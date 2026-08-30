@@ -44,6 +44,11 @@ import templateStatusRoutes from './templateStatus';
 import parserTemplatesRoutes from './parserTemplates';
 import trainingRoutes from './training';
 import tripsRoutes from './trips';
+import tourRouteRoutes from './trips/tourRoutes';
+import tourLegRoutes from './trips/tourLegs';
+import tourRoutingRoutes from './trips/tourRouting';
+import tourTrackRoutes from './trips/tourTracks';
+import tourIndexRoutes from './trips/tourIndex';
 import immichTripRoutes from './immich/tripAlbums';
 import immichAssetProxyRoutes from './immich/assetProxy';
 import immichTripCoverRoutes from './immich/tripCover';
@@ -57,6 +62,7 @@ import cruisesRouter from './cruises';
 import cruiseRouteOverrideRoutes from './cruises/routeOverride';
 import currenciesRouter from './currencies';
 import lodgingRouter from './lodging';
+import lodgingPhotoRouter from './lodging/photos';
 import placesRouter from './places';
 import xlsxImportRouter from './xlsxImport';
 import placeVisitPhotoRouter from './places/visitPhotos';
@@ -122,6 +128,32 @@ export const apiMounts: ApiMount[] = [
   { id: 'templateStatus', base: '/api/v1/template-status', router: templateStatusRoutes },
   { id: 'training', base: '/api/v1/training', router: trainingRoutes },
   { id: 'trips', base: '/api/v1', router: tripsRoutes },
+  // Tour route sections — same-prefix satellite router, same pattern as
+  // cruises.routeOverride above — split out of trips.ts once that file
+  // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`
+  // still resolves to the main router first.
+  { id: 'tourRoutes', base: '/api/v1', router: tourRouteRoutes },
+  // Leg overrides — same-prefix satellite router, split out of tourRoutes
+  // once that file crossed the 400-line ideal ceiling on its own. Mounted
+  // right after `tourRoutes` for the same reason that one follows `trips`.
+  { id: 'tourLegs', base: '/api/v1', router: tourLegRoutes },
+  // Provider-routing endpoints (task 6, phase 3) — same-prefix satellite
+  // router, split out of `tourLegs.ts` once it grew past the 400-line ideal
+  // ceiling. Mounted right after `tourLegs` for the same reason it follows
+  // `tourRoutes`.
+  { id: 'tourRouting', base: '/api/v1', router: tourRoutingRoutes },
+  // Recorded tracks (task 4, phase 3b) — same-prefix satellite router, split
+  // out alongside the others above. Mounted right after `tourRouting`, last
+  // among the tour satellites: the plan originally said "after tourLegs",
+  // written before `tourRouting` existed; this ordering is a controller
+  // ruling made when `tourRouting` landed first.
+  { id: 'tourTracks', base: '/api/v1', router: tourTrackRoutes },
+  // Dashboard-wide tour listing + batch geometry (task 1, phase 4) — NOT
+  // trip-scoped like the four satellites above, so it cannot reuse their
+  // `/trips/:id/...` prefix pattern for ownership; mounted last among the
+  // tour satellites so it never shadows a more specific `/trips/:id/...`
+  // route above it.
+  { id: 'tourIndex', base: '/api/v1', router: tourIndexRoutes },
   { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
   { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
   { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },
@@ -135,6 +167,10 @@ export const apiMounts: ApiMount[] = [
   // above — split out of cruises.ts once that file crossed the 800-line max.
   { id: 'cruises.routeOverride', base: '/api/v1/cruises', router: cruiseRouteOverrideRoutes },
   { id: 'currencies', base: '/api/v1/currencies', router: currenciesRouter },
+  // Photographs of the house — same prefix, own file. Mounted FIRST for the
+  // same reason the visit-photo router is: relying on segment counts to keep
+  // two routers on one prefix apart is a rule nobody can see.
+  { id: 'lodging.photos', base: '/api/v1/lodging', router: lodgingPhotoRouter },
   { id: 'lodging', base: '/api/v1/lodging', router: lodgingRouter },
   // Photo proof for a visit — same prefix, own file, split out before places.ts
   // approaches the 800-line max. Mounted first so nothing depends on segment

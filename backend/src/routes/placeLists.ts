@@ -87,9 +87,9 @@ function present(list: ListRow, withEntries: boolean, now = new Date()) {
  *
  * Renaming "Neue 7 Weltwunder" locally would make the achievement that measures
  * it report against a list nobody recognises, and hand-editing its membership
- * would make progress meaningless. Colour, icon and sort order stay editable —
- * those are presentation, and a user colouring their wonders gold breaks
- * nothing.
+ * would make progress meaningless. Colour, icon, label mode and sort order stay
+ * editable — those are presentation, and a user colouring their wonders gold or
+ * labelling them with a symbol breaks nothing.
  */
 function assertEditableAs(list: { curatedKey: string | null }, what: "name" | "membership"): void {
   if (list.curatedKey === null) return;
@@ -121,8 +121,38 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       orderBy: [{ sortIdx: "asc" }, { name: "asc" }],
     });
 
+    /**
+     * How big the CATALOGUE is, for the rows that mirror one.
+     *
+     * Forgejo #24: a subscribed UNESCO list showed "47 / 47 — vollständig" for
+     * an account that had visited 47 of 1,248 sites. Nothing computed a wrong
+     * number; the problem is that `placeCount` is not a denominator here. This
+     * endpoint materialises only the entries the account already has, so on a
+     * curated subscription `placeCount` and `visitedCount` converge on "how
+     * many you ticked" and their ratio is always 1.
+     *
+     * `curatedItemCount` gives a client a denominator that means something. It
+     * is null for an ordinary list, where `placeCount` IS the total and the
+     * ratio is honest.
+     */
+    const curatedKeys = rows.map((r) => r.curatedKey).filter((k): k is string => k !== null);
+    const catalogueSizes = new Map<string, number>();
+    if (curatedKeys.length > 0) {
+      const catalogues = await prisma.curatedList.findMany({
+        where: { key: { in: curatedKeys } },
+        select: { key: true, _count: { select: { items: true } } },
+      });
+      for (const c of catalogues) catalogueSizes.set(c.key, c._count.items);
+    }
+
     const now = new Date();
-    res.json({ success: true, data: rows.map((r) => present(r, parsed.data.withEntries, now)) });
+    res.json({
+      success: true,
+      data: rows.map((r) => ({
+        ...present(r, parsed.data.withEntries, now),
+        curatedItemCount: r.curatedKey === null ? null : (catalogueSizes.get(r.curatedKey) ?? null),
+      })),
+    });
   } catch (error) {
     next(error);
   }

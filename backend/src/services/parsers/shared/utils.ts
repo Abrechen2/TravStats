@@ -231,6 +231,25 @@ export const PATTERNS = {
    * accepting a heading costs the wrong flight.
    */
   PNR: /\b(?=[A-Z0-9]{6}\b)(?=[A-Z]*\d)([A-Z0-9]{6})\b/,
+  /*
+   * Resolution note, merge of main into dev/openapi-complete (2026-08-30).
+   *
+   * Both lines fixed the same class independently. main (Forgejo #17) required a
+   * LABEL, because a marketing mail produced "LEIDER" and an American Airlines
+   * greeting produced "NSCHEN" — the tail of "WUENSCHEN", the umlaut breaking the
+   * word boundary. The OCR line (Forgejo #36) instead let an unlabelled code
+   * through only when it carries a DIGIT, because a boarding pass prints the
+   * cabin heading "KLASSE" where a reference would sit.
+   *
+   * Kept the digit rule, because it is the superset: "NSCHEN" and "ANGEBO" carry
+   * no digit and are still refused, so main's cases hold, while a pass that
+   * prints a bare "E9VLVKC" is still read. Both suites are run against this —
+   * `pnrRequiresLabel.test.ts` from main and `fieldPatterns.test.ts` from here.
+   *
+   * The shared reason survives either way: `findExistingFlight` treats the PNR as
+   * its STRONGEST match key and looks it up before flight number and date, so an
+   * invented one merges a scan into an unrelated flight.
+   */
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
   /**
    * `Boarding` is deliberately NOT a gate label: on almost every pass it

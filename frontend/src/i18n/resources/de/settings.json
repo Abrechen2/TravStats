@@ -132,6 +132,13 @@
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat"
   },
+  "domainColors": {
+    "title": "Bereichsfarben",
+    "description": "Die Farbe je Bereich — sie gilt in den Statistiken, in der Reise-Zeitleiste, in der Aktivitätsleiste, im Import-Protokoll und überall sonst, wo ein Bereich mit einer einzelnen Farbe gekennzeichnet wird.",
+    "mapNote": "Die Karte bleibt davon unberührt: dort lässt sich eine Route nach Status oder Häufigkeit einfärben, ein Jahresbalken nicht. Die Kartenfarben stellst du weiter im Kartenbereich ein.",
+    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben.",
+    "reset": "Auf Markenfarben zurücksetzen"
+  },
   "units": {
     "title": "Einheiten & Formate",
     "description": "Definiere die Standard-Einheiten für Statistiken.",
@@ -491,6 +498,32 @@
       "username": "Benutzername",
       "password": "Passwort",
       "or": "ODER (stattdessen Basic Auth verwenden)"
+    }
+  },
+  "routing": {
+    "title": "Routing-Anbieter",
+    "description": "Bestimmt, welcher Anbieter eine Etappe berechnet — einzeln oder für die ganze Tour auf einmal. Ohne Anbieter bleibt jede Etappe eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten der Etappe, um die Strecke zu berechnen — sie verlassen damit diese Instanz.",
+    "providerLabel": "Anbieter",
+    "provider": {
+      "none": "Kein Anbieter",
+      "openrouteservice": "OpenRouteService",
+      "graphhopper": "GraphHopper",
+      "custom": "Eigener OSRM-Server"
+    },
+    "noneHint": "Ohne Anbieter bleibt „Berechnet“ in der Touren-Ansicht deaktiviert — jede Etappe bleibt eine Luftlinie, bis hier einer eingerichtet wird.",
+    "customUrlLabel": "Basis-URL",
+    "customUrlHint": "Adresse eines selbst gehosteten OSRM-Servers, z. B. https://osrm.example.com.",
+    "loadError": "Routing-Einstellungen konnten nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "saveSuccess": "Routing-Einstellungen gespeichert",
+    "saveError": "Routing-Einstellungen konnten nicht gespeichert werden",
+    "openrouteservice": {
+      "label": "OpenRouteService API-Schlüssel",
+      "description": "Kostenlos: 2000 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
+    },
+    "graphhopper": {
+      "label": "GraphHopper API-Schlüssel",
+      "description": "Kostenlos: 500 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
     }
   },
   "import": {

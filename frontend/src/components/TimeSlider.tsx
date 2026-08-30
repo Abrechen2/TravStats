@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface TimeSliderProps {
   min: number;
@@ -17,6 +18,7 @@ export function TimeSlider({
   playing,
   onTogglePlay,
 }: TimeSliderProps): JSX.Element {
+  const { t } = useTranslation(["common"]);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export function TimeSlider({
       className="flex items-center gap-3 px-4 py-2 rounded-lg border border-(--border-default) text-sm"
     >
       <button
-        aria-label={playing ? "Pause" : "Play"}
+        aria-label={playing ? t("common:accessibility.pause") : t("common:accessibility.play")}
         onClick={onTogglePlay}
         className="p-1 rounded-sm hover:bg-(--bg-elevated)"
       >

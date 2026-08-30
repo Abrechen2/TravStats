@@ -8,6 +8,12 @@
  * Without this, "the API docs are complete" is a claim nobody measures.
  * It was wrong for 244 endpoints before anyone noticed, and the README
  * asserted the spec "never drifts" the whole time.
+ *
+ * The list of exceptions is GONE as of 2026-08-29: `pending.ts` shrank to
+ * nothing and, per its own instruction, was deleted. What is left is the
+ * plain assertion — every endpoint in scope is documented, and the spec
+ * documents nothing the app does not serve. A new route now fails this
+ * test on the day it is written, with no line to add that would quiet it.
  */
 
 import '../services/openapi/paths';
@@ -17,7 +23,6 @@ import {
   listMountedEndpoints,
   UNDOCUMENTED_MOUNTS,
 } from '../services/openapi/coverage';
-import { PENDING_DOCUMENTATION } from '../services/openapi/pending';
 
 const documentedOperations = (): Set<string> => {
   const doc = buildOpenApiDocument();
@@ -35,33 +40,13 @@ const label = (method: string, path: string) => `${method.toUpperCase()} ${path}
 describe('openapi coverage', () => {
   const documented = documentedOperations();
   const inScope = listDocumentableEndpoints();
-  const pending = new Set(PENDING_DOCUMENTATION);
 
-  it('has no endpoint that is neither documented nor explicitly pending', () => {
+  it('documents every endpoint in scope', () => {
     const undocumented = inScope
       .filter((e) => !documented.has(`${e.method} ${e.path}`))
-      .map((e) => label(e.method, e.path))
-      .filter((l) => !pending.has(l));
+      .map((e) => label(e.method, e.path));
 
     expect(undocumented).toEqual([]);
-  });
-
-  it('has no pending entry that is already documented', () => {
-    // Forces the ratchet to tighten: documenting an endpoint without
-    // removing its line here fails the build.
-    const stale = [...pending].filter((entry) => {
-      const [method, ...rest] = entry.split(' ');
-      return documented.has(`${method.toLowerCase()} ${rest.join(' ')}`);
-    });
-
-    expect(stale).toEqual([]);
-  });
-
-  it('has no pending entry for an endpoint that no longer exists', () => {
-    const live = new Set(inScope.map((e) => label(e.method, e.path)));
-    const orphaned = [...pending].filter((entry) => !live.has(entry));
-
-    expect(orphaned).toEqual([]);
   });
 
   it('documents nothing the app does not serve', () => {

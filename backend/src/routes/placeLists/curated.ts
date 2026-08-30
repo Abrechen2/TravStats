@@ -158,9 +158,25 @@ router.delete("/:key/subscribe", async (req: AuthRequest, res: Response, next: N
 
 // ---------------------------------------------------------------- progress
 
+/**
+ * Whether the caller wants the catalogue itself or only the tally.
+ *
+ * Forgejo #22: this endpoint returns every item with both blurbs — 1,248 rows
+ * for the world-heritage list — and a client that only needs "47 of 1,248"
+ * had to download all of it, on every screen that shows a progress bar.
+ *
+ * A parameter rather than a new endpoint, and defaulting to the full payload,
+ * so nothing that exists today changes behaviour.
+ */
+const progressQuerySchema = z.object({
+  items: z.enum(["all", "none"]).default("all"),
+});
+
 router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
+    const query = progressQuerySchema.safeParse(req.query);
+    if (!query.success) throw new AppError(query.error.message, 400);
     const curated = await prisma.curatedList.findUnique({
       where: { key: req.params.key },
       include: { items: { orderBy: [{ sortIdx: "asc" }, { name: "asc" }] } },
@@ -226,7 +242,9 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
         color: subscription?.color ?? null,
         itemCount: items.length,
         tickedCount: items.filter((i) => i.ticked).length,
-        items,
+        // Omitted entirely rather than sent empty: an empty array would read as
+        // "this catalogue has no items", which is a different statement.
+        ...(query.data.items === "all" ? { items } : {}),
       },
     });
   } catch (error) {
@@ -308,7 +326,13 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
     const tickedIds = new Set(ticked.filter((p) => p.visited).map((p) => p.curatedItemId));
     const targets = curated.items
       .filter((i) => !tickedIds.has(i.id))
-      .map((i) => ({ itemId: i.id, name: i.name, lat: i.lat, lon: i.lon }));
+      .map((i) => ({
+        itemId: i.id,
+        name: i.name,
+        country: i.isoCountryCode ?? i.country ?? null,
+        lat: i.lat,
+        lon: i.lon,
+      }));
 
     const anchors = buildAnchors({
       lodgings: stays

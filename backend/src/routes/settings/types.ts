@@ -111,6 +111,8 @@ export interface ApiKeysUpdateData {
   openskyClientSecret?: string | null;
   openskyUsername?: string | null;
   openskyPassword?: string | null;
+  openrouteserviceApiKey?: string | null;
+  graphhopperApiKey?: string | null;
 }
 
 export interface UserApiKeySettings {
@@ -121,6 +123,8 @@ export interface UserApiKeySettings {
   openskyClientSecret: string | null;
   openskyUsername: string | null;
   openskyPassword: string | null;
+  openrouteserviceApiKey: string | null;
+  graphhopperApiKey: string | null;
 }
 
 export interface PrismaErrorWithCode extends Error {

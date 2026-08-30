@@ -22,7 +22,7 @@
 # Non-interactive: FORCE=1 ./scripts/stage-rc-from-prod.sh
 set -euo pipefail
 
-PVE_NODE="${PVE_NODE:-192.168.178.180}"
+PVE_NODE="${PVE_NODE:?set PVE_NODE to the Proxmox node hosting the prod and RC containers -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519}"
 CT_PROD="${CT_PROD:-100}"
 CT_RC="${CT_RC:-107}"
@@ -104,7 +104,7 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER
 # Re-apply RC-specific settings the prod clone wiped. The prod dump carries
 # prod's admin_settings, so the mobile-app pairing URL (public_url) now points
 # at prod, not the RC — the app's QR would encode an address it can't reach.
-# Set RC_PUBLIC_URL to the RC's own public address (e.g. https://trav.abrechen2.de).
+# Set RC_PUBLIC_URL to the RC's own address, however it is reached.
 #
 # Guarded with an IF EXISTS: older release lines (e.g. 2.2.x) predate the
 # public_url column, and a bare UPDATE would error out and abort the whole

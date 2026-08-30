@@ -135,7 +135,44 @@
       },
       "betaFeatures": {
         "label": "Show beta features",
-        "help": "Reveals unfinished features for everyone on this instance. For testing only — beta features may change or disappear again."
+        "help": "Reveals unfinished features for everyone on this instance. For testing only — beta features may change or disappear again.",
+        "listTitle": "What this switch turns on",
+        "listEmpty": "Nothing is behind the switch at the moment.",
+        "listNote": "This list is read from the registry in the source, so it always matches what this build actually gates.",
+        "reason": {
+          "beta": "unfinished",
+          "advanced": "advanced"
+        },
+        "features": {
+          "tripAiSummary": {
+            "name": "AI trip summary",
+            "what": "A button on the trip detail page that summarises the journey in prose."
+          },
+          "devicePairing": {
+            "name": "Device pairing",
+            "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
+          },
+          "passport": {
+            "name": "Passport",
+            "what": "A page of stamps, continent quotas and a country table, built from your flight data."
+          },
+          "domainColors": {
+            "name": "Custom domain colours",
+            "what": "Makes the per-domain colour a setting rather than a brand constant. Applies to statistics, the trip timeline, the activity rail and the import log."
+          },
+          "poiDomain": {
+            "name": "Places",
+            "what": "The whole Places domain: create, edit, detail page, list, map, custom lists and the shipped checklists."
+          },
+          "tourRoutes": {
+            "name": "Tours",
+            "what": "Route sections inside a trip — the section list, its editor, a dashboard tab of its own, and the lines on the map."
+          },
+          "dawarich": {
+            "name": "Dawarich connection",
+            "what": "A connection to a Dawarich instance that recorded tracks are pulled from."
+          }
+        }
       }
     },
     "passkeys": {

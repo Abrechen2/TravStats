@@ -439,6 +439,14 @@ export interface LodgingLoyaltyStats {
   /** Herfindahl index over chain nights: 1 = one brand only, near 0 = spread thin. */
   concentration: number | null;
   chainNightsRanked: LodgingPlaceCount[];
+  /**
+   * The same ranking one level down: individual hotels by nights.
+   *
+   * Optional because an older backend does not send it. A client must tell
+   * ABSENT from EMPTY here — treating a missing list as "no completed stay"
+   * puts that sentence next to a card reading "longest stay: 3 nights".
+   */
+  lodgingNightsRanked?: LodgingPlaceCount[];
   /** Newest year first, then most nights. */
   programmeYears: LodgingProgrammeYear[];
 }

@@ -28,12 +28,12 @@
 | Cloudflare zone `travstats.de` | `8e34d30898073f3ee7e95bc0bdcb4022` |
 | Cloudflare account | `9a4d9c86ff53f151156fc1361af434cf` |
 | Token file | `~/.cloudflare-travstats-token` (DNS + Tunnel verified) |
-| pve-node1 | `192.168.178.171` |
-| pve-node3 (for CT100/106/107 reads) | `192.168.178.180` |
-| DMZ bridge | `vmbr2`, gateway `192.168.20.1` |
-| CT134 address | `192.168.20.134/24` |
+| pve-node1 | `<pve-node1>` |
+| pve-node3 (for CT100/106/107 reads) | `<pve-node3>` |
+| DMZ bridge | `vmbr2`, gateway `<dmz-gateway>` |
+| CT134 address | `<preview-host>/24` |
 | LXC template | `local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst` |
-| Ollama in LAN (must stay unreachable) | `192.168.178.155:11434` |
+| Ollama in LAN (must stay unreachable) | `<ollama-host>:11434` |
 | Backend seed module inside the image | `/app/backend/dist/seedDemoUser.js`, exports `seedDemoUser` |
 
 **Slot table (used by every task):**
@@ -44,7 +44,7 @@
 | `immich` | 3011 | `immich-beta.travstats.de` | `:preview-immich` (mutable) | `dev/immich-albums` |
 | `poi` | 3012 | `poi-beta.travstats.de` | `:preview-poi` (mutable) | `dev/hotels` |
 
-**SSH pattern:** `ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '<cmd>'"`
+**SSH pattern:** `ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '<cmd>'"`
 
 ---
 
@@ -56,7 +56,7 @@ The isolation check is the whole justification for this host. If it fails, stop 
 - Create: `scripts/preview/provision-ct134.sh`
 
 **Interfaces:**
-- Produces: a running CT134 with Docker, reachable at `192.168.20.134`, and an external Docker network `preview-net`.
+- Produces: a running CT134 with Docker, reachable at `<preview-host>`, and an external Docker network `preview-net`.
 
 - [ ] **Step 1: Write the provisioning script**
 
@@ -68,7 +68,7 @@ Create `scripts/preview/provision-ct134.sh`:
 # Idempotent: safe to re-run. Never run against any other CTID.
 set -euo pipefail
 
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:-<pve-node1>}"
 CTID=134
 SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}")
 
@@ -84,7 +84,7 @@ else
       --hostname ct134-travstats-preview \
       --cores 4 --memory 8192 --swap 2048 \
       --rootfs ceph-nvme:30 \
-      --net0 name=eth0,bridge=vmbr2,ip=192.168.20.134/24,gw=192.168.20.1 \
+      --net0 name=eth0,bridge=vmbr2,ip=<preview-host>/24,gw=<dmz-gateway> \
       --unprivileged 1 --features nesting=1 \
       --onboot 1 --start 1"
 fi
@@ -114,7 +114,7 @@ Expected: `CT134 provisioned.` On a second run, `CT134 already exists — skippi
 - [ ] **Step 3: Verify Docker and the network exist**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- bash -c 'docker --version && docker network ls | grep preview-net'"
 ```
 
@@ -123,8 +123,8 @@ Expected: a Docker version line and a `preview-net` row.
 - [ ] **Step 4: The negative test — LAN must be unreachable**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
-  "pct exec 134 -- bash -c 'curl -s --max-time 5 http://192.168.178.155:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+  "pct exec 134 -- bash -c 'curl -s --max-time 5 http://<ollama-host>:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
 ```
 
 Expected: `BLOCKED`.
@@ -185,8 +185,8 @@ No `ports:` block — Ollama has no authentication and must never be reachable f
 
 ```bash
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/ollama/docker-compose.yml \
-  root@192.168.178.171:/tmp/ollama-compose.yml
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  root@<pve-node1>:/tmp/ollama-compose.yml
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct push 134 /tmp/ollama-compose.yml /opt/preview/ollama/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/ollama && docker compose up -d'"
 ```
@@ -194,7 +194,7 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
 - [ ] **Step 3: Pull the model**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- docker exec preview-ollama ollama pull gemma3:4b"
 ```
 
@@ -203,7 +203,7 @@ Expected: pull progress, ending in `success`. This downloads roughly 3.3 GB and 
 - [ ] **Step 4: Verify the model answers**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- docker exec preview-ollama \
      ollama run gemma3:4b 'Reply with exactly the word: ready' --verbose 2>/dev/null | head -1"
 ```
@@ -213,7 +213,7 @@ Expected: output containing `ready`.
 - [ ] **Step 5: Verify Ollama is NOT published to the host**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- bash -c 'curl -s --max-time 3 http://127.0.0.1:11434/ >/dev/null && echo PUBLISHED || echo INTERNAL_ONLY'"
 ```
 
@@ -299,7 +299,7 @@ The DB is on the stack-private `default` network only. The app joins both so it 
 - [ ] **Step 2: Determine the current beta tag (read-only)**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node3> \
   "pct exec 106 -- grep -m1 'image: ghcr' /opt/travstats-beta/docker-compose.yml"
 ```
 
@@ -309,7 +309,7 @@ Expected: something like `image: ghcr.io/abrechen2/travstats:2.3.0-beta.11`. Use
 
 ```bash
 TAG="<tag from Step 2>"
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
   set -e
   PW=\$(openssl rand -hex 24)
   umask 077
@@ -331,8 +331,8 @@ Expected: `written`. The password is generated on the host and never printed.
 
 ```bash
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/app/docker-compose.yml \
-  root@192.168.178.171:/tmp/app-compose.yml
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  root@<pve-node1>:/tmp/app-compose.yml
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct push 134 /tmp/app-compose.yml /opt/preview/beta/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/beta && docker compose pull -q && docker compose up -d'"
 ```
@@ -340,7 +340,7 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
 - [ ] **Step 5: Verify health and that the DB port is closed**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
   curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:3010/health && echo && \
   (curl -s --max-time 3 http://127.0.0.1:5432 >/dev/null 2>&1 && echo DB_EXPOSED || echo DB_CLOSED)'"
 ```
@@ -434,7 +434,7 @@ Create `scripts/preview/deploy-preview.sh`:
 #   bash scripts/preview/deploy-preview.sh immich preview-immich
 set -uo pipefail
 
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:-<pve-node1>}"
 CTID="${CTID:-134}"
 DRY_RUN="${DRY_RUN:-0}"
 
@@ -550,7 +550,7 @@ echo "pushed ghcr.io/abrechen2/travstats:${tag} ($commit)"
 ```bash
 for spec in "immich:3011:immich-beta.travstats.de" "poi:3012:poi-beta.travstats.de"; do
   slot="${spec%%:*}"; rest="${spec#*:}"; port="${rest%%:*}"; host="${rest##*:}"
-  ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+  ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
     set -e
     PW=\$(openssl rand -hex 24)
     umask 077
@@ -572,7 +572,7 @@ Expected: `immich written`, `poi written`.
 - [ ] **Step 3: Copy the compose template into both slots**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- bash -c 'cp /opt/preview/beta/docker-compose.yml /opt/preview/immich/ && \
                             cp /opt/preview/beta/docker-compose.yml /opt/preview/poi/ && ls /opt/preview/*/docker-compose.yml'"
 ```
@@ -636,7 +636,7 @@ Create `scripts/preview/seed-preview-users.sh`:
 # and printed ONCE so they can be moved into a password manager.
 set -euo pipefail
 
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:-<pve-node1>}"
 slot="${1:-}"
 case "$slot" in beta|immich|poi) ;; *) echo "usage: $0 <beta|immich|poi>" >&2; exit 2 ;; esac
 
@@ -681,7 +681,7 @@ Expected: three `username password` lines. Copy them into the password manager n
 - [ ] **Step 3: Verify login works and registration is closed**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
   curl -s -o /dev/null -w \"login=%{http_code}\n\" -X POST http://127.0.0.1:3010/api/v1/auth/login \
     -H \"Content-Type: application/json\" \
     --data \"{\\\"username\\\":\\\"demo\\\",\\\"password\\\":\\\"\$(cut -d\\\" \\\" -f2 < <(grep ^demo /opt/preview/beta/USERS.txt))\\\"}\"
@@ -734,7 +734,7 @@ TOKEN_FILE="${TOKEN_FILE:-$HOME/.cloudflare-travstats-token}"
 TOK=$(cat "$TOKEN_FILE")
 ZONE=8e34d30898073f3ee7e95bc0bdcb4022
 ACCT=9a4d9c86ff53f151156fc1361af434cf
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:-<pve-node1>}"
 API=https://api.cloudflare.com/client/v4
 NAME=travstats-preview
 
@@ -854,8 +854,8 @@ No new files. This is the gate before anyone is invited.
 - [ ] **Step 1: Re-run the isolation negative test**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
-  "pct exec 134 -- bash -c 'curl -s --max-time 5 http://192.168.178.155:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+  "pct exec 134 -- bash -c 'curl -s --max-time 5 http://<ollama-host>:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
 ```
 
 Expected: `BLOCKED`. Docker installs iptables rules; this confirms none of them opened a path to the LAN.
@@ -865,7 +865,7 @@ Expected: `BLOCKED`. Docker installs iptables rules; this confirms none of them 
 ```bash
 for ct in 100 106 107; do
   echo -n "CT$ct image: "
-  ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 \
+  ssh -i ~/.ssh/id_ed25519 root@<pve-node3> \
     "pct exec $ct -- bash -c 'grep -m1 \"image: ghcr\" /opt/travstats*/docker-compose.yml'" 2>/dev/null || echo "?"
 done
 ```
@@ -893,7 +893,7 @@ Expected: `403` three times.
 - [ ] **Step 5: Confirm the parser reaches the DMZ Ollama**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- docker exec preview-beta sh -c 'curl -sf --max-time 10 http://ollama:11434/api/tags | head -c 120'"
 ```
 
@@ -913,7 +913,7 @@ Expected: a JSON body listing `gemma3:4b`.
 Insert a row into the 3-tier topology table, and a short section below it:
 
 ```markdown
-| **Preview** | 134 | `192.168.20.134:3010-3012` (DMZ) | `preview-beta` / `-immich` / `-poi` | je eigene | `/opt/preview/<slot>` | **öffentlich**, Demo-Daten, externe Tester |
+| **Preview** | 134 | `<preview-host>:3010-3012` (DMZ) | `preview-beta` / `-immich` / `-poi` | je eigene | `/opt/preview/<slot>` | **öffentlich**, Demo-Daten, externe Tester |
 
 ## Public Preview (CT134, DMZ — seit 2026-07-09)
 
@@ -1092,7 +1092,7 @@ No `ports:` block anywhere. Immich must be reachable only from `preview-net` —
 Generate the DB password on the container; never print it.
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -s" <<'SH'
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -s" <<'SH'
 set -e
 mkdir -p /opt/preview/immich-demo
 umask 077
@@ -1102,8 +1102,8 @@ echo "env written"
 SH
 
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/immich-demo/docker-compose.yml \
-  root@192.168.178.171:/tmp/immich-demo.yml
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  root@<pve-node1>:/tmp/immich-demo.yml
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct push 134 /tmp/immich-demo.yml /opt/preview/immich-demo/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/immich-demo && docker compose pull -q && docker compose up -d'"
 ```
@@ -1111,7 +1111,7 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
 Then wait for it to answer — first boot runs migrations and takes a minute or two:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- docker exec preview-immich sh -c 'wget -qO- --timeout=10 http://immich-demo-server:2283/api/server/ping'"
 ```
 
@@ -1137,7 +1137,7 @@ Fetch two or three freely usable images (`https://picsum.photos/1200/800` serves
 Confirm:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
   "pct exec 134 -- docker exec preview-immich sh -c \
     'wget -qO- --header=\"x-api-key: <KEY>\" http://immich-demo-server:2283/api/albums'"
 ```
@@ -1155,7 +1155,7 @@ Verify through the app's own connection tester (the branch adds `immichTester.ts
 - [ ] **Step 7: Confirm Immich stayed private**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
   (curl -s --max-time 3 http://127.0.0.1:2283/ >/dev/null 2>&1 && echo HOST_EXPOSED || echo INTERNAL_ONLY)
   docker inspect immich-demo-server --format "{{json .HostConfig.PortBindings}}"
 '"

@@ -1,3 +1,5 @@
+import type { PlaceLabelMode } from "../lib/placeLabel";
+
 import type { Place } from "./place";
 
 // Frontend view of place lists and the shipped checklists. Mirrors
@@ -38,11 +40,18 @@ export interface PlaceList {
   /** Hex. What `list` colour mode resolves a pin through. */
   color: string;
   icon: string | null;
+  /**
+   * What this list's places are labelled with on the map — the list's DEFAULT
+   * only. The map's own control overrides it for the whole map, and a list with
+   * no `icon` shows names whatever this says. Resolve it through
+   * `lib/placeLabel.ts`, never by reading this field directly.
+   */
+  labelMode: PlaceLabelMode;
   sortIdx: number;
   /**
    * Non-null when this list is a SUBSCRIPTION to a shipped checklist. Then the
    * name and the membership come from the catalog and the server refuses to
-   * change either — colour and icon stay the user's.
+   * change either — colour, icon and label mode stay the user's.
    */
   curatedKey: string | null;
   createdAt: string;
@@ -63,6 +72,7 @@ export interface PlaceListInput {
   description?: string | null;
   color?: string;
   icon?: string | null;
+  labelMode?: PlaceLabelMode;
   sortIdx?: number;
 }
 

@@ -26,7 +26,7 @@ describe("routeEditorState", () => {
   it("starts clean, with nothing selected", () => {
     const s = initRouteEditor(LINE);
     expect(isDirty(s)).toBe(false);
-    expect(s.selected).toBeNull();
+    expect(s.selected).toEqual([]);
     expect(s.waypoints).toEqual(LINE);
   });
 
@@ -92,7 +92,7 @@ describe("routeEditorState", () => {
   it("clears the selection when the selected point is removed", () => {
     let s = selectWaypoint(initRouteEditor(LINE), 1);
     s = removeWaypoint(s, 1);
-    expect(s.selected).toBeNull();
+    expect(s.selected).toEqual([]);
   });
 
   it("undoes a move exactly, and reports clean again", () => {
@@ -121,7 +121,7 @@ describe("routeEditorState", () => {
 
   it("never selects an endpoint", () => {
     const s = selectWaypoint(initRouteEditor(LINE), 0);
-    expect(s.selected).toBeNull();
+    expect(s.selected).toEqual([]);
   });
 
   it("does not mutate the state it was given", () => {
@@ -165,7 +165,7 @@ describe("routeEditorState", () => {
     // the bounded history and undo stops meaning "one gesture back".
     let s = beginDrag(initRouteEditor(LINE), 1);
     expect(s.history).toHaveLength(1);
-    expect(s.selected).toBe(1);
+    expect(s.selected).toEqual([1]);
     s = dragWaypoint(s, 1, [1.1, 1.1]);
     s = dragWaypoint(s, 1, [1.5, 1.4]);
     s = dragWaypoint(s, 1, [2.2, 0.9]);

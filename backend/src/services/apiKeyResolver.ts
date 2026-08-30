@@ -16,7 +16,9 @@ export type ApiProvider =
   | 'aerodatabox'
   | 'opensky'
   | 'logostream'
-  | 'googlePlaces';
+  | 'googlePlaces'
+  | 'openrouteservice'
+  | 'graphhopper';
 
 export interface OpenSkyCredentials {
   clientId?: string;
@@ -44,6 +46,8 @@ export async function getApiKey(
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
+          openrouteserviceApiKey: true,
+          graphhopperApiKey: true,
         },
       });
 
@@ -65,6 +69,12 @@ export async function getApiKey(
             break;
           case 'aerodatabox':
             userKey = userSettings.aerodataboxApiKey;
+            break;
+          case 'openrouteservice':
+            userKey = userSettings.openrouteserviceApiKey;
+            break;
+          case 'graphhopper':
+            userKey = userSettings.graphhopperApiKey;
             break;
         }
 
@@ -108,6 +118,12 @@ export async function getApiKey(
         case 'googlePlaces':
           globalKey = adminSettings.globalGooglePlacesApiKey;
           break;
+        case 'openrouteservice':
+          globalKey = adminSettings.globalOpenrouteserviceApiKey;
+          break;
+        case 'graphhopper':
+          globalKey = adminSettings.globalGraphhopperApiKey;
+          break;
       }
 
       if (globalKey) {
@@ -134,6 +150,10 @@ export async function getApiKey(
         return process.env.LOGOSTREAM_API_KEY || null;
       case 'googlePlaces':
         return process.env.GOOGLE_PLACES_API_KEY || null;
+      case 'openrouteservice':
+        return process.env.OPENROUTESERVICE_API_KEY || null;
+      case 'graphhopper':
+        return process.env.GRAPHHOPPER_API_KEY || null;
       default:
         return null;
     }
@@ -283,6 +303,8 @@ export async function hasApiKeyAccess(
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
+          openrouteserviceApiKey: true,
+          graphhopperApiKey: true,
         },
       });
 
@@ -303,6 +325,12 @@ export async function hasApiKeyAccess(
             break;
           case 'aerodatabox':
             hasUserKey = !!userSettings.aerodataboxApiKey;
+            break;
+          case 'openrouteservice':
+            hasUserKey = !!userSettings.openrouteserviceApiKey;
+            break;
+          case 'graphhopper':
+            hasUserKey = !!userSettings.graphhopperApiKey;
             break;
         }
 
@@ -332,6 +360,12 @@ export async function hasApiKeyAccess(
             break;
           case 'aerodatabox':
             hasGlobalKey = !!adminSettings.globalAerodataboxApiKey;
+            break;
+          case 'openrouteservice':
+            hasGlobalKey = !!adminSettings.globalOpenrouteserviceApiKey;
+            break;
+          case 'graphhopper':
+            hasGlobalKey = !!adminSettings.globalGraphhopperApiKey;
             break;
         }
       } catch (error: unknown) {
@@ -366,6 +400,12 @@ export async function hasApiKeyAccess(
         break;
       case 'aerodatabox':
         hasEnvKey = !!process.env.AERODATABOX_API_KEY;
+        break;
+      case 'openrouteservice':
+        hasEnvKey = !!process.env.OPENROUTESERVICE_API_KEY;
+        break;
+      case 'graphhopper':
+        hasEnvKey = !!process.env.GRAPHHOPPER_API_KEY;
         break;
     }
 

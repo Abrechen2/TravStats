@@ -1,3 +1,4 @@
+import type { PlaceLabelList } from "../lib/placeLabel";
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
@@ -41,7 +42,15 @@ interface MapContainer3DProps {
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   onResetTrip?: () => void;
-  /** Extra deck.gl layers appended after all internally-built layers. */
+  /**
+   * Extra deck.gl layers appended after all internally-built layers.
+   * Reaches BOTH map engines: DeckGLMap in every non-globe visMode, and
+   * GlobeView's own MapboxOverlay when visMode is "globe" -- until this
+   * was wired through, a caller's extraLayers (dashboard-wide tour
+   * paths, journey-mode layers) silently vanished the moment the user
+   * switched to globe, because MapContainer3D forwarded this prop to
+   * DeckGLMap only.
+   */
   extraLayers?: Layer[];
   /**
    * When false, the internal cruise fetch + cruise arc/port layers are
@@ -103,6 +112,7 @@ interface MapContainer3DProps {
   onPlaceClick?: (placeId: string) => void;
   /** Place-id → its list's colour, for the `list` colour mode. */
   placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
   /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
@@ -133,6 +143,7 @@ export default function MapContainer3D({
   placesOverride,
   onPlaceClick,
   placeListColors,
+  placeListLabels,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -250,6 +261,7 @@ export default function MapContainer3D({
               onCruiseOpen={onCruiseOpen}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
+              extraLayers={extraLayers}
             />
           </Suspense>
         ) : (
@@ -271,6 +283,7 @@ export default function MapContainer3D({
             placesOverride={placesOverride}
             onPlaceClick={onPlaceClick}
             placeListColors={placeListColors}
+            placeListLabels={placeListLabels}
             placeMarkerSize={placeMarkerSize}
             onPlaceMarkerSizeChange={setPlaceMarkerSize}
             onLodgingClick={onLodgingClick}

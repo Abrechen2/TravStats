@@ -131,7 +131,7 @@ V2 enters main as a Release Candidate, not a final tag. The first
 
 If V2 lands on prod and breaks anything that wasn't caught by §1–§9:
 
-1. `ssh root@192.168.178.180 "pct exec 100 -- bash -c 'cd /opt/travstats
+1. `ssh root@<pve-node3> "pct exec 100 -- bash -c 'cd /opt/travstats
    && APP_VERSION=1.5.0 docker compose pull && docker compose up -d'"`
 2. Confirm `/health` still returns 200 on the rollback tag.
 3. File a `gsd:debug` session against the regression and continue

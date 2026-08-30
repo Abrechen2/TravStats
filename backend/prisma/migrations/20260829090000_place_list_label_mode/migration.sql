@@ -1,0 +1,13 @@
+-- What a places list says its places should be labelled with on the map.
+--
+-- Only ever the list's DEFAULT: the map's own control ("as the list says" /
+-- "always names" / "always symbols") overrides it for the whole map. That is
+-- why this is a column on the list rather than a user setting -- a user has one
+-- map but many lists, and the McDonald's list wanting a symbol says nothing
+-- about the hotels list.
+--
+-- NOT NULL with a default rather than nullable: every list has an answer, and
+-- NULL would only be a second spelling of 'name'. A list carrying no `icon`
+-- renders names whatever this column says, so the default is also the only
+-- value existing rows could truthfully take.
+ALTER TABLE "place_lists" ADD COLUMN     "label_mode" TEXT NOT NULL DEFAULT 'name';

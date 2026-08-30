@@ -42,8 +42,8 @@ const baseStay: LodgingStay = {
   userId: "user-1",
   tripId: null,
   bookingId: null,
-    checkInTime: null,
-    checkOutTime: null,
+  checkInTime: null,
+  checkOutTime: null,
   checkIn: "2024-05-12T15:00:00.000Z",
   checkOut: "2024-05-14T11:00:00.000Z",
   datePrecision: "DAY" as const,
@@ -260,12 +260,8 @@ describe("LodgingDetailPage", () => {
   });
 
   it("shows the trip pill and the loyalty program when a stay is linked to both", async () => {
-    tripsGetAllMock.mockResolvedValue([
-      { id: "trip-1", name: "Zürich City" },
-    ]);
-    listMembershipsMock.mockResolvedValue([
-      { id: "mem-1", programName: "NH Rewards" },
-    ]);
+    tripsGetAllMock.mockResolvedValue([{ id: "trip-1", name: "Zürich City" }]);
+    listMembershipsMock.mockResolvedValue([{ id: "mem-1", programName: "NH Rewards" }]);
     const linkedStay: LodgingStay = { ...baseStay, tripId: "trip-1", membershipId: "mem-1" };
     getLodgingMock.mockResolvedValue(makeLodging({}, [linkedStay]));
 
@@ -309,8 +305,8 @@ describe("LodgingDetailPage", () => {
             createdAt: "2024-01-01T00:00:00.000Z",
           },
         },
-        [derivedStay],
-      ),
+        [derivedStay]
+      )
     );
 
     renderDetailPage();
@@ -333,7 +329,7 @@ describe("LodgingDetailPage", () => {
 
   it("shows the Original amount and per-category rating averages in the sidebar cards", async () => {
     getLodgingMock.mockResolvedValue(
-      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }, [baseStay]),
+      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }, [baseStay])
     );
 
     renderDetailPage();
@@ -367,7 +363,7 @@ describe("LodgingDetailPage", () => {
     // must not render that 0 as "0 €", which would wrongly assert the stay
     // was free.
     getLodgingMock.mockResolvedValue(
-      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {} }, [clearedStay]),
+      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {} }, [clearedStay])
     );
 
     renderDetailPage();
@@ -381,5 +377,77 @@ describe("LodgingDetailPage", () => {
     expect(spendBaseLabel.closest("div")?.textContent).not.toMatch(/0\s*€/);
     const perNightLabel = screen.getByText("lodging:detail.spendPerNight");
     expect(perNightLabel.closest("div")?.textContent).toMatch(/—/);
+  });
+
+  /**
+   * Notes were accepted and then shown nowhere.
+   *
+   * The form has the field, the schema stores it, and the detail page did not
+   * mention it once — so anything typed there vanished from view the moment it
+   * was saved (Alex, 2026-08-29). It is rendered under the SAME label the form
+   * uses; calling it "Beschreibung" in one place and "Notizen" in the other
+   * would trade one inconsistency for a fresh one.
+   */
+  it("shows the notes that were typed into the form", async () => {
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ notes: "Zimmer zur Hofseite verlangen, Strasse ist laut." })
+    );
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Zimmer zur Hofseite verlangen, Strasse ist laut.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("says nothing at all when there are no notes", async () => {
+    // An empty "Notizen" heading over blank space is its own small lie.
+    getLodgingMock.mockResolvedValue(makeLodging({ notes: null }));
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("lodging-delete-button")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("lodging:field.notes")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Coming from a chain, the way back is the chain.
+   *
+   * The back button was hard-wired to the full lodging list, so a reader who
+   * had drilled list -> chain -> hotel landed two levels up and had to find
+   * the chain again (Alex, 2026-08-29). The origin travels in router state, so
+   * it survives the click that set it and nothing else — on a reload or a
+   * bookmark there genuinely is no origin, and the list is then the honest
+   * answer rather than a remembered guess.
+   */
+  it("offers the way back to the chain when that is where the reader came from", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/lodging/lodging-1", state: { fromChain: { id: 7, name: "Kempinski" } } },
+        ]}
+      >
+        <Routes>
+          <Route path="/lodging/:id" element={<LodgingDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("← Kempinski")).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to the list when there is no origin", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
+    });
   });
 });

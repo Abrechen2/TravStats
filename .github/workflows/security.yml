@@ -1,0 +1,228 @@
+name: Security
+
+# Why this file exists
+# --------------------
+# TravStats publishes a Docker image to GHCR and Docker Hub that strangers
+# run on their own servers, and until August 2026 nothing in CI looked at
+# dependencies at all — no audit, no scanner, no SARIF, nothing feeding the
+# Security tab. The whole supply chain was checked by whoever happened to
+# read `npm install` output.
+#
+# Separate from ci.yml on purpose. The README's CI badge points at ci.yml,
+# and scanner findings arrive on someone else's schedule — a new CVE
+# published against an unchanged dependency would otherwise turn the badge
+# red for a commit that changed nothing. Correctness and supply chain are
+# different questions and deserve different answers.
+#
+# What is a GATE here and what is a REPORT
+# ----------------------------------------
+# Only one thing blocks: a CRITICAL vulnerability in production
+# dependencies. That threshold was picked by measuring, not by taste — see
+# the audit job. Everything else lands in the Security tab, where findings
+# get triaged instead of trained-past. A scanner wired to fail the build on
+# its first run just teaches everyone to ignore a red X.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Dependencies rot without anyone touching the repo: a CVE published
+    # today applies to code that last changed in April. A push-only trigger
+    # would never notice. Monday 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------
+  # npm audit — the one blocking security check.
+  #
+  # Scope is `--omit=dev` deliberately. The dev tree (vite, eslint, jest,
+  # playwright …) never reaches a user's server; treating a devDependency
+  # advisory as release-blocking is how audit gates get switched off
+  # wholesale. Production dependencies are the ones that ship.
+  #
+  # Threshold measured on main @ 6fe74af3 (2026-08-30), `npm audit
+  # --omit=dev` in each tree:
+  #
+  #   backend :  1 high,                          0 critical
+  #   frontend: 10 high, 1 moderate,              0 critical
+  #
+  # So `--audit-level=high` would have been born red in BOTH trees — a
+  # required check that has never once been green, which is worth less
+  # than no check. `--audit-level=critical` exits 0 in both trees today
+  # (verified: exit code 0 at critical, exit code 1 at high), so it is a
+  # real gate that is genuinely passing and can genuinely start failing.
+  #
+  # What the current highs actually are, so the next person does not
+  # re-derive it:
+  #
+  #   * frontend, 10 of the 11: one chain — image-size <- texture-compressor
+  #     <- @loaders.gl/textures <- deck.gl 9.x. npm's only offered "fix" is
+  #     deck.gl 8.9.36, a MAJOR DOWNGRADE of the mapping stack. The
+  #     advisories are DoS loops in ICNS/JXL/HEIF decoding inside a texture
+  #     CLI that the browser bundle never executes. There is no forward fix
+  #     to take; taking the backward one would break the maps.
+  #   * frontend dompurify (moderate) via jspdf, and backend undici (high)
+  #     via cheerio, both have real in-range fixes available. Those are
+  #     ordinary dependency-bump work, tracked separately — not a reason to
+  #     wire a gate that blocks every unrelated commit until they land.
+  #
+  # Raise this to `high` the moment those numbers reach zero. Do not raise
+  # it as an aspiration.
+  # ---------------------------------------------------------------------
+  audit:
+    name: npm audit (production deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      # `npm audit` queries the registry from the lockfile and needs no
+      # node_modules, so there is no install step here.
+      - name: Audit backend production dependencies
+        run: cd backend && npm audit --omit=dev --audit-level=critical
+
+      - name: Audit frontend production dependencies
+        run: cd frontend && npm audit --omit=dev --audit-level=critical
+
+      # Runs even when the gate above passes, so the highs stay visible
+      # instead of sitting silently under the threshold until one of them
+      # is upgraded to critical by an advisory revision.
+      - name: Report full advisory counts
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            echo "### npm audit — production dependencies"
+            echo ""
+            echo "Blocking threshold: critical. Lower severities are reported, not gated."
+            echo ""
+            echo "| Tree | critical | high | moderate | low |"
+            echo "|---|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for tree in backend frontend; do
+            # `npm audit` exits non-zero when it finds anything, which would
+            # kill the step under `set -e` before the summary is written.
+            counts=$(cd "$tree" && npm audit --omit=dev --json 2>/dev/null || true)
+            printf '%s' "$counts" | node -e '
+              let raw = "";
+              process.stdin.on("data", d => raw += d);
+              process.stdin.on("end", () => {
+                let v = {};
+                try { v = JSON.parse(raw).metadata.vulnerabilities || {}; } catch {}
+                const n = k => v[k] ?? 0;
+                console.log(`| ${process.argv[1]} | ${n("critical")} | ${n("high")} | ${n("moderate")} | ${n("low")} |`);
+              });
+            ' "$tree" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  # ---------------------------------------------------------------------
+  # Trivy — repository scan, findings go to the Security tab.
+  #
+  # NOT a gate, and `exit-code: 0` below says so honestly rather than
+  # hiding a failure behind continue-on-error. The SARIF upload is the
+  # product of this job: findings become Code Scanning alerts that can be
+  # triaged, dismissed with a reason, and tracked over time. An exit code
+  # cannot do any of that, and this scanner has never run against this repo
+  # before — nobody has seen its first output, so gating on it would be
+  # gating on an unknown.
+  #
+  # Two details that silently break this job if changed carelessly:
+  #
+  #   * The action tag is `v0.36.0`. The tags carry a leading `v`; a
+  #     plain `0.33.1` does not resolve and the step fails to load.
+  #   * `limit-severities-for-sarif: true` is REQUIRED for `severity` to
+  #     mean anything in SARIF output. Without it Trivy writes every
+  #     severity into the report regardless of the filter, and the Security
+  #     tab fills with LOW noise that buries the findings worth reading.
+  #
+  # `ignore-unfixed` keeps the list actionable: an advisory with no
+  # released fix is not something this repo can act on today.
+  # ---------------------------------------------------------------------
+  trivy:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          # Reporting job: the alerts are the output, not the exit status.
+          exit-code: "0"
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        # `if: always()` so a scan that dies mid-run still publishes what it
+        # managed to produce instead of losing the whole run.
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-fs
+
+  # ---------------------------------------------------------------------
+  # CodeQL — static analysis of the TypeScript on both sides.
+  #
+  # Also not a gate. CodeQL reports into the Security tab; the job fails
+  # only if the analysis itself breaks, which is a real failure worth
+  # seeing. `security-and-quality` is the wider query pack — on a codebase
+  # this size the extra queries cost minutes, not hours, and this repo has
+  # never had static analysis run over it, so the wider net is worth it on
+  # the first pass. Narrow to `security-extended` if run time becomes a
+  # problem.
+  # ---------------------------------------------------------------------
+  codeql:
+    name: CodeQL (TypeScript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      # No build step: `javascript-typescript` analyses source directly.
+      # Adding one would only slow the job down.
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: codeql-js
+
+# Deliberately NOT here, so nobody adds them by reflex:
+#
+#   * bandit / pip-audit. Python tooling. The only Python in this repo is
+#     backend/src/scripts/*.py, developer-side helpers that are not part of
+#     the shipped runtime. `ruff` already covers them via pre-commit. A
+#     Python security stack here would scan code no user ever executes.
+#   * Trivy image scan. The release image is built on the maintainer's
+#     machine at deploy time, not in CI, so there is no image here to scan
+#     without duplicating the entire multi-stage build on every push. The
+#     filesystem scan already covers the dependency manifests that image is
+#     built from. Wire an image scan into the deploy path, not into this
+#     file, if it is wanted.

@@ -9,10 +9,12 @@ import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { formatDateTimeInTimezone } from "../lib/dateUtils";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
+import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
 import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -28,6 +30,7 @@ import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
+import TourSectionList from "../components/Trips/TourSectionList";
 import {
   compareTimelineEvents,
   formatTimelineDate,
@@ -37,14 +40,15 @@ import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { Place, PlaceVisit } from "../types/place";
 
-type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
-const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
+type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
+const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "tours"];
 const TAB_ICON: Record<TabKey, string> = {
   overview: "📋",
   timeline: "📅",
   map: "🗺",
   gallery: "📷",
   logistics: "🧾",
+  tours: "🛣",
 };
 
 /**
@@ -62,7 +66,11 @@ const TAB_ICON: Record<TabKey, string> = {
  */
 export default function TripDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const { t, i18n } = useTranslation(["trips", "common"]);
+  // "cruise" and "flights" are here because the timeline entries expand to show
+  // a cabin type and a seat class, whose words live in those namespaces. Without
+  // them `t("cruise:cabinType.balcony")` cannot resolve and the raw key reaches
+  // the screen — which is what a browser showed, and no test could.
+  const { t, i18n } = useTranslation(["trips", "common", "cruise", "flights"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -119,7 +127,6 @@ export default function TripDetailPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [id]);
-
 
   const handleDelete = async (): Promise<void> => {
     if (!trip) return;
@@ -212,6 +219,7 @@ export default function TripDetailPage(): JSX.Element {
           {tab === "logistics" && (
             <LogisticsTab trip={shownTrip} t={t} onChanged={() => void load()} />
           )}
+          {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
         </div>
       </div>
 
@@ -368,6 +376,11 @@ interface TabBarProps {
 }
 
 function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
+  // "tours" is the only tab gated by the instance-level beta flag today —
+  // see `config/betaFeatures.ts` (`tourRoutes`) for why.
+  const { isFeatureVisible } = useBetaFeatures();
+  const visibleTabs = TABS.filter((key) => key !== "tours" || isFeatureVisible("tourRoutes"));
+
   return (
     <div
       className="sticky top-0 z-30"
@@ -377,7 +390,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
-        {TABS.map((key) => {
+        {visibleTabs.map((key) => {
           const isActive = tab === key;
           return (
             <button
@@ -501,6 +514,9 @@ type TimelineEvent =
       date: string;
       title: string;
       subtitle: string | null;
+      /** The row itself, so the entry can open in place. It is already on the
+       *  trip payload -- see the note on `Trip["flights"]`. */
+      flight: NonNullable<Trip["flights"]>[number];
     }
   | {
       id: string;
@@ -508,6 +524,7 @@ type TimelineEvent =
       date: string;
       title: string;
       subtitle: string | null;
+      cruise: NonNullable<Trip["cruises"]>[number];
     }
   | {
       id: string;
@@ -580,9 +597,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         if (cancelled) return;
         setPlaceVisits(
           places.flatMap((place) =>
-            place.visits
-              .filter((v) => v.tripId === id)
-              .map((visit) => ({ place, visit }))
+            place.visits.filter((v) => v.tripId === id).map((visit) => ({ place, visit }))
           )
         );
       } catch (err: unknown) {
@@ -619,6 +634,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         subtitle: f.arrivalTime
           ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
           : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
+        flight: f,
       });
     }
     for (const c of trip.cruises ?? []) {
@@ -631,6 +647,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         subtitle: c.endDate
           ? `${new Date(c.startDate).toLocaleDateString()} → ${new Date(c.endDate).toLocaleDateString()}`
           : new Date(c.startDate).toLocaleDateString(),
+        cruise: c,
       });
     }
     for (const s of trip.stops ?? []) {
@@ -674,7 +691,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
       // It is still shown on the trip — in the lodging list below, which needs
       // no chronology — rather than being dropped from the page.
       if (s.checkIn !== null) {
-        out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
+        out.push({
+          id: `lodging-checkin-${s.id}`,
+          kind: "lodging-checkin",
+          date: s.checkIn,
+          stay: s,
+        });
       }
       if (s.checkOut !== null) {
         out.push({
@@ -836,8 +858,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                     boxShadow: "0 0 0 3px var(--bg-base)",
                   }}
                 />
-                {ev.kind === "flight" && <FlightCard ev={ev} />}
-                {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} />}
+                {ev.kind === "flight" && <FlightCard ev={ev} t={t} />}
+                {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
                     ev={ev}
@@ -854,9 +876,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
                 )}
-                {ev.kind === "place-visit" && (
-                  <PlaceVisitCard ev={ev} language={language} />
-                )}
+                {ev.kind === "place-visit" && <PlaceVisitCard ev={ev} language={language} />}
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
@@ -1004,28 +1024,128 @@ function EventCard({
   );
 }
 
-function FlightCard({ ev }: { ev: Extract<TimelineEvent, { kind: "flight" }> }): JSX.Element {
+/**
+ * The clock time of a cruise stop.
+ *
+ * A stop's arrival/departure is a UTC-pinned WALL CLOCK, like the stop's date
+ * itself — the ship's local time, stored at UTC so it cannot drift. Rendering
+ * it in the viewer's zone would move Barcelona's 12:00 departure by an hour for
+ * a reader in London. The raw value is a full ISO timestamp, which is what
+ * reached the screen before this existed.
+ */
+/**
+ * The four cabin types the schema names. Anything else is shown as stored.
+ *
+ * `Cruise.cabinType` is TYPED as an enum and is not one in practice: measured
+ * on 2026-08-29, the demo seed alone holds thirteen distinct free-text values
+ * ("Balkonkabine", "The Haven Penthouse", "Yacht Club Suite"), and a parsed
+ * booking can carry whatever the line calls its cabins. Translating blindly put
+ * the raw key "cabinType.Balkon" on screen. A word we do not have a translation
+ * for is still a word the user recognises — printing it beats printing a key.
+ */
+const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
+
+export function cabinLabel(
+  value: string | null | undefined,
+  t: ReturnType<typeof useTranslation>["t"]
+): string | null {
+  if (!value) return null;
+  return (CABIN_TYPES as readonly string[]).includes(value)
+    ? t(`cruise:cabinType.${value}`)
+    : value;
+}
+
+function stopClock(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(11, 16);
+}
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}): JSX.Element | null {
+  if (value === null || value === undefined || value === "") return null;
   return (
-    <EventCard
+    <div className="flex gap-2 text-xs py-0.5">
+      <span style={{ color: "var(--text-muted)", minWidth: 110 }}>{label}</span>
+      <span style={{ color: "var(--text-primary)" }}>{value}</span>
+    </div>
+  );
+}
+
+/** The link out of the panel. Always a sibling of the toggle button, never a
+ *  child of it — see the note in ExpandableEventCard. */
+function OpenFullLink({ to, label }: { to: string; label: string }): JSX.Element {
+  return (
+    <Link
+      to={to}
+      className="inline-block mt-2 rounded-lg px-3 py-1.5 text-xs font-medium"
+      style={{ border: "1px solid var(--accent)", color: "var(--accent)" }}
+    >
+      {label} →
+    </Link>
+  );
+}
+
+function FlightCard({
+  ev,
+  t,
+}: {
+  ev: Extract<TimelineEvent, { kind: "flight" }>;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const f = ev.flight;
+  const seat = [f.seatNumber, f.seatClass ? t(`flights:seatClass.${f.seatClass}`) : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <ExpandableEventCard
       icon="✈"
       bg="rgba(240,169,71,0.15)"
       iconColor="var(--domain-flight, var(--accent))"
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
-    />
+      expanded={open}
+      onToggle={() => setOpen((v) => !v)}
+      detailsLabel={t("trips:detail.timeline.showDetails")}
+    >
+      <DetailRow
+        label={t("trips:detail.timeline.flightNumber")}
+        value={[f.airline, f.flightNumber].filter(Boolean).join(" ") || null}
+      />
+      <DetailRow label={t("trips:detail.timeline.aircraft")} value={f.aircraft ?? null} />
+      <DetailRow label={t("trips:detail.timeline.seat")} value={seat || null} />
+      <DetailRow
+        label={t("trips:detail.timeline.price")}
+        value={f.price != null ? `${f.price} ${f.currency ?? ""}`.trim() : null}
+      />
+      <OpenFullLink to={`/flights/${f.id}`} label={t("trips:detail.timeline.openFlight")} />
+    </ExpandableEventCard>
   );
 }
 
 function CruiseCard({
   ev,
   language,
+  t,
 }: {
   ev: Extract<TimelineEvent, { kind: "cruise" }>;
   language: string | undefined;
+  t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const c = ev.cruise;
+  const ship = c.ship?.name ?? c.shipNameOverride ?? null;
+  const stops = c.stops ?? [];
   return (
-    <EventCard
+    <ExpandableEventCard
       icon="⚓"
       bg="rgba(111,160,214,0.15)"
       iconColor="var(--domain-cruise, #6fa0d6)"
@@ -1037,7 +1157,62 @@ function CruiseCard({
       // styles side by side. Only FlightCard keeps local formatting, because
       // a departure time is a genuine instant.
       dateLabel={formatTimelineDate(ev.date, language)}
-    />
+      expanded={open}
+      onToggle={() => setOpen((v) => !v)}
+      detailsLabel={t("trips:detail.timeline.showDetails")}
+    >
+      <DetailRow label={t("trips:detail.timeline.ship")} value={ship} />
+      <DetailRow label={t("trips:detail.timeline.route")} value={c.routeName ?? null} />
+      <DetailRow
+        label={t("trips:detail.timeline.cabin")}
+        value={[cabinLabel(c.cabinType, t), c.cabinNumber].filter(Boolean).join(" · ") || null}
+      />
+      <DetailRow
+        label={t("trips:detail.timeline.price")}
+        value={c.price != null ? `${c.price} ${c.currency ?? ""}`.trim() : null}
+      />
+
+      {stops.length > 0 && (
+        <div className="mt-2">
+          <div
+            className="text-[11px] uppercase tracking-wide mb-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {t("trips:detail.timeline.itinerary")}
+          </div>
+          <ol className="flex flex-col gap-0.5" style={{ listStyle: "none", paddingLeft: 0 }}>
+            {stops.map((stop) => (
+              <li key={stop.id} className="flex gap-2 text-xs">
+                <span
+                  className="font-mono shrink-0"
+                  style={{ color: "var(--text-muted)", minWidth: 22 }}
+                >
+                  {stop.dayNumber}
+                </span>
+                <span style={{ color: "var(--text-primary)" }}>
+                  {/* The three-state stop invariant, rendered honestly: a sea
+                      day says so, an unresolved port keeps the name it was
+                      imported under rather than pretending to be a catalogue
+                      port, and a matched port shows its own name. */}
+                  {stop.isAtSea
+                    ? t("trips:detail.timeline.atSea")
+                    : (stop.port?.name ?? stop.unresolvedPortName ?? "—")}
+                </span>
+                {(stop.arrivalTime || stop.departureTime) && (
+                  <span className="font-mono ml-auto" style={{ color: "var(--text-muted)" }}>
+                    {[stopClock(stop.arrivalTime), stopClock(stop.departureTime)]
+                      .filter(Boolean)
+                      .join(" – ")}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <OpenFullLink to={`/cruises/${c.id}`} label={t("trips:detail.timeline.openCruise")} />
+    </ExpandableEventCard>
   );
 }
 
@@ -1064,7 +1239,7 @@ function LodgingCheckCard({
   const isCheckIn = ev.kind === "lodging-checkin";
   const title = t(
     isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
-    { name: stay.lodging.name },
+    { name: stay.lodging.name }
   );
   // Check-in/out are stored as the calendar day at UTC midnight and we capture no
   // time of day. Rendering them in local time would print a meaningless "02:00" and,
@@ -1080,9 +1255,7 @@ function LodgingCheckCard({
         iconColor="var(--domain-lodging, #d4778f)"
         title={title}
         subtitle={
-          showHint
-            ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}`
-            : subtitle
+          showHint ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
         }
         date={ev.date}
         dateLabel={formatTimelineDate(ev.date, language)}
@@ -1197,6 +1370,7 @@ function RowActions({
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
+  const { t } = useTranslation(["common"]);
   return (
     <div className="flex gap-1 mt-1">
       {onView && (
@@ -1205,7 +1379,7 @@ function RowActions({
           onClick={onView}
           className="text-[11px] px-1.5 py-0.5 rounded-sm"
           style={{ color: "var(--text-muted)" }}
-          aria-label="view"
+          aria-label={t("common:accessibility.view")}
           title="view"
         >
           👁
@@ -1216,7 +1390,7 @@ function RowActions({
         onClick={onEdit}
         className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--text-muted)" }}
-        aria-label="edit"
+        aria-label={t("common:buttons.edit")}
         title="edit"
       >
         ✎
@@ -1226,7 +1400,7 @@ function RowActions({
         onClick={onDelete}
         className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--danger, #f87171)" }}
-        aria-label="delete"
+        aria-label={t("common:buttons.delete")}
         title="delete"
       >
         ✕

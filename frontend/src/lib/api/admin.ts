@@ -8,6 +8,7 @@ import type {
   SmtpConfigInput,
   SmtpConfigResponse,
 } from "./types";
+import type { RoutingProviderId } from "../../types/tour";
 
 export interface InstanceSettings {
   instanceName: string;
@@ -319,6 +320,13 @@ export const adminApi = {
     globalOpenskyClientSecret?: string;
     globalOpenskyUsername?: string;
     globalOpenskyPassword?: string;
+    // Tour routing provider (Phase 3): the global key each of the two
+    // key-based providers falls back to when a user has none of their own,
+    // and which provider/custom URL is active for the whole instance.
+    globalOpenrouteserviceApiKey?: string;
+    globalGraphhopperApiKey?: string;
+    routingProvider: RoutingProviderId | null;
+    routingCustomUrl: string | null;
     allowUserFlightApiKeys: boolean;
   }> => {
     const { data } = await api.get<{
@@ -330,6 +338,10 @@ export const adminApi = {
       globalOpenskyClientSecret?: string;
       globalOpenskyUsername?: string;
       globalOpenskyPassword?: string;
+      globalOpenrouteserviceApiKey?: string;
+      globalGraphhopperApiKey?: string;
+      routingProvider: RoutingProviderId | null;
+      routingCustomUrl: string | null;
       allowUserFlightApiKeys: boolean;
     }>("/admin/api-keys");
     return data;
@@ -344,6 +356,10 @@ export const adminApi = {
     globalOpenskyClientSecret?: string | null;
     globalOpenskyUsername?: string | null;
     globalOpenskyPassword?: string | null;
+    globalOpenrouteserviceApiKey?: string | null;
+    globalGraphhopperApiKey?: string | null;
+    routingProvider?: RoutingProviderId | null;
+    routingCustomUrl?: string | null;
     allowUserFlightApiKeys?: boolean;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/api-keys", keys);
@@ -358,6 +374,8 @@ export const adminApi = {
       | "aviationstack"
       | "aerodatabox"
       | "opensky"
+      | "openrouteservice"
+      | "graphhopper"
       | "logostream"
       | "googlePlaces",
     apiKey?: string,

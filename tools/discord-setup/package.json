@@ -9,6 +9,7 @@
     "setup:dry": "tsx src/index.ts setup --dry-run",
     "serve": "tsx src/index.ts serve",
     "read": "tsx src/index.ts read",
+    "triage-scan": "tsx src/triageScan.ts",
     "announce": "tsx src/index.ts announce",
     "reply": "tsx src/index.ts reply",
     "typecheck": "tsc --noEmit",

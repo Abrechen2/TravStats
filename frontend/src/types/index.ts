@@ -1,5 +1,6 @@
 import type { Lodging, LodgingStay } from "./lodging";
 import type { LinkedAlbum } from "./immich";
+import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
 
 export interface User {
   id: string;
@@ -239,6 +240,16 @@ export interface Trip {
     | "price"
     | "currency"
     | "bookingId"
+    // The timeline entry expands in place to show the flight without leaving
+    // the trip. GET /trips/:id already sends the whole row -- this Pick was
+    // simply narrower than the wire, and the fields below were arriving and
+    // being discarded.
+    | "airline"
+    | "flightNumber"
+    | "aircraft"
+    | "seatNumber"
+    | "seatClass"
+    | "status"
   >[];
   cruises?: Array<{
     id: string;
@@ -254,6 +265,18 @@ export interface Trip {
     currency?: string | null;
     bookingId?: string | null;
     distanceKm?: number;
+    // Same story as the flight fields above: GET /trips/:id includes the ship,
+    // both ports and every stop (ordered by day), and this type declared less
+    // than arrived. The timeline entry expands to show the itinerary, so it
+    // needs no second request.
+    ship?: Ship | null;
+    shipNameOverride?: string | null;
+    routeName?: string | null;
+    departurePort?: Port | null;
+    arrivalPort?: Port | null;
+    stops?: CruiseStop[];
+    cabinType?: CabinType | null;
+    cabinNumber?: string | null;
   }>;
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];

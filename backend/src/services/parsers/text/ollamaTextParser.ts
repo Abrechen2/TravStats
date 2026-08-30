@@ -1,12 +1,19 @@
 import https from "https";
 import http from "http";
-import { ITextParser, ProviderAvailability, TextProvider } from "../types";
+import { ITextParser, ProviderAvailability, TextProvider, TextParseOptions } from "../types";
 import { ParsedBooking } from "../../bookingParser";
 import logger from "../../../utils/logger";
 
-export function buildSystemPrompt(): string {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const exampleYear = new Date().getFullYear();
+/**
+ * @param referenceDate The point a year-less date should be read against —
+ *   normally when the email was SENT. Omitted means today, which is right for
+ *   a confirmation that just arrived and wrong for a mailbox export: an email
+ *   from 2005 saying "16 JUL" was coming back as a 2026 flight (#285).
+ */
+export function buildSystemPrompt(referenceDate?: Date): string {
+  const anchor = referenceDate ?? new Date();
+  const today = anchor.toISOString().slice(0, 10); // YYYY-MM-DD
+  const exampleYear = anchor.getUTCFullYear();
   return `You are a flight booking data extractor. Extract all flight segments from booking confirmation emails.
 
 Today's date is ${today}. Use this as the reference point for any date that does not carry an explicit year in the source.
@@ -186,7 +193,13 @@ export class OllamaTextParser implements ITextParser {
     }
   }
 
-  async parseEmail(subject: string, text: string): Promise<ParsedBooking[]> {
+  async parseEmail(
+    subject: string,
+    text: string,
+    _html?: string,
+    _apiKey?: string,
+    options?: TextParseOptions,
+  ): Promise<ParsedBooking[]> {
     // 12k chars ≈ 3k tokens — comfortably within every deployed model's
     // context alongside the system prompt. The old 5000 cap sat 300 chars
     // above a real Emirates booking PDF; anything longer silently lost its
@@ -207,7 +220,7 @@ export class OllamaTextParser implements ITextParser {
     // JSON extraction.
     const body = JSON.stringify({
       model: this.model,
-      system: buildSystemPrompt(),
+      system: buildSystemPrompt(options?.referenceDate),
       prompt: userPrompt,
       stream: false,
       think: false,

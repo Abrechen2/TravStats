@@ -137,14 +137,34 @@ describe('Text Parsers', () => {
         expect(result[0].flightNumber).toBeDefined();
       });
 
-      it('should handle emails with no flight information', async () => {
+      it('returns nothing for an email with no flight information', async () => {
+        // Changed deliberately. This used to assert ONE candidate with missing
+        // fields, which is the behaviour Forgejo #17 reported: ordinary
+        // marketing mail came back as a booking — one case with no flight
+        // number and no route at all, just a date lifted out of the prose —
+        // and the UI opened a review form over it rather than saying no
+        // booking was found.
+        //
+        // A candidate now needs a flight number or both ends of a route. A
+        // date is not evidence; every promotional email has one.
         const subject = 'Hello there';
         const text = 'This is just a regular email with no flight info.';
 
         const result = await parser.parseEmail(subject, text);
 
-        expect(result).toHaveLength(1);
-        expect(result[0].missing.length).toBeGreaterThan(0);
+        expect(result).toHaveLength(0);
+      });
+
+      it('still returns a candidate when only the route is recognisable', async () => {
+        // The gate must not demand a flight number: plenty of confirmations
+        // name only the airports, and dropping those would trade one silent
+        // failure for another.
+        // The arrow form is one the extractor actually understands; prose like
+        // "von FRA nach JFK" is not recognised as a route at all, which is a
+        // separate gap and not what this gate decides.
+        const result = await parser.parseEmail('Ihre Reise', 'FRA → JFK');
+
+        expect(result.length).toBeGreaterThan(0);
       });
 
       it('should extract PNR and validate it contains numbers', async () => {

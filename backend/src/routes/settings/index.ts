@@ -9,6 +9,7 @@ import profileRouter from './profile';
 import profilePictureRouter from './profilePicture';
 import tokensRouter from './tokens';
 import immichRouter from './immich';
+import dawarichRouter from './dawarich';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/profile', profileRouter);
 router.use('/profile-picture', profilePictureRouter);
 router.use('/tokens', tokensRouter);
 router.use('/immich', immichRouter);
+router.use('/dawarich', dawarichRouter);
 
 export default router;

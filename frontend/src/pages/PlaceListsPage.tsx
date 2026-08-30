@@ -7,6 +7,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { curatedText } from "../lib/curatedCopy";
 import { logger } from "../lib/logger";
+import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
+import type { PlaceLabelMode } from "../lib/placeLabel";
 import {
   createPlaceList,
   listCuratedChecklists,
@@ -55,6 +57,8 @@ export default function PlaceListsPage(): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState<string>(LIST_COLOR_PRESETS[0]);
+  const [newIcon, setNewIcon] = useState("");
+  const [newLabelMode, setNewLabelMode] = useState<PlaceLabelMode>("name");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
@@ -86,7 +90,14 @@ export default function PlaceListsPage(): JSX.Element {
     if (!name) return;
     setSaving(true);
     try {
-      const created = await createPlaceList({ name, color: newColor });
+      const created = await createPlaceList({
+        name,
+        color: newColor,
+        // An empty input means "no symbol", which the column stores as null
+        // rather than as an empty string nothing can tell apart from a space.
+        icon: hasSymbol(newIcon) ? newIcon.trim() : null,
+        labelMode: newLabelMode,
+      });
       setCreating(false);
       setNewName("");
       navigate(`/places/lists/${created.id}`);
@@ -96,7 +107,7 @@ export default function PlaceListsPage(): JSX.Element {
     } finally {
       setSaving(false);
     }
-  }, [newName, newColor, navigate, addToast, t]);
+  }, [newName, newColor, newIcon, newLabelMode, navigate, addToast, t]);
 
   const handleSubscribe = useCallback(
     async (key: string): Promise<void> => {
@@ -200,6 +211,12 @@ export default function PlaceListsPage(): JSX.Element {
                 />
               ))}
             </div>
+            <PlaceListLabelFields
+              icon={newIcon}
+              onIconChange={setNewIcon}
+              labelMode={newLabelMode}
+              onLabelModeChange={setNewLabelMode}
+            />
             <div className="mt-4 flex gap-2">
               <button
                 type="button"

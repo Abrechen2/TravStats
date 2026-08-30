@@ -85,7 +85,16 @@ describe("PreviewModal", () => {
     expect(screen.getByText("flown")).toBeInTheDocument();
   });
 
-  it("checks rows with yellow warnings (duplicates) by default", () => {
+  it("leaves a row the server already holds unticked, but still tickable", () => {
+    // Changed deliberately: this used to assert `exact_match` was TICKED, with
+    // no reason recorded. That produced Forgejo #4 — re-importing the same CSV
+    // showed "0 bereit / 1 Duplikate" above a live button reading "1 Zeile
+    // importieren", which then imported nothing, because the count comes from
+    // the ticked rows and a duplicate is not a hard error.
+    //
+    // Unticked, not DISABLED: forcing the import back on is still one click,
+    // so the capability the old behaviour gave away for free is intact — the
+    // button simply stops promising it by default.
     render(
       <PreviewModal
         rows={[row({ dedupeHint: "exact_match" })]}
@@ -95,8 +104,36 @@ describe("PreviewModal", () => {
       />
     );
     const cb = screen.getByRole("checkbox");
-    expect(cb).toBeChecked();
+    expect(cb).not.toBeChecked();
     expect(cb).not.toBeDisabled();
+  });
+
+  it("ticks a same-day same-route row, which is a suspicion and not a duplicate", () => {
+    // Two different flights genuinely share a day and a route. Pre-unticking
+    // these would silently drop real rows — the opposite mistake, and a worse
+    // one, because nothing on screen would say a row had been dropped.
+    render(
+      <PreviewModal
+        rows={[row({ dedupeHint: "same_day_same_route" })]}
+        summary={{ ok: 0, problems: 0, duplicates: 1, unresolvable: 0 }}
+        onCommit={vi.fn().mockResolvedValue({ committed: 1, failedChunks: 0 })}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("disables the commit button when every row is one the server already holds", () => {
+    // The whole point of #4: the visible action must match what will happen.
+    render(
+      <PreviewModal
+        rows={[row({ dedupeHint: "exact_match" })]}
+        summary={{ ok: 0, problems: 0, duplicates: 1, unresolvable: 0 }}
+        onCommit={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByText("settings:import.preview.commit").closest("button")).toBeDisabled();
   });
 
   it("on commit, awaits onCommit and transitions to success view with count", async () => {
@@ -127,7 +164,9 @@ describe("PreviewModal", () => {
       />
     );
     const checkboxes = screen.getAllByRole("checkbox");
-    fireEvent.click(checkboxes[1]);
+    // Row 1 is an exact match and therefore starts UNTICKED, so it needs no
+    // click to be excluded — the assertion below is what still matters.
+    expect(checkboxes[1]).not.toBeChecked();
     fireEvent.click(screen.getByText("settings:import.preview.commit"));
     expect(onCommit).toHaveBeenCalledWith([expect.objectContaining({ sourceRowIndex: 0 })]);
   });

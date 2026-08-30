@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi } from "../../lib/api";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
+import BetaFeatureList from "./BetaFeatureList";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
@@ -155,9 +156,7 @@ export default function InstanceSettings(): JSX.Element {
   return (
     <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
       <div>
-        <h2 className="text-xl font-semibold text-(--text-primary)">
-          {t("admin:instance.title")}
-        </h2>
+        <h2 className="text-xl font-semibold text-(--text-primary)">{t("admin:instance.title")}</h2>
         <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.subtitle")}</p>
       </div>
 
@@ -172,9 +171,7 @@ export default function InstanceSettings(): JSX.Element {
           onChange={(e) => setForm({ ...form, instanceName: e.target.value })}
           className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.name.help")}
-        </p>
+        <p className="mt-1 text-xs text-(--text-muted)">{t("admin:instance.fields.name.help")}</p>
       </div>
 
       <div>
@@ -223,9 +220,7 @@ export default function InstanceSettings(): JSX.Element {
           placeholder="http://192.168.1.10:3010"
           className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.lanUrl.help")}
-        </p>
+        <p className="mt-1 text-xs text-(--text-muted)">{t("admin:instance.fields.lanUrl.help")}</p>
       </div>
 
       {/* Passkeys. Separated by a rule because these two fields are not "more
@@ -235,9 +230,7 @@ export default function InstanceSettings(): JSX.Element {
         <h3 className="text-base font-semibold text-(--text-primary)">
           {t("admin:instance.passkeys.title")}
         </h3>
-        <p className="mt-1 text-sm text-(--text-muted)">
-          {t("admin:instance.passkeys.subtitle")}
-        </p>
+        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.passkeys.subtitle")}</p>
 
         {passkeyStatus && (
           <p
@@ -342,6 +335,9 @@ export default function InstanceSettings(): JSX.Element {
           <span className="block text-xs text-(--text-muted)">
             {t("admin:instance.fields.betaFeatures.help")}
           </span>
+          {/* Derived from the registry, so it cannot drift from what the
+              switch actually gates — see BetaFeatureList.tsx. */}
+          <BetaFeatureList />
         </span>
       </label>
 

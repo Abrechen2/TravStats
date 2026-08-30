@@ -11,7 +11,10 @@ import {
   testLogostreamKey,
   testGooglePlacesKey,
   testOpenSkyCredentials,
+  testOpenRouteServiceKey,
+  testGraphHopperKey,
 } from "../../services/apiKeyTester";
+import { routingSettingsSchema } from "../../schemas/tour";
 
 interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
@@ -23,7 +26,11 @@ interface GlobalApiKeysUpdateData {
   globalOpenskyClientSecret?: string | null;
   globalOpenskyUsername?: string | null;
   globalOpenskyPassword?: string | null;
+  globalOpenrouteserviceApiKey?: string | null;
+  globalGraphhopperApiKey?: string | null;
   allowUserFlightApiKeys?: boolean;
+  routingProvider?: string | null;
+  routingCustomUrl?: string | null;
 }
 
 const globalApiKeysSchema = z
@@ -55,9 +62,18 @@ const globalApiKeysSchema = z
     globalOpenskyClientSecret: z.string().optional().nullable(),
     globalOpenskyUsername: z.string().optional().nullable(),
     globalOpenskyPassword: z.string().optional().nullable(),
+    // Tour routing provider keys (Phase 3) — plain masked-echo pattern like
+    // the flight-lookup keys above, no short-secret guard needed since these
+    // providers don't share logostream's/Google's minimum-length quirk.
+    globalOpenrouteserviceApiKey: z.string().optional().nullable(),
+    globalGraphhopperApiKey: z.string().optional().nullable(),
     allowUserFlightApiKeys: z.boolean().optional(),
   })
-  .partial();
+  .partial()
+  // Which routing provider is active, and (only for "custom") its base URL —
+  // see `routingSettingsSchema` in schemas/tour.ts for the validation and the
+  // deliberate no-egress-restriction note on the custom URL.
+  .merge(routingSettingsSchema);
 
 const testApiKeySchema = z.object({
   apiKey: z.string().optional(),
@@ -97,6 +113,8 @@ async function resolveAdminGlobalKey(
     | "globalGooglePlacesApiKey"
     | "globalOpenskyClientId"
     | "globalOpenskyClientSecret"
+    | "globalOpenrouteserviceApiKey"
+    | "globalGraphhopperApiKey"
 ): Promise<string | null> {
   const settings = await prisma.adminSettings.findFirst();
   return decryptApiKey((settings?.[column] as string | null) ?? null);
@@ -128,7 +146,11 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalOpenskyClientSecret: undefined,
         globalOpenskyUsername: undefined,
         globalOpenskyPassword: undefined,
+        globalOpenrouteserviceApiKey: undefined,
+        globalGraphhopperApiKey: undefined,
         allowUserFlightApiKeys: true,
+        routingProvider: null,
+        routingCustomUrl: null,
       });
     }
 
@@ -142,7 +164,11 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
       globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
       globalOpenskyPassword: maskKey(adminSettings.globalOpenskyPassword),
+      globalOpenrouteserviceApiKey: maskKey(adminSettings.globalOpenrouteserviceApiKey),
+      globalGraphhopperApiKey: maskKey(adminSettings.globalGraphhopperApiKey),
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys ?? true,
+      routingProvider: adminSettings.routingProvider ?? null,
+      routingCustomUrl: adminSettings.routingCustomUrl ?? null,
     });
   } catch (error) {
     logger.error({
@@ -224,8 +250,26 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         updateData.globalOpenskyPassword = encrypted;
       }
     }
+    if (payload.globalOpenrouteserviceApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalOpenrouteserviceApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalOpenrouteserviceApiKey = encrypted;
+      }
+    }
+    if (payload.globalGraphhopperApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalGraphhopperApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalGraphhopperApiKey = encrypted;
+      }
+    }
     if (payload.allowUserFlightApiKeys !== undefined) {
       updateData.allowUserFlightApiKeys = payload.allowUserFlightApiKeys;
+    }
+    if (payload.routingProvider !== undefined) {
+      updateData.routingProvider = payload.routingProvider;
+    }
+    if (payload.routingCustomUrl !== undefined) {
+      updateData.routingCustomUrl = payload.routingCustomUrl;
     }
 
     if (adminSettings) {
@@ -256,7 +300,11 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
         globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
         globalOpenskyPassword: maskKey(adminSettings.globalOpenskyPassword),
+        globalOpenrouteserviceApiKey: maskKey(adminSettings.globalOpenrouteserviceApiKey),
+        globalGraphhopperApiKey: maskKey(adminSettings.globalGraphhopperApiKey),
         allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
+        routingProvider: adminSettings.routingProvider ?? null,
+        routingCustomUrl: adminSettings.routingCustomUrl ?? null,
       },
     });
   } catch (error) {
@@ -383,6 +431,56 @@ router.post(
           });
       }
       const result = await testGooglePlacesKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/api-keys/test/openrouteservice",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalOpenrouteserviceApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No OpenRouteService key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testOpenRouteServiceKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/api-keys/test/graphhopper",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalGraphhopperApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No GraphHopper key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testGraphHopperKey(effective);
       res.json(result);
     } catch (error) {
       next(error);

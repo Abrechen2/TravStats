@@ -61,6 +61,12 @@
     "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
     "emptyCta": "Go to cruises page"
   },
+  "tourTab": {
+    "listTitle": "Tours",
+    "listEmpty": "No tours recorded yet",
+    "empty": "No tours yet. Add your first one from a trip's “Tours” tab on its detail page.",
+    "unavailable": "This feature is currently unavailable."
+  },
   "lodgingTab": {
     "loading": "Loading lodgings …",
     "emptyTitle": "No lodgings yet",
@@ -154,6 +160,11 @@
     "flights_other": "flights",
     "unnamed": "Unnamed Trip"
   },
+  "tours": {
+    "loading": "Loading tours …",
+    "loadError": "Tours could not be loaded.",
+    "retry": "Retry"
+  },
   "airport": {
     "flightsTotal_one": "flight total",
     "flightsTotal_other": "flights total",
@@ -174,7 +185,8 @@
       "flight": "Flights",
       "cruise": "Cruises",
       "lodging": "Lodging",
-      "poi": "POIs"
+      "poi": "POIs",
+      "tour": "Tours"
     }
   },
   "addPicker": {
@@ -282,7 +294,8 @@
     "lodgingRated": "Rated",
     "lodgingUnrated": "Not rated",
     "lodgingChain": "Chain",
-    "lodgingIndependent": "Independent"
+    "lodgingIndependent": "Independent",
+    "title": "Key"
   },
   "userMenu": {
     "label": "Account menu"

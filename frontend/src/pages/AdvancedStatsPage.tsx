@@ -35,12 +35,17 @@ import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
+import SectionVisibilityMenu, {
+  type SectionOption,
+} from "../components/Stats/SectionVisibilityMenu";
+import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
+import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
 import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
@@ -57,7 +62,34 @@ import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesAccess } from "../hooks/usePlacesVisible";
+import { resolveStatsTab } from "./statsTabAccess";
 import { DOMAINS, type DomainKey } from "../shared/domains";
+
+/**
+ * The flight tab's blocks, in the order they are drawn.
+ *
+ * A list rather than keys scattered through the page: the menu and the page
+ * have to agree, and a key typed in two places is a key that will disagree in
+ * one of them. A block added here but not wrapped simply offers a switch that
+ * does nothing, which is why the two live next to each other.
+ */
+const FLIGHT_SECTIONS = (t: (key: string) => string): SectionOption[] => [
+  { key: "overview", label: t("stats:sections.overview") },
+  { key: "charts", label: t("stats:sections.charts") },
+  { key: "calendar", label: t("stats:calendar.title") },
+  { key: "distance", label: t("stats:sections.distance") },
+  { key: "breakdown", label: t("stats:sections.breakdown") },
+  { key: "punctuality", label: t("stats:sections.punctuality") },
+  { key: "fun", label: t("stats:sections.fun") },
+  { key: "business", label: t("stats:sections.business") },
+  { key: "unique", label: t("stats:sections.unique") },
+  { key: "airports", label: t("stats:sections.airports") },
+  { key: "seats", label: t("stats:sections.seats") },
+  { key: "airlines", label: t("stats:sections.airlines") },
+  { key: "aircraft", label: t("stats:sections.aircraft") },
+  { key: "countries", label: t("stats:sections.countries") },
+];
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
@@ -85,11 +117,22 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilterState] = useState<DomainKey | "all">(() => {
     const tab = searchParams.get("tab");
-    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi") {
+    if (
+      tab === "all" ||
+      tab === "flight" ||
+      tab === "cruise" ||
+      tab === "lodging" ||
+      tab === "poi"
+    ) {
       return tab;
     }
     return "all";
   });
+
+  // Which blocks this tab draws. Per tab, because hiding costs on flights says
+  // nothing about cruises — and everything is visible until someone says
+  // otherwise, so a section added later still appears for existing readers.
+  const sections = useSectionVisibility(filter);
   const setFilter = useCallback(
     (next: DomainKey | "all") => {
       setFilterState(next);
@@ -111,6 +154,25 @@ export default function AdvancedStatsPage(): JSX.Element {
       tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi" ? tab : "all";
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
+
+  /**
+   * A tab the reader may not have.
+   *
+   * The tab STRIP is built from `enabled`, so a disabled domain has no button.
+   * The filter itself was read straight from `?tab=`, with no such check — so
+   * `/stats?tab=poi` drew the POI statistics for an account that had switched
+   * the domain off, and on an instance where the beta flag was off entirely.
+   * The chrome was gated and the deep link was not, which is the same gap in
+   * every application that ever had one.
+   *
+   * POI needs the three-state answer rather than a boolean: `betaFeaturesEnabled`
+   * is instance state and is `null` until `GET /settings` answers, so a hard
+   * navigation to this URL would otherwise decide "not allowed" while it simply
+   * did not know yet. Pending keeps the tab and shows nothing; denied falls back
+   * to the overview, which is a page rather than a blank.
+   */
+  const placesAccess = usePlacesAccess();
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -347,9 +409,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // labelled great-circle estimate instead of a silent zero.
   const durationTotals = flights.reduce((totals, flight) => {
     const backendMinutes =
-      flight.durationMinutes != null && flight.durationMinutes > 0
-        ? flight.durationMinutes
-        : null;
+      flight.durationMinutes != null && flight.durationMinutes > 0 ? flight.durationMinutes : null;
     return addFlightDuration(totals, {
       measuredMinutes: backendMinutes ?? measureFlightMinutes(flight),
       depLat: flight.depLat ?? null,
@@ -622,18 +682,32 @@ export default function AdvancedStatsPage(): JSX.Element {
           </div>
         </div>
 
+        {effectiveFilter === "flight" && (
+          <div className="container mx-auto px-6 pt-4 flex justify-end">
+            <SectionVisibilityMenu options={FLIGHT_SECTIONS(t)} visibility={sections} />
+          </div>
+        )}
+
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
-          {filter === "all" && <OverviewTab flights={flights} achievements={achievementSummary} />}
+          {effectiveFilter === "all" && (
+            <OverviewTab flights={flights} achievements={achievementSummary} />
+          )}
 
           {/* Cruise tab renders its own stats section. */}
-          {filter === "cruise" && <CruiseStatsSection />}
+          {effectiveFilter === "cruise" && <CruiseStatsSection />}
           {/* Moved off the dashboard map, where these numbers floated on top of
               the world the user came to look at. */}
-          {filter === "lodging" && <LodgingStatsSection />}
+          {effectiveFilter === "lodging" && <LodgingStatsSection />}
+          {/* The POI tab existed with no branch behind it since before 2.5.2 —
+              the strip offered it and the page rendered nothing. */}
+          {/* `allowed`, not "not denied": while the instance flag is still
+              unknown this renders nothing rather than drawing the section and
+              tearing it away a moment later. */}
+          {effectiveFilter === "poi" && placesAccess === "allowed" && <PoiStatsSection />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
-          {filter === "flight" && flights.length > 0 && (
+          {effectiveFilter === "flight" && flights.length > 0 && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowCertificate(true)}
@@ -665,7 +739,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           )}
 
           {/* Flight-specific stats block — flight tab only. */}
-          {filter === "flight" && (
+          {effectiveFilter === "flight" && (
             <>
               {/* Scorecard: time-range control + KPI tiles + canonical chart.
                   Replaces the old separate "Yearly Trend"/"Monthly Flights"
@@ -756,91 +830,109 @@ export default function AdvancedStatsPage(): JSX.Element {
                   {t("stats:overview.scopeHint")}
                 </span>
               </div>
-              <StatsOverviewCards
-                totalFlights={flights.length}
-                totalFlightTime={totalFlightTime}
-                estimatedHours={durationTotals.estimatedMinutes / 60}
-                estimatedFlightCount={durationTotals.estimatedCount}
-                avgFlightDuration={avgFlightDuration}
-                airlineCount={Object.keys(airlineStats).length}
-              />
+              {sections.isVisible("overview") && (
+                <StatsOverviewCards
+                  totalFlights={flights.length}
+                  totalFlightTime={totalFlightTime}
+                  estimatedHours={durationTotals.estimatedMinutes / 60}
+                  estimatedFlightCount={durationTotals.estimatedCount}
+                  avgFlightDuration={avgFlightDuration}
+                  airlineCount={Object.keys(airlineStats).length}
+                />
+              )}
 
               {/* Time-based Charts */}
-              <StatsChartsSection
-                seasonalData={seasonalData}
-                weekdayData={weekdayData}
-                hasFlights={flights.length > 0}
-              />
+              {sections.isVisible("charts") && (
+                <StatsChartsSection
+                  seasonalData={seasonalData}
+                  weekdayData={weekdayData}
+                  hasFlights={flights.length > 0}
+                />
+              )}
 
               {/* Calendar Views Section */}
-              <div className="mb-8">
-                <h2 className="text-3xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
-                  {t("stats:calendar.title")}
-                </h2>
-                <div className="mb-6">
-                  <YearHeatmap flights={flights} />
+              {sections.isVisible("calendar") && (
+                <div className="mb-8">
+                  <h2 className="text-3xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
+                    {t("stats:calendar.title")}
+                  </h2>
+                  <div className="mb-6">
+                    <YearHeatmap flights={flights} />
+                  </div>
+                  <div>
+                    <FlightCalendar flights={flights} />
+                  </div>
                 </div>
-                <div>
-                  <FlightCalendar flights={flights} />
-                </div>
-              </div>
+              )}
 
               {/* Distance Visualization */}
-              <StatsDistanceSection
-                totalDistance={totalDistance}
-                avgDistance={avgDistance}
-                longestDistance={longestDistance}
-                shortestDistance={shortestDistance}
-              />
+              {sections.isVisible("distance") && (
+                <StatsDistanceSection
+                  totalDistance={totalDistance}
+                  avgDistance={avgDistance}
+                  longestDistance={longestDistance}
+                  shortestDistance={shortestDistance}
+                />
+              )}
 
               {/* Flight Breakdown: airlines, airports, seat classes, aircraft, status, boarding, longest/shortest */}
-              <StatsFlightBreakdown
-                sortedAirlines={sortedAirlines}
-                sortedAirports={sortedAirports}
-                seatClassStats={seatClassStats}
-                sortedAircraft={sortedAircraft}
-                statusStats={statusStats}
-                boardingGroupStats={boardingGroupStats}
-                longestFlight={longestFlight}
-                shortestFlight={shortestFlight}
-                totalFlights={flights.length}
-              />
+              {sections.isVisible("breakdown") && (
+                <StatsFlightBreakdown
+                  sortedAirlines={sortedAirlines}
+                  sortedAirports={sortedAirports}
+                  seatClassStats={seatClassStats}
+                  sortedAircraft={sortedAircraft}
+                  statusStats={statusStats}
+                  boardingGroupStats={boardingGroupStats}
+                  longestFlight={longestFlight}
+                  shortestFlight={shortestFlight}
+                  totalFlights={flights.length}
+                />
+              )}
 
               {/* Punctuality (#2) — self-fetching, hides without a delay sample */}
-              <PunctualitySection />
+              {sections.isVisible("punctuality") && <PunctualitySection />}
 
               {/* Fun Statistics */}
-              {funStats && <StatsFunSection funStats={funStats} />}
+              {sections.isVisible("fun") && funStats && <StatsFunSection funStats={funStats} />}
 
               {/* Business Statistics */}
-              {features.enableCostTracking && businessStats && (
+              {sections.isVisible("business") && features.enableCostTracking && businessStats && (
                 <StatsBusinessSection businessStats={businessStats} />
               )}
 
               {/* Unique Statistics */}
-              <StatsUniqueSection uniqueStats={uniqueStats} />
+              {sections.isVisible("unique") && <StatsUniqueSection uniqueStats={uniqueStats} />}
 
               {/* Airport Statistics */}
-              <StatsAirportsSection airportStats={airportStats} />
+              {sections.isVisible("airports") && (
+                <StatsAirportsSection airportStats={airportStats} />
+              )}
 
               {/* Seat Statistics */}
-              <StatsSeatSection seatStats={seatStats} />
+              {sections.isVisible("seats") && <StatsSeatSection seatStats={seatStats} />}
 
               {/* Airline Loyalty Ranking */}
-              <div className="mt-8 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                <AirlineRankingCard />
-              </div>
+              {sections.isVisible("airlines") && (
+                <div className="mt-8 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
+                  <AirlineRankingCard />
+                </div>
+              )}
 
               {/* Aircraft (Hulls) Ranking — only shows when at least one
                   flight has a tail number on file (AeroDataBox-enriched). */}
-              <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                <AircraftRankingCard />
-              </div>
+              {sections.isVisible("aircraft") && (
+                <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
+                  <AircraftRankingCard />
+                </div>
+              )}
 
               {/* Country Distribution */}
-              <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                <CountryDistributionCard />
-              </div>
+              {sections.isVisible("countries") && (
+                <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
+                  <CountryDistributionCard />
+                </div>
+              )}
             </>
           )}
         </div>
