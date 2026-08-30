@@ -93,7 +93,11 @@ export default function CrossDomainActivityChart({
           {t("stats:overviewChart.title")}
         </h3>
         <div className="flex items-baseline gap-3">
-          <div className="flex gap-1" role="group" aria-label={t("stats:overviewChart.measureLabel")}>
+          <div
+            className="flex gap-1"
+            role="group"
+            aria-label={t("stats:overviewChart.measureLabel")}
+          >
             {(["events", "days"] as const).map((option) => (
               <button
                 key={option}
@@ -116,70 +120,88 @@ export default function CrossDomainActivityChart({
           </span>
         </div>
       </div>
-      <div
-        className="grid items-end gap-4 mt-2"
-        style={{ gridTemplateColumns: `repeat(${Math.max(years.length, 1)}, 1fr)`, height: 240 }}
-      >
-        {years.map((y, i) => {
-          const total = totals[i];
-          const isSelected = selectedYear === y;
-          const isCompare = compareEnabled && compareYear === y && selectedYear !== null;
-          const dimmed = selectedYear !== null && !isSelected && !isCompare;
-          return (
-            <div key={y} className="flex flex-col items-center gap-2 h-full">
-              <div
-                className="text-xs font-mono font-semibold"
-                style={{ color: dimmed ? "var(--text-muted)" : "var(--text-primary)" }}
-              >
-                {total}
+      {/* Forgejo #8: one column per year, each with a label under it, so the
+          grid's min-content grows with the user's history — twenty years of
+          flying pushed the /stats document past a 390px viewport and the PAGE
+          scrolled sideways instead of the chart. It scrolls in its own box now.
+
+          `overflow-y-hidden` matches YearHeatmap (#248): a bare
+          `overflow-x-auto` computes overflow-y as auto and adds a vertical
+          scrollbar the moment the horizontal one appears. */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <div
+          className="grid items-end gap-4 mt-2"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(years.length, 1)}, 1fr)`,
+            height: 240,
+            // Keeps a year column readable rather than letting many years
+            // squeeze into slivers.
+            minWidth: Math.max(280, years.length * 44),
+          }}
+        >
+          {years.map((y, i) => {
+            const total = totals[i];
+            const isSelected = selectedYear === y;
+            const isCompare = compareEnabled && compareYear === y && selectedYear !== null;
+            const dimmed = selectedYear !== null && !isSelected && !isCompare;
+            return (
+              <div key={y} className="flex flex-col items-center gap-2 h-full">
+                <div
+                  className="text-xs font-mono font-semibold"
+                  style={{ color: dimmed ? "var(--text-muted)" : "var(--text-primary)" }}
+                >
+                  {total}
+                </div>
+                <div
+                  className="w-full max-w-16 mx-auto flex flex-col-reverse rounded-sm overflow-hidden flex-1 self-stretch"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    opacity: dimmed ? 0.35 : 1,
+                    outline: isSelected
+                      ? "2px solid var(--accent)"
+                      : isCompare
+                        ? "2px dashed var(--accent)"
+                        : "none",
+                    outlineOffset: 2,
+                  }}
+                >
+                  {series.map((s) => {
+                    const v = s.data[y] ?? 0;
+                    if (v === 0) return null;
+                    return (
+                      <div
+                        key={s.key}
+                        title={`${s.label}: ${v}`}
+                        style={{
+                          height: `${(v / max) * 100}%`,
+                          background: s.color,
+                          borderTop: "1px solid rgba(0,0,0,0.2)",
+                          // A colour the user picked near the panel's own darkness
+                          // stays that colour; it just gets an edge so the bar is
+                          // still findable. Brightening it would be overruling a
+                          // deliberate choice.
+                          outline: needsOutline(s.color)
+                            ? "1px solid rgba(255,255,255,0.28)"
+                            : undefined,
+                          outlineOffset: -1,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div
+                  className="text-xs font-mono"
+                  style={{
+                    color: isSelected || isCompare ? "var(--accent)" : "var(--text-muted)",
+                    fontWeight: isSelected || isCompare ? 700 : 400,
+                  }}
+                >
+                  {y}
+                </div>
               </div>
-              <div
-                className="w-full max-w-16 mx-auto flex flex-col-reverse rounded-sm overflow-hidden flex-1 self-stretch"
-                style={{
-                  background: "var(--bg-elevated)",
-                  opacity: dimmed ? 0.35 : 1,
-                  outline: isSelected
-                    ? "2px solid var(--accent)"
-                    : isCompare
-                      ? "2px dashed var(--accent)"
-                      : "none",
-                  outlineOffset: 2,
-                }}
-              >
-                {series.map((s) => {
-                  const v = s.data[y] ?? 0;
-                  if (v === 0) return null;
-                  return (
-                    <div
-                      key={s.key}
-                      title={`${s.label}: ${v}`}
-                      style={{
-                        height: `${(v / max) * 100}%`,
-                        background: s.color,
-                        borderTop: "1px solid rgba(0,0,0,0.2)",
-                        // A colour the user picked near the panel's own darkness
-                        // stays that colour; it just gets an edge so the bar is
-                        // still findable. Brightening it would be overruling a
-                        // deliberate choice.
-                        outline: needsOutline(s.color) ? "1px solid rgba(255,255,255,0.28)" : undefined,
-                        outlineOffset: -1,
-                      }}
-                    />
-                  );
-                })}
-              </div>
-              <div
-                className="text-xs font-mono"
-                style={{
-                  color: isSelected || isCompare ? "var(--accent)" : "var(--text-muted)",
-                  fontWeight: isSelected || isCompare ? 700 : 400,
-                }}
-              >
-                {y}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

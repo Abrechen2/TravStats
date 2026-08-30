@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { ColumnMappingWizard, autoMapHeaders, type MappingFieldSpec } from "../ColumnMappingWizard";
 
 // Mirrors the flight field spec built by `useFlightMappingFields` in
@@ -416,4 +416,71 @@ describe("ColumnMappingWizard (generic)", () => {
     // ... while the untouched field gets filled from the late suggestion.
     expect((screen.getByLabelText("Anreise") as HTMLSelectElement).value).toBe("Datum Anreise");
   });
+
+  describe("a rejected mapping (Forgejo #15)", () => {
+    /**
+     * Mapping a lodging CSV so that nothing was readable — "640 dates
+     * unreadable" — left "Weiter" enabled, and pressing it again produced the
+     * identical failure. The wizard offered a way out of a dead end it already
+     * knew about, so the user pressed the same button until they gave up.
+     *
+     * Both directions matter. Locking the button whenever an error is showing
+     * would strand the wizard permanently, which is a worse bug than the one
+     * being fixed — so the second test is the one that keeps the fix honest.
+     */
+    function renderWizard(submitError: string | null) {
+      const onSubmit = vi.fn();
+      const utils = render(
+        <ColumnMappingWizard
+          fields={FLIGHT_MAPPING_FIELDS}
+          // One spare column nothing maps to, so the test can make a real
+          // change without colliding with a field that already uses it.
+          csvHeaders={[...FULL_HEADERS, "Spare"]}
+          csvSamples={{ ...FULL_SAMPLES, Spare: "x" }}
+          onSubmit={onSubmit}
+          onCancel={vi.fn()}
+          submitError={submitError}
+        />
+      );
+      const button = screen.getByRole("button", {
+        name: /settings:import\.preview\.wizard\.continue/i,
+      });
+      return { ...utils, onSubmit, button };
+    }
+
+    it("stops offering the same attempt after it was rejected", () => {
+      const { button, onSubmit } = renderWizard(null);
+      fireEvent.click(button);
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+
+      // The rejection comes back from the parent while the wizard stays open.
+      cleanup();
+      const second = renderWizard("no row could be read");
+      fireEvent.click(second.button);
+      expect(second.onSubmit).toHaveBeenCalledTimes(1);
+      fireEvent.click(second.button);
+      // Still one: the attempt that already failed is not repeated.
+      expect(second.onSubmit).toHaveBeenCalledTimes(1);
+      expect(second.button).toBeDisabled();
+    });
+
+    it("offers it again as soon as the mapping changes", () => {
+      const { button, onSubmit } = renderWizard("no row could be read");
+      fireEvent.click(button);
+      expect(button).toBeDisabled();
+
+      // Change any field and the attempt is worth making again, even before
+      // anyone knows whether it will work. Unmapping an OPTIONAL column is the
+      // smallest real change — the required ones must stay mapped or the button
+      // would be disabled for a different reason and this would prove nothing.
+      const selects = screen.getAllByRole("combobox");
+      fireEvent.change(selects[selects.length - 1], { target: { value: "Spare" } });
+
+      expect(
+        screen.getByRole("button", { name: /settings:import\.preview\.wizard\.continue/i })
+      ).not.toBeDisabled();
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+  });
+
 });

@@ -56,6 +56,10 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   // Carried through unchanged on edit.
   const externalRef = place?.externalRef ?? "";
   const [saving, setSaving] = useState(false);
+  // Forgejo #9: out-of-range coordinates used to vanish silently and the
+  // record saved without them. LocationInput now says so; this stops the
+  // form writing while the user is looking at that message.
+  const [coordsValid, setCoordsValid] = useState(true);
 
   /**
    * Lists to drop the new place into, offered on CREATE only.
@@ -189,7 +193,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={!canSave}
+            disabled={!canSave || !coordsValid}
             className="rounded-lg px-4 py-2 text-sm font-semibold"
             style={{
               background: canSave ? "var(--domain-poi)" : "var(--bg-muted)",
@@ -213,6 +217,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           <LocationInput
             value={position}
             onChange={handleLocationChange}
+            onValidityChange={setCoordsValid}
             idPrefix="place-location"
             label={t("places:form.searchLabel")}
           />

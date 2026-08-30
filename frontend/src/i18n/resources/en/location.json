@@ -24,5 +24,8 @@
     "resolving": "Resolving address…",
     "noAddress": "No address found for this point",
     "nearby": "Nearby"
-  }
+  },
+  "outOfRange": "Latitude must be between −90 and 90, longitude between −180 and 180.",
+  "latOutOfRange": "Latitude must be between −90 and 90.",
+  "lonOutOfRange": "Longitude must be between −180 and 180."
 }

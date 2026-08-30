@@ -481,10 +481,23 @@ function MergeConfirmModal({
   );
 }
 
+/**
+ * A segmented control that scrolls INSIDE itself.
+ *
+ * Forgejo #16: on a 390px phone the category group — eight buttons — pushed the
+ * document to 511px, so the whole Trips page sat partly off-canvas and the last
+ * category was unreachable. The row around these groups wraps, but a group
+ * cannot break itself apart: it is one bordered pill, and wrapping mid-control
+ * looks broken.
+ *
+ * So the group takes the width it is given and scrolls its own overflow, and
+ * the buttons refuse to shrink — a squashed "Familie" is not better than a
+ * scrollable one.
+ */
 function FilterGroup({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <div
-      className="flex gap-1 rounded-lg p-1"
+      className="flex gap-1 rounded-lg p-1 max-w-full overflow-x-auto"
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       {children}
@@ -504,7 +517,7 @@ function FilterButton({
   return (
     <button
       onClick={onClick}
-      className="px-3 py-1 rounded-md text-xs transition-colors"
+      className="px-3 py-1 rounded-md text-xs transition-colors shrink-0 whitespace-nowrap"
       style={{
         background: active ? "var(--bg-muted)" : "transparent",
         color: active ? "var(--text-primary)" : "var(--text-muted)",

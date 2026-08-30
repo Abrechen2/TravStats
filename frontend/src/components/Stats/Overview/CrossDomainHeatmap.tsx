@@ -75,33 +75,43 @@ export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): 
           {t("stats:overviewHeatmap.subtitle")}
         </span>
       </div>
-      <div
-        className="grid gap-[3px] mt-3 text-[10px]"
-        style={{ gridTemplateColumns: "80px repeat(31, 1fr)" }}
-      >
-        <div />
-        {Array.from({ length: 31 }, (_, i) => (
-          <div key={i} className="text-center" style={{ color: "var(--text-muted)" }}>
-            {(i + 1) % 5 === 0 || i === 0 ? i + 1 : ""}
-          </div>
-        ))}
-        {months.map((mLabel, mIndex) => {
-          const daysInMonth = new Date(year, mIndex + 1, 0).getDate();
-          return (
-            <FragmentRow
-              key={mLabel}
-              mIndex={mIndex}
-              mLabel={mLabel}
-              year={year}
-              daysInMonth={daysInMonth}
-              grid={grid}
-              hover={hover}
-              setHover={setHover}
-              t={t}
-              colorOf={colorOf}
-            />
-          );
-        })}
+      {/* Forgejo #8: 31 day-number columns plus an 80px label have a
+          min-content width of roughly 510px, so on a 390px phone this grid
+          pushed the whole /stats document sideways — the page scrolled, not
+          the chart. Wide content scrolls inside its own box instead.
+
+          `overflow-y-hidden` is load-bearing, same as YearHeatmap (#248): a
+          bare `overflow-x-auto` computes overflow-y as auto, and the moment a
+          horizontal scrollbar appears it adds a vertical one too. */}
+      <div className="overflow-x-auto overflow-y-hidden mt-3">
+        <div
+          className="grid gap-[3px] text-[10px] min-w-[520px]"
+          style={{ gridTemplateColumns: "80px repeat(31, 1fr)" }}
+        >
+          <div />
+          {Array.from({ length: 31 }, (_, i) => (
+            <div key={i} className="text-center" style={{ color: "var(--text-muted)" }}>
+              {(i + 1) % 5 === 0 || i === 0 ? i + 1 : ""}
+            </div>
+          ))}
+          {months.map((mLabel, mIndex) => {
+            const daysInMonth = new Date(year, mIndex + 1, 0).getDate();
+            return (
+              <FragmentRow
+                key={mLabel}
+                mIndex={mIndex}
+                mLabel={mLabel}
+                year={year}
+                daysInMonth={daysInMonth}
+                grid={grid}
+                hover={hover}
+                setHover={setHover}
+                t={t}
+                colorOf={colorOf}
+              />
+            );
+          })}
+        </div>
       </div>
       <div
         className="flex items-center gap-1.5 mt-3 text-xs"
@@ -259,7 +269,7 @@ function pickDominant(perDomain: Partial<Record<DomainKey, number>>): DomainKey 
  */
 export function domainSlices(
   perDomain: Partial<Record<DomainKey, number>>,
-  colorOf: (domain: DomainKey) => string,
+  colorOf: (domain: DomainKey) => string
 ): Array<{ domain: DomainKey; hex: string; from: number; to: number }> {
   const present = AVAILABLE_DOMAINS.map((domain) => ({
     domain,

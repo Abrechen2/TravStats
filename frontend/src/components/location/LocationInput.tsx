@@ -58,6 +58,12 @@ export interface LocationInputProps {
   label?: string;
   /** id prefix so multiple instances on one page never collide. */
   idPrefix?: string;
+  /**
+   * Told whenever the typed coordinates stop being usable, so the surrounding
+   * form can refuse to save. Optional: a caller that does not pass it keeps
+   * today's behaviour and still gets the inline message.
+   */
+  onValidityChange?: (valid: boolean) => void;
 }
 
 function isValidLat(n: number): boolean {
@@ -93,11 +99,13 @@ export function LocationInput({
   compact = false,
   label,
   idPrefix = "location-input",
+  onValidityChange,
 }: LocationInputProps): JSX.Element {
   const { t, i18n } = useTranslation(["location"]);
 
   const [query, setQuery] = useState("");
   const [coordsDetected, setCoordsDetected] = useState(false);
+  const [rangeError, setRangeError] = useState<string | null>(null);
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -154,12 +162,39 @@ export function LocationInput({
   );
 
   /** A coordinate typed or pasted into the advanced fields. */
+  /**
+   * An out-of-range pair used to be swallowed by a bare `return`.
+   *
+   * Forgejo #9: typing 999 / -999 left the numbers sitting in the fields, never
+   * called `onChange`, and the form saved a lodging with NO coordinates at all
+   * — the user's input discarded without a word, on a dialog whose Save button
+   * stayed enabled throughout. The browser marked the inputs invalid; the
+   * application never looked.
+   *
+   * Now it names which value is wrong and reports upward so a form can decline
+   * to save. A previously VALID selection is deliberately left in place:
+   * clearing it would punish a typo by throwing away a good location.
+   */
   const handleTypedPick = useCallback(
     (lat: number, lon: number): void => {
-      if (!isValidLat(lat) || !isValidLon(lon)) return;
+      const latOk = isValidLat(lat);
+      const lonOk = isValidLon(lon);
+      if (!latOk || !lonOk) {
+        setRangeError(
+          !latOk && !lonOk
+            ? "location:outOfRange"
+            : !latOk
+              ? "location:latOutOfRange"
+              : "location:lonOutOfRange"
+        );
+        onValidityChange?.(false);
+        return;
+      }
+      setRangeError(null);
+      onValidityChange?.(true);
       onChange({ lat, lon });
     },
-    [onChange]
+    [onChange, onValidityChange]
   );
 
   const handleModalConfirm = useCallback(
@@ -339,6 +374,16 @@ export function LocationInput({
             />
           </div>
         </div>
+        {rangeError && (
+          <p
+            className="mt-2 text-sm"
+            role="alert"
+            data-testid="location-range-error"
+            style={{ color: "rgb(252, 165, 165)" }}
+          >
+            {t(rangeError)}
+          </p>
+        )}
       </details>
     </div>
   );
