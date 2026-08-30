@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../../hooks/useTranslation";
-import { DOMAINS } from "../../../../shared/domains";
+
 import { ChainNameLink } from "../../../lodging/ChainNameLink";
 import type { Lodging } from "../../../../types/lodging";
+import { useDomainColors } from "../../../../hooks/useDomainColors";
 
 interface LodgingChainsViewProps {
   lodgings: readonly Lodging[];
@@ -57,6 +58,7 @@ function groupByChain(lodgings: readonly Lodging[], independentLabel: string): C
 /** "Stays per chain" mode — a simple proportional-bar list, no new chart dependency. */
 export function LodgingChainsView({ lodgings }: LodgingChainsViewProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
+  const { colorOf } = useDomainColors();
   const independentLabel = t("dashboard:lodgingTab.independentChain");
   const chains = useMemo(
     () => groupByChain(lodgings, independentLabel),
@@ -129,7 +131,7 @@ export function LodgingChainsView({ lodgings }: LodgingChainsViewProps): JSX.Ele
                     height: "100%",
                     borderRadius: 3,
                     width: `${(chain.nights / maxNights) * 100}%`,
-                    background: chain.color ?? DOMAINS.lodging.color,
+                    background: chain.color ?? colorOf("lodging"),
                   }}
                 />
               </div>

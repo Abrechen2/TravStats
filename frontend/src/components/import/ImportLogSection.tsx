@@ -10,6 +10,7 @@ import {
 } from "../../lib/api/importBatches";
 import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -56,6 +57,7 @@ function describeCounts(batch: ImportBatchSummary, t: Translate): string {
 
 export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element {
   const { t } = useTranslation(["lodging", "settings", "common"]);
+  const { colorOf } = useDomainColors();
   const addToast = useToastStore((s) => s.addToast);
 
   const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
@@ -199,7 +201,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                     <span
                       aria-hidden="true"
                       className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: DOMAINS[batch.domain].color }}
+                      style={{ background: colorOf(batch.domain) }}
                     />
                     {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
                   </span>

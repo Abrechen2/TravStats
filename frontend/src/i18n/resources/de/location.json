@@ -24,5 +24,8 @@
     "resolving": "Adresse wird ermittelt…",
     "noAddress": "Keine Adresse zu diesem Punkt gefunden",
     "nearby": "In der Nähe"
-  }
+  },
+  "outOfRange": "Breite muss zwischen −90 und 90 liegen, Länge zwischen −180 und 180.",
+  "latOutOfRange": "Breite muss zwischen −90 und 90 liegen.",
+  "lonOutOfRange": "Länge muss zwischen −180 und 180 liegen."
 }

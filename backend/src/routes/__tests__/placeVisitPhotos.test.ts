@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
+
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -200,4 +202,51 @@ describe("Place visit photos API", () => {
     // A gallery per row is a page of joins nobody asked for.
     expect(res.body.data[0].visits[0].photos).toBeUndefined();
   });
+
+  describe("identity for a later Immich link (Forgejo #21)", () => {
+    /**
+     * The Companion uploads these as a TEMPORARY copy and tells the user, in
+     * the sheet where the action lives, that the photo will be swapped for a
+     * library link later. Keeping that promise needs something exact to match
+     * on; filename, size and upload time work often and not always, and every
+     * photo stored without an identity widens the set that can only ever be
+     * matched by guessing.
+     *
+     * The expected value is computed from the SAME bytes the test uploads,
+     * with node's own crypto — not copied from the implementation. If the
+     * route ever hashed something else (the path, the multer name, a re-encoded
+     * buffer), this would not agree.
+     */
+    it("records the SHA-1 of the uploaded bytes, base64, as Immich reports it", async () => {
+      const res = await upload(visitId);
+      expect(res.status).toBe(201);
+
+      const row = await prisma.placeVisitPhoto.findUnique({
+        where: { id: res.body.data[0].id },
+        select: { checksum: true, sizeBytes: true },
+      });
+
+      const expected = createHash("sha1").update(PNG).digest("base64");
+      expect(row?.checksum).toBe(expected);
+      // base64 of a SHA-1 is always 28 characters ending in "=" — a cheap way
+      // to notice a hex digest or a different algorithm slipping in.
+      expect(row?.checksum).toHaveLength(28);
+      expect(row?.sizeBytes).toBe(PNG.length);
+    });
+
+    it("gives two identical uploads the same checksum, and that is correct", async () => {
+      // Immich deduplicates on exactly this. Two rows pointing at one asset is
+      // the intended outcome, not a collision to defend against.
+      const a = await upload(visitId);
+      const b = await upload(visitId);
+
+      const rows = await prisma.placeVisitPhoto.findMany({
+        where: { id: { in: [a.body.data[0].id, b.body.data[0].id] } },
+        select: { checksum: true },
+      });
+      expect(rows[0].checksum).toBe(rows[1].checksum);
+      expect(rows[0].checksum).not.toBeNull();
+    });
+  });
+
 });

@@ -4,9 +4,11 @@ import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 export default function ModuleSection(): JSX.Element {
   const { t } = useTranslation("common");
+  const { colorOf } = useDomainColors();
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
   const { isFeatureVisible } = useBetaFeatures();
@@ -51,7 +53,7 @@ export default function ModuleSection(): JSX.Element {
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
-                style={{ backgroundColor: `${d.color}22` }}
+                style={{ backgroundColor: `${colorOf(d.key)}22` }}
                 aria-hidden
               >
                 {d.icon}
@@ -80,7 +82,7 @@ export default function ModuleSection(): JSX.Element {
                 type="button"
                 role="switch"
                 aria-checked={enabled}
-                aria-label={d.i18nKey}
+                aria-label={t(d.i18nKey)}
                 disabled={!d.available}
                 onClick={(e) => {
                   e.stopPropagation();

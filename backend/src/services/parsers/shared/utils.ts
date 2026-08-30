@@ -210,7 +210,20 @@ export function extractAirlineCode(flightNumber: string): string | undefined {
 export const PATTERNS = {
   FLIGHT_NUMBER: /\b([A-Z]{2,3}\s?\d{1,4})\b/,
   IATA_CODE: /\b([A-Z]{3})\b/g,
-  PNR: /\b([A-Z0-9]{6})\b/,
+  /**
+   * A booking reference has to be LABELLED.
+   *
+   * This was a bare `/\b([A-Z0-9]{6})\b/` — any six-character word — matched
+   * against text the caller upper-cases first. So a German marketing mail
+   * produced the reference "LEIDER", and an American Airlines holiday greeting
+   * produced "NSCHEN": the tail of "WÜNSCHEN", because the umlaut breaks the
+   * word boundary. Both were attached to phantom flights (Forgejo #17).
+   *
+   * The trade is deliberate. An unlabelled code is now MISSED rather than
+   * invented: a missing reference is visible and easy to add by hand, while a
+   * wrong one looks like data and gets saved.
+   */
+  PNR: /(?:BUCHUNGS(?:REFERENZ|NUMMER|CODE)|RESERVIERUNGS(?:NUMMER|CODE)|BOOKING\s*(?:REFERENCE|CODE|NUMBER)|CONFIRMATION(?:\s*(?:CODE|NUMBER))?|RESERVATION\s*CODE|RECORD\s*LOCATOR|PNR)\s*[:#-]?\s*([A-Z0-9]{6})\b/i,
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
   GATE: /(?:Gate|Boarding|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
   TERMINAL: /Terminal\s*:?\s*([A-Z0-9]+)/i,

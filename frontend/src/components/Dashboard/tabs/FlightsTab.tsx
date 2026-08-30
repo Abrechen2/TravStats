@@ -192,7 +192,8 @@ export function FlightsTab(): JSX.Element {
     async (flight: FlightInput, opts?: FlightSubmitOptions): Promise<Flight> => {
       try {
         const created = await flightsApi.create(flight, opts);
-        addToast("success", t("flights:table.toast.updated"));
+        // Anlegen, nicht aendern (Forgejo #11).
+        addToast("success", t("flights:table.toast.created"));
         setShowAddFlight(false);
         await refreshAll();
         // Flows back into the form's post-create trip assignment (#199).

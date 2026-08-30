@@ -21,6 +21,8 @@ interface ParseState {
   kind: "email" | "pdf";
   result: ParseEmailResult | ParsePdfResult;
   emailMeta?: { subject?: string; text?: string; html?: string };
+  /** What the file was called, so the import log can name it (Forgejo #19). */
+  sourceFileName?: string | null;
 }
 
 /**
@@ -62,16 +64,20 @@ export default function DomainImportPanel({
     [addToast]
   );
 
-  const handleEmailResult = useCallback((result: ParseEmailResult) => {
-    setParseState({
-      kind: "email",
-      result,
-      emailMeta: { subject: result.subject, text: result.text, html: result.html },
-    });
-  }, []);
+  const handleEmailResult = useCallback(
+    (result: ParseEmailResult, fileName?: string | null) => {
+      setParseState({
+        kind: "email",
+        result,
+        emailMeta: { subject: result.subject, text: result.text, html: result.html },
+        sourceFileName: fileName ?? null,
+      });
+    },
+    []
+  );
 
-  const handlePdfResult = useCallback((result: ParsePdfResult) => {
-    setParseState({ kind: "pdf", result });
+  const handlePdfResult = useCallback((result: ParsePdfResult, fileName?: string | null) => {
+    setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
   }, []);
 
   const handleReviewCommit = useCallback(async (): Promise<void> => {
@@ -186,6 +192,7 @@ export default function DomainImportPanel({
         adapter.renderReviewModal({
           parseResult: parseState.result,
           emailMeta: parseState.emailMeta,
+          sourceFileName: parseState.sourceFileName ?? null,
           onCommit: handleReviewCommit,
           onCancel: handleReviewCancel,
         })}

@@ -73,4 +73,39 @@ describe("GET /api/v1/flights — country + timezone enrichment", () => {
     expect(typeof flight.depTimezone).toBe("string");
     expect(typeof flight.arrTimezone).toBe("string");
   });
+
+  /**
+   * The single-flight endpoint feeds the flight DETAIL page, and the detail
+   * page renders each end in its airport's clock using exactly the fields
+   * below. When only the list enriched them, the detail page fell back to UTC
+   * and a Munich departure of 12:16 read "10:16 UTC" on its own page while the
+   * list and the trip timeline both said 12:16.
+   *
+   * This asserts the two endpoints AGREE rather than restating what the values
+   * should be — a copy of the rule would pass while the surfaces drifted apart.
+   */
+  it("gives the single-flight endpoint the same enrichment as the list", async () => {
+    if (!catalogReady) return;
+    const [listRes, oneRes] = await Promise.all([
+      request(app).get("/api/v1/flights?limit=200").set("Cookie", authCookie),
+      request(app).get(`/api/v1/flights/${seededFlightId}`).set("Cookie", authCookie),
+    ]);
+    expect(listRes.status).toBe(200);
+    expect(oneRes.status).toBe(200);
+
+    const fromList = listRes.body.flights.find(
+      (f: { id: string }) => f.id === seededFlightId,
+    );
+    expect(fromList).toBeDefined();
+
+    for (const field of [
+      "depTimezone",
+      "arrTimezone",
+      "depCountry",
+      "arrCountry",
+      "durationMinutes",
+    ] as const) {
+      expect({ [field]: oneRes.body[field] }).toEqual({ [field]: fromList[field] });
+    }
+  });
 });

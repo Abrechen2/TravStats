@@ -49,18 +49,35 @@ export const CONTINENTS: readonly Continent[] = [
  * Countries that genuinely straddle two continents. A single country-level answer would
  * put Vladivostok in Europe, so these are resolved from the coordinates instead.
  */
-const TRANSCONTINENTAL: Record<string, (lat: number, lon: number) => Continent> = {
+/**
+ * A country that genuinely straddles two continents, with BOTH the resolver and
+ * the continents that resolver can return.
+ *
+ * The pair is stated rather than left implicit in the closure because a
+ * per-continent country total has to know it: without it, Egypt has to be filed
+ * under one continent or the other, and either choice is wrong half the time.
+ * Stated this way, Egypt counts towards Africa AND Asia, which is what it is.
+ */
+interface Transcontinental {
+  resolve: (lat: number, lon: number) => Continent;
+  spans: readonly Continent[];
+}
+
+const TRANSCONTINENTAL: Record<string, Transcontinental> = {
   // Ural divide, conventionally ~60°E.
-  RU: (_lat, lon) => (lon < 60 ? "Europe" : "Asia"),
+  RU: { resolve: (_lat, lon) => (lon < 60 ? "Europe" : "Asia"), spans: ["Europe", "Asia"] },
   // The Ural river runs through western Kazakhstan, roughly 55°E at Atyrau/Oral.
-  KZ: (_lat, lon) => (lon < 55 ? "Europe" : "Asia"),
+  KZ: { resolve: (_lat, lon) => (lon < 55 ? "Europe" : "Asia"), spans: ["Europe", "Asia"] },
   // The Bosphorus is at ~29°E. Istanbul Airport (IST, lon 28.8) is on the European side.
-  TR: (_lat, lon) => (lon < 29 ? "Europe" : "Asia"),
+  TR: { resolve: (_lat, lon) => (lon < 29 ? "Europe" : "Asia"), spans: ["Europe", "Asia"] },
   // The Sinai peninsula is in Asia; the rest of Egypt is Africa. The peninsula sits
   // north-east of the Gulf of Suez: Sharm el-Sheikh (27.98/34.39) and Taba are on it,
   // while Hurghada (27.18/33.80) and Marsa Alam are across the water on the African
   // coast at the same longitude, and Suez city (29.97/32.53) is on the African bank.
-  EG: (lat, lon) => (lon > 33 && lat > 27.8 ? "Asia" : "Africa"),
+  EG: {
+    resolve: (lat, lon) => (lon > 33 && lat > 27.8 ? "Asia" : "Africa"),
+    spans: ["Africa", "Asia"],
+  },
 };
 
 /**
@@ -254,7 +271,7 @@ export function continentForCountry(
   if (split) {
     // Without coordinates we cannot place a transcontinental country honestly.
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    return split(lat as number, lon as number);
+    return split.resolve(lat as number, lon as number);
   }
 
   return BY_ISO[iso] ?? null;
@@ -307,4 +324,32 @@ export function getContinent(
   country?: string | null,
 ): Continent | null {
   return continentForCountry(country, lat, lon) ?? continentForCoordinates(lat, lon);
+}
+
+/**
+ * How many countries this table knows, per continent.
+ *
+ * Exists so a "13 of 51" style quota has a denominator that can be pointed at,
+ * rather than one of the several competing counts of the world's countries —
+ * none of which is a fact, and all of which would read as one sitting next to
+ * a real number. Transcontinental countries are resolved by coordinates at
+ * lookup time, so they are counted once here, under the continent this table
+ * files them by.
+ */
+export function countryCountsByContinent(): Record<Continent, number> {
+  const totals = Object.fromEntries(CONTINENTS.map((c) => [c, 0])) as Record<
+    Continent,
+    number
+  >;
+  for (const continent of Object.values(BY_ISO)) {
+    totals[continent] += 1;
+  }
+  // A transcontinental country counts towards every continent it can be in.
+  // Anything else means picking one, and for Egypt either pick is wrong for
+  // half the country.
+  for (const [code, entry] of Object.entries(TRANSCONTINENTAL)) {
+    if (code in BY_ISO) continue;
+    for (const continent of entry.spans) totals[continent] += 1;
+  }
+  return totals;
 }

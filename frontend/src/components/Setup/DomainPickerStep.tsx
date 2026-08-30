@@ -2,6 +2,7 @@ import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 export interface DomainPickerStepProps {
   value: DomainKey[];
@@ -10,6 +11,7 @@ export interface DomainPickerStepProps {
 
 export default function DomainPickerStep({ value, onChange }: DomainPickerStepProps): JSX.Element {
   const { t } = useTranslation("common");
+  const { colorOf } = useDomainColors();
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;
@@ -68,7 +70,7 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
-                style={{ backgroundColor: `${d.color}22` }}
+                style={{ backgroundColor: `${colorOf(d.key)}22` }}
                 aria-hidden
               >
                 {d.icon}

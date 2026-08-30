@@ -23,9 +23,13 @@ describe("GlobeLoader", () => {
     expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Loading flights");
   });
 
-  it("falls back to the default aria-label when no label is passed", () => {
+  it("falls back to a TRANSLATED default when no label is passed", () => {
+    // Was pinned to the literal "Loading" — an English name on a German page.
     render(<GlobeLoader />);
-    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Loading");
+    expect(screen.getByRole("status")).toHaveAttribute(
+      "aria-label",
+      "common:accessibility.loading"
+    );
   });
 
   it("renders the visible label when provided", () => {

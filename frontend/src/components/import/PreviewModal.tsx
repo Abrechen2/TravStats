@@ -65,7 +65,22 @@ export function PreviewModal({
   const initialChecked = useMemo(() => {
     const m = new Map<number, boolean>();
     for (const r of rows) {
-      m.set(r.sourceRowIndex, !hasHardError(r.flags));
+      // A row the server already holds is pre-UNTICKED, because ticking it
+      // achieves nothing: commit skips it and reports it as already present.
+      //
+      // Forgejo #4: importing the same CSV twice showed "0 bereit · 1 Duplikate
+      // · 0 Probleme" above a live button reading "1 Zeile importieren", which
+      // then imported nothing. The count came from the ticked rows, and a
+      // duplicate is not a hard error, so it stayed ticked — the button
+      // promised work the server had already decided not to do.
+      //
+      // ONLY `exact_match` (same day, same flight number). `same_day_same_route`
+      // is a suspicion, not a fact: two different flights can share a day and a
+      // route, and pre-unticking those would quietly drop real rows. The row
+      // stays visible and tickable either way, so forcing an import is still
+      // one click.
+      const alreadyHeld = r.dedupeHint === "exact_match";
+      m.set(r.sourceRowIndex, !hasHardError(r.flags) && !alreadyHeld);
     }
     return m;
   }, [rows]);

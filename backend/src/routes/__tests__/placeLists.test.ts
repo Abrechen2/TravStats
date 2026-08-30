@@ -496,4 +496,99 @@ describe("Place lists API", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe("a subscribed checklist has a real denominator (Forgejo #24)", () => {
+    /**
+     * A subscribed UNESCO list showed "47 / 47 — vollständig" for an account
+     * that had visited 47 of 1,248 sites.
+     *
+     * No number was miscalculated. `GET /place-lists` materialises only the
+     * entries an account already holds, so on a curated subscription
+     * `placeCount` and `visitedCount` converge on "how many you ticked" and
+     * their ratio is always 1. `placeCount` is simply not a denominator here,
+     * and the shape invited every consumer to treat it as one.
+     */
+    it("reports the catalogue size beside the materialised count", async () => {
+      await request(app)
+        .post(`/api/v1/place-lists/curated/${NEW7}/subscribe`)
+        .set("Cookie", authCookie)
+        .expect(201);
+
+      const res = await request(app)
+        .get("/api/v1/place-lists")
+        .set("Cookie", authCookie)
+        .expect(200);
+
+      const row = (res.body.data as Array<Record<string, unknown>>).find(
+        (l) => l.curatedKey === NEW7
+      );
+      expect(row).toBeDefined();
+      // The seeded catalogue holds seven wonders; the account has ticked none,
+      // so the honest reading is 0 of 7 — not 0 of 0.
+      expect(row?.curatedItemCount).toBe(7);
+      expect(row?.placeCount).not.toBe(row?.curatedItemCount);
+
+      await request(app)
+        .delete(`/api/v1/place-lists/curated/${NEW7}/subscribe`)
+        .set("Cookie", authCookie);
+    });
+
+    it("leaves an ordinary list without one, because placeCount IS its total", async () => {
+      // Null rather than a copy of placeCount: a client can then tell the two
+      // kinds of row apart instead of guessing from the numbers.
+      const created = await request(app)
+        .post("/api/v1/place-lists")
+        .set("Cookie", authCookie)
+        .send({ name: "Eigene Liste" })
+        .expect(201);
+
+      const res = await request(app)
+        .get("/api/v1/place-lists")
+        .set("Cookie", authCookie)
+        .expect(200);
+
+      const row = (res.body.data as Array<Record<string, unknown>>).find(
+        (l) => l.id === created.body.data.id
+      );
+      expect(row?.curatedItemCount).toBeNull();
+    });
+  });
+
+
+  describe("progress without the catalogue (Forgejo #22)", () => {
+    /**
+     * `/progress` returns every item with both blurbs — 1,248 rows for the
+     * world-heritage list — and a client that only wants "47 of 1,248" had to
+     * download all of it on every screen showing a progress bar.
+     */
+    it("still sends the whole catalogue by default", async () => {
+      const res = await request(app)
+        .get(`/api/v1/place-lists/curated/${NEW7}/progress`)
+        .set("Cookie", authCookie)
+        .expect(200);
+
+      expect(Array.isArray(res.body.data.items)).toBe(true);
+      expect(res.body.data.items).toHaveLength(res.body.data.itemCount);
+    });
+
+    it("can answer with the counts alone", async () => {
+      const res = await request(app)
+        .get(`/api/v1/place-lists/curated/${NEW7}/progress?items=none`)
+        .set("Cookie", authCookie)
+        .expect(200);
+
+      // Absent, not empty: an empty array would say the catalogue has no items.
+      expect(res.body.data).not.toHaveProperty("items");
+      expect(res.body.data.itemCount).toBe(7);
+      expect(res.body.data).toHaveProperty("tickedCount");
+    });
+
+    it("refuses a value it does not understand instead of guessing", async () => {
+      await request(app)
+        .get(`/api/v1/place-lists/curated/${NEW7}/progress?items=some`)
+        .set("Cookie", authCookie)
+        .expect(400);
+    });
+  });
+
 });

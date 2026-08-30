@@ -31,6 +31,17 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
   const percent = (value: number | null): string =>
     value === null ? "—" : `${(value * 100).toFixed(0)} %`;
 
+  // One entry per programme that has a tier at all, in the order the years
+  // arrive. A programme appears on several year rows; its tier is one value.
+  const currentTiers = loyalty.programmeYears.reduce<Array<{ programme: string; tier: string }>>(
+    (acc, row) => {
+      if (!row.tier) return acc;
+      if (acc.some((seen) => seen.programme === row.programme)) return acc;
+      return [...acc, { programme: row.programme, tier: row.tier }];
+    },
+    []
+  );
+
   return (
     <section className="mt-8">
       <h2 className="mb-6 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
@@ -103,6 +114,17 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           <h3 className="mb-3 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
             {t("lodging:stats.loyalty.programmeYears")}
           </h3>
+          {/* The tier belongs to the CARD, not to a year — the backend type says
+              so in as many words. Printed beside every year it claimed a status
+              that may not have existed then, and there is no dated history to
+              draw a truthful per-year value from. So it is said once, here,
+              about now. */}
+          {currentTiers.length > 0 && (
+            <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("lodging:stats.loyalty.currentTier")}{" "}
+              {currentTiers.map((entry) => `${entry.programme} ${entry.tier}`).join(" · ")}
+            </p>
+          )}
           {loyalty.programmeYears.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("lodging:stats.loyalty.noProgrammes")}
@@ -128,14 +150,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
               <tbody>
                 {loyalty.programmeYears.map((row) => (
                   <tr key={`${row.programme}-${row.year}`}>
-                    <td className="py-1">
-                      {row.programme}
-                      {row.tier && (
-                        <span className="ml-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                          {row.tier}
-                        </span>
-                      )}
-                    </td>
+                    <td className="py-1">{row.programme}</td>
                     <td className="py-1">{row.year}</td>
                     <td className="py-1 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
                       {row.nights}

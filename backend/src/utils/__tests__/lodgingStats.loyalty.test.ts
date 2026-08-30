@@ -167,3 +167,44 @@ describe("lodging loyalty", () => {
     expect(l.chainNightsRanked).toEqual([]);
   });
 });
+
+/**
+ * "Ketten nach Nächten" answers which BRAND you sleep with; it cannot answer
+ * which HOUSE, which is the question a person actually asks about their own
+ * year (Alex, 2026-08-29). Same pass, one level down.
+ */
+describe("lodgingNightsRanked", () => {
+  it("ranks individual hotels by nights, then by stays", () => {
+    const stats = calculateLodgingStats(
+      [
+        stay({ lodgingId: "a", lodgingName: "Hotel Adlon", checkIn: new Date("2024-05-14T00:00:00Z"), checkOut: new Date("2024-05-16T00:00:00Z") }),
+        stay({ lodgingId: "a", lodgingName: "Hotel Adlon", checkIn: new Date("2024-07-01T00:00:00Z"), checkOut: new Date("2024-07-04T00:00:00Z") }),
+        stay({ lodgingId: "b", lodgingName: "Le Meurice", checkIn: new Date("2024-06-01T00:00:00Z"), checkOut: new Date("2024-06-03T00:00:00Z") }),
+      ],
+      NOW,
+    );
+
+    const ranked = stats.loyalty.lodgingNightsRanked;
+    expect(ranked[0]).toEqual({ key: "Hotel Adlon", nights: 5, stays: 2 });
+    expect(ranked[1]).toEqual({ key: "Le Meurice", nights: 2, stays: 1 });
+  });
+
+  it("keeps two hotels that share a name apart", () => {
+    // Same name, different houses — folding them would report nights in a
+    // hotel nobody ever stayed in.
+    const stats = calculateLodgingStats(
+      [
+        stay({ lodgingId: "muc", lodgingName: "Motel One", city: "München" }),
+        stay({ lodgingId: "ber", lodgingName: "Motel One", city: "Berlin" }),
+      ],
+      NOW,
+    );
+
+    expect(stats.loyalty.lodgingNightsRanked).toHaveLength(2);
+    expect(stats.loyalty.lodgingNightsRanked.every((r) => r.nights === 2)).toBe(true);
+  });
+
+  it("is empty for an empty logbook", () => {
+    expect(calculateLodgingStats([], NOW).loyalty.lodgingNightsRanked).toEqual([]);
+  });
+});

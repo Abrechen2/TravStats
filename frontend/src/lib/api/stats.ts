@@ -1,4 +1,5 @@
 import type { TravelAccountResponse } from "../../types/travelAccount";
+import type { Passport } from "../../types/passport";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -24,6 +25,15 @@ export const statsApi = {
    * next, and two round-trips for one question is two chances to show half
    * an answer.
    */
+  /**
+   * The passport. Derived server-side on purpose: the mobile app draws the same
+   * screen, and two client-side derivations of one set of numbers drift.
+   */
+  getPassport: async (): Promise<Passport> => {
+    const { data } = await api.get<Passport>("/stats/passport");
+    return data;
+  },
+
   getTravelAccount: async (): Promise<TravelAccountResponse> => {
     const { data } = await api.get<TravelAccountResponse>("/stats/travel-account");
     return data;

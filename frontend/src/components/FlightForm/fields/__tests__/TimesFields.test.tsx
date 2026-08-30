@@ -30,6 +30,74 @@ describe("TimesFields", () => {
   });
 
   describe("actual times (#200)", () => {
+    /**
+     * One button for all four actual fields.
+     *
+     * An actual time is usually the planned one give or take a few minutes, so
+     * the work is "take these and adjust". Four separate arrows would be four
+     * clicks for one intention (Alex, 2026-08-29).
+     */
+    it("fills the empty actual fields from the planned ones", async () => {
+      const onActualChange = vi.fn();
+      render(
+        <TimesFields
+          value={VALUE}
+          onChange={() => {}}
+          actualValue={EMPTY_ACTUAL}
+          onActualChange={onActualChange}
+        />
+      );
+
+      await userEvent.click(
+        screen.getByLabelText(/actualTimes\.copyFromPlanned/i)
+      );
+
+      expect(onActualChange).toHaveBeenCalledWith({
+        actualDepDate: "2026-08-14",
+        actualDepTime: "14:35",
+        actualArrDate: "2026-08-14",
+        actualArrTime: "16:50",
+      });
+    });
+
+    it("does not overwrite an actual time that was already entered", async () => {
+      // Someone who has typed the real arrival and then reaches for this
+      // expects help, not to lose it.
+      const onActualChange = vi.fn();
+      render(
+        <TimesFields
+          value={VALUE}
+          onChange={() => {}}
+          actualValue={{ ...EMPTY_ACTUAL, actualArrTime: "17:12" }}
+          onActualChange={onActualChange}
+        />
+      );
+
+      await userEvent.click(screen.getByLabelText(/actualTimes\.copyFromPlanned/i));
+
+      expect(onActualChange).toHaveBeenCalledWith(
+        expect.objectContaining({ actualArrTime: "17:12", actualDepTime: "14:35" })
+      );
+    });
+
+    it("is dead once there is nothing left to fill", () => {
+      render(
+        <TimesFields
+          value={VALUE}
+          onChange={() => {}}
+          actualValue={{
+            actualDepDate: "2026-08-14",
+            actualDepTime: "14:40",
+            actualArrDate: "2026-08-14",
+            actualArrTime: "17:12",
+          }}
+          onActualChange={() => {}}
+        />
+      );
+
+      expect(screen.getByLabelText(/actualTimes\.copyFromPlanned/i)).toBeDisabled();
+    });
+
     it("renders no actual-time inputs and no delay when actualValue/onActualChange are omitted", () => {
       render(<TimesFields value={VALUE} onChange={() => {}} />);
       expect(screen.queryByText(/actualTimes\.label/)).not.toBeInTheDocument();

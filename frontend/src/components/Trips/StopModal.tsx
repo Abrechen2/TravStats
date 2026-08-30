@@ -44,6 +44,10 @@ export default function StopModal({
   const [lon, setLon] = useState<number | null>(stop?.lon ?? null);
   const [notes, setNotes] = useState(stop?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  // Forgejo #9: out-of-range coordinates used to vanish silently and the
+  // record saved without them. LocationInput now says so; this stops the
+  // form writing while the user is looking at that message.
+  const [coordsValid, setCoordsValid] = useState(true);
 
   useEffect(() => {
     if (!stop) return;
@@ -208,7 +212,11 @@ export default function StopModal({
             {t("trips:stopModal.timeHint")}
           </p>
           <div>
-            <LocationInput value={position} onChange={handleLocationChange} />
+            <LocationInput
+              value={position}
+              onChange={handleLocationChange}
+              onValidityChange={setCoordsValid}
+            />
             {position !== null && (
               <button
                 type="button"
@@ -245,7 +253,7 @@ export default function StopModal({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={!title.trim() || saving}
+            disabled={!title.trim() || saving || !coordsValid}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
             {saving ? "…" : t("trips:stopModal.save")}

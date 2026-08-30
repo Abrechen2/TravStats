@@ -73,6 +73,26 @@ export interface SeedAirportsOptions {
   closedOnly?: boolean;
 }
 
+/**
+ * Whether a failure is the CSV colliding with itself rather than a fault.
+ *
+ * Prisma reports a unique-constraint violation as P2002. In this seeder that
+ * means a DIFFERENT airport already holds the code — the source data contains
+ * several distinct offshore helidecks sharing one ICAO — so skipping the row is
+ * both correct and always the same decision.
+ *
+ * Exported for the test: the shape of a Prisma error is the thing that can
+ * change under us, and a startup that logs errors for expected data teaches
+ * people to ignore the log (Forgejo #3).
+ */
+export function isDuplicateCodeError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === 'P2002'
+  );
+}
+
 export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
   const { closedOnly = false } = options;
   logger.info({
@@ -147,6 +167,9 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+  // Rows the CSV itself makes impossible: a distinct airport already holds
+  // this code. Counted apart from other skips so the summary says WHY.
+  let duplicateCodes = 0;
 
   for (const airport of filteredAirports) {
     try {
@@ -246,12 +269,38 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({
-        operation: 'seed_airports_airport_error',
-        message: `Error processing airport ${airport.name}`,
-        context: { airportName: airport.name },
-        error: { message: errorMessage },
-      });
+
+      // A unique-constraint clash here is DATA, not a fault.
+      //
+      // Forgejo #3: a fresh start logged error-level lines for a handful of
+      // offshore helidecks — "Error processing airport SSCV Hermod Helideck",
+      // unique constraint failed on (icao, is_closed). The source CSV genuinely
+      // contains several distinct platforms sharing one ICAO. The row is looked
+      // up by its IATA pair, is not found, and the insert then collides on the
+      // ICAO pair of a different airport.
+      //
+      // Skipping is the correct outcome and always the same one, so it is
+      // logged as the routine event it is. Updating instead would overwrite a
+      // DIFFERENT airport with this one's details, which is worse than not
+      // importing an unmanned helideck.
+      //
+      // Anything else still shouts: a fresh startup with red lines in it
+      // teaches people to ignore red lines.
+      if (isDuplicateCodeError(error)) {
+        duplicateCodes++;
+        logger.debug({
+          operation: 'seed_airports_duplicate_code',
+          message: `Skipped ${airport.name} — its code is already taken by another airport`,
+          context: { airportName: airport.name, iata: airport.iata_code, icao: airport.ident },
+        });
+      } else {
+        logger.error({
+          operation: 'seed_airports_airport_error',
+          message: `Error processing airport ${airport.name}`,
+          context: { airportName: airport.name },
+          error: { message: errorMessage },
+        });
+      }
       skipped++;
     }
   }
@@ -259,7 +308,7 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
   logger.info({
     operation: 'seed_airports_complete',
     message: 'Airport import completed',
-    context: { imported, updated, skipped, total: imported + updated },
+    context: { imported, updated, skipped, duplicateCodes, total: imported + updated },
   });
 
   // Zeige Gesamtanzahl in DB
