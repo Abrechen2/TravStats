@@ -31,7 +31,7 @@ import { classifyVisit } from "../../shared/placeCounting";
  */
 
 /** What kind of recorded travel put the user near a target. */
-export type SuggestionAnchorKind = "place" | "lodging" | "cruise_port" | "flight";
+export type SuggestionAnchorKind = "place" | "lodging" | "cruise_port" | "flight" | "photo";
 
 /**
  * How far from a target an anchor may sit and still mean something, per kind.
@@ -65,10 +65,27 @@ const RADIUS_KM: Record<SuggestionAnchorKind, number> = {
   lodging: 30,
   cruise_port: 40,
   flight: 15,
+  /**
+   * A photograph is the only anchor here that is not a proxy.
+   *
+   * Every other kind says where the user's TRAVEL was and infers where they
+   * stood: a hotel is booked in the town you came to see, an airport is an hour
+   * from the city it is named after. A geotagged photo is a GPS fix at the
+   * moment the shutter opened — they were there, holding the camera.
+   *
+   * So this radius is a hand's breadth by comparison, and it should stay that
+   * way. Widening it would not add evidence, it would spend the one anchor with
+   * real precision on guesses the weaker anchors already make.
+   */
+  photo: 1,
 };
 
 /** Ranking of the kinds. Higher wins when two anchors both reach a target. */
 const CONFIDENCE_RANK: Record<SuggestionAnchorKind, number> = {
+  // Above a logged place and a hotel, and deliberately: those record a trip,
+  // this records a position. When both reach a target, the photo is the better
+  // answer to "how do you know".
+  photo: 4,
   place: 3,
   lodging: 3,
   cruise_port: 2,
@@ -78,6 +95,7 @@ const CONFIDENCE_RANK: Record<SuggestionAnchorKind, number> = {
 export type SuggestionConfidence = "high" | "medium" | "low";
 
 const CONFIDENCE: Record<SuggestionAnchorKind, SuggestionConfidence> = {
+  photo: "high",
   place: "high",
   lodging: "high",
   cruise_port: "medium",
@@ -172,11 +190,29 @@ interface PlaceAnchorInput {
   visits: readonly { visitedAt: Date | null }[];
 }
 
+/**
+ * A geotagged photograph from a trip.
+ *
+ * `lat`/`lon` are populated on Immich import; a photo without them carries no
+ * position and is dropped. `takenAt` may be absent — a photo with coordinates
+ * and no date is still evidence of place, so it becomes a dated-less anchor
+ * rather than being thrown away, exactly as the other kinds allow.
+ */
+interface PhotoAnchorInput {
+  lat: number | null;
+  lon: number | null;
+  takenAt: Date | null;
+  /** The trip the photo belongs to — what the user is shown as the reason. */
+  tripName: string | null;
+}
+
 export interface AnchorSources {
   lodgings: readonly LodgingAnchorInput[];
   cruiseStops: readonly CruiseStopAnchorInput[];
   flights: readonly FlightAnchorInput[];
   places: readonly PlaceAnchorInput[];
+  /** Optional so every existing caller keeps compiling and behaving identically. */
+  photos?: readonly PhotoAnchorInput[];
 }
 
 const usable = (lat: number | null, lon: number | null): boolean =>
@@ -229,6 +265,20 @@ export function buildAnchors(sources: AnchorSources): SuggestionAnchor[] {
       lat: place.lat,
       lon: place.lon,
       at: lastVisit,
+    });
+  }
+
+  for (const photo of sources.photos ?? []) {
+    if (!usable(photo.lat, photo.lon)) continue;
+    anchors.push({
+      kind: "photo",
+      // The trip is what the user recognises; a bare coordinate would tell them
+      // nothing about why they are being asked. No trip name is possible in
+      // principle, so the label degrades to empty rather than inventing one.
+      label: photo.tripName ?? "",
+      lat: photo.lat as number,
+      lon: photo.lon as number,
+      at: photo.takenAt,
     });
   }
 

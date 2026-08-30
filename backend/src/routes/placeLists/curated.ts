@@ -273,7 +273,7 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
     });
     if (!curated) throw new AppError("Checklist not found", 404);
 
-    const [ticked, stays, stops, flights, places] = await Promise.all([
+    const [ticked, stays, stops, flights, places, photos] = await Promise.all([
       prisma.place.findMany({
         where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
         select: { curatedItemId: true, visited: true },
@@ -319,6 +319,23 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
           visits: { select: { visitedAt: true } },
         },
       }),
+      /**
+       * Geotagged trip photos — POI Phase D, piece 1.
+       *
+       * These rows already existed and were doing nothing for suggestions: an
+       * Immich import writes `lat`/`lon`/`takenAt`, so a trip with a linked
+       * album is already a list of dated, positioned points. It is the only
+       * anchor that records where the user STOOD rather than where their travel
+       * was, which is why it reaches one kilometre and outranks the rest.
+       *
+       * Filtered in the query, not afterwards: an account can hold thousands of
+       * photos and only some carry coordinates, and the ones without a position
+       * cannot become an anchor however far the code goes.
+       */
+      prisma.tripPhoto.findMany({
+        where: { trip: { userId }, lat: { not: null }, lon: { not: null } },
+        select: { lat: true, lon: true, takenAt: true, trip: { select: { name: true } } },
+      }),
     ]);
 
     // Only OPEN targets. Suggesting something the user already ticked is noise
@@ -355,6 +372,12 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
         })),
       flights,
       places,
+      photos: photos.map((p) => ({
+        lat: p.lat,
+        lon: p.lon,
+        takenAt: p.takenAt,
+        tripName: p.trip?.name ?? null,
+      })),
     });
 
     const suggestions = suggestVisits(targets, anchors);
