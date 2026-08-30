@@ -50,7 +50,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------
-  # SAFE TO REQUIRE. Measured green on main @ 6fe74af3 (2026-08-30):
+  # SAFE TO REQUIRE. Measured green on main @ 80ca3061 (2026-08-30):
   # `npx tsc --noEmit` clean in both trees, `eslint` clean in both.
   # ---------------------------------------------------------------------
   static:
@@ -90,8 +90,8 @@ jobs:
         run: cd frontend && npm run lint
 
   # ---------------------------------------------------------------------
-  # SAFE TO REQUIRE. Measured green on main @ 6fe74af3 (2026-08-30):
-  # 346 files, 3050 tests, all passing, exit 0.
+  # SAFE TO REQUIRE. Measured green on main @ 80ca3061 (2026-08-30):
+  # 371 files, 3254 tests, all passing, exit 0.
   #
   # The suite logs jsdom "HTMLCanvasElement.prototype.getContext is not
   # implemented" noise from the globe components. That is stderr output,
@@ -118,51 +118,61 @@ jobs:
   # ---------------------------------------------------------------------
   # ADVISORY — DO NOT MARK REQUIRED YET.
   #
-  # This is not a guess about CI behaviour. The suite was run on main @
-  # 6fe74af3 (2026-08-30) against a dedicated throwaway Postgres, with the
-  # same migrate/seed steps and the same memory and pool settings this job
-  # uses. Measured result:
+  # The reason is the sharpest possible illustration of why "green" and
+  # "checked" are different words. Measured on main @ 80ca3061 (2026-08-30)
+  # against Postgres:
   #
-  #   Test Suites: 16 failed, 1 skipped, 328 passed (344 of 345)
-  #   Tests:       38 failed, 10 skipped, 2921 passed (2969 total)
-  #   Wall clock:  ~8 minutes
+  #   Test Suites: 2 failed, 354 passed, 356 total
+  #   Tests:       3056 passed, 3056 total
   #
-  # The failures are pre-existing test-isolation defects, NOT a CI problem
-  # and NOT fixed here. Two causes account for all 16 suites:
+  # Every single test passes and the run still exits 1. The two red SUITES
+  # contain no failing test: src/routes/__tests__/lodging.test.ts and
+  # src/routes/__tests__/lodgingFxSource.test.ts both fail in `afterAll`
+  # with Postgres 40P01 "deadlock detected". The lodging routes fire
+  # checkAndUpdateAchievements deliberately without `await`, and teardown
+  # deletes the user while that background write is still in flight. Both
+  # fail identically in a control run with none of this workflow's changes,
+  # so it is pre-existing and is not fixed here.
   #
-  #   1. Un-awaited background writes racing teardown. The lodging routes
-  #      fire checkAndUpdateAchievements deliberately without `await`, so
-  #      the suite deletes its user while that write is still in flight.
-  #      Postgres answers with 40P01 "deadlock detected" on
-  #      lodging.test.ts:53, and the same race shows up 56 times as a
-  #      unique-constraint violation on (user_id, achievement_id).
-  #   2. Catalogue wipes leaking across files. The seed suites clear the
-  #      airport/airline/aircraft/ship/port tables wholesale and re-seed in
-  #      afterAll; when a run is disrupted mid-flight, later suites query
-  #      empty catalogues (100 failed airport.findMany calls) and fail for
-  #      reasons that have nothing to do with the code under test.
+  # A required check that is red while 3056 of 3056 tests pass would teach
+  # everyone to click past it within a week. That is exactly the failure
+  # mode this repo should avoid, so the job reports honestly and does not
+  # gate.
   #
-  # So the suite is not "green except one file" — a third of the failures
-  # are collateral, and which files fail depends on ordering. Gating merges
-  # on that would block every unrelated commit and train everyone to click
-  # past a red check, which is exactly how a gate stops being read.
+  # A CLEAN CHECKOUT FAILS MORE THAN THE MAINTAINER'S MACHINE DOES. Run
+  # against a throwaway database with no developer state, two further
+  # suites fail for environmental reasons that a CI runner will hit every
+  # time:
   #
-  # Fix the isolation defects first. Then delete `continue-on-error` below
-  # and promote this job to required, in one deliberate move, and only
-  # after re-measuring.
+  #   * src/routes/__tests__/emailParse.referenceDate.test.ts asserts
+  #     fs.existsSync() on
+  #     "test-samples/Flug-emails/Buchungsdetails _ 23 November 2023_.msg".
+  #     Only 7 files under test-samples/ are tracked and they are all
+  #     .gitkeep/README — the sample is a real booking email that is not in
+  #     the public repo. This test CANNOT pass on any fresh clone. It needs
+  #     to skip when its fixture is absent before this job can ever be
+  #     green.
+  #   * src/__tests__/lodgingImportCommit.test.ts expects a non-null
+  #     chainId, but scripts/seed-test-catalogues.ts never seeds the
+  #     lodging-chain catalogue (it covers airlines, aircraft, ships,
+  #     ports, airports and achievements). The seed step below deliberately
+  #     calls the project's own script rather than a CI-only variant, so
+  #     that CI and a local run stay the same thing; closing this gap
+  #     belongs in that script.
   #
-  # Two environment details that are load-bearing, both learned the hard
-  # way rather than guessed:
+  # Promote this job to required only when all three are addressed — the
+  # teardown deadlock, the missing-fixture guard, and the chain seed — and
+  # only after re-measuring. Then delete `continue-on-error` below in one
+  # deliberate move.
   #
-  #   * connection_limit=5 on the DATABASE_URL. Prisma sizes its pool from
-  #     the host's core count, and on a many-core runner a single client
-  #     grabs most of Postgres's 100 connections; the suite then dies with
-  #     ~100 connection errors that look like application bugs.
-  #   * NODE_OPTIONS raises the heap. `main` does not carry the
-  #     jest.setup/globalSetup harness or `workerIdleMemoryLimit` that
-  #     bound memory on other branches, so on Node's default ~4 GB ceiling
-  #     this suite OOMs partway through. Raising the ceiling here keeps the
-  #     job meaningful without importing that harness onto main.
+  # On the environment: main now carries jest.globalSetup.ts (fails fast
+  # with one clear sentence when Postgres is unreachable, instead of a
+  # four-figure failure count) and jest.setup.ts + workerIdleMemoryLimit
+  # (which recycle the single worker and cap the Prisma pool). So this job
+  # does NOT need to raise the heap or set a pool size itself; an earlier
+  # revision did both and they are now redundant. connection_limit is left
+  # on the URL below only because jest.setup.ts explicitly honours an
+  # already-chosen limit, which makes the intent visible at the call site.
   # ---------------------------------------------------------------------
   backend-tests:
     name: Backend tests (Jest, advisory)
@@ -188,7 +198,6 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_ci?connection_limit=5
-      NODE_OPTIONS: --max-old-space-size=6144
       NODE_ENV: test
       # Not decoration, and not free-form. Several suites import src/index.ts,
       # which calls validateEnv() and answers a bad value with process.exit(1)
