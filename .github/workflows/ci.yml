@@ -139,10 +139,19 @@ jobs:
   # mode this repo should avoid, so the job reports honestly and does not
   # gate.
   #
-  # A CLEAN CHECKOUT FAILS MORE THAN THE MAINTAINER'S MACHINE DOES. Run
-  # against a throwaway database with no developer state, two further
-  # suites fail for environmental reasons that a CI runner will hit every
-  # time:
+  # A CLEAN CHECKOUT FAILS MORE THAN THE MAINTAINER'S MACHINE DOES, and
+  # CI is a clean checkout. Same commit, run against a throwaway database
+  # with no developer state and no personal fixtures:
+  #
+  #   Test Suites: 3 failed, 1 skipped, 352 passed (355 of 356)
+  #   Tests:       2 failed, 10 skipped, 3044 passed (3056 total)
+  #
+  # Only TWO tests actually fail, and both are environmental rather than
+  # defects in the code under review. (The deadlock suites contribute zero
+  # failing tests here — and which of them trips is not deterministic:
+  # lodgingFxSource.test.ts failed in this run while lodging.test.ts
+  # passed, the reverse of the maintainer's run. A race, not a fixed list.)
+  # The two real failures:
   #
   #   * src/routes/__tests__/emailParse.referenceDate.test.ts asserts
   #     fs.existsSync() on
