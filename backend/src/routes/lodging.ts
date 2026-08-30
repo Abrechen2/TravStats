@@ -8,7 +8,7 @@ import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
-import { checkAndUpdateAchievements } from "../utils/achievements";
+import { recheckAchievementsInBackground } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
 import { classifyStay } from "../shared/lodgingCounting";
 import { resolveStayTiming } from "../shared/lodgingTiming";
@@ -317,12 +317,7 @@ const fxPreviewQuerySchema = z.object({
 });
 
 function recheckAchievements(userId: string): void {
-  checkAndUpdateAchievements(userId).catch((error) => {
-    logger.error({
-      operation: "lodging_achievement_check_failed",
-      error: error instanceof Error ? error.message : error,
-    });
-  });
+  recheckAchievementsInBackground(userId, "lodging");
 }
 
 // ---- Lodging CRUD ----

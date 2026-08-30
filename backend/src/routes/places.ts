@@ -6,7 +6,7 @@ import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
-import { checkAndUpdateAchievements } from "../utils/achievements";
+import { recheckAchievementsInBackground } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import {
   createPlaceSchema,
@@ -15,7 +15,6 @@ import {
   updateVisitSchema,
   placeQuerySchema,
 } from "../schemas/place";
-import logger from "../utils/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -264,9 +263,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       include: PLACE_INCLUDE,
     });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place create");
-    });
+    recheckAchievementsInBackground(userId, "place create");
 
     res.status(201).json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -309,9 +306,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       include: PLACE_INCLUDE,
     });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place update");
-    });
+    recheckAchievementsInBackground(userId, "place update");
 
     res.json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -331,9 +326,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // which is what "delete this place" means.
     await prisma.place.delete({ where: { id: existing.id } });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place delete");
-    });
+    recheckAchievementsInBackground(userId, "place delete");
 
     res.json({ success: true });
   } catch (error) {
@@ -399,9 +392,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     }
     const [visit] = await prisma.$transaction(writes);
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit create");
-    });
+    recheckAchievementsInBackground(userId, "visit create");
 
     res.status(201).json({ success: true, data: visit });
   } catch (error) {
@@ -445,9 +436,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
       });
     }
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit update");
-    });
+    recheckAchievementsInBackground(userId, "visit update");
 
     res.json({ success: true, data: visit });
   } catch (error) {
@@ -469,9 +458,7 @@ router.delete("/visits/:visitId", async (req: AuthRequest, res: Response, next: 
     // explicitly on the place itself.
     await prisma.placeVisit.delete({ where: { id: existing.id } });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit delete");
-    });
+    recheckAchievementsInBackground(userId, "visit delete");
 
     res.json({ success: true });
   } catch (error) {

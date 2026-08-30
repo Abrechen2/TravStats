@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { checkAndUpdateAchievements } from "../../utils/achievements";
+import { recheckAchievementsInBackground } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
@@ -461,9 +461,7 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       }
     }
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after checklist tick");
-    });
+    recheckAchievementsInBackground(userId, "checklist tick");
 
     logger.info(
       { operation: "curated_item_tick", userId, itemId: item.id, placeId: place.id },
@@ -489,9 +487,7 @@ router.delete("/items/:itemId/tick", async (req: AuthRequest, res: Response, nex
     });
     if (updated.count === 0) throw new AppError("Checklist item not ticked", 404);
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after checklist untick");
-    });
+    recheckAchievementsInBackground(userId, "checklist untick");
 
     res.json({ success: true });
   } catch (error) {

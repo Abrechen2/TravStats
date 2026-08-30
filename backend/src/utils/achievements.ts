@@ -39,11 +39,80 @@ export { calculateUserStats, getContinent } from './achievementStats';
 export { checkAchievement } from './achievementChecks';
 
 /**
+ * The re-check currently running or queued for a user, if any.
+ *
+ * Forgejo #39. A run re-evaluates every achievement inside one long
+ * transaction, and ten of the sixteen call sites do not await it — a place tick
+ * answers 2xx and leaves the transaction going. Two of those for the same user
+ * overlap readily: save a flight while a place tick is still running, or let the
+ * six detached call sites in `places.ts` fire in quick succession.
+ *
+ * The overlap is not theoretical. The suite showed both halves of it — an
+ * `upsert` on `(user_id, achievement_id)` failing the unique constraint, and a
+ * `40P01 deadlock detected` between two of these transactions. `upsert` is not
+ * enough on its own: when the conflicting row belongs to a transaction that has
+ * not committed, the second statement blocks and can still fail.
+ *
+ * So runs for one user are chained end to end. Different users are untouched and
+ * still run concurrently — the contention is per user, and so is the fix;
+ * serialising everyone would turn one slow account into a queue for the whole
+ * instance.
+ *
+ * The chain is per PROCESS. A deployment running several instances against one
+ * database would still overlap; TravStats ships as a single container, so this
+ * holds for how it is actually run, and a second instance would need the lock in
+ * the database instead. Written down because that limit is invisible from here.
+ */
+const runningPerUser = new Map<string, Promise<UserAchievementWithRelation[]>>();
+
+/**
  * Check and update achievements for a user
  * Returns newly unlocked achievements
  * Uses transactions to prevent race conditions and ensure data consistency
+ *
+ * Serialised per user — see `runningPerUser`. A caller still gets its own result
+ * and its own rejection; it may simply wait for a run already under way.
  */
-export async function checkAndUpdateAchievements(userId: string): Promise<UserAchievementWithRelation[]> {
+export function checkAndUpdateAchievements(userId: string): Promise<UserAchievementWithRelation[]> {
+  const previous = runningPerUser.get(userId);
+
+  // Both branches run the check: a failed run must not stop the queue behind it.
+  const started: Promise<UserAchievementWithRelation[]> = previous
+    ? previous.then(() => runAchievementCheck(userId), () => runAchievementCheck(userId))
+    : runAchievementCheck(userId);
+
+  // Only clear the slot if nothing newer has taken it, or a later caller's run
+  // would drop out of the chain and could overlap after all.
+  const tracked: Promise<UserAchievementWithRelation[]> = started.finally(() => {
+    if (runningPerUser.get(userId) === tracked) runningPerUser.delete(userId);
+  });
+
+  runningPerUser.set(userId, tracked);
+  return tracked;
+}
+
+/**
+ * Start a re-check without making the request wait for it.
+ *
+ * Ten call sites had written this by hand, each with its own wording, and one
+ * with a structured `operation` while the rest carried prose — so the one line
+ * you want to grep for after a badge fails to appear was spelled ten ways. Each
+ * also carried its own `.catch`; a future caller written without one would be an
+ * unhandled rejection, which on Node ends the process.
+ *
+ * What this deliberately does NOT do is make the failure visible to the user.
+ * The request has already answered by the time this runs, so a lost badge still
+ * only reaches the log and shows up to the user as a badge that unlocks one save
+ * later. Changing that means awaiting at these sites and paying the latency,
+ * which is a product decision rather than a tidy-up (Forgejo #39).
+ */
+export function recheckAchievementsInBackground(userId: string, after: string): void {
+  void checkAndUpdateAchievements(userId).catch((error) => {
+    logger.error({ error, userId, context: { after } }, '[Achievements] Background re-check failed');
+  });
+}
+
+async function runAchievementCheck(userId: string): Promise<UserAchievementWithRelation[]> {
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
