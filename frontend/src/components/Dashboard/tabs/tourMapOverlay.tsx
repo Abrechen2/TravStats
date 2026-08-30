@@ -6,8 +6,10 @@ import { TOUR_MODE_RGB, type TourPathDatum } from "../../layers/tourPathsLayer";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 
 // Split out of AllTab.tsx purely to keep that file under its 800-line
-// ceiling — everything here is AllTab-specific (dashboard-wide tour
-// sections on the "Alle" map) and has exactly one caller.
+// ceiling — everything here is dashboard-wide-tour-specific (tour sections
+// drawn on top of a map that is not itself a tour editor). Two callers now:
+// AllTab.tsx (tour lines over everything else) and the dedicated
+// TourTab.tsx (tour lines as the only thing on the map).
 
 /**
  * Reuses the SAME mode labels the tour route editor already shows

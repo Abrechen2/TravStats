@@ -61,6 +61,11 @@
     "emptyBody": "Füge deine erste Kreuzfahrt über „+ Kreuzfahrt hinzufügen“ hinzu oder importiere eine Buchungs-E-Mail bzw. ein PDF auf der Kreuzfahrten-Seite.",
     "emptyCta": "Zur Kreuzfahrten-Seite"
   },
+  "tourTab": {
+    "listTitle": "Touren",
+    "listEmpty": "Noch keine Touren erfasst",
+    "empty": "Noch keine Touren angelegt. Lege deine erste Tour auf der Detailseite einer Reise unter „Touren“ an."
+  },
   "lodgingTab": {
     "loading": "Unterkünfte werden geladen …",
     "emptyTitle": "Noch keine Unterkünfte",
@@ -179,7 +184,8 @@
       "flight": "Flüge",
       "cruise": "Kreuzfahrten",
       "lodging": "Unterkünfte",
-      "poi": "POIs"
+      "poi": "POIs",
+      "tour": "Touren"
     }
   },
   "addPicker": {

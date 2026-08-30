@@ -61,6 +61,11 @@
     "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
     "emptyCta": "Go to cruises page"
   },
+  "tourTab": {
+    "listTitle": "Tours",
+    "listEmpty": "No tours recorded yet",
+    "empty": "No tours yet. Add your first one from a trip's “Tours” tab on its detail page."
+  },
   "lodgingTab": {
     "loading": "Loading lodgings …",
     "emptyTitle": "No lodgings yet",
@@ -179,7 +184,8 @@
       "flight": "Flights",
       "cruise": "Cruises",
       "lodging": "Lodging",
-      "poi": "POIs"
+      "poi": "POIs",
+      "tour": "Tours"
     }
   },
   "addPicker": {

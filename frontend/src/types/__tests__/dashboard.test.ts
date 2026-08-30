@@ -8,8 +8,8 @@ import {
 } from "../dashboard";
 
 describe("dashboard tab + mode registry", () => {
-  it("exposes exactly the five agreed tabs", () => {
-    expect(DASHBOARD_TABS).toEqual(["all", "flight", "cruise", "poi", "lodging"]);
+  it("exposes exactly the six agreed tabs", () => {
+    expect(DASHBOARD_TABS).toEqual(["all", "flight", "cruise", "poi", "lodging", "tour"]);
   });
 
   it("isDashboardTab narrows arbitrary strings", () => {
@@ -45,5 +45,13 @@ describe("dashboard tab + mode registry", () => {
     expect(DASHBOARD_TABS).toContain("lodging");
     expect(TAB_MODE_REGISTRY.lodging.modes).toContain("map");
     expect(defaultModeForTab("lodging")).toBe("map");
+  });
+
+  it("registers the tour tab", () => {
+    expect(DASHBOARD_TABS).toContain("tour");
+    expect(TAB_MODE_REGISTRY.tour.modes).toEqual(["routes", "globe"]);
+    expect(defaultModeForTab("tour")).toBe("routes");
+    expect(isModeForTab("tour", "globe")).toBe(true);
+    expect(isModeForTab("tour", "markers")).toBe(false);
   });
 });

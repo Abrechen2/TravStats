@@ -127,14 +127,21 @@ export function DashboardLayout({
           {tab === "all" ? (
             <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />
           ) : (
-            <button
-              type="button"
-              onClick={() => setAddingDomain(tab as AddableDomain)}
-              className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
-              style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
-            >
-              + {t(`dashboard:controls.addPerTab.${tab}`)}
-            </button>
+            // "Touren" has no button here: a tour section belongs to a trip and
+            // is created from that trip's own "Touren" tab
+            // (components/Trips/TourSectionList.tsx), not from a
+            // dashboard-wide "+" — there is no `AddableDomain` value for it,
+            // so casting `tab` here would be a lie the type system can't catch.
+            tab !== "tour" && (
+              <button
+                type="button"
+                onClick={() => setAddingDomain(tab as AddableDomain)}
+                className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
+                style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
+              >
+                + {t(`dashboard:controls.addPerTab.${tab}`)}
+              </button>
+            )
           )}
         </div>
       </div>

@@ -5,10 +5,18 @@ import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
 import { DASHBOARD_TABS } from "../../types/dashboard";
+import { isValidDomain, type DomainKey } from "../../shared/domains";
 
 interface DomainTabStripProps {
   active: DashboardTab;
-  counts: Record<Exclude<DashboardTab, "all">, number>;
+  /**
+   * Keyed by `DomainKey`, NOT `Exclude<DashboardTab, "all">` — a dashboard
+   * tab is not a domain (types/dashboard.ts), and the "Touren" tab is the
+   * proof: it has no count badge and no enable/disable pill, because it has
+   * no domain to count or disable. Widening this to every non-"all" tab
+   * would force a fake count for a tab that doesn't have one.
+   */
+  counts: Record<DomainKey, number>;
   /**
    * How many of `counts` are merely planned (per domain, optional). Shown as
    * a "(n geplant)" hint so the tab count and the statistics stop appearing
@@ -16,8 +24,8 @@ interface DomainTabStripProps {
    * consistent (statistics count flown things) but reads like a bug without
    * the hint (UAT finding B6).
    */
-  scheduledCounts?: Partial<Record<Exclude<DashboardTab, "all">, number>>;
-  enabled: Record<Exclude<DashboardTab, "all">, boolean>;
+  scheduledCounts?: Partial<Record<DomainKey, number>>;
+  enabled: Record<DomainKey, boolean>;
   onSelect(next: DashboardTab): void;
   /**
    * At most one upcoming entry per domain, soonest first. The strip shows the
@@ -35,6 +43,7 @@ const TAB_ICON: Record<DashboardTab, string> = {
   cruise: "⚓",
   poi: "📍",
   lodging: "🏨",
+  tour: "🧭",
 };
 
 export function DomainTabStrip({
@@ -58,8 +67,14 @@ export function DomainTabStrip({
   // The Places domain is real but unfinished, so it ships to beta instances
   // only — a different gate from the `poiDashboardTab` stub one it replaced,
   // and hidden for a different reason. See config/betaFeatures.ts.
+  //
+  // "Touren" is gated the same shape, but on a DIFFERENT flag (`tourRoutes`)
+  // — the feature is complete, the gate is only withholding it until the
+  // owner's release decision (config/betaFeatures.ts).
   const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => tab !== "poi" || isFeatureVisible("poiDomain")
+    (tab) =>
+      (tab !== "poi" || isFeatureVisible("poiDomain")) &&
+      (tab !== "tour" || isFeatureVisible("tourRoutes"))
   );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
@@ -86,9 +101,14 @@ export function DomainTabStrip({
     >
       {visibleTabs.map((tab) => {
         const isActive = tab === active;
-        const isDisabled = tab !== "all" && !enabled[tab];
-        const count = tab === "all" ? null : counts[tab];
-        const scheduled = tab === "all" ? 0 : (scheduledCounts?.[tab] ?? 0);
+        // `tab` ranges over every DASHBOARD_TAB, but `enabled`/`counts` are
+        // keyed by DOMAIN — "Touren" is a tab with no domain behind it, so it
+        // is never dimmed (there is nothing to disable) and never carries a
+        // count badge (there is nothing this strip fetched to count).
+        const domain = isValidDomain(tab) ? tab : null;
+        const isDisabled = domain !== null && !enabled[domain];
+        const count = domain === null ? null : counts[domain];
+        const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
         const label = t(`dashboard:tabStrip.tabs.${tab}`);
 
         return (

@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
@@ -18,6 +19,7 @@ import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
 import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
 import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
 import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
+import { TourTab } from "../components/Dashboard/tabs/TourTab";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
@@ -55,6 +57,12 @@ export default function DashboardPage(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();
+  // Tours have no domain to be "enabled"/"disabled" — only the instance-level
+  // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
+  // a cold load; treating that as "denied" would redirect a direct
+  // `/dashboard/tour` load away before the flag has even answered, the exact
+  // /dashboard/poi bug below.
+  const { betaFeaturesEnabled, isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // How many of the counted entries are merely planned (B6): shown as a
   // "(n geplant)" hint so the tab count and the flown-only statistics stop
@@ -135,6 +143,16 @@ export default function DashboardPage(): JSX.Element {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Same fix, same reason, for the "Touren" tab: a direct `/dashboard/tour`
+  // load must not render the shell with the tab hidden from the strip while
+  // its own "+ Tour hinzufügen" button still floats over an empty page. There
+  // is no domain to intersect here (tours are gated on `tourRoutes` alone),
+  // so the three-state dance is just "wait for the flag, then decide" rather
+  // than `usePlacesAccess`'s two-condition version.
+  if (tab === "tour" && betaFeaturesEnabled !== null && !isFeatureVisible("tourRoutes")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <DashboardLayout
       counts={counts}
@@ -147,6 +165,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
+      {tab === "tour" && <TourTab key={refreshToken} />}
     </DashboardLayout>
   );
 }

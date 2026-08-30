@@ -20,6 +20,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
         "dashboard:tabStrip.tabs.cruise": "Cruises",
         "dashboard:tabStrip.tabs.poi": "POIs",
         "dashboard:tabStrip.tabs.lodging": "Lodging",
+        "dashboard:tabStrip.tabs.tour": "Tours",
       };
       return labels[key] ?? key;
     },
@@ -128,6 +129,43 @@ describe("DomainTabStrip", () => {
       useSettingsStore.setState({ betaFeaturesEnabled: true });
       renderStrip();
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
+    });
+  });
+
+  // The "Touren" tab is complete, unlike the POI domain above — it hides
+  // behind the SAME shape of gate (`tourRoutes`, config/betaFeatures.ts) only
+  // because the feature has not yet been through the owner's release
+  // decision. It also has no domain behind it: `counts`/`enabled` are keyed
+  // by DomainKey and never carry a "tour" entry, so the tab must render with
+  // no count badge and — unlike POI — must never be dimmed either.
+  describe("beta gate: tourRoutes", () => {
+    const renderStrip = (): void => {
+      render(
+        <DomainTabStrip
+          active="all"
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          onSelect={() => {}}
+        />
+      );
+    };
+
+    it.each([
+      ["off", false],
+      ["unknown (not loaded yet)", null],
+    ])("hides the Touren tab when the beta flag is %s", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
+      renderStrip();
+      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
+      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+    });
+
+    it("shows the Touren tab, never dimmed, when the beta flag is on", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      const tour = screen.getByRole("tab", { name: /tours/i });
+      expect(tour).toBeTruthy();
+      expect(tour.getAttribute("data-disabled")).toBe("false");
     });
   });
 });
