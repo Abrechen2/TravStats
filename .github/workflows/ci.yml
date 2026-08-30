@@ -1,17 +1,33 @@
 name: CI
 
-# Solo-project CI: just a Prettier safety net for the rare external PR.
-# The real quality gate is the local pre-/deploy hook (tsc + lint + tests
-# both sides). Re-running it here was duplicate work that produced red
-# badges without catching anything, so it was removed in May 2026.
+# What this workflow is for
+# ------------------------
+# Until August 2026 this file had exactly one substantive job (a Prettier
+# check on changed frontend files). Everything else the repo already knows
+# how to run — tsc, eslint, jest, vitest — ran only on the maintainer's
+# machine before a deploy. That is a gate you have to remember to walk
+# through, which means it is not a gate.
 #
-# The check is scoped to the files a change actually touches. Running
-# prettier over all of frontend/src made the job fail on every single PR
-# (95 files under src have never been formatted, mostly since the Tailwind 4
-# migration), so a red badge said nothing about the change being reviewed. A
-# mass `prettier --write` was the alternative, but it collides with the
-# long-running lodging branch — and it would not have made the gate any more
-# informative about future changes than scoping it does.
+# The jobs below run the suites that already exist in package.json. Nothing
+# here is new tooling; it is the existing tooling, wired to `push`.
+#
+# Honesty rules this file follows
+# -------------------------------
+# A check that cannot fail is worse than no check, because it buys the
+# feeling of coverage without the coverage. So:
+#
+#   * No step carries `continue-on-error`. A step either matters or it is
+#     not here. Where a whole job is advisory, the flag sits on the JOB and
+#     the reason is written down next to it — never sprinkled per-step,
+#     which is how a "required" check quietly becomes unfailable.
+#   * Nothing is skipped by a path filter. A job skipped by a path filter
+#     reports as green to branch protection, so a filter is a way of
+#     passing a check without running it.
+#   * Every advisory job writes its real outcome into the job summary, so
+#     "this was allowed to fail" never reads the same as "this passed".
+#
+# Which jobs are safe to mark as REQUIRED in branch protection is listed
+# per job below. Do not promote a job to required without re-measuring it.
 
 on:
   push:
@@ -19,17 +35,10 @@ on:
     # `Main`, and GitHub branch filters are case-sensitive, so the push
     # trigger never fired once.
     branches: [main]
-    paths:
-      - "frontend/src/**"
-      - "frontend/.prettierrc*"
-      - "frontend/package.json"
-      - "frontend/package-lock.json"
+    # Deliberately NO `paths:` filter. A path-filtered job that does not
+    # run is reported to branch protection as successful, which is the
+    # third way a gate can silently stop being a gate.
   pull_request:
-    paths:
-      - "frontend/src/**"
-      - "frontend/.prettierrc*"
-      - "frontend/package.json"
-      - "frontend/package-lock.json"
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +49,207 @@ permissions:
   contents: read
 
 jobs:
+  # ---------------------------------------------------------------------
+  # SAFE TO REQUIRE. Measured green on main @ 6fe74af3 (2026-08-30):
+  # `npx tsc --noEmit` clean in both trees, `eslint` clean in both.
+  # ---------------------------------------------------------------------
+  static:
+    name: Typecheck + lint (both trees)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # `npm ci` in backend/ triggers its postinstall (`prisma generate`).
+      # tsc needs the generated client types, so this is not optional.
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Typecheck backend
+        run: cd backend && npx tsc --noEmit
+
+      - name: Typecheck frontend
+        run: cd frontend && npx tsc --noEmit
+
+      - name: Lint backend
+        run: cd backend && npm run lint
+
+      # eslint here runs with --max-warnings 0 (see frontend/package.json),
+      # so a new warning fails the job rather than accumulating silently.
+      - name: Lint frontend
+        run: cd frontend && npm run lint
+
+  # ---------------------------------------------------------------------
+  # SAFE TO REQUIRE. Measured green on main @ 6fe74af3 (2026-08-30):
+  # 346 files, 3050 tests, all passing, exit 0.
+  #
+  # The suite logs jsdom "HTMLCanvasElement.prototype.getContext is not
+  # implemented" noise from the globe components. That is stderr output,
+  # not a failure — do not "fix" it by making the job tolerate errors.
+  # ---------------------------------------------------------------------
+  frontend-tests:
+    name: Frontend tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Vitest
+        run: cd frontend && npx vitest --run
+
+  # ---------------------------------------------------------------------
+  # ADVISORY — DO NOT MARK REQUIRED YET.
+  #
+  # This is not a guess about CI behaviour. The suite was run on main @
+  # 6fe74af3 (2026-08-30) against a dedicated throwaway Postgres, with the
+  # same migrate/seed steps and the same memory and pool settings this job
+  # uses. Measured result:
+  #
+  #   Test Suites: 16 failed, 1 skipped, 328 passed (344 of 345)
+  #   Tests:       38 failed, 10 skipped, 2921 passed (2969 total)
+  #   Wall clock:  ~8 minutes
+  #
+  # The failures are pre-existing test-isolation defects, NOT a CI problem
+  # and NOT fixed here. Two causes account for all 16 suites:
+  #
+  #   1. Un-awaited background writes racing teardown. The lodging routes
+  #      fire checkAndUpdateAchievements deliberately without `await`, so
+  #      the suite deletes its user while that write is still in flight.
+  #      Postgres answers with 40P01 "deadlock detected" on
+  #      lodging.test.ts:53, and the same race shows up 56 times as a
+  #      unique-constraint violation on (user_id, achievement_id).
+  #   2. Catalogue wipes leaking across files. The seed suites clear the
+  #      airport/airline/aircraft/ship/port tables wholesale and re-seed in
+  #      afterAll; when a run is disrupted mid-flight, later suites query
+  #      empty catalogues (100 failed airport.findMany calls) and fail for
+  #      reasons that have nothing to do with the code under test.
+  #
+  # So the suite is not "green except one file" — a third of the failures
+  # are collateral, and which files fail depends on ordering. Gating merges
+  # on that would block every unrelated commit and train everyone to click
+  # past a red check, which is exactly how a gate stops being read.
+  #
+  # Fix the isolation defects first. Then delete `continue-on-error` below
+  # and promote this job to required, in one deliberate move, and only
+  # after re-measuring.
+  #
+  # Two environment details that are load-bearing, both learned the hard
+  # way rather than guessed:
+  #
+  #   * connection_limit=5 on the DATABASE_URL. Prisma sizes its pool from
+  #     the host's core count, and on a many-core runner a single client
+  #     grabs most of Postgres's 100 connections; the suite then dies with
+  #     ~100 connection errors that look like application bugs.
+  #   * NODE_OPTIONS raises the heap. `main` does not carry the
+  #     jest.setup/globalSetup harness or `workerIdleMemoryLimit` that
+  #     bound memory on other branches, so on Node's default ~4 GB ceiling
+  #     this suite OOMs partway through. Raising the ceiling here keeps the
+  #     job meaningful without importing that harness onto main.
+  # ---------------------------------------------------------------------
+  backend-tests:
+    name: Backend tests (Jest, advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    services:
+      postgres:
+        # Values are CI-local throwaways and intentionally unrelated to any
+        # developer or deployment credentials.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_ci?connection_limit=5
+      NODE_OPTIONS: --max-old-space-size=6144
+      NODE_ENV: test
+      # Not decoration, and not free-form. Several suites import src/index.ts,
+      # which calls validateEnv() and answers a bad value with process.exit(1)
+      # — that kills the whole jest run after a single file, which reads like
+      # "the suite is broken" rather than "an env var is malformed". The
+      # schema in src/config/env.ts demands JWT_SECRET >= 32 chars and
+      # ENCRYPTION_KEY of EXACTLY 64 hex characters. Both values below are
+      # throwaway CI literals with no relationship to any real key.
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Apply migrations
+        run: cd backend && npx prisma migrate deploy
+
+      # Not optional. `init` does not seed catalogues, and a large part of
+      # the suite reaches the airport/aircraft catalogue on import — even
+      # files that look like pure unit tests do, via the catalogue caches.
+      # Without this the failures look like logic bugs.
+      - name: Seed test catalogues
+        run: cd backend && npx tsx scripts/seed-test-catalogues.ts
+
+      - name: Jest
+        id: jest
+        run: cd backend && npx jest --ci --forceExit
+
+      # Without this, `continue-on-error` above would render a failing run
+      # as a green tick and the whole job would become decoration.
+      - name: Report outcome
+        if: always()
+        run: |
+          if [ "${{ steps.jest.outcome }}" = "success" ]; then
+            echo "Backend suite passed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Backend suite FAILED (advisory job)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "This job does not block merges yet. Check whether this is the known" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`lodging.test.ts\` 40P01 deadlock or a genuine regression you introduced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ---------------------------------------------------------------------
+  # SAFE TO REQUIRE — but note it only checks files the change touched.
+  #
+  # Scoped on purpose: ~95 files under frontend/src have never been
+  # Prettier-formatted (mostly since the Tailwind 4 migration), so a
+  # repo-wide check would fail on every PR regardless of its content, and
+  # a badge that is always red carries no information. Scoping keeps the
+  # signal about the change under review. A mass `prettier --write` is the
+  # alternative whenever the maintainer wants to take that diff.
+  # ---------------------------------------------------------------------
   format:
     name: Frontend format check
     runs-on: ubuntu-latest
@@ -63,12 +273,13 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           BEFORE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
             range="origin/$BASE_REF...HEAD"
-          elif [ "${{ github.event_name }}" = "push" ] && \
+          elif [ "$EVENT_NAME" = "push" ] && \
                [ -n "${BEFORE_SHA:-}" ] && \
                [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
             range="$BEFORE_SHA..HEAD"
