@@ -3,13 +3,10 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { boardingPassParseLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
+import { getAvailableProviders } from '../services/parsers/factory';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
-import { decodeBarcodeFromImageBase64 } from '../utils/barcodeImage';
-import { decodeBcbp, looksLikeBcbp } from '../utils/bcbp';
-import { getMissingFields } from '../services/parsers/shared/utils';
-import { ParsedBooking } from '../services/bookingParser';
+import { isEmpty, readBoardingPass } from '../services/boardingPassRead';
 
 const router = Router();
 
@@ -75,83 +72,17 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-    // --- 1. The barcode, if the image has one ------------------------------
-    //
-    // Every boarding pass carries its own flight in a PDF417 stripe or an
-    // Aztec square, error-corrected and unambiguous, and OCR of the same card
-    // is a guess by comparison. This route used to ignore it and read only the
-    // printed text, which is why a Wallet screenshot could come back empty
-    // while the answer sat in the middle of the picture.
-    //
-    // Never fatal: a photo with no readable barcode is the ordinary case this
-    // route was built for, and it still gets the full OCR pass below.
-    const barcodeStr = await decodeBarcodeFromImageBase64(imageBase64);
-    const decoded = looksLikeBcbp(barcodeStr) ? decodeBcbp(barcodeStr) : null;
-    if (decoded) {
-      logger.info(
-        { flightNumber: decoded.flightNumber, route: `${decoded.fromCode} → ${decoded.toCode}` },
-        '[Boarding Pass Parse] barcode read from image'
-      );
-    }
+    // Barcode first, OCR for what no barcode carries, merged with the barcode
+    // winning — shared with /boardingpass/propose, see services/boardingPassRead.
+    const reading = await readBoardingPass({ imageBase64, userId });
 
-    // --- 2. OCR, for the printed fields no barcode carries -----------------
-    // Gate, terminal, boarding group and aircraft are never in a BCBP string,
-    // so this runs even when the barcode decoded. It is allowed to fail there:
-    // losing the gate must not cost a flight the barcode already spelled out.
-    const config = await getParserConfig(undefined, undefined, userId);
-    let ocrFlight: ParsedBooking | undefined;
-    let provider = 'barcode';
-    let fallbackUsed = false;
-    try {
-      const result = await parseBoardingPass(imageBase64, config);
-      ocrFlight = result.flights[0];
-      provider = result.provider;
-      fallbackUsed = result.fallbackUsed;
-    } catch (ocrError) {
-      if (!decoded) {
-        throw ocrError;
-      }
-      logger.warn({ err: ocrError }, '[Boarding Pass Parse] OCR failed, continuing with barcode only');
-    }
-
-    logger.info({
-      provider,
-      fallbackUsed,
-      barcode: Boolean(decoded),
-      flightNumber: ocrFlight?.flightNumber,
-      route: `${ocrFlight?.departureCode} → ${ocrFlight?.arrivalCode}`,
-    }, '[Boarding Pass Parse] Parsing complete');
-
-    if (!decoded && !ocrFlight) {
+    if (isEmpty(reading)) {
       res.status(422).json({ error: 'No flight data could be extracted from the boarding pass' });
       return;
     }
 
-    // --- 3. Merge, barcode winning what it carries -------------------------
-    // The date is stamped T00:00 rather than left bare: a BCBP string holds a
-    // day of the year and no clock at all, and midnight is the placeholder
-    // this codebase already reads as date-only.
-    const merged: ParsedBooking = {
-      ...(ocrFlight ?? { missing: [] }),
-      ...(decoded
-        ? {
-            flightNumber: decoded.flightNumber ?? ocrFlight?.flightNumber,
-            departureCode: decoded.fromCode ?? ocrFlight?.departureCode,
-            arrivalCode: decoded.toCode ?? ocrFlight?.arrivalCode,
-            departureTime: decoded.date ? `${decoded.date}T00:00` : ocrFlight?.departureTime,
-            seat: decoded.seatNumber ?? ocrFlight?.seat,
-            pnr: decoded.pnr ?? ocrFlight?.pnr,
-            bookingReference: decoded.pnr ?? ocrFlight?.bookingReference,
-            airline: ocrFlight?.airline ?? decoded.carrier,
-          }
-        : {}),
-    };
-    // Recomputed, not inherited: `missing` came from the OCR pass alone and
-    // would still name fields the barcode has since supplied.
-    merged.missing = getMissingFields(merged);
-
     let enriched = false;
-    let flight = merged;
+    let flight = reading.merged;
 
     if (
       enrichWithApi &&
@@ -195,13 +126,13 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     res.json({
       flight,
-      provider,
-      fallbackUsed,
+      provider: reading.provider,
+      fallbackUsed: reading.fallbackUsed,
       enriched,
       // Additive, and the same vocabulary /boardingpass/propose already uses:
       // a caller that wants to know how much to trust the answer can, and one
       // that does not simply ignores the field.
-      sources: { barcode: Boolean(decoded), ocr: Boolean(ocrFlight) },
+      sources: reading.sources,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

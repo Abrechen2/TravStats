@@ -6,9 +6,7 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { boardingPassParseLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import logger from "../utils/logger";
-import { decodeBcbp, looksLikeBcbp } from "../utils/bcbp";
-import { decodeBarcodeFromImageBase64 } from "../utils/barcodeImage";
-import { getParserConfig, parseBoardingPass } from "../services/parsers/factory";
+import { readBoardingPass } from "../services/boardingPassRead";
 import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { getCachedAirport } from "../services/airportCache";
 
@@ -55,76 +53,46 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     const userId = req.userId!;
     const { barcode, imageBase64 } = proposeSchema.parse(req.body);
 
-    // --- 1. Barcode = source of truth (deterministic, error-corrected) ------
-    // The scan path sends the decoded barcode string directly. The upload path
-    // sends only an image — read the Aztec/PDF417 barcode out of it, because
-    // boarding-pass OCR is unreliable and the barcode is exact.
-    let barcodeStr = barcode;
-    let barcodeFromImage = false;
-    if (!barcodeStr && imageBase64) {
-      const fromImage = await decodeBarcodeFromImageBase64(imageBase64);
-      if (fromImage) {
-        barcodeStr = fromImage;
-        barcodeFromImage = true;
-      }
-    }
-    const decoded = barcodeStr && looksLikeBcbp(barcodeStr) ? decodeBcbp(barcodeStr) : null;
-    if (barcodeFromImage && decoded) {
-      logger.info(
-        { flightNumber: decoded.flightNumber, route: `${decoded.fromCode} → ${decoded.toCode}` },
-        "[BoardingPassPropose] barcode read from uploaded image"
+    // --- 1+2. Barcode, then OCR for what it does not carry -----------------
+    // Shared with /parse-boardingpass — see services/boardingPassRead. A
+    // supplied barcode wins over re-reading one out of the image, which is what
+    // the live scanner path relies on: it decodes from a camera frame and
+    // sends no photograph at all.
+    //
+    // An image that fails validation still has its barcode read; only OCR is
+    // skipped. A picture too poor to read text off can hold a perfectly good
+    // error-corrected barcode.
+    const validation =
+      imageBase64 === undefined ? null : validateBoardingPassImageBase64(imageBase64);
+    if (validation !== null && !validation.valid) {
+      logger.warn(
+        { reason: validation.reason },
+        "[BoardingPassPropose] image rejected by validation, continuing with barcode only"
       );
     }
-    let flightNumber = decoded?.flightNumber;
-    let fromCode = decoded?.fromCode;
-    let toCode = decoded?.toCode;
-    let date = decoded?.date;
-    let seatNumber = decoded?.seatNumber;
-    let bookingClassLetter = decoded?.bookingClassLetter;
-    let pnr = decoded?.pnr;
-    let airline = decoded?.carrier;
+    const reading = await readBoardingPass({
+      imageBase64,
+      barcode,
+      userId,
+      allowOcr: validation === null ? false : validation.valid,
+    });
+
+    const { decoded, merged } = reading;
+    const flightNumber = merged.flightNumber;
+    const fromCode = merged.departureCode;
+    const toCode = merged.arrivalCode;
+    const date = merged.departureTime?.slice(0, 10);
+    const seatNumber = merged.seat;
+    const bookingClassLetter = merged.bookingClassLetter;
+    const pnr = merged.pnr ?? merged.bookingReference;
+    const airline = merged.airline;
     const passengerName = decoded?.passengerName;
-
-    // --- 2. OCR = supplement for fields the barcode omits -------------------
-    let gate: string | undefined;
-    let terminal: string | undefined;
-    let boardingGroup: string | undefined;
-    let aircraft: string | undefined;
-    let ocrUsed = false;
-
-    if (imageBase64) {
-      const validation = validateBoardingPassImageBase64(imageBase64);
-      if (validation.valid) {
-        try {
-          const config = await getParserConfig(undefined, undefined, userId);
-          const result = await parseBoardingPass(imageBase64, config);
-          const f = result.flights[0];
-          if (f) {
-            ocrUsed = true;
-            flightNumber = flightNumber || f.flightNumber;
-            fromCode = fromCode || f.departureCode;
-            toCode = toCode || f.arrivalCode;
-            date = date || (f.departureTime ? f.departureTime.slice(0, 10) : undefined);
-            seatNumber = seatNumber || f.seat;
-            pnr = pnr || f.pnr || f.bookingReference;
-            bookingClassLetter = bookingClassLetter || f.bookingClassLetter;
-            airline = airline || f.airline;
-            // Barcode never carries these, so OCR is authoritative for them.
-            gate = f.gate;
-            terminal = f.terminal;
-            boardingGroup = f.boardingGroup;
-            aircraft = f.aircraft;
-          }
-        } catch (err) {
-          logger.warn({ err }, "[BoardingPassPropose] OCR step failed, continuing with barcode only");
-        }
-      } else {
-        logger.warn(
-          { reason: validation.reason },
-          "[BoardingPassPropose] image rejected by validation, continuing with barcode only"
-        );
-      }
-    }
+    // The barcode never carries these four, so OCR is their only source.
+    const gate = merged.gate;
+    const terminal = merged.terminal;
+    const boardingGroup = merged.boardingGroup;
+    const aircraft = merged.aircraft;
+    const ocrUsed = reading.sources.ocr;
 
     // --- 3. Resolve airports (IATA -> coords) so the result is save-ready ---
     const departure = await resolveAirport(fromCode);
