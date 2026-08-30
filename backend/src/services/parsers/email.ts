@@ -1,5 +1,6 @@
 import { TextProvider, ParserConfig, ParserResult } from './types';
 import { keepOnlyFlightsWithEvidence } from './shared/evidence';
+import { backfillRoutesFromText } from './shared/routeFromText';
 import { ParsedBooking } from '../bookingParser';
 import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
 import { shouldLogParserOperations } from '../loggingConfig';
@@ -21,7 +22,7 @@ function applyEmailRegexPostProcessing(
   const combinedText = `${subject}\n${text || ''}\n${html || ''}`;
   const regexData = extractFlightDataFromText(combinedText.toUpperCase());
 
-  return flights.map((flight) => {
+  const withFields = flights.map((flight) => {
     const enhanced = { ...flight };
 
     if (!enhanced.pnr && regexData.pnr) {
@@ -65,6 +66,13 @@ function applyEmailRegexPostProcessing(
 
     return enhanced;
   });
+
+  // The route is recovered across the whole document rather than per flight,
+  // because pairing the bracketed codes needs the itinerary in order. Note this
+  // passes combinedText in its ORIGINAL case: the uppercased copy above would
+  // turn an ordinary "(die)" into a code and reintroduce the false positives
+  // the bracket rule exists to avoid.
+  return backfillRoutesFromText(withFields, combinedText);
 }
 
 /**
