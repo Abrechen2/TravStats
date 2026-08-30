@@ -1630,6 +1630,30 @@ model PlaceVisitPhoto {
   /// Immich provenance, set only when imported from a linked album.
   immichAssetId String? @map("immich_asset_id")
 
+  /// SHA-1 of the uploaded original, base64 — the encoding Immich uses for
+  /// `asset.checksum`, so a later match is exact rather than a guess.
+  ///
+  /// Computed server-side from the bytes on disk. A client-supplied value
+  /// would be unverified, and the whole point of this column is that it can be
+  /// trusted. Null for rows written before it existed and for anything
+  /// imported FROM Immich, which already carries its asset id.
+  ///
+  /// Forgejo #21: the Companion uploads place-visit photos as a TEMPORARY copy
+  /// and tells the user they will become a library link later. Without an
+  /// identity on the row that promise can only be kept heuristically — by
+  /// original filename, size and creation time, which works often and not
+  /// always. The window of rows that can never be matched exactly is the only
+  /// thing that grows by waiting.
+  checksum String?
+
+  /// When the picture was taken, as opposed to when it was uploaded.
+  ///
+  /// Deliberately NOT parsed from EXIF here: this project has no EXIF reader,
+  /// and adding one to a photo upload path is a bigger decision than this
+  /// column. `TripPhoto.takenAt` is filled the same two ways — from Immich's
+  /// `fileCreatedAt` on import, or by the client through PATCH.
+  takenAt DateTime? @map("taken_at")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
