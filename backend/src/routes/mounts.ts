@@ -62,6 +62,7 @@ import cruisesRouter from './cruises';
 import cruiseRouteOverrideRoutes from './cruises/routeOverride';
 import currenciesRouter from './currencies';
 import lodgingRouter from './lodging';
+import lodgingPhotoRouter from './lodging/photos';
 import placesRouter from './places';
 import xlsxImportRouter from './xlsxImport';
 import placeVisitPhotoRouter from './places/visitPhotos';
@@ -166,6 +167,10 @@ export const apiMounts: ApiMount[] = [
   // above — split out of cruises.ts once that file crossed the 800-line max.
   { id: 'cruises.routeOverride', base: '/api/v1/cruises', router: cruiseRouteOverrideRoutes },
   { id: 'currencies', base: '/api/v1/currencies', router: currenciesRouter },
+  // Photographs of the house — same prefix, own file. Mounted FIRST for the
+  // same reason the visit-photo router is: relying on segment counts to keep
+  // two routers on one prefix apart is a rule nobody can see.
+  { id: 'lodging.photos', base: '/api/v1/lodging', router: lodgingPhotoRouter },
   { id: 'lodging', base: '/api/v1/lodging', router: lodgingRouter },
   // Photo proof for a visit — same prefix, own file, split out before places.ts
   // approaches the 800-line max. Mounted first so nothing depends on segment

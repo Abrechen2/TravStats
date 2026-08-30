@@ -24,6 +24,10 @@ interface Props {
 export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   const { t } = useTranslation(["cruise", "location"]);
   const [query, setQuery] = useState<string>(value?.name ?? "");
+  // Forgejo #9: out-of-range coordinates used to vanish silently and the
+  // record saved without them. LocationInput now says so; this stops the
+  // form writing while the user is looking at that message.
+  const [coordsValid, setCoordsValid] = useState(true);
   const [results, setResults] = useState<Port[]>([]);
   // External geocoder fallback: populated only when the local catalog has no
   // match, so a user can still find ports missing from the vendored CSV
@@ -238,9 +242,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
           })}
         </ul>
       )}
-      {searchError && (
-        <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>
-      )}
+      {searchError && <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>}
       {/* Create/persist errors — rendered HERE, not only inside the add-custom
           form: a failed geocoder-candidate save (handleSelectGeocoded) sets
           this too, and until 2026-08-02 it had no render site on that path,
@@ -289,6 +291,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
             <LocationInput
               value={newPosition}
               onChange={handleNewLocationChange}
+              onValidityChange={setCoordsValid}
               compact
               idPrefix="port-picker-location"
             />
@@ -316,7 +319,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
             </button>
             <button
               type="button"
-              disabled={saving || !canSave}
+              disabled={saving || !canSave || !coordsValid}
               onClick={(): void => {
                 void save();
               }}

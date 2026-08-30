@@ -32,7 +32,8 @@
     "later": "Später",
     "details": "Details",
     "dismiss": "Verwerfen",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "showLess": "Weniger anzeigen"
   },
   "dismiss": "Verwerfen",
   "app": {
@@ -63,7 +64,14 @@
     "showHelp": "Hilfe anzeigen",
     "closeHint": "Hinweis schließen",
     "toggleMenu": "Menü umschalten",
-    "back": "Zurück"
+    "back": "Zurück",
+    "required": "Pflichtfeld",
+    "home": "Startseite",
+    "discord": "Discord beitreten",
+    "view": "Ansehen",
+    "play": "Abspielen",
+    "pause": "Pausieren",
+    "loading": "Lädt"
   },
   "help": {
     "clickForMore": "Klick für mehr Infos"

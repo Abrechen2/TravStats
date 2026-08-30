@@ -106,7 +106,11 @@ describe("RouteEditorOverlay — undo and redo shortcuts", () => {
 
   it("redoes on Ctrl+Shift+Z, and does not undo", () => {
     const { onUndo, onRedo } = keys();
-    fireEvent.keyDown(screen.getByLabelText("Griff 2"), { key: "z", ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(screen.getByLabelText("Griff 2"), {
+      key: "z",
+      ctrlKey: true,
+      shiftKey: true,
+    });
     expect(onRedo).toHaveBeenCalledTimes(1);
     expect(onUndo).not.toHaveBeenCalled();
   });

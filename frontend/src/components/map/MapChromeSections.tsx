@@ -30,6 +30,7 @@ import {
   TEXT,
   PANEL_OPTION_STYLE,
 } from "./controlPanelKit";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 const YEAR_RANGE_BACK = 14;
 
@@ -58,6 +59,7 @@ function Section({
 }
 
 export function MapChromeSections(): JSX.Element {
+  const { colorOf } = useDomainColors();
   const { t } = useTranslation(["dashboard", "common"]);
   const { tab, mode, setMode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
@@ -150,9 +152,9 @@ export function MapChromeSections(): JSX.Element {
                         onClick={() => toggleDomain(key)}
                         className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] transition-colors"
                         style={{
-                          background: active ? descriptor.color : "transparent",
+                          background: active ? colorOf(descriptor.key) : "transparent",
                           color: active ? "#0d1117" : "rgba(241,245,249,0.6)",
-                          border: `1px solid ${active ? descriptor.color : BORDER}`,
+                          border: `1px solid ${active ? colorOf(descriptor.key) : BORDER}`,
                           fontWeight: active ? 600 : 400,
                         }}
                       >

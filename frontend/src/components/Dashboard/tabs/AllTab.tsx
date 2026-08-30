@@ -83,6 +83,10 @@ function isAllMode(mode: unknown): mode is AllMode {
  * number to change — verify by measuring, not by eye: compare the legend's
  * `getBoundingClientRect().bottom` against `.maplibregl-ctrl-bottom-right`.
  */
+// Remembered per browser: a key someone shut should stay shut on the next
+// visit, and it is a display preference rather than account state.
+const LEGEND_OPEN_KEY = "dashboard.legendOpen";
+
 const ATTRIBUTION_CLEARANCE = 52;
 
 export function AllTab(): JSX.Element {
@@ -111,6 +115,25 @@ export function AllTab(): JSX.Element {
   const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeLists, setPlaceLists] = useState<PlaceList[]>([]);
+  // Remembered per browser, like the rest of the map's appearance. Someone who
+  // closes the key on a crowded map means it, and having it reopen on every
+  // navigation is the same annoyance one page later.
+  const [legendOpen, setLegendOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem(LEGEND_OPEN_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LEGEND_OPEN_KEY, String(legendOpen));
+    } catch {
+      /* private mode or blocked site data — the choice just does not survive a reload */
+    }
+  }, [legendOpen]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   // Global dashboard filter — year populates `time.from/to`, domain
@@ -466,10 +489,16 @@ export function AllTab(): JSX.Element {
   // and `legendRow` — split into that file to keep this one under its
   // 800-line ceiling (same reason as `tourMapOverlay.tsx`). Nothing about
   // WHAT they compute changed: same config in, same JSX out.
+  // Colours and labels per place list. The POI legend names the lists the
+  // map is actually painting, so both read the same resolution.
+  const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
+
   const flightLegendRows = buildFlightLegendRows(flightColorConfig, t, legendRow);
   const cruiseLegendRows = buildCruiseLegendRows(cruiseColorConfig, t, legendRow);
   const lodgingLegendRows = buildLodgingLegendRows(lodgingColorConfig, t, legendRow);
-  const poiLegendRows = buildPoiLegendRows(placeColorConfig, t, legendRow);
+  // The lists are passed in: in "by list" mode the key has to NAME them, or the
+  // only row is the negative one and every coloured pin stays unexplained.
+  const poiLegendRows = buildPoiLegendRows(placeColorConfig, t, legendRow, placeListContext.used);
   const placeLegendRows = buildAirportPortLegendRows(
     flightsVisible,
     cruisesVisible,
@@ -494,9 +523,26 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
-  const anyLegendVisible =
-    flightsVisible || cruisesVisible || lodgingsVisible || placesVisible || tourHasData;
-  const legendTable = anyLegendVisible && (
+  const legendRows = [
+    ...(flightsVisible ? flightLegendRows : []),
+    ...(cruisesVisible ? cruiseLegendRows : []),
+    ...(lodgingsVisible ? lodgingLegendRows : []),
+    ...(placesVisible ? poiLegendRows : []),
+    ...placeLegendRows,
+    // The tour rows join the same array rather than hanging outside it,
+    // or they would sit below the collapsed panel and stay visible when
+    // the key is shut — and be missing from the count on the button.
+    ...(tourHasData ? tourLegend.rows : []),
+  ];
+
+  // Collapsible, like the map options beside it. The key grew a row per LIST
+  // when "by list" colouring started naming them, and on a map with a dozen
+  // lists it began covering the thing it explains (Alex, 2026-08-29).
+  //
+  // The count stays visible when collapsed. A bare chevron hides how much is
+  // behind it, and a key is the one overlay where "there is more here" is the
+  // whole point.
+  const legendTable = legendRows.length > 0 && (
     <div
       style={{
         position: "absolute",
@@ -513,14 +559,37 @@ export function AllTab(): JSX.Element {
         border: "1px solid var(--color-border)",
         fontSize: 12,
         whiteSpace: "nowrap",
+        maxHeight: legendOpen ? "min(60vh, 420px)" : undefined,
+        overflowY: legendOpen ? "auto" : undefined,
       }}
     >
-      {flightsVisible && flightLegendRows}
-      {cruisesVisible && cruiseLegendRows}
-      {lodgingsVisible && lodgingLegendRows}
-      {placesVisible && poiLegendRows}
-      {placeLegendRows}
-      {tourHasData && tourLegend.rows}
+      <button
+        type="button"
+        onClick={() => setLegendOpen((open) => !open)}
+        aria-expanded={legendOpen}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          background: "none",
+          border: "none",
+          padding: 0,
+          margin: 0,
+          font: "inherit",
+          color: "var(--text-muted)",
+          cursor: "pointer",
+        }}
+      >
+        <span>{t("dashboard:legend.title")}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {!legendOpen && (
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{legendRows.length}</span>
+          )}
+          <span aria-hidden>{legendOpen ? "▾" : "▸"}</span>
+        </span>
+      </button>
+      {legendOpen && legendRows}
     </div>
   );
 
@@ -609,10 +678,6 @@ export function AllTab(): JSX.Element {
       )}
     </div>
   );
-
-  // Resolved once for both maps below. "First list wins" lives in this one
-  // function, so a pin's colour and its symbol can never name different lists.
-  const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
 
   // Journey mode takes over the map entirely: it injects its own cross-domain
   // layers and suppresses the internal cruise arcs that MapContainer3D would

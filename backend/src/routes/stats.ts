@@ -30,6 +30,7 @@ import {
   resolveFlightDuration,
 } from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
+import { buildPassport } from '../services/stats/passport';
 import {
   normalizeAirline,
   mergeAirlineCounts,
@@ -1086,6 +1087,66 @@ router.get(
       next(error);
     }
   }
+);
+
+/**
+ * The passport — countries, their airports, and a continent quota.
+ *
+ * One endpoint rather than two raw ones the clients re-aggregate: the Companion
+ * app already derives this screen client-side, and a second derivation in the
+ * web frontend would be a third copy of arithmetic that has to agree. The
+ * rules, and why each was chosen to match a figure published elsewhere on this
+ * server, are in services/stats/passport.ts.
+ */
+router.get(
+  '/passport',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const flights = await prisma.flight.findMany({
+        where: { userId, status: { in: ['flown', 'historical'] } },
+        select: {
+          depIata: true,
+          depLat: true,
+          depLon: true,
+          arrIata: true,
+          arrLat: true,
+          arrLon: true,
+          departureTime: true,
+          status: true,
+        },
+      });
+
+      const codes = [
+        ...new Set(
+          flights.flatMap((f) => [f.depIata, f.arrIata]).filter((c): c is string => Boolean(c)),
+        ),
+      ];
+
+      // One catalogue lookup for every end of every flight. A failure here
+      // costs the countries, so it is reported rather than swallowed into an
+      // empty passport that looks like someone who has never flown.
+      const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
+      const airportCountries = new Map<string, string | null>(
+        [...airports.entries()].map(([code, data]) => [code, data?.country ?? null]),
+      );
+
+      const homeSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { data: true },
+      });
+      const historyData =
+        homeSettings?.data && typeof homeSettings.data === 'object'
+          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
+          : undefined;
+      const homeIatas = normalizeHistory(historyData).map((entry) => entry.iata);
+
+      res.json(buildPassport(flights, airportCountries, homeIatas));
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 // Seat position statistics

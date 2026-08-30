@@ -43,7 +43,12 @@
     "title": "Activity per year",
     "subtitleStacked": "stacked by domain",
     "subtitleHighlight": "{{year}} highlighted",
-    "subtitleCompare": "{{year}} vs. {{compare}} highlighted"
+    "subtitleCompare": "{{year}} vs. {{compare}} highlighted",
+    "measureLabel": "What is counted",
+    "measure": {
+      "events": "Experiences",
+      "days": "Travel days"
+    }
   },
   "overviewHeatmap": {
     "title": "Active days {{year}}",
@@ -588,5 +593,23 @@
     "avgTripDaysDesc_other": "Longest trip: {{count}} days",
     "journalEntries": "Journal entries",
     "noMoods": "No mood recorded yet"
+  },
+  "sections": {
+    "button": "Sections",
+    "hiddenCount": "{{count}} off",
+    "showAll": "Show all again",
+    "overview": "Overview",
+    "charts": "Charts",
+    "distance": "Distance",
+    "breakdown": "Breakdown",
+    "punctuality": "Punctuality",
+    "fun": "Curiosities",
+    "business": "Cost",
+    "unique": "Firsts",
+    "airports": "Airports",
+    "seats": "Seats",
+    "airlines": "Airlines",
+    "aircraft": "Aircraft",
+    "countries": "Countries"
   }
 }

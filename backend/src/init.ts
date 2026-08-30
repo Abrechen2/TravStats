@@ -7,6 +7,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { seedPortsFromCSV } from './seedPortsFromCSV';
+import { seedShipsFromCSV } from './seedShipsFromCSV';
 import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -211,6 +213,44 @@ async function init() {
 
     if (shouldSeedDemo) {
       const reason = isFirstInstall ? 'first install' : 'CREATE_DEMO_USER=true';
+
+      // The cruise catalogues are a PREREQUISITE of the demo data, so they are
+      // seeded here rather than left to the server's own startup.
+      //
+      // Forgejo #2: on a fresh install the demo seeder ran first and found an
+      // empty ports table, so it created "0 cruises with stops" — and the log
+      // then cheerfully reported 12,059 ports and 30 ships being inserted
+      // immediately afterwards, by the server process that starts later. The
+      // dashboard showed 160 flights and no cruises at all, with nothing to
+      // suggest anything had gone wrong.
+      //
+      // Both seeders are idempotent (they skip rows whose UNLOCODE/IMO already
+      // exists and never overwrite user-added ones), so the server's own pass
+      // a few seconds later is a no-op. Gated on `shouldSeedDemo` so an
+      // ordinary restart does not pay for work the server already does.
+      console.log('5️⃣ b Seeding cruise catalogues (needed by the demo data)...');
+      for (const [label, seed] of [
+        ['ports', seedPortsFromCSV],
+        ['ships', seedShipsFromCSV],
+      ] as const) {
+        try {
+          await seed();
+          logger.info({
+            operation: 'init_seed_cruise_catalogue',
+            message: `Seeded ${label} before the demo user`,
+          });
+        } catch (error) {
+          // Not fatal: a demo account without cruises is still worth having,
+          // and the server retries both on startup.
+          console.error(`   ⚠️  Could not seed ${label} — demo cruises may be missing`);
+          logger.warn({
+            operation: 'init_seed_cruise_catalogue_error',
+            message: `Failed to seed ${label} before the demo user`,
+            error: { message: error instanceof Error ? error.message : 'Unknown error' },
+          });
+        }
+      }
+
       console.log(`6️⃣  Seeding demo user (${reason})...`);
       logger.info({
         operation: 'init_demo_user',

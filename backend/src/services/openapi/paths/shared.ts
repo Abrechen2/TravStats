@@ -77,6 +77,32 @@ export const flightResponse = registry.register(
       companions: z.array(z.string()),
       notes: z.string().nullable(),
       createdAt: z.string().datetime(),
+
+      // Derived from the airport catalogue at read time, not stored on the row.
+      // Every endpoint that returns a flight fills these in; a client may rely
+      // on them being present wherever a Flight appears.
+      depTimezone: z
+        .string()
+        .nullable()
+        .describe(
+          "IANA zone of the departure airport. A flight stores UTC and carries no " +
+            "zone of its own, so this is what lets a client show the time on the " +
+            "clock the traveller actually read. Null means the airport is not in " +
+            "the catalogue — then the time is UTC and should be labelled as such, " +
+            "never shown bare as if it were local."
+        ),
+      arrTimezone: z.string().nullable().describe("IANA zone of the arrival airport."),
+      depCountry: z.string().nullable().describe("ISO country of the departure airport."),
+      arrCountry: z.string().nullable().describe("ISO country of the arrival airport."),
+      durationMinutes: z
+        .number()
+        .int()
+        .nullable()
+        .describe(
+          "Elapsed minutes with both zones accounted for. Null when the times are " +
+            "date-only: there is no honest duration to report, and a client draws a " +
+            "great-circle estimate instead of dressing up a placeholder as a fact."
+        ),
     })
     .openapi("Flight")
 );

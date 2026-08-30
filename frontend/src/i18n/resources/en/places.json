@@ -65,6 +65,7 @@
   "form": {
     "createTitle": "Add place",
     "editTitle": "Edit place",
+    "searchLabel": "Search for a place",
     "name": "Name",
     "namePlaceholder": "e.g. McDonald’s Shibuya Center-Gai",
     "category": "Category",
@@ -80,7 +81,9 @@
     "positionRequired": "A place cannot be saved without a position — search for it, click it on the map, or enter coordinates.",
     "created": "Place added.",
     "updated": "Place saved.",
-    "saveFailed": "The place could not be saved."
+    "saveFailed": "The place could not be saved.",
+    "addToLists": "Add to lists",
+    "listAddFailed": "Could not add to these lists: {{lists}}"
   },
   "detail": {
     "backToList": "Back to the list",
@@ -208,5 +211,61 @@
     "caption": "Caption",
     "captionAdd": "Caption…",
     "captionFailed": "The caption could not be saved."
+  },
+  "stats": {
+    "empty": "No visited places yet — record a visit and this page fills up.",
+    "visitedPlaces": "Places visited",
+    "visitedPlacesDesc": "{{wishlist}} more on the wishlist",
+    "visits": "Visits",
+    "visitsDesc": "{{dated}} dated · {{undated}} undated",
+    "visitsAllDated": "all dated",
+    "countries": "Countries",
+    "citiesDesc": "across {{count}} cities",
+    "lists": "Lists",
+    "listsDesc": "{{own}} own · {{checklists}} checklists",
+    "byCategory": "By category",
+    "byCountry": "By country",
+    "byCity": "By city",
+    "noCities": "No place has a city recorded.",
+    "mostVisited": "Most visited",
+    "checklists": "Checklist progress",
+    "more": "+ {{count}} more",
+    "noVisitsYet": "No visit recorded yet.",
+    "rhythm": {
+      "title": "Rhythm",
+      "busiestMonth": "Busiest month",
+      "busiestWeekday": "Busiest weekday",
+      "busiestDay": "Most places in a day",
+      "busiestDayDesc": "on {{date}}",
+      "streak": "Longest streak",
+      "streakDesc": "consecutive days with at least one visit",
+      "visitsCount": "{{count}} visits",
+      "visitsCount_one": "{{count}} visit",
+      "byYear": "Visits per year",
+      "byMonth": "Visits per month",
+      "byWeekday": "Visits per weekday",
+      "undatedNote": "{{count}} visits carry no date. They are in the totals but on no chart — they have no day.",
+      "undatedNote_one": "One visit carries no date. It is in the totals but on no chart — it has no day."
+    },
+    "quality": {
+      "title": "Ratings",
+      "average": "Avg rating",
+      "averageDesc": "from {{rated}} of {{total}} visits ({{share}} %)",
+      "bestRated": "Best rated",
+      "noRatings": "No rating given yet."
+    },
+    "fun": {
+      "title": "Curiosities",
+      "firstVisit": "First place",
+      "favourite": "Most returned to",
+      "favouriteDesc": "{{count}} visits",
+      "categoryCoverage": "Categories used",
+      "categoryCoverageDesc": "{{count}} still undiscovered",
+      "categoryCoverageComplete": "every category at least once",
+      "northernmost": "Northernmost place",
+      "southernmost": "Southernmost place",
+      "onTrips": "Visits on a trip",
+      "onTripsDesc": "of {{total}} in total"
+    }
   }
 }
