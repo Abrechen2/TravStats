@@ -591,8 +591,15 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
-                {/* Admin-only; the card itself renders null for non-admins. */}
-                <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
+                {/* Admin-only AND behind the tours gate. The card configures a
+                    road router for tour legs and has no other consumer, so on a
+                    production instance with beta off it would offer to set up
+                    routing for a feature invisible everywhere else — the same
+                    defect the Dawarich card below was fixed for, which this,
+                    its sibling, kept until the merge review. */}
+                {isFeatureVisible("tourRoutes") && (
+                  <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
+                )}
                 <ImmichConnectionCard />
                 {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
                     still meaningless where nothing consumes a recorded track,

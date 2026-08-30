@@ -23,6 +23,9 @@ vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
   default: () => <div data-testid="immich-connection-card" />,
 }));
+vi.mock("../../components/Settings/RoutingProviderSection", () => ({
+  default: () => <div data-testid="routing-provider-section" />,
+}));
 
 // The page's data hook fires API requests on mount. Everything it returns is
 // only consumed by sections we never render in these cases.
@@ -138,12 +141,17 @@ describe("SettingsPage — beta gate: devicePairing", () => {
  * MEDIUM-1 (final whole-phase review, 2026-08-29): `DawarichConnectionCard`
  * used to render unconditionally on `externalServices` — with the beta flag
  * OFF (production's setting), every user saw a connection card for a feature
- * invisible everywhere else (the Touren tab, the route editor). Gated the
- * same way those two are, via `isFeatureVisible("tourRoutes")`.
+ * invisible everywhere else (the Touren tab, the route editor). It was first
+ * gated via `isFeatureVisible("tourRoutes")`; since `6247e262` it has its OWN
+ * `dawarich` key, because cruise legs will pull from the same connection and a
+ * gate named after tours would then hide a card the cruise feature needs.
+ * These cases flip the MASTER switch, so they hold either way — which is
+ * exactly why the docstring had to be corrected by hand rather than by a
+ * failing test.
  * `ImmichConnectionCard` is the control: it has NO such gate and must keep
  * rendering regardless of the flag.
  */
-describe("SettingsPage — beta gate: tourRoutes (Dawarich connection card)", () => {
+describe("SettingsPage — beta gate: the Dawarich connection card", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
@@ -162,6 +170,37 @@ describe("SettingsPage — beta gate: tourRoutes (Dawarich connection card)", ()
     renderSettings("/settings?section=externalServices");
 
     expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+  });
+});
+
+/**
+ * Found during the merge review, 2026-08-30: `RoutingProviderSection` is the
+ * Dawarich card's sibling and kept the very defect the block above records.
+ * It configures a road router for TOUR legs and has no other consumer, so on a
+ * production instance (beta OFF) an admin saw a routing card for a feature
+ * hidden everywhere else. Gating it needed no test to change, which is how it
+ * survived a whole phase — hence this one.
+ * `ImmichConnectionCard` is again the control: no gate, always rendered.
+ */
+describe("SettingsPage — beta gate: the routing provider card", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
+  });
+
+  it("does not render the routing provider card when the flag is OFF", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+  });
+
+  it("renders the routing provider card when the flag is ON", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.getByTestId("routing-provider-section")).toBeTruthy();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
   });
 });
