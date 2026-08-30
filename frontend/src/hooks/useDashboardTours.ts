@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tourIndexApi, type TourGeometryEntry, type TourSummary } from "../lib/api/tourIndex";
 import { logger } from "../lib/logger";
 
@@ -100,7 +100,12 @@ export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
 
-  const geometries = Array.from(geometryById.values());
+  // Memoized on `geometryById` alone — without this, `Array.from(...)`
+  // allocated a new array identity on every render regardless of whether
+  // the map itself changed, which silently defeated the `tourPathData`
+  // `useMemo` in AllTab.tsx that depends on this array: it recomputed on
+  // every render too, since its dependency was never actually stable.
+  const geometries = useMemo(() => Array.from(geometryById.values()), [geometryById]);
 
   return { tours, toursLoading, toursLoadError, geometries, reload };
 }
