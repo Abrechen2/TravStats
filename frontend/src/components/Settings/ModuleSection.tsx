@@ -17,9 +17,7 @@ export default function ModuleSection(): JSX.Element {
   // the domain on, so gating it on "already enabled" would make it
   // permanently unreachable. Offering a switch that turns on something the
   // instance then refuses to render is the confusing half-state this avoids.
-  const visibleKeys = DOMAIN_KEYS.filter(
-    (key) => key !== "poi" || isFeatureVisible("poiDomain")
-  );
+  const visibleKeys = DOMAIN_KEYS.filter((key) => key !== "poi" || isFeatureVisible("poiDomain"));
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;

@@ -79,7 +79,8 @@ export function PinnedCard({
         ...SURFACE,
         opacity: shown ? 1 : 0,
         transform: shown ? "translateY(0) scale(1)" : "translateY(6px) scale(0.98)",
-        transition: "opacity .26s cubic-bezier(0.16,1,0.3,1), transform .26s cubic-bezier(0.16,1,0.3,1)",
+        transition:
+          "opacity .26s cubic-bezier(0.16,1,0.3,1), transform .26s cubic-bezier(0.16,1,0.3,1)",
       }}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -165,9 +166,7 @@ function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
         </div>
       );
     case "cruise":
-      return (
-        <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>
-      );
+      return <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>;
   }
 }
 
@@ -355,9 +354,7 @@ function PortBody({
   const stats = getPortStats(cruises, portKey);
   return (
     <>
-      {pinned.data.iata !== pinned.data.name && (
-        <SubHeading>{pinned.data.iata}</SubHeading>
-      )}
+      {pinned.data.iata !== pinned.data.name && <SubHeading>{pinned.data.iata}</SubHeading>}
       <Place city={pinned.data.city} country={pinned.data.country} locale={locale} />
       <Hero color="#7dd3fc">
         {stats.totalVisits} {t("map:airportMarkers.visits")}
@@ -406,7 +403,9 @@ function ArcBody({
     <>
       <div className="mb-2.5 space-y-1.5">
         {[pinned.data.departure, pinned.data.arrival].map((ep, i) => {
-          const place = [ep.city, countryName(ep.country, locale)].filter((s): s is string => !!s).join(", ");
+          const place = [ep.city, countryName(ep.country, locale)]
+            .filter((s): s is string => !!s)
+            .join(", ");
           return (
             <div key={i} className="text-[11px]">
               <div className="text-[12px] font-medium" style={{ color: "rgba(241,245,249,0.92)" }}>

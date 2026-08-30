@@ -255,7 +255,6 @@ describe("createMarkerTooltip — lodging", () => {
   });
 });
 
-
 /**
  * Places were the one domain whose pins were pickable and answered nothing.
  *
@@ -289,7 +288,9 @@ describe("createMarkerTooltip — places", () => {
 
   it("answers on the label layers too, not only the dots", () => {
     for (const layer of ["place-pins-labels", "place-pins-symbols"]) {
-      const result = getTooltip(makeInfo(layer, { name: "Kolosseum", category: "landmark", visited: true }));
+      const result = getTooltip(
+        makeInfo(layer, { name: "Kolosseum", category: "landmark", visited: true })
+      );
       expect(result, layer).not.toBeNull();
       expect(result!.html).toContain("Kolosseum");
     }

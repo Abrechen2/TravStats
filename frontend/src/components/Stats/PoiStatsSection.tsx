@@ -101,10 +101,7 @@ export default function PoiStatsSection(): JSX.Element {
       ? new Intl.DisplayNames([locale], { type: "region" })
       : null;
 
-  const toRows = (
-    counts: Map<string, number>,
-    label: (key: string) => string
-  ): RankedRow[] => {
+  const toRows = (counts: Map<string, number>, label: (key: string) => string): RankedRow[] => {
     const max = Math.max(...counts.values(), 1);
     return [...counts.entries()]
       .sort(([, a], [, b]) => b - a)

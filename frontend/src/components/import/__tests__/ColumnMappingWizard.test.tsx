@@ -482,5 +482,4 @@ describe("ColumnMappingWizard (generic)", () => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
   });
-
 });

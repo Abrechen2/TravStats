@@ -355,12 +355,7 @@ export default function NavigationBar(): JSX.Element {
                     {node.label}
                   </div>
                   {node.children.map((child) => (
-                    <MobileLeaf
-                      key={child.id}
-                      node={child}
-                      indent
-                      onNavigate={closeMobileMenu}
-                    />
+                    <MobileLeaf key={child.id} node={child} indent onNavigate={closeMobileMenu} />
                   ))}
                 </div>
               ) : (
@@ -377,12 +372,7 @@ export default function NavigationBar(): JSX.Element {
                   {system.label}
                 </div>
                 {system.children.map((child) => (
-                  <MobileLeaf
-                    key={child.id}
-                    node={child}
-                    indent
-                    onNavigate={closeMobileMenu}
-                  />
+                  <MobileLeaf key={child.id} node={child} indent onNavigate={closeMobileMenu} />
                 ))}
               </div>
             ) : (

@@ -122,41 +122,41 @@ export function PhotoStrip<T extends StripPhoto>({
           style={{ display: "inline-flex", flexDirection: "column", gap: 2, width: 64 }}
         >
           <span style={{ position: "relative", display: "inline-block" }}>
-          <img
-            src={photo.url}
-            alt={photo.caption ?? t("places:photos.alt")}
-            width={64}
-            height={64}
-            style={{
-              width: 64,
-              height: 64,
-              objectFit: "cover",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              display: "block",
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => void handleDelete(photo.id)}
-            aria-label={t("places:photos.delete")}
-            style={{
-              position: "absolute",
-              top: -6,
-              right: -6,
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              fontSize: 11,
-              lineHeight: "16px",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
+            <img
+              src={photo.url}
+              alt={photo.caption ?? t("places:photos.alt")}
+              width={64}
+              height={64}
+              style={{
+                width: 64,
+                height: 64,
+                objectFit: "cover",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                display: "block",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => void handleDelete(photo.id)}
+              aria-label={t("places:photos.delete")}
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -6,
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                fontSize: 11,
+                lineHeight: "16px",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
           </span>
 
           {editing?.id === photo.id ? (
@@ -183,7 +183,9 @@ export function PhotoStrip<T extends StripPhoto>({
               onClick={() => setEditing({ id: photo.id, text: photo.caption ?? "" })}
               className="w-full truncate text-left text-[10px]"
               style={{
-                color: photo.caption ? "var(--text-muted)" : "var(--text-subtle, var(--text-muted))",
+                color: photo.caption
+                  ? "var(--text-muted)"
+                  : "var(--text-subtle, var(--text-muted))",
                 background: "none",
                 border: "none",
                 padding: 0,

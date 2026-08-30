@@ -504,7 +504,7 @@ export function AllTab(): JSX.Element {
     background: string,
     label: string,
     key: string,
-    shape: "line" | "ramp" | "dot" = "line",
+    shape: "line" | "ramp" | "dot" = "line"
   ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
@@ -579,11 +579,11 @@ export function AllTab(): JSX.Element {
   const poiLegendRows = buildPlaceLegend(placeColorConfig, placeListContext.used).map(
     (row: PlaceLegendRow) =>
       legendRow(
-      rgbCss(row.color),
-      row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
-      `poi-${row.slot}`,
-      "dot"
-    )
+        rgbCss(row.color),
+        row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
+        `poi-${row.slot}`,
+        "dot"
+      )
   );
 
   // Airports and ports are the only marks on this map that are ONLY marks:
@@ -603,8 +603,7 @@ export function AllTab(): JSX.Element {
         "place-airport",
         "dot"
       ),
-    cruisesVisible &&
-      legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
+    cruisesVisible && legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
   ].filter((row): row is JSX.Element => row !== false);
 
   // Colour key as a compact table pinned bottom-right — out of the top band

@@ -136,9 +136,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
                   <th className="pb-2 text-left font-normal">
                     {t("lodging:stats.loyalty.programme")}
                   </th>
-                  <th className="pb-2 text-left font-normal">
-                    {t("lodging:stats.loyalty.year")}
-                  </th>
+                  <th className="pb-2 text-left font-normal">{t("lodging:stats.loyalty.year")}</th>
                   <th className="pb-2 text-right font-normal">
                     {t("lodging:stats.loyalty.nights")}
                   </th>

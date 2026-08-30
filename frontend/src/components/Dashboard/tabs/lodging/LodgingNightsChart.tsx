@@ -1,13 +1,5 @@
 import type { JSX } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "../../../../hooks/useTranslation";
 
 import { useDomainColors } from "../../../../hooks/useDomainColors";

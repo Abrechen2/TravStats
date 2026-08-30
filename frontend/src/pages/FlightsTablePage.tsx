@@ -13,10 +13,7 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
-import ListFilterBar, {
-  FilterField,
-  PANEL_SELECT_CLASS,
-} from "../components/table/ListFilterBar";
+import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightInput, Trip } from "../types";
@@ -106,8 +103,18 @@ const FLIGHT_STATUSES: ReadonlyArray<Flight["status"]> = [
 ];
 
 const MONTH_KEYS = [
-  "jan", "feb", "mar", "apr", "may", "jun",
-  "jul", "aug", "sep", "oct", "nov", "dec",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
 ] as const;
 
 export default function FlightsTablePage(): JSX.Element {
@@ -142,7 +149,12 @@ export default function FlightsTablePage(): JSX.Element {
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("flights-list", "departureTime", "desc", ["departureTime","airline","status","duration"] as const);
+  const { sortBy, sortOrder, setSort } = useSortPrefs("flights-list", "departureTime", "desc", [
+    "departureTime",
+    "airline",
+    "status",
+    "duration",
+  ] as const);
   const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
@@ -400,14 +412,7 @@ export default function FlightsTablePage(): JSX.Element {
         if (airlineFilter !== "all" && f.airline !== airlineFilter) return false;
 
         if (searchNeedle.length > 0) {
-          const haystack = [
-            f.airline,
-            f.flightNumber,
-            f.depIata,
-            f.arrIata,
-            f.depName,
-            f.arrName,
-          ]
+          const haystack = [f.airline, f.flightNumber, f.depIata, f.arrIata, f.depName, f.arrName]
             .filter(Boolean)
             .join(" ")
             .toLowerCase();
@@ -462,7 +467,11 @@ export default function FlightsTablePage(): JSX.Element {
       if (f.arrIata) airports.add(f.arrIata);
     }
     return [
-      { key: "flights", value: String(displayedFlights.length), label: t("common:summary.flights") },
+      {
+        key: "flights",
+        value: String(displayedFlights.length),
+        label: t("common:summary.flights"),
+      },
       { key: "airlines", value: String(airlines.size), label: t("common:summary.airlines") },
       { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
     ];
@@ -502,7 +511,6 @@ export default function FlightsTablePage(): JSX.Element {
   const thStyle: React.CSSProperties = {
     color: "var(--text-muted)",
   };
-
 
   return (
     <PageTransition>
@@ -669,252 +677,254 @@ export default function FlightsTablePage(): JSX.Element {
               {t("flights:table.loadError")}
             </div>
           ) : (
-          <div
-            className="rounded-lg shadow-xs overflow-hidden"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <>
-              <div className="overflow-x-auto">
-                {loading ? (
-                  <SkeletonTable rows={10} />
-                ) : displayedFlights.length === 0 ? (
-                  <ListEmptyState
-                    filtered={hasActiveFilter}
-                    emptyTitle={t("flights:table.noFlights")}
-                    emptyHint={t("flights:table.noFlightsHint")}
-                    onReset={resetFilters}
-                  />
-                ) : (
-                  <table className="w-full min-w-[960px]">
-                    <thead
-                      style={{
-                        background: "var(--bg-elevated)",
-                        borderBottom: "1px solid var(--color-border)",
-                      }}
-                    >
-                      <tr>
-                        {/*
+            <div
+              className="rounded-lg shadow-xs overflow-hidden"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <>
+                <div className="overflow-x-auto">
+                  {loading ? (
+                    <SkeletonTable rows={10} />
+                  ) : displayedFlights.length === 0 ? (
+                    <ListEmptyState
+                      filtered={hasActiveFilter}
+                      emptyTitle={t("flights:table.noFlights")}
+                      emptyHint={t("flights:table.noFlightsHint")}
+                      onReset={resetFilters}
+                    />
+                  ) : (
+                    <table className="w-full min-w-[960px]">
+                      <thead
+                        style={{
+                          background: "var(--bg-elevated)",
+                          borderBottom: "1px solid var(--color-border)",
+                        }}
+                      >
+                        <tr>
+                          {/*
                           One loop instead of ten copied blocks. Each sortable
                           one built its own button and showed ▼ for ascending —
                           the opposite of the shared component, and of this
                           page's own footer, which wrote "aufsteigend" beside
                           that ▼.
                         */}
-                        {FLIGHT_COLUMN_IDS.filter((id) => flightColumnPrefs.isVisible(id)).map(
-                          (id) => {
-                            const right = id === "actions";
-                            const label = flightColumnLabel(t, id);
-                            const sortKey = FLIGHT_SORT_KEY_BY_COLUMN[id];
-                            return (
-                              <th
-                                key={id}
-                                className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                                  right ? "text-right whitespace-nowrap" : "text-left"
-                                }`}
-                                style={thStyle}
-                              >
-                                {sortKey === undefined ? (
-                                  label
-                                ) : (
-                                  <SortableHeader
-                                    column={sortKey}
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    onSort={handleSort}
-                                    ariaLabel={t("flights:table.sortBy", { col: label })}
-                                  >
-                                    {label}
-                                  </SortableHeader>
-                                )}
-                              </th>
-                            );
-                          }
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayedFlights.map((flight, index) => {
-                        const tripEntry = flight.tripId ? tripMap.get(flight.tripId) : undefined;
-                        return (
-                          <tr
-                            key={flight.id}
-                            // The row opens the flight, like the cruise and
-                            // lodging rows already did. Every control inside
-                            // the actions cell stops propagation, so deleting
-                            // does not also navigate.
-                            onClick={() => openFlight(flight)}
-                            className="cursor-pointer transition-colors"
-                            style={{
-                              background:
-                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-                            }}
-                            onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLTableRowElement).style.background =
-                                "var(--bg-muted)";
-                            }}
-                            onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLTableRowElement).style.background =
-                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
-                            }}
-                          >
-                            {/* py-1 instead of py-3: the brand tile fills the row height
-                                set by the two-line route/time cells instead of growing it. */}
-                            {flightColumnPrefs.isVisible("airline") && (
-                            <td className="px-4 py-1" style={{ color: "var(--text-primary)" }}>
-                              <AirlineWordmarkCell flight={flight} />
-                              {flight.specialType && (
-                                <div className="mt-1">
-                                  <SpecialTypeBadge type={flight.specialType as SpecialType} />
-                                </div>
-                              )}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("flightNumber") && (
-                            <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
-                              {flight.flightNumber || t("common:labels.notAvailable")}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("route") && (
-                            <td
-                              className="px-4 py-3 max-w-[16rem]"
-                              style={{ color: "var(--text-primary)" }}
-                            >
-                              <RouteCell flight={flight} />
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("time") && (
-                            <td className="px-4 py-3">
-                              <TimeCell flight={flight} />
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("status") && (
-                            <td className="px-4 py-3">
-                              <FlightStatusCell flight={flight} />
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("duration") && (
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatFlightDurationCell(flight)}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("aircraft") && (
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {flight.aircraft || t("common:labels.notAvailable")}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("price") && (
-                            <td
-                              className="px-4 py-3 text-sm"
+                          {FLIGHT_COLUMN_IDS.filter((id) => flightColumnPrefs.isVisible(id)).map(
+                            (id) => {
+                              const right = id === "actions";
+                              const label = flightColumnLabel(t, id);
+                              const sortKey = FLIGHT_SORT_KEY_BY_COLUMN[id];
+                              return (
+                                <th
+                                  key={id}
+                                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                                    right ? "text-right whitespace-nowrap" : "text-left"
+                                  }`}
+                                  style={thStyle}
+                                >
+                                  {sortKey === undefined ? (
+                                    label
+                                  ) : (
+                                    <SortableHeader
+                                      column={sortKey}
+                                      sortBy={sortBy}
+                                      sortOrder={sortOrder}
+                                      onSort={handleSort}
+                                      ariaLabel={t("flights:table.sortBy", { col: label })}
+                                    >
+                                      {label}
+                                    </SortableHeader>
+                                  )}
+                                </th>
+                              );
+                            }
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedFlights.map((flight, index) => {
+                          const tripEntry = flight.tripId ? tripMap.get(flight.tripId) : undefined;
+                          return (
+                            <tr
+                              key={flight.id}
+                              // The row opens the flight, like the cruise and
+                              // lodging rows already did. Every control inside
+                              // the actions cell stops propagation, so deleting
+                              // does not also navigate.
+                              onClick={() => openFlight(flight)}
+                              className="cursor-pointer transition-colors"
                               style={{
-                                color: "var(--text-muted)",
-                                fontVariantNumeric: "tabular-nums",
+                                background:
+                                  index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLTableRowElement).style.background =
+                                  "var(--bg-muted)";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLTableRowElement).style.background =
+                                  index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
                               }}
                             >
-                              {priceCellState(flight) === "amount" ? (
-                                <>
-                                  {flight.price!.toFixed(2)}
-                                  <span className="ml-1 text-[11px]">
-                                    {flight.currency || "EUR"}
-                                  </span>
-                                </>
-                              ) : priceCellState(flight) === "package" ? (
-                                <span title={t("flights:price.packageHint")}>
-                                  {t("flights:price.package")}
-                                </span>
-                              ) : (
-                                t("common:labels.notAvailable")
+                              {/* py-1 instead of py-3: the brand tile fills the row height
+                                set by the two-line route/time cells instead of growing it. */}
+                              {flightColumnPrefs.isVisible("airline") && (
+                                <td className="px-4 py-1" style={{ color: "var(--text-primary)" }}>
+                                  <AirlineWordmarkCell flight={flight} />
+                                  {flight.specialType && (
+                                    <div className="mt-1">
+                                      <SpecialTypeBadge type={flight.specialType as SpecialType} />
+                                    </div>
+                                  )}
+                                </td>
                               )}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("trip") && (
-                            <td className="px-3 py-2">
-                              {tripEntry ? (
-                                <Link
-                                  to={`/trips/${tripEntry.id}`}
-                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
+                              {flightColumnPrefs.isVisible("flightNumber") && (
+                                <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
+                                  {flight.flightNumber || t("common:labels.notAvailable")}
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("route") && (
+                                <td
+                                  className="px-4 py-3 max-w-[16rem]"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  <RouteCell flight={flight} />
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("time") && (
+                                <td className="px-4 py-3">
+                                  <TimeCell flight={flight} />
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("status") && (
+                                <td className="px-4 py-3">
+                                  <FlightStatusCell flight={flight} />
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("duration") && (
+                                <td
+                                  className="px-4 py-3 text-sm"
+                                  style={{ color: "var(--text-muted)" }}
+                                >
+                                  {formatFlightDurationCell(flight)}
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("aircraft") && (
+                                <td
+                                  className="px-4 py-3 text-sm"
+                                  style={{ color: "var(--text-muted)" }}
+                                >
+                                  {flight.aircraft || t("common:labels.notAvailable")}
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("price") && (
+                                <td
+                                  className="px-4 py-3 text-sm"
                                   style={{
-                                    background: `${tripEntry.color}18`,
-                                    borderColor: `${tripEntry.color}44`,
-                                    color: tripEntry.color,
+                                    color: "var(--text-muted)",
+                                    fontVariantNumeric: "tabular-nums",
                                   }}
                                 >
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                                    style={{ background: tripEntry.color }}
-                                  />
-                                  {tripEntry.name}
-                                </Link>
-                              ) : (
-                                <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>—</span>
+                                  {priceCellState(flight) === "amount" ? (
+                                    <>
+                                      {flight.price!.toFixed(2)}
+                                      <span className="ml-1 text-[11px]">
+                                        {flight.currency || "EUR"}
+                                      </span>
+                                    </>
+                                  ) : priceCellState(flight) === "package" ? (
+                                    <span title={t("flights:price.packageHint")}>
+                                      {t("flights:price.package")}
+                                    </span>
+                                  ) : (
+                                    t("common:labels.notAvailable")
+                                  )}
+                                </td>
                               )}
-                            </td>
-                            )}
-                            {flightColumnPrefs.isVisible("actions") && (
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <FlightRowActions
-                                  flight={flight}
-                                  openDuplicateMenuFor={duplicateMenuFor}
-                                  onToggleDuplicateMenu={setDuplicateMenuFor}
-                                  onEdit={(f) => {
-                                    // Special flights → SpecialFlightModal so the user
-                                    // edits eclipse coords / parabolas / etc. through the
-                                    // same UI that created them, not the generic edit
-                                    // modal (which hides those fields entirely).
-                                    if (f.specialType) {
-                                      setEditingSpecialFlight(f);
-                                    } else {
-                                      setEditingFlight(f);
-                                    }
-                                  }}
-                                  onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
-                                  onDelete={handleDeleteClick}
-                                />
-                                <span className="inline-flex w-[18px] justify-center">
-                                  <SourceInfoDot flight={flight} />
-                                </span>
-                              </div>
-                            </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+                              {flightColumnPrefs.isVisible("trip") && (
+                                <td className="px-3 py-2">
+                                  {tripEntry ? (
+                                    <Link
+                                      to={`/trips/${tripEntry.id}`}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
+                                      style={{
+                                        background: `${tripEntry.color}18`,
+                                        borderColor: `${tripEntry.color}44`,
+                                        color: tripEntry.color,
+                                      }}
+                                    >
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                                        style={{ background: tripEntry.color }}
+                                      />
+                                      {tripEntry.name}
+                                    </Link>
+                                  ) : (
+                                    <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>
+                                      —
+                                    </span>
+                                  )}
+                                </td>
+                              )}
+                              {flightColumnPrefs.isVisible("actions") && (
+                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <FlightRowActions
+                                      flight={flight}
+                                      openDuplicateMenuFor={duplicateMenuFor}
+                                      onToggleDuplicateMenu={setDuplicateMenuFor}
+                                      onEdit={(f) => {
+                                        // Special flights → SpecialFlightModal so the user
+                                        // edits eclipse coords / parabolas / etc. through the
+                                        // same UI that created them, not the generic edit
+                                        // modal (which hides those fields entirely).
+                                        if (f.specialType) {
+                                          setEditingSpecialFlight(f);
+                                        } else {
+                                          setEditingFlight(f);
+                                        }
+                                      }}
+                                      onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
+                                      onDelete={handleDeleteClick}
+                                    />
+                                    <span className="inline-flex w-[18px] justify-center">
+                                      <SourceInfoDot flight={flight} />
+                                    </span>
+                                  </div>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
 
-              {/* Footer */}
-              {!loading && displayedFlights.length > 0 && (
-                <div
-                  className="px-4 py-3"
-                  style={{
-                    background: "var(--bg-elevated)",
-                    borderTop: "1px solid var(--color-border)",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  <div className="flex items-center justify-end">
-                    <div className="text-sm">
-                      {t("flights:table.footer.sortedBy", {
-                        label: sortLabels[sortBy],
-                        direction:
-                          sortOrder === "asc"
-                            ? t("common:sort.ascending")
-                            : t("common:sort.descending"),
-                      })}
+                {/* Footer */}
+                {!loading && displayedFlights.length > 0 && (
+                  <div
+                    className="px-4 py-3"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderTop: "1px solid var(--color-border)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    <div className="flex items-center justify-end">
+                      <div className="text-sm">
+                        {t("flights:table.footer.sortedBy", {
+                          label: sortLabels[sortBy],
+                          direction:
+                            sortOrder === "asc"
+                              ? t("common:sort.ascending")
+                              : t("common:sort.descending"),
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </>
-          </div>
+                )}
+              </>
+            </div>
           )}
         </div>
 

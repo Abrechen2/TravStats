@@ -64,17 +64,14 @@ export default function DomainImportPanel({
     [addToast]
   );
 
-  const handleEmailResult = useCallback(
-    (result: ParseEmailResult, fileName?: string | null) => {
-      setParseState({
-        kind: "email",
-        result,
-        emailMeta: { subject: result.subject, text: result.text, html: result.html },
-        sourceFileName: fileName ?? null,
-      });
-    },
-    []
-  );
+  const handleEmailResult = useCallback((result: ParseEmailResult, fileName?: string | null) => {
+    setParseState({
+      kind: "email",
+      result,
+      emailMeta: { subject: result.subject, text: result.text, html: result.html },
+      sourceFileName: fileName ?? null,
+    });
+  }, []);
 
   const handlePdfResult = useCallback((result: ParsePdfResult, fileName?: string | null) => {
     setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });

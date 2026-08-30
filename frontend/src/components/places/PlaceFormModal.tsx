@@ -101,21 +101,18 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
    * second hit to correct a coordinate must not silently revert a name the
    * user rewrote by hand.
    */
-  const handleLocationChange = useCallback(
-    (sel: LocationSelection): void => {
-      setLat(sel.lat);
-      setLon(sel.lon);
-      setName((prev) => (prev.trim() === "" && sel.name ? sel.name : prev));
-      setAddress((prev) => (prev.trim() === "" && sel.address ? sel.address : prev));
-      setCity((prev) => (prev.trim() === "" && sel.city ? sel.city : prev));
-      setCountry((prev) => (prev.trim() === "" && sel.country ? sel.country : prev));
-      // Only a guess, and only when the user has not chosen: the picker shows
-      // it and they can change it. A wrong guess is cheap because nothing but
-      // an icon depends on the category.
-      setCategory((prev) => (prev === "other" ? categoryFromOsmValue(sel.name) : prev));
-    },
-    []
-  );
+  const handleLocationChange = useCallback((sel: LocationSelection): void => {
+    setLat(sel.lat);
+    setLon(sel.lon);
+    setName((prev) => (prev.trim() === "" && sel.name ? sel.name : prev));
+    setAddress((prev) => (prev.trim() === "" && sel.address ? sel.address : prev));
+    setCity((prev) => (prev.trim() === "" && sel.city ? sel.city : prev));
+    setCountry((prev) => (prev.trim() === "" && sel.country ? sel.country : prev));
+    // Only a guess, and only when the user has not chosen: the picker shows
+    // it and they can change it. A wrong guess is cheap because nothing but
+    // an icon depends on the category.
+    setCategory((prev) => (prev === "other" ? categoryFromOsmValue(sel.name) : prev));
+  }, []);
 
   const canSave = name.trim() !== "" && position !== null && !saving;
 
@@ -164,8 +161,23 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
       setSaving(false);
     }
   }, [
-    canSave, position, name, category, address, city, country, notes, visited,
-    externalRef, isEdit, place, addToast, t, onSaved, selectedLists, lists,
+    canSave,
+    position,
+    name,
+    category,
+    address,
+    city,
+    country,
+    notes,
+    visited,
+    externalRef,
+    isEdit,
+    place,
+    addToast,
+    t,
+    onSaved,
+    selectedLists,
+    lists,
   ]);
 
   // The shared frame the three other domain edit dialogs use. This one already
@@ -247,13 +259,25 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label={t("places:form.address")}>
-              <input className={INPUT_CLASS} value={address} onChange={(e) => setAddress(e.target.value)} />
+              <input
+                className={INPUT_CLASS}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
             </Field>
             <Field label={t("places:form.city")}>
-              <input className={INPUT_CLASS} value={city} onChange={(e) => setCity(e.target.value)} />
+              <input
+                className={INPUT_CLASS}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
             </Field>
             <Field label={t("places:form.country")}>
-              <input className={INPUT_CLASS} value={country} onChange={(e) => setCountry(e.target.value)} />
+              <input
+                className={INPUT_CLASS}
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+              />
             </Field>
           </div>
 

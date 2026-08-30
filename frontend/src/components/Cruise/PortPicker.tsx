@@ -242,9 +242,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
           })}
         </ul>
       )}
-      {searchError && (
-        <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>
-      )}
+      {searchError && <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>}
       {/* Create/persist errors — rendered HERE, not only inside the add-custom
           form: a failed geocoder-candidate save (handleSelectGeocoded) sets
           this too, and until 2026-08-02 it had no render site on that path,

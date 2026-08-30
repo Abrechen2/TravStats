@@ -86,7 +86,11 @@ describe("LocationInput — coordinates out of range", () => {
     // the good coordinates would lose work the user had already done.
     const onChange = vi.fn();
     render(
-      <LocationInput value={{ lat: 48.1, lon: 11.6 }} onChange={onChange} onValidityChange={vi.fn()} />
+      <LocationInput
+        value={{ lat: 48.1, lon: 11.6 }}
+        onChange={onChange}
+        onValidityChange={vi.fn()}
+      />
     );
     openAdvanced();
 

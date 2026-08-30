@@ -125,7 +125,6 @@ export default function TripDetailPage(): JSX.Element {
     void load();
   }, [id]);
 
-
   const handleDelete = async (): Promise<void> => {
     if (!trip) return;
     try {
@@ -589,9 +588,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         if (cancelled) return;
         setPlaceVisits(
           places.flatMap((place) =>
-            place.visits
-              .filter((v) => v.tripId === id)
-              .map((visit) => ({ place, visit }))
+            place.visits.filter((v) => v.tripId === id).map((visit) => ({ place, visit }))
           )
         );
       } catch (err: unknown) {
@@ -685,7 +682,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
       // It is still shown on the trip — in the lodging list below, which needs
       // no chronology — rather than being dropped from the page.
       if (s.checkIn !== null) {
-        out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
+        out.push({
+          id: `lodging-checkin-${s.id}`,
+          kind: "lodging-checkin",
+          date: s.checkIn,
+          stay: s,
+        });
       }
       if (s.checkOut !== null) {
         out.push({
@@ -865,9 +867,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
                 )}
-                {ev.kind === "place-visit" && (
-                  <PlaceVisitCard ev={ev} language={language} />
-                )}
+                {ev.kind === "place-visit" && <PlaceVisitCard ev={ev} language={language} />}
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
@@ -1038,7 +1038,7 @@ const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 
 export function cabinLabel(
   value: string | null | undefined,
-  t: ReturnType<typeof useTranslation>["t"],
+  t: ReturnType<typeof useTranslation>["t"]
 ): string | null {
   if (!value) return null;
   return (CABIN_TYPES as readonly string[]).includes(value)
@@ -1053,7 +1053,13 @@ function stopClock(value: string | null | undefined): string | null {
   return d.toISOString().slice(11, 16);
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }): JSX.Element | null {
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}): JSX.Element | null {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex gap-2 text-xs py-0.5">
@@ -1150,9 +1156,7 @@ function CruiseCard({
       <DetailRow label={t("trips:detail.timeline.route")} value={c.routeName ?? null} />
       <DetailRow
         label={t("trips:detail.timeline.cabin")}
-        value={
-          [cabinLabel(c.cabinType, t), c.cabinNumber].filter(Boolean).join(" · ") || null
-        }
+        value={[cabinLabel(c.cabinType, t), c.cabinNumber].filter(Boolean).join(" · ") || null}
       />
       <DetailRow
         label={t("trips:detail.timeline.price")}
@@ -1161,13 +1165,19 @@ function CruiseCard({
 
       {stops.length > 0 && (
         <div className="mt-2">
-          <div className="text-[11px] uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="text-[11px] uppercase tracking-wide mb-1"
+            style={{ color: "var(--text-muted)" }}
+          >
             {t("trips:detail.timeline.itinerary")}
           </div>
           <ol className="flex flex-col gap-0.5" style={{ listStyle: "none", paddingLeft: 0 }}>
             {stops.map((stop) => (
               <li key={stop.id} className="flex gap-2 text-xs">
-                <span className="font-mono shrink-0" style={{ color: "var(--text-muted)", minWidth: 22 }}>
+                <span
+                  className="font-mono shrink-0"
+                  style={{ color: "var(--text-muted)", minWidth: 22 }}
+                >
                   {stop.dayNumber}
                 </span>
                 <span style={{ color: "var(--text-primary)" }}>
@@ -1220,7 +1230,7 @@ function LodgingCheckCard({
   const isCheckIn = ev.kind === "lodging-checkin";
   const title = t(
     isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
-    { name: stay.lodging.name },
+    { name: stay.lodging.name }
   );
   // Check-in/out are stored as the calendar day at UTC midnight and we capture no
   // time of day. Rendering them in local time would print a meaningless "02:00" and,
@@ -1236,9 +1246,7 @@ function LodgingCheckCard({
         iconColor="var(--domain-lodging, #d4778f)"
         title={title}
         subtitle={
-          showHint
-            ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}`
-            : subtitle
+          showHint ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
         }
         date={ev.date}
         dateLabel={formatTimelineDate(ev.date, language)}

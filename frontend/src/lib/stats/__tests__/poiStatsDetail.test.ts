@@ -133,7 +133,10 @@ describe("derivePoiStats", () => {
         place({
           id: "p1",
           name: "Trevi",
-          visits: [visit({ visitedAt: "2023-04-01", rating: 5 }), visit({ visitedAt: "2023-05-01" })],
+          visits: [
+            visit({ visitedAt: "2023-04-01", rating: 5 }),
+            visit({ visitedAt: "2023-05-01" }),
+          ],
         }),
         place({
           id: "p2",
@@ -153,8 +156,18 @@ describe("derivePoiStats", () => {
   it("names the extremes by latitude", () => {
     const d = derivePoiStats(
       [
-        place({ id: "p1", name: "Tromsø", lat: 69.6, visits: [visit({ visitedAt: "2023-01-01" })] }),
-        place({ id: "p2", name: "Ushuaia", lat: -54.8, visits: [visit({ visitedAt: "2023-01-02" })] }),
+        place({
+          id: "p1",
+          name: "Tromsø",
+          lat: 69.6,
+          visits: [visit({ visitedAt: "2023-01-01" })],
+        }),
+        place({
+          id: "p2",
+          name: "Ushuaia",
+          lat: -54.8,
+          visits: [visit({ visitedAt: "2023-01-02" })],
+        }),
       ],
       PLACE_CATEGORIES.length,
       NOW
@@ -167,8 +180,18 @@ describe("derivePoiStats", () => {
   it("says how much of the category catalogue has been used", () => {
     const d = derivePoiStats(
       [
-        place({ id: "p1", name: "A", category: "museum", visits: [visit({ visitedAt: "2023-01-01" })] }),
-        place({ id: "p2", name: "B", category: "nature", visits: [visit({ visitedAt: "2023-01-02" })] }),
+        place({
+          id: "p1",
+          name: "A",
+          category: "museum",
+          visits: [visit({ visitedAt: "2023-01-01" })],
+        }),
+        place({
+          id: "p2",
+          name: "B",
+          category: "nature",
+          visits: [visit({ visitedAt: "2023-01-02" })],
+        }),
       ],
       PLACE_CATEGORIES.length,
       NOW

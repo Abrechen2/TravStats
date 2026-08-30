@@ -42,8 +42,8 @@ const baseStay: LodgingStay = {
   userId: "user-1",
   tripId: null,
   bookingId: null,
-    checkInTime: null,
-    checkOutTime: null,
+  checkInTime: null,
+  checkOutTime: null,
   checkIn: "2024-05-12T15:00:00.000Z",
   checkOut: "2024-05-14T11:00:00.000Z",
   datePrecision: "DAY" as const,
@@ -260,12 +260,8 @@ describe("LodgingDetailPage", () => {
   });
 
   it("shows the trip pill and the loyalty program when a stay is linked to both", async () => {
-    tripsGetAllMock.mockResolvedValue([
-      { id: "trip-1", name: "Zürich City" },
-    ]);
-    listMembershipsMock.mockResolvedValue([
-      { id: "mem-1", programName: "NH Rewards" },
-    ]);
+    tripsGetAllMock.mockResolvedValue([{ id: "trip-1", name: "Zürich City" }]);
+    listMembershipsMock.mockResolvedValue([{ id: "mem-1", programName: "NH Rewards" }]);
     const linkedStay: LodgingStay = { ...baseStay, tripId: "trip-1", membershipId: "mem-1" };
     getLodgingMock.mockResolvedValue(makeLodging({}, [linkedStay]));
 
@@ -309,8 +305,8 @@ describe("LodgingDetailPage", () => {
             createdAt: "2024-01-01T00:00:00.000Z",
           },
         },
-        [derivedStay],
-      ),
+        [derivedStay]
+      )
     );
 
     renderDetailPage();
@@ -333,7 +329,7 @@ describe("LodgingDetailPage", () => {
 
   it("shows the Original amount and per-category rating averages in the sidebar cards", async () => {
     getLodgingMock.mockResolvedValue(
-      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }, [baseStay]),
+      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }, [baseStay])
     );
 
     renderDetailPage();
@@ -367,7 +363,7 @@ describe("LodgingDetailPage", () => {
     // must not render that 0 as "0 €", which would wrongly assert the stay
     // was free.
     getLodgingMock.mockResolvedValue(
-      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {} }, [clearedStay]),
+      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {} }, [clearedStay])
     );
 
     renderDetailPage();

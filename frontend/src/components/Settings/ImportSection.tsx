@@ -132,8 +132,7 @@ export default function ImportSection(): JSX.Element {
           onClick={() => setLogOpen((open) => !open)}
           className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-(--text-primary) hover:bg-(--bg-inset)"
         >
-          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span>{" "}
-          {t("settings:import.log.title")}
+          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span> {t("settings:import.log.title")}
         </button>
         {logOpen && (
           <div id="import-log-panel">

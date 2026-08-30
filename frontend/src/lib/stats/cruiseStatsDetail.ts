@@ -146,9 +146,7 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
     if (cruise.tripId) onTrips += 1;
   }
 
-  dated.sort(
-    (a, b) => Date.parse(a.startDate ?? "") - Date.parse(b.startDate ?? "")
-  );
+  dated.sort((a, b) => Date.parse(a.startDate ?? "") - Date.parse(b.startDate ?? ""));
 
   return {
     dated,

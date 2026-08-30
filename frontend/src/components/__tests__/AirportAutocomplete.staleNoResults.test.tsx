@@ -123,5 +123,4 @@ describe("AirportAutocomplete — no stale not-found", () => {
       expect(searched).not.toContain(airportInputLabel(JFK));
     });
   });
-
 });

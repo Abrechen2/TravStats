@@ -1,5 +1,4 @@
-
-import { useTranslation } from "../hooks/useTranslation";// Monochrome spinning globe used as a branded loader. Renders on a
+import { useTranslation } from "../hooks/useTranslation"; // Monochrome spinning globe used as a branded loader. Renders on a
 // <canvas> so it paints before three.js / deck.gl finish booting; the
 // country TopoJSON lives as a static /public asset to keep it off the
 // JS bundle. Reads --text-primary / --bg-base / --accent live so it

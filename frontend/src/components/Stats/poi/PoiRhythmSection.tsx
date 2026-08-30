@@ -10,12 +10,28 @@ import StatCard from "../StatCard";
  * weekday order Sunday-first, which is what the flight page draws.
  */
 const MONTH_KEYS = [
-  "jan", "feb", "mar", "apr", "may", "jun",
-  "jul", "aug", "sep", "oct", "nov", "dec",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
 ] as const;
 
 const WEEKDAY_KEYS = [
-  "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
 ] as const;
 
 interface Props {
@@ -78,13 +94,13 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           description={
             detail.busiestDay
               ? t("places:stats.rhythm.busiestDayDesc", {
-                    date: new Date(`${detail.busiestDay.date}T00:00:00Z`).toLocaleDateString(locale, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      timeZone: "UTC",
-                    }),
-                  })
+                  date: new Date(`${detail.busiestDay.date}T00:00:00Z`).toLocaleDateString(locale, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    timeZone: "UTC",
+                  }),
+                })
               : t("places:stats.noVisitsYet")
           }
         />

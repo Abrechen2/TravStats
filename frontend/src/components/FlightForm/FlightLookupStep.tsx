@@ -15,7 +15,6 @@ import {
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
 
-
 export interface FlightLookupStepProps {
   // State
   flightNumber: string;
@@ -242,7 +241,6 @@ export default function FlightLookupStep({
           />
         </Suspense>
       )}
-
     </div>
   );
 }

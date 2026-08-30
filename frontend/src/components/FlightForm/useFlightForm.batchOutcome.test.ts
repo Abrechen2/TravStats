@@ -50,7 +50,11 @@ vi.mock("../../store/toastStore", () => ({
 }));
 vi.mock("../../lib/timeEstimation", () => ({
   storeHistoricalFlightTime: vi.fn(),
-  estimateFlightTimes: vi.fn(() => ({ arrivalTime: "14:00", source: "heuristic", confidence: "low" })),
+  estimateFlightTimes: vi.fn(() => ({
+    arrivalTime: "14:00",
+    source: "heuristic",
+    confidence: "low",
+  })),
 }));
 
 import { useFlightForm } from "./useFlightForm";
@@ -84,20 +88,14 @@ describe("useFlightForm — what the batch import reports", () => {
     mocks.createBatch.mockResolvedValue({ flights: [], count: 0, skipped: 2 });
     await runTwoLegImport();
 
-    expect(mocks.addToast).toHaveBeenCalledWith(
-      "info",
-      "flights:review.batchAllDuplicates"
-    );
+    expect(mocks.addToast).toHaveBeenCalledWith("info", "flights:review.batchAllDuplicates");
   });
 
   it("reports both halves of a partial import", async () => {
     mocks.createBatch.mockResolvedValue({ flights: [{}], count: 1, skipped: 1 });
     await runTwoLegImport();
 
-    expect(mocks.addToast).toHaveBeenCalledWith(
-      "success",
-      "flights:review.batchImportedWithSkips"
-    );
+    expect(mocks.addToast).toHaveBeenCalledWith("success", "flights:review.batchImportedWithSkips");
   });
 
   it("confirms a clean import", async () => {

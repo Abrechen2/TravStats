@@ -21,11 +21,7 @@ import { continentLabel } from "../lib/continentLabel";
 import { countryName } from "../shared/geo/countryCode";
 
 import { useToastStore } from "../store/toastStore";
-import type {
-  CuratedProgress,
-  CuratedProgressItem,
-  VisitSuggestion,
-} from "../types/placeList";
+import type { CuratedProgress, CuratedProgressItem, VisitSuggestion } from "../types/placeList";
 import { useDomainColors } from "../hooks/useDomainColors";
 
 type RowFilter = "all" | "open" | "ticked" | "suggested";
@@ -256,7 +252,17 @@ export default function CuratedChecklistPage(): JSX.Element {
       if (gb === "") return -1;
       return ga.localeCompare(gb, i18n.language) || byName(a, b);
     });
-  }, [progress?.items, search, country, continent, rowFilter, sortKey, suggestionById, t, i18n.language]);
+  }, [
+    progress?.items,
+    search,
+    country,
+    continent,
+    rowFilter,
+    sortKey,
+    suggestionById,
+    t,
+    i18n.language,
+  ]);
 
   const shown = filtered.slice(0, RENDER_CAP);
   const hidden = filtered.length - shown.length;
@@ -365,7 +371,12 @@ export default function CuratedChecklistPage(): JSX.Element {
             aria-valuemin={0}
             aria-valuemax={progress.itemCount}
             aria-label={title}
-            style={{ height: 8, borderRadius: 4, background: "var(--bg-elevated)", overflow: "hidden" }}
+            style={{
+              height: 8,
+              borderRadius: 4,
+              background: "var(--bg-elevated)",
+              overflow: "hidden",
+            }}
           >
             <div style={{ width: `${pct}%`, height: "100%", background: accent }} />
           </div>

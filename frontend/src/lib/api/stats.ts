@@ -18,7 +18,6 @@ import type { SummaryParams, SummaryResponse, TimeseriesParams, TimeseriesRespon
 
 // Stats API
 export const statsApi = {
-
   /**
    * The cross-domain night account plus the per-trip rollup — one request
    * because a screen asking "where did I sleep" asks "which trip has a gap"

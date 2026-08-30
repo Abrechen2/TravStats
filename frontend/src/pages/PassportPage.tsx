@@ -91,7 +91,10 @@ export default function PassportPage(): JSX.Element {
       <PageTransition>
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
           <NavigationBar />
-          <div className="mx-auto max-w-5xl px-4 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="mx-auto max-w-5xl px-4 py-16 text-center text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
             {t("common:loading.default")}
           </div>
         </div>
@@ -124,10 +127,7 @@ export default function PassportPage(): JSX.Element {
         <NavigationBar />
         <div className="max-w-5xl mx-auto px-4 py-6 print:max-w-none print:py-0">
           <div className="flex items-baseline justify-between mb-4 print:hidden">
-            <Link
-              to="/stats"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
+            <Link to="/stats" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               ← {t("passport:backToStats")}
             </Link>
             {passport && passport.summary.countries > 0 && (
@@ -257,9 +257,7 @@ export default function PassportPage(): JSX.Element {
                           key={stamp.iata}
                           className="px-2.5 py-1.5 rounded-md border font-mono text-center"
                           style={{ borderColor: "var(--border)" }}
-                          title={
-                            stamp.country ? countryName(stamp.country, locale) : undefined
-                          }
+                          title={stamp.country ? countryName(stamp.country, locale) : undefined}
                         >
                           <span className="block text-sm font-semibold tracking-wider">
                             {stamp.iata}

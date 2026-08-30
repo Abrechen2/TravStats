@@ -121,7 +121,15 @@ describe("PlaceFormModal — adding to lists on create", () => {
     // list" and invite fixing something that is not broken.
     render(
       <PlaceFormModal
-        place={{ ...saved, category: "restaurant", lat: 41.9, lon: 12.48, visits: [] } as unknown as Place}
+        place={
+          {
+            ...saved,
+            category: "restaurant",
+            lat: 41.9,
+            lon: 12.48,
+            visits: [],
+          } as unknown as Place
+        }
         onClose={() => {}}
         onSaved={() => {}}
       />

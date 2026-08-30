@@ -175,9 +175,7 @@ export function derivePoiStats(
   }
 
   datedVisits.sort((a, b) => a.at.getTime() - b.at.getTime());
-  mostVisited.sort(
-    (a, b) => b.visits - a.visits || a.place.name.localeCompare(b.place.name)
-  );
+  mostVisited.sort((a, b) => b.visits - a.visits || a.place.name.localeCompare(b.place.name));
 
   let busiestDay: PoiStatsDetail["busiestDay"] = null;
   for (const [date, ids] of placesPerDay) {
@@ -217,9 +215,7 @@ export function derivePoiStats(
     longestStreakDays: longestRunOfDays([...placesPerDay.keys()]),
 
     averageRating:
-      ratings.length > 0
-        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-        : null,
+      ratings.length > 0 ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length : null,
     ratedVisits: ratings.length,
     bestRated: [...ratings]
       .sort((a, b) => b.rating - a.rating || a.name.localeCompare(b.name))

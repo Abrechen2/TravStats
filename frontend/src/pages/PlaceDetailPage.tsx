@@ -95,9 +95,7 @@ export default function PlaceDetailPage(): JSX.Element {
       // A date with no time is stored at midnight UTC — the timezone-naive
       // wall-clock convention lib/tripTimeline.ts documents. An empty date is
       // sent as null, which is a valid visit ("I was here, no idea when").
-      const visitedAt = visitDate
-        ? `${visitDate}T${visitTime || "00:00"}:00.000Z`
-        : null;
+      const visitedAt = visitDate ? `${visitDate}T${visitTime || "00:00"}:00.000Z` : null;
       await createVisit(place.id, {
         visitedAt,
         notes: visitNotes.trim() || null,
@@ -213,7 +211,11 @@ export default function PlaceDetailPage(): JSX.Element {
               {t("common:buttons.retry")}
             </button>
           )}
-          <Link to="/places" className="mt-3 inline-block text-sm underline" style={{ color: "var(--accent)" }}>
+          <Link
+            to="/places"
+            className="mt-3 inline-block text-sm underline"
+            style={{ color: "var(--accent)" }}
+          >
             {t("places:detail.backToList")}
           </Link>
         </div>
@@ -235,7 +237,10 @@ export default function PlaceDetailPage(): JSX.Element {
               <span aria-hidden>{PLACE_CATEGORY_ICONS[place.category]}</span>
               {place.name}
             </h1>
-            <div className="mt-1 flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            <div
+              className="mt-1 flex items-center gap-2 text-sm"
+              style={{ color: "var(--text-muted)" }}
+            >
               {[place.city, placeCountryLabel(place, i18n.language)].filter(Boolean).join(", ") ||
                 "—"}
               {placeCountryCode(place) && <FlagImg country={placeCountryCode(place)} />}
@@ -281,7 +286,10 @@ export default function PlaceDetailPage(): JSX.Element {
           <div className="space-y-4">
             {addingVisit && (
               <section className="rounded-lg p-4" style={PANEL}>
-                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                <h2
+                  className="mb-3 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   {t("places:detail.addVisit")}
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
@@ -289,20 +297,34 @@ export default function PlaceDetailPage(): JSX.Element {
                     <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                       {t("places:detail.date")}
                     </span>
-                    <input type="date" className={INPUT} value={visitDate} onChange={(e) => setVisitDate(e.target.value)} />
+                    <input
+                      type="date"
+                      className={INPUT}
+                      value={visitDate}
+                      onChange={(e) => setVisitDate(e.target.value)}
+                    />
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                       {t("places:detail.time")}
                     </span>
-                    <input type="time" className={INPUT} value={visitTime} onChange={(e) => setVisitTime(e.target.value)} />
+                    <input
+                      type="time"
+                      className={INPUT}
+                      value={visitTime}
+                      onChange={(e) => setVisitTime(e.target.value)}
+                    />
                   </label>
                 </div>
                 <label className="mt-3 flex flex-col gap-1">
                   <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                     {t("places:detail.visitNotes")}
                   </span>
-                  <input className={INPUT} value={visitNotes} onChange={(e) => setVisitNotes(e.target.value)} />
+                  <input
+                    className={INPUT}
+                    value={visitNotes}
+                    onChange={(e) => setVisitNotes(e.target.value)}
+                  />
                 </label>
                 <label className="mt-3 flex flex-col gap-1">
                   <span className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -331,7 +353,10 @@ export default function PlaceDetailPage(): JSX.Element {
                     type="button"
                     onClick={() => setAddingVisit(false)}
                     className="rounded-lg px-3 py-1.5 text-sm"
-                    style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+                    style={{
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-secondary)",
+                    }}
                   >
                     {t("common:buttons.cancel")}
                   </button>
@@ -348,7 +373,10 @@ export default function PlaceDetailPage(): JSX.Element {
             )}
 
             <section className="rounded-lg p-4" style={PANEL}>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:detail.visits")} · {completed.length}
               </h2>
               {completed.length === 0 && planned.length === 0 ? (
@@ -369,7 +397,10 @@ export default function PlaceDetailPage(): JSX.Element {
                     <li key={v.id} className="rounded-md px-3 py-2" style={ROW}>
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-mono text-sm">{formatVisit(v)}</span>
-                        <span className="flex-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>
+                        <span
+                          className="flex-1 truncate text-xs"
+                          style={{ color: "var(--text-muted)" }}
+                        >
                           {v.notes ?? ""}
                         </span>
                         <RowActions>
@@ -387,11 +418,18 @@ export default function PlaceDetailPage(): JSX.Element {
                     </li>
                   ))}
                   {planned.map((v) => (
-                    <li key={v.id} className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={ROW}>
+                    <li
+                      key={v.id}
+                      className="flex items-center justify-between gap-3 rounded-md px-3 py-2"
+                      style={ROW}
+                    >
                       <span className="font-mono text-sm" style={{ color: "var(--warning)" }}>
                         {formatVisit(v)}
                       </span>
-                      <span className="flex-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>
+                      <span
+                        className="flex-1 truncate text-xs"
+                        style={{ color: "var(--text-muted)" }}
+                      >
                         {v.notes ?? ""}
                       </span>
                       <span
@@ -419,10 +457,16 @@ export default function PlaceDetailPage(): JSX.Element {
 
             {place.notes && (
               <section className="rounded-lg p-4" style={PANEL}>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                <h2
+                  className="mb-2 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   {t("places:detail.notes")}
                 </h2>
-                <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--text-secondary)" }}>
+                <p
+                  className="whitespace-pre-wrap text-sm"
+                  style={{ color: "var(--text-secondary)" }}
+                >
                   {place.notes}
                 </p>
               </section>
@@ -447,7 +491,10 @@ export default function PlaceDetailPage(): JSX.Element {
             </section>
 
             <section className="rounded-lg p-4" style={PANEL}>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:detail.masterData")}
               </h2>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">

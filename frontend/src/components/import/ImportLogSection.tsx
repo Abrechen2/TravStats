@@ -96,7 +96,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         setItemsLoading(null);
       }
     },
-    [expandedId, itemsByBatch],
+    [expandedId, itemsByBatch]
   );
   const [reverting, setReverting] = useState<boolean>(false);
 
@@ -137,7 +137,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                 count: result.deleted,
                 kept: result.detached,
               })
-            : t("settings:import.log.reverted", { count: result.deleted }),
+            : t("settings:import.log.reverted", { count: result.deleted })
         );
         setConfirmingId(null);
         await load();
@@ -190,54 +190,57 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
               className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
             >
               <div className="flex items-center justify-between gap-3">
-              <div>
-                <div
-                  className="flex items-center gap-2 font-medium"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {/* Which area this run landed in. Never left implicit: an
+                <div>
+                  <div
+                    className="flex items-center gap-2 font-medium"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {/* Which area this run landed in. Never left implicit: an
                       unlabelled log reads as if it covered everything. */}
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    <span
-                      aria-hidden="true"
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: colorOf(batch.domain) }}
-                    />
-                    {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
-                  </span>
-                  <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
-                  {batch.fileName && <span> · {batch.fileName}</span>}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ background: colorOf(batch.domain) }}
+                      />
+                      {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
+                    </span>
+                    <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
+                    {batch.fileName && <span> · {batch.fileName}</span>}
+                  </div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    <span>{new Date(batch.createdAt).toLocaleDateString()}</span>
+                    {" · "}
+                    <span>{describeCounts(batch, t)}</span>
+                  </div>
                 </div>
-                <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  <span>{new Date(batch.createdAt).toLocaleDateString()}</span>
-                  {" · "}
-                  <span>{describeCounts(batch, t)}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid={`batch-items-toggle-${batch.id}`}
+                    aria-expanded={expandedId === batch.id}
+                    aria-controls={`batch-items-${batch.id}`}
+                    onClick={() => void toggleItems(batch.id)}
+                    className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
+                  >
+                    <span aria-hidden="true">{expandedId === batch.id ? "▾" : "▸"}</span>{" "}
+                    {t("settings:import.log.items.toggle")}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid={`batch-revert-${batch.id}`}
+                    onClick={() => setConfirmingId(batch.id)}
+                    className="whitespace-nowrap rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                  >
+                    {t("lodging:import.batches.revert")}
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  data-testid={`batch-items-toggle-${batch.id}`}
-                  aria-expanded={expandedId === batch.id}
-                  aria-controls={`batch-items-${batch.id}`}
-                  onClick={() => void toggleItems(batch.id)}
-                  className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
-                >
-                  <span aria-hidden="true">{expandedId === batch.id ? "▾" : "▸"}</span>{" "}
-                  {t("settings:import.log.items.toggle")}
-                </button>
-                <button
-                  type="button"
-                  data-testid={`batch-revert-${batch.id}`}
-                  onClick={() => setConfirmingId(batch.id)}
-                  className="whitespace-nowrap rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                >
-                  {t("lodging:import.batches.revert")}
-                </button>
-              </div>
               </div>
               {expandedId === batch.id && (
-                <div id={`batch-items-${batch.id}`} className="mt-2 border-t border-[var(--color-border)] pt-2">
+                <div
+                  id={`batch-items-${batch.id}`}
+                  className="mt-2 border-t border-[var(--color-border)] pt-2"
+                >
                   {itemsLoading === batch.id ? (
                     <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                       {t("settings:import.log.items.loading")}
@@ -260,7 +263,10 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                           >
                             <span style={{ color: "var(--text-primary)" }}>{item.label}</span>
                             <span style={{ color: "var(--text-muted)" }}>
-                              {[item.detail, item.date ? new Date(item.date).toLocaleDateString() : null]
+                              {[
+                                item.detail,
+                                item.date ? new Date(item.date).toLocaleDateString() : null,
+                              ]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>

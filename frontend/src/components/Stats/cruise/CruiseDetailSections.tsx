@@ -13,12 +13,25 @@ interface Props {
 }
 
 const MONTH_KEYS = [
-  "jan", "feb", "mar", "apr", "may", "jun",
-  "jul", "aug", "sep", "oct", "nov", "dec",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
 ] as const;
 
-const shipName = (cruise: { shipNameOverride?: string | null; ship?: { name?: string } | null; cruiseLine?: string | null }): string =>
-  cruise.shipNameOverride || cruise.ship?.name || cruise.cruiseLine || "—";
+const shipName = (cruise: {
+  shipNameOverride?: string | null;
+  ship?: { name?: string } | null;
+  cruiseLine?: string | null;
+}): string => cruise.shipNameOverride || cruise.ship?.name || cruise.cruiseLine || "—";
 
 const shortDate = (iso: string | null, locale: string): string =>
   iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short" }) : "—";

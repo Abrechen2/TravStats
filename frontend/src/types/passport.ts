@@ -7,13 +7,7 @@
  */
 
 export type Continent =
-  | "Africa"
-  | "Antarctica"
-  | "Asia"
-  | "Europe"
-  | "North America"
-  | "Oceania"
-  | "South America";
+  "Africa" | "Antarctica" | "Asia" | "Europe" | "North America" | "Oceania" | "South America";
 
 export interface PassportCountry {
   /** ISO-3166 alpha-2 — the glyph shown, deliberately not a flag. */

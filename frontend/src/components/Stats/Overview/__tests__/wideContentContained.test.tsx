@@ -35,9 +35,7 @@ function scrollingAncestorOf(el: Element | null): Element | null {
 
 describe("wide overview charts stay inside their own box", () => {
   it("puts the day-number heatmap in a horizontal scroller", () => {
-    const { container } = render(
-      <CrossDomainHeatmap statsMap={{}} visible={{}} year={2024} />
-    );
+    const { container } = render(<CrossDomainHeatmap statsMap={{}} visible={{}} year={2024} />);
 
     // The grid is identified by the layout that makes it wide in the first
     // place, not by a class we could rename without noticing.

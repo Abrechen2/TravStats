@@ -100,9 +100,7 @@ export default function CruiseStatsSection(): JSX.Element {
         <p className="mb-2 text-3xl" aria-hidden>
           🚢
         </p>
-        <p className="font-medium text-(--text-primary)">
-          {t("stats:cruiseSection.emptyTitle")}
-        </p>
+        <p className="font-medium text-(--text-primary)">{t("stats:cruiseSection.emptyTitle")}</p>
         <p className="mt-1 text-sm">{t("stats:cruiseSection.emptyHint")}</p>
       </div>
     );

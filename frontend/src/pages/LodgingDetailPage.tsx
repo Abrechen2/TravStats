@@ -42,8 +42,8 @@ export default function LodgingDetailPage(): JSX.Element {
    * genuinely IS no origin, and the full list is then the honest answer rather
    * than a guess dressed up as memory.
    */
-  const fromChain = (location.state as { fromChain?: { id: number; name: string } } | null)
-    ?.fromChain ?? null;
+  const fromChain =
+    (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
   const { t } = useTranslation(["lodging", "common"]);
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
@@ -370,7 +370,9 @@ export default function LodgingDetailPage(): JSX.Element {
                 <div className="flex justify-between">
                   <dt>{t("lodging:detail.spendPerNight")}</dt>
                   <dd>
-                    {priced && avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}
+                    {priced && avgPerNight !== null
+                      ? formatCurrency(avgPerNight, baseCurrency)
+                      : "—"}
                   </dd>
                 </div>
               </dl>

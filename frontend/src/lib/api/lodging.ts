@@ -91,11 +91,11 @@ export const createStay = async (lodgingId: string, input: StayInput): Promise<L
 export const updateStay = async (
   lodgingId: string,
   stayId: string,
-  input: StayInput,
+  input: StayInput
 ): Promise<LodgingStay> => {
   const { data } = await api.patch<Envelope<LodgingStay>>(
     `/lodging/${lodgingId}/stays/${stayId}`,
-    input,
+    input
   );
   return data.data;
 };
@@ -137,11 +137,11 @@ export const createMembership = async (input: MembershipInput): Promise<LodgingM
 
 export const updateMembership = async (
   id: string,
-  input: MembershipInput,
+  input: MembershipInput
 ): Promise<LodgingMembership> => {
   const { data } = await api.patch<Envelope<LodgingMembership>>(
     `/lodging-memberships/${id}`,
-    input,
+    input
   );
   return data.data;
 };
@@ -155,7 +155,7 @@ export const deleteMembership = async (id: string): Promise<void> => {
 export const getFxPreview = async (
   amount: number,
   from: string,
-  date: string,
+  date: string
 ): Promise<FxPreview | null> => {
   const { data } = await api.get<Envelope<FxPreview | null>>("/lodging/fx-preview", {
     params: { amount, from, date },

@@ -48,9 +48,7 @@ describe("TimesFields", () => {
         />
       );
 
-      await userEvent.click(
-        screen.getByLabelText(/actualTimes\.copyFromPlanned/i)
-      );
+      await userEvent.click(screen.getByLabelText(/actualTimes\.copyFromPlanned/i));
 
       expect(onActualChange).toHaveBeenCalledWith({
         actualDepDate: "2026-08-14",

@@ -8,8 +8,7 @@ const flag: { value: boolean | null } = { value: null };
 // else from that store, and a narrow fake of it would fail for reasons that
 // have nothing to do with what is being tested.
 vi.mock("../../hooks/useBetaFeatures", () => ({
-  useBetaFeatureAccess: () =>
-    flag.value === null ? "pending" : flag.value ? "allowed" : "denied",
+  useBetaFeatureAccess: () => (flag.value === null ? "pending" : flag.value ? "allowed" : "denied"),
   useBetaFeatures: () => ({
     betaFeaturesEnabled: flag.value,
     isFeatureVisible: () => flag.value === true,

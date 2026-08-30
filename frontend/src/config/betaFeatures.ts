@@ -107,13 +107,15 @@ export const BETA_FEATURES = Object.freeze({
   passport: Object.freeze({
     reason: "beta",
     why: "The page is complete and the numbers agree with the statistics page, but it ships in the middle of a release candidate. Hiding it keeps 2.6.0's released surface unchanged while the RC still gets it in front of testers.",
-    returnsWhen: "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
+    returnsWhen:
+      "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
   }),
 
   domainColors: Object.freeze({
     reason: "advanced",
     why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
-    returnsWhen: "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
+    returnsWhen:
+      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
     issue: "#270",
   }),
 

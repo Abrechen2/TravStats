@@ -43,8 +43,7 @@ export default function LodgingRecordsSection({ stats }: Props): JSX.Element | n
     label: row.key,
     weight: row.nights / maxNights,
     value: t("lodging:stats.records.nightsCount", { count: row.nights }),
-    hint:
-      row.stays > 1 ? t("lodging:stats.records.staysCount", { count: row.stays }) : null,
+    hint: row.stays > 1 ? t("lodging:stats.records.staysCount", { count: row.stays }) : null,
   }));
 
   const cards: JSX.Element[] = [];

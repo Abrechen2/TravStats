@@ -95,5 +95,4 @@ describe("English achievement mirrors", () => {
     const missing = Object.keys(codes).filter((code) => !germanCodes[code]?.name);
     expect(missing).toEqual([]);
   });
-
 });

@@ -129,10 +129,10 @@ export default function TimesFields({
    */
   const canCopyPlannedToActual = Boolean(
     actualValue &&
-      ((value.depDate && !actualValue.actualDepDate) ||
-        (value.depTime && !actualValue.actualDepTime) ||
-        (value.arrDate && !actualValue.actualArrDate) ||
-        (value.arrTime && !actualValue.actualArrTime))
+    ((value.depDate && !actualValue.actualDepDate) ||
+      (value.depTime && !actualValue.actualDepTime) ||
+      (value.arrDate && !actualValue.actualArrDate) ||
+      (value.arrTime && !actualValue.actualArrTime))
   );
 
   const handleCopyPlannedToActual = (): void => {

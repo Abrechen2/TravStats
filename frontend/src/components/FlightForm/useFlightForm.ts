@@ -101,7 +101,6 @@ export function buildLocalString(
   return `${date}T${time}`;
 }
 
-
 /**
  * A 409 `already_imported` is the server saying "you already have this one" —
  * the ordinary answer to reading a forwarded confirmation a second time. It is
@@ -119,7 +118,7 @@ export function useFlightForm(
   // no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
-  onBatchComplete?: (newAchievements?: UserAchievement[]) => void,
+  onBatchComplete?: (newAchievements?: UserAchievement[]) => void
   /**
    * Opens straight into the e-mail/PDF uploader instead of the lookup step.
    * Used by the central import hub (#238): the hub carries the flight parse
@@ -884,7 +883,10 @@ export function useFlightForm(
         setError("");
         try {
           const submittedCount = confirmedFlightsRef.current.length;
-          const batchResult = await flightsApi.createBatch(confirmedFlightsRef.current, importBatchId);
+          const batchResult = await flightsApi.createBatch(
+            confirmedFlightsRef.current,
+            importBatchId
+          );
 
           /**
            * Say what the import actually did.

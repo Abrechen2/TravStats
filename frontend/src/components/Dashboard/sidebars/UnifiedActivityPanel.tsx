@@ -248,9 +248,7 @@ export function UnifiedActivityPanel({
                 {!item.mappable && (
                   // The map cannot focus this row. Saying so beats a click that
                   // looks broken — the arrow still leads to where it gets fixed.
-                  <span title={t("dashboard:sidebar.notOnMap")}>
-                    ⌀
-                  </span>
+                  <span title={t("dashboard:sidebar.notOnMap")}>⌀</span>
                 )}
               </div>
             )}

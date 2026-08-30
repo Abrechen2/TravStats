@@ -52,7 +52,10 @@ export function normalizeDomainColors(raw: unknown): DomainColorMap {
     Object.fromEntries(
       AVAILABLE_DOMAINS.map((key) => {
         const value = source[key];
-        return [key, typeof value === "string" && HEX.test(value) ? value : BRAND_DOMAIN_COLORS[key]];
+        return [
+          key,
+          typeof value === "string" && HEX.test(value) ? value : BRAND_DOMAIN_COLORS[key],
+        ];
       })
     ) as Record<DomainKey, string>
   );
