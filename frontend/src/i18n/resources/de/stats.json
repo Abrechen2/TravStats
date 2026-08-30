@@ -593,5 +593,23 @@
     "avgTripDaysDesc_other": "Längste Reise: {{count}} Tage",
     "journalEntries": "Tagebucheinträge",
     "noMoods": "Noch keine Stimmung erfasst"
+  },
+  "sections": {
+    "button": "Abschnitte",
+    "hiddenCount": "{{count}} aus",
+    "showAll": "Alle wieder anzeigen",
+    "overview": "Übersicht",
+    "charts": "Diagramme",
+    "distance": "Distanz",
+    "breakdown": "Aufschlüsselung",
+    "punctuality": "Pünktlichkeit",
+    "fun": "Kurioses",
+    "business": "Kosten",
+    "unique": "Besonderes",
+    "airports": "Flughäfen",
+    "seats": "Sitzplätze",
+    "airlines": "Airlines",
+    "aircraft": "Flugzeuge",
+    "countries": "Länder"
   }
 }
