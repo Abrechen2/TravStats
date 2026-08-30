@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 
+import de from "../resources/de/achievements.json";
 import en from "../resources/en/achievements.json";
 
 /**
@@ -52,7 +53,9 @@ const POI_CODES_PART_H = [
   "PLACE_SOUTH_54",
 ] as const;
 
-const codes = en.codes as Record<string, { name?: string; description?: string }>;
+type Entry = { name?: string; description?: string };
+const codes = en.codes as Record<string, Entry>;
+const germanCodes = de.codes as Record<string, Entry>;
 
 describe("English achievement mirrors", () => {
   it("gives every Part H badge an English name and description", () => {
@@ -71,6 +74,26 @@ describe("English achievement mirrors", () => {
       germanTells.test(`${codes[code]?.name ?? ""} ${codes[code]?.description ?? ""}`)
     );
     expect(suspicious).toEqual([]);
+  });
+
+  /**
+   * The direction this file was missing until 2026-08-30, and the reason all 25
+   * Part H badges shipped reading "City stroller" on a German page.
+   *
+   * German is the PRIMARY locale. The page asks for `codes.<CODE>` with the
+   * seeded German name as `defaultValue`, which looks like a safe fallback and
+   * is not: i18next falls back to `en` BEFORE it reaches `defaultValue`, so a
+   * key present in English and absent in German resolves to the English string
+   * and the default never runs. Nothing errors, nothing is blank — the badge
+   * simply speaks the wrong language.
+   *
+   * Both files are in the frontend, so unlike the mirror check above this one
+   * needs no hand-maintained list and cannot rot: every English key must have a
+   * German one, whatever gets added later.
+   */
+  it("gives every English mirror a German one, so the fallback never wins", () => {
+    const missing = Object.keys(codes).filter((code) => !germanCodes[code]?.name);
+    expect(missing).toEqual([]);
   });
 
 });
