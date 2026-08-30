@@ -279,8 +279,31 @@ function chordCoordinates(
   ];
 }
 
+export interface RouteGeometryFeature {
+  type: "Feature";
+  geometry: { type: "LineString"; coordinates: Array<[number, number]> };
+  properties: {
+    legId: string;
+    source: string;
+    mode: string;
+    distanceKm: number;
+    confidence: string;
+  };
+}
+
+export interface RouteGeometryFeatureCollection {
+  type: "FeatureCollection";
+  features: RouteGeometryFeature[];
+}
+
 /**
- * GET /trips/:id/routes/:routeId/geometry
+ * Assemble one section's legs into the GeoJSON FeatureCollection
+ * `GET .../geometry` below returns. Extracted so
+ * `routes/trips/tourIndex.ts`'s dashboard-wide batch endpoint can reuse
+ * the exact same waypoints/chord-fallback logic instead of a second,
+ * possibly-drifting assembler — the same relationship
+ * `routes/cruises.ts`'s `buildCruiseGeometry` has to its own per-cruise
+ * and batch endpoints.
  *
  * One LineString per leg, so the map can colour each leg by its own mode
  * and dash the straight ones. A leg with stored waypoints emits them; a
@@ -295,7 +318,47 @@ function chordCoordinates(
  *
  * Ordered by `fromStop.routeOrderIdx` IN THE QUERY, the same clause the
  * stops endpoint in `tourRoutes.ts` already uses — no JS re-sort needed
- * once the database does the ordering.
+ * once the database does the ordering. Callers are trusted to have already
+ * checked ownership of `routeId` — this function itself does not.
+ */
+export async function buildRouteGeometry(routeId: string): Promise<RouteGeometryFeatureCollection> {
+  const legs = await prisma.tripRouteLeg.findMany({
+    where: { routeId },
+    orderBy: { fromStop: { routeOrderIdx: "asc" } },
+    include: {
+      fromStop: { select: { lat: true, lon: true } },
+      toStop: { select: { lat: true, lon: true } },
+    },
+  });
+
+  const features: RouteGeometryFeature[] = legs.flatMap((leg) => {
+    const coordinates = isCoordinatePolyline(leg.waypoints)
+      ? leg.waypoints
+      : chordCoordinates(leg.fromStop, leg.toStop);
+    if (!coordinates) return [];
+    return [
+      {
+        type: "Feature" as const,
+        geometry: { type: "LineString" as const, coordinates },
+        properties: {
+          legId: leg.id,
+          source: leg.source,
+          mode: leg.mode,
+          distanceKm: leg.distanceKm,
+          confidence: leg.confidence,
+        },
+      },
+    ];
+  });
+
+  return { type: "FeatureCollection", features };
+}
+
+/**
+ * GET /trips/:id/routes/:routeId/geometry
+ *
+ * Thin wrapper around {@link buildRouteGeometry} once ownership of
+ * `routeId` is established.
  */
 router.get(
   "/trips/:id/routes/:routeId/geometry",
@@ -306,37 +369,7 @@ router.get(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
-
-      const legs = await prisma.tripRouteLeg.findMany({
-        where: { routeId },
-        orderBy: { fromStop: { routeOrderIdx: "asc" } },
-        include: {
-          fromStop: { select: { lat: true, lon: true } },
-          toStop: { select: { lat: true, lon: true } },
-        },
-      });
-
-      const features = legs.flatMap((leg) => {
-        const coordinates = isCoordinatePolyline(leg.waypoints)
-          ? leg.waypoints
-          : chordCoordinates(leg.fromStop, leg.toStop);
-        if (!coordinates) return [];
-        return [
-          {
-            type: "Feature" as const,
-            geometry: { type: "LineString" as const, coordinates },
-            properties: {
-              legId: leg.id,
-              source: leg.source,
-              mode: leg.mode,
-              distanceKm: leg.distanceKm,
-              confidence: leg.confidence,
-            },
-          },
-        ];
-      });
-
-      res.json({ type: "FeatureCollection", features });
+      res.json(await buildRouteGeometry(routeId));
     } catch (error) {
       next(error);
     }

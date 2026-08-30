@@ -301,3 +301,17 @@ export const routingSettingsSchema = z
   .partial();
 
 export type RoutingSettingsInput = z.infer<typeof routingSettingsSchema>;
+
+/**
+ * Body for `POST /tours/geometry/batch` (`routes/trips/tourIndex.ts`) —
+ * the dashboard-wide map's one round trip for several sections' geometry
+ * at once. Same shape and same bounds as `cruises.ts`'s
+ * `geometryBatchSchema`: a min of 1 keeps an empty request from being a
+ * silent no-op that still costs a round trip, and the max of 100 is a
+ * denial-of-service bound, not a product limit.
+ */
+export const tourGeometryBatchSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+});
+
+export type TourGeometryBatchInput = z.infer<typeof tourGeometryBatchSchema>;

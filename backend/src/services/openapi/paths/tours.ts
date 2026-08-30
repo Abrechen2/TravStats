@@ -1,6 +1,6 @@
 /**
  * Tour route section endpoints — a trip's "how did we get there" layer on
- * top of its stops. All fifteen live on the four same-prefix satellite
+ * top of its stops. All of these live on the four same-prefix satellite
  * routers `routes/trips/tourRoutes.ts`, `routes/trips/tourLegs.ts`,
  * `routes/trips/tourRouting.ts`, and `routes/trips/tourTracks.ts`, all
  * mounted at the plain `/trips` base, which is why every path here starts
@@ -9,6 +9,16 @@
  * None of these responses use the `{success, data}` envelope the cruise
  * endpoints use — they follow the older bare-object convention `trips.ts`
  * itself uses (`{ route: ... }`, `{ leg: ... }`).
+ *
+ * The two dashboard-wide endpoints — `GET /tours` and
+ * `POST /tours/geometry/batch`, on the NOT-trip-scoped
+ * `routes/trips/tourIndex.ts` — are documented in the SEPARATE
+ * `./tourIndex.ts` path module rather than here: adding them here would
+ * have pushed this file past the 800-line hard maximum, the exact same
+ * reason `tourLegs.ts` / `tourRouting.ts` / `tourTracks.ts` were split off
+ * `routes/trips/tourRoutes.ts` as their own router files. `legMode` and
+ * `tourRouteGeometry` are exported below for that module to reuse rather
+ * than redefine.
  */
 
 import { z } from "zod";
@@ -719,3 +729,5 @@ registry.registerPath({
     404: { description: "Trip, section, or track not found", content: errorContent },
   },
 });
+
+export { legMode, tourRouteGeometry };
