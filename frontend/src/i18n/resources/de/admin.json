@@ -135,7 +135,44 @@
       },
       "betaFeatures": {
         "label": "Beta-Funktionen anzeigen",
-        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden."
+        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden.",
+        "listTitle": "Was dieser Schalter freigibt",
+        "listEmpty": "Zurzeit ist nichts hinter dem Schalter versteckt.",
+        "listNote": "Diese Liste kommt aus dem Register im Quelltext und ist damit immer der tatsächliche Stand dieser Version.",
+        "reason": {
+          "beta": "unfertig",
+          "advanced": "für Fortgeschrittene"
+        },
+        "features": {
+          "tripAiSummary": {
+            "name": "KI-Zusammenfassung einer Reise",
+            "what": "Ein Knopf auf der Reise-Detailseite, der den Verlauf in Prosa zusammenfasst."
+          },
+          "devicePairing": {
+            "name": "Geräte koppeln",
+            "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
+          },
+          "passport": {
+            "name": "Reisepass",
+            "what": "Eine eigene Seite mit Stempeln, Kontinent-Quoten und einer Länderliste — gespeist aus den Flugdaten."
+          },
+          "domainColors": {
+            "name": "Eigene Bereichsfarben",
+            "what": "Die Farbe je Bereich wird einstellbar, statt fest aus der Marke zu kommen. Wirkt in Statistiken, Zeitleiste, Aktivitätsleiste und Import-Protokoll."
+          },
+          "poiDomain": {
+            "name": "Orte",
+            "what": "Der ganze Bereich Orte: Anlegen, Bearbeiten, Detailseite, Liste, Karte, eigene Listen und die mitgelieferten Checklisten."
+          },
+          "tourRoutes": {
+            "name": "Touren",
+            "what": "Routenabschnitte innerhalb einer Reise — Abschnittsliste, Editor, ein eigener Dashboard-Reiter und die Linien auf der Karte."
+          },
+          "dawarich": {
+            "name": "Dawarich-Anbindung",
+            "what": "Eine Verbindung zu einer Dawarich-Instanz, aus der aufgezeichnete Wegstrecken übernommen werden."
+          }
+        }
       }
     },
     "passkeys": {

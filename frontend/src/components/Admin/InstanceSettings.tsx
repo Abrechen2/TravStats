@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi } from "../../lib/api";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
+import BetaFeatureList from "./BetaFeatureList";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
@@ -342,6 +343,9 @@ export default function InstanceSettings(): JSX.Element {
           <span className="block text-xs text-(--text-muted)">
             {t("admin:instance.fields.betaFeatures.help")}
           </span>
+          {/* Derived from the registry, so it cannot drift from what the
+              switch actually gates — see BetaFeatureList.tsx. */}
+          <BetaFeatureList />
         </span>
       </label>
 

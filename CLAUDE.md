@@ -243,11 +243,19 @@ frontend/src/
   in `backend/src/schemas/`.
 - **Beta gating (since 2.4.0)** — unfinished features must register in
   `frontend/src/config/betaFeatures.ts` and hide behind
-  `betaFeaturesEnabled` (admin_settings column, default `false`). Currently
-  gated: POI dashboard tab, Devices settings entry, trip AI summary. The
-  Devices entry is the ONLY phone-pairing entry point — it must be
-  un-gated when the mobile app ships. The flag is instance state: never
-  persist it client-side (see the `partialize` in `settingsStore.ts`).
+  `betaFeaturesEnabled` (admin_settings column, default `false`).
+  **That registry is the list — do not copy it here.** This paragraph named
+  three features until 2026-08-30, by which time there were seven; a list in
+  prose beside a list in code is a list that is wrong, and being wrong about
+  what is hidden is worse than saying nothing, because nobody goes looking.
+  The admin panel renders the same registry for the same reason
+  (`components/Admin/BetaFeatureList.tsx`), and a test fails when a key has no
+  user-facing copy. Each entry carries `why` it is hidden and `returnsWhen` it
+  may come back — write both, or the gate outlives the reason for it.
+  Two standing notes: the Devices entry is the ONLY phone-pairing entry point
+  and must be un-gated when the mobile app ships; and the flag is instance
+  state, never persisted client-side (see the `partialize` in
+  `settingsStore.ts`).
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through
