@@ -7,6 +7,8 @@ import {
   validateIATACode,
   PATTERNS,
 } from '../shared/utils';
+import { CITY_TO_IATA } from '../text/regexMappings';
+import { normalizeCityName } from '../text/regexAirportExtractor';
 import logger from '../../../utils/logger';
 
 /**
@@ -52,6 +54,90 @@ function expandYear(captured: string | undefined): string {
 }
 
 /**
+ * Sauvola, not Otsu.
+ *
+ * Tesseract binarises before it reads, and its default (Otsu, `0`) picks ONE
+ * global threshold for the whole image. A boarding pass defeats that twice
+ * over: the card is coloured — navy on saturated orange has far less luminance
+ * contrast than it appears to have — and a phone screenshot sets it in a black
+ * letterbox, which drags the global threshold away from the card entirely. The
+ * result is not a bad read, it is no read: a real Lufthansa Wallet pass
+ * returned the status-bar clock, the word "Lufthansa" and the security number,
+ * and nothing else.
+ *
+ * Sauvola (`2`) thresholds per neighbourhood, so the card is judged against the
+ * card rather than against the margin around it.
+ *
+ * Measured 2026-08-30 over the twelve real passes in `test-samples/`, scoring
+ * flight number, both airport codes and seat against `samples.json`:
+ *
+ * | | correct | wrong | missing | produced a date |
+ * |---|---|---|---|---|
+ * | Otsu | 10 | 4 | 34 | 1/12 |
+ * | Sauvola | 35 | 3 | 10 | 8/12 |
+ *
+ * Better on every axis, including *fewer* wrong values — so this is not a
+ * recall-for-precision trade. It also costs nothing: one parameter, no
+ * preprocessing step and no new dependency.
+ */
+const THRESHOLDING_SAUVOLA = '2';
+
+/**
+ * Does this line look like the OCR reading a barcode rather than words?
+ *
+ * A field line on a boarding pass is made of words: "MUNCHEN FRANKFURT",
+ * "LH117 30AUG26 18:30". The 2D barcode has no words in it, so what comes back
+ * from that part of the card is a scatter of one- and two-character fragments —
+ * "ol i kan 24", "r ple Tr", "4 rT: Hh". Judging a line by how much of it is
+ * such fragments separates the two reliably, and does not depend on knowing
+ * which airline printed the pass.
+ *
+ * Deliberately generous: a line is only rubble when MOST of it is fragments, so
+ * a short genuine line ("MUC = FRA", two real tokens and a stray glyph) stays.
+ */
+function looksLikeRubble(line: string): boolean {
+  const tokens = line.trim().split(/\s+/).filter((t) => t !== '');
+  if (tokens.length < 3) {
+    return false;
+  }
+  const fragments = tokens.filter((t) => t.replace(/[^A-Za-z0-9]/g, '').length <= 2);
+  return fragments.length * 2 > tokens.length;
+}
+
+/** The pass with the OCR's rubble lines dropped. */
+function readableLines(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !looksLikeRubble(line))
+    .join('\n');
+}
+
+/**
+ * The route read from the city names a pass prints above its codes.
+ *
+ * Null unless BOTH ends are found and they differ — a single city says nothing
+ * about direction, and a city matched twice is a misread rather than a round
+ * trip. Order is reading order, which is the order a pass prints departure and
+ * destination in.
+ */
+function citiesToCodes(
+  text: string,
+): { departure: string; arrival: string } | null {
+  const found: string[] = [];
+  for (const word of text.split(/[^A-Za-zÀ-ÿ]+/)) {
+    if (word.length < 3) continue;
+    const code = CITY_TO_IATA[normalizeCityName(word)];
+    if (code !== undefined && !found.includes(code)) {
+      found.push(code);
+    }
+    if (found.length === 2) {
+      return { departure: found[0], arrival: found[1] };
+    }
+  }
+  return null;
+}
+
+/**
  * Tesseract OCR Vision Parser
  *
  * Provides free, local OCR-based boarding pass parsing without requiring external APIs.
@@ -77,6 +163,12 @@ export class TesseractVisionParser implements IVisionParser {
           logger.debug(`[Tesseract Parser] OCR Progress: ${Math.round(m.progress * 100)}%`);
         }
       },
+    });
+
+    // Set on the worker, not per call: the worker is cached and reused, and
+    // this must hold for every recognition it performs.
+    await this.worker.setParameters({
+      thresholding_method: THRESHOLDING_SAUVOLA,
     });
 
     this.isInitialized = true;
@@ -230,9 +322,23 @@ export class TesseractVisionParser implements IVisionParser {
       return result;
     }
 
-    // Fallback: every 3-letter token on the pass, in reading order.
+    // The city names printed above the codes, e.g. "MÜNCHEN … FRANKFURT".
+    //
+    // Stronger evidence than any leftover three-letter token, and it has to be
+    // tried before them: Sauvola thresholding reads far more of the barcode
+    // field than Otsu did, and that field turns into lines like "ol i kan 24"
+    // and "r ple Tr". On the pass that prompted this, the harvest below then
+    // produced the route KAN → PLE — a confident, entirely invented flight,
+    // from a pass whose own header says MÜNCHEN and FRANKFURT.
+    const cities = citiesToCodes(text);
+    if (cities !== null) {
+      return cities;
+    }
+
+    // Fallback: every 3-letter token on the pass, in reading order — with the
+    // OCR's own rubble left out, see `looksLikeRubble`.
     const allCodes: string[] = [];
-    const matches = text.matchAll(PATTERNS.IATA_CODE);
+    const matches = readableLines(text).matchAll(PATTERNS.IATA_CODE);
     for (const match of matches) {
       const code = match[1];
       // Filter out common false positives
