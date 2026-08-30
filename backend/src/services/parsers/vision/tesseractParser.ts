@@ -1,8 +1,55 @@
 import { createWorker, Worker } from 'tesseract.js';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
-import { normalizeParsedBooking, extractFlightDataFromText, PATTERNS } from '../shared/utils';
+import {
+  normalizeParsedBooking,
+  extractFlightDataFromText,
+  validateIATACode,
+  PATTERNS,
+} from '../shared/utils';
 import logger from '../../../utils/logger';
+
+/**
+ * Three-letter tokens that are printed ON boarding passes but are not
+ * airports: column headings, status words, honorifics.
+ *
+ * Only consulted by the last-resort branch of {@link
+ * TesseractVisionParser.extractIATACodes}; anything on the IATA whitelist wins
+ * before this list is reached. Kept to tokens that are unambiguously labels —
+ * a code that is BOTH a label somewhere and a real airport (THE = Teresina)
+ * stays out of the route by the whitelist ordering, not by being banned here.
+ */
+const NOT_AIRPORT_CODES = new Set([
+  // Pre-existing entries: ordinary English words that survive OCR.
+  'THE', 'AND', 'FOR', 'NOT', 'ARE', 'YOU',
+  // Column headings and field labels, German and English.
+  'GRP', 'SEQ', 'PNR', 'SEC', 'REF', 'FLT', 'TKT', 'ETK', 'ZON', 'ROW',
+  'DEP', 'ARR', 'GRO', 'CLS', 'STS', 'NBR',
+  // Frequent-flyer and status printing (Lufthansa: "FTL LH*S").
+  'FTL', 'FTV', 'SEN', 'HON',
+  // Honorifics in the passenger row.
+  'MRS', 'MSS',
+  // Clock/zone words.
+  'GMT', 'UTC',
+]);
+
+/**
+ * A day and a month with no clock after them, the airline way: `30AUG26`,
+ * `30AUG2026`, `30 AUG 26`, `05 DEC`.
+ *
+ * Separators are optional throughout, because the printed form runs the three
+ * parts together. The year is optional too, and a two-digit one that turns out
+ * to be an hour is refused rather than read as a year — without the lookahead,
+ * "30 AUG 18:30" would date the flight to 2018.
+ */
+const DATE_WITHOUT_TIME =
+  /\b(\d{1,2})\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*(\d{4}|\d{2}(?!\s*:))?/i;
+
+/** "26" → 2026, "2026" → 2026, nothing → this year (flagged as inferred). */
+function expandYear(captured: string | undefined): string {
+  if (!captured) return new Date().getFullYear().toString();
+  return captured.length === 2 ? `20${captured}` : captured;
+}
 
 /**
  * Tesseract OCR Vision Parser
@@ -156,9 +203,13 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   /**
-   * Extract IATA codes with context awareness
+   * Extract IATA codes with context awareness.
+   *
+   * `protected` for the same reason `extractDateTimes` is: the interesting
+   * behaviour is which of a pass's many three-letter tokens it picks, and that
+   * is worth testing without spinning up a real OCR run.
    */
-  private extractIATACodes(text: string): { departure?: string; arrival?: string } {
+  protected extractIATACodes(text: string): { departure?: string; arrival?: string } {
     const result: { departure?: string; arrival?: string } = {};
 
     // Look for "FROM XXX TO YYY" pattern
@@ -179,21 +230,30 @@ export class TesseractVisionParser implements IVisionParser {
       return result;
     }
 
-    // Fallback: extract all IATA codes and take first two
+    // Fallback: every 3-letter token on the pass, in reading order.
     const allCodes: string[] = [];
     const matches = text.matchAll(PATTERNS.IATA_CODE);
     for (const match of matches) {
       const code = match[1];
       // Filter out common false positives
-      if (!['THE', 'AND', 'FOR', 'NOT', 'ARE', 'YOU'].includes(code)) {
+      if (!NOT_AIRPORT_CODES.has(code)) {
         allCodes.push(code);
       }
     }
 
     const uniqueCodes = [...new Set(allCodes)];
-    if (uniqueCodes.length >= 2) {
-      result.departure = uniqueCodes[0];
-      result.arrival = uniqueCodes[1];
+
+    // Codes we can actually vouch for come first. A boarding pass is full of
+    // three-letter LABELS — "GRP", "SEQ", "PNR", "SEC" — and they are printed
+    // in the header, ABOVE the route. Taking the first two tokens therefore
+    // read a Lufthansa pass as GRP → MUC: the group column, then the departure
+    // airport, with the actual destination dropped. Preferring known airports
+    // costs nothing when the pass is plain and is the whole difference here.
+    const known = uniqueCodes.filter((code) => validateIATACode(code, true));
+    const candidates = known.length >= 2 ? known : uniqueCodes;
+    if (candidates.length >= 2) {
+      result.departure = candidates[0];
+      result.arrival = candidates[1];
     }
 
     return result;
@@ -244,6 +304,34 @@ export class TesseractVisionParser implements IVisionParser {
       result.departure = `${year}-${month}-${day}T${hour}:${minute}`;
       if (!yearCaptured) {
         result.inferredFields.push('departureTime');
+      }
+    }
+
+    // Last: the airline date with no departure time next to it.
+    //
+    // The pattern above needs a clock immediately after the date, and the
+    // commonest boarding-pass date of all does not have one: Lufthansa prints
+    // "DATUM 30AUG26" and puts 18:30 under BOARDING, one column away. So a
+    // real pass produced NO date, `departureTime` stayed empty, and every
+    // caller that requires a date — the Companion's photo capture among them —
+    // threw the whole parse away.
+    //
+    // The time is left at midnight rather than borrowed from elsewhere on the
+    // pass, deliberately: the clocks printed near a date are boarding and gate
+    // closing, not departure, and `T00:00` is the placeholder this codebase
+    // already reads as date-only (`regexDateExtractor` patches real times over
+    // it, and the Companion's `localClockTime` drops it).
+    if (!result.departure) {
+      const dateOnly = text.match(DATE_WITHOUT_TIME);
+      if (dateOnly) {
+        const yearCaptured = dateOnly[3];
+        const year = expandYear(yearCaptured);
+        const month = this.monthToNumber(dateOnly[2]);
+        const day = dateOnly[1].padStart(2, '0');
+        result.departure = `${year}-${month}-${day}T00:00`;
+        if (!yearCaptured) {
+          result.inferredFields.push('departureTime');
+        }
       }
     }
 

@@ -1,0 +1,81 @@
+import { describe, it, expect, jest } from '@jest/globals';
+import { TesseractVisionParser } from '../tesseractParser';
+
+jest.mock('../../../../utils/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+/** Exposes the protected route picker — see the note on the method itself. */
+class TestableTesseractVisionParser extends TesseractVisionParser {
+  public callExtractIATACodes(text: string) {
+    return this.extractIATACodes(text);
+  }
+}
+
+/**
+ * The OCR of a Lufthansa Wallet pass, uppercased the way `parseOCRText` hands
+ * it over. The header labels come FIRST — which is the whole problem.
+ */
+const LUFTHANSA_WALLET_OCR = [
+  'GATE',
+  'GRP',
+  'SITZ',
+  'LUFTHANSA',
+  'G 2 8C',
+  'MUNCHEN',
+  'FRANKFURT',
+  'MUC',
+  'FRA',
+  'FLUG',
+  'DATUM',
+  'LH117',
+  '30AUG26',
+  'PASSAGIER',
+  'WITTKE, DENNIS MR',
+  'FTL LH*S',
+].join('\n');
+
+describe('TesseractVisionParser.extractIATACodes', () => {
+  let parser: TestableTesseractVisionParser;
+
+  beforeEach(() => {
+    parser = new TestableTesseractVisionParser();
+  });
+
+  it('reads the route past the column headings above it', () => {
+    // Taking the first two three-letter tokens read this pass as GRP → MUC:
+    // the boarding-group heading, then the departure airport, destination
+    // dropped entirely.
+    expect(parser.callExtractIATACodes(LUFTHANSA_WALLET_OCR)).toEqual({
+      departure: 'MUC',
+      arrival: 'FRA',
+    });
+  });
+
+  it('still reads an explicit route line first', () => {
+    expect(parser.callExtractIATACodes('FROM LUX TO MUC')).toEqual({
+      departure: 'LUX',
+      arrival: 'MUC',
+    });
+  });
+
+  it('falls back to reading order for airports it does not know', () => {
+    // The whitelist is a shortlist of busy airports, not a world index. Two
+    // unknown codes must still produce a route rather than nothing.
+    expect(parser.callExtractIATACodes('GRP\nBZG\nKVA\nSEQ')).toEqual({
+      departure: 'BZG',
+      arrival: 'KVA',
+    });
+  });
+
+  it('gives no route when the pass shows only one airport', () => {
+    const result = parser.callExtractIATACodes('GRP\nMUC\nSEQ');
+    expect(result.arrival).toBeUndefined();
+  });
+});

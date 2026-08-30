@@ -210,9 +210,34 @@ export function extractAirlineCode(flightNumber: string): string | undefined {
 export const PATTERNS = {
   FLIGHT_NUMBER: /\b([A-Z]{2,3}\s?\d{1,4})\b/,
   IATA_CODE: /\b([A-Z]{3})\b/g,
-  PNR: /\b([A-Z0-9]{6})\b/,
+  /**
+   * A booking reference the pass NAMES. Tried first, and the only form that is
+   * trusted on letters alone.
+   */
+  PNR_LABELLED:
+    /(?:PNR|Booking\s*(?:Reference|Ref|Code)|Buchungs(?:code|referenz|nummer)|Reservation\s*Code|Record\s*Locator)\s*:?\s*([A-Z0-9]{6})\b/i,
+  /**
+   * An unlabelled six-character token, which must contain a digit to count.
+   *
+   * The bare `[A-Z0-9]{6}` this replaces matched any six-letter word on the
+   * pass: a German Lufthansa pass reported the PNR as "KLASSE", the column
+   * heading above the cabin. That is not a cosmetic error — `findExistingFlight`
+   * treats the PNR as its STRONGEST match key and looks it up before flight
+   * number and date, so an invented one can merge a scan into an unrelated
+   * flight. Refusing an all-letter record locator costs an optional field;
+   * accepting a heading costs the wrong flight.
+   */
+  PNR: /\b(?=[A-Z0-9]{6}\b)(?=[A-Z]*\d)([A-Z0-9]{6})\b/,
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
-  GATE: /(?:Gate|Boarding|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
+  /**
+   * `Boarding` is deliberately NOT a gate label: on almost every pass it
+   * introduces the boarding TIME, not the gate, so "BOARDING 18:30" was being
+   * read as gate "18". A pass that writes "Boarding Gate B12" still matches on
+   * `Gate`. The trailing guard rejects a clock even where a gate label does
+   * precede one, and the `\b` stops it from backing off to a shorter number to
+   * escape that guard ("Gate 18:30" must yield nothing, never "1").
+   */
+  GATE: /(?:Gate|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)\b(?!\s*:)/i,
   TERMINAL: /Terminal\s*:?\s*([A-Z0-9]+)/i,
   DATE_ISO: /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/g,
   PRICE_EUR: /(\d{1,5}[.,]\d{2})\s?(EUR|€)/i,
@@ -232,8 +257,9 @@ export function extractFlightDataFromText(text: string): Partial<ParsedBooking> 
     result.airline = extractAirlineCode(flightMatch[1]);
   }
 
-  // PNR/Booking reference
-  const pnrMatch = text.match(PATTERNS.PNR);
+  // PNR/Booking reference — a labelled one first, since that is the only form
+  // that can be trusted without a digit in it.
+  const pnrMatch = text.match(PATTERNS.PNR_LABELLED) ?? text.match(PATTERNS.PNR);
   if (pnrMatch) {
     result.pnr = pnrMatch[1].toUpperCase();
     result.bookingReference = pnrMatch[1].toUpperCase();
