@@ -104,6 +104,23 @@ export const BETA_FEATURES = Object.freeze({
     why: "The section list and its editor both work end-to-end, but the feature has not yet been through the owner's review — the gate is what keeps it off production until that happens.",
     returnsWhen: "The owner accepts the feature for release.",
   }),
+
+  /**
+   * The Dawarich connection — a self-hosted location-history server TravStats
+   * PULLS recorded tracks from, never writes to.
+   *
+   * It has its own key rather than riding on `tourRoutes`, even though tours
+   * are its only consumer today. Dawarich is an integration, not a feature of
+   * one domain: `dev/cruise-tracks` will take cruise legs from the same
+   * connection, and a gate named after tours would then hide a card the cruise
+   * feature needs. Gating an integration on one of its consumers is only ever
+   * right while there is exactly one.
+   */
+  dawarich: Object.freeze({
+    reason: "beta",
+    why: "The connection, the pull and the settings card all work, but every consumer of a recorded track is itself still behind a gate — a Dawarich card on production would offer a connection with nothing to connect to.",
+    returnsWhen: "A feature that consumes recorded tracks ships — tour routes today, cruise legs next.",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

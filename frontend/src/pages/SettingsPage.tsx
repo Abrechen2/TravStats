@@ -594,10 +594,12 @@ export default function SettingsPage(): JSX.Element {
                 {/* Admin-only; the card itself renders null for non-admins. */}
                 <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
-                {/* Gated the same way the Touren tab and the route editor are
-                    (`tourRoutes`) — a Dawarich connection card is meaningless
-                    on an instance where nothing consumes it. */}
-                {isFeatureVisible("tourRoutes") && <DawarichConnectionCard />}
+                {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
+                    still meaningless where nothing consumes a recorded track,
+                    but tours stopped being the only consumer the moment cruise
+                    legs were scoped onto the same connection — a gate named
+                    after tours would then hide a card the cruise feature needs. */}
+                {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the
