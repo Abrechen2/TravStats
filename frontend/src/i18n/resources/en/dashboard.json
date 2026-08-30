@@ -64,7 +64,8 @@
   "tourTab": {
     "listTitle": "Tours",
     "listEmpty": "No tours recorded yet",
-    "empty": "No tours yet. Add your first one from a trip's “Tours” tab on its detail page."
+    "empty": "No tours yet. Add your first one from a trip's “Tours” tab on its detail page.",
+    "unavailable": "This feature is currently unavailable."
   },
   "lodgingTab": {
     "loading": "Loading lodgings …",

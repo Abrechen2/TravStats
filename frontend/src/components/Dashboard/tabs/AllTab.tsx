@@ -23,6 +23,7 @@ import {
   buildFlightLegendRows,
   buildLodgingLegendRows,
   buildPoiLegendRows,
+  legendRow,
 } from "./allTabLegendRows";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
@@ -444,48 +445,14 @@ export function AllTab(): JSX.Element {
     </button>
   );
 
-  /**
-   * One colour-key row. The swatch takes the SHAPE of the thing it stands for:
-   *
-   *   "line"  a route — flights and cruises are drawn as arcs
-   *   "ramp"  a route coloured by a gradient (flight frequency mode)
-   *   "dot"   a place — a lodging or a POI is a pin, not a line (Alex,
-   *           2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte hier
-   *           auch in der Legende ein Kreis sein.")
-   *
-   * There was a "ring" shape for POIs while the pin layer drew a ringed mark.
-   * The ring left the map on 2026-08-28 and the shape left with it: a key that
-   * draws a mark the map does not is worse than no key.
-   *
-   * `background` takes any CSS colour OR gradient, so all three share one
-   * renderer.
-   */
-  const legendRow = (
-    background: string,
-    label: string,
-    key: string,
-    shape: "line" | "ramp" | "dot" = "line"
-  ): JSX.Element => (
-    <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span
-        aria-hidden
-        style={{
-          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
-          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
-          background,
-          boxSizing: "border-box",
-          borderRadius: shape === "dot" ? "50%" : 2,
-          flexShrink: 0,
-        }}
-      />
-      <span style={{ color: "var(--text-primary)" }}>{label}</span>
-    </span>
-  );
-
-  // Each builder is a pure function of its colour config, `t`, and this
-  // `legendRow` swatch-JSX builder — split into `./allTabLegendRows.ts` to
-  // keep this file under its 800-line ceiling (same reason as `tourMapOverlay.tsx`).
-  // Nothing about WHAT they compute changed: same config in, same JSX out.
+  // `legendRow` (the swatch-JSX builder) now lives in `./allTabLegendRows.tsx`
+  // itself, alongside the five builders below that take it as a parameter —
+  // TourTab.tsx uses the exact same swatch shape and had its own inline
+  // copy until the fix-round review (2026-08-30) pointed out the
+  // duplication. Each builder is a pure function of its colour config, `t`,
+  // and `legendRow` — split into that file to keep this one under its
+  // 800-line ceiling (same reason as `tourMapOverlay.tsx`). Nothing about
+  // WHAT they compute changed: same config in, same JSX out.
   const flightLegendRows = buildFlightLegendRows(flightColorConfig, t, legendRow);
   const cruiseLegendRows = buildCruiseLegendRows(cruiseColorConfig, t, legendRow);
   const lodgingLegendRows = buildLodgingLegendRows(lodgingColorConfig, t, legendRow);

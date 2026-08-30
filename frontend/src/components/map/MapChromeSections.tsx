@@ -94,81 +94,89 @@ export function MapChromeSections(): JSX.Element {
         />
       </Section>
 
-      {/* Filter */}
-      <Section>
-        <SectionLabel>{t("dashboard:filter.title")}</SectionLabel>
-        <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1">
-            <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-              {t("dashboard:filter.year")}
-            </span>
-            <select
-              value={year ?? ""}
-              onChange={(e) => setYear(e.target.value === "" ? null : Number(e.target.value))}
-              className="cursor-pointer rounded-md px-2 py-1.5 text-[11px]"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: `1px solid ${BORDER}`,
-                color: TEXT,
-                colorScheme: "dark",
-              }}
-            >
-              {/* Options MUST be styled explicitly — the popup ignores the
-                  select's colours on Windows and was white-on-white (#196). */}
-              <option value="" style={PANEL_OPTION_STYLE}>
-                {t("dashboard:filter.allYears")}
-              </option>
-              {yearOptions.map((y) => (
-                <option key={y} value={y} style={PANEL_OPTION_STYLE}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {tab === "all" && (
-            <div className="flex flex-col gap-1">
+      {/* Filter -- hidden entirely on the tour tab: the year select has no
+          effect on `useDashboardTours` (no date param exists on that
+          endpoint, see TourTab.tsx's own concerns section), and the domain
+          pills are already `tab === "all"`-only above. A control that
+          visibly does nothing is the same defect this feature's tour
+          legend was fixed for -- offering it here would be the same lie
+          about a different control (fix-round review, 2026-08-30). */}
+      {tab !== "tour" && (
+        <Section>
+          <SectionLabel>{t("dashboard:filter.title")}</SectionLabel>
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col gap-1">
               <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-                {t("dashboard:filter.domains")}
+                {t("dashboard:filter.year")}
               </span>
-              <div className="flex flex-wrap gap-1">
-                {domainOptions.map((key) => {
-                  const active = domains.includes(key);
-                  const descriptor = DOMAINS[key];
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => toggleDomain(key)}
-                      className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                      style={{
-                        background: active ? descriptor.color : "transparent",
-                        color: active ? "#0d1117" : "rgba(241,245,249,0.6)",
-                        border: `1px solid ${active ? descriptor.color : BORDER}`,
-                        fontWeight: active ? 600 : 400,
-                      }}
-                    >
-                      {t(`common:${descriptor.i18nKey}`)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+              <select
+                value={year ?? ""}
+                onChange={(e) => setYear(e.target.value === "" ? null : Number(e.target.value))}
+                className="cursor-pointer rounded-md px-2 py-1.5 text-[11px]"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT,
+                  colorScheme: "dark",
+                }}
+              >
+                {/* Options MUST be styled explicitly — the popup ignores the
+                  select's colours on Windows and was white-on-white (#196). */}
+                <option value="" style={PANEL_OPTION_STYLE}>
+                  {t("dashboard:filter.allYears")}
+                </option>
+                {yearOptions.map((y) => (
+                  <option key={y} value={y} style={PANEL_OPTION_STYLE}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          {filterActive && (
-            <button
-              type="button"
-              onClick={resetFilter}
-              className="cursor-pointer self-start text-[10px] underline opacity-80 hover:opacity-100"
-              style={{ color: `rgb(${ACCENT})` }}
-            >
-              {t("dashboard:filter.reset")}
-            </button>
-          )}
-        </div>
-      </Section>
+            {tab === "all" && (
+              <div className="flex flex-col gap-1">
+                <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
+                  {t("dashboard:filter.domains")}
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {domainOptions.map((key) => {
+                    const active = domains.includes(key);
+                    const descriptor = DOMAINS[key];
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleDomain(key)}
+                        className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] transition-colors"
+                        style={{
+                          background: active ? descriptor.color : "transparent",
+                          color: active ? "#0d1117" : "rgba(241,245,249,0.6)",
+                          border: `1px solid ${active ? descriptor.color : BORDER}`,
+                          fontWeight: active ? 600 : 400,
+                        }}
+                      >
+                        {t(`common:${descriptor.i18nKey}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {filterActive && (
+              <button
+                type="button"
+                onClick={resetFilter}
+                className="cursor-pointer self-start text-[10px] underline opacity-80 hover:opacity-100"
+                style={{ color: `rgb(${ACCENT})` }}
+              >
+                {t("dashboard:filter.reset")}
+              </button>
+            )}
+          </div>
+        </Section>
+      )}
     </>
   );
 }

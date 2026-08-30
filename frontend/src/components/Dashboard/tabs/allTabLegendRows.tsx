@@ -32,12 +32,54 @@ import type { MapLayerColors } from "../../../types/mapTheme";
 // JSX out — only where the code that computes it lives.
 
 type Translate = (key: string) => string;
-type LegendRowFn = (
+export type LegendRowFn = (
   background: string,
   label: string,
   key: string,
   shape?: "line" | "ramp" | "dot"
 ) => JSX.Element;
+
+/**
+ * One colour-key row. The swatch takes the SHAPE of the thing it stands for:
+ *
+ *   "line"  a route — flights, cruises and tour legs are drawn as lines/arcs
+ *   "ramp"  a route coloured by a gradient (flight frequency mode)
+ *   "dot"   a place — a lodging or a POI is a pin, not a line (Alex,
+ *           2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte hier
+ *           auch in der Legende ein Kreis sein.")
+ *
+ * There was a "ring" shape for POIs while the pin layer drew a ringed mark.
+ * The ring left the map on 2026-08-28 and the shape left with it: a key that
+ * draws a mark the map does not is worse than no key.
+ *
+ * `background` takes any CSS colour OR gradient, so all three share one
+ * renderer. Was inlined identically in both AllTab.tsx and TourTab.tsx
+ * (found in the tour-dashboard-map fix-round review, 2026-08-30) — moved
+ * here once there were two copies to keep in sync instead of one.
+ */
+export function legendRow(
+  background: string,
+  label: string,
+  key: string,
+  shape: "line" | "ramp" | "dot" = "line"
+): JSX.Element {
+  return (
+    <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span
+        aria-hidden
+        style={{
+          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
+          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
+          background,
+          boxSizing: "border-box",
+          borderRadius: shape === "dot" ? "50%" : 2,
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ color: "var(--text-primary)" }}>{label}</span>
+    </span>
+  );
+}
 
 // Legend row → i18n key. The COLOURS never appear here — they come from
 // `buildFlightLegend`, i.e. the same function the map layers resolve through

@@ -80,8 +80,24 @@ export function DomainTabStrip({
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives
   // sorted, so "the soonest" is simply the first one.
+  //
+  // `isValidDomain(active)` narrows `active` from `DashboardTab` to
+  // `DomainKey` before the comparison below, rather than comparing
+  // `entry.domain` (`DomainKey | "trip"`) against the wider `DashboardTab`
+  // directly. The two unions only partially overlap (every DashboardTab
+  // value up to "Touren" is also a DomainKey; "tour" and "all" are not, and
+  // "trip" is a valid `entry.domain` no tab is ever named), so the bare
+  // comparison happened to be correct only because "tour"/"all" never equal
+  // any real `entry.domain` -- not because the types actually matched. A
+  // domain-less tab has no upcoming entry by construction (see
+  // `UpcomingEntry.domain`), so the `else` branch here returns that
+  // directly rather than relying on `.find()` to fail silently.
   const nextUp =
-    active === "all" ? upcoming[0] : upcoming.find((entry) => entry.domain === active);
+    active === "all"
+      ? upcoming[0]
+      : isValidDomain(active)
+        ? upcoming.find((entry) => entry.domain === active)
+        : undefined;
 
   return (
     <div

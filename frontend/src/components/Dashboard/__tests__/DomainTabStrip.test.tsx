@@ -200,7 +200,7 @@ describe("DomainTabStrip: the next-up entry", () => {
     },
   ];
 
-  const renderStrip = (active: "all" | "flight" | "cruise"): void => {
+  const renderStrip = (active: "all" | "flight" | "cruise" | "tour"): void => {
     render(
       <MemoryRouter>
         <DomainTabStrip
@@ -252,5 +252,17 @@ describe("DomainTabStrip: the next-up entry", () => {
   it("does not repeat the name on a trip entry, where it is already the headline", () => {
     renderStrip("all");
     expect(screen.queryByTestId("next-up-trip")).not.toBeInTheDocument();
+  });
+
+  // L4 (fix round 1 review, 2026-08-30): the match used to compare
+  // `entry.domain` (`DomainKey | "trip"`) against `active` (`DashboardTab`)
+  // directly -- two overlapping-but-different unions, correct only because
+  // no `entry.domain` value happens to equal "tour" or "all". Now
+  // `isValidDomain(active)` narrows first, so a domain-less tab returns
+  // `undefined` by construction rather than by the comparison silently
+  // finding nothing.
+  it("shows nothing on the domain-less 'tour' tab, which cannot match any upcoming entry", () => {
+    renderStrip("tour");
+    expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();
   });
 });

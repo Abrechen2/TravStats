@@ -10,6 +10,7 @@ import type { TourSummary } from "../../../lib/api/tourIndex";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
 import { buildTourDeckLayers, buildTourLegendRows, TourStatusOverlay } from "./tourMapOverlay";
+import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 
 /**
@@ -55,26 +56,10 @@ export function TourTab(): JSX.Element {
   );
   const tourLayers = useMemo<Layer[]>(() => buildTourDeckLayers(tourPathData), [tourPathData]);
 
-  // Same swatch shape the "Alle" map's legend uses (AllTab.tsx's `legendRow`,
-  // "line" variant) — kept local rather than shared, since this tab has no
-  // use for the dot/ramp variants that function also supports.
-  const legendRow = (background: string, label: string, key: string): JSX.Element => (
-    <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span
-        aria-hidden
-        style={{
-          width: 14,
-          height: 2,
-          background,
-          boxSizing: "border-box",
-          borderRadius: 2,
-          flexShrink: 0,
-        }}
-      />
-      <span style={{ color: "var(--text-primary)" }}>{label}</span>
-    </span>
-  );
-
+  // The same swatch-JSX builder AllTab.tsx's "Alle" map legend uses —
+  // shared in `./allTabLegendRows.tsx` since the fix-round review
+  // (2026-08-30) found this tab had grown its own byte-identical copy.
+  // Called with the default "line" shape (its only use here).
   const tourLegend = buildTourLegendRows(toursAllowed, dashboardTours, t, legendRow);
 
   // Settled + genuinely nothing to show — distinct from `toursLoading` and
@@ -91,6 +76,43 @@ export function TourTab(): JSX.Element {
   const handleRowClick = (tour: TourSummary): void => {
     navigate(`/trips/${tour.tripId}/route/${tour.id}`);
   };
+
+  // Defensive belt-and-braces guard (see the doc comment above) actually
+  // firing: the beta flag flipped off after this tab was already mounted.
+  // Render "this feature is unavailable", never the ordinary empty-list
+  // state -- `dashboardTours.tours` is `[]` here too (useDashboardTours
+  // clears it the instant `enabled` goes false), and reusing the empty
+  // copy would tell the user "you have no tours" when the true answer is
+  // "you cannot see this at all right now". Found in the fix-round review
+  // (2026-08-30): a stale mount hit exactly this branch and rendered the
+  // ordinary empty-state text instead.
+  if (!toursAllowed) {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 420,
+            padding: 32,
+            textAlign: "center",
+            background: "rgba(15, 23, 42, 0.85)",
+            border: "1px solid var(--color-border)",
+            borderRadius: 16,
+            color: "var(--text-muted)",
+          }}
+        >
+          {t("dashboard:tourTab.unavailable")}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>

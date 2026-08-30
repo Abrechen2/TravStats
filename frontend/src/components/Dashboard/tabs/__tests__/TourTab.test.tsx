@@ -242,7 +242,10 @@ describe("TourTab", () => {
   });
 
   it("never fetches while the tourRoutes beta gate is off", () => {
-    mockUseBetaFeatures.mockReturnValue({ betaFeaturesEnabled: true, isFeatureVisible: () => false });
+    mockUseBetaFeatures.mockReturnValue({
+      betaFeaturesEnabled: true,
+      isFeatureVisible: () => false,
+    });
     mockUseDashboardTours.mockReturnValue({
       ...READY_NO_TOURS,
       tours: [TOUR_A],
@@ -255,5 +258,27 @@ describe("TourTab", () => {
     // it must refuse to fetch on its own end; here we assert the tab asked
     // for it to be off.
     expect(mockUseDashboardTours).toHaveBeenCalledWith(false);
+  });
+
+  // L1 (fix round 1 review, 2026-08-30): a stale mount with the gate off
+  // (the beta flag flipped after this tab was already open) used to fall
+  // through to the ordinary empty-list copy -- "you have no tours" when
+  // the true answer is "you cannot see this at all right now". Distinct
+  // from every other state: no map/list content, no loading banner, no
+  // error banner, no generic empty banner.
+  it("shows the feature-unavailable notice, not the empty-tours copy, while the gate is off", () => {
+    mockUseBetaFeatures.mockReturnValue({
+      betaFeaturesEnabled: true,
+      isFeatureVisible: () => false,
+    });
+    mockUseDashboardTours.mockReturnValue(READY_NO_TOURS);
+
+    renderTab();
+
+    expect(screen.getByText("dashboard:tourTab.unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tourTab.empty")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tourTab.listEmpty")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
   });
 });
