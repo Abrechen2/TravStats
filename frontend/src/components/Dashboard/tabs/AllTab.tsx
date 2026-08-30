@@ -77,6 +77,9 @@ const LODGING_LEGEND_LABEL_KEY: Record<LodgingLegendRow["slot"], string> = {
 
 // Place rows on this tab are always the mode's built-in slots — `list` mode's
 // user-named rows are a POI-tab thing, where a list filter sits beside them.
+/** Where the open/closed state of the map key is remembered. */
+const LEGEND_OPEN_KEY = "dashboard.legendOpen";
+
 const PLACE_LEGEND_LABEL_KEY: Record<string, string> = {
   solid: "dashboard:poi.legend.solid",
   visited: "dashboard:poi.legend.visited",
@@ -142,6 +145,25 @@ export function AllTab(): JSX.Element {
   const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeLists, setPlaceLists] = useState<PlaceList[]>([]);
+  // Remembered per browser, like the rest of the map's appearance. Someone who
+  // closes the key on a crowded map means it, and having it reopen on every
+  // navigation is the same annoyance one page later.
+  const [legendOpen, setLegendOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem(LEGEND_OPEN_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LEGEND_OPEN_KEY, String(legendOpen));
+    } catch {
+      /* private mode or blocked site data — the choice just does not survive a reload */
+    }
+  }, [legendOpen]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   // Global dashboard filter — year populates `time.from/to`, domain
@@ -596,7 +618,22 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
-  const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible || placesVisible) && (
+  const legendRows = [
+    ...(flightsVisible ? flightLegendRows : []),
+    ...(cruisesVisible ? cruiseLegendRows : []),
+    ...(lodgingsVisible ? lodgingLegendRows : []),
+    ...(placesVisible ? poiLegendRows : []),
+    ...placeLegendRows,
+  ];
+
+  // Collapsible, like the map options beside it. The key grew a row per LIST
+  // when "by list" colouring started naming them, and on a map with a dozen
+  // lists it began covering the thing it explains (Alex, 2026-08-29).
+  //
+  // The count stays visible when collapsed. A bare chevron hides how much is
+  // behind it, and a key is the one overlay where "there is more here" is the
+  // whole point.
+  const legendTable = legendRows.length > 0 && (
     <div
       style={{
         position: "absolute",
@@ -613,13 +650,37 @@ export function AllTab(): JSX.Element {
         border: "1px solid var(--color-border)",
         fontSize: 12,
         whiteSpace: "nowrap",
+        maxHeight: legendOpen ? "min(60vh, 420px)" : undefined,
+        overflowY: legendOpen ? "auto" : undefined,
       }}
     >
-      {flightsVisible && flightLegendRows}
-      {cruisesVisible && cruiseLegendRows}
-      {lodgingsVisible && lodgingLegendRows}
-      {placesVisible && poiLegendRows}
-      {placeLegendRows}
+      <button
+        type="button"
+        onClick={() => setLegendOpen((open) => !open)}
+        aria-expanded={legendOpen}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          background: "none",
+          border: "none",
+          padding: 0,
+          margin: 0,
+          font: "inherit",
+          color: "var(--text-muted)",
+          cursor: "pointer",
+        }}
+      >
+        <span>{t("dashboard:legend.title")}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {!legendOpen && (
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{legendRows.length}</span>
+          )}
+          <span aria-hidden>{legendOpen ? "▾" : "▸"}</span>
+        </span>
+      </button>
+      {legendOpen && legendRows}
     </div>
   );
 

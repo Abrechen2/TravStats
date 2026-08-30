@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
 import type { Place } from "../../../../types/place";
@@ -142,5 +143,38 @@ describe("AllTab: the legend names the lists it colours by", () => {
     await waitFor(() => {
       expect(screen.getByText("dashboard:poi.legend.unlisted")).toBeInTheDocument();
     });
+  });
+
+  /**
+   * The key collapses, and says how much it is hiding.
+   *
+   * It grew a row per LIST once "by list" colouring started naming them, and on
+   * a map with a dozen lists it began covering the thing it explains (Alex,
+   * 2026-08-29). A bare chevron would hide how much is behind it — on a key,
+   * "there is more here" is the whole point.
+   */
+  it("hides the rows when closed and keeps the count visible", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText("Maccis")).toBeInTheDocument());
+
+    const toggle = screen.getByRole("button", { name: /dashboard:legend.title/ });
+    // Count the rows as they are drawn, rather than guessing which ones exist:
+    // each row carries one hidden swatch, and the toggle is not one of them.
+    const legend = toggle.parentElement as HTMLElement;
+    const rowCount = legend.querySelectorAll("span[aria-hidden]").length - 1;
+    expect(rowCount).toBeGreaterThan(0);
+
+    await user.click(toggle);
+
+    expect(screen.queryByText("Maccis")).not.toBeInTheDocument();
+    // The number stands in for the rows, so the reader knows what was folded.
+    expect(toggle).toHaveTextContent(String(rowCount));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });

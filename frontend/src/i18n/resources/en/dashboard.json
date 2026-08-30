@@ -282,7 +282,8 @@
     "lodgingRated": "Rated",
     "lodgingUnrated": "Not rated",
     "lodgingChain": "Chain",
-    "lodgingIndependent": "Independent"
+    "lodgingIndependent": "Independent",
+    "title": "Key"
   },
   "userMenu": {
     "label": "Account menu"

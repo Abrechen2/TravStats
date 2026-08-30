@@ -3,7 +3,7 @@
 // compare year if comparison is on) gets a colored outline so the
 // chart explains the KPI deltas.
 import type { JSX } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -38,6 +38,24 @@ export default function CrossDomainActivityChart({
   const { t } = useTranslation(["stats", "common"]);
   const { colorOf } = useDomainColors();
 
+  /**
+   * What a bar counts.
+   *
+   * "Events" is one flight, one cruise, one stay, one visit — the tally that
+   * makes a weekend city break and a three-week cruise the same size. "Travel
+   * days" is the days each of them actually occupied, which is the figure a
+   * reader means when they say a year was busy (Alex, 2026-08-29, asking for
+   * nights rather than stays).
+   *
+   * Both were already being derived for every domain — `yearlyActiveDays` sits
+   * beside `yearlyEvents` precisely so a multi-day span cannot inflate an event
+   * count. Nothing new is computed here; the chart simply stopped ignoring half
+   * of what it was given. It is a CHOICE rather than a replacement, because
+   * "how often" and "how long" are different questions and neither is the
+   * right default for everyone.
+   */
+  const [measure, setMeasure] = useState<"events" | "days">("events");
+
   const series: Series[] = useMemo(() => {
     const out: Series[] = [];
     for (const [key, stats] of Object.entries(statsMap) as Array<
@@ -49,11 +67,11 @@ export default function CrossDomainActivityChart({
         key,
         color: colorOf(key),
         label: t(`common:${DOMAINS[key].i18nKey}`),
-        data: stats.yearlyEvents,
+        data: measure === "events" ? stats.yearlyEvents : stats.yearlyActiveDays,
       });
     }
     return out;
-  }, [statsMap, visible, t]);
+  }, [statsMap, visible, t, colorOf, measure]);
 
   const totals = years.map((y) => series.reduce((s, x) => s + (x.data[y] ?? 0), 0));
   const max = Math.max(1, ...totals);
@@ -70,13 +88,33 @@ export default function CrossDomainActivityChart({
       className="rounded-lg p-6"
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
-      <div className="flex items-baseline justify-between mb-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {t("stats:overviewChart.title")}
         </h3>
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {subtitle}
-        </span>
+        <div className="flex items-baseline gap-3">
+          <div className="flex gap-1" role="group" aria-label={t("stats:overviewChart.measureLabel")}>
+            {(["events", "days"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={measure === option}
+                onClick={() => setMeasure(option)}
+                className="rounded-md px-2 py-0.5 text-xs transition-colors"
+                style={{
+                  background: measure === option ? "var(--bg-elevated)" : "transparent",
+                  color: measure === option ? "var(--text-primary)" : "var(--text-muted)",
+                  border: `1px solid ${measure === option ? "var(--color-border)" : "transparent"}`,
+                }}
+              >
+                {t(`stats:overviewChart.measure.${option}`)}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {subtitle}
+          </span>
+        </div>
       </div>
       <div
         className="grid items-end gap-4 mt-2"

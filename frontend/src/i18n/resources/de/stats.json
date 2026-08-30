@@ -43,7 +43,12 @@
     "title": "Aktivität pro Jahr",
     "subtitleStacked": "gestapelt nach Domain",
     "subtitleHighlight": "{{year}} hervorgehoben",
-    "subtitleCompare": "{{year}} vs. {{compare}} hervorgehoben"
+    "subtitleCompare": "{{year}} vs. {{compare}} hervorgehoben",
+    "measureLabel": "Was gezählt wird",
+    "measure": {
+      "events": "Erlebnisse",
+      "days": "Reisetage"
+    }
   },
   "overviewHeatmap": {
     "title": "Aktive Tage {{year}}",
