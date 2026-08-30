@@ -53,3 +53,47 @@ describe("German filler words do not become flight numbers", () => {
     expect(flights.map((f) => f.flightNumber)).toContain("LH117");
   });
 });
+
+/**
+ * Forgejo #291 / #35. The same confirmation that produced MO24 also LOST its
+ * real flights, and the two faults share one cause: which candidate wins.
+ *
+ * A confirmation prints its flight number alone on a line. The context lookahead
+ * used `.`, which stops at the newline, so there was nothing after "EK0050" on
+ * its own line to satisfy it and the real flight never matched at all. The next
+ * line — the German weekday, the date and "Franz Josef Strauß - Flughafen" —
+ * does contain "Flug", inside "Flughafen", so the weekday matched instead. The
+ * rule meant to demand context was systematically preferring prose lines to
+ * flight lines.
+ *
+ * Choosing the first hit in the document made it worse: the fare "EUR 934,00" is
+ * printed above the itinerary, so even once the flight matched, the price came
+ * first. Hence the preference for a prefix the airline catalogue knows — EK is
+ * Emirates, EUR and MO are nothing.
+ */
+describe("the real flight wins over what is printed around it", () => {
+  const parser = new RegexTextParser();
+
+  const CONFIRMATION = [
+    "Buchungsbestätigung",
+    "Flug\t 2 Passagiere, Economy, Sparpreis\t EUR 934,00",
+    "Klasse / Flugzeug",
+    "EK0050",
+    "Mo\t24-Feb-14 14:25\t Franz Josef Strauß - Flughafen (MUC)\t 5Std. 50Min.",
+    "Mo\t24-Feb-14 23:15\t Dubai - Internationaler Flughafen (DXB)",
+  ].join("\n");
+
+  it("reads the flight number, not the weekday beside the date", async () => {
+    const flights = await parser.parseEmail("Buchungsbestätigung", CONFIRMATION, undefined);
+    const numbers = flights.map((f) => f.flightNumber);
+
+    expect(numbers).toContain("EK0050");
+    expect(numbers).not.toContain("MO24");
+  });
+
+  it("reads the flight number, not the fare printed above it", async () => {
+    const flights = await parser.parseEmail("Buchungsbestätigung", CONFIRMATION, undefined);
+
+    expect(flights.map((f) => f.flightNumber)).not.toContain("EUR934");
+  });
+});

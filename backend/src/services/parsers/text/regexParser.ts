@@ -5,6 +5,7 @@ import { normalizeParsedBooking, PATTERNS } from '../shared/utils';
 import logger from '../../../utils/logger';
 
 import { FLIGHT_NUMBER_FALSE_PREFIXES } from './regexMappings';
+import { resolveAirlineCodes } from '../../../utils/airlineNormalize';
 import { extractAirportCodes, extractAllAirportPairs, isValidIATACode } from './regexAirportExtractor';
 import { extractAllTimePairs, extractLabeledDates } from './regexDateExtractor';
 import { extractSharedPNR, findPNRInSource } from './regexPnrExtractor';
@@ -239,40 +240,63 @@ export class RegexTextParser implements ITextParser {
       // Tab-delimited standalone airline code — old Buchungsdetails format (e.g. "\tLH 2316\t")
       /[\t >]([A-Z]{2}\s+\d{3,4})(?:[\t \r\n]|$)/m,
       /(?:FLIGHT|FLUG|FLUGNUMMER|FLUGNR\.?|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
-      /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/i,
-      /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*[A-Z]{3}.*[A-Z]{3})/i, // Near airport codes
+      // Case-SENSITIVE, and the lookahead spans lines. Both matter, and both
+      // were wrong in a way that inverted this pattern's purpose:
+      //
+      // `.` does not cross a newline. A confirmation prints its flight number
+      // alone on a line ("EK0050"), so there is nothing after it ON THAT LINE
+      // for the lookahead to find and the real flight never matched. The very
+      // next line, "Mo  24-Feb-14 … Franz Josef Strauß - Flughafen (MUC)", DOES
+      // contain "Flug" — inside "Flughafen" — so the German weekday matched
+      // instead and the document was booked as flight MO24. The context rule
+      // was systematically preferring prose lines over the flight lines.
+      //
+      // The /i flag was the other half: it let "Mo" and even "fly4" out of a
+      // URL count as an airline code. A printed flight number is uppercase.
+      /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=[\s\S]*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/,
+      /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=[\s\S]*[A-Z]{3}[\s\S]*[A-Z]{3})/, // Near airport codes
     ];
 
-    let flightMatch: RegExpMatchArray | null = null;
+    // EVERY match of every pattern, in pattern order, not the first match of the
+    // first pattern that hits. Taking the first hit meant the winner was decided
+    // by position in the document: on an Emirates confirmation "EUR 934,00" is
+    // printed above the itinerary, so the price won and the flight below it was
+    // never considered.
+    const candidates: string[] = [];
     for (const pattern of flightPatterns) {
-      flightMatch = source.match(pattern);
-      if (flightMatch) {
-        // Validate it's not a false positive (e.g., "AM18" from "am 18").
-        //
-        // Uppercased BEFORE the check, and that is the whole fix: the patterns
-        // above carry /i and run over `source` in its original case, so an
-        // advertisement's "ab 380 EUR" arrives here as "ab380".
-        // FLIGHT_NUMBER_FALSE_PREFIXES lists "AB" — and "ab" is not "AB", so the
-        // guard that was written for exactly this case never fired. Six of the
-        // eight archived Emirates promotions became a flight this way (Forgejo
-        // #35), and the evidence rule cannot catch them: a flight number is
-        // precisely what the advertising manufactures.
-        //
-        // The multi-flight path above rejects a lowercase candidate outright via
-        // its /^[A-Z]{2,3}\d{2,4}$/ test, which is why only this branch leaked.
-        const potentialFlight = (flightMatch[1] + (flightMatch[2] || ''))
-          .replace(/\s+/g, '')
-          .toUpperCase();
-        // The WHOLE alphabetic prefix, not the first two characters: an airline
-        // code may be two or three letters, and slicing at two let "Nur 7 Tage
-        // gültig" through as NUR7 because the guard only ever saw "NU".
-        const prefix = /^[A-Z]+/.exec(potentialFlight)?.[0] ?? '';
-        if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(prefix)) {
-          data.flightNumber = potentialFlight;
-          data.airline = potentialFlight.slice(0, 2);
-          break;
-        }
+      const everyMatch = new RegExp(
+        pattern.source,
+        pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g'
+      );
+      for (const match of source.matchAll(everyMatch)) {
+        // Uppercased BEFORE the guard, and that alone fixed a whole class: the
+        // patterns run over `source` in its original case, so an advertisement's
+        // "ab 380 EUR" arrived as "ab380". FLIGHT_NUMBER_FALSE_PREFIXES lists
+        // "AB" — and "ab" is not "AB", so a guard written for exactly this case
+        // had never once fired.
+        const candidate = (match[1] + (match[2] || '')).replace(/\s+/g, '').toUpperCase();
+        if (!/^[A-Z]{2,3}\d{1,4}$/.test(candidate)) continue;
+        // The WHOLE alphabetic prefix, not the first two characters: slicing at
+        // two let "Nur 7 Tage gültig" through as NUR7 on a prefix of "NU".
+        const prefix = /^[A-Z]+/.exec(candidate)?.[0] ?? '';
+        if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(prefix)) candidates.push(candidate);
       }
+    }
+
+    // Prefer a candidate whose prefix is an airline the catalogue knows. A
+    // blocklist can only ever name the noise someone has already seen; asking
+    // "is this an airline" answers for the noise nobody has met yet. On the
+    // archived corpus this is what finally picks EK0050 over EUR934 and MO24,
+    // and AF1423 over "von 7".
+    //
+    // It is a preference, not a requirement: an airline missing from the
+    // catalogue must still be able to produce a flight, so an unknown candidate
+    // is used when there is no known one.
+    const known = candidates.find((c) => resolveAirlineCodes(/^[A-Z]+/.exec(c)?.[0] ?? '')?.name);
+    const chosen = known ?? candidates[0];
+    if (chosen) {
+      data.flightNumber = chosen;
+      data.airline = chosen.slice(0, 2);
     }
 
     // If no match found, try the original pattern but with stricter validation
