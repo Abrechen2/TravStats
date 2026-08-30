@@ -6,6 +6,7 @@ import {
   normalizeBoard,
   normalizeGuestCount,
 } from "./lodgingFieldNormalization";
+import { cleanEmailBody } from "../parsers/shared/utils";
 import { reconcileTotalPrice } from "./documentTotal";
 import { getAdminParserSettings } from "../parserSettings";
 import { LODGING_TYPES } from "../../schemas/lodging";
@@ -440,7 +441,24 @@ export async function parseLodgingBookingText(
   }
 
   try {
-    const bookings = await parseWithOllama(text, url, model);
+    // Cleaned only for the model, never for the template branch above: a
+    // template may key on layout or on a link, and stripping either would take
+    // a working parse away to help a failing one.
+    //
+    // Forgejo #34, and the reason is not the one the report guessed. An archived
+    // hotels.com confirmation came back "no booking found" while the model was
+    // reachable. Measured against it: the check-in and check-out lines sit at
+    // character ~1073, far inside the window, and rewriting their mixed German/
+    // English form ("Mo, Apr 6, 2009") to ISO changed NOTHING — the document was
+    // still lost. What did change it was removing the links: 12360 characters
+    // fall to 3995, roughly two thirds of that mail being tracking and booking
+    // URLs, and the whole document then parses correctly. Truncation was a
+    // symptom of the same bloat, not the cause.
+    //
+    // `cleanEmailBody` is what the flight parser has always applied to its body;
+    // this side only ever used `cleanText` on individual field VALUES. So this
+    // is the flight parser's own treatment, not a new idea.
+    const bookings = await parseWithOllama(cleanEmailBody(text), url, model);
     if (bookings.length === 0) {
       return {
         bookings: [],
