@@ -49,7 +49,7 @@ function isLegMode(value: string): value is LegMode {
 export function TourTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
-  const { t } = useTranslation(["dashboard", "trips"]);
+  const { t } = useTranslation(["dashboard", "trips", "common"]);
   const { isFeatureVisible } = useBetaFeatures();
   const toursAllowed = isFeatureVisible("tourRoutes");
   const dashboardTours = useDashboardTours(toursAllowed);
@@ -190,7 +190,7 @@ export function TourTab(): JSX.Element {
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              aria-label="close"
+              aria-label={t("common:buttons.close")}
               style={{
                 background: "none",
                 border: "none",

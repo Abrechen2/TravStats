@@ -19,6 +19,7 @@ import {
   buildPlaceLegend,
   type PlaceColorConfig,
   type PlaceLegendRow,
+  type PlaceListColorResolution,
 } from "../../../lib/placeColor";
 import { PORT_RGB } from "../../layers/cruisePortsLayer";
 import type { MapLayerColors } from "../../../types/mapTheme";
@@ -188,12 +189,17 @@ const PLACE_LEGEND_LABEL_KEY: Record<string, string> = {
 // They were rings until 2026-08-28, when the ring was removed from the pin
 // layer by owner decision; the legend kept drawing one and so described a
 // mark that is no longer there.
+//
+// `usedLists` is passed through: in "by list" mode the key has to name the
+// lists, or the only row is the negative one and every coloured pin on the
+// map stays unexplained (Alex, 2026-08-29).
 export function buildPoiLegendRows(
   config: PlaceColorConfig,
   t: Translate,
-  legendRow: LegendRowFn
+  legendRow: LegendRowFn,
+  usedLists: PlaceListColorResolution["used"] = []
 ): JSX.Element[] {
-  return buildPlaceLegend(config).map((row: PlaceLegendRow) =>
+  return buildPlaceLegend(config, usedLists).map((row: PlaceLegendRow) =>
     legendRow(
       rgbCss(row.color),
       row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),

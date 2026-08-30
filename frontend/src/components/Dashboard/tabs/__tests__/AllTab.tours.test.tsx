@@ -25,8 +25,18 @@ vi.mock("../../../../hooks/useDashboardTours", () => ({
 }));
 
 const mockUseBetaFeatures = vi.hoisted(() => vi.fn());
+// `usePlacesVisible` (unmocked here) now resolves through
+// `useBetaFeatureAccess`, not `useBetaFeatures` directly (main's
+// refactor, merged 2026-08-30). Mirrors the real function's own logic
+// (hooks/useBetaFeatures.ts) exactly, off the SAME mock state, so it can
+// never drift from what `betaOn`/`betaOff` below configure.
 vi.mock("../../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => mockUseBetaFeatures(),
+  useBetaFeatureAccess: (key: string) => {
+    const { betaFeaturesEnabled, isFeatureVisible } = mockUseBetaFeatures();
+    if (betaFeaturesEnabled === null) return "pending";
+    return isFeatureVisible(key) ? "allowed" : "denied";
+  },
 }));
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
