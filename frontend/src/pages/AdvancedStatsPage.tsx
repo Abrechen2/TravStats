@@ -35,7 +35,9 @@ import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
-import SectionVisibilityMenu, { type SectionOption } from "../components/Stats/SectionVisibilityMenu";
+import SectionVisibilityMenu, {
+  type SectionOption,
+} from "../components/Stats/SectionVisibilityMenu";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
@@ -60,6 +62,8 @@ import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesAccess } from "../hooks/usePlacesVisible";
+import { resolveStatsTab } from "./statsTabAccess";
 import { DOMAINS, type DomainKey } from "../shared/domains";
 
 /**
@@ -113,7 +117,13 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilterState] = useState<DomainKey | "all">(() => {
     const tab = searchParams.get("tab");
-    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi") {
+    if (
+      tab === "all" ||
+      tab === "flight" ||
+      tab === "cruise" ||
+      tab === "lodging" ||
+      tab === "poi"
+    ) {
       return tab;
     }
     return "all";
@@ -144,6 +154,25 @@ export default function AdvancedStatsPage(): JSX.Element {
       tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi" ? tab : "all";
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
+
+  /**
+   * A tab the reader may not have.
+   *
+   * The tab STRIP is built from `enabled`, so a disabled domain has no button.
+   * The filter itself was read straight from `?tab=`, with no such check — so
+   * `/stats?tab=poi` drew the POI statistics for an account that had switched
+   * the domain off, and on an instance where the beta flag was off entirely.
+   * The chrome was gated and the deep link was not, which is the same gap in
+   * every application that ever had one.
+   *
+   * POI needs the three-state answer rather than a boolean: `betaFeaturesEnabled`
+   * is instance state and is `null` until `GET /settings` answers, so a hard
+   * navigation to this URL would otherwise decide "not allowed" while it simply
+   * did not know yet. Pending keeps the tab and shows nothing; denied falls back
+   * to the overview, which is a page rather than a blank.
+   */
+  const placesAccess = usePlacesAccess();
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -380,9 +409,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // labelled great-circle estimate instead of a silent zero.
   const durationTotals = flights.reduce((totals, flight) => {
     const backendMinutes =
-      flight.durationMinutes != null && flight.durationMinutes > 0
-        ? flight.durationMinutes
-        : null;
+      flight.durationMinutes != null && flight.durationMinutes > 0 ? flight.durationMinutes : null;
     return addFlightDuration(totals, {
       measuredMinutes: backendMinutes ?? measureFlightMinutes(flight),
       depLat: flight.depLat ?? null,
@@ -655,7 +682,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           </div>
         </div>
 
-        {filter === "flight" && (
+        {effectiveFilter === "flight" && (
           <div className="container mx-auto px-6 pt-4 flex justify-end">
             <SectionVisibilityMenu options={FLIGHT_SECTIONS(t)} visibility={sections} />
           </div>
@@ -663,19 +690,24 @@ export default function AdvancedStatsPage(): JSX.Element {
 
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
-          {filter === "all" && <OverviewTab flights={flights} achievements={achievementSummary} />}
+          {effectiveFilter === "all" && (
+            <OverviewTab flights={flights} achievements={achievementSummary} />
+          )}
 
           {/* Cruise tab renders its own stats section. */}
-          {filter === "cruise" && <CruiseStatsSection />}
+          {effectiveFilter === "cruise" && <CruiseStatsSection />}
           {/* Moved off the dashboard map, where these numbers floated on top of
               the world the user came to look at. */}
-          {filter === "lodging" && <LodgingStatsSection />}
+          {effectiveFilter === "lodging" && <LodgingStatsSection />}
           {/* The POI tab existed with no branch behind it since before 2.5.2 —
               the strip offered it and the page rendered nothing. */}
-          {filter === "poi" && <PoiStatsSection />}
+          {/* `allowed`, not "not denied": while the instance flag is still
+              unknown this renders nothing rather than drawing the section and
+              tearing it away a moment later. */}
+          {effectiveFilter === "poi" && placesAccess === "allowed" && <PoiStatsSection />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
-          {filter === "flight" && flights.length > 0 && (
+          {effectiveFilter === "flight" && flights.length > 0 && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowCertificate(true)}
@@ -707,7 +739,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           )}
 
           {/* Flight-specific stats block — flight tab only. */}
-          {filter === "flight" && (
+          {effectiveFilter === "flight" && (
             <>
               {/* Scorecard: time-range control + KPI tiles + canonical chart.
                   Replaces the old separate "Yearly Trend"/"Monthly Flights"
@@ -859,14 +891,10 @@ export default function AdvancedStatsPage(): JSX.Element {
               )}
 
               {/* Punctuality (#2) — self-fetching, hides without a delay sample */}
-              {sections.isVisible("punctuality") && (
-                <PunctualitySection />
-              )}
+              {sections.isVisible("punctuality") && <PunctualitySection />}
 
               {/* Fun Statistics */}
-              {sections.isVisible("fun") && funStats && (
-                <StatsFunSection funStats={funStats} />
-              )}
+              {sections.isVisible("fun") && funStats && <StatsFunSection funStats={funStats} />}
 
               {/* Business Statistics */}
               {sections.isVisible("business") && features.enableCostTracking && businessStats && (
@@ -874,9 +902,7 @@ export default function AdvancedStatsPage(): JSX.Element {
               )}
 
               {/* Unique Statistics */}
-              {sections.isVisible("unique") && (
-                <StatsUniqueSection uniqueStats={uniqueStats} />
-              )}
+              {sections.isVisible("unique") && <StatsUniqueSection uniqueStats={uniqueStats} />}
 
               {/* Airport Statistics */}
               {sections.isVisible("airports") && (
@@ -884,9 +910,7 @@ export default function AdvancedStatsPage(): JSX.Element {
               )}
 
               {/* Seat Statistics */}
-              {sections.isVisible("seats") && (
-                <StatsSeatSection seatStats={seatStats} />
-              )}
+              {sections.isVisible("seats") && <StatsSeatSection seatStats={seatStats} />}
 
               {/* Airline Loyalty Ranking */}
               {sections.isVisible("airlines") && (
