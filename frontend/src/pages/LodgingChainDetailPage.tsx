@@ -214,7 +214,14 @@ export default function LodgingChainDetailPage(): JSX.Element {
                 {lodgings.map((l) => (
                   <tr
                     key={l.id}
-                    onClick={() => navigate(`/lodging/${l.id}`)}
+                    onClick={() =>
+                      // Carry where the click came from, so the hotel's own
+                      // page can offer the way back here instead of dropping
+                      // the reader into the full list (Alex, 2026-08-29).
+                      navigate(`/lodging/${l.id}`, {
+                        state: { fromChain: { id: chain.id, name: chain.name } },
+                      })
+                    }
                     className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]"
                   >
                     <td className="px-3 py-2">

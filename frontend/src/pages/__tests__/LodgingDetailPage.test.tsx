@@ -415,4 +415,43 @@ describe("LodgingDetailPage", () => {
     });
     expect(screen.queryByText("lodging:field.notes")).not.toBeInTheDocument();
   });
+
+  /**
+   * Coming from a chain, the way back is the chain.
+   *
+   * The back button was hard-wired to the full lodging list, so a reader who
+   * had drilled list -> chain -> hotel landed two levels up and had to find
+   * the chain again (Alex, 2026-08-29). The origin travels in router state, so
+   * it survives the click that set it and nothing else — on a reload or a
+   * bookmark there genuinely is no origin, and the list is then the honest
+   * answer rather than a remembered guess.
+   */
+  it("offers the way back to the chain when that is where the reader came from", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/lodging/lodging-1", state: { fromChain: { id: 7, name: "Kempinski" } } },
+        ]}
+      >
+        <Routes>
+          <Route path="/lodging/:id" element={<LodgingDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("← Kempinski")).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to the list when there is no origin", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
+    });
+  });
 });

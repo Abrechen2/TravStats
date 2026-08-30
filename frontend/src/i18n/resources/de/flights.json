@@ -406,7 +406,8 @@
     "delayMinutes": "{{minutes}} Min. Verspätung",
     "earlyMinutes": "{{minutes}} Min. früher",
     "co2Label": "CO₂",
-    "co2Value": "{{kg}} kg CO₂"
+    "co2Value": "{{kg}} kg CO₂",
+    "copyFromPlanned": "Geplante Zeiten übernehmen — füllt nur leere Felder"
   },
   "filter": {
     "searchPlaceholder": "Airline, Flugnummer oder Flughafen …",

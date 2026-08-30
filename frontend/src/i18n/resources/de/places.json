@@ -65,6 +65,7 @@
   "form": {
     "createTitle": "Ort anlegen",
     "editTitle": "Ort bearbeiten",
+    "searchLabel": "Ort suchen",
     "name": "Name",
     "namePlaceholder": "z. B. McDonald’s Shibuya Center-Gai",
     "category": "Kategorie",
@@ -80,7 +81,9 @@
     "positionRequired": "Ohne Position lässt sich der Ort nicht speichern — such ihn, klick ihn auf der Karte an oder gib Koordinaten ein.",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
-    "saveFailed": "Der Ort konnte nicht gespeichert werden."
+    "saveFailed": "Der Ort konnte nicht gespeichert werden.",
+    "addToLists": "Zu Listen hinzufügen",
+    "listAddFailed": "Konnte nicht zu diesen Listen hinzufügen: {{lists}}"
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",

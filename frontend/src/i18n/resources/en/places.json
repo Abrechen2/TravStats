@@ -65,6 +65,7 @@
   "form": {
     "createTitle": "Add place",
     "editTitle": "Edit place",
+    "searchLabel": "Search for a place",
     "name": "Name",
     "namePlaceholder": "e.g. McDonald’s Shibuya Center-Gai",
     "category": "Category",
@@ -80,7 +81,9 @@
     "positionRequired": "A place cannot be saved without a position — search for it, click it on the map, or enter coordinates.",
     "created": "Place added.",
     "updated": "Place saved.",
-    "saveFailed": "The place could not be saved."
+    "saveFailed": "The place could not be saved.",
+    "addToLists": "Add to lists",
+    "listAddFailed": "Could not add to these lists: {{lists}}"
   },
   "detail": {
     "backToList": "Back to the list",
