@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { AuthRequest } from "../middleware/auth";
 import { batchCreationLimiter } from "../middleware/rateLimit";
 import { createFlightSchema } from "../schemas/flight";
+import { withAirportTimezones } from '../services/flightTimezoneDefaults';
 import { TRIP_COLORS } from "../schemas/trip";
 import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
@@ -35,7 +36,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     }
 
     // Validate each flight entry
-    const parsedFlights = rawBody.map((entry: unknown) => createFlightSchema.parse(entry));
+    const parsedFlights = await Promise.all(
+      rawBody.map(async (entry: unknown) =>
+        createFlightSchema.parse(await withAirportTimezones(entry)),
+      ),
+    );
 
     // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
     // legitimate manually-edited just-departed rows still succeed, but

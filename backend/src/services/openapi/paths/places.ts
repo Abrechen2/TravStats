@@ -88,9 +88,25 @@ const placeList = registry.register(
             "name and the membership come from the catalogue and are refused here; " +
             "colour, symbol and order stay the user's."
         ),
-      placeCount: z.number().int(),
+      placeCount: z
+        .number()
+        .int()
+        .describe(
+          "Entries this account actually holds. For a curated SUBSCRIPTION this " +
+            "is materialised-only, so it converges on visitedCount and their " +
+            "ratio is always 1 — use curatedItemCount as the denominator there."
+        ),
       visitedCount: z.number().int(),
       countryCount: z.number().int(),
+      curatedItemCount: z
+        .number()
+        .int()
+        .nullable()
+        .describe(
+          "Size of the shipped catalogue behind a subscription, so progress has " +
+            "a real denominator (47 of 1,248, not 47 of 47). Null for an " +
+            "ordinary list, where placeCount is already the total."
+        ),
     })
     .openapi("PlaceList")
 );

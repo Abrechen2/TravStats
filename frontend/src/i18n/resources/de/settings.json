@@ -132,6 +132,13 @@
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat"
   },
+  "domainColors": {
+    "title": "Bereichsfarben",
+    "description": "Die Farbe je Bereich — sie gilt in den Statistiken, in der Reise-Zeitleiste, in der Aktivitätsleiste, im Import-Protokoll und überall sonst, wo ein Bereich mit einer einzelnen Farbe gekennzeichnet wird.",
+    "mapNote": "Die Karte bleibt davon unberührt: dort lässt sich eine Route nach Status oder Häufigkeit einfärben, ein Jahresbalken nicht. Die Kartenfarben stellst du weiter im Kartenbereich ein.",
+    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben.",
+    "reset": "Auf Markenfarben zurücksetzen"
+  },
   "units": {
     "title": "Einheiten & Formate",
     "description": "Definiere die Standard-Einheiten für Statistiken.",

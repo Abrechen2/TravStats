@@ -698,6 +698,72 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    case 'place_cities':
+      progress = stats.placeCities.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_continents':
+      progress = stats.placeContinents.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_categories_unique':
+      progress = stats.placeCategoriesUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_same_repeat':
+      progress = stats.placeSameRepeatMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'places_one_day':
+      progress = stats.placesInOneDayMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_visit_streak':
+      progress = stats.placeVisitStreakMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_visits_in_year':
+      progress = stats.placeVisitsInYearMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_countries_in_year':
+      progress = stats.placeCountriesInYearMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_rated_visits':
+      progress = stats.placeRatedVisits;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_trip_visits':
+      progress = stats.placeTripVisits;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    // Latitude thresholds are absolute degrees, so one requirement reads the
+    // same in both hemispheres. A place at 66.6°N and one at 66.6°S each clear
+    // "polar circle" on their own side; neither is compared to the other.
+    case 'place_northern_lat':
+      progress = stats.placeNorthernLat !== null ? Math.floor(stats.placeNorthernLat) : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_southern_lat':
+      progress =
+        stats.placeSouthernLat !== null && stats.placeSouthernLat < 0
+          ? Math.floor(Math.abs(stats.placeSouthernLat))
+          : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     default:
       progress = 0;
       isUnlocked = false;

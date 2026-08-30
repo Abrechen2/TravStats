@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import type { LocationCoordinates } from "../location/LocationInput";
@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
+import { addPlaceToList, listPlaceLists } from "../../lib/api/placeLists";
+import type { PlaceList } from "../../types/placeList";
 import { useToastStore } from "../../store/toastStore";
 import {
   PLACE_CATEGORIES,
@@ -54,6 +56,42 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   // Carried through unchanged on edit.
   const externalRef = place?.externalRef ?? "";
   const [saving, setSaving] = useState(false);
+  // Forgejo #9: out-of-range coordinates used to vanish silently and the
+  // record saved without them. LocationInput now says so; this stops the
+  // form writing while the user is looking at that message.
+  const [coordsValid, setCoordsValid] = useState(true);
+
+  /**
+   * Lists to drop the new place into, offered on CREATE only.
+   *
+   * Not on edit, deliberately: a place already belongs to lists, and a picker
+   * that started empty would read as "in no list" and invite someone to fix
+   * something that is not broken. Membership is edited where it lives, on the
+   * list itself.
+   *
+   * Subscribed checklists are left out for a harder reason — the server refuses
+   * to change their membership at all (409), so offering them would be offering
+   * a button that cannot work.
+   */
+  const [lists, setLists] = useState<PlaceList[]>([]);
+  const [selectedLists, setSelectedLists] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isEdit) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await listPlaceLists();
+        if (!cancelled) setLists(rows.filter((l) => l.curatedKey === null));
+      } catch (err) {
+        // The place can still be created; only the shortcut is unavailable.
+        logger.error({ err }, "PlaceFormModal: could not load lists");
+      }
+    })();
+    return (): void => {
+      cancelled = true;
+    };
+  }, [isEdit]);
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
 
@@ -98,7 +136,26 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
         externalRef: externalRef.trim() || null,
       };
       const saved = isEdit ? await updatePlace(place.id, payload) : await createPlace(payload);
+
+      // The place exists at this point. A list that refuses the membership is
+      // reported and does not undo the creation — losing a place because one
+      // list said no would be a far worse trade than an unfiled place.
+      const rejected: string[] = [];
+      if (!isEdit && selectedLists.length > 0) {
+        for (const listId of selectedLists) {
+          try {
+            await addPlaceToList(listId, saved.id);
+          } catch (err) {
+            logger.error({ err, listId }, "PlaceFormModal: could not add to list");
+            rejected.push(lists.find((l) => l.id === listId)?.name ?? listId);
+          }
+        }
+      }
+
       addToast("success", isEdit ? t("places:form.updated") : t("places:form.created"));
+      if (rejected.length > 0) {
+        addToast("error", t("places:form.listAddFailed", { lists: rejected.join(", ") }));
+      }
       onSaved(saved);
     } catch (err: unknown) {
       logger.error({ err }, "PlaceFormModal: save failed");
@@ -108,7 +165,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     }
   }, [
     canSave, position, name, category, address, city, country, notes, visited,
-    externalRef, isEdit, place, addToast, t, onSaved,
+    externalRef, isEdit, place, addToast, t, onSaved, selectedLists, lists,
   ]);
 
   // The shared frame the three other domain edit dialogs use. This one already
@@ -136,7 +193,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={!canSave}
+            disabled={!canSave || !coordsValid}
             className="rounded-lg px-4 py-2 text-sm font-semibold"
             style={{
               background: canSave ? "var(--domain-poi)" : "var(--bg-muted)",
@@ -151,13 +208,26 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     >
       <>
         <div className="space-y-4">
+          {/* FIRST field, as the lodging form already does — it was moved
+              there in July for this exact reason and places were never
+              brought along (Alex, Discord 2026-08-29). A search hit fills the
+              name, so with the search below it a person types the name, then
+              watches the search overwrite nothing and wonders why they typed
+              it. Searching first turns the fields below into a review step. */}
+          <LocationInput
+            value={position}
+            onChange={handleLocationChange}
+            onValidityChange={setCoordsValid}
+            idPrefix="place-location"
+            label={t("places:form.searchLabel")}
+          />
+
           <Field label={t("places:form.name")}>
             <input
               className={INPUT_CLASS}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("places:form.namePlaceholder")}
-              autoFocus
             />
           </Field>
 
@@ -175,13 +245,6 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
             </select>
           </Field>
 
-          <LocationInput
-            value={position}
-            onChange={handleLocationChange}
-            idPrefix="place-location"
-            label={t("places:form.location")}
-          />
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label={t("places:form.address")}>
               <input className={INPUT_CLASS} value={address} onChange={(e) => setAddress(e.target.value)} />
@@ -193,6 +256,39 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
               <input className={INPUT_CLASS} value={country} onChange={(e) => setCountry(e.target.value)} />
             </Field>
           </div>
+
+          {!isEdit && lists.length > 0 && (
+            <Field label={t("places:form.addToLists")}>
+              <div className="flex flex-wrap gap-2">
+                {lists.map((list) => {
+                  const on = selectedLists.includes(list.id);
+                  return (
+                    <button
+                      key={list.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setSelectedLists((prev) =>
+                          prev.includes(list.id)
+                            ? prev.filter((id) => id !== list.id)
+                            : [...prev, list.id]
+                        )
+                      }
+                      className="rounded-full border px-3 py-1 text-xs"
+                      style={{
+                        borderColor: on ? list.color : "var(--color-border)",
+                        background: on ? `${list.color}22` : "transparent",
+                        color: on ? list.color : "var(--text-secondary)",
+                      }}
+                    >
+                      {list.icon ? `${list.icon} ` : ""}
+                      {list.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
 
           <Field label={t("places:form.status")}>
             <div className="flex gap-2">

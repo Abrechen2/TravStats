@@ -1,4 +1,5 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DomainColorSection from "./DomainColorSection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { changeLanguage } from "../../i18n/config";
 import type { DisplaySettings } from "../../store/settingsStore";
@@ -95,6 +96,7 @@ export default function DisplaySection({
           </div>
         </div>
       </div>
+      <DomainColorSection />
     </SectionCard>
   );
 }

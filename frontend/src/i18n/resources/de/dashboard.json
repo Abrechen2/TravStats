@@ -282,7 +282,8 @@
     "lodgingRated": "Bewertet",
     "lodgingUnrated": "Ohne Bewertung",
     "lodgingChain": "Kette",
-    "lodgingIndependent": "Unabhängig"
+    "lodgingIndependent": "Unabhängig",
+    "title": "Legende"
   },
   "userMenu": {
     "label": "Konto-Menü"

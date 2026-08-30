@@ -15,6 +15,7 @@ import {
   type ActivityItem,
   type ActivityKind,
 } from "./activityItems";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 
 interface UnifiedActivityPanelProps {
   flights?: GeoJSONFeature[];
@@ -61,6 +62,7 @@ export function UnifiedActivityPanel({
   title,
 }: UnifiedActivityPanelProps): JSX.Element | null {
   const { t } = useTranslation(["dashboard", "common"]);
+  const { colorOf } = useDomainColors();
   const [filter, setFilter] = useState<"all" | ActivityKind>("all");
 
   const allItems = useMemo<ActivityItem[]>(
@@ -128,7 +130,7 @@ export function UnifiedActivityPanel({
         <button
           type="button"
           onClick={onClose}
-          aria-label="close"
+          aria-label={t("common:accessibility.close")}
           style={{
             background: "none",
             border: "none",
@@ -203,7 +205,7 @@ export function UnifiedActivityPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span aria-hidden style={{ color: DOMAINS[item.kind].color }}>
+              <span aria-hidden style={{ color: colorOf(item.kind) }}>
                 {DOMAINS[item.kind].icon}
               </span>
               <strong style={{ flex: 1 }}>{item.label}</strong>

@@ -382,4 +382,76 @@ describe("LodgingDetailPage", () => {
     const perNightLabel = screen.getByText("lodging:detail.spendPerNight");
     expect(perNightLabel.closest("div")?.textContent).toMatch(/—/);
   });
+
+  /**
+   * Notes were accepted and then shown nowhere.
+   *
+   * The form has the field, the schema stores it, and the detail page did not
+   * mention it once — so anything typed there vanished from view the moment it
+   * was saved (Alex, 2026-08-29). It is rendered under the SAME label the form
+   * uses; calling it "Beschreibung" in one place and "Notizen" in the other
+   * would trade one inconsistency for a fresh one.
+   */
+  it("shows the notes that were typed into the form", async () => {
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ notes: "Zimmer zur Hofseite verlangen, Strasse ist laut." })
+    );
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Zimmer zur Hofseite verlangen, Strasse ist laut.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("says nothing at all when there are no notes", async () => {
+    // An empty "Notizen" heading over blank space is its own small lie.
+    getLodgingMock.mockResolvedValue(makeLodging({ notes: null }));
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("lodging-delete-button")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("lodging:field.notes")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Coming from a chain, the way back is the chain.
+   *
+   * The back button was hard-wired to the full lodging list, so a reader who
+   * had drilled list -> chain -> hotel landed two levels up and had to find
+   * the chain again (Alex, 2026-08-29). The origin travels in router state, so
+   * it survives the click that set it and nothing else — on a reload or a
+   * bookmark there genuinely is no origin, and the list is then the honest
+   * answer rather than a remembered guess.
+   */
+  it("offers the way back to the chain when that is where the reader came from", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/lodging/lodging-1", state: { fromChain: { id: 7, name: "Kempinski" } } },
+        ]}
+      >
+        <Routes>
+          <Route path="/lodging/:id" element={<LodgingDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("← Kempinski")).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to the list when there is no origin", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
+    });
+  });
 });

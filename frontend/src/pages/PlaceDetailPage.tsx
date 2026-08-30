@@ -431,10 +431,11 @@ export default function PlaceDetailPage(): JSX.Element {
 
           <div className="space-y-4">
             <section className="overflow-hidden rounded-lg" style={PANEL}>
-              {/* Read-only here: the place is edited through the form, which
-                  has the full picker. The click and drag handlers are required
-                  props, so they are explicit no-ops rather than silently
-                  moving a place from a page that offers no way to save it. */}
+              {/* Read-only: the place is edited through the form, which has the
+                  full picker. Omitting the handlers is what makes it read-only —
+                  no-ops used to stand here, and they left the pin draggable, so
+                  it could be nudged and stay nudged while the coordinates below
+                  went on showing the stored value. */}
               <LocationMiniMap
                 value={{ lat: place.lat, lon: place.lon }}
                 initialViewState={{ longitude: place.lon, latitude: place.lat, zoom: 12 }}
@@ -442,8 +443,6 @@ export default function PlaceDetailPage(): JSX.Element {
                 compact
                 ariaLabel={t("places:detail.mapLabel", { name: place.name })}
                 attributionLabel=""
-                onMapClick={() => {}}
-                onMarkerDragEnd={() => {}}
               />
             </section>
 

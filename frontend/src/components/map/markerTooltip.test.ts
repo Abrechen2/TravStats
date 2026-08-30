@@ -11,6 +11,10 @@ const t = (key: string, opts?: Record<string, unknown>): string => {
   if (key === "map:globe.timesPlanned") return `${opts?.count}× geplant`;
   if (key === "lodging:field.staysCount") return `${opts?.count} Aufenthalte`;
   if (key === "lodging:field.nightsCount") return `${opts?.count} Übernachtungen`;
+  if (key === "places:list.visitsCount") return `${opts?.count} Besuche`;
+  if (key === "places:list.status.wishlist") return "Merkliste";
+  if (key === "places:categories.restaurant") return "Restaurant";
+  if (key === "places:categories.landmark") return "Sehenswürdigkeit";
   return key;
 };
 
@@ -248,5 +252,66 @@ describe("createMarkerTooltip — lodging", () => {
 
   it("returns null for an unrelated layer id", () => {
     expect(getTooltip(makeInfo("some-other-layer", { name: "x" }))).toBeNull();
+  });
+});
+
+
+/**
+ * Places were the one domain whose pins were pickable and answered nothing.
+ *
+ * Every other domain — airports, ports, arcs, cruise paths, lodging — has a
+ * branch here. The place pin datum was even built to feed one ("Completed
+ * visits — feeds the tooltip", placePinsLayer.ts), but no branch existed, so
+ * hovering a place gave the hand cursor and no card (Alex, 2026-08-29).
+ */
+describe("createMarkerTooltip — places", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it("answers for a place pin, with its country, category and visits", () => {
+    const result = getTooltip(
+      makeInfo("place-pins", {
+        name: "McDonald's Trevi",
+        category: "restaurant",
+        city: "Rom",
+        country: "Italien",
+        visitCount: 3,
+        visited: true,
+      })
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("flagcdn.com/it.svg");
+    expect(result!.html).toContain("McDonald&#039;s Trevi");
+    expect(result!.html).toContain("Rom, Italien");
+    expect(result!.html).toContain("Restaurant");
+    expect(result!.html).toContain("3 Besuche");
+  });
+
+  it("answers on the label layers too, not only the dots", () => {
+    for (const layer of ["place-pins-labels", "place-pins-symbols"]) {
+      const result = getTooltip(makeInfo(layer, { name: "Kolosseum", category: "landmark", visited: true }));
+      expect(result, layer).not.toBeNull();
+      expect(result!.html).toContain("Kolosseum");
+    }
+  });
+
+  it("says wishlist rather than counting a visit that has not happened", () => {
+    const result = getTooltip(
+      makeInfo("place-pins", {
+        name: "Sagrada Família",
+        category: "landmark",
+        city: "Barcelona",
+        country: "ES",
+        visitCount: 0,
+        visited: false,
+      })
+    );
+
+    expect(result!.html).toContain("Merkliste");
+    expect(result!.html).not.toContain("0 Besuche");
+  });
+
+  it("stays silent for a datum with no name", () => {
+    expect(getTooltip(makeInfo("place-pins", { category: "other" }))).toBeNull();
   });
 });

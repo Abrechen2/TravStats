@@ -2,6 +2,9 @@ import fs from "fs";
 import path from "path";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
+import { createHash } from "crypto";
+import fsp from "fs/promises";
+
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import {
@@ -123,14 +126,52 @@ router.post(
       });
       let nextIdx = (last?.sortIdx ?? -1) + 1;
 
+      /**
+       * The identity of the bytes, so this copy can later become a link.
+       *
+       * Forgejo #21: the Companion uploads a place-visit photo as a TEMPORARY
+       * copy and tells the user it will be swapped for a library link. Matching
+       * a row to an Immich asset afterwards needs something exact; filename,
+       * size and creation time work often and not always.
+       *
+       * SHA-1, base64 — the same encoding Immich reports in `asset.checksum`,
+       * so a comparison is a string equality rather than a re-derivation. SHA-1
+       * is chosen for THAT reason and not as a security claim: nothing here
+       * depends on it being hard to forge, and the value is computed from the
+       * bytes on disk rather than accepted from the client, which is what makes
+       * it worth storing at all.
+       *
+       * A checksum that cannot be computed must not cost the user their upload,
+       * so it falls back to null and the row is still written.
+       */
+      const checksums = await Promise.all(
+        uploaded.map(async (file) => {
+          try {
+            const bytes = await fsp.readFile(
+              path.join(getPlacePhotoDir(), path.basename(file.filename))
+            );
+            return createHash("sha1").update(bytes).digest("base64");
+          } catch (error) {
+            logger.warn({
+              operation: "place_photo_checksum_failed",
+              message: "Stored a photo without a checksum; a later Immich match will be heuristic",
+              context: { filename: file.filename },
+              error: { message: error instanceof Error ? error.message : "Unknown error" },
+            });
+            return null;
+          }
+        })
+      );
+
       const created = await prisma.$transaction(
-        uploaded.map((file) =>
+        uploaded.map((file, i) =>
           prisma.placeVisitPhoto.create({
             data: {
               placeVisitId: req.params.visitId,
               filename: file.filename,
               mimetype: file.mimetype,
               sizeBytes: file.size,
+              checksum: checksums[i],
               sortIdx: nextIdx++,
             },
           })

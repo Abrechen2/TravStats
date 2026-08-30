@@ -34,4 +34,5 @@ export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
   "trip-photos",
   "place-photos",
   "profile-pictures",
+  "lodging-photos",
 ] as const;

@@ -9,7 +9,8 @@ import {
   YAxis,
 } from "recharts";
 import { useTranslation } from "../../../../hooks/useTranslation";
-import { DOMAINS } from "../../../../shared/domains";
+
+import { useDomainColors } from "../../../../hooks/useDomainColors";
 
 interface LodgingNightsChartProps {
   /** `LodgingStats.nightsByMonth` — "YYYY-MM" keys, already summed server-side. */
@@ -29,6 +30,7 @@ interface NightsPoint {
  */
 export function LodgingNightsChart({ nightsByMonth }: LodgingNightsChartProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
+  const { colorOf } = useDomainColors();
   const series: NightsPoint[] = Object.entries(nightsByMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([period, nights]) => ({ period, nights }));
@@ -83,7 +85,7 @@ export function LodgingNightsChart({ nightsByMonth }: LodgingNightsChartProps): 
             />
             <Bar
               dataKey="nights"
-              fill={DOMAINS.lodging.color}
+              fill={colorOf("lodging")}
               radius={[4, 4, 0, 0]}
               name={t("dashboard:lodgingTab.stats.nights")}
             />

@@ -1070,6 +1070,106 @@
     "ALL_INCLUSIVE_50": {
       "name": "All-inclusive-Veteran",
       "description": "50 Nächte mit All-inclusive-Verpflegung"
+    },
+    "PLACE_CITIES_5": {
+      "name": "Stadtbummler",
+      "description": "Orte in 5 verschiedenen Städten besucht"
+    },
+    "PLACE_CITIES_20": {
+      "name": "Städtesammler",
+      "description": "Orte in 20 verschiedenen Städten besucht"
+    },
+    "PLACE_CITIES_50": {
+      "name": "Metropolen-Atlas",
+      "description": "Orte in 50 verschiedenen Städten besucht"
+    },
+    "PLACE_CONTINENTS_3": {
+      "name": "Drei Kontinente",
+      "description": "Orte auf 3 Kontinenten besucht"
+    },
+    "PLACE_CONTINENTS_5": {
+      "name": "Fünf Kontinente",
+      "description": "Orte auf 5 Kontinenten besucht"
+    },
+    "PLACE_CONTINENTS_7": {
+      "name": "Alle Kontinente",
+      "description": "Orte auf allen 7 Kontinenten besucht — Antarktis eingeschlossen"
+    },
+    "PLACE_CATEGORIES_4": {
+      "name": "Vielseitig",
+      "description": "Orte aus 4 verschiedenen Kategorien besucht"
+    },
+    "PLACE_CATEGORIES_ALL": {
+      "name": "Nichts ausgelassen",
+      "description": "Aus jeder der acht Kategorien mindestens einen Ort besucht"
+    },
+    "PLACE_REGULAR_5": {
+      "name": "Stammgast",
+      "description": "5 Besuche an ein und demselben Ort"
+    },
+    "PLACE_REGULAR_15": {
+      "name": "Der übliche Platz",
+      "description": "15 Besuche an ein und demselben Ort"
+    },
+    "PLACES_ONE_DAY_5": {
+      "name": "Tagesprogramm",
+      "description": "5 verschiedene Orte an einem Tag besucht"
+    },
+    "PLACES_ONE_DAY_10": {
+      "name": "Sightseeing-Marathon",
+      "description": "10 verschiedene Orte an einem Tag besucht"
+    },
+    "PLACE_STREAK_7": {
+      "name": "Eine Woche unterwegs",
+      "description": "An 7 Tagen hintereinander mindestens einen Ort besucht"
+    },
+    "PLACE_STREAK_14": {
+      "name": "Zwei Wochen am Stück",
+      "description": "An 14 Tagen hintereinander mindestens einen Ort besucht"
+    },
+    "PLACE_YEAR_25": {
+      "name": "Gutes Jahr",
+      "description": "25 Besuche in einem Kalenderjahr"
+    },
+    "PLACE_YEAR_100": {
+      "name": "Jahr der Orte",
+      "description": "100 Besuche in einem Kalenderjahr"
+    },
+    "PLACE_COUNTRIES_YEAR_5": {
+      "name": "Fünf Länder in einem Jahr",
+      "description": "In einem Kalenderjahr Orte in 5 Ländern besucht"
+    },
+    "PLACE_RATED_10": {
+      "name": "Kritiker",
+      "description": "10 Besuche bewertet"
+    },
+    "PLACE_RATED_50": {
+      "name": "Sterne vergeben",
+      "description": "50 Besuche bewertet"
+    },
+    "PLACE_TRIP_10": {
+      "name": "Teil der Reise",
+      "description": "10 Besuche einer Reise zugeordnet"
+    },
+    "PLACE_TRIP_50": {
+      "name": "Lückenlos dokumentiert",
+      "description": "50 Besuche einer Reise zugeordnet"
+    },
+    "PLACE_NORTH_60": {
+      "name": "Hoher Norden",
+      "description": "Einen Ort nördlich des 60. Breitengrads besucht"
+    },
+    "PLACE_NORTH_66": {
+      "name": "Jenseits des Polarkreises",
+      "description": "Einen Ort nördlich des Polarkreises besucht"
+    },
+    "PLACE_SOUTH_35": {
+      "name": "Weit im Süden",
+      "description": "Einen Ort südlich des 35. Breitengrads besucht"
+    },
+    "PLACE_SOUTH_54": {
+      "name": "Ende der Welt",
+      "description": "Einen Ort südlich des 54. Breitengrads besucht — Feuerland und weiter"
     }
   }
 }

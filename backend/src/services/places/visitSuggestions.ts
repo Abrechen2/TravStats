@@ -42,11 +42,29 @@ export type SuggestionAnchorKind = "place" | "lodging" | "cruise_port" | "flight
  * is the honest reach of that kind of anchor, which is why they differ by
  * a factor of four rather than sharing one number.
  */
+/**
+ * How far an anchor may reach to raise a QUESTION.
+ *
+ * Forgejo #23: a flight anchor reached 60km, which produced 60 open suggestions
+ * on a real account, nearly all from one connection through AMS — among them a
+ * polder 29km from the gate. Sixty questions bury the handful that were worth
+ * asking, and weak ones train people to tick without reading.
+ *
+ * 60km is defensible for FINDING: Schiphol genuinely is the gateway to half the
+ * Netherlands. But a suggestion is not a search result — it is a question the
+ * user answers with a tick in their own logbook, and the service already grades
+ * a flight anchor as "low": you may have changed planes and never left the
+ * terminal. It simply never acted on that grading.
+ *
+ * So a flight now reaches city scale — "you landed in Amsterdam, were you IN
+ * Amsterdam" — while hotels, port calls and logged places keep their reach,
+ * because each of those means the user was demonstrably on the ground there.
+ */
 const RADIUS_KM: Record<SuggestionAnchorKind, number> = {
   place: 15,
   lodging: 30,
   cruise_port: 40,
-  flight: 60,
+  flight: 15,
 };
 
 /** Ranking of the kinds. Higher wins when two anchors both reach a target. */
@@ -89,12 +107,24 @@ export interface SuggestionAnchor {
 export interface SuggestionTarget {
   itemId: string;
   name: string;
+  /** ISO country code, if the catalogue has one. Travels out with the hit. */
+  country?: string | null;
   lat: number;
   lon: number;
 }
 
 export interface VisitSuggestion {
   itemId: string;
+  /**
+   * What the target is called, and where.
+   *
+   * Forgejo #22: a suggestion used to carry only an id, so a client drawing
+   * "Warst du hier? Kölner Dom" had to fetch the whole catalogue — 1,248 rows
+   * with descriptions — to resolve three names. `suggestVisits` already
+   * receives both fields on its target and was dropping them on the way out.
+   */
+  name: string;
+  country: string | null;
   confidence: SuggestionConfidence;
   /** Great-circle km between the target and the anchor, rounded. */
   distanceKm: number;
@@ -372,6 +402,8 @@ export function suggestVisits(
     if (best === null) continue;
     suggestions.push({
       itemId: target.itemId,
+      name: target.name,
+      country: target.country ?? null,
       confidence: CONFIDENCE[best.anchor.kind],
       distanceKm: Math.round(best.distance),
       anchorKind: best.anchor.kind,

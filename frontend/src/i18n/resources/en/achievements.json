@@ -1070,6 +1070,106 @@
     "ALL_INCLUSIVE_50": {
       "name": "All-Inclusive Veteran",
       "description": "50 nights on an all-inclusive board"
+    },
+    "PLACE_CITIES_5": {
+      "name": "City stroller",
+      "description": "Visited places in 5 different cities"
+    },
+    "PLACE_CITIES_20": {
+      "name": "City collector",
+      "description": "Visited places in 20 different cities"
+    },
+    "PLACE_CITIES_50": {
+      "name": "Atlas of metropolises",
+      "description": "Visited places in 50 different cities"
+    },
+    "PLACE_CONTINENTS_3": {
+      "name": "Three continents",
+      "description": "Visited places on 3 continents"
+    },
+    "PLACE_CONTINENTS_5": {
+      "name": "Five continents",
+      "description": "Visited places on 5 continents"
+    },
+    "PLACE_CONTINENTS_7": {
+      "name": "Every continent",
+      "description": "Visited places on all 7 continents — Antarctica included"
+    },
+    "PLACE_CATEGORIES_4": {
+      "name": "Well rounded",
+      "description": "Visited places from 4 different categories"
+    },
+    "PLACE_CATEGORIES_ALL": {
+      "name": "Nothing left out",
+      "description": "Visited at least one place in every one of the eight categories"
+    },
+    "PLACE_REGULAR_5": {
+      "name": "Regular",
+      "description": "5 visits to one and the same place"
+    },
+    "PLACE_REGULAR_15": {
+      "name": "The usual spot",
+      "description": "15 visits to one and the same place"
+    },
+    "PLACES_ONE_DAY_5": {
+      "name": "Full day out",
+      "description": "Visited 5 different places in one day"
+    },
+    "PLACES_ONE_DAY_10": {
+      "name": "Sightseeing marathon",
+      "description": "Visited 10 different places in one day"
+    },
+    "PLACE_STREAK_7": {
+      "name": "A week out",
+      "description": "At least one place visited on 7 consecutive days"
+    },
+    "PLACE_STREAK_14": {
+      "name": "Two weeks running",
+      "description": "At least one place visited on 14 consecutive days"
+    },
+    "PLACE_YEAR_25": {
+      "name": "Good year",
+      "description": "25 visits in one calendar year"
+    },
+    "PLACE_YEAR_100": {
+      "name": "Year of places",
+      "description": "100 visits in one calendar year"
+    },
+    "PLACE_COUNTRIES_YEAR_5": {
+      "name": "Five countries in a year",
+      "description": "Visited places in 5 countries within one calendar year"
+    },
+    "PLACE_RATED_10": {
+      "name": "Critic",
+      "description": "Rated 10 visits"
+    },
+    "PLACE_RATED_50": {
+      "name": "Handing out stars",
+      "description": "Rated 50 visits"
+    },
+    "PLACE_TRIP_10": {
+      "name": "Part of the journey",
+      "description": "Linked 10 visits to a trip"
+    },
+    "PLACE_TRIP_50": {
+      "name": "Fully documented",
+      "description": "Linked 50 visits to a trip"
+    },
+    "PLACE_NORTH_60": {
+      "name": "Far north",
+      "description": "Visited a place north of the 60th parallel"
+    },
+    "PLACE_NORTH_66": {
+      "name": "Beyond the Arctic Circle",
+      "description": "Visited a place north of the Arctic Circle"
+    },
+    "PLACE_SOUTH_35": {
+      "name": "Deep south",
+      "description": "Visited a place south of the 35th parallel"
+    },
+    "PLACE_SOUTH_54": {
+      "name": "End of the world",
+      "description": "Visited a place south of the 54th parallel — Tierra del Fuego and beyond"
     }
   }
 }
