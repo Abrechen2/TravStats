@@ -31,6 +31,8 @@ import {
 } from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
 import { buildPassport } from '../services/stats/passport';
+import { buildTravelRecords } from '../services/stats/records';
+import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
 import {
   normalizeAirline,
   mergeAirlineCounts,
@@ -1098,6 +1100,64 @@ router.get(
  * rules, and why each was chosen to match a figure published elsewhere on this
  * server, are in services/stats/passport.ts.
  */
+/**
+ * GET /stats/records — the seven travel records, derived here (Forgejo #41).
+ *
+ * The Companion computes these client-side today, from the raw flight list.
+ * That is one implementation of "what was my longest flight" living in one
+ * client, and #42 is the audit of what that costs: a second implementation in
+ * the web app would answer the same question differently the first time an edge
+ * case came up. The rules — and the abstentions, which are the interesting part
+ * — are in services/stats/records.ts, ported from the Companion's tested
+ * adapter rather than rewritten.
+ *
+ * Numbers, not sentences: a formatted "12.345 km" in a JSON body would fix the
+ * decimal separator and the unit for every client that ever reads it.
+ */
+router.get(
+  '/records',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const flights = await prisma.flight.findMany({
+        where: { userId, status: { in: ['flown', 'historical'] } },
+        select: {
+          id: true,
+          flightNumber: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimeSemantics: true,
+          arrTimeSemantics: true,
+          delayMinutes: true,
+          routeDistance: true,
+          status: true,
+        },
+      });
+
+      // `durationMinutes` is not a column — it is derived from the two clocks,
+      // their timezones and their semantics. Deriving it a second time here
+      // would be the very drift #42 is about, so the record uses the SAME
+      // enrichment every other flight response goes through: a DATE_ONLY row
+      // comes back with a null duration and the aloft record abstains, exactly
+      // as it does in the app.
+      const enriched = await enrichFlightsWithAirportFacts(flights);
+
+      res.json({ success: true, data: { records: buildTravelRecords(enriched) } });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 router.get(
   '/passport',
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
