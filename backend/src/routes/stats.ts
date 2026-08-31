@@ -1212,6 +1212,32 @@ router.get(
       // costs the countries, so it is reported rather than swallowed into an
       // empty passport that looks like someone who has never flown.
       const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
+
+      /**
+       * Evidence beyond landings — Forgejo #42, owner's decision 2026-08-31.
+       *
+       * A cruise that CALLED at a port and a place the user recorded visiting
+       * both prove presence. Only sailed cruises count, the same cut rule 1
+       * makes for flights, and a place joins on its resolved `isoCountryCode`
+       * because "Deutschland" and "Germany" are one country and only the code
+       * knows that.
+       *
+       * Fetched here rather than inside the service so the derivation stays a
+       * pure function of its inputs and keeps its unit tests.
+       */
+      const [portCalls, placeVisits] = await Promise.all([
+        prisma.cruiseStop.findMany({
+          where: {
+            cruise: { userId, status: { in: ['flown', 'historical'] } },
+            port: { isNot: null },
+          },
+          select: { arrivalTime: true, date: true, port: { select: { country: true } } },
+        }),
+        prisma.place.findMany({
+          where: { userId, visited: true, isoCountryCode: { not: null } },
+          select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+        }),
+      ]);
       const airportCountries = new Map<string, string | null>(
         [...airports.entries()].map(([code, data]) => [code, data?.country ?? null]),
       );
@@ -1226,7 +1252,28 @@ router.get(
           : undefined;
       const homeIatas = normalizeHistory(historyData).map((entry) => entry.iata);
 
-      res.json(buildPassport(flights, airportCountries, homeIatas));
+      res.json(
+        buildPassport(
+          flights,
+          airportCountries,
+          homeIatas,
+          new Date(),
+          portCalls.map((stop) => ({
+            country: stop.port?.country ?? null,
+            at: stop.arrivalTime ?? stop.date,
+          })),
+          // A place's visits, flattened: each dated visit is its own evidence,
+          // and a place with none still proves the country through `visited`.
+          placeVisits.flatMap((place) =>
+            place.visits.length > 0
+              ? place.visits.map((v) => ({
+                  isoCountryCode: place.isoCountryCode,
+                  at: v.visitedAt,
+                }))
+              : [{ isoCountryCode: place.isoCountryCode, at: null }],
+          ),
+        ),
+      );
     } catch (error) {
       next(error);
     }
