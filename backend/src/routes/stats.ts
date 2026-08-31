@@ -660,7 +660,27 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
       },
     });
 
-    // Group by route
+    /**
+     * Grouped by the PAIR, not the direction — Forgejo #42, owner's decision
+     * 2026-08-31.
+     *
+     * This used to key `${dep}-${arr}`, so FRA→WAW and WAW→FRA were two routes
+     * with one flight each while the Companion's globe grouped them as one with
+     * two. Same account, two different route counts, and neither side was
+     * wrong on its own terms — which is exactly the drift #42 was filed about.
+     *
+     * A person says "I have flown Munich–Dubai eleven times" and means both
+     * directions. So the pair is the route, and the key is the two codes
+     * sorted: FRA-WAW and WAW-FRA both become "FRA-WAW".
+     *
+     * This CHANGES the top-routes list for existing accounts — two entries of
+     * one collapse into one of two, which reorders the ranking. That is a
+     * visible change and belongs in the changelog, not a silent fix.
+     *
+     * `departure`/`arrival` name the first flight of the pair that was seen.
+     * With direction no longer meaningful they are simply the two ends; the
+     * distance is the same either way.
+     */
     const routeMap = new Map<string, {
       count: number;
       departure: { iata?: string; name?: string; lat: number; lon: number };
@@ -669,7 +689,11 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
     }>();
 
     flights.forEach(flight => {
-      const routeKey = `${flight.depIata || flight.depIcao}-${flight.arrIata || flight.arrIcao}`;
+      const depCode = flight.depIata || flight.depIcao;
+      const arrCode = flight.arrIata || flight.arrIcao;
+      // Sorted, so both directions land on one key. `String()` guards the
+      // null-code case, which would otherwise sort inconsistently.
+      const routeKey = [String(depCode), String(arrCode)].sort().join('-');
 
       if (routeMap.has(routeKey)) {
         routeMap.get(routeKey)!.count++;
