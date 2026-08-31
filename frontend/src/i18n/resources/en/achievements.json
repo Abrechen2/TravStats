@@ -127,6 +127,14 @@
       "name": "Seven Wonders of the Ancient World",
       "description": "Stood at all seven ancient wonders — six of them in your mind's eye"
     },
+    "WARSHIPS_5": {
+      "name": "Boarding Party",
+      "description": "Visited 5 museum warships"
+    },
+    "WARSHIPS_10": {
+      "name": "Fleet Visit",
+      "description": "Visited 10 museum warships"
+    },
     "FIRST_FLIGHT": {
       "name": "Taking Off",
       "description": "Complete your first flight"

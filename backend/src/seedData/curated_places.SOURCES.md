@@ -11,10 +11,14 @@ something hand-typed:
 A CSV read with `columns: true` cannot carry a comment header — a leading `#`
 line would be parsed as the header row — so the record lives here instead.
 
-## `curated_places.csv` — the two wonder lists
+## `curated_places.csv` — the wonder lists and the museum warships
 
-Hand-written, 14 rows, from common knowledge; coordinates read off the sites.
-Nothing bulk-derived, so no attribution obligation attaches. Edit it by hand.
+Hand-written, from common knowledge; coordinates read off the sites. Nothing
+bulk-derived, so no attribution obligation attaches. Edit it by hand.
+
+Three catalogs share the file: the two wonder lists (14 rows) and
+`museum-warships` (14 rows) — preserved warships open to the public as
+museum ships, spread across the US, UK, Japan, Sweden and Germany.
 
 ## `curated_places.world-heritage.csv` — UNESCO World Heritage
 
