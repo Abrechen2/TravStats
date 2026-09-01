@@ -20,7 +20,10 @@
     "lint:frontend": "cd frontend && npm run lint",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "cd backend && npx tsc --noEmit",
-    "typecheck:frontend": "cd frontend && npx tsc --noEmit"
+    "typecheck:frontend": "cd frontend && npx tsc --noEmit",
+    "check:size": "node scripts/check-file-size.mjs",
+    "check:drift": "node scripts/check-schema-drift.mjs",
+    "check": "npm run check:size && npm run check:drift"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
