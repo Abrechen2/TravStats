@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
+import { statsLimiter } from '../middleware/rateLimit';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { resolveRank } from '../utils/achievementRank';
 
@@ -131,7 +132,12 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Manually trigger achievement check (useful for testing or background jobs)
-router.post('/check', async (req: AuthRequest, res: Response, next: NextFunction) => {
+//
+// Rate-limited on `statsLimiter`: this re-derives every achievement from the
+// caller's whole logbook and writes the progress rows back, which is the same
+// full-history aggregation the stats endpoints do — plus the writes. The list
+// routes above only read the already-computed rows and stay unlimited.
+router.post('/check', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
 
@@ -148,7 +154,14 @@ router.post('/check', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Get leaderboard (top users by points)
-router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFunction) => {
+//
+// The one route in this app whose cost is set by the size of the INSTANCE
+// rather than by the caller's own data: it loads every UserAchievement row of
+// every user with their achievement and user joined, then aggregates in JS.
+// There is no WHERE on the caller and no pagination, so on a family instance
+// it grows with everyone's progress at once. Same `statsLimiter` bucket —
+// 30/min is plenty for a board nobody watches change second by second.
+router.get('/leaderboard', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const rawLeaderboardLimit = parseInt(req.query.limit as string, 10);
     const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;

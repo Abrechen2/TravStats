@@ -20,6 +20,11 @@ import logger from "../utils/logger";
  * Shipped checklists live in `routes/placeLists/curated.ts` and are mounted on
  * the SAME path, ahead of this router — `/curated` would otherwise be captured
  * by `/:id` here and answered with "list not found".
+ *
+ * No rate limiter: per-user CRUD over the caller's own lists and their entries,
+ * bounded by how many lists they made. The one route in the checklist feature
+ * that reads the caller's ENTIRE history is `/curated/:key/suggestions`, and it
+ * is limited in that file.
  */
 const router = Router();
 router.use(authenticate);

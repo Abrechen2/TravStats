@@ -5,6 +5,11 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// No rate limiter: one route, one grouped read of the caller's own companion
+// links. It feeds a picker that opens on nearly every travel form, so a
+// per-user cap here would fire during ordinary data entry and protect nothing
+// — the query is bounded by how many people the caller has travelled with.
+
 /**
  * The caller's companions, most used first. Feeds the companion picker in the
  * flight, trip and cruise forms.

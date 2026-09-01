@@ -15,11 +15,17 @@
  *   session).  Any `userId` field in the request body is silently
  *   ignored to prevent IDOR attacks.
  * - Payloads exceeding MAX_PREVIEW_ROWS (1000) rows are rejected with 413.
+ * - Both routes are rate-limited (`lodgingImportLimiter`, the shared bulk-import
+ *   bucket). The row and byte ceilings bound ONE request; without a limiter
+ *   nothing bounds a thousand of them, and each is a 2 MiB lex or a
+ *   thousand-row enrichment. The limiter goes AFTER `authenticate` on each
+ *   route so it keys per user rather than per IP.
  */
 
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { lodgingImportLimiter } from "../middleware/rateLimit";
 import { buildPreviewRows, MAX_PREVIEW_ROWS } from "../services/importPreview";
 import { parseFr24 } from "../services/parsers/fr24";
 import { parseGenericCsv } from "../services/parsers/genericCsv";
@@ -67,6 +73,7 @@ const previewRequestSchema = z.object({
 router.post(
   "/preview",
   authenticate,
+  lodgingImportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId;
@@ -156,6 +163,7 @@ const parseRequestSchema = z.discriminatedUnion("source", [
 router.post(
   "/parse",
   authenticate,
+  lodgingImportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId;

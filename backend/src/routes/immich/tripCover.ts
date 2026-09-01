@@ -8,6 +8,13 @@
  * `POST /trips/:id/photos/:photoId/cover` is not Immich-specific, but
  * `routes/trips.ts` is at the 800-line hard cap, so it lands here next to its
  * sibling rather than growing a file that is already too big.
+ *
+ * No rate limiter, despite the word "Immich". Neither route moves image bytes:
+ * both write one URL string to `Trip.coverImageUrl`. The Immich touch is a
+ * membership check against `getCachedAlbumAssets`, i.e. an album's asset LIST,
+ * cached and shared with the gallery that just rendered. The routes that do
+ * spend Immich — the byte proxy and the album import — carry
+ * `immichProxyLimiter` and `immichImportLimiter` where they live.
  */
 import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";

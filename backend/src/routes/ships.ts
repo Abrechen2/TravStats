@@ -7,6 +7,12 @@ import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import logger from "../utils/logger";
 
+// No rate limiter: a capped catalog search plus a one-row insert, both behind
+// `authenticate`. Its public sibling `/airports/search` IS limited — but for
+// the reason stated there, that it is deliberately unauthenticated so the
+// signup autocomplete works before credentials exist. That reason does not
+// apply here, and an authenticated typeahead that a limiter can break mid-word
+// is worse than no limiter on a local table.
 const router = Router();
 router.use(authenticate);
 // Read-only PATs may search ships (GET) but not create them (POST).

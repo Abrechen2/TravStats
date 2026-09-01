@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
+import { statsLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
@@ -244,8 +245,15 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
  *
  * Anchors are the user's OWN recorded travel, and only travel that happened:
  * stays that are over, port calls on sailed cruises, flown legs, logged places.
+ *
+ * The only rate-limited route in this router, on `statsLimiter`. It reads the
+ * caller's ENTIRE history — every stay, every port call, every flight, every
+ * visited place, none of it paginated — and then matches each open target
+ * against every anchor. That is a stats-sized aggregation wearing a checklist
+ * hat, so it gets the stats bucket. The catalog, progress and tick routes
+ * around it are bounded by one list's items and stay unlimited.
  */
-router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/:key/suggestions", statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const curated = await prisma.curatedList.findUnique({

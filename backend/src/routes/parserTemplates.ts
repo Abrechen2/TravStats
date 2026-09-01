@@ -4,6 +4,10 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
 
+// No rate limiter: all four handlers are single indexed statements against the
+// caller's own template rows. Deriving a template is the expensive part and it
+// happens in `training.ts`, which is limited — this router only reads and
+// edits the result.
 const router = Router();
 router.use(authenticate);
 // Read-scoped PATs may list templates (GET) but not create / update / delete.

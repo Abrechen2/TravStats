@@ -9,6 +9,9 @@ import {
 } from "../services/aircraftCatalogCache";
 import logger from "../utils/logger";
 
+// No rate limiter, for the same reason as its sibling `airlines.ts`: an
+// authenticated typeahead served from the in-process catalog cache plus a
+// one-row insert. No external call, no unbounded scan.
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);

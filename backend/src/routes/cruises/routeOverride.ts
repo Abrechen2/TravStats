@@ -18,6 +18,15 @@ import logger from '../../utils/logger';
  * `/api/v1/auth`. This is a move, not a rewrite: paths, status codes, check
  * order, transaction boundaries, and logged `operation` fields are all
  * unchanged from before the split.
+ *
+ * No rate limiter, and the reason is worth writing down because both handlers
+ * call `recomputeLegsForCruise` inside a transaction and that runs the marnet
+ * A* for every leg the user has NOT overridden. What keeps it cheap enough to
+ * leave open is the fan-out: one cruise's stops, on a graph built once per
+ * process, from an editor where each request is a deliberate save. Contrast
+ * `POST /cruises/geometry/batch`, which routes up to a hundred cruises in one
+ * request and is limited for exactly that reason. If a bulk override endpoint
+ * ever appears, it belongs on that limiter, not on this reasoning.
  */
 
 type PortRow = Prisma.PortGetPayload<Record<string, never>>;

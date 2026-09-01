@@ -21,6 +21,14 @@ import logger from '../utils/logger';
 
 const router = Router();
 
+// No rate limiter. `/:id/preview` looks like the expensive one — it says
+// "statistics impact" — but it computes that for ONE flight from data already
+// on the pending row, resolving at most four airport codes through the
+// in-process airport cache. Everything else is a single-row read or write
+// scoped by `userId`. The expensive half of this feature is the enrichment
+// that CREATES pending updates, and that runs in a scheduled job and behind
+// `flightLookup.ts`, which is limited because it spends an external API quota.
+
 // All routes require authentication
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but

@@ -9,6 +9,7 @@ import {
   getPlacePhotoDir,
   deletePlacePhotoFile,
 } from "../../middleware/upload";
+import { uploadReceiptLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
@@ -106,8 +107,19 @@ router.get(
   }
 );
 
+/**
+ * Only the upload is rate-limited, on the shared file-upload bucket: it is the
+ * one route here that writes to the data volume, and it takes 20 files of
+ * 15 MB in a single request. The reads and the metadata edits around it are
+ * ordinary per-user CRUD and stay unlimited — a gallery page fetches every
+ * photo it shows through `/file`, so throttling that would punish looking.
+ *
+ * The limiter sits ABOVE multer so a refused request never lands its bytes on
+ * disk and never reaches the orphan-cleanup path below.
+ */
 router.post(
   "/visits/:visitId/photos",
+  uploadReceiptLimiter,
   uploadPlacePhotos.array("photos", 20),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const uploaded: Express.Multer.File[] = (req.files as Express.Multer.File[] | undefined) ?? [];

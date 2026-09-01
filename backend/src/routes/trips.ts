@@ -36,7 +36,7 @@ import {
   summariseTrip,
   checkOllamaAvailable,
 } from "../services/tripSummaryService";
-import { emailParseLimiter } from "../middleware/rateLimit";
+import { emailParseLimiter, uploadReceiptLimiter } from "../middleware/rateLimit";
 import {
   uploadTripPhotos,
   uploadTripCover,
@@ -1131,11 +1131,19 @@ const updatePhotoSchema = z.object({
   sortIdx: z.number().int().min(0).max(10000).optional(),
 });
 
-/** POST /trips/:id/photos — upload one or more images */
+/**
+ * POST /trips/:id/photos — upload one or more images.
+ *
+ * Shares the file-upload bucket with every other route that writes user bytes
+ * to the data volume; 20 files of 15 MB per request is the same disk-exhaustion
+ * shape as the place-visit photo upload, and the two must not disagree about
+ * it. The limiter sits above multer so a refused request writes nothing.
+ */
 router.post(
   "/trips/:id/photos",
   authenticate,
   requireWriteScope,
+  uploadReceiptLimiter,
   uploadTripPhotos.array("photos", 20),
   async (
     req: AuthRequest,

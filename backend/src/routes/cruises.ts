@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
+import { statsLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -224,12 +225,27 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
  *
  * Defined BEFORE the `/:id/geometry` route so Express doesn't try to
  * match `geometry` as the `:id` parameter.
+ *
+ * The two geometry routes are the only rate-limited ones in this router, and
+ * they reuse `statsLimiter` — they are the same thing it already guards: an
+ * expensive READ on the dashboard's render path. One call here fans out to
+ * 100 cruises × their legs, and every cold leg is an A* through the marnet
+ * graph (`computeSchematicRoute`). The LRU cache makes a repeat leg a Map.get,
+ * so the ceiling is only reached by a caller who keeps asking for pairs nobody
+ * has asked for yet. 30/min is one batch per dashboard render with two orders
+ * of magnitude to spare.
+ *
+ * The WRITE routes below deliberately stay unlimited even though they also
+ * route (`recomputeLegsForCruise` → `computeLegDistance`): their fan-out is
+ * one cruise's stops, not a hundred cruises', and the marnet graph is built
+ * once per process. If cruise writes ever gain a bulk endpoint, that changes
+ * and this decision has to be revisited.
  */
 const geometryBatchSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
 });
 
-router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/geometry/batch', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = geometryBatchSchema.safeParse(req.body);
@@ -278,7 +294,8 @@ router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: Nex
   }
 });
 
-router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFunction) => {
+// Same routing cost as the batch route above, one cruise at a time — same bucket.
+router.get('/:id/geometry', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const cruise = await prisma.cruise.findFirst({
