@@ -71,6 +71,7 @@ import curatedListsRouter from './placeLists/curated';
 import lodgingChainsRouter from './lodgingChains';
 import lodgingMembershipsRouter from './lodgingMemberships';
 import lodgingImportRoutes from './lodgingImport';
+import placeImportRoutes from './placeImport';
 import importBatchRoutes from './importBatches';
 import companionRoutes from './companions';
 import openapiRoutes from './openapi';
@@ -185,6 +186,7 @@ export const apiMounts: ApiMount[] = [
   { id: 'lodgingChains', base: '/api/v1/lodging-chains', router: lodgingChainsRouter },
   { id: 'lodgingMemberships', base: '/api/v1/lodging-memberships', router: lodgingMembershipsRouter },
   { id: 'lodgingImport', base: '/api/v1/lodging-import', router: lodgingImportRoutes },
+  { id: 'placeImport', base: '/api/v1/place-import', router: placeImportRoutes },
   { id: 'importBatches', base: '/api/v1/import-batches', router: importBatchRoutes },
   { id: 'companions', base: '/api/v1/companions', router: companionRoutes },
   { id: 'import', base: '/api/v1/import', router: importRoutes },

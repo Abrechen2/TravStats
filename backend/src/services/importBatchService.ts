@@ -11,7 +11,7 @@ import { revertLodgingImportBatch } from "./lodging/lodgingImportBatches";
  * drags along when it goes differs per domain.
  */
 
-export const IMPORT_DOMAINS = ["flight", "cruise", "lodging"] as const;
+export const IMPORT_DOMAINS = ["flight", "cruise", "lodging", "poi"] as const;
 export type ImportDomain = (typeof IMPORT_DOMAINS)[number];
 
 export const IMPORT_SOURCES = ["csv", "email", "pdf"] as const;
@@ -24,9 +24,23 @@ export interface ImportBatchSummary {
   fileName: string | null;
   createdAt: string;
   /** How many rows this batch still owns, per kind. */
-  counts: { lodgings: number; stays: number; flights: number; cruises: number };
+  counts: { lodgings: number; stays: number; flights: number; cruises: number; places: number };
 }
 
+/**
+ * A stored domain string, or the safest wrong answer.
+ *
+ * The fallback is `"lodging"` and it is load-bearing in the wrong direction: an
+ * unknown domain silently became a lodging batch, which then took the lodging
+ * REVERT path. That was harmless only because nothing wrote a domain outside
+ * the list. `"poi"` is the first addition since, so the fallback is now a real
+ * hazard rather than a theoretical one — a POI batch written by a newer build
+ * and read by an older one would be reverted as lodging.
+ *
+ * Kept as a fallback rather than a throw because a listing must not fail over
+ * one unreadable row, but every caller that ACTS on the domain (see
+ * `revertImportBatch`) now refuses an unrecognised one instead of guessing.
+ */
 function asDomain(value: string): ImportDomain {
   return (IMPORT_DOMAINS as readonly string[]).includes(value) ? (value as ImportDomain) : "lodging";
 }
@@ -68,11 +82,14 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
         { stays: { some: {} } },
         { flights: { some: {} } },
         { cruises: { some: {} } },
+        // Without this a POI batch existed and was invisible in the log — the
+        // user could neither see nor undo an import that had happened.
+        { places: { some: {} } },
       ],
     },
     orderBy: { createdAt: "desc" },
     include: {
-      _count: { select: { lodgings: true, stays: true, flights: true, cruises: true } },
+      _count: { select: { lodgings: true, stays: true, flights: true, cruises: true, places: true } },
     },
   });
 
@@ -87,13 +104,14 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
       stays: b._count.stays,
       flights: b._count.flights,
       cruises: b._count.cruises,
+      places: b._count.places,
     },
   }));
 }
 
 /** One row an import brought in, flattened across the domains. */
 export interface ImportBatchItem {
-  kind: "flight" | "cruise" | "lodging" | "stay";
+  kind: "flight" | "cruise" | "lodging" | "stay" | "place";
   id: string;
   /** What to call it on screen: flight number, ship, hotel name. */
   label: string;
@@ -139,7 +157,7 @@ export async function listImportBatchItems(
   });
   if (!batch) throw new AppError("Import batch not found", 404);
 
-  const [flights, cruises, lodgings, stays] = await Promise.all([
+  const [flights, cruises, lodgings, stays, places] = await Promise.all([
     prisma.flight.findMany({
       where: { userId, importBatchId: batchId },
       select: {
@@ -176,19 +194,28 @@ export async function listImportBatchItems(
       orderBy: { checkIn: "asc" },
       take: ITEM_CAP,
     }),
+    prisma.place.findMany({
+      where: { userId, batchId },
+      select: { id: true, name: true, city: true, country: true },
+      orderBy: { name: "asc" },
+      take: ITEM_CAP,
+    }),
   ]);
 
   const counts = await prisma.importBatch.findFirst({
     where: { id: batchId, userId },
     select: {
-      _count: { select: { flights: true, cruises: true, lodgings: true, stays: true } },
+      _count: {
+        select: { flights: true, cruises: true, lodgings: true, stays: true, places: true },
+      },
     },
   });
   const total =
     (counts?._count.flights ?? 0) +
     (counts?._count.cruises ?? 0) +
     (counts?._count.lodgings ?? 0) +
-    (counts?._count.stays ?? 0);
+    (counts?._count.stays ?? 0) +
+    (counts?._count.places ?? 0);
 
   const items: ImportBatchItem[] = [
     ...flights.map((f) => ({
@@ -218,6 +245,16 @@ export async function listImportBatchItems(
       label: s.lodging?.name ?? "—",
       date: s.checkIn ? s.checkIn.toISOString() : null,
       detail: s.lodging?.city ?? null,
+    })),
+    ...places.map((p) => ({
+      kind: "place" as const,
+      id: p.id,
+      label: p.name,
+      // A place carries no date of its own — a VISIT does. Showing nothing is
+      // honest; showing the row's creation date would read as "when I was
+      // there", which is a different fact.
+      date: null,
+      detail: [p.city, p.country].filter(Boolean).join(", ") || null,
     })),
   ];
 
@@ -252,7 +289,35 @@ export async function revertImportBatch(userId: string, batchId: string): Promis
   });
   if (!batch) throw new AppError("Import batch not found", 404);
 
-  const domain = asDomain(batch.domain);
+  // Deliberately NOT `asDomain` here. That falls back to "lodging" for anything
+  // it does not recognise, which is tolerable when listing and dangerous when
+  // deleting: a batch written by a newer build would be reverted down the wrong
+  // path. Undo is the one operation that must refuse rather than guess.
+  if (!(IMPORT_DOMAINS as readonly string[]).includes(batch.domain)) {
+    throw new AppError(`Cannot revert an import of unknown kind "${batch.domain}"`, 409);
+  }
+  const domain = batch.domain as ImportDomain;
+
+  if (domain === "poi") {
+    /**
+     * Places are deleted, and the batch with them.
+     *
+     * Without this branch a POI batch fell through to the cruise arm below and
+     * did something much worse than nothing: it deleted zero places, deleted
+     * the batch, and `Place.batch` being `onDelete: SetNull` then cleared every
+     * `batchId` — so the undo appeared to work, changed nothing the user could
+     * see, and destroyed the only link that would have let them try again.
+     *
+     * Note the column: `Place` names it `batchId`, while flights and cruises
+     * use `importBatchId`. Reusing the `where` below would have matched nothing
+     * and looked like an empty batch.
+     */
+    return await prisma.$transaction(async (tx) => {
+      const deleted = (await tx.place.deleteMany({ where: { userId, batchId } })).count;
+      await tx.importBatch.delete({ where: { id: batchId } });
+      return { domain, deleted };
+    });
+  }
 
   if (domain === "lodging") {
     const result = await revertLodgingImportBatch(userId, batchId);
