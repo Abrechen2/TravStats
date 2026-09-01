@@ -11,7 +11,7 @@
 
 import { z } from 'zod';
 
-import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
+import { REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
 
 export const parseEmailSchema = z.object({
   emailContent: z.string().min(1, 'Email content is required').refine(
@@ -22,7 +22,11 @@ export const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
+  /**
+   * `auto` asks the server to decide what the document is (#57). The default
+   * stays `flight`, so no existing caller changes behaviour by upgrading.
+   */
+  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('flight'),
   /**
    * When the email was SENT — normally straight from its own Date: header.
    *

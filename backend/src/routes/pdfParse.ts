@@ -4,13 +4,8 @@ import { pdfParseLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
-import { parseBookingText } from '../services/bookingParser';
-import { parseCruiseBookingText } from '../services/cruiseBookingParser';
-import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
-import { parseLodgingBookingText } from '../services/lodging/lodgingBookingParser';
-import { bookingsToCandidates } from '../services/lodging/lodgingCandidates';
+import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
 import { FILE_LIMITS } from '../config/constants';
-import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 import { describeParserError } from '../utils/parserErrors';
 
 const router = Router();
@@ -20,29 +15,30 @@ const parsePdfSchema = z.object({
     .string()
     .min(1, 'PDF data is required')
     .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large'), // base64 overhead ~1.37x, use 2x for safety
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
+  // 'auto' asks the server to decide what the document is — see Forgejo #57.
+  // The default stays 'flight' so no existing caller changes behaviour.
+  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('flight'),
 });
 
 /**
  * POST /api/v1/parse-pdf
- * Parse a PDF file (booking confirmation or boarding pass) and extract flight data.
+ * Parse a PDF booking confirmation or boarding pass.
  *
  * Body:
  * - pdfBase64: string (required) — Base64-encoded PDF file content
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
  *
- * Returns:
- * - flights: ParsedBooking[]
- * - provider: string
- * - pdfTextLength: number
- * - bcbpDetected: boolean
+ * Returns the domain-shaped body plus `pdfTextLength`. When `domain: 'auto'`
+ * was asked for, the answer additionally carries `domainSource: 'detected'` and
+ * a `detection` block naming the runners-up, so a client that disagrees can
+ * re-ask explicitly instead of sending the document three times.
  */
 router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parsePdfSchema.parse(req.body);
-    const { pdfBase64 } = parsed;
     const userId = req.userId;
 
-    const buffer = Buffer.from(pdfBase64, 'base64');
+    const buffer = Buffer.from(parsed.pdfBase64, 'base64');
 
     let pdfText: string;
     try {
@@ -59,7 +55,7 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       return res.status(422).json({
         error: 'Empty PDF',
         message:
-          'No text could be extracted from this PDF. It may be a scanned image — use the Boarding Pass Scanner instead.',
+          'No text could be extracted from this PDF. It may be a scanned image — send the page to /parse-image, which reads any travel document, or use the Boarding Pass Scanner.',
       });
     }
 
@@ -68,42 +64,30 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       '[PDF Parse] Text extracted, parsing...',
     );
 
-    if (parsed.domain === 'cruise') {
-      const cruiseResult = await parseCruiseBookingText(pdfText);
-      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-      const cruises = await hydrateResolvedCruises(resolved, userId);
-      return res.json({
-        cruises,
-        parserUsed: cruiseResult.parserUsed,
-        ollamaAvailable: cruiseResult.ollamaAvailable,
-        pdfTextLength: pdfText.length,
-        domain: 'cruise',
-      });
-    }
+    const outcome = await parseDocument({
+      text: pdfText,
+      domain: parsed.domain,
+      source: 'document',
+      userId,
+    });
 
-    if (parsed.domain === 'lodging') {
-      const lodgingResult = await parseLodgingBookingText(pdfText);
-      logger.info(
-        { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
-        '[PDF Parse] Lodging parsing complete',
-      );
-      return res.json({
-        domain: 'lodging',
-        candidates: bookingsToCandidates(lodgingResult.bookings),
-        parserUsed: lodgingResult.parserUsed,
-        ollamaAvailable: lodgingResult.ollamaAvailable,
-        fallbackReason: lodgingResult.fallbackReason,
-        pdfTextLength: pdfText.length,
-      });
-    }
-
-    const bcbpDetected = isBcbpText(pdfText);
-    const result = await parseBookingText(pdfText, userId);
+    logger.info(
+      { userId, domain: outcome.domain, domainSource: outcome.domainSource },
+      '[PDF Parse] Parsing complete',
+    );
 
     res.json({
-      ...result,
+      ...outcome.body,
+      // Only for a flight: it describes a barcode, and a cruise or hotel
+      // confirmation never carries one. Reporting `false` on those would
+      // suggest the question had been asked of them.
+      ...(outcome.domain === 'flight' ? { bcbpDetected: isBcbpText(pdfText) } : {}),
       pdfTextLength: pdfText.length,
-      bcbpDetected,
+      // Present only when the server decided, so an explicit request keeps
+      // exactly the response shape it had before.
+      ...(outcome.domainSource === 'detected'
+        ? { domainSource: outcome.domainSource, detection: outcome.detection }
+        : {}),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -25,6 +25,36 @@ const parsedFlightSchema = registry.register(
     .openapi("ParsedFlight")
 );
 
+/**
+ * The evidence behind an automatic domain decision. Shared by every route that
+ * accepts `domain: "auto"`, because a client should learn to read it once.
+ */
+const domainDetectionSchema = registry.register(
+  "DomainDetection",
+  z
+    .object({
+      domain: z.enum(["flight", "cruise", "lodging"]),
+      confidence: z.number().min(0).max(1),
+      candidates: z.array(
+        z.object({
+          domain: z.enum(["flight", "cruise", "lodging"]),
+          score: z.number(),
+          confidence: z.number(),
+          matched: z.array(z.string()).describe("Signal ids that fired, e.g. \"checkin-checkout\""),
+        })
+      ),
+    })
+    .openapi("DomainDetection")
+);
+
+const requestableDomain = z
+  .enum(["flight", "cruise", "lodging", "auto"])
+  .describe(
+    "'auto' lets the server decide what the document is and report the evidence. " +
+      "Text routes default to 'flight' for backwards compatibility; /parse-image " +
+      "defaults to 'auto', because a photograph has no caller history to preserve."
+  );
+
 registry.registerPath({
   method: "post",
   path: "/parse-email",
@@ -65,6 +95,60 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     429: { description: "Rate-limited (parser is expensive)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/parse-image",
+  summary: "Read any travel document from a photograph",
+  description:
+    "OCRs a photographed booking confirmation and parses it as a flight, a " +
+    "cruise or a hotel stay. Until this existed an image could only ever become " +
+    "a flight: the boarding-pass routes are flight-only, and /parse-pdf handles " +
+    "all three domains but needs text and refuses a scan — so a photographed " +
+    "hotel bill had no way in. This is only the missing step in front of the " +
+    "existing parsers, pixels to text; the parsing itself is the same dispatcher " +
+    "/parse-pdf and /parse-email use. " +
+    "Accepts JPEG, PNG, GIF or WebP up to 10 MB decoded. `ocrConfidence` is " +
+    "reported but never used as a gate — it describes the glyphs, not whether " +
+    "the document parsed. The result is NOT auto-saved.",
+  tags: ["Parsers"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              imageBase64: z.string().min(1).max(20 * 1024 * 1024),
+              domain: requestableDomain.default("auto").optional(),
+            })
+            .openapi("ParseImageRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The domain-shaped parse result, plus OCR metadata",
+      content: {
+        "application/json": {
+          schema: z.object({
+            domain: z.enum(["flight", "cruise", "lodging"]),
+            ocrConfidence: z.number(),
+            ocrTextLength: z.number(),
+            domainSource: z
+              .enum(["requested", "detected"])
+              .optional()
+              .describe("Present only when the server decided the domain"),
+            detection: domainDetectionSchema.optional(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed or unsupported image", content: errorContent },
+    422: { description: "Almost no text could be read from the image", content: errorContent },
+    429: { description: "Rate-limited (OCR is expensive)", content: errorContent },
   },
 });
 
