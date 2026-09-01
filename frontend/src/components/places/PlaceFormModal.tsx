@@ -51,10 +51,19 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   const [country, setCountry] = useState(place?.country ?? "");
   const [notes, setNotes] = useState(place?.notes ?? "");
   const [visited, setVisited] = useState(place?.visited ?? false);
-  // Provenance, never user-editable: it is the dedup key the server matches
-  // on, so letting it be typed would let a user collide with their own row.
-  // Carried through unchanged on edit.
-  const externalRef = place?.externalRef ?? "";
+  /**
+   * Provenance, never user-editable: it is the dedup key the server matches on,
+   * so letting it be typed would let a user collide with their own row. It is
+   * state rather than a constant because the picker now MINTS it — see
+   * `handleLocationChange`.
+   *
+   * Until then nothing wrote it on create, so every hand-added place was stored
+   * with `externalRef: null` and the `@@unique([userId, externalRef])` index on
+   * `Place` could never fire. Add the Colosseum by hand, import it later from
+   * Google Takeout, and you own two Colosseums — the precondition named in
+   * `docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md` §3.1.
+   */
+  const [externalRef, setExternalRef] = useState(place?.externalRef ?? "");
   const [saving, setSaving] = useState(false);
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
   // record saved without them. LocationInput now says so; this stops the
@@ -104,6 +113,13 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   const handleLocationChange = useCallback((sel: LocationSelection): void => {
     setLat(sel.lat);
     setLon(sel.lon);
+    // Unlike the name and address below, the identity is NOT kept when the user
+    // picks again. Those are text they may have rewritten by hand, so a second
+    // hit must not overwrite them; this is a machine key that belongs to the
+    // coordinates. Picking a different place makes it a different place — and a
+    // hand-typed coordinate carries no identity, so it clears the field rather
+    // than leaving the previous hit's ref attached to a point it never named.
+    setExternalRef(sel.externalRef ?? "");
     setName((prev) => (prev.trim() === "" && sel.name ? sel.name : prev));
     setAddress((prev) => (prev.trim() === "" && sel.address ? sel.address : prev));
     setCity((prev) => (prev.trim() === "" && sel.city ? sel.city : prev));
