@@ -31,6 +31,8 @@ import {
 } from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
 import { buildPassport } from '../services/stats/passport';
+import { buildCountryDetail } from '../services/stats/countryDetail';
+import { buildWrapped } from '../services/stats/wrapped';
 import { buildTravelRecords } from '../services/stats/records';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
 import {
@@ -70,6 +72,22 @@ const SummaryQuerySchema = z.object({
   toDate: z.string().optional(),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
   compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
+});
+
+/**
+ * The country a detail page is asked for. Accepts an ISO alpha-2 code or an
+ * English country name — `isoCountryCode` resolves both, and rejecting a name
+ * here would make the endpoint stricter than the catalogue that feeds it. The
+ * bound is the longest country name the table carries, with room to spare.
+ */
+const CountryCodeParamSchema = z.object({
+  code: z.string().trim().min(2).max(64),
+});
+
+// Wrapped — a year in review. Omitting `year` asks for the latest year that
+// has anything in it; see services/stats/wrapped.ts rule 1.
+const WrappedQuerySchema = z.object({
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
 });
 
 // Timeseries endpoint — bucketed series + current/previous window totals
@@ -1182,15 +1200,158 @@ router.get(
   },
 );
 
+/**
+ * The airport codes a passport-shaped flight row touches, deduplicated.
+ *
+ * IATA only, deliberately: `buildPassport` keys its airports by that code and
+ * an ICAO fallback would file the same airport twice under two names.
+ */
+function passportAirportCodes(
+  flights: readonly { depIata: string | null; arrIata: string | null }[],
+): string[] {
+  return [
+    ...new Set(
+      flights.flatMap((f) => [f.depIata, f.arrIata]).filter((c): c is string => Boolean(c)),
+    ),
+  ];
+}
+
+/** Country per airport code, as the catalogue holds it. */
+async function loadAirportCountries(codes: string[]): Promise<Map<string, string | null>> {
+  // One catalogue lookup for every end of every flight. A failure here costs
+  // the countries, so it is reported rather than swallowed into an empty
+  // passport that looks like someone who has never flown.
+  const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
+  return new Map<string, string | null>(
+    [...airports.entries()].map(([code, data]) => [code, data?.country ?? null]),
+  );
+}
+
+/** The user's home airport codes, newest history first. */
+async function loadHomeIatas(userId: string): Promise<string[]> {
+  const homeSettings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { data: true },
+  });
+  const historyData =
+    homeSettings?.data && typeof homeSettings.data === 'object'
+      ? (homeSettings.data as SettingsDataJson).homeAirportHistory
+      : undefined;
+  return normalizeHistory(historyData).map((entry) => entry.iata);
+}
+
+/**
+ * Build the whole passport for a user.
+ *
+ * Extracted so `/stats/wrapped` can take its "new countries this year" from
+ * the same object `/stats/passport` publishes. Deriving that number a second
+ * time from the flight list would make the story disagree with the passport on
+ * an account with a cruise — which is precisely the drift #42 is about.
+ */
+async function loadPassport(userId: string): Promise<ReturnType<typeof buildPassport>> {
+  const flights = await prisma.flight.findMany({
+    where: { userId, status: { in: ['flown', 'historical'] } },
+    select: {
+      depIata: true,
+      depLat: true,
+      depLon: true,
+      arrIata: true,
+      arrLat: true,
+      arrLon: true,
+      departureTime: true,
+      status: true,
+    },
+  });
+
+  /**
+   * Evidence beyond landings — Forgejo #42, owner's decision 2026-08-31.
+   *
+   * A cruise that CALLED at a port and a place the user recorded visiting
+   * both prove presence. Only sailed cruises count, the same cut rule 1
+   * makes for flights, and a place joins on its resolved `isoCountryCode`
+   * because "Deutschland" and "Germany" are one country and only the code
+   * knows that.
+   *
+   * Fetched here rather than inside the service so the derivation stays a
+   * pure function of its inputs and keeps its unit tests.
+   */
+  const [airportCountries, portCalls, placeVisits, homeIatas] = await Promise.all([
+    loadAirportCountries(passportAirportCodes(flights)),
+    prisma.cruiseStop.findMany({
+      where: {
+        cruise: { userId, status: { in: ['flown', 'historical'] } },
+        port: { isNot: null },
+      },
+      select: { arrivalTime: true, date: true, port: { select: { country: true } } },
+    }),
+    prisma.place.findMany({
+      where: { userId, visited: true, isoCountryCode: { not: null } },
+      select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+    }),
+    loadHomeIatas(userId),
+  ]);
+
+  return buildPassport(
+    flights,
+    airportCountries,
+    homeIatas,
+    new Date(),
+    portCalls.map((stop) => ({
+      country: stop.port?.country ?? null,
+      at: stop.arrivalTime ?? stop.date,
+    })),
+    // A place's visits, flattened: each dated visit is its own evidence,
+    // and a place with none still proves the country through `visited`.
+    placeVisits.flatMap((place) =>
+      place.visits.length > 0
+        ? place.visits.map((v) => ({
+            isoCountryCode: place.isoCountryCode,
+            at: v.visitedAt,
+          }))
+        : [{ isoCountryCode: place.isoCountryCode, at: null }],
+    ),
+  );
+}
+
 router.get(
   '/passport',
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      res.json(await loadPassport(req.userId!));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /stats/countries/:code — one country, in detail (Forgejo #42).
+ *
+ * The drill-down behind a passport row. It answers for a country reached only
+ * by cruise or by a recorded place too, because the passport lists those rows
+ * and a 404 there would put the list and the page into the disagreement #42 is
+ * about. The rules are in services/stats/countryDetail.ts.
+ *
+ * Bare object rather than a `{ success, data }` envelope: it sits beside
+ * `/stats/countries` and `/stats/passport`, and a client that walks from a row
+ * to its page should not have to unwrap a second shape halfway.
+ */
+router.get(
+  '/countries/:code',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
       const userId = req.userId!;
+      const parsed = CountryCodeParamSchema.safeParse(req.params);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid country', details: parsed.error.errors });
+        return;
+      }
 
       const flights = await prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         select: {
+          id: true,
+          flightNumber: true,
           depIata: true,
           depLat: true,
           depLon: true,
@@ -1202,78 +1363,145 @@ router.get(
         },
       });
 
-      const codes = [
-        ...new Set(
-          flights.flatMap((f) => [f.depIata, f.arrIata]).filter((c): c is string => Boolean(c)),
-        ),
-      ];
-
-      // One catalogue lookup for every end of every flight. A failure here
-      // costs the countries, so it is reported rather than swallowed into an
-      // empty passport that looks like someone who has never flown.
-      const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
-
-      /**
-       * Evidence beyond landings — Forgejo #42, owner's decision 2026-08-31.
-       *
-       * A cruise that CALLED at a port and a place the user recorded visiting
-       * both prove presence. Only sailed cruises count, the same cut rule 1
-       * makes for flights, and a place joins on its resolved `isoCountryCode`
-       * because "Deutschland" and "Germany" are one country and only the code
-       * knows that.
-       *
-       * Fetched here rather than inside the service so the derivation stays a
-       * pure function of its inputs and keeps its unit tests.
-       */
-      const [portCalls, placeVisits] = await Promise.all([
+      // The same three sources the passport counts, so the row and the page
+      // can only ever agree.
+      const [airportCountries, portCalls, places, homeIatas] = await Promise.all([
+        loadAirportCountries(passportAirportCodes(flights)),
         prisma.cruiseStop.findMany({
           where: {
             cruise: { userId, status: { in: ['flown', 'historical'] } },
             port: { isNot: null },
           },
-          select: { arrivalTime: true, date: true, port: { select: { country: true } } },
+          select: {
+            cruiseId: true,
+            arrivalTime: true,
+            date: true,
+            port: { select: { name: true, country: true } },
+          },
         }),
         prisma.place.findMany({
           where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+          select: {
+            id: true,
+            name: true,
+            isoCountryCode: true,
+            visits: { select: { visitedAt: true } },
+          },
         }),
+        loadHomeIatas(userId),
       ]);
-      const airportCountries = new Map<string, string | null>(
-        [...airports.entries()].map(([code, data]) => [code, data?.country ?? null]),
-      );
 
-      const homeSettings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: { data: true },
-      });
-      const historyData =
-        homeSettings?.data && typeof homeSettings.data === 'object'
-          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-          : undefined;
-      const homeIatas = normalizeHistory(historyData).map((entry) => entry.iata);
-
-      res.json(
-        buildPassport(
-          flights,
-          airportCountries,
-          homeIatas,
-          new Date(),
-          portCalls.map((stop) => ({
-            country: stop.port?.country ?? null,
-            at: stop.arrivalTime ?? stop.date,
-          })),
-          // A place's visits, flattened: each dated visit is its own evidence,
-          // and a place with none still proves the country through `visited`.
-          placeVisits.flatMap((place) =>
-            place.visits.length > 0
-              ? place.visits.map((v) => ({
+      const detail = buildCountryDetail(
+        parsed.data.code,
+        flights,
+        airportCountries,
+        homeIatas,
+        portCalls.map((stop) => ({
+          cruiseId: stop.cruiseId,
+          portName: stop.port?.name ?? null,
+          country: stop.port?.country ?? null,
+          at: stop.arrivalTime ?? stop.date,
+        })),
+        places.flatMap((place) =>
+          place.visits.length > 0
+            ? place.visits.map((v) => ({
+                placeId: place.id,
+                name: place.name,
+                isoCountryCode: place.isoCountryCode,
+                at: v.visitedAt,
+              }))
+            : [
+                {
+                  placeId: place.id,
+                  name: place.name,
                   isoCountryCode: place.isoCountryCode,
-                  at: v.visitedAt,
-                }))
-              : [{ isoCountryCode: place.isoCountryCode, at: null }],
-          ),
+                  at: null,
+                },
+              ],
         ),
       );
+
+      if (!detail) {
+        // Nothing evidences this country — including a code the catalogue does
+        // not know. Both are "you have not been there", and saying so is
+        // better than an empty page that looks like a loading failure.
+        res.status(404).json({ error: 'No record of this country' });
+        return;
+      }
+
+      res.json(detail);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /stats/wrapped?year= — the year in review (Forgejo #42, the last piece).
+ *
+ * Without `year` the story is about the latest year that has anything in it,
+ * read off the data and never off the wall clock, so the same account tells the
+ * same story on New Year's Eve and the morning after. The rules — and the two
+ * deliberate departures from the Companion's version this is ported from — are
+ * in services/stats/wrapped.ts.
+ */
+router.get(
+  '/wrapped',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const parsed = WrappedQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        return;
+      }
+
+      const [flights, cruises, passport] = await Promise.all([
+        prisma.flight.findMany({
+          where: { userId, status: { in: ['flown', 'historical'] } },
+          select: {
+            depIata: true,
+            depLat: true,
+            depLon: true,
+            arrIata: true,
+            arrLat: true,
+            arrLon: true,
+            departureTime: true,
+            airline: true,
+            flightNumber: true,
+            status: true,
+          },
+        }),
+        prisma.cruise.findMany({
+          where: { userId, status: { in: ['flown', 'historical'] } },
+          select: { startDate: true, status: true },
+        }),
+        // For `newCountries` only — the passport already decides what counts as
+        // a country and when it was first reached.
+        loadPassport(userId),
+      ]);
+
+      const wrapped = buildWrapped(
+        // Great-circle from the coordinates, the same measure
+        // `/stats/timeseries` buckets — so the year's distance agrees with the
+        // year's bar on the trend chart.
+        flights.map((f) => ({
+          ...f,
+          distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
+        })),
+        cruises,
+        passport.countries,
+        parsed.data.year ?? null,
+      );
+
+      if (!wrapped) {
+        // No countable activity in any year. There is no story, and a grid of
+        // zeros would pretend there is one.
+        res.status(404).json({ error: 'Nothing to look back on yet' });
+        return;
+      }
+
+      res.json(wrapped);
     } catch (error) {
       next(error);
     }

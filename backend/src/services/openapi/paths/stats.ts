@@ -129,6 +129,59 @@ readOnlyStat(
     "several competing counts of the world's countries, none of which is a fact."
 );
 
+readOnlyStat(
+  "/stats/records",
+  "The seven travel records",
+  "Longest and shortest flight, busiest day, longest aloft, biggest delay, " +
+    "northernmost airport and longest streak. Numbers, not sentences: each record " +
+    "carries a value, a unit and the raw parts of its detail, because a formatted " +
+    '"12.345 km" would fix the decimal separator and the unit for every client. A ' +
+    "record that cannot be derived is OMITTED rather than zeroed — a shortest " +
+    "flight of 0 km would win forever, and a missing delay means \"not recorded\", " +
+    "which is a different fact from \"on time\"."
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/countries/{code}",
+  summary: "One country, in detail",
+  description:
+    "The drill-down behind a passport row: the airports used there, the years, " +
+    "and a timeline of what happened. Accepts an ISO alpha-2 code or an English " +
+    "country name. It answers for a country reached only by cruise or by a " +
+    "recorded place too — the passport lists those rows, so refusing them here " +
+    "would put the list and the page into disagreement; such a country carries no " +
+    "entries and no airports and says so through `evidence`. No country name and " +
+    "no composed prose: the client names the code in the reader's language.",
+  tags: statsTag,
+  request: { params: z.object({ code: z.string() }) },
+  responses: {
+    200: { description: "Country detail" },
+    404: { description: "Nothing evidences that country" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/wrapped",
+  summary: "The year in review",
+  description:
+    "Without `year`, the story is about the latest year that has anything in it — " +
+    "read off the data and never off the wall clock, so the same account tells the " +
+    "same story on New Year's Eve and the morning after. `availableYears` lists " +
+    "what can be asked for. `rank` is exact: 'second' only when exactly one year " +
+    "had more flights, 'top' only when none did. A favourite the year cannot " +
+    "support is null rather than zero, so the story skips that page instead of " +
+    "drawing an empty one. The top route is the PAIR, not the direction, matching " +
+    "/stats/routes; `newCountries` counts evidence, matching /stats/passport.",
+  tags: statsTag,
+  request: { query: z.object({ year: z.coerce.number().int().optional() }) },
+  responses: {
+    200: { description: "The year in review" },
+    404: { description: "No countable activity in any year" },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/stats/aircraft/{registration}",
