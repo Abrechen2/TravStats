@@ -5,6 +5,11 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 
+// No rate limiter: both routes are search-as-you-type and both are capped at
+// SUGGESTION_CAP rows from local tables, with no external call anywhere. The
+// geocoding typeaheads (`/geo/search`, `/ports/geocode`) ARE limited, and the
+// difference is exactly that they spend someone else's quota per keystroke
+// while these spend an indexed query.
 const router = Router();
 
 router.use(authenticate);

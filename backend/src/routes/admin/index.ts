@@ -16,6 +16,14 @@ import usageStatsRouter from './usageStats';
 
 const router = Router();
 
+// No blanket rate limiter on the admin surface: every route below is behind
+// `requireAdmin`, and an admin who wanted to hammer their own instance could
+// do it from a psql prompt — throttling them protects nothing that isn't
+// already theirs. What DOES get a limiter is the handful of admin routes whose
+// cost is out of proportion to the click: the whole-database export and the
+// parse-log export (`adminExportLimiter`), and the catalog reseeds and logo
+// re-sync (`adminReseedLimiter`), all in `system.ts` / `parseLogs.ts`.
+//
 // Apply auth middleware to ALL admin routes.
 // requireAdmin already blocks any PAT whose scope !== 'admin', so the
 // 'read'-scoped lockout below is currently redundant — but adding it

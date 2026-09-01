@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 
 const router = Router();
@@ -81,8 +82,26 @@ router.get(
   },
 );
 
+/**
+ * The scan is the expensive one and the only route here that is limited.
+ *
+ * A single call reads the user's whole Immich library across a ten-year
+ * default window, clusters it, and reverse-geocodes every surviving cluster
+ * against Nominatim — whose usage policy is what gets an instance's IP banned.
+ * `MAX_LOOKUPS` in the scan service caps that at 40 lookups, and since
+ * Nominatim is throttled to 1 req/s upstream, 40 seconds is the scan's FLOOR,
+ * not its worst case. The cost is set by the size of someone else's photo
+ * library and by a third party's tolerance, neither of which this process
+ * controls, so the one thing it can bound is how often the request is allowed
+ * to start. It shares `immichImportLimiter` with the album import for that
+ * reason.
+ *
+ * The list and the accept/dismiss patch are single indexed statements against
+ * the caller's own rows and stay unlimited.
+ */
 router.post(
   "/scan",
+  immichImportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const parsed = scanBodySchema.safeParse(req.body ?? {});

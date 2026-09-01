@@ -16,6 +16,12 @@ import {
   placeQuerySchema,
 } from "../schemas/place";
 
+// No rate limiter: per-user CRUD over the caller's own places and visits, every
+// handler scoped by `userId` and bounded by their own row count. The expensive
+// neighbours are limited where they live — the geocoder behind the place picker
+// in `geo.ts`, the visit-photo upload in `places/visitPhotos.ts`, and the
+// checklist suggestion sweep in `placeLists/curated.ts`. This router only
+// stores what those produced.
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but

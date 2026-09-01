@@ -19,6 +19,12 @@ import { classifyStay } from "../shared/lodgingCounting";
 // to everyone, unlike every other resource in the lodging domain, which is
 // strictly per-user (see routes/lodging.ts, routes/lodgingMemberships.ts).
 
+// No rate limiter. `GET /:id` is the heaviest thing here and it still only
+// aggregates the CALLER's own lodgings for one chain — their row count is the
+// ceiling. `POST /` writes a globally-visible row, which is the unusual part of
+// this file, but it is two indexed statements and is idempotent by name, so
+// repeating it produces the same single row rather than accumulating work.
+// Neither touches an external service.
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but

@@ -9,6 +9,12 @@ import {
 } from "../services/airlineCatalogCache";
 import logger from "../utils/logger";
 
+// No rate limiter: an authenticated typeahead over an in-process catalog cache
+// (`airlineCatalogCache`) plus a one-row insert — the search does not even
+// reach Postgres on a warm cache. The public `/airports/search` is limited
+// because it is unauthenticated by design; this one is not. The airline LOGO
+// proxy, which does have an upstream budget to burn, is limited separately in
+// `airlineLogos.ts`.
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);

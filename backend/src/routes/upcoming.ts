@@ -4,6 +4,12 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { getCachedAirports } from '../services/airportCache';
 import type { DomainKey } from '../shared/domains';
 
+// No rate limiter, and deliberately so — for the same reason `stats.ts` has
+// none, arrived at from the other side. This route exists BECAUSE the tab strip
+// would otherwise make one call per domain; it is the consolidation. Its whole
+// cost is four `findFirst`s with `take: 1` on indexed date columns, and it is
+// on the render path of the dashboard the user opens first, so a per-user cap
+// would fire on ordinary navigation and buy nothing.
 const router = Router();
 router.use(authenticate);
 

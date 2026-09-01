@@ -134,14 +134,30 @@ export const fxPreviewLimiter = rateLimit({
 });
 
 /**
- * Per-user/IP limit for the lodging import endpoints (preview/commit/list/
- * revert/suggest-mapping). `/suggest-mapping` calls an LLM; `/preview` and
- * `/commit` do real DB scans (up to `MAX_LODGING_IMPORT_ROWS` rows); `/commit`
- * also kicks off a background Nominatim geocode backfill — whose usage policy
- * would get the instance's IP banned if abused. Mirrors `fxPreviewLimiter` /
- * `portGeocodeLimiter`'s shape (per-caller keying + PAT-aware multiplier),
- * with a 15-minute window since a real import run is a batch operation, not a
- * typeahead.
+ * Per-caller limit for BULK IMPORT endpoints. Named for its first consumer,
+ * but it is the shared bucket for every import surface — `lodgingImport.ts`,
+ * `importBatches.ts` and `import.ts` (the flight CSV routes) all mount it —
+ * because they cost the same kind of thing: one request chews through up to a
+ * thousand rows instead of touching one.
+ *
+ * What each consumer spends it on: `/lodging-import/suggest-mapping` calls an
+ * LLM; `/lodging-import/preview` and `/commit` do real DB scans (up to
+ * `MAX_LODGING_IMPORT_ROWS` rows) and `/commit` kicks off a background
+ * Nominatim geocode backfill — whose usage policy would get the instance's IP
+ * banned if abused; `/import/parse` lexes a 2 MiB CSV blob; `/import/preview`
+ * enriches up to `MAX_PREVIEW_ROWS` (1000) rows with airport and timezone
+ * lookups apiece.
+ *
+ * Mirrors `fxPreviewLimiter` / `portGeocodeLimiter`'s shape (per-caller keying
+ * + PAT-aware multiplier), with a 15-minute window since a real import run is
+ * a batch operation, not a typeahead. 60 covers the click-heavy loop a real
+ * import is (parse → preview → adjust the mapping → preview again → commit)
+ * several times over; a PAT-driven agent gets 600.
+ *
+ * MOUNT IT AFTER `authenticate`. `userOrIpKey` reads `req.userId`, so a
+ * limiter placed above the auth middleware silently degrades to per-IP —
+ * which on a LAN deployment behind a reverse proxy is one bucket for the
+ * whole household.
  */
 export const lodgingImportLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -301,10 +317,17 @@ export const adminExportLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for admin airport reseed endpoint. Reseeding upserts ~18k
- * rows from OurAirports — without a cap a malicious admin PAT could DoS
- * Postgres by spamming reseeds across process restarts. 3/h is generous
- * for legitimate operational use (initial seed, after fixing a bad CSV).
+ * Rate limiter for CATALOG RESEED / RESYNC endpoints — the rare operational
+ * refreshes of instance-global data from an external source. Reseeding upserts
+ * ~18k rows from OurAirports; the airline-logo re-sync and the parser-template
+ * sync (`templateStatus.ts`) each fan out to a third-party host. Without a cap
+ * a malicious admin PAT could DoS Postgres by spamming reseeds across process
+ * restarts, and any authenticated user could burn the instance's GitHub raw
+ * quota. 3/h is generous for legitimate operational use (initial seed, after
+ * fixing a bad CSV, pulling a just-published template).
+ *
+ * Named `admin` for its first consumers; the template sync is not
+ * admin-gated, which is a separate question from how often it may run.
  */
 export const adminReseedLimiter = rateLimit({
   windowMs: RATE_LIMITS.ADMIN_RESEED_WINDOW_MS,
@@ -342,9 +365,20 @@ export const batchCreationLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for receipt file uploads
- * Prevents disk exhaustion through repeated uploads
- * Allows 30 uploads per hour per IP
+ * Rate limiter for user-supplied FILE uploads. Named for its first consumer
+ * (receipts), but it is the shared bucket for every multipart route that
+ * writes bytes to the data volume: receipts (`uploads.ts`), parser training
+ * samples (`training.ts`, 20 MB each and base64'd into a jsonb column), trip
+ * photos and place-visit photos (`trips.ts`, `places/visitPhotos.ts`, 15 MB ×
+ * 20 per request). One bucket is right here — they all exhaust the SAME disk,
+ * so a per-surface budget would just be three ways to fill it.
+ *
+ * 30 requests/hour, not 30 files: a photo route accepts 20 files per request,
+ * so this still allows ~600 photos an hour — generous for a real gallery
+ * upload, bounded for a script.
+ *
+ * Mount it BEFORE the multer middleware on each route, or a 429'd request
+ * still writes its bytes to disk first, which defeats the point.
  */
 export const uploadReceiptLimiter = rateLimit({
   windowMs: RATE_LIMITS.UPLOAD_RECEIPT_WINDOW_MS,
@@ -352,6 +386,10 @@ export const uploadReceiptLimiter = rateLimit({
   message: 'Too many file uploads, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  // Per-user, like every other limiter in this file. It was per-IP until the
+  // upload surfaces above started sharing it: on a LAN deployment behind a
+  // reverse proxy that is one 30/h bucket for every user in the house.
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -441,8 +479,17 @@ export const immichProxyLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for Immich album import (rare, heavy — downloads every asset
- * in an album to local storage). Consumed by a later task's import route.
+ * Rate limiter for the rare-and-heavy Immich operations: album import
+ * (downloads every asset in an album to local storage) and the photo-journey
+ * scan (`photoJourneys.ts`), which walks the user's whole library over a
+ * ten-year default window and then reverse-geocodes every surviving cluster
+ * against Nominatim — the same upstream whose usage policy gets an instance's
+ * IP banned, which is why `portGeocodeLimiter` exists.
+ *
+ * One bucket for both is deliberate: they are the two ways a single request
+ * turns into an unbounded amount of work against someone else's server, and a
+ * user has no reason to run them concurrently. 20 per 15 minutes is far more
+ * than the handful of deliberate clicks either is worth.
  */
 export const immichImportLimiter = rateLimit({
   windowMs: RATE_LIMITS.IMMICH_IMPORT_WINDOW_MS,

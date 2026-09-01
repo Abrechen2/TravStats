@@ -372,8 +372,38 @@ model Flight {
   pendingUpdates PendingFlightUpdate[]
   companionLinks FlightCompanion[]
 
+  // Composite indexes for the two shapes that actually dominate reads.
+  // Everything else below is a single-column index kept for a single,
+  // named call site — see the note under each.
+  //
+  // (userId, status, departureTime) serves the statistics shape:
+  // `{ userId, status: { in: ['flown','historical'] } }`, optionally with a
+  // `departureTime` range. That is ~19 of the queries in routes/stats.ts
+  // alone, plus utils/achievements.ts and routes/placeLists/curated.ts.
+  // Without it Postgres reads the user's whole row set from the heap and
+  // throws the wrong statuses away afterwards; with it, `count` and
+  // `groupBy(['status'])` become index-ONLY scans and never touch the heap
+  // at all. Column order is deliberate: userId first because it is the only
+  // truly selective predicate, departureTime LAST because it is the one
+  // arriving as a range — a range column can only be the final index column
+  // without cutting off everything after it.
+  @@index([userId, status, departureTime])
+  // (userId, departureTime) serves the chronological shape: the flight list
+  // (`GET /flights`, `orderBy [departureTime desc, id asc]` with skip/take)
+  // and `GET /upcoming` (`status != 'cancelled'`, so status is NOT an
+  // equality predicate and cannot help an index). Without it those walk the
+  // global departure_time index and discard every other user's rows one by
+  // one — on a 40-user instance that was 97% of everything it read.
+  @@index([userId, departureTime])
+  // Kept although both composites above start with userId: dropping it is a
+  // separate, measurable decision, not a side effect of this one.
   @@index([userId])
+  // Global time window, no user: services/reminderScheduler.ts and
+  // services/statusSweep.ts sweep across all users.
   @@index([departureTime])
+  // Status without a userId — the sweeps and the boot-time backfill in
+  // index.ts filter `status: 'scheduled'` instance-wide. The composite above
+  // cannot serve those: its leading column is missing.
   @@index([status])
   @@index([airline])
   @@index([flightNumber])

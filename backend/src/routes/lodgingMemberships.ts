@@ -17,6 +17,9 @@ import logger from "../utils/logger";
 // that comparison broke the moment either side was corrected. See
 // `LodgingMembershipChain` in schema.prisma.
 
+// No rate limiter: per-user CRUD over the caller's own membership rows and
+// their chain links. A person has a handful of loyalty programmes, so the
+// working set is a handful of rows; nothing here scans, computes or calls out.
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but

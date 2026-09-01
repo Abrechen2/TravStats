@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { uploadReceiptLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../db';
 import logger from '../utils/logger';
@@ -57,8 +58,15 @@ const annotateSchema = z.object({
 });
 
 // POST /api/v1/training/upload
+//
+// Rate-limited on the shared file-upload bucket: this route writes a 20 MB
+// file to the data volume and then reads it straight back into memory, and a
+// boarding pass is base64'd into a jsonb column on top — so one request costs
+// disk, RAM and DB row size at once. The limiter runs BEFORE multer so a
+// refused request never writes its bytes.
 router.post(
   '/upload',
+  uploadReceiptLimiter,
   trainingUpload.single('file'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

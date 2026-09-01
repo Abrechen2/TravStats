@@ -4,6 +4,9 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { isCurrencyCode } from "../shared/currencies";
 
+// No rate limiter: `/recent` reads the currencies the caller has already used,
+// from their own rows. Nothing here touches the FX upstream — the route that
+// does is `/lodging/fx-preview`, and that one has `fxPreviewLimiter`.
 const router = Router();
 router.use(authenticate);
 
