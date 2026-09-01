@@ -45,7 +45,12 @@ const LISTS_CSV_PATH = path.resolve(__dirname, "seedData", "curated_lists.csv");
  * `scripts/build-world-heritage-csv.mjs`. Keeping it separate is what lets it
  * be regenerated wholesale without touching the hand-written wonder rows.
  */
-const PLACES_CSV_FILES = ["curated_places.csv", "curated_places.world-heritage.csv"] as const;
+const PLACES_CSV_FILES = [
+  "curated_places.csv",
+  "curated_places.world-heritage.csv",
+  "curated_places.biosphere.csv",
+  "curated_places.nationalparks.csv",
+] as const;
 const placesCsvPath = (file: string): string => path.resolve(__dirname, "seedData", file);
 
 /** Rows per bulk insert. Keeps a first boot's INSERT off the parameter limit
