@@ -11,14 +11,16 @@ something hand-typed:
 A CSV read with `columns: true` cannot carry a comment header — a leading `#`
 line would be parsed as the header row — so the record lives here instead.
 
-## `curated_places.csv` — the three wonder lists
+## `curated_places.csv` — the wonder lists and the museum warships
 
-Hand-written, 21 rows, edited by hand. Nothing bulk-derived, so no attribution
-obligation attaches. Two of the three lists differ in how their coordinates were
-obtained, and the difference is worth keeping:
+Hand-written, 35 rows across FOUR catalogues, edited by hand. Nothing
+bulk-derived, so no attribution obligation attaches. The four differ in how
+their coordinates were obtained, and the difference is worth keeping:
 
 **The two 2007/antiquity lists (14 rows)** were written from common knowledge
-with coordinates read off the sites.
+with coordinates read off the sites. **`museum-warships` (14 rows)** — preserved
+warships open to the public across the US, UK, Japan, Sweden and Germany — was
+written the same way, on a separate branch, and merged here on 2026-09-01.
 
 **New 7 Wonders of Nature (7 rows, added 2026-09-01)** was verified entry by
 entry rather than recalled — two candidate Wikidata ids guessed from memory
@@ -46,7 +48,6 @@ Iguazú.
 Two rows carry a country that is a choice rather than a fact — the Amazon spans
 nine countries and Iguazú sits on a border — and both blurbs name the other side
 rather than letting the single `isoCountryCode` column assert something untrue.
-
 ## `curated_places.world-heritage.csv` — UNESCO World Heritage
 
 | | |

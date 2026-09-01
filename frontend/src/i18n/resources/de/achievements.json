@@ -127,6 +127,14 @@
       "name": "Sieben Weltwunder der Antike",
       "description": "An allen sieben antiken Weltwundern gestanden — sechs davon in Gedanken"
     },
+    "WARSHIPS_5": {
+      "name": "Deck betreten",
+      "description": "5 Museums-Kriegsschiffe besucht"
+    },
+    "WARSHIPS_10": {
+      "name": "Flottenbesuch",
+      "description": "10 Museums-Kriegsschiffe besucht"
+    },
     "FIRST_FLIGHT": {
       "name": "Abgehoben",
       "description": "Absolviere deinen ersten Flug"

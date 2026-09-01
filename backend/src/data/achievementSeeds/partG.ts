@@ -178,4 +178,34 @@ export const seedsPartG: AchievementDefinition[] = [
     requirementType: 'curated_list_ticked:world-heritage',
     points: 400,
   },
+
+  // ── Museum warships — rungs, same reasoning as UNESCO above ──────
+  //
+  // The catalog can grow (more ships get added the way more sites can), so a
+  // fixed "all N" badge would need editing every time the CSV does. Two rungs
+  // instead of a finish line.
+  {
+    code: 'WARSHIPS_5',
+    name: 'Deck betreten',
+    description: '5 Museums-Kriegsschiffe besucht',
+    category: 'collector',
+    domain: 'poi',
+    icon: '⚓',
+    tier: 'bronze',
+    requirement: 5,
+    requirementType: 'curated_list_ticked:museum-warships',
+    points: 40,
+  },
+  {
+    code: 'WARSHIPS_10',
+    name: 'Flottenbesuch',
+    description: '10 Museums-Kriegsschiffe besucht',
+    category: 'collector',
+    domain: 'poi',
+    icon: '🎖',
+    tier: 'gold',
+    requirement: 10,
+    requirementType: 'curated_list_ticked:museum-warships',
+    points: 120,
+  },
 ];
