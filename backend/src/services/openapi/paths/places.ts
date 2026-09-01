@@ -18,6 +18,11 @@
 
 import { z } from "zod";
 
+import {
+  placeImportCommitSchema,
+  placeImportPreviewSchema,
+} from "../../../schemas/placeImport";
+
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
@@ -400,4 +405,70 @@ registry.registerPath({
   tags: placesTag,
   request: { params: z.object({ itemId: z.string() }) },
   responses: { 204: deleted, 404: notFound },
+});
+
+/**
+ * Place import — preview then commit.
+ *
+ * Registered on 2026-09-01, after `openapi.coverage.test.ts` caught the two
+ * routes going live undocumented: they were added and mounted in one commit
+ * that touched no OpenAPI file. That guard is exactly why it exists, and it
+ * only fired once the branch reached a trunk the guard runs on.
+ */
+registry.registerPath({
+  method: "post",
+  path: "/place-import/preview",
+  summary: "Dry-run a place import",
+  description:
+    "Classifies each candidate row without writing anything: what would be " +
+    "created, what is a duplicate of a place already held, and what cannot be " +
+    "placed. An unresolvable row is an OFFER, not a discard — the user's own " +
+    "note is what would otherwise be thrown away — so it comes back as " +
+    "`needsInput` rather than being dropped silently. Rate-limited on the same " +
+    "bucket as the lodging import: the same shape of expensive request.",
+  tags: placesTag,
+  request: {
+    body: { content: { "application/json": { schema: placeImportPreviewSchema } } },
+  },
+  responses: {
+    200: {
+      description: "What the import would do",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: z.unknown() }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    401: { description: "Not authenticated", content: errorContent },
+    429: { description: "Rate-limited", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/place-import/commit",
+  summary: "Write a previewed place import",
+  description:
+    "Persists the rows the preview accepted, recording the source and file name " +
+    "as provenance. A row that fails carries a fixed failure code rather than a " +
+    "raw database message — a 201 body never passes through the error handler's " +
+    "leak protections, so the vocabulary is closed on purpose.",
+  tags: placesTag,
+  request: {
+    body: { content: { "application/json": { schema: placeImportCommitSchema } } },
+  },
+  responses: {
+    201: {
+      description: "Import written",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: z.unknown() }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    401: { description: "Not authenticated", content: errorContent },
+    429: { description: "Rate-limited", content: errorContent },
+  },
 });
