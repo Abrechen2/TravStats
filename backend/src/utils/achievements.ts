@@ -23,11 +23,19 @@ import {
   resolveStayProgramme,
 } from '../services/lodging/stayMembership';
 import { classifyStay } from '../shared/lodgingCounting';
+import { countableFlightWhere } from '../shared/flightCounting';
 import { calculatePlaceStats } from './placeStats';
 
 /** Shared "did this actually happen" check for flights and cruises alike —
  * both domains use the same status vocabulary (`flown` / `historical` are
- * done, everything else — scheduled, in_progress, cancelled — is not). */
+ * done, everything else — scheduled, in_progress, cancelled — is not).
+ *
+ * Deliberately NOT `isCountableFlightStatus` from shared/flightCounting: this
+ * predicate is applied to cruise rows too, and the two domains agree today by
+ * coincidence rather than by rule (`duplicated` exists only for flights). A
+ * flight-named helper called on a cruise would hide that. If the flight rule
+ * ever moves, the cruise half of this line has to be decided separately —
+ * which is the whole reason it is written out here rather than imported. */
 const isDoneStatus = (status: string): boolean => status === 'flown' || status === 'historical';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
@@ -73,7 +81,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     //   cross-domain Fly & Stay / Grand Tour flags.
     const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings, places] = await Promise.all([
       prisma.flight.findMany({
-        where: { userId, status: { in: ['flown', 'historical'] } },
+        where: { userId, ...countableFlightWhere() },
         orderBy: { departureTime: 'asc' },
       }),
       prisma.flight.findMany({

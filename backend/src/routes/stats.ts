@@ -30,6 +30,7 @@ import {
   resolveFlightDuration,
 } from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
+import { countableFlightWhere } from '../shared/flightCounting';
 import {
   normalizeAirline,
   mergeAirlineCounts,
@@ -165,7 +166,7 @@ async function computeSummary(
   // `byStatus`/`byAirline`/`byCategory` still run on the unfiltered `where`:
   // a breakdown BY status that hid statuses would be pointless. What is merely
   // booked is reported as `plannedFlights` instead of being folded in.
-  const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
+  const geoWhere: Prisma.FlightWhereInput = { ...where, ...countableFlightWhere() };
 
   const [
     flownFlights,
@@ -402,7 +403,7 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
 
     const flightsWhere: Prisma.FlightWhereInput = {
       userId,
-      status: { in: ['flown', 'historical'] },
+      ...countableFlightWhere(),
     };
     const baseCurrency = await getBaseCurrency(userId);
 
@@ -521,7 +522,7 @@ async function fetchFlightDatedRows(
   const rows = await prisma.flight.findMany({
     where: {
       userId,
-      status: { in: ['flown', 'historical'] },
+      ...countableFlightWhere(),
       departureTime: { gte: from, lt: to },
     },
     select: {
@@ -642,7 +643,7 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
     // Routes are time-insensitive (airport-pair grouping + great-circle distance),
     // so historical flights are included.
     const flights = await prisma.flight.findMany({
-      where: { userId, status: { in: ['flown', 'historical'] } },
+      where: { userId, ...countableFlightWhere() },
       select: {
         depIata: true,
         depIcao: true,
@@ -725,7 +726,7 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
     // Fun stats are computed across both flown and historical flights; the
     // helper applies a tighter `flown`-only filter for time-sensitive parts
     // (time-of-day buckets, weekend warrior).
-    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -820,7 +821,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
     // Business stats are computed across both flown and historical flights; the
     // helper applies a tighter `flown`-only filter for duration-based metrics
     // (avgFlightDuration, costPerHour).
-    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -923,7 +924,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
     // Unique stats are computed across both flown and historical flights; the
     // helper applies a tighter `flown`-only filter for time-sensitive parts
     // (time-travel index, layovers, fastest route, midnight crossings, etc.).
-    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -1036,7 +1037,7 @@ router.get(
 
       // Airport stats are time-insensitive (counts, country/continent, distance),
       // so historical flights are included.
-      const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
       if (fromDate || toDate) {
         where.departureTime = {};
         if (fromDate) where.departureTime.gte = new Date(fromDate);
@@ -1116,7 +1117,7 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
 
     // Seat statistics are time-insensitive (just position/class buckets),
     // so historical flights with seat data are included.
-    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -1262,7 +1263,7 @@ interface AirlineRankingResponse {
 router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
     const [total, airlineCounts] = await Promise.all([
       prisma.flight.count({ where }),
@@ -1373,7 +1374,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const userId = req.userId!;
 
     const flights = await prisma.flight.findMany({
-      where: { userId, status: { in: ['flown', 'historical'] } },
+      where: { userId, ...countableFlightWhere() },
       select: {
         depIata: true,
         depIcao: true,
@@ -1790,7 +1791,7 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
+      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
       const [total, typeCounts] = await Promise.all([
         prisma.flight.count({ where }),
@@ -1847,7 +1848,7 @@ router.get(
       const flights = await prisma.flight.findMany({
         where: {
           userId,
-          status: { in: ['flown', 'historical'] },
+          ...countableFlightWhere(),
           aircraftRegistration: { not: null },
         },
         select: {
@@ -2022,7 +2023,7 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
 
     const where: Prisma.FlightWhereInput = {
       userId,
-      status: { in: ['flown', 'historical'] },
+      ...countableFlightWhere(),
       delayMinutes: { not: null },
     };
     if (fromDate || toDate) {

@@ -14,6 +14,7 @@ import {
   type FlightColorConfig,
 } from "../../lib/flightColor";
 import { DEFAULT_FLIGHT_ROUTE_SHAPE, type FlightRouteShape } from "../../lib/flightRouteShape";
+import { isCountableFlight } from "../../shared/flightCounting";
 import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
 import { markerDotRadiusProps } from "./markerDotStyle";
 
@@ -99,7 +100,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
     // code-less airfields still aggregate instead of being dropped (#120).
     const key = routeKey(airportId(dep, coords.depCoord), airportId(arr, coords.arrCoord));
     const isScheduled = f.properties.status === "scheduled";
-    const isFlown = f.properties.status === "flown" || f.properties.status === "historical";
+    const isFlown = isCountableFlight(f.properties);
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
     if (existing) {

@@ -6,6 +6,7 @@ import {
   averageDurationMinutes,
   emptyDurationTotals,
 } from '../../shared/flightDuration';
+import { isCountableFlight } from '../../shared/flightCounting';
 
 /**
  * Calculate business/informative statistics.
@@ -34,9 +35,7 @@ export function calculateBusinessStats(
 
   // Time-insensitive subset — flown + historical contribute to distance,
   // cost, category, and airport coverage.
-  const countableFlights = flights.filter(
-    (f) => f.status === 'flown' || f.status === 'historical'
-  );
+  const countableFlights = flights.filter(isCountableFlight);
 
   // Cost per kilometer — only consider flights that have a cost entry so the denominator
   // (distance) is not inflated by cost-free flights.

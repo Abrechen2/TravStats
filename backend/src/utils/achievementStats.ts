@@ -7,6 +7,7 @@ import { getContinent } from './continents';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
+import { isCountableFlight } from '../shared/flightCounting';
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
@@ -257,9 +258,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
   const stats: UserStats = {
     // Historical flights are real past flights and count toward "flights_count"
     // achievements. Time-sensitive sub-stats below stay narrowed to `flown`.
-    flightsCount: flights.filter(
-      f => f.status === 'flown' || f.status === 'historical'
-    ).length,
+    flightsCount: flights.filter(isCountableFlight).length,
     totalDistance: 0,
     totalFlightHours: 0,
     countries: new Set(),

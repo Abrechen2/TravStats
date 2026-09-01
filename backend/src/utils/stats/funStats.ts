@@ -5,6 +5,7 @@ import { normalizeAirline } from '../airlineNormalize';
 import logger from '../logger';
 import { departureClockOf } from './departureClock';
 import type { FlightData, FunStats } from './types';
+import { isCountableFlight } from '../../shared/flightCounting';
 
 /**
  * Calculate fun/entertaining statistics.
@@ -32,9 +33,7 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
 
   // Time-insensitive subset — flown + historical contribute to airport
   // count, distance, loyalty, etc.
-  const countableFlights = flights.filter(
-    (f) => f.status === 'flown' || f.status === 'historical'
-  );
+  const countableFlights = flights.filter(isCountableFlight);
 
   // Timezone hopper — count unique timezones across every airport touched
   // (time-insensitive: only needs the airport metadata).

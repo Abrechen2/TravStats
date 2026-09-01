@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import { formatDuration } from "../../lib/formatters";
 import type { Flight } from "../../types";
+import { isCountableFlight } from "../../shared/flightCounting";
 
 interface RouteDetailsSidebarProps {
   flights: Flight[];
@@ -47,10 +48,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
     return durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   }, [sorted]);
 
-  const flownLegs = useMemo(
-    () => sorted.filter((f) => f.status === "flown" || f.status === "historical"),
-    [sorted]
-  );
+  const flownLegs = useMemo(() => sorted.filter(isCountableFlight), [sorted]);
   const scheduledLegs = useMemo(() => sorted.filter((f) => f.status === "scheduled"), [sorted]);
 
   // "2× geflogen · 1× geplant" — each part appears only when non-zero. When

@@ -5,6 +5,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
+import { countableFlightWhere } from "../../shared/flightCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import logger from "../../utils/logger";
@@ -277,7 +278,7 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
         },
       }),
       prisma.flight.findMany({
-        where: { userId, status: { in: ["flown", "historical"] } },
+        where: { userId, ...countableFlightWhere() },
         select: {
           status: true,
           depIata: true,

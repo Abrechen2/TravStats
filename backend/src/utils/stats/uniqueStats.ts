@@ -7,6 +7,7 @@ import { departureClockOf } from './departureClock';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData, UniqueStats } from './types';
 import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
+import { isCountableFlight } from '../../shared/flightCounting';
 
 /** Max duration counted as a "layover". Anything longer is a stopover / trip gap. */
 const LAYOVER_CAP_HOURS = 24;
@@ -46,9 +47,7 @@ export async function calculateUniqueStats(
 
   // Time-insensitive subset — flown + historical contribute to geographic
   // coverage stats.
-  const countableFlights = flights.filter(
-    (f) => f.status === 'flown' || f.status === 'historical'
-  );
+  const countableFlights = flights.filter(isCountableFlight);
 
   // Time travel index - flights where local arrival time (at destination) appears to be before
   // local departure time (at origin), e.g. departing NYC at 23:00 EST and arriving London at
