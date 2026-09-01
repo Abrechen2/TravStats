@@ -1,11 +1,7 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { emailParseLimiter } from '../middleware/rateLimit';
-import { parseBookingEmail } from '../services/bookingParser';
-import { parseCruiseBookingText } from '../services/cruiseBookingParser';
-import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
-import { parseLodgingBookingText } from '../services/lodging/lodgingBookingParser';
-import { bookingsToCandidates } from '../services/lodging/lodgingCandidates';
+import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile, getEmailUploadDir } from '../middleware/upload';
 import { z } from 'zod';
@@ -14,7 +10,6 @@ import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
 import { describeParserError } from '../utils/parserErrors';
-import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
@@ -27,7 +22,9 @@ const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
+  // 'auto' asks the server to decide what the document is — see Forgejo #57.
+  // The default stays 'flight' so no existing caller changes behaviour.
+  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('flight'),
 });
 
 /**
@@ -37,11 +34,12 @@ const parseEmailSchema = z.object({
  * Body:
  * - emailContent: string (required) - Email body text or HTML
  * - subject: string (optional) - Email subject line
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
  *
- * Returns:
- * - flights: ParsedBooking[] - Array of extracted flight information
- * - parserUsed: 'ollama' | 'regex' - Which parser was used
- * - ollamaAvailable: boolean - Whether Ollama was available
+ * Returns the domain-shaped body plus `text` and `subject`. When `domain: 'auto'`
+ * was asked for, the answer additionally carries `domainSource: 'detected'` and a
+ * `detection` block naming the runners-up, so a client that disagrees can re-ask
+ * explicitly instead of sending the mail three times.
  */
 router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
@@ -53,53 +51,42 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
 
     logger.info({ userId, domain: parsed.domain }, '[Email Parse] Parsing email');
 
-    if (parsed.domain === 'cruise') {
-      const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
-      const cruiseResult = await parseCruiseBookingText(combined);
-      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-      const cruises = await hydrateResolvedCruises(resolved, userId);
-      return res.json({
-        cruises,
-        parserUsed: cruiseResult.parserUsed,
-        ollamaAvailable: cruiseResult.ollamaAvailable,
-        text: emailContent,
-        subject: subject ?? undefined,
-        domain: 'cruise',
-      });
-    }
+    const outcome = await parseDocument({
+      text: emailContent,
+      // An empty subject is no subject: it must not become a blank first line
+      // in the text the parsers score, and the flight parser treats the two
+      // differently. This mirrors the `subject || undefined` the flight branch
+      // used to do here.
+      subject: subject || undefined,
+      domain: parsed.domain,
+      // Never 'document' on this route: the email entry point reads the subject
+      // and the HTML part, and a header is what dates a mail whose body carries
+      // a year-less date (#285).
+      source: 'email',
+      userId,
+    });
 
-    if (parsed.domain === 'lodging') {
-      const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
-      const lodgingResult = await parseLodgingBookingText(combined);
-      logger.info(
-        { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
-        '[Email Parse] Lodging parsing complete',
-      );
-      return res.json({
-        domain: 'lodging',
-        candidates: bookingsToCandidates(lodgingResult.bookings),
-        parserUsed: lodgingResult.parserUsed,
-        ollamaAvailable: lodgingResult.ollamaAvailable,
-        fallbackReason: lodgingResult.fallbackReason,
-        text: emailContent,
-        subject: subject ?? undefined,
-      });
-    }
+    const body = outcome.body;
 
-    const result = await parseBookingEmail(
-      subject || undefined,
-      emailContent,
-      undefined,
-      userId ? { userId } : undefined
+    logger.info(
+      { userId, domain: outcome.domain, domainSource: outcome.domainSource },
+      '[Email Parse] Parsing complete',
     );
 
-    logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
-
     res.json({
-      ...result,
+      ...body,
       text: emailContent,
       subject: subject ?? undefined,
-      airlineNotice: result.flights[0]?.airlineNotice ?? null,
+      // Only a flight carries one — a cruise or hotel confirmation has no
+      // airline to say anything about.
+      ...(body.domain === 'flight'
+        ? { airlineNotice: body.flights[0]?.airlineNotice ?? null }
+        : {}),
+      // Present only when the server decided, so an explicit request keeps
+      // exactly the response shape it had before.
+      ...(outcome.domainSource === 'detected'
+        ? { domainSource: outcome.domainSource, detection: outcome.detection }
+        : {}),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -125,11 +112,11 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
  *
  * Body: multipart/form-data
  * - email: File (required) - Email file (.msg, .eml, or .txt)
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
  *
- * Returns:
- * - flights: ParsedBooking[] - Array of extracted flight information
- * - parserUsed: 'ollama' | 'regex' | 'openai' | 'claude' - Which parser was used
- * - subject: string - Extracted email subject
+ * Returns the domain-shaped body plus `subject`, `text` and `html`. As on
+ * /parse-email, `domainSource` and `detection` appear only when the server
+ * decided the domain itself.
  */
 router.post(
   '/parse-email-file',
@@ -150,7 +137,7 @@ router.post(
       // Domain discriminator (optional, defaults to 'flight').
       // Multipart form-data: rawDomain comes as string from form field.
       const rawDomain = typeof req.body?.domain === 'string' ? req.body.domain : 'flight';
-      const domainSchema = z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight');
+      const domainSchema = z.enum(REQUESTABLE_DOMAINS).optional().default('flight');
       const domainParse = domainSchema.safeParse(rawDomain);
       if (!domainParse.success) {
         if (filePath && fs.existsSync(filePath)) {
@@ -211,82 +198,45 @@ router.post(
         domain: domainValue,
       }, '[Email Parse File] Email extracted from file');
 
-      if (domainValue === 'cruise') {
-        const combined = extracted.subject
-          ? `${extracted.subject}\n\n${extracted.text}`
-          : extracted.text;
-        const cruiseResult = await parseCruiseBookingText(combined);
-        const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-        const cruises = await hydrateResolvedCruises(resolved, userId);
+      const outcome = await parseDocument({
+        text: extracted.text,
+        subject: extracted.subject,
+        html: extracted.html,
+        domain: domainValue,
+        // See /parse-email above: the flight path must take the email entry
+        // point so subject and HTML are read (#285).
+        source: 'email',
+        userId,
+      });
 
-        if (filePath && fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
-        }
-
-        return res.json({
-          cruises,
-          parserUsed: cruiseResult.parserUsed,
-          ollamaAvailable: cruiseResult.ollamaAvailable,
-          subject: extracted.subject,
-          text: extracted.text,
-          html: extracted.html ?? undefined,
-          domain: 'cruise',
-        });
-      }
-
-      if (domainValue === 'lodging') {
-        const combined = extracted.subject
-          ? `${extracted.subject}\n\n${extracted.text}`
-          : extracted.text;
-        const lodgingResult = await parseLodgingBookingText(combined);
-
-        if (filePath && fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
-        }
-
-        logger.info(
-          { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
-          '[Email Parse File] Lodging parsing complete',
-        );
-
-        return res.json({
-          domain: 'lodging',
-          candidates: bookingsToCandidates(lodgingResult.bookings),
-          parserUsed: lodgingResult.parserUsed,
-          ollamaAvailable: lodgingResult.ollamaAvailable,
-          fallbackReason: lodgingResult.fallbackReason,
-          subject: extracted.subject,
-          text: extracted.text,
-          html: extracted.html ?? undefined,
-        });
-      }
-
-      // Parse email with configured parser
-      const result = await parseBookingEmail(
-        extracted.subject,
-        extracted.text,
-        extracted.html,
-        userId ? { userId } : undefined
-      );
+      const body = outcome.body;
 
       logger.info(
-        `[Email Parse File] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`
+        { userId, domain: outcome.domain, domainSource: outcome.domainSource },
+        '[Email Parse File] Parsing complete',
       );
 
-      // Cleanup: Delete temporary file
+      // Cleanup: Delete temporary file. Before the response, so the upload is
+      // gone by the time the caller is told the parse succeeded — the catch
+      // block below covers every failing path.
       if (filePath && fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
       }
 
       res.json({
-        ...result,
+        ...body,
         subject: extracted.subject,
         text: extracted.text,
         html: extracted.html ?? undefined,
-        airlineNotice: result.flights[0]?.airlineNotice ?? null,
+        // Flight-only, for the same reason as on /parse-email.
+        ...(body.domain === 'flight'
+          ? { airlineNotice: body.flights[0]?.airlineNotice ?? null }
+          : {}),
+        // Present only when the server decided the domain.
+        ...(outcome.domainSource === 'detected'
+          ? { domainSource: outcome.domainSource, detection: outcome.detection }
+          : {}),
       });
     } catch (error) {
       // Cleanup: Delete temporary file on error

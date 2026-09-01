@@ -39,6 +39,66 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   /**
+   * A SECOND worker, for reading whole travel documents rather than boarding
+   * passes — Forgejo #58.
+   *
+   * Deliberately separate from the one above, which stays exactly as it was.
+   * The difference is the language set: a boarding pass is alphanumeric and
+   * English, while the documents this one reads are hotel bills and sailing
+   * confirmations, and the corpus this product is built against is German.
+   * Reading "Nächte" with English-only training data loses the umlaut, and the
+   * lodging parser matches on that word.
+   *
+   * Why not simply widen the existing worker: the extra language pack is
+   * fetched at first use, and an air-gapped instance would then fail to create
+   * ANY worker — taking boarding-pass scanning down with it, a feature that
+   * works today. Two workers cost memory only once both are actually used, and
+   * this one degrades to English on its own rather than failing.
+   */
+  private docWorker: Worker | null = null;
+
+  private async ensureDocumentWorker(): Promise<Worker> {
+    if (this.docWorker) return this.docWorker;
+
+    try {
+      this.docWorker = await createWorker(['eng', 'deu'], 1);
+      logger.info('[Tesseract Parser] Document OCR worker initialized (eng+deu)');
+    } catch (error) {
+      // The German pack could not be fetched — offline, or no cache. English
+      // still reads Latin script, so a degraded answer beats no answer; it is
+      // logged at warn so the cause is visible when a German document parses
+      // badly, rather than looking like a parser bug.
+      logger.warn(
+        { error },
+        '[Tesseract Parser] German language pack unavailable, falling back to English only'
+      );
+      this.docWorker = await createWorker('eng', 1);
+    }
+
+    return this.docWorker;
+  }
+
+  /**
+   * OCR an image and return the TEXT, without interpreting it as a flight.
+   *
+   * `parseImage` below answers "which flight is this", which is the wrong
+   * question for a hotel invoice. This answers "what does it say", and the
+   * caller hands the text to whichever domain parser applies — which is what
+   * lets one image route serve all three domains.
+   */
+  async recognizeText(imageBase64: string): Promise<{ text: string; confidence: number }> {
+    const worker = await this.ensureDocumentWorker();
+    const { data } = await worker.recognize(Buffer.from(imageBase64, 'base64'));
+
+    logger.info(
+      { confidence: data.confidence, textLength: data.text.length },
+      '[Tesseract Parser] Document OCR complete'
+    );
+
+    return { text: data.text, confidence: data.confidence };
+  }
+
+  /**
    * Cleanup worker on shutdown
    */
   async cleanup(): Promise<void> {
@@ -47,6 +107,11 @@ export class TesseractVisionParser implements IVisionParser {
       this.worker = null;
       this.isInitialized = false;
       logger.info('[Tesseract Parser] OCR worker terminated');
+    }
+    if (this.docWorker) {
+      await this.docWorker.terminate();
+      this.docWorker = null;
+      logger.info('[Tesseract Parser] Document OCR worker terminated');
     }
   }
 

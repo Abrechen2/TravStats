@@ -242,8 +242,15 @@ export const backupRestoreLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for boarding pass parsing (expensive LLM/vision operation)
- * Allows 20 parses per 15 minutes per IP
+ * Rate limiter for OCR routes — boarding passes and whole documents.
+ *
+ * 20 parses per 15 minutes per USER, not per IP. It was per IP until
+ * 2026-09-01, alone among the limiters in this file, which every sibling keys
+ * with `userOrIpKey`. On a self-hosted instance behind a reverse proxy or
+ * Cloudflare that made one shared budget for everybody: a single user
+ * photographing a stack of receipts locked the others out of the most
+ * expensive endpoint in the app. Nothing here suggests that was a decision, and
+ * `/parse-image` made it matter for hotel and cruise users too.
  */
 export const boardingPassParseLimiter = rateLimit({
   windowMs: RATE_LIMITS.BOARDING_PASS_PARSE_WINDOW_MS,
@@ -251,6 +258,7 @@ export const boardingPassParseLimiter = rateLimit({
   message: 'Too many boarding pass parse requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
