@@ -1,0 +1,35 @@
+{
+  "title": "Reisepass",
+  "backToStats": "Zurück zur Statistik",
+  "print": "Drucken",
+  "since": "seit {{year}}",
+  "empty": "Noch keine geflogenen Flüge — der Pass füllt sich mit dem ersten Eintrag.",
+  "needsFlights": "Der Reisepass wird aus deinen Flügen gebildet. Aktiviere den Bereich „Flüge“ in den Einstellungen, um ihn zu sehen.",
+  "loadError": "Der Reisepass konnte nicht geladen werden.",
+  "stamps": "Stempel",
+  "summary": {
+    "countries": "Länder",
+    "airports": "Flughäfen",
+    "entries": "Einreisen",
+    "continents": "Kontinente"
+  },
+  "continents": {
+    "title": "Kontinente",
+    "denominator": "Gemessen an den Ländern, die dieser Katalog kennt — nicht an einer Gesamtzahl der Länder der Welt, für die es keine verbindliche Zahl gibt.",
+    "europe": "Europa",
+    "asia": "Asien",
+    "northAmerica": "Nordamerika",
+    "southAmerica": "Südamerika",
+    "africaAntarctica": "Afrika · Antarktis",
+    "oceania": "Ozeanien"
+  },
+  "countries": {
+    "title": "Länder",
+    "country": "Land",
+    "entries": "Einreisen",
+    "period": "Zeitraum",
+    "airports": "Flughäfen",
+    "home": "Heimat",
+    "new": "neu"
+  }
+}

@@ -4,8 +4,9 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
+import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
-import { checkAndUpdateAchievements } from "../utils/achievements";
+import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import {
   createPlaceSchema,
@@ -14,7 +15,6 @@ import {
   updateVisitSchema,
   placeQuerySchema,
 } from "../schemas/place";
-import logger from "../utils/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -228,6 +228,22 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       }
     }
 
+    // Whatever the input method, the row ends up with a complete location —
+    // the same rule lodging follows (`routes/lodgingGeocode.ts`). A place
+    // entered by dropping a pin has a name and nothing else; the city and
+    // country it needs to be grouped, filtered and flagged come from the pin.
+    // Awaited here, unlike on the checklist tick: this is one row on an
+    // explicit save, so the address is present in the response the form gets
+    // back rather than appearing a second later.
+    const completed = await completeAddressFromCoordinates({
+      lat: input.lat,
+      lon: input.lon,
+      address: input.address,
+      city: input.city,
+      country: input.country,
+    });
+    const country = input.country ?? completed?.country ?? null;
+
     const place = await prisma.place.create({
       data: {
         userId,
@@ -235,10 +251,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
         category: input.category,
         lat: input.lat,
         lon: input.lon,
-        address: input.address ?? null,
-        city: input.city ?? null,
-        country: input.country ?? null,
-        isoCountryCode: resolveCountryCode(input.country ?? null),
+        address: input.address ?? completed?.address ?? null,
+        city: input.city ?? completed?.city ?? null,
+        country,
+        isoCountryCode: resolveCountryCode(country),
         externalRef: input.externalRef ?? null,
         notes: input.notes ?? null,
         visited: input.visited,
@@ -247,9 +263,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       include: PLACE_INCLUDE,
     });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place create");
-    });
+    await recheckAchievements(userId, "place create");
 
     res.status(201).json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -292,9 +306,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       include: PLACE_INCLUDE,
     });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place update");
-    });
+    await recheckAchievements(userId, "place update");
 
     res.json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -314,9 +326,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // which is what "delete this place" means.
     await prisma.place.delete({ where: { id: existing.id } });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after place delete");
-    });
+    await recheckAchievements(userId, "place delete");
 
     res.json({ success: true });
   } catch (error) {
@@ -382,9 +392,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     }
     const [visit] = await prisma.$transaction(writes);
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit create");
-    });
+    await recheckAchievements(userId, "visit create");
 
     res.status(201).json({ success: true, data: visit });
   } catch (error) {
@@ -428,9 +436,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
       });
     }
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit update");
-    });
+    await recheckAchievements(userId, "visit update");
 
     res.json({ success: true, data: visit });
   } catch (error) {
@@ -452,9 +458,7 @@ router.delete("/visits/:visitId", async (req: AuthRequest, res: Response, next: 
     // explicitly on the place itself.
     await prisma.placeVisit.delete({ where: { id: existing.id } });
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after visit delete");
-    });
+    await recheckAchievements(userId, "visit delete");
 
     res.json({ success: true });
   } catch (error) {

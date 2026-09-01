@@ -86,6 +86,11 @@ export interface ReviewModalProps {
   parseResult: unknown;
   /** Optional original email metadata for re-edit / training. */
   emailMeta?: { subject?: string; text?: string; html?: string };
+  /**
+   * The uploaded file's name, so the import log row can be told apart from
+   * the others made the same day (Forgejo #19). Null for pasted text.
+   */
+  sourceFileName?: string | null;
   /** Called once the user commits the items (creates them server-side). */
   onCommit: () => void | Promise<void>;
   /** Called when the user dismisses the review without saving. */

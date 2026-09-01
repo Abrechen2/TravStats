@@ -16,19 +16,11 @@ import { validateEmailFile } from '../utils/fileValidation';
 import { describeParserError } from '../utils/parserErrors';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
+import { parseEmailSchema } from '../schemas/parseEmail';
+
 const router = Router();
 
-const parseEmailSchema = z.object({
-  emailContent: z.string().min(1, 'Email content is required').refine(
-    (val) => val.length <= 10 * 1024 * 1024,
-    { message: 'Email content too large (max 10MB)' }
-  ),
-  subject: z.string().optional().refine(
-    (val) => !val || val.length <= 1000,
-    { message: 'Subject too long (max 1000 characters)' }
-  ),
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
-});
+
 
 /**
  * POST /api/v1/parse-email
@@ -86,11 +78,12 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       });
     }
 
+    const referenceDate = parsed.referenceDate ? new Date(parsed.referenceDate) : undefined;
     const result = await parseBookingEmail(
       subject || undefined,
       emailContent,
       undefined,
-      userId ? { userId } : undefined
+      { ...(userId ? { userId } : {}), ...(referenceDate ? { referenceDate } : {}) }
     );
 
     logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
@@ -263,12 +256,25 @@ router.post(
         });
       }
 
-      // Parse email with configured parser
+      // Parse email with configured parser.
+      //
+      // The message's own send date anchors any year-less date in the body. An
+      // uploaded mailbox is mostly OLD mail, so reading "16.07." against today
+      // is wrong far more often than it is right: a 2007 Germanwings
+      // confirmation imported as two 2026 flights and built a trip in the wrong
+      // decade, with nothing on screen to suggest it (Forgejo #18).
+      //
+      // Only a default. A caller that knows better still wins, and a file whose
+      // header is unreadable falls back to the previous behaviour rather than
+      // refusing the import.
       const result = await parseBookingEmail(
         extracted.subject,
         extracted.text,
         extracted.html,
-        userId ? { userId } : undefined
+        {
+          ...(userId ? { userId } : {}),
+          ...(extracted.sentAt ? { referenceDate: extracted.sentAt } : {}),
+        }
       );
 
       logger.info(

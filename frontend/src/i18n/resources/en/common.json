@@ -32,7 +32,8 @@
     "later": "Later",
     "details": "Details",
     "dismiss": "Dismiss",
-    "retry": "Try again"
+    "retry": "Try again",
+    "showLess": "Show less"
   },
   "dismiss": "Dismiss",
   "app": {
@@ -63,11 +64,16 @@
     "showHelp": "Show help",
     "closeHint": "Close hint",
     "toggleMenu": "Toggle menu",
-    "back": "Back"
+    "back": "Back",
+    "required": "Required field",
+    "home": "Home",
+    "discord": "Join our Discord",
+    "view": "View",
+    "play": "Play",
+    "pause": "Pause",
+    "loading": "Loading"
   },
   "help": {
-    "more": "Learn more",
-    "less": "Less",
     "clickForMore": "Click for more info"
   },
   "theme": {
@@ -234,5 +240,10 @@
     "northAmerica": "North America",
     "oceania": "Oceania",
     "southAmerica": "South America"
+  },
+  "emojiPicker": {
+    "open": "Choose",
+    "clear": "Clear",
+    "unavailable": "The emoji picker cannot load here. You can still paste an emoji into the field."
   }
 }

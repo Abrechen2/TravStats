@@ -192,12 +192,22 @@ app.get('/api/v1/version', async (_req, res) => {
 // a boolean reflecting the instance-wide admin setting.
 app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
   try {
-    const { prisma } = await import('./db');
-    const adminSettings = await prisma.adminSettings.findFirst({
-      select: { ollamaUrl: true, ollamaModel: true },
-    });
-    const hasLlm = Boolean(adminSettings?.ollamaUrl && adminSettings?.ollamaModel);
-    res.json({ hasLlm });
+    /**
+     * Answered from the SAME resolution the parser uses.
+     *
+     * Forgejo #12: this read `admin_settings` alone, while `getParserConfig`
+     * also falls back to OLLAMA_URL / OLLAMA_MODEL from the environment. On any
+     * instance configured through env — which is how the test VM installer sets
+     * it up — the import screen said "Kein LLM-Parser verfuegbar" while the
+     * very next request came back labelled `ollama` with 85% confidence, and
+     * the server log agreed with the parser.
+     *
+     * Two sources of truth for one question is how they disagreed. There is now
+     * one, and the user cannot be told the opposite of what happens.
+     */
+    const { getParserConfig } = await import('./services/parsers/config');
+    const config = await getParserConfig();
+    res.json({ hasLlm: Boolean(config.ollamaUrl && config.ollamaModel) });
   } catch (error) {
     next(error);
   }
@@ -255,6 +265,8 @@ process.on('SIGINT', async () => {
   stopAirlineLogoRefreshScheduler();
   const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
   stopStatusSweepScheduler();
+  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+  stopPlaceAddressBackfillScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -273,6 +285,8 @@ process.on('SIGTERM', async () => {
   stopAirlineLogoRefreshScheduler();
   const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
   stopStatusSweepScheduler();
+  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+  stopPlaceAddressBackfillScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -654,6 +668,13 @@ if (process.env.NODE_ENV !== 'test') {
       logger.info({
         operation: 'server_start_status_sweep_scheduler',
         message: 'Status sweep scheduler started',
+      });
+
+      const { startPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+      startPlaceAddressBackfillScheduler();
+      logger.info({
+        operation: 'server_start_place_address_backfill_scheduler',
+        message: 'Place address backfill scheduler started',
       });
     } catch (error) {
       logger.warn({

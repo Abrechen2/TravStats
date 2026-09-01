@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { AnimatePresence } from "framer-motion";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import type { AdminUser } from "./SystemInfo";
@@ -37,27 +36,10 @@ export default function UserManagement({
 
   return (
     <div className="space-y-4">
-      <InlineHelp
-        title={t("admin:users.title")}
-        category="advanced"
-        content={
-          <div className="space-y-2">
-            <p>{t("admin:users.help.description")}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-              <li>
-                <strong>{t("admin:users.help.adminTitle")}</strong> {t("admin:users.help.admin")}
-              </li>
-              <li>
-                <strong>{t("admin:users.help.userTitle")}</strong> {t("admin:users.help.user")}
-              </li>
-              <li>
-                <strong>{t("admin:users.help.deactivateTitle")}</strong>{" "}
-                {t("admin:users.help.deactivate")}
-              </li>
-            </ul>
-          </div>
-        }
-      />
+      {/* Was the collapsed help box. The sentence that matters is the one about
+          deactivation keeping the data — an admin should not have to open
+          anything to learn that. */}
+      <p className="text-sm text-(--text-muted)">{t("admin:users.description")}</p>
       <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full min-w-[720px]">
           <thead className="bg-(--bg-base)">

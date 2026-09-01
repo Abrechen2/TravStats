@@ -36,16 +36,6 @@ import {
   type LodgingColorMode,
   type LodgingColorSlot,
 } from "../../lib/lodgingColor";
-import {
-  DEFAULT_PLACE_COLOR_CONFIG,
-  PLACE_COLOR_MODES,
-  PLACE_COLOR_PRESETS,
-  slotsForPlaceMode,
-  type PlaceColorConfig,
-  type PlaceColorMode,
-  type PlaceColorSlot,
-} from "../../lib/placeColor";
-
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
 export const PANEL_BG = "rgba(13,17,23,0.85)";
@@ -367,7 +357,7 @@ export type AppearanceDomain = "flight" | "cruise" | "lodging" | "poi";
 // worse — their mode was not a control at all, it was hardcoded per tab.
 
 /** Quick-pick swatch row + the free colour input for one colour slot. */
-function ColorRow({
+export function ColorRow({
   caption,
   value,
   presets,
@@ -865,77 +855,6 @@ export function LodgingAppearanceSection({
         onChange={onMarkerSizeChange}
         format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
       />
-    </div>
-  );
-}
-
-/** Place-domain appearance state — mode and colours, read from
- *  `usePlaceColorStore`. */
-export interface PlaceAppearanceState {
-  colorConfig?: PlaceColorConfig;
-  onColorModeChange?: (m: PlaceColorMode) => void;
-  onColorChange?: (slot: PlaceColorSlot, c: Rgb) => void;
-}
-
-export interface PlaceAppearanceSectionProps extends PlaceAppearanceState {
-  /** Uppercase section header ("Orte"). */
-  title: string;
-}
-
-/**
- * The POI domain's appearance controls: colour MODE and the colours it uses.
- *
- * NO marker-size slider, unlike lodging — place pins share the airport/port dot
- * sizing and have no size store of their own, so a slider here would be a
- * control that does nothing. That is the one thing this panel exists to avoid.
- *
- * `list` mode shows only its FALLBACK colour: the rest of that mode's colours
- * are the user's own list colours, edited on the list itself. A second place to
- * set the same thing is a second place for it to be wrong.
- */
-export function PlaceAppearanceSection({
-  title,
-  colorConfig = DEFAULT_PLACE_COLOR_CONFIG,
-  onColorModeChange,
-  onColorChange,
-}: PlaceAppearanceSectionProps): JSX.Element | null {
-  const { t } = useTranslation();
-  const { mode, colors } = colorConfig;
-
-  // Nothing to offer without both handlers — render nothing rather than a
-  // dead header.
-  if (!onColorModeChange || !onColorChange) return null;
-
-  const modeOptions = PLACE_COLOR_MODES.map((m) => ({
-    value: m,
-    label: t(`map:globe.panel.placeColorMode.${m}.label`),
-  }));
-
-  return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
-      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-        {t("map:globe.panel.placeColorMode.label")}
-      </div>
-      <SegControl<PlaceColorMode>
-        value={mode}
-        onChange={onColorModeChange}
-        options={modeOptions}
-      />
-      <div className="mt-1 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
-        {t(`map:globe.panel.placeColorMode.${mode}.hint`)}
-      </div>
-
-      {slotsForPlaceMode(mode).map((slot) => (
-        <ColorRow
-          key={slot}
-          caption={t(`map:globe.panel.placeColorMode.swatch.${slot}`)}
-          value={colors[slot]}
-          presets={PLACE_COLOR_PRESETS}
-          onChange={(c) => onColorChange(slot, c)}
-        />
-      ))}
     </div>
   );
 }

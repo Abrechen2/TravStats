@@ -10,6 +10,7 @@
 // night, performance mode) stays out of here — those live per map.
 
 import type { LabelsMode } from "./labelPriority";
+import type { PlaceLabelSource } from "../../lib/placeLabel";
 import {
   cruiseColorFromStored,
   type CruiseColorConfig,
@@ -105,6 +106,13 @@ export interface MapAppearance {
    *  the pin icon, for the separation reason documented in lib/placeColor.ts. */
   placeColorMode?: PlaceColorMode;
   placeColors?: PlaceColors;
+  /** Marker-size multiplier for place pins (1 = default), owned by
+   *  `MapContainer3D` exactly as `lodgingMarkerSize` is and persisted the same
+   *  way. Places went without one until 2026-08-28: both callers passed a
+   *  hardcoded `1` into `buildPlacePins`, so the panel offered every domain but
+   *  this one a size, and the dots could not be matched to the neighbours they
+   *  share a map with. */
+  placeMarkerSize?: number;
   /** Whether the lodging LIST panel is open (its own state, not the map
    *  control panel's `panelExpanded`). It used to open on every mount, so
    *  switching domain and coming back always sprang it open again. */
@@ -112,6 +120,16 @@ export interface MapAppearance {
   // Layers
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  /**
+   * Whether place pins are labelled with their name or their list's symbol,
+   * for the whole map at once.
+   *
+   * Each list carries its own default; this overrides all of them. ABSENT MUST
+   * KEEP MEANING "as each list says" — every existing user's stored blob
+   * predates this field, and reading absence as "always names" would make
+   * turning a list to symbols appear to do nothing at all.
+   */
+  placeLabelSource?: PlaceLabelSource;
   labelsMode?: LabelsMode;
   // Chrome
   /** Whether the control panel is expanded (#194). One value for both maps —

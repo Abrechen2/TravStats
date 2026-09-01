@@ -208,7 +208,8 @@
       "deleted": "Flug gelöscht",
       "updated": "Flug aktualisiert",
       "duplicated": "Flug dupliziert — bitte Datum und Zeit ergänzen",
-      "duplicateFailed": "Duplizieren fehlgeschlagen"
+      "duplicateFailed": "Duplizieren fehlgeschlagen",
+      "created": "Flug angelegt"
     },
     "duplicate": {
       "label": "Duplizieren",
@@ -249,7 +250,14 @@
     "sourceText": "Quelltext",
     "hideSourceText": "Ausblenden",
     "inferredHint": "Vom Parser geraten — bitte prüfen.",
-    "inferredDateHint": "Quelle nannte kein Jahr — Parser hat es geraten. Bitte verifiziere Datum und Jahr."
+    "inferredDateHint": "Quelle nannte kein Jahr — Parser hat es geraten. Bitte verifiziere Datum und Jahr.",
+    "importAll_one": "{{count}} Flug importieren",
+    "importAll_other": "{{count}} Flüge importieren",
+    "batchImported_one": "{{count}} Flug importiert",
+    "batchImported_other": "{{count}} Flüge importiert",
+    "batchImportedWithSkips": "{{created}} importiert, {{skipped}} übersprungen — die gab es schon",
+    "batchAllDuplicates_one": "Nichts importiert — der Flug war bereits erfasst",
+    "batchAllDuplicates_other": "Nichts importiert — alle {{count}} Flüge waren bereits erfasst"
   },
   "lookup": {
     "resultsTitle_one": "{{count}} Flug gefunden",
@@ -406,7 +414,8 @@
     "delayMinutes": "{{minutes}} Min. Verspätung",
     "earlyMinutes": "{{minutes}} Min. früher",
     "co2Label": "CO₂",
-    "co2Value": "{{kg}} kg CO₂"
+    "co2Value": "{{kg}} kg CO₂",
+    "copyFromPlanned": "Geplante Zeiten übernehmen — füllt nur leere Felder"
   },
   "filter": {
     "searchPlaceholder": "Airline, Flugnummer oder Flughafen …",

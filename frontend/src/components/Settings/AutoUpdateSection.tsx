@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { AmberToggle, SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface AutoUpdateSettings {
@@ -41,39 +40,6 @@ export default function AutoUpdateSection({
           {t("settings:autoUpdate.viewPending")} →
         </Link>
       </div>
-      <InlineHelp
-        title={t("settings:autoUpdate.info.title")}
-        category="basic"
-        content={
-          <div className="space-y-3">
-            <p>{t("settings:autoUpdate.info.description")}</p>
-            <div>
-              <p className="font-semibold mb-2">{t("settings:autoUpdate.info.benefits.title")}</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                <li>{t("settings:autoUpdate.info.benefits.realTime")}</li>
-                <li>{t("settings:autoUpdate.info.benefits.automatic")}</li>
-                <li>{t("settings:autoUpdate.info.benefits.review")}</li>
-                <li>{t("settings:autoUpdate.info.benefits.accurate")}</li>
-                <li>{t("settings:autoUpdate.info.benefits.timeSaving")}</li>
-              </ul>
-            </div>
-            <div
-              className="rounded-lg p-3"
-              style={{
-                background: "rgba(240,169,71,0.1)",
-                border: "1px solid rgba(240,169,71,0.3)",
-              }}
-            >
-              <p className="font-semibold mb-1 text-sm" style={{ color: "var(--accent)" }}>
-                {t("settings:autoUpdate.info.requirement.title")}
-              </p>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("settings:autoUpdate.info.requirement.description")}
-              </p>
-            </div>
-          </div>
-        }
-      />
       <div className="space-y-4">
         <label className="flex items-center gap-3">
           <AmberToggle

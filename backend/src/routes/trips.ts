@@ -32,6 +32,7 @@ import {
   dissolveMicroTrips,
   mergeTrips,
 } from "../services/tripCleanupService";
+import { recomputeLegs } from "../services/tour/legRecompute";
 import {
   summariseTrip,
   checkOllamaAvailable,
@@ -946,6 +947,18 @@ router.patch(
       });
       if (!existing) throw new AppError("Stop not found", 404);
       const body = updateStopSchema.parse(req.body);
+      // A route member's coordinates are the invariant a section's legs
+      // are built on (`recomputeLegs` refuses a coordinate-less endpoint
+      // at assignment time) — but `lat`/`lon` stay nullable on the stop
+      // itself, and this endpoint would otherwise silently null them out
+      // from under an assigned leg. Enforced here, at the ONLY other write
+      // path for a stop's coordinates.
+      if (existing.routeId !== null && (body.lat === null || body.lon === null)) {
+        throw new AppError(
+          "This stop is part of a route section — remove it from the route before clearing its coordinates",
+          400,
+        );
+      }
       const stop = await prisma.tripStop.update({
         where: { id: req.params.stopId },
         data: {
@@ -970,7 +983,18 @@ router.patch(
   },
 );
 
-/** DELETE /trips/:id/stops/:stopId */
+/**
+ * DELETE /trips/:id/stops/:stopId
+ *
+ * A stop with no `routeId` is a plain timeline point — delete it and stop.
+ * A stop that IS a route member needs more: the FK cascade already removes
+ * its two adjacent `TripRouteLeg` rows (`onDelete: Cascade` on both
+ * `fromStop`/`toStop`), but nothing re-creates the leg that should now span
+ * its former neighbours, and the surviving members' `routeOrderIdx` goes
+ * non-contiguous (e.g. 0, 2). Both are repaired here, inside one
+ * transaction with the delete itself, so a section never observably passes
+ * through the broken intermediate state.
+ */
 router.delete(
   "/trips/:id/stops/:stopId",
   authenticate,
@@ -987,7 +1011,36 @@ router.delete(
         where: { id: req.params.stopId, tripId: req.params.id },
       });
       if (!existing) throw new AppError("Stop not found", 404);
-      await prisma.tripStop.delete({ where: { id: req.params.stopId } });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.tripStop.delete({ where: { id: req.params.stopId } });
+
+        if (existing.routeId === null) return;
+
+        const route = await tx.tripRoute.findUnique({
+          where: { id: existing.routeId },
+          select: { mode: true },
+        });
+        // The section itself may have been deleted concurrently (cascade
+        // from a route DELETE) — nothing left to renumber or recompute.
+        if (!route) return;
+
+        const survivors = await tx.tripStop.findMany({
+          where: { routeId: existing.routeId },
+          orderBy: { routeOrderIdx: "asc" },
+          select: { id: true, lat: true, lon: true },
+        });
+
+        for (let idx = 0; idx < survivors.length; idx++) {
+          await tx.tripStop.update({
+            where: { id: survivors[idx].id },
+            data: { routeOrderIdx: idx },
+          });
+        }
+
+        await recomputeLegs(tx, existing.routeId, route.mode, survivors);
+      });
+
       res.status(204).send();
     } catch (error) {
       next(error);

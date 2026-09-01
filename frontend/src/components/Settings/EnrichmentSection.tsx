@@ -1,5 +1,4 @@
 import { AmberToggle, SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface HistoricalEnrichmentSettings {
@@ -38,58 +37,6 @@ export default function EnrichmentSection({
         </span>
       </div>
 
-      <InlineHelp
-        title={t("settings:historicalEnrichment.info.title")}
-        category="basic"
-        content={
-          <div className="space-y-3">
-            <p>{t("settings:historicalEnrichment.info.description")}</p>
-
-            <div className="rounded-lg p-3 space-y-2" style={{ background: "var(--bg-base)" }}>
-              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                {t("settings:historicalEnrichment.info.modes.title")}
-              </p>
-              <div className="flex gap-2 items-start">
-                <span
-                  className="px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap"
-                  style={{ background: "rgba(34,197,94,0.15)", color: "rgb(22,163,74)" }}
-                >
-                  {t("settings:historicalEnrichment.info.modes.fullLabel")}
-                </span>
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:historicalEnrichment.info.modes.fullDescription")}
-                </p>
-              </div>
-              <div className="flex gap-2 items-start">
-                <span
-                  className="px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap"
-                  style={{ background: "rgba(240,169,71,0.15)", color: "var(--accent)" }}
-                >
-                  {t("settings:historicalEnrichment.info.modes.slimLabel")}
-                </span>
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:historicalEnrichment.info.modes.slimDescription")}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className="rounded-lg p-3"
-              style={{
-                background: "rgba(240,169,71,0.1)",
-                border: "1px solid rgba(240,169,71,0.3)",
-              }}
-            >
-              <p className="font-semibold mb-1 text-sm" style={{ color: "var(--accent)" }}>
-                {t("settings:historicalEnrichment.info.warning.title")}
-              </p>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("settings:historicalEnrichment.info.warning.description")}
-              </p>
-            </div>
-          </div>
-        }
-      />
 
       <div className="space-y-4">
         <label className="flex items-center gap-3">

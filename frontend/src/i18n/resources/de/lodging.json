@@ -522,11 +522,30 @@
       "concentrationFootnote": "Herfindahl-Index über deine Kettennächte. Er sagt nichts darüber, wie oft du überhaupt eine Kette wählst — das steht links daneben.",
       "byChain": "Ketten, nach Nächten",
       "programmeYears": "Status-Fortschritt je Jahr",
+      "currentTier": "Aktueller Status:",
       "noProgrammes": "Noch keine Karte einem Aufenthalt zugeordnet",
       "programme": "Programm",
       "year": "Jahr",
       "nights": "Nächte",
       "stays": "Aufenthalte"
+    },
+    "records": {
+      "title": "Rekorde",
+      "longestStay": "Längster Aufenthalt",
+      "longestStayDesc": "Nächte am Stück in einem Haus",
+      "mostReturns": "Öfteste Rückkehr",
+      "mostReturnsDesc": "Aufenthalte im selben Hotel",
+      "perfectStays": "Makellose Aufenthalte",
+      "perfectStaysDesc": "durchweg Bestnoten · {{endured}} überstanden",
+      "oneNighters": "Eine Nacht",
+      "oneNightersDesc": "von {{total}} Aufenthalten",
+      "byHotel": "Hotels nach Nächten",
+      "nightsCount": "{{count}} Nächte",
+      "nightsCount_one": "{{count}} Nacht",
+      "staysCount": "{{count}} Aufenthalte",
+      "staysCount_one": "{{count}} Aufenthalt",
+      "noHotels": "Noch kein abgeschlossener Aufenthalt.",
+      "more": "+ {{count}} weitere"
     }
   },
   "period": {
@@ -549,5 +568,8 @@
     "yearField": "Jahr",
     "nightsField": "Nächte (falls bekannt)",
     "nightsHint": "Optional. Ohne Angabe zählt der Aufenthalt, aber ohne Nächte."
+  },
+  "photos": {
+    "title": "Fotos"
   }
 }

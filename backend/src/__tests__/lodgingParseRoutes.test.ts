@@ -171,7 +171,7 @@ describe("lodging domain wired into the parse routes", () => {
         bookings: [],
         parserUsed: "none",
         ollamaAvailable: true,
-        fallbackReason: "The parser found no booking in this document",
+        fallbackReason: "The AI parser read this document and found no booking in it",
       });
 
       const res = await request(app)

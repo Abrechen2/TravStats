@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface Invitation {
@@ -59,38 +58,18 @@ export default function InvitationManagement({
 
   return (
     <div className="space-y-4">
-      <InlineHelp
-        title={t("admin:invitations.title")}
-        category="advanced"
-        content={
-          <div className="space-y-2">
-            <p>{t("admin:invitations.help.description")}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-              <li>
-                <strong>{t("admin:invitations.help.createTitle")}</strong>{" "}
-                {t("admin:invitations.help.create")}
-              </li>
-              <li>
-                <strong>{t("admin:invitations.help.expiryTitle")}</strong>{" "}
-                {t("admin:invitations.help.expiry")}
-              </li>
-              <li>
-                <strong>{t("admin:invitations.help.oneUseTitle")}</strong>{" "}
-                {t("admin:invitations.help.oneUse")}
-              </li>
-              <li>
-                <strong>{t("admin:invitations.help.emailTitle")}</strong>{" "}
-                {t("admin:invitations.help.email")}
-              </li>
-            </ul>
-          </div>
-        }
-      />
 
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-(--text-primary)">
-          {t("admin:invitations.invitationLinks")}
-        </h2>
+        <div>
+          <h2 className="text-lg font-semibold text-(--text-primary)">
+            {t("admin:invitations.invitationLinks")}
+          </h2>
+          {/* Was the collapsed help box; the two facts an admin needs before
+              sending one — single use, seven days — now simply stand here. */}
+          <p className="text-sm text-(--text-muted) mt-1">
+            {t("admin:invitations.description")}
+          </p>
+        </div>
         <div className="flex gap-2">
           <button onClick={onCreateLink} className="btn-primary">
             {t("admin:invitations.actions.createLink")}

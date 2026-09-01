@@ -21,6 +21,7 @@ import enTrips from "./resources/en/trips.json";
 import enCruise from "./resources/en/cruise.json";
 import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
+import enPassport from "./resources/en/passport.json";
 import enSpecialFlights from "./resources/en/specialFlights.json";
 import enImmich from "./resources/en/immich.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
@@ -29,6 +30,7 @@ import enLodging from "./resources/en/lodging.json";
 import enLocation from "./resources/en/location.json";
 import enCompanions from "./resources/en/companions.json";
 import enPlaces from "./resources/en/places.json";
+import enXlsx from "./resources/en/xlsx.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -48,6 +50,7 @@ import deTrips from "./resources/de/trips.json";
 import deCruise from "./resources/de/cruise.json";
 import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
+import dePassport from "./resources/de/passport.json";
 import deSpecialFlights from "./resources/de/specialFlights.json";
 import deImmich from "./resources/de/immich.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
@@ -56,6 +59,7 @@ import deLodging from "./resources/de/lodging.json";
 import deLocation from "./resources/de/location.json";
 import deCompanions from "./resources/de/companions.json";
 import dePlaces from "./resources/de/places.json";
+import deXlsx from "./resources/de/xlsx.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -98,6 +102,7 @@ const resources = {
     cruise: enCruise,
     import: enImport,
     aircraft: enAircraft,
+    passport: enPassport,
     specialFlights: enSpecialFlights,
     immich: enImmich,
     whatsNew: enWhatsNew,
@@ -106,6 +111,7 @@ const resources = {
     location: enLocation,
     companions: enCompanions,
     places: enPlaces,
+    xlsx: enXlsx,
   },
   de: {
     common: deCommon,
@@ -126,6 +132,7 @@ const resources = {
     cruise: deCruise,
     import: deImport,
     aircraft: deAircraft,
+    passport: dePassport,
     specialFlights: deSpecialFlights,
     immich: deImmich,
     whatsNew: deWhatsNew,
@@ -134,6 +141,7 @@ const resources = {
     location: deLocation,
     companions: deCompanions,
     places: dePlaces,
+    xlsx: deXlsx,
   },
 };
 
@@ -163,6 +171,7 @@ i18n.use(initReactI18next).init({
     "cruise",
     "import",
     "aircraft",
+    "passport",
     "specialFlights",
     "immich",
     "whatsNew",
@@ -171,6 +180,7 @@ i18n.use(initReactI18next).init({
     "location",
     "companions",
     "places",
+    "xlsx",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

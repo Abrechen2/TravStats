@@ -8,7 +8,7 @@ import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
-import { checkAndUpdateAchievements } from "../utils/achievements";
+import { recheckAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
 import { classifyStay } from "../shared/lodgingCounting";
 import { resolveStayTiming } from "../shared/lodgingTiming";
@@ -316,15 +316,6 @@ const fxPreviewQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
 });
 
-function recheckAchievements(userId: string): void {
-  checkAndUpdateAchievements(userId).catch((error) => {
-    logger.error({
-      operation: "lodging_achievement_check_failed",
-      error: error instanceof Error ? error.message : error,
-    });
-  });
-}
-
 // ---- Lodging CRUD ----
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -572,7 +563,7 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
       },
     });
 
-    recheckAchievements(userId);
+    await recheckAchievements(userId, "lodging");
     logger.info({ operation: "lodging_stay_create", stayId: stay.id, lodgingId: lodging.id, userId });
     res.status(201).json({ success: true, data: stay });
   } catch (err) {
@@ -766,7 +757,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       },
     });
 
-    recheckAchievements(userId);
+    await recheckAchievements(userId, "lodging");
     res.json({ success: true, data: updated });
   } catch (err) {
     next(err);

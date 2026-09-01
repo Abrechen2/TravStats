@@ -81,10 +81,84 @@ export const BETA_FEATURES = Object.freeze({
    * so a place visited on a trip keeps its `PlaceVisit` row and reappears
    * intact the moment the flag comes back on.
    */
+  /**
+   * User-chosen colour per domain, applied to every surface outside the map.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
+   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
+   * everyone gets the brand set from BRAND.md §3, so an instance that turns
+   * the flag back off does not keep rendering colours nobody can reach a
+   * control for.
+   *
+   * The open question it is waiting on is not technical. BRAND.md §3 names the
+   * four hexes as canonical and the backend mirrors the same table; letting a
+   * user override them turns a brand constant into a default, which affects
+   * screenshots, the wiki and the marketing site as much as the app.
+   */
+  /**
+   * The passport page — /passport, its nav entry, and GET /stats/passport.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
+   * flag is off, as every gate here does (see the file header). That matters
+   * more than usual: the Companion app is expected to READ this endpoint and
+   * drop its own client-side derivation, and it must not have to care what an
+   * instance's beta flag says.
+   */
+  passport: Object.freeze({
+    reason: "beta",
+    why: "The page is complete and the numbers agree with the statistics page, but it ships in the middle of a release candidate. Hiding it keeps 2.6.0's released surface unchanged while the RC still gets it in front of testers.",
+    returnsWhen:
+      "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
+  }),
+
+  domainColors: Object.freeze({
+    reason: "advanced",
+    why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
+    returnsWhen:
+      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
+    issue: "#270",
+  }),
+
   poiDomain: Object.freeze({
     reason: "beta",
     why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
     returnsWhen: "Custom lists (phase B) have shipped.",
+  }),
+
+  /**
+   * The "Touren" tab on the trip detail page (tour route sections: a named
+   * ordered chain of stops with driven legs — the road-trip counterpart to
+   * cruise itineraries), and its editor at
+   * `/trips/:id/route/:routeId` — gated the same way as the tab, since the
+   * editor is otherwise reachable by URL with the tab hidden.
+   *
+   * The list AND its editor (stop assignment, per-leg mode/source
+   * overrides, the route map) are both feature-complete now. The gate stays
+   * on because the feature as a whole is still awaiting the owner's release
+   * decision, not because anything named here is unfinished.
+   */
+  tourRoutes: Object.freeze({
+    reason: "beta",
+    why: "The section list and its editor both work end-to-end, but the feature has not yet been through the owner's review — the gate is what keeps it off production until that happens.",
+    returnsWhen: "The owner accepts the feature for release.",
+  }),
+
+  /**
+   * The Dawarich connection — a self-hosted location-history server TravStats
+   * PULLS recorded tracks from, never writes to.
+   *
+   * It has its own key rather than riding on `tourRoutes`, even though tours
+   * are its only consumer today. Dawarich is an integration, not a feature of
+   * one domain: `dev/cruise-tracks` will take cruise legs from the same
+   * connection, and a gate named after tours would then hide a card the cruise
+   * feature needs. Gating an integration on one of its consumers is only ever
+   * right while there is exactly one.
+   */
+  dawarich: Object.freeze({
+    reason: "beta",
+    why: "The connection, the pull and the settings card all work, but every consumer of a recorded track is itself still behind a gate — a Dawarich card on production would offer a connection with nothing to connect to.",
+    returnsWhen:
+      "A feature that consumes recorded tracks ships — tour routes today, cruise legs next.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

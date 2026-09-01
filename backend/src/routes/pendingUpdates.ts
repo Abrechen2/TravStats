@@ -44,6 +44,111 @@ const updatePendingUpdateSchema = z.object({
   }).optional(),
 });
 
+/**
+ * Bulk apply / reject.
+ *
+ * Every action here was per-id, and the review page held a single selected id,
+ * so accepting a refresh that produced fifty proposals cost fifty clicks and
+ * fifty round trips (Forgejo #33). The refresh is a batch operation; the review
+ * was not, which made the feature slower to use exactly as it became more
+ * useful.
+ *
+ * The response reports an outcome PER ID rather than one success flag. Some
+ * proposals will fail — a flight edited in the meantime, a proposal already
+ * applied, an id that is not yours — and collapsing that into a single boolean
+ * would silently drop changes the user believes they accepted. Partial success
+ * is the normal case here, not an error case.
+ *
+ * The cap is deliberate. `historicalEnrichmentMaxPerDay` defaults to 50, so 200
+ * is generous for real use while keeping one request from turning into an
+ * unbounded transaction.
+ */
+const bulkIdsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(200),
+});
+
+type BulkOutcome = { id: string; status: 'applied' | 'rejected' | 'failed'; error?: string };
+
+async function runBulk(
+  ids: string[],
+  userId: string,
+  action: 'apply' | 'reject'
+): Promise<BulkOutcome[]> {
+  const results: BulkOutcome[] = [];
+  // Sequential on purpose: applying mutates the underlying flight, and running
+  // these in parallel would put dozens of writes on the pool at once for no
+  // gain a person can perceive.
+  for (const id of ids) {
+    try {
+      const existing = await getPendingUpdateById(id, userId);
+      if (!existing) {
+        results.push({ id, status: 'failed', error: 'Not found' });
+        continue;
+      }
+      if (action === 'apply') {
+        const flight = await applyPendingUpdate(id, userId);
+        results.push(
+          flight
+            ? { id, status: 'applied' }
+            : { id, status: 'failed', error: 'Could not be applied' }
+        );
+      } else {
+        const ok = await rejectPendingUpdate(id, userId);
+        results.push(
+          ok ? { id, status: 'rejected' } : { id, status: 'failed', error: 'Could not be rejected' }
+        );
+      }
+    } catch (error) {
+      results.push({
+        id,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+  return results;
+}
+
+// Bulk apply — registered before the /:id routes so the literal path wins
+router.post('/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { ids } = bulkIdsSchema.parse(req.body);
+    const results = await runBulk(ids, userId, 'apply');
+    const applied = results.filter((r) => r.status === 'applied').length;
+
+    logger.info({
+      operation: 'bulk_apply_pending_updates',
+      message: 'Pending updates applied in bulk',
+      context: { userId, requested: ids.length, applied, failed: ids.length - applied },
+    });
+
+    res.json({ requested: ids.length, applied, failed: ids.length - applied, results });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Bulk reject
+router.post('/reject', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { ids } = bulkIdsSchema.parse(req.body);
+    const results = await runBulk(ids, userId, 'reject');
+    const rejected = results.filter((r) => r.status === 'rejected').length;
+
+    logger.info({
+      operation: 'bulk_reject_pending_updates',
+      message: 'Pending updates rejected in bulk',
+      context: { userId, requested: ids.length, rejected, failed: ids.length - rejected },
+    });
+
+    res.json({ requested: ids.length, rejected, failed: ids.length - rejected, results });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all pending updates for the authenticated user
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

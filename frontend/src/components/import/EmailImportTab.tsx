@@ -14,12 +14,21 @@ interface EmailImportTabProps {
   /** Only a domain the backend can actually parse for — see `types.ts`. */
   domain: ParseableImportDomain;
   acceptedExtensions: string[];
-  onEmailResult: (result: ParseEmailResult) => void;
+  /**
+   * The parsed result, plus the file it came from when there was one.
+   *
+   * Forgejo #19: the import log showed rows reading "Flüge · E-Mail ·
+   * 30.8.2026 · 2 Flüge" with no way to tell them apart, because the batch was
+   * created with `fileName: null`. After several imports on one day, reverting
+   * the right one is guesswork. The name is null for pasted text, which has
+   * no source file to name.
+   */
+  onEmailResult: (result: ParseEmailResult, fileName?: string | null) => void;
   /**
    * Called when a `.pdf` is dropped in the email tab — kept for back-compat
    * with the flight workflow that auto-detects PDFs in this tab.
    */
-  onPdfResult?: (result: ParsePdfResult) => void;
+  onPdfResult?: (result: ParsePdfResult, fileName?: string | null) => void;
   onError: (message: string) => void;
 }
 
@@ -62,7 +71,7 @@ export default function EmailImportTab({
           }
           const pdfBase64 = btoa(binary);
           const result = await parseApi.parsePdf(pdfBase64, domain);
-          onPdfResult(result);
+          onPdfResult(result, file.name);
         } catch (err) {
           logger.error("EmailImportTab: PDF parse failed", err);
           onError(extractApiErrorMessage(err, t("import:pdf.parseError")));
@@ -80,7 +89,7 @@ export default function EmailImportTab({
       setDropState("loading");
       try {
         const result = await parseApi.parseEmailFile(file, domain);
-        onEmailResult(result);
+        onEmailResult(result, file.name);
       } catch (err) {
         logger.error("EmailImportTab: email file parse failed", err);
         onError(extractApiErrorMessage(err, t("import:email.parseError")));
@@ -96,7 +105,9 @@ export default function EmailImportTab({
     setDropState("loading");
     try {
       const result = await parseApi.parseEmail(emailText, undefined, domain);
-      onEmailResult(result);
+      // Pasted text has no source file, so the log row stays unnamed rather
+      // than being given a made-up one.
+      onEmailResult(result, null);
     } catch (err) {
       logger.error("EmailImportTab: email text parse failed", err);
       onError(extractApiErrorMessage(err, t("import:email.parseError")));

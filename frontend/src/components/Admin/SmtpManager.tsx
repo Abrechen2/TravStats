@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi, type SmtpConfigInput } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
-import InlineHelp from "../Help/InlineHelp";
 import ConfirmModal from "../Training/ConfirmModal";
 
 const DEFAULT_CONFIG: SmtpConfigInput = {
@@ -140,33 +140,6 @@ export default function SmtpManager(): JSX.Element {
         {t("settings:notifications.smtpTitle")}
       </h3>
 
-      <InlineHelp
-        title={t("settings:notifications.smtpHelp.title")}
-        category="expert"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:notifications.smtpHelp.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:notifications.smtpHelp.portsTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.ports")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">
-                {t("settings:notifications.smtpHelp.credentialsTitle")}
-              </p>
-              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.credentials")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:notifications.smtpHelp.senderTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.sender")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:notifications.smtpHelp.testTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.test")}</p>
-            </div>
-          </div>
-        }
-      />
 
       {/* Enable toggle */}
       <label className="flex items-center gap-3">
@@ -196,7 +169,10 @@ export default function SmtpManager(): JSX.Element {
 
         {/* Port */}
         <div>
-          <label className="label">{t("settings:notifications.smtpPort")}</label>
+          <label className="label flex items-center gap-1.5">
+                {t("settings:notifications.smtpPort")}
+                <HelpIcon content={t("settings:notifications.smtpHelp.ports")} position="top" />
+              </label>
           <input
             type="number"
             className="input"
@@ -221,7 +197,10 @@ export default function SmtpManager(): JSX.Element {
 
         {/* Password */}
         <div>
-          <label className="label">{t("settings:notifications.smtpPassword")}</label>
+          <label className="label flex items-center gap-1.5">
+                {t("settings:notifications.smtpPassword")}
+                <HelpIcon content={t("settings:notifications.smtpHelp.credentials")} position="top" />
+              </label>
           <input
             type="password"
             className="input"
@@ -234,7 +213,10 @@ export default function SmtpManager(): JSX.Element {
 
         {/* From Email */}
         <div>
-          <label className="label">{t("settings:notifications.smtpFromEmail")}</label>
+          <label className="label flex items-center gap-1.5">
+                {t("settings:notifications.smtpFromEmail")}
+                <HelpIcon content={t("settings:notifications.smtpHelp.sender")} position="top" />
+              </label>
           <input
             type="email"
             className="input"

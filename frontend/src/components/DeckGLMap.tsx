@@ -19,9 +19,12 @@ import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemap
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
+import type { Place } from "../types/place";
 import type { MapMode } from "./MapContainer3D";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { buildLodgingPins } from "./layers/lodgingPinsLayer";
+import { buildPlacePins } from "./layers/placePinsLayer";
+import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
@@ -158,6 +161,33 @@ interface DeckGLMapProps {
    * from immediately clearing whatever the click just did.
    */
   onLodgingClick?: (lodgingId: string) => void;
+  /**
+   * Places to render as pins + name labels. Built HERE rather than by the
+   * caller for the same reason `lodgingsOverride` is: the layer needs `zoom`
+   * and `labelsMode`, which are private to this component.
+   *
+   * Until 2026-08-28 both PoiTab and AllTab called `buildPlacePins` themselves
+   * and passed it into `extraLayers`, which is why places were the one domain
+   * whose labels never opened up on zoom — the tab had no zoom to give and
+   * passed a literal `4` — and the one domain with no size slider, for the same
+   * reason. Undefined/empty means no place layer at all.
+   */
+  placesOverride?: readonly Place[];
+  /** Fired when a place pin is clicked. Wrapped internally with the
+   *  `deckClickedRef` guard, exactly as the lodging and airport clicks are. */
+  onPlaceClick?: (placeId: string) => void;
+  /** Place-id → its list's colour, resolved by the caller (`list` colour mode
+   *  only). Passed through untouched: a layer resolving list membership itself
+   *  would be a second place deciding what a pin means. */
+  placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  /** Place-id → the label default of the SAME list that gave it its colour,
+   *  resolved by the caller through `resolvePlaceListColors`. Passed through
+   *  untouched, for the reason `placeListColors` is. */
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
+  /** Marker-size slider value + setter for places, owned by `MapContainer3D`
+   *  exactly as the lodging pair is. */
+  placeMarkerSize?: number;
+  onPlaceMarkerSizeChange?: (s: number) => void;
 }
 
 export function DeckGLMap({
@@ -176,6 +206,12 @@ export function DeckGLMap({
   onLodgingMarkerSizeChange,
   lodgingsOverride,
   onLodgingClick,
+  placesOverride,
+  onPlaceClick,
+  placeListColors,
+  placeListLabels,
+  placeMarkerSize = 1,
+  onPlaceMarkerSizeChange,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -197,8 +233,9 @@ export function DeckGLMap({
   const lodgingColorConfig = useLodgingColorStore((s) => s.config);
   const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
   const setLodgingColor = useLodgingColorStore((s) => s.setColor);
-  // POI has no marker-size slider of its own — place pins share the airport/
-  // port dot sizing — so only mode + colours travel to the panel.
+  // Places carry mode + colours AND (since 2026-08-28) their own marker size,
+  // the same pair every other domain has. The dot still derives from
+  // `markerDotStyle`, so 1x is exactly an airport dot.
   const placeColorConfig = usePlaceColorStore((s) => s.config);
   const setPlaceColorMode = usePlaceColorStore((s) => s.setMode);
   const setPlaceColor = usePlaceColorStore((s) => s.setColor);
@@ -257,6 +294,10 @@ export function DeckGLMap({
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
     () => loadMapAppearance().labelsMode ?? "important"
   );
+  // Absent means "as each list says" — see the field's note in mapAppearance.
+  const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
+    () => loadMapAppearance().placeLabelSource ?? "list"
+  );
   useEffect(() => {
     saveMapAppearance({
       styleId,
@@ -271,6 +312,7 @@ export function DeckGLMap({
       showTerrain,
       showPlaceLabels,
       labelsMode,
+      placeLabelSource,
     });
   }, [
     styleId,
@@ -285,6 +327,7 @@ export function DeckGLMap({
     showTerrain,
     showPlaceLabels,
     labelsMode,
+    placeLabelSource,
   ]);
   // Apply the style-level overlays (relief hillshade + basemap place
   // names) once the map is loaded and whenever a toggle flips. Same
@@ -599,6 +642,14 @@ export function DeckGLMap({
     [onLodgingClick]
   );
 
+  const handlePlaceClick = useCallback(
+    (placeId: string): void => {
+      deckClickedRef.current = true;
+      onPlaceClick?.(placeId);
+    },
+    [onPlaceClick]
+  );
+
   // Heavy data build extracted from the layer useMemo so selection changes
   // (which only need to re-style the existing arcs) don't re-aggregate
   // flights into routes. Deps are deliberately limited to fields that
@@ -716,11 +767,24 @@ export function DeckGLMap({
         colors: lodgingColorConfig,
       }) ?? [];
 
+    // Place pins, on the same terms as lodging above — real zoom, real
+    // labelsMode, real marker size.
+    const placeLayers: Layer[] =
+      buildPlacePins(placesOverride ?? [], placeMarkerSize, zoom, {
+        onPinClick: handlePlaceClick,
+        labelsMode,
+        colors: placeColorConfig,
+        listColors: placeListColors,
+        listLabels: placeListLabels,
+        labelSource: placeLabelSource,
+      }) ?? [];
+
     return [
       ...cruisePathsBelow,
       ...base,
       ...cruisePortsAbove,
       ...lodgingLayers,
+      ...placeLayers,
       ...(extraLayers ?? []),
     ];
   }, [
@@ -755,6 +819,13 @@ export function DeckGLMap({
     lodgingMarkerSize,
     lodgingColorConfig,
     handleLodgingClick,
+    placesOverride,
+    placeMarkerSize,
+    placeColorConfig,
+    placeListColors,
+    placeListLabels,
+    placeLabelSource,
+    handlePlaceClick,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -903,6 +974,10 @@ export function DeckGLMap({
             colorConfig: placeColorConfig,
             onColorModeChange: setPlaceColorMode,
             onColorChange: setPlaceColor,
+            markerSize: placeMarkerSize,
+            onMarkerSizeChange: onPlaceMarkerSizeChange ?? (() => {}),
+            labelSource: placeLabelSource,
+            onLabelSourceChange: setPlaceLabelSource,
           }}
         />
       </div>

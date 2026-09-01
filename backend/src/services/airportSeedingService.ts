@@ -6,6 +6,9 @@ import { parse } from 'csv-parse/sync';
 import https from 'https';
 import { AIRPORT_CATALOGUE } from '../config/constants';
 
+import { admitsAirport } from '../shared/antarcticAirfields';
+import { normalizeAirportName } from '../shared/airportName';
+
 interface CSVAirport {
   id: string;
   ident: string;
@@ -178,26 +181,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
       context: { recordCount: records.length },
     });
 
-    // Filter airports. We include `closed` so that permanently closed
-    // commercial airports (e.g. Berlin Tegel TXL, Denver Stapleton) are still
-    // pickable for historical flights. Without them, users cannot log any
-    // pre-closure flights. We also drop the `scheduled_service === 'yes'`
-    // filter: `closed` airports always have `scheduled_service = 'no'`.
-    const filteredAirports = records.filter((airport) => {
-      if (!['large_airport', 'medium_airport', 'closed'].includes(airport.type)) {
-        return false;
-      }
-      if (!airport.latitude_deg || !airport.longitude_deg) {
-        return false;
-      }
-      // Closed airports in OurAirports data don't lose their IATA/ICAO — we
-      // still require a code so the airport is addressable. Active airports
-      // without a code are also dropped (same as before).
-      if (!airport.iata_code && !airport.gps_code && !airport.ident) {
-        return false;
-      }
-      return true;
-    });
+    const filteredAirports = records.filter((a) => admitsAirport(a));
 
     const totalAirports = filteredAirports.length;
 
@@ -295,7 +279,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           : await prisma.airport.findFirst({ where: { icao, isClosed } });
 
         const data = {
-          name: airport.name,
+          name: normalizeAirportName(airport.name),
           city: airport.municipality || null,
           country: airport.iso_country || null,
           lat,

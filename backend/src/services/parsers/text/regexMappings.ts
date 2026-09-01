@@ -108,8 +108,20 @@ export const IATA_FALSE_POSITIVES = [
   'DID', 'ITS', 'LET', 'PUT', 'SAY', 'SHE', 'TOO', 'USE', 'YET', 'ZUR',
 ];
 
-// Two-letter prefixes that are common false positives for flight numbers
+/**
+ * Word prefixes that are common false positives for flight numbers.
+ *
+ * Compared against the WHOLE alphabetic prefix of a candidate, which is why
+ * three-letter entries belong here too: the check used to look at the first two
+ * characters only, so "Nur 7 Tage gültig" became flight NUR7 — the subject line
+ * of the very promotion Forgejo #35 was filed about.
+ *
+ * Kept separate from IATA_FALSE_POSITIVES on purpose, even though both hold
+ * German filler words: NUR is also Nuremberg's airport code, and banning it
+ * there would cost a real airport to save a fake flight.
+ */
 export const FLIGHT_NUMBER_FALSE_PREFIXES = [
+  'NUR',
   'AB', 'AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR',
   'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO',
   'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM',

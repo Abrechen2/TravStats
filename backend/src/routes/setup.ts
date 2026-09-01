@@ -4,8 +4,7 @@ import { appVersion } from "../utils/version";
 import { z } from 'zod';
 import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
-import { getAuthCookieOptions } from './auth';
+import { issueAuthCookie } from '../utils/session';
 import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
 import { updateInstanceSettings } from '../services/instanceSettingsService';
@@ -127,8 +126,8 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
     }
 
     // Generate token and set HttpOnly cookie for automatic login
-    const token = generateToken(user.id);
-    res.cookie('auth_token', token, getAuthCookieOptions(req));
+    // Same choke point as every other session (Forgejo #31).
+    issueAuthCookie(req, res, user);
 
     res.json({
       success: true,

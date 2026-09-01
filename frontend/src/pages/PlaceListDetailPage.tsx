@@ -1,3 +1,5 @@
+import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
+import type { PlaceLabelMode } from "../lib/placeLabel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -172,6 +174,39 @@ export default function PlaceListDetailPage(): JSX.Element {
     }
   }, [list, draftName, addToast, t]);
 
+  /**
+   * Symbol and label mode save together.
+   *
+   * They are one decision to the user and one guarded pair in the form -- the
+   * mode falls back when the symbol is cleared -- so sending them as two
+   * requests would let the pair land half-applied if the second one failed.
+   */
+  // The symbol is a text field on a page that saves as you go, so it is edited
+  // as a draft and committed on blur. Seeded from the list once it loads, and
+  // re-seeded if the list itself is replaced.
+  const [draftIcon, setDraftIcon] = useState("");
+  useEffect(() => {
+    setDraftIcon(list?.icon ?? "");
+  }, [list?.id, list?.icon]);
+
+  const handleLabel = useCallback(
+    async (icon: string, labelMode: PlaceLabelMode): Promise<void> => {
+      if (!list) return;
+      try {
+        setList(
+          await updatePlaceList(list.id, {
+            icon: hasSymbol(icon) ? icon.trim() : null,
+            labelMode,
+          })
+        );
+      } catch (err: unknown) {
+        logger.error({ err }, "PlaceListDetailPage: failed to save list label settings");
+        addToast("error", t("places:lists.saveFailed"));
+      }
+    },
+    [list, addToast, t]
+  );
+
   const handleColor = useCallback(
     async (color: string): Promise<void> => {
       if (!list) return;
@@ -345,6 +380,16 @@ export default function PlaceListDetailPage(): JSX.Element {
               }}
             />
           ))}
+        </div>
+
+        <div className="mb-6">
+          <PlaceListLabelFields
+            icon={draftIcon}
+            onIconChange={setDraftIcon}
+            onIconCommit={(icon) => void handleLabel(icon, list.labelMode)}
+            labelMode={list.labelMode}
+            onLabelModeChange={(mode) => void handleLabel(draftIcon, mode)}
+          />
         </div>
 
         {/* Add a place. Search-as-you-type over the places the user already has

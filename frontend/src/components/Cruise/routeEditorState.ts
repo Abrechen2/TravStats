@@ -16,7 +16,15 @@ export type LonLat = [number, number];
 export interface RouteEditorState {
   waypoints: LonLat[];
   original: LonLat[];
-  selected: number | null;
+  /**
+   * The selected handles, ascending, never containing an endpoint.
+   *
+   * A SET rather than one index because a marquee selects many at once. The
+   * endpoint rule has to hold here rather than at the delete: a rectangle
+   * dragged over the whole leg contains the two ports as surely as it contains
+   * the handles, and a port the user can select is a delete they will try.
+   */
+  selected: number[];
   history: LonLat[][];
   /** Lines undo took back, newest last — what redo restores. Any NEW
    *  change discards it: redoing an abandoned branch over newer work is
@@ -109,7 +117,7 @@ export function initRouteEditor(waypoints: LonLat[]): RouteEditorState {
   return {
     waypoints: clone(waypoints),
     original: clone(waypoints),
-    selected: null,
+    selected: [],
     history: [],
     future: [],
   };
@@ -124,15 +132,31 @@ export function isEndpoint(state: RouteEditorState, index: number): boolean {
 }
 
 export function selectWaypoint(state: RouteEditorState, index: number | null): RouteEditorState {
-  if (index === null || isEndpoint(state, index)) return { ...state, selected: null };
-  return { ...state, selected: index };
+  if (index === null || isEndpoint(state, index)) return { ...state, selected: [] };
+  return { ...state, selected: [index] };
+}
+
+/** Everything the predicate accepts, ports excluded whatever it says. */
+export function selectWaypointsIn(
+  state: RouteEditorState,
+  contains: (point: LonLat, index: number) => boolean
+): RouteEditorState {
+  const selected = state.waypoints.reduce<number[]>((acc, point, index) => {
+    if (!isEndpoint(state, index) && contains(point, index)) acc.push(index);
+    return acc;
+  }, []);
+  return { ...state, selected };
+}
+
+export function clearSelection(state: RouteEditorState): RouteEditorState {
+  return state.selected.length === 0 ? state : { ...state, selected: [] };
 }
 
 export function moveWaypoint(state: RouteEditorState, index: number, to: LonLat): RouteEditorState {
   if (isEndpoint(state, index)) return state;
   const waypoints = clone(state.waypoints);
   waypoints[index] = [to[0], to[1]];
-  return { ...state, waypoints, history: remember(state), selected: index, future: [] };
+  return { ...state, waypoints, history: remember(state), selected: [index], future: [] };
 }
 
 /**
@@ -143,7 +167,7 @@ export function moveWaypoint(state: RouteEditorState, index: number, to: LonLat)
  */
 export function beginDrag(state: RouteEditorState, index: number): RouteEditorState {
   if (isEndpoint(state, index)) return state;
-  return { ...state, history: remember(state), selected: index, future: [] };
+  return { ...state, history: remember(state), selected: [index], future: [] };
 }
 
 /** A drag in flight: move without remembering — `beginDrag` already did. */
@@ -151,7 +175,7 @@ export function dragWaypoint(state: RouteEditorState, index: number, to: LonLat)
   if (isEndpoint(state, index)) return state;
   const waypoints = clone(state.waypoints);
   waypoints[index] = [to[0], to[1]];
-  return { ...state, waypoints, selected: index };
+  return { ...state, waypoints, selected: [index] };
 }
 
 /**
@@ -167,14 +191,39 @@ export function insertWaypoint(
   if (segmentIndex < 0 || segmentIndex >= state.waypoints.length - 1) return state;
   const waypoints = clone(state.waypoints);
   waypoints.splice(segmentIndex + 1, 0, [at[0], at[1]]);
-  return { ...state, waypoints, history: remember(state), selected: segmentIndex + 1, future: [] };
+  return {
+    ...state,
+    waypoints,
+    history: remember(state),
+    selected: [segmentIndex + 1],
+    future: [],
+  };
 }
 
 export function removeWaypoint(state: RouteEditorState, index: number): RouteEditorState {
   if (isEndpoint(state, index)) return state;
   const waypoints = clone(state.waypoints);
   waypoints.splice(index, 1);
-  return { ...state, waypoints, history: remember(state), selected: null, future: [] };
+  return { ...state, waypoints, history: remember(state), selected: [], future: [] };
+}
+
+/**
+ * Delete a whole selection in one step.
+ *
+ * Back to front, because deleting front to back shifts every later index by one
+ * and takes out the wrong points -- so the caller's ordering must not matter.
+ * One history entry, because a marquee delete is one decision and has to be one
+ * undo. Ports are dropped from the request rather than refused: a rectangle
+ * that happened to cover one should still delete the handles beside it.
+ */
+export function removeWaypoints(state: RouteEditorState, indices: number[]): RouteEditorState {
+  const removable = [...new Set(indices)]
+    .filter((index) => !isEndpoint(state, index))
+    .sort((a, b) => b - a);
+  if (removable.length === 0) return state;
+  const waypoints = clone(state.waypoints);
+  for (const index of removable) waypoints.splice(index, 1);
+  return { ...state, waypoints, history: remember(state), selected: [], future: [] };
 }
 
 /**
@@ -198,7 +247,7 @@ export function undo(state: RouteEditorState): RouteEditorState {
   const history = [...state.history];
   const previous = history.pop() as LonLat[];
   const future = [...state.future, clone(state.waypoints)];
-  return { ...state, waypoints: previous, history, future, selected: null };
+  return { ...state, waypoints: previous, history, future, selected: [] };
 }
 
 /** Restore what undo took back. Bounded by undo itself — the future can
@@ -207,7 +256,7 @@ export function redo(state: RouteEditorState): RouteEditorState {
   if (state.future.length === 0) return state;
   const future = [...state.future];
   const next = future.pop() as LonLat[];
-  return { ...state, waypoints: next, history: remember(state), future, selected: null };
+  return { ...state, waypoints: next, history: remember(state), future, selected: [] };
 }
 
 /** Has the line actually changed? Drives whether saving is offered at all. */

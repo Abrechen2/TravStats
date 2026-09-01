@@ -88,12 +88,7 @@
     "saved": "Profil gespeichert",
     "saveFailed": "Fehler beim Speichern des Profils",
     "help": {
-      "title": "Profil & Passwort",
-      "description": "Benutzername, E-Mail und Profilbild sind nur für dich sichtbar. Die E-Mail wird außerdem für Passwort-Reset und optionale Benachrichtigungen verwendet.",
-      "avatarTitle": "Profilbild:",
-      "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet.",
-      "passwordTitle": "Passwort ändern:",
-      "password": "Öffnet ein separates Modal, in dem das aktuelle Passwort zur Verifizierung eingegeben werden muss, bevor ein neues gesetzt wird."
+      "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet."
     },
     "editProfile": "Profil bearbeiten"
   },
@@ -122,8 +117,6 @@
     "bannerTitle": "Kein Heimatflughafen hinterlegt",
     "bannerDescription": "Setze deinen Heimatflughafen, damit Statistiken wie \"Längster Layover\" oder \"Am weitesten von zu Hause\" korrekt funktionieren.",
     "help": {
-      "title": "Heimatflughafen & Umzüge",
-      "description": "Der Heimatflughafen dient als Anker für Reise-Statistiken. Nur der Start einer Reise vom Heimatflughafen oder die Rückkehr dorthin ist per Definition kein Zwischenstopp.",
       "historyExplained": "Wenn du umziehst, wird der bisherige Flughafen nicht überschrieben, sondern als vergangener Eintrag gespeichert. Alte Flüge behalten den damaligen Heimatflughafen."
     }
   },
@@ -138,6 +131,13 @@
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat"
+  },
+  "domainColors": {
+    "title": "Bereichsfarben",
+    "description": "Die Farbe je Bereich — sie gilt in den Statistiken, in der Reise-Zeitleiste, in der Aktivitätsleiste, im Import-Protokoll und überall sonst, wo ein Bereich mit einer einzelnen Farbe gekennzeichnet wird.",
+    "mapNote": "Die Karte bleibt davon unberührt: dort lässt sich eine Route nach Status oder Häufigkeit einfärben, ein Jahresbalken nicht. Die Kartenfarben stellst du weiter im Kartenbereich ein.",
+    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben.",
+    "reset": "Auf Markenfarben zurücksetzen"
   },
   "units": {
     "title": "Einheiten & Formate",
@@ -157,11 +157,7 @@
       "fahrenheit": "Fahrenheit"
     },
     "help": {
-      "title": "Einheiten & Formate",
-      "description": "Bestimmt, wie Distanzen und Kosten überall in der App dargestellt werden — Dashboard, Statistiken, Flugdetails und Exporte.",
-      "distanceTitle": "Distanz:",
       "distance": "Kilometer (Standard in DE/EU), Meilen (US) oder Nautische Meilen (wie bei Airlines üblich). Die zugrunde liegende Berechnung bleibt gleich — nur die Anzeige ändert sich.",
-      "currencyTitle": "Währung:",
       "currency": "Wird für Ticketpreise und Kostenstatistiken verwendet. Keine automatische Umrechnung bestehender Flüge — alte Werte bleiben in der ursprünglichen Währung gespeichert."
     },
     "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden."
@@ -185,27 +181,13 @@
       "vacation": "Urlaub"
     },
     "help": {
-      "title": "Standard-Werte für neue Flüge",
-      "description": "Diese Werte sind vorausgewählt, wenn du einen Flug manuell anlegst oder per E-Mail importierst. Du kannst jeden einzelnen Flug danach noch frei bearbeiten.",
-      "statusTitle": "Status:",
       "status": "\"Geplant\" ist sinnvoll für zukünftige Flüge; \"Geflogen\" für den Schnelleintrag vergangener Flüge.",
-      "categoryTitle": "Flugkategorie:",
       "category": "Business / Privat / Urlaub — nur für deine Statistiken relevant, wirkt sich nicht auf Live-Daten oder Kosten aus."
     }
   },
   "notifications": {
     "title": "Benachrichtigungen",
-    "description": "Erinnerungen und Updates steuern.",
-    "help": {
-      "title": "Benachrichtigungen",
-      "description": "Hier stellst du ein, worüber du per E-Mail benachrichtigt werden willst. Die eigentliche SMTP-Konfiguration läuft über den Admin-Bereich.",
-      "emailTitle": "E-Mail-Benachrichtigungen:",
-      "email": "Erfordert eine verifizierte E-Mail-Adresse im Profil. Ohne SMTP-Setup im Admin-Panel bleibt diese Option wirkungslos, auch wenn sie aktiviert ist.",
-      "remindersTitle": "Erinnerungen:",
-      "reminders": "Flug-Erinnerungen werden 24 h oder 48 h vor Abflug verschickt, abhängig von der gewählten Option. Check-in-Reminder setzen eine Airline-Integration voraus.",
-      "privacyTitle": "Datenschutz:",
-      "privacy": "Benachrichtigungen werden nur lokal ausgelöst — es werden keine Daten an externe Dienste außerhalb deines SMTP-Servers übermittelt."
-    },
+    "description": "Worüber du per E-Mail benachrichtigt werden willst. Ohne SMTP-Einrichtung im Admin-Bereich bleiben diese Schalter wirkungslos, auch wenn sie an sind — und die E-Mail-Adresse im Profil muss bestätigt sein.",
     "emailNotifications": "E-Mail-Benachrichtigungen aktivieren",
     "flightReminder": "Flug-Erinnerung",
     "checkInReminder": "Check-in Reminder",
@@ -242,16 +224,9 @@
     },
     "loadError": "Konfiguration konnte nicht geladen werden",
     "smtpHelp": {
-      "title": "SMTP-Server einrichten",
-      "description": "TravStats versendet Passwort-Reset-Links und Benachrichtigungen über einen SMTP-Server. Ohne gültige SMTP-Konfiguration sind diese Funktionen deaktiviert.",
-      "portsTitle": "Ports & Verschlüsselung:",
       "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
-      "credentialsTitle": "Zugangsdaten:",
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
-      "senderTitle": "Absender:",
-      "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit.",
-      "testTitle": "Verbindung testen:",
-      "test": "\"Verbindung testen\" prüft Login und TLS-Handshake, ohne eine echte Mail zu versenden — nutzbar vor dem ersten Speichern."
+      "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     }
   },
   "privacy": {
@@ -266,7 +241,7 @@
   },
   "backup": {
     "title": "Meine Daten & Sync",
-    "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
+    "description": "Ein Backup friert Datenbank und hochgeladene Dateien zu einem Zeitpunkt ein. Angestoßen, heruntergeladen und wiederhergestellt wird es im Admin-Bereich — hier siehst du nur den Stand.",
     "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
     "userNote": "Backups werden vom Administrator verwaltet.",
     "autoBackup": "Automatische Backups aktivieren",
@@ -292,16 +267,6 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
-    },
-    "help": {
-      "title": "Backups & Wiederherstellung",
-      "description": "Ein Backup ist ein .tar.gz-Archiv, das die komplette Datenbank und die hochgeladenen Dateien (Bordkarten, Quittungen) zu einem Zeitpunkt einfriert.",
-      "scopeTitle": "Inhalt:",
-      "scope": "PostgreSQL-Dump (pg_dump) + uploads/-Verzeichnis. Logs und API-Caches werden nicht gesichert — sie sind reproduzierbar.",
-      "adminTitle": "Admin-Bereich:",
-      "admin": "Die Verwaltung (manuell anstoßen, herunterladen, wiederherstellen, Intervall, Cloud-Sync) findet im Admin-Panel statt. Diese Sektion hier ist nur die Statusanzeige für Nicht-Admins.",
-      "restoreTitle": "Wiederherstellung:",
-      "restore": "Eine Wiederherstellung ersetzt die bestehende Datenbank komplett. Vorher immer ein zusätzliches Backup anfertigen lassen (Checkbox im Restore-Dialog)."
     }
   },
   "password": {
@@ -337,16 +302,6 @@
       "auto": "Auto (trainiert wenn verfügbar, sonst Base)",
       "trained": "Nur trainiertes Modell",
       "base": "Nur Basis-Modell"
-    },
-    "help": {
-      "title": "Training-Einstellungen",
-      "description": "Diese Einstellungen steuern, ob und wie trainierte LLM-Modelle verwendet werden.",
-      "options": {
-        "useTrainedModels": "Aktiviert automatische Verwendung trainierter Modelle wenn verfügbar",
-        "preferredEmailModel": "Wähle zwischen Auto (trainiert wenn verfügbar), Trained (nur trainiert) oder Base (nur Basis-Modell)",
-        "preferredVisionModel": "Gleiche Optionen für Boarding-Pass-Parsing",
-        "trainingSeparateModels": "Verwendet getrennte Modelle für Email und Vision (empfohlen für bessere Spezialisierung)"
-      }
     }
   },
   "developer": {
@@ -367,30 +322,7 @@
       }
     },
     "cancel": "Abbrechen",
-    "activate": "Aktivieren",
-    "help": {
-      "title": "Entwicklermodus",
-      "description": "Der Entwicklermodus aktiviert erweiterte Funktionen für die Parser-Entwicklung.",
-      "features": {
-        "title": "Funktionen:",
-        "items": {
-          "trainingPage": "Zugriff auf die Parser-Seite mit Annotation, Templates und Parse-Logs",
-          "uploadAnnotation": "Upload und Annotation von E-Mails und Boarding Passes",
-          "loraTraining": "Eigene Regex-Templates aus annotierten Daten erstellen",
-          "parserAccuracy": "Parse-Logs zur Analyse und Verbesserung der Parsing-Ergebnisse"
-        }
-      },
-      "requirements": {
-        "title": "Voraussetzungen:",
-        "items": {
-          "ollama": "Für LLM-Parsing: Ollama-Server muss erreichbar sein (optional)",
-          "hardware": "Für LLM-Parsing: ausreichend Hardware-Ressourcen (CPU/GPU, RAM)",
-          "trainingData": "Für eigene Templates: mindestens eine annotierte E-Mail"
-        }
-      },
-      "noteLabel": "Hinweis",
-      "note": "Nur das LLM-basierte Parsen (Ollama) ist vollständig getestet. Template- und Regex-Parser sind experimentell."
-    }
+    "activate": "Aktivieren"
   },
   "features": {
     "title": "Funktionen",
@@ -398,12 +330,7 @@
     "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
     "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
-    "help": {
-      "title": "Optionale Funktionen",
-      "description": "Hier kannst du Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Deaktivierte Funktionen bleiben im Code vorhanden und können jederzeit wieder eingeschaltet werden.",
-      "costTitle": "Kostenerfassung:",
-      "cost": "Blendet die Steuer- und Gebührenfelder in den Flugformularen ein und aktiviert die Business-Statistiken. Preis und Währung sind unabhängig davon immer verfügbar — nur die Aufschlüsselung ist optional, damit die Maske schlank bleibt."
-    }
+    "description": "Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Abgeschaltete Funktionen lassen sich jederzeit wieder einschalten — es gehen keine Daten verloren."
   },
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
@@ -435,52 +362,11 @@
       "openai": "OpenAI API-Schlüssel",
       "claude": "Claude API-Schlüssel",
       "optional": "Optional. Erhalten von"
-    },
-    "help": {
-      "title": "Parser-Konfiguration",
-      "modes": {
-        "title": "Parser-Modi:",
-        "auto": "Auto",
-        "autoDesc": "Wählt automatisch den besten verfügbaren Parser",
-        "ollama": "Ollama",
-        "ollamaDesc": "Läuft lokal (kostenlos, benötigt gute Hardware)",
-        "cloud": "OpenAI/Claude",
-        "cloudDesc": "Cloud-basiert (kostenpflichtig, funktioniert auf jedem Gerät)",
-        "fallback": "Tesseract/Regex",
-        "fallbackDesc": "Kostenlose Fallback-Optionen (niedrigere Genauigkeit)"
-      },
-      "bestPractices": {
-        "title": "Best Practices:",
-        "auto": "Verwende \"Auto\" für die beste Balance zwischen Genauigkeit und Kosten",
-        "ollama": "Ollama ist ideal, wenn du eine GPU hast und lokale Verarbeitung bevorzugst",
-        "cloud": "Cloud-Parser sind am genauesten, aber erfordern API-Keys und verursachen Kosten",
-        "trained": "Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich"
-      }
     }
   },
   "autoUpdate": {
     "title": "Automatische Updates",
-    "description": "Automatisch aktuelle Flugdaten von APIs während aktiver Flüge abrufen. Updates werden im Bereich für ausstehende Updates gespeichert zur Überprüfung.",
-    "info": {
-      "title": "Wie funktionieren automatische Updates?",
-      "description": "Wenn aktiviert, werden während aktiver Flüge regelmäßig aktuelle Flugdaten von APIs abgerufen. Alle gefundenen Änderungen werden im Bereich für ausstehende Updates gespeichert, damit du sie überprüfen und genehmigen kannst, bevor sie auf deine Flüge angewendet werden.",
-      "benefits": {
-        "title": "Vorteile:",
-        "realTime": "Echtzeit-Updates: Du bekommst aktuelle Flugdaten automatisch während deiner Flüge",
-        "automatic": "Automatisierung: Keine manuelle Suche nach Flugänderungen mehr nötig",
-        "review": "Kontrolle: Alle Änderungen werden zur Überprüfung gespeichert, bevor sie angewendet werden",
-        "accurate": "Genauigkeit: Nutzt mehrere APIs für zuverlässige und präzise Flugdaten",
-        "timeSaving": "Zeitersparnis: Deine Flugstatistiken aktualisieren sich automatisch"
-      },
-      "howItWorks": {
-        "title": "So funktioniert's:",
-        "description": "Das System prüft in konfigurierbaren Intervallen (Standard: 15 Minuten) während aktiver Flugzeiten nach Updates. Gefundene Änderungen wie Verspätungen, Gate-Wechsel oder Flugstatus werden im Bereich 'Ausstehende Updates' gespeichert. Du kannst diese Änderungen einzeln überprüfen und genehmigen oder ablehnen."
-      },
-      "requirement": {
-        "title": "Wichtiger Hinweis:",
-        "description": "Diese Funktion funktioniert nur bei vorab eingetragenen Flügen, z.B. durch den E-Mail-Import oder manuelle Eingabe. Automatische Updates werden nur für Flüge durchgeführt, die bereits in deiner Flugliste stehen."
-      }
-    },
+    "description": "Ruft während aktiver Flüge regelmäßig aktuelle Daten ab. Gefundene Änderungen landen unter „Ausstehende Updates“ und werden erst nach deiner Bestätigung übernommen — nie automatisch. Betrifft nur Flüge, die bereits in deiner Liste stehen.",
     "viewPending": "Ausstehende Updates anzeigen",
     "enabled": "Automatische Updates aktivieren",
     "requireApproval": "Bestätigung erforderlich",
@@ -495,22 +381,7 @@
   },
   "historicalEnrichment": {
     "title": "Historische Anreicherung",
-    "description": "Ergänzt Flüge mit fehlenden Daten durch Aggregation von Referenzflügen derselben Flugnummer",
-    "info": {
-      "title": "Wie funktioniert die historische Anreicherung?",
-      "description": "Das System sucht Flüge mit derselben Flugnummer, die live getrackt wurden, und aggregiert deren Daten. Je nach Alter des Fluges werden unterschiedliche Felder ergänzt.",
-      "modes": {
-        "title": "Zwei Anreicherungs-Modi:",
-        "fullLabel": "Vollständig",
-        "fullDescription": "Flüge < 1 Jahr: Flugzeugtyp, ICAO-Codes, Route, Terminal, Gate werden ergänzt.",
-        "slimLabel": "Basis",
-        "slimDescription": "Flüge ≥ 1 Jahr: Nur ICAO-Codes und Terminal — Flugzeugtyp und Route sind zu unsicher für ältere Flüge."
-      },
-      "warning": {
-        "title": "Wichtig:",
-        "description": "Alle Vorschläge sind Schätzungen basierend auf ähnlichen Flügen. Jede Anreicherung muss manuell bestätigt werden bevor sie gespeichert wird."
-      }
-    },
+    "description": "Ergänzt ältere Flüge aus live getrackten Flügen derselben Flugnummer. Alle Vorschläge sind Schätzungen und werden erst nach deiner Bestätigung gespeichert.",
     "enabled": "Historische Flugdaten-Anreicherung aktivieren",
     "minConfidence": "Min. Konfidenz (%)",
     "minConfidenceDescription": "Nur Vorschläge mit mindestens X% Konfidenz anzeigen",
@@ -537,17 +408,7 @@
   },
   "apiKeys": {
     "title": "API-Schlüssel",
-    "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",
-    "help": {
-      "title": "Externe API-Schlüssel",
-      "description": "TravStats kann Live-Flugdaten (Positionen, Verspätungen, Gates) und zusätzliche Flughafen-Informationen über Drittanbieter-APIs anreichern. Alle Anbieter haben einen kostenlosen Tier — Schlüssel sind optional.",
-      "sharedTitle": "Geteilte Schlüssel:",
-      "shared": "Wenn der Administrator einen Schlüssel für einen Provider hinterlegt hat, wird dieser automatisch genutzt — du musst dann nichts eintragen. Eigene Schlüssel haben Vorrang.",
-      "providersTitle": "Anbieter:",
-      "providers": "Airlabs (generisches Flight Tracking, kostenloser Tier mit Rate-Limit), Aviationstack (präzise Schedule-Daten, freier 100/Monat-Tier), OpenSky (open-source Flugtracker, benötigt Clientkennung + Secret).",
-      "securityTitle": "Sicherheit:",
-      "security": "Schlüssel werden verschlüsselt in der Datenbank gespeichert und nie an dein Browser-UI zurückgespielt. Nach dem Speichern zeigt das Feld nur ein Platzhalter-Pünktchen-Muster."
-    },
+    "description": "Optionale Schlüssel für Live-Flugdaten und zusätzliche Flughafen-Informationen. Hat der Administrator einen hinterlegt, wird er automatisch benutzt; ein eigener hat Vorrang. Schlüssel werden verschlüsselt gespeichert und nie wieder angezeigt.",
     "parserApis": "Parser APIs",
     "flightApis": "Flugdaten APIs",
     "shared": "Geteilt",
@@ -637,6 +498,32 @@
       "username": "Benutzername",
       "password": "Passwort",
       "or": "ODER (stattdessen Basic Auth verwenden)"
+    }
+  },
+  "routing": {
+    "title": "Routing-Anbieter",
+    "description": "Bestimmt, welcher Anbieter eine Etappe berechnet — einzeln oder für die ganze Tour auf einmal. Ohne Anbieter bleibt jede Etappe eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten der Etappe, um die Strecke zu berechnen — sie verlassen damit diese Instanz.",
+    "providerLabel": "Anbieter",
+    "provider": {
+      "none": "Kein Anbieter",
+      "openrouteservice": "OpenRouteService",
+      "graphhopper": "GraphHopper",
+      "custom": "Eigener OSRM-Server"
+    },
+    "noneHint": "Ohne Anbieter bleibt „Berechnet“ in der Touren-Ansicht deaktiviert — jede Etappe bleibt eine Luftlinie, bis hier einer eingerichtet wird.",
+    "customUrlLabel": "Basis-URL",
+    "customUrlHint": "Adresse eines selbst gehosteten OSRM-Servers, z. B. https://osrm.example.com.",
+    "loadError": "Routing-Einstellungen konnten nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "saveSuccess": "Routing-Einstellungen gespeichert",
+    "saveError": "Routing-Einstellungen konnten nicht gespeichert werden",
+    "openrouteservice": {
+      "label": "OpenRouteService API-Schlüssel",
+      "description": "Kostenlos: 2000 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
+    },
+    "graphhopper": {
+      "label": "GraphHopper API-Schlüssel",
+      "description": "Kostenlos: 500 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
     }
   },
   "import": {

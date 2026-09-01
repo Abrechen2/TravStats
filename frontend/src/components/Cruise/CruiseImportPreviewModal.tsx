@@ -32,6 +32,9 @@ import AirportAutocomplete from "../AirportAutocomplete";
 
 interface CruiseImportPreviewModalProps {
   entries: ParsedCruiseEntry[];
+  /** The uploaded file's name, so the import log row can be identified later
+   *  rather than reading like every other email import that day (#19). */
+  sourceFileName?: string | null;
   onCancel: () => void;
   onSaved: () => void | Promise<void>;
 }
@@ -94,6 +97,7 @@ function isAlreadyImported(err: unknown): boolean {
 
 export function CruiseImportPreviewModal({
   entries,
+  sourceFileName,
   onCancel,
   onSaved,
 }: CruiseImportPreviewModalProps): JSX.Element {
@@ -133,7 +137,7 @@ export function CruiseImportPreviewModal({
       // must not cost the user their import, so it falls back to unbatched.
       let batchId: string | null = null;
       try {
-        batchId = await createImportBatch("cruise", "email", null);
+        batchId = await createImportBatch("cruise", "email", sourceFileName ?? null);
       } catch (err: unknown) {
         logger.error("CruiseImportPreviewModal: import batch create failed", err);
       }

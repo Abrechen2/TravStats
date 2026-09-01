@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
+
+import { useTranslation } from "../../../hooks/useTranslation";
 
 export interface RankedRow {
   /** Stable key AND the label shown, unless `render` overrides the label. */
@@ -21,7 +24,14 @@ interface Props {
   emptyLabel: string;
   /** Cap the rows shown. The caller says how many were dropped via `moreLabel`. */
   limit?: number;
-  /** e.g. "+ 12 weitere" — shown only when `limit` actually cut something. */
+  /**
+   * e.g. "+ 12 weitere" — shown only when `limit` actually cut something.
+   *
+   * It is a BUTTON that expands the list in place, not a caption. It used to be
+   * plain text, which promised rows and led nowhere (Alex, 2026-08-29). The
+   * rows are already loaded, so a modal would be ceremony around data that is
+   * sitting in the component.
+   */
   moreLabel?: (hidden: number) => string;
 }
 
@@ -43,7 +53,9 @@ export default function RankedBarList({
   limit,
   moreLabel,
 }: Props): JSX.Element {
-  const shown = limit !== undefined ? rows.slice(0, limit) : rows;
+  const { t } = useTranslation(["common"]);
+  const [expanded, setExpanded] = useState(false);
+  const shown = limit !== undefined && !expanded ? rows.slice(0, limit) : rows;
   const hidden = rows.length - shown.length;
   const max = shown.reduce((m, r) => Math.max(m, r.weight), 0);
 
@@ -101,10 +113,16 @@ export default function RankedBarList({
         </ul>
       )}
 
-      {hidden > 0 && moreLabel && (
-        <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          {moreLabel(hidden)}
-        </p>
+      {moreLabel && (hidden > 0 || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          className="mt-3 text-xs underline-offset-2 hover:underline"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {expanded ? t("common:buttons.showLess") : moreLabel(hidden)}
+        </button>
       )}
     </div>
   );

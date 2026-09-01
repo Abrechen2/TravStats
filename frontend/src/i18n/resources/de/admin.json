@@ -135,7 +135,44 @@
       },
       "betaFeatures": {
         "label": "Beta-Funktionen anzeigen",
-        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden."
+        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden.",
+        "listTitle": "Was dieser Schalter freigibt",
+        "listEmpty": "Zurzeit ist nichts hinter dem Schalter versteckt.",
+        "listNote": "Diese Liste kommt aus dem Register im Quelltext und ist damit immer der tatsächliche Stand dieser Version.",
+        "reason": {
+          "beta": "unfertig",
+          "advanced": "für Fortgeschrittene"
+        },
+        "features": {
+          "tripAiSummary": {
+            "name": "KI-Zusammenfassung einer Reise",
+            "what": "Ein Knopf auf der Reise-Detailseite, der den Verlauf in Prosa zusammenfasst."
+          },
+          "devicePairing": {
+            "name": "Geräte koppeln",
+            "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
+          },
+          "passport": {
+            "name": "Reisepass",
+            "what": "Eine eigene Seite mit Stempeln, Kontinent-Quoten und einer Länderliste — gespeist aus den Flugdaten."
+          },
+          "domainColors": {
+            "name": "Eigene Bereichsfarben",
+            "what": "Die Farbe je Bereich wird einstellbar, statt fest aus der Marke zu kommen. Wirkt in Statistiken, Zeitleiste, Aktivitätsleiste und Import-Protokoll."
+          },
+          "poiDomain": {
+            "name": "Orte",
+            "what": "Der ganze Bereich Orte: Anlegen, Bearbeiten, Detailseite, Liste, Karte, eigene Listen und die mitgelieferten Checklisten."
+          },
+          "tourRoutes": {
+            "name": "Touren",
+            "what": "Routenabschnitte innerhalb einer Reise — Abschnittsliste, Editor, ein eigener Dashboard-Reiter und die Linien auf der Karte."
+          },
+          "dawarich": {
+            "name": "Dawarich-Anbindung",
+            "what": "Eine Verbindung zu einer Dawarich-Instanz, aus der aufgezeichnete Wegstrecken übernommen werden."
+          }
+        }
       }
     },
     "passkeys": {
@@ -201,15 +238,6 @@
   "refreshing": "⏳ Lade...",
   "users": {
     "title": "Benutzerverwaltung",
-    "help": {
-      "description": "Verwalte alle Benutzer deiner TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
-      "adminTitle": "Admin:",
-      "admin": "Vollzugriff auf alle Funktionen, einschließlich Admin-Panel",
-      "userTitle": "Benutzer:",
-      "user": "Standard-Benutzer mit Zugriff auf Flüge, Statistiken und Achievements",
-      "deactivateTitle": "Deaktivieren:",
-      "deactivate": "Deaktivierte Benutzer können sich nicht anmelden, ihre Daten bleiben erhalten"
-    },
     "table": {
       "username": "Benutzername",
       "flights": "Flüge",
@@ -268,21 +296,11 @@
       "title": "Zwei-Faktor zurücksetzen",
       "message": "Zwei-Faktor-Anmeldung für „{{username}}“ ausschalten? Die nächste Anmeldung braucht dann nur noch das Passwort. Das ist der Weg zurück ins Konto, wenn Telefon UND Wiederherstellungscodes weg sind.",
       "confirm": "Zurücksetzen"
-    }
+    },
+    "description": "Alle Benutzer dieser Instanz — Rollen ändern und Konten deaktivieren. Ein deaktiviertes Konto kann sich nicht mehr anmelden, seine Daten bleiben erhalten."
   },
   "invitations": {
     "title": "Einladungen verwalten",
-    "help": {
-      "description": "Erstelle Einladungslinks, um neue Benutzer zu deiner TravStats-Instanz einzuladen.",
-      "createTitle": "Einladung erstellen:",
-      "create": "Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann",
-      "expiryTitle": "Ablaufdatum:",
-      "expiry": "Einladungen laufen nach 7 Tagen ab (standardmäßig)",
-      "oneUseTitle": "Einmalige Nutzung:",
-      "oneUse": "Jeder Link kann nur einmal verwendet werden",
-      "emailTitle": "E-Mail (optional):",
-      "email": "Du kannst eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
-    },
     "invitationLinks": "Einladungslinks",
     "createButton": "+ Einladung erstellen",
     "copiedToClipboard": "Einladungslink in die Zwischenablage kopiert!",
@@ -354,7 +372,8 @@
       "expired": "Abgelaufen",
       "active": "Aktiv",
       "emailFailed": "Mail fehlgeschlagen"
-    }
+    },
+    "description": "Einladungslinks für neue Benutzer. Jeder Link lässt sich genau einmal verwenden und läuft nach sieben Tagen ab."
   },
   "userLimitWarning": {
     "title": "⚠️ Benutzerlimit-Warnung",
@@ -376,19 +395,7 @@
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC ausgeliefert wird — das Image ist dann byte-identisch zur getesteten RC-Version, der Registry-Tag ist aber bereits die finale Version.",
     "exportButton": "Vollständiges Backup herunterladen (JSON)",
-    "exportDescription": "Alle Benutzerdaten für Backup-Zwecke exportieren (DSGVO-konform)",
-    "exportHelp": {
-      "title": "Daten-Export",
-      "description": "Exportiere alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
-      "fullExportTitle": "Vollständiger Export:",
-      "fullExport": "Enthält alle Flüge, Achievements, Einstellungen und Benutzerdaten",
-      "gdprTitle": "DSGVO-konform:",
-      "gdpr": "Alle Daten werden in einem strukturierten Format exportiert",
-      "backupTitle": "Backup:",
-      "backup": "Regelmäßige Exports werden empfohlen, um Datenverlust zu vermeiden",
-      "formatTitle": "Format:",
-      "format": "JSON-Datei, die einfach importiert oder analysiert werden kann"
-    }
+    "exportDescription": "Exportiert alle Benutzerdaten als JSON — für Sicherungen und zur Auswertung."
   },
   "airlineLogos": {
     "title": "Airline-Logos",
@@ -402,14 +409,6 @@
     "button": "📥 Daten exportieren",
     "description": "Exportiere alle Benutzerdaten als JSON-Datei.",
     "title": "Daten-Export",
-    "help": {
-      "title": "Was wird exportiert?",
-      "items": {
-        "users": "Alle Benutzerkonten",
-        "flights": "Alle Flugdaten",
-        "settings": "Systemeinstellungen"
-      }
-    },
     "confirmTitle": "Alle Daten exportieren?",
     "confirmMessage": "Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter."
   },
@@ -448,15 +447,11 @@
   },
   "logging": {
     "title": "Debug-Logging & Diagnostik",
-    "description": "Erweitertes Logging für Fehlerbehebung und Überwachung",
+    "description": "Steuert das Logging-Verhalten des Systems. Debug-Modus aktiviert detaillierte Ausgaben für die Fehlersuche.",
     "debugMode": "Debug-Modus aktivieren",
     "debugModeDisable": "Debug-Modus deaktivieren",
     "help": {
-      "title": "Logging-Konfiguration",
-      "description": "Steuert das Logging-Verhalten des Systems. Debug-Modus aktiviert detaillierte Ausgaben für die Fehlersuche.",
-      "levelsTitle": "Log-Level:",
       "levels": "error → warn → info → debug → trace (von wenig zu sehr detailliert)",
-      "warningTitle": "Hinweis:",
       "warning": "Debug-Modus kann die Leistung beeinträchtigen und erzeugt große Log-Dateien. Nur kurzzeitig für Diagnosen aktivieren."
     },
     "debugActive": {
@@ -512,7 +507,7 @@
   },
   "parserSettings": {
     "title": "Globale Parser-Konfiguration",
-    "description": "Standard Parser-Einstellungen für alle Benutzer. API-Schlüssel werden im API-Schlüssel Tab verwaltet.",
+    "description": "Standard-Parser für alle Benutzer. Lokale Verfahren sind kostenlos, Cloud-KI kostet je Anfrage und braucht einen Schlüssel.",
     "defaultSettings": "Standard-Einstellungen",
     "defaultSettingsDescription": "Diese Standardwerte gelten für neue Benutzerkonten. Benutzer können diese in ihren eigenen Einstellungen ändern.",
     "visionParser": "Standard Vision-Parser (Bordkarte)",
@@ -533,21 +528,11 @@
       "modelsAvailable": "Verfügbare Modelle",
       "connectionSuccess": "Ollama erreichbar",
       "connectionFailed": "Verbindung fehlgeschlagen"
-    },
-    "help": {
-      "title": "Parser-Konfiguration",
-      "description": "Konfiguriert die Standard-Parser für alle Benutzer.",
-      "freeTitle": "Kostenlose Optionen:",
-      "free": "Ollama (lokale KI, GPU empfohlen), Tesseract (OCR), Regex (Mustererkennung)",
-      "cloudTitle": "Cloud-Optionen:",
-      "cloud": "OpenAI (~0,01–0,05€/Anfrage), Claude (~0,01–0,03€/Anfrage) – erfordern API-Schlüssel",
-      "autoTitle": "Auto-Modus:",
-      "auto": "Priorisiert: Cloud-KI > lokale KI > OCR/Regex basierend auf Verfügbarkeit"
     }
   },
   "backup": {
     "title": "Backup-Verwaltung",
-    "description": "Verwalte deine Backups und stelle sie bei Bedarf wieder her",
+    "description": "Backups sichern alle Daten dieser Instanz und lassen sich bei Datenverlust oder Umzug wiederherstellen. Eine Wiederherstellung überschreibt den aktuellen Bestand vollständig — lege vorher ein zusätzliches Backup an.",
     "loading": "Lade Backups...",
     "creating": "Erstelle Backup...",
     "running": "Backup läuft",
@@ -611,16 +596,6 @@
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
       "deleteFailed": "Fehler beim Löschen des Backups"
-    },
-    "help": {
-      "title": "Backup-Verwaltung",
-      "description": "Backups sichern alle Daten der TravStats-Instanz und können bei Datenverlust oder Umzug wiederhergestellt werden.",
-      "typesTitle": "Backup-Typen:",
-      "types": "Vollständig (Datenbank + Dateien), Nur Datenbank, Nur Dateien",
-      "restoreTitle": "Wiederherstellung:",
-      "restore": "Vor der Wiederherstellung wird empfohlen, ein neues Backup zu erstellen. Alle aktuellen Daten werden überschrieben.",
-      "retentionTitle": "Aufbewahrung:",
-      "retention": "Backups werden automatisch nach der konfigurierten Aufbewahrungsdauer gelöscht."
     }
   },
   "feedback": {
@@ -655,7 +630,7 @@
   },
   "globalApiKeys": {
     "title": "Globale API-Schlüssel",
-    "description": "Konfiguriere globale API-Schlüssel, die mit allen Benutzern geteilt werden. Benutzer können weiterhin eigene Schlüssel setzen, wenn erlaubt.",
+    "description": "Diese Schlüssel gelten für alle Benutzer und dienen als Rückfall für alle, die keinen eigenen hinterlegt haben. Ein eigener Schlüssel hat immer Vorrang.",
     "parserApis": "Parser APIs",
     "parserApisDescription": "API-Schlüssel für KI-gestütztes E-Mail- und Bordkarten-Parsing.",
     "flightApis": "Flugdaten APIs",
@@ -706,16 +681,6 @@
     "logostream": {
       "label": "Airline-Logos (logostream.dev)",
       "description": "Liefert Airline-Logos als Icon-, Schriftzug- und Dark-Mode-Varianten. Ohne Key werden nur die einfachen Komplett-Logos (Daisycon) angezeigt."
-    },
-    "help": {
-      "title": "Globale API-Schlüssel",
-      "description": "Diese Schlüssel werden mit allen Benutzern geteilt und ermöglichen den Zugriff auf externe KI- und Flugdaten-Services.",
-      "parserTitle": "Parser APIs:",
-      "parser": "OpenAI und Claude werden für KI-gestütztes Parsing von E-Mails und Bordkarten verwendet.",
-      "flightTitle": "Flugdaten APIs:",
-      "flight": "AirLabs, Aviationstack und OpenSky werden für automatische Flugdaten-Updates verwendet.",
-      "permissionsTitle": "Benutzer-Berechtigungen:",
-      "permissions": "Steuert ob Benutzer eigene Schlüssel setzen können. Globale Schlüssel sind Fallback für Benutzer ohne eigene Schlüssel."
     },
     "googlePlaces": {
       "label": "Google Places (Unterkunfts-Orte)",

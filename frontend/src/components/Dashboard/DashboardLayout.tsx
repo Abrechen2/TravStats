@@ -13,6 +13,7 @@ import SpecialFlightModal from "../SpecialFlightModal";
 import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
+import { isValidDomain } from "../../shared/domains";
 import DomainImportPanel from "../import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../import/adapters/lodgingAdapter";
 import { DashboardEmptyState } from "./DashboardEmptyState";
@@ -127,14 +128,25 @@ export function DashboardLayout({
           {tab === "all" ? (
             <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />
           ) : (
-            <button
-              type="button"
-              onClick={() => setAddingDomain(tab as AddableDomain)}
-              className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
-              style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
-            >
-              + {t(`dashboard:controls.addPerTab.${tab}`)}
-            </button>
+            // `isValidDomain` narrows `tab` to `DomainKey` — the actual set
+            // this button knows how to handle — rather than a cast that
+            // ASSERTS `tab` is one. A cast here was wrong the moment
+            // `DashboardTab` grew a tab with no domain behind it ("Touren"):
+            // `tab as AddableDomain` would still compile for that tab and
+            // silently render a live-looking button with a missing i18n key
+            // that opens nothing on click. This guard makes the SAME mistake
+            // impossible for the next domain-less tab too, instead of only
+            // excluding the one we happened to find.
+            isValidDomain(tab) && (
+              <button
+                type="button"
+                onClick={() => setAddingDomain(tab)}
+                className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
+                style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
+              >
+                + {t(`dashboard:controls.addPerTab.${tab}`)}
+              </button>
+            )
           )}
         </div>
       </div>

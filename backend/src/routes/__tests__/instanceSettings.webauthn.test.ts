@@ -73,7 +73,7 @@ describe("admin instance-settings — WebAuthn relying party", () => {
     const res = await request(app)
       .put("/api/v1/admin/instance-settings")
       .set("Cookie", cookie)
-      .send({ webauthnRpId: "192.168.178.120" });
+      .send({ webauthnRpId: "192.168.1.10" });
     expect(res.status).toBe(400);
   });
 
@@ -92,7 +92,7 @@ describe("admin instance-settings — WebAuthn relying party", () => {
     const res = await request(app)
       .put("/api/v1/admin/instance-settings")
       .set("Cookie", cookie)
-      .send({ webauthnOrigins: ["http://192.168.178.120:3010"] });
+      .send({ webauthnOrigins: ["http://192.168.1.10:3010"] });
 
     expect(res.status).toBe(200);
     expect(res.body.passkeyStatus).toEqual({ usable: false, reason: "insecureOrigin" });

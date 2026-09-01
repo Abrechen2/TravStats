@@ -1,8 +1,10 @@
+import type { PlaceLabelList } from "../lib/placeLabel";
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
+import type { Place } from "../types/place";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
@@ -40,7 +42,15 @@ interface MapContainer3DProps {
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   onResetTrip?: () => void;
-  /** Extra deck.gl layers appended after all internally-built layers. */
+  /**
+   * Extra deck.gl layers appended after all internally-built layers.
+   * Reaches BOTH map engines: DeckGLMap in every non-globe visMode, and
+   * GlobeView's own MapboxOverlay when visMode is "globe" -- until this
+   * was wired through, a caller's extraLayers (dashboard-wide tour
+   * paths, journey-mode layers) silently vanished the moment the user
+   * switched to globe, because MapContainer3D forwarded this prop to
+   * DeckGLMap only.
+   */
   extraLayers?: Layer[];
   /**
    * When false, the internal cruise fetch + cruise arc/port layers are
@@ -92,6 +102,18 @@ interface MapContainer3DProps {
    */
   onLodgingClick?: (lodgingId: string) => void;
   /**
+   * Places to render as pins. Threaded straight through to DeckGLMap, which
+   * builds the layer for the same reason it builds the lodging one — it owns
+   * the zoom/labelsMode state the layer needs. Callers that don't pass it get
+   * no place layer.
+   */
+  placesOverride?: readonly Place[];
+  /** Fired when a place pin is clicked — receives the place id. */
+  onPlaceClick?: (placeId: string) => void;
+  /** Place-id → its list's colour, for the `list` colour mode. */
+  placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
+  /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
    * so the panel only surfaces the relevant route/marker controls.
@@ -118,6 +140,10 @@ export default function MapContainer3D({
   cruisesOverride,
   lodgingsOverride,
   onLodgingClick,
+  placesOverride,
+  onPlaceClick,
+  placeListColors,
+  placeListLabels,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -181,6 +207,15 @@ export default function MapContainer3D({
     saveMapAppearance({ lodgingMarkerSize });
   }, [lodgingMarkerSize]);
 
+  // Same ownership for places, for the same reason: DeckGLMap builds the pin
+  // layer, this component owns and persists the size the slider edits.
+  const [placeMarkerSize, setPlaceMarkerSize] = useState<number>(
+    () => loadMapAppearance().placeMarkerSize ?? 1
+  );
+  useEffect(() => {
+    saveMapAppearance({ placeMarkerSize });
+  }, [placeMarkerSize]);
+
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
     const seen = new Set<string>();
@@ -226,6 +261,7 @@ export default function MapContainer3D({
               onCruiseOpen={onCruiseOpen}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
+              extraLayers={extraLayers}
             />
           </Suspense>
         ) : (
@@ -244,6 +280,12 @@ export default function MapContainer3D({
             lodgingMarkerSize={lodgingMarkerSize}
             onLodgingMarkerSizeChange={setLodgingMarkerSize}
             lodgingsOverride={lodgingsOverride}
+            placesOverride={placesOverride}
+            onPlaceClick={onPlaceClick}
+            placeListColors={placeListColors}
+            placeListLabels={placeListLabels}
+            placeMarkerSize={placeMarkerSize}
+            onPlaceMarkerSizeChange={setPlaceMarkerSize}
             onLodgingClick={onLodgingClick}
           />
         )}

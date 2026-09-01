@@ -88,12 +88,7 @@
     "saved": "Profile saved",
     "saveFailed": "Failed to save profile",
     "help": {
-      "title": "Profile & password",
-      "description": "Username, email and profile picture are only visible to you. The email is also used for password reset and optional notifications.",
-      "avatarTitle": "Profile picture:",
-      "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service.",
-      "passwordTitle": "Change password:",
-      "password": "Opens a separate modal that requires the current password for verification before a new one can be set."
+      "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service."
     },
     "editProfile": "Edit profile"
   },
@@ -122,8 +117,6 @@
     "bannerTitle": "No home airport set",
     "bannerDescription": "Set your home airport so stats like \"longest layover\" or \"farthest from home\" work correctly.",
     "help": {
-      "title": "Home airport & relocations",
-      "description": "The home airport anchors travel statistics. Flights departing from or returning to home are not layovers by definition.",
       "historyExplained": "When you move, the previous airport is preserved as a past entry — old flights still use the old home airport."
     }
   },
@@ -138,6 +131,13 @@
     "timezone": "Timezone",
     "dateFormat": "Date Format",
     "timeFormat": "Time Format"
+  },
+  "domainColors": {
+    "title": "Domain colours",
+    "description": "One colour per domain — used in the statistics, the trip timeline, the activity sidebar, the import log and everywhere else a domain is marked with a single colour.",
+    "mapNote": "The map is unaffected: there a route can be coloured by status or by frequency, a yearly bar cannot. Map colours stay in the map panel.",
+    "lowContrast": "A very dark colour barely separates from the background. It is used exactly as picked — affected marks get a hairline outline so they stay findable.",
+    "reset": "Reset to brand colours"
   },
   "units": {
     "title": "Units & Formats",
@@ -157,11 +157,7 @@
       "fahrenheit": "Fahrenheit"
     },
     "help": {
-      "title": "Units & formats",
-      "description": "Controls how distances and costs are displayed throughout the app — dashboard, statistics, flight details and exports.",
-      "distanceTitle": "Distance:",
       "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
-      "currencyTitle": "Currency:",
       "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
     },
     "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were."
@@ -185,27 +181,13 @@
       "vacation": "Vacation"
     },
     "help": {
-      "title": "Defaults for new flights",
-      "description": "These values are pre-selected when you add a flight manually or import one from email. You can still edit every individual flight afterwards.",
-      "statusTitle": "Status:",
       "status": "\"Scheduled\" makes sense for upcoming flights; \"Flown\" is convenient when quickly entering past flights.",
-      "categoryTitle": "Flight category:",
       "category": "Business / private / vacation — only relevant for your statistics, has no effect on live data or cost calculation."
     }
   },
   "notifications": {
     "title": "Notifications",
-    "description": "Control reminders and updates.",
-    "help": {
-      "title": "Notifications",
-      "description": "Control which events you want to be notified about via email. The actual SMTP configuration lives in the admin area.",
-      "emailTitle": "Email notifications:",
-      "email": "Requires a verified email address in your profile. Without SMTP set up in the admin panel, this option has no effect even when enabled.",
-      "remindersTitle": "Reminders:",
-      "reminders": "Flight reminders are sent 24 h or 48 h before departure depending on the selected option. Check-in reminders require an airline integration.",
-      "privacyTitle": "Privacy:",
-      "privacy": "Notifications are triggered locally — no data is sent to any external service outside your own SMTP server."
-    },
+    "description": "What you want to be emailed about. Without SMTP configured in the admin area these switches do nothing, even when they are on — and the email address in your profile has to be confirmed.",
     "emailNotifications": "Enable email notifications",
     "flightReminder": "Flight Reminder",
     "checkInReminder": "Check-in Reminder",
@@ -242,16 +224,9 @@
     },
     "loadError": "Failed to load configuration",
     "smtpHelp": {
-      "title": "Set up SMTP server",
-      "description": "TravStats sends password reset links and notifications through an SMTP server. Without a valid SMTP configuration these features are disabled.",
-      "portsTitle": "Ports & encryption:",
       "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
-      "credentialsTitle": "Credentials:",
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
-      "senderTitle": "Sender:",
-      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability.",
-      "testTitle": "Test the connection:",
-      "test": "\"Test connection\" verifies login and TLS handshake without sending an actual mail — safe to use before the first save."
+      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     }
   },
   "privacy": {
@@ -266,7 +241,7 @@
   },
   "backup": {
     "title": "My data & sync",
-    "description": "Control regular backups and cloud sync.",
+    "description": "A backup freezes the database and your uploaded files at one point in time. Running, downloading and restoring one happens in the admin area — this page only shows the status.",
     "adminNote": "Backup settings are managed in the Admin panel.",
     "userNote": "Backups are managed by the administrator.",
     "autoBackup": "Enable automatic backups",
@@ -292,16 +267,6 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
-    },
-    "help": {
-      "title": "Backups & restore",
-      "description": "A backup is a .tar.gz archive that freezes the full database and uploaded files (boarding passes, receipts) at a point in time.",
-      "scopeTitle": "Contents:",
-      "scope": "PostgreSQL dump (pg_dump) + the uploads/ directory. Logs and API caches are not backed up — they are reproducible.",
-      "adminTitle": "Admin area:",
-      "admin": "Management (manual trigger, download, restore, interval, cloud sync) happens in the admin panel. This section here is a read-only status view for non-admins.",
-      "restoreTitle": "Restore:",
-      "restore": "A restore completely replaces the existing database. Always create an extra backup beforehand using the checkbox in the restore dialog."
     }
   },
   "password": {
@@ -337,16 +302,6 @@
       "auto": "Auto (trained if available, else base)",
       "trained": "Trained model only",
       "base": "Base model only"
-    },
-    "help": {
-      "title": "Training Settings",
-      "description": "These settings control whether and how trained LLM models are used.",
-      "options": {
-        "useTrainedModels": "Enables automatic use of trained models when available",
-        "preferredEmailModel": "Choose between Auto (trained if available), Trained (trained only) or Base (base model only)",
-        "preferredVisionModel": "Same options for boarding pass parsing",
-        "trainingSeparateModels": "Uses separate models for email and vision (recommended for better specialization)"
-      }
     }
   },
   "developer": {
@@ -367,30 +322,7 @@
       }
     },
     "cancel": "Cancel",
-    "activate": "Activate",
-    "help": {
-      "title": "Developer Mode",
-      "description": "Developer Mode enables advanced features for parser development.",
-      "features": {
-        "title": "Features:",
-        "items": {
-          "trainingPage": "Access to the parser page with annotation, templates, and parse logs",
-          "uploadAnnotation": "Upload and annotate emails and boarding passes",
-          "loraTraining": "Create custom regex templates from annotated data",
-          "parserAccuracy": "Parse logs for analyzing and improving parsing results"
-        }
-      },
-      "requirements": {
-        "title": "Requirements:",
-        "items": {
-          "ollama": "For LLM parsing: Ollama server must be reachable (optional)",
-          "hardware": "For LLM parsing: sufficient hardware resources (CPU/GPU, RAM)",
-          "trainingData": "For custom templates: at least one annotated email"
-        }
-      },
-      "noteLabel": "Note",
-      "note": "Only LLM-based parsing (Ollama) is fully tested. Template and regex parsers are experimental."
-    }
+    "activate": "Activate"
   },
   "features": {
     "title": "Features",
@@ -398,12 +330,7 @@
     "costTrackingDesc": "Show tax and fee fields on flight forms and enable business cost statistics. Price and currency are always available.",
     "trackAircraft": "Track tail numbers",
     "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
-    "help": {
-      "title": "Optional features",
-      "description": "Toggle features on and off to tailor the UI to your usage. Disabled features stay in the code and can be re-enabled any time.",
-      "costTitle": "Cost tracking:",
-      "cost": "Shows the tax and fee fields on the flight forms and enables the business cost statistics. Price and currency are always available regardless — only the breakdown is optional, to keep the form lean."
-    }
+    "description": "Show or hide features to fit the interface to how you work. A feature you switch off can be switched back on at any time — no data is lost."
   },
   "autoSave": {
     "idle": "Changes are saved automatically",
@@ -435,52 +362,11 @@
       "openai": "OpenAI API Key",
       "claude": "Claude API Key",
       "optional": "Optional. Get from"
-    },
-    "help": {
-      "title": "Parser Configuration",
-      "modes": {
-        "title": "Parser Modes:",
-        "auto": "Auto",
-        "autoDesc": "Automatically selects the best available parser",
-        "ollama": "Ollama",
-        "ollamaDesc": "Runs locally (free, requires good hardware)",
-        "cloud": "OpenAI/Claude",
-        "cloudDesc": "Cloud-based (paid, works on any device)",
-        "fallback": "Tesseract/Regex",
-        "fallbackDesc": "Free fallback options (lower accuracy)"
-      },
-      "bestPractices": {
-        "title": "Best Practices:",
-        "auto": "Use \"Auto\" for the best balance between accuracy and cost",
-        "ollama": "Ollama is ideal if you have a GPU and prefer local processing",
-        "cloud": "Cloud parsers are most accurate but require API keys and incur costs",
-        "trained": "Trained Ollama models (via Training page) significantly improve accuracy"
-      }
     }
   },
   "autoUpdate": {
     "title": "Automatic Updates",
-    "description": "Automatically fetch current flight data from APIs during active flights. Updates will be saved in the pending updates area for review.",
-    "info": {
-      "title": "How do automatic updates work?",
-      "description": "When enabled, current flight data is regularly fetched from APIs during active flights. All found changes are saved in the pending updates area so you can review and approve them before they are applied to your flights.",
-      "benefits": {
-        "title": "Benefits:",
-        "realTime": "Real-time updates: Get current flight data automatically during your flights",
-        "automatic": "Automation: No more manual searching for flight changes needed",
-        "review": "Control: All changes are saved for review before being applied",
-        "accurate": "Accuracy: Uses multiple APIs for reliable and precise flight data",
-        "timeSaving": "Time-saving: Save time by automatically updating your flight statistics"
-      },
-      "howItWorks": {
-        "title": "How it works:",
-        "description": "The system checks for updates at configurable intervals (default: 15 minutes) during active flight times. Found changes such as delays, gate changes, or flight status are saved in the 'Pending Updates' area. You can review and approve or reject these changes individually."
-      },
-      "requirement": {
-        "title": "Important note:",
-        "description": "This feature only works with pre-entered flights, e.g. through email import or manual entry. Automatic updates are only performed for flights that are already in your flight list."
-      }
-    },
+    "description": "Fetches current data while a flight is under way. Anything it finds lands under “Pending updates” and is applied only after you confirm it — never automatically. Only flights already in your list are affected.",
     "viewPending": "View Pending Updates",
     "enabled": "Enable Automatic Updates",
     "requireApproval": "Require Approval",
@@ -495,22 +381,7 @@
   },
   "historicalEnrichment": {
     "title": "Historical Enrichment",
-    "description": "Fills in missing flight data by aggregating reference flights with the same flight number",
-    "info": {
-      "title": "How does historical enrichment work?",
-      "description": "The system finds flights with the same flight number that were live-tracked and aggregates their data. Depending on the age of the flight, different fields are filled in.",
-      "modes": {
-        "title": "Two enrichment modes:",
-        "fullLabel": "Full",
-        "fullDescription": "Flights < 1 year: aircraft type, ICAO codes, route, terminal, and gate are filled in.",
-        "slimLabel": "Basic",
-        "slimDescription": "Flights ≥ 1 year: Only ICAO codes and terminal — aircraft type and route are too unreliable for older flights."
-      },
-      "warning": {
-        "title": "Important:",
-        "description": "All suggestions are estimates based on similar flights. Each enrichment must be manually confirmed before it is saved."
-      }
-    },
+    "description": "Fills in older flights from live-tracked flights with the same number. Every suggestion is an estimate and is saved only after you confirm it.",
     "enabled": "Enable historical flight data enrichment",
     "minConfidence": "Min. Confidence (%)",
     "minConfidenceDescription": "Only show suggestions with at least X% confidence",
@@ -537,17 +408,7 @@
   },
   "apiKeys": {
     "title": "API Keys",
-    "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
-    "help": {
-      "title": "External API keys",
-      "description": "TravStats can enrich live flight data (positions, delays, gates) and additional airport information through third-party APIs. Every provider offers a free tier — keys are optional.",
-      "sharedTitle": "Shared keys:",
-      "shared": "If the administrator has configured a key for a provider, it is used automatically — you do not need to enter anything. Your own keys take precedence.",
-      "providersTitle": "Providers:",
-      "providers": "Airlabs (general flight tracking, free tier with rate limit), Aviationstack (accurate schedule data, free 100/month tier), OpenSky (open-source flight tracker, requires client id + secret).",
-      "securityTitle": "Security:",
-      "security": "Keys are stored encrypted in the database and never sent back to the browser UI. After saving, the field only shows a placeholder dot pattern."
-    },
+    "description": "Optional keys for live flight data and extra airport information. If an administrator has stored one, it is used automatically; your own takes precedence. Keys are stored encrypted and never shown again.",
     "parserApis": "Parser APIs",
     "flightApis": "Flight Lookup APIs",
     "shared": "Shared",
@@ -637,6 +498,32 @@
       "username": "Username",
       "password": "Password",
       "or": "OR (use basic auth instead)"
+    }
+  },
+  "routing": {
+    "title": "Routing provider",
+    "description": "Determines which provider computes a leg's route — one at a time, or for the whole tour at once. Without a provider, every leg stays a straight line. A selected provider receives the leg's coordinates to compute the route — they leave this instance to do so.",
+    "providerLabel": "Provider",
+    "provider": {
+      "none": "No provider",
+      "openrouteservice": "OpenRouteService",
+      "graphhopper": "GraphHopper",
+      "custom": "Self-hosted OSRM server"
+    },
+    "noneHint": "Without a provider, \"Routed\" stays disabled in the tours view — every leg stays a straight line until one is set up here.",
+    "customUrlLabel": "Base URL",
+    "customUrlHint": "Address of a self-hosted OSRM server, e.g. https://osrm.example.com.",
+    "loadError": "Routing settings could not be loaded",
+    "retry": "Retry",
+    "saveSuccess": "Routing settings saved",
+    "saveError": "Routing settings could not be saved",
+    "openrouteservice": {
+      "label": "OpenRouteService API key",
+      "description": "Free: 2000 routing requests/day. Used as the shared key for everyone until someone sets their own."
+    },
+    "graphhopper": {
+      "label": "GraphHopper API key",
+      "description": "Free: 500 routing requests/day. Used as the shared key for everyone until someone sets their own."
     }
   },
   "import": {

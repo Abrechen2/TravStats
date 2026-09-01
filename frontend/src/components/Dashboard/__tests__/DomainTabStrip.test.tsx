@@ -20,6 +20,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
         "dashboard:tabStrip.tabs.cruise": "Cruises",
         "dashboard:tabStrip.tabs.poi": "POIs",
         "dashboard:tabStrip.tabs.lodging": "Lodging",
+        "dashboard:tabStrip.tabs.tour": "Tours",
       };
       return labels[key] ?? key;
     },
@@ -130,6 +131,43 @@ describe("DomainTabStrip", () => {
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
     });
   });
+
+  // The "Touren" tab is complete, unlike the POI domain above — it hides
+  // behind the SAME shape of gate (`tourRoutes`, config/betaFeatures.ts) only
+  // because the feature has not yet been through the owner's release
+  // decision. It also has no domain behind it: `counts`/`enabled` are keyed
+  // by DomainKey and never carry a "tour" entry, so the tab must render with
+  // no count badge and — unlike POI — must never be dimmed either.
+  describe("beta gate: tourRoutes", () => {
+    const renderStrip = (): void => {
+      render(
+        <DomainTabStrip
+          active="all"
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          onSelect={() => {}}
+        />
+      );
+    };
+
+    it.each([
+      ["off", false],
+      ["unknown (not loaded yet)", null],
+    ])("hides the Touren tab when the beta flag is %s", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
+      renderStrip();
+      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
+      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+    });
+
+    it("shows the Touren tab, never dimmed, when the beta flag is on", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      const tour = screen.getByRole("tab", { name: /tours/i });
+      expect(tour).toBeTruthy();
+      expect(tour.getAttribute("data-disabled")).toBe("false");
+    });
+  });
 });
 
 describe("DomainTabStrip: the next-up entry", () => {
@@ -162,7 +200,7 @@ describe("DomainTabStrip: the next-up entry", () => {
     },
   ];
 
-  const renderStrip = (active: "all" | "flight" | "cruise"): void => {
+  const renderStrip = (active: "all" | "flight" | "cruise" | "tour"): void => {
     render(
       <MemoryRouter>
         <DomainTabStrip
@@ -214,5 +252,17 @@ describe("DomainTabStrip: the next-up entry", () => {
   it("does not repeat the name on a trip entry, where it is already the headline", () => {
     renderStrip("all");
     expect(screen.queryByTestId("next-up-trip")).not.toBeInTheDocument();
+  });
+
+  // L4 (fix round 1 review, 2026-08-30): the match used to compare
+  // `entry.domain` (`DomainKey | "trip"`) against `active` (`DashboardTab`)
+  // directly -- two overlapping-but-different unions, correct only because
+  // no `entry.domain` value happens to equal "tour" or "all". Now
+  // `isValidDomain(active)` narrows first, so a domain-less tab returns
+  // `undefined` by construction rather than by the comparison silently
+  // finding nothing.
+  it("shows nothing on the domain-less 'tour' tab, which cannot match any upcoming entry", () => {
+    renderStrip("tour");
+    expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();
   });
 });

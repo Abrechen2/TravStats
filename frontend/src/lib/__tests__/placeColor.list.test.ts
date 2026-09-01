@@ -104,3 +104,58 @@ describe("buildPlaceLegend", () => {
     ).toEqual(["visited", "wishlist"]);
   });
 });
+
+/**
+ * A pin's colour and its symbol must come from the SAME list.
+ *
+ * "First list wins" is one rule with two consequences, and resolving the two
+ * separately is how a place ends up wearing the Maccis colour and the Rome
+ * symbol. The resolver therefore hands out both together.
+ */
+describe("list membership resolves colour and label as one", () => {
+  const maccis = {
+    id: "maccis",
+    name: "Maccis",
+    color: "#5ec2b2",
+    labelMode: "icon" as const,
+    icon: "🍟",
+    entries: [{ placeId: "trevi" }, { placeId: "hafen" }],
+  };
+  const rome = {
+    id: "rome",
+    name: "Rom",
+    color: "#d9975e",
+    labelMode: "name" as const,
+    icon: "🏛️",
+    entries: [{ placeId: "trevi" }, { placeId: "kolosseum" }],
+  };
+
+  it("gives a place in two lists the first list's colour AND its symbol", () => {
+    const { byPlaceId, labelsByPlaceId } = resolvePlaceListColors([maccis, rome]);
+    expect(byPlaceId.get("trevi")).toEqual([94, 194, 178]);
+    expect(labelsByPlaceId.get("trevi")).toEqual({ labelMode: "icon", icon: "🍟" });
+  });
+
+  it("follows the winner when the order is reversed", () => {
+    // The user reorders their lists by dragging; both consequences move together.
+    const { byPlaceId, labelsByPlaceId } = resolvePlaceListColors([rome, maccis]);
+    expect(byPlaceId.get("trevi")).toEqual([217, 151, 94]);
+    expect(labelsByPlaceId.get("trevi")).toEqual({ labelMode: "name", icon: "🏛️" });
+  });
+
+  it("leaves a place in no list out of both maps", () => {
+    const { byPlaceId, labelsByPlaceId } = resolvePlaceListColors([maccis]);
+    expect(byPlaceId.has("kolosseum")).toBe(false);
+    expect(labelsByPlaceId.has("kolosseum")).toBe(false);
+  });
+
+  it("reads a list that predates the column as wanting names", () => {
+    // `labelMode` is NOT NULL with a default, but a cached API response from
+    // before the column existed carries neither it nor an icon.
+    const legacy = { id: "l", name: "Alt", color: "#5ec2b2", entries: [{ placeId: "p" }] };
+    expect(resolvePlaceListColors([legacy]).labelsByPlaceId.get("p")).toEqual({
+      labelMode: "name",
+      icon: null,
+    });
+  });
+});

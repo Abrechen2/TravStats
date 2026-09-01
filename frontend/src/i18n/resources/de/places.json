@@ -41,7 +41,9 @@
     "filters": {
       "status": "Status",
       "category": "Kategorie",
-      "country": "Land"
+      "country": "Land",
+      "list": "Liste",
+      "allLists": "Alle Listen"
     },
     "status": {
       "visited": "Besucht",
@@ -63,6 +65,7 @@
   "form": {
     "createTitle": "Ort anlegen",
     "editTitle": "Ort bearbeiten",
+    "searchLabel": "Ort suchen",
     "name": "Name",
     "namePlaceholder": "z. B. McDonald’s Shibuya Center-Gai",
     "category": "Kategorie",
@@ -78,7 +81,9 @@
     "positionRequired": "Ohne Position lässt sich der Ort nicht speichern — such ihn, klick ihn auf der Karte an oder gib Koordinaten ein.",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
-    "saveFailed": "Der Ort konnte nicht gespeichert werden."
+    "saveFailed": "Der Ort konnte nicht gespeichert werden.",
+    "addToLists": "Zu Listen hinzufügen",
+    "listAddFailed": "Konnte nicht zu diesen Listen hinzufügen: {{lists}}"
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",
@@ -113,6 +118,16 @@
     "nameLabel": "Name",
     "namePlaceholder": "z. B. Maccis weltweit",
     "colorLabel": "Farbe",
+    "symbolLabel": "Symbol",
+    "symbolPlaceholder": "🍟",
+    "symbolHint": "Ein Emoji, optional.",
+    "labelModeLabel": "Auf der Karte",
+    "labelMode": {
+      "name": "Ortsname",
+      "icon": "Symbol"
+    },
+    "labelModeHint": "Gilt als Standard dieser Liste. Die Karte kann davon abweichen.",
+    "labelModeNeedsSymbol": "Erst ein Symbol setzen, dann kann die Karte es statt der Namen zeigen.",
     "ownSection": "Eigene Listen",
     "ownEmpty": "Noch keine eigene Liste. Eine Liste gruppiert Orte, die du schon erfasst hast.",
     "curatedSection": "Mitgelieferte Checklisten",
@@ -196,5 +211,61 @@
     "caption": "Bildunterschrift",
     "captionAdd": "Unterschrift…",
     "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden."
+  },
+  "stats": {
+    "empty": "Noch keine besuchten Orte — trage einen Besuch ein, dann füllt sich diese Seite.",
+    "visitedPlaces": "Orte besucht",
+    "visitedPlacesDesc": "{{wishlist}} weitere auf der Merkliste",
+    "visits": "Besuche",
+    "visitsDesc": "{{dated}} mit Datum · {{undated}} ohne",
+    "visitsAllDated": "alle mit Datum",
+    "countries": "Länder",
+    "citiesDesc": "in {{count}} Städten",
+    "lists": "Listen",
+    "listsDesc": "{{own}} eigene · {{checklists}} Checklisten",
+    "byCategory": "Nach Kategorie",
+    "byCountry": "Nach Land",
+    "byCity": "Nach Stadt",
+    "noCities": "Zu keinem Ort ist eine Stadt hinterlegt.",
+    "mostVisited": "Am häufigsten besucht",
+    "checklists": "Checklisten-Fortschritt",
+    "more": "+ {{count}} weitere",
+    "noVisitsYet": "Noch kein Besuch datiert.",
+    "rhythm": {
+      "title": "Rhythmus",
+      "busiestMonth": "Stärkster Monat",
+      "busiestWeekday": "Stärkster Wochentag",
+      "busiestDay": "Meiste Orte an einem Tag",
+      "busiestDayDesc": "am {{date}}",
+      "streak": "Längste Serie",
+      "streakDesc": "Tage hintereinander mit mindestens einem Besuch",
+      "visitsCount": "{{count}} Besuche",
+      "visitsCount_one": "{{count}} Besuch",
+      "byYear": "Besuche pro Jahr",
+      "byMonth": "Besuche pro Monat",
+      "byWeekday": "Besuche pro Wochentag",
+      "undatedNote": "{{count}} Besuche ohne Datum sind in den Summen enthalten, aber in keinem Diagramm — sie haben keinen Tag.",
+      "undatedNote_one": "Ein Besuch ohne Datum ist in den Summen enthalten, aber in keinem Diagramm — er hat keinen Tag."
+    },
+    "quality": {
+      "title": "Bewertungen",
+      "average": "Ø Bewertung",
+      "averageDesc": "aus {{rated}} von {{total}} Besuchen ({{share}} %)",
+      "bestRated": "Am besten bewertet",
+      "noRatings": "Noch keine Bewertung abgegeben."
+    },
+    "fun": {
+      "title": "Kurioses",
+      "firstVisit": "Erster Ort",
+      "favourite": "Am häufigsten zurück",
+      "favouriteDesc": "{{count}} Besuche",
+      "categoryCoverage": "Kategorien genutzt",
+      "categoryCoverageDesc": "noch {{count}} unentdeckt",
+      "categoryCoverageComplete": "alle Kategorien mindestens einmal",
+      "northernmost": "Nördlichster Ort",
+      "southernmost": "Südlichster Ort",
+      "onTrips": "Besuche in einer Reise",
+      "onTripsDesc": "von {{total}} insgesamt"
+    }
   }
 }

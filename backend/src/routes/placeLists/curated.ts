@@ -3,10 +3,11 @@ import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { checkAndUpdateAchievements } from "../../utils/achievements";
+import { recheckAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
+import { completePlaceAddress } from "../../services/places/addressBackfill";
 import logger from "../../utils/logger";
 
 /**
@@ -157,9 +158,25 @@ router.delete("/:key/subscribe", async (req: AuthRequest, res: Response, next: N
 
 // ---------------------------------------------------------------- progress
 
+/**
+ * Whether the caller wants the catalogue itself or only the tally.
+ *
+ * Forgejo #22: this endpoint returns every item with both blurbs — 1,248 rows
+ * for the world-heritage list — and a client that only needs "47 of 1,248"
+ * had to download all of it, on every screen that shows a progress bar.
+ *
+ * A parameter rather than a new endpoint, and defaulting to the full payload,
+ * so nothing that exists today changes behaviour.
+ */
+const progressQuerySchema = z.object({
+  items: z.enum(["all", "none"]).default("all"),
+});
+
 router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
+    const query = progressQuerySchema.safeParse(req.query);
+    if (!query.success) throw new AppError(query.error.message, 400);
     const curated = await prisma.curatedList.findUnique({
       where: { key: req.params.key },
       include: { items: { orderBy: [{ sortIdx: "asc" }, { name: "asc" }] } },
@@ -225,7 +242,9 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
         color: subscription?.color ?? null,
         itemCount: items.length,
         tickedCount: items.filter((i) => i.ticked).length,
-        items,
+        // Omitted entirely rather than sent empty: an empty array would read as
+        // "this catalogue has no items", which is a different statement.
+        ...(query.data.items === "all" ? { items } : {}),
       },
     });
   } catch (error) {
@@ -307,7 +326,13 @@ router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: Ne
     const tickedIds = new Set(ticked.filter((p) => p.visited).map((p) => p.curatedItemId));
     const targets = curated.items
       .filter((i) => !tickedIds.has(i.id))
-      .map((i) => ({ itemId: i.id, name: i.name, lat: i.lat, lon: i.lon }));
+      .map((i) => ({
+        itemId: i.id,
+        name: i.name,
+        country: i.isoCountryCode ?? i.country ?? null,
+        lat: i.lat,
+        lon: i.lon,
+      }));
 
     const anchors = buildAnchors({
       lodgings: stays
@@ -395,6 +420,16 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       update: { visited: true },
     });
 
+    // The catalogue has no address column and names a country for only 14 of
+    // its rows, so a ticked place arrives located but undescribed. Derive the
+    // rest from the pin — deliberately NOT awaited: the geocoder is throttled
+    // to 1 request/second, and someone ticking their way down the World
+    // Heritage list must not wait a second per tick for a field they did not
+    // ask for. It fills only empty columns and never throws.
+    completePlaceAddress(place.id).catch((error) => {
+      logger.error({ error, placeId: place.id }, "Failed to complete address after tick");
+    });
+
     const list = await prisma.placeList.upsert({
       where: { userId_curatedKey: { userId, curatedKey: curated.key } },
       create: {
@@ -426,9 +461,7 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       }
     }
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after checklist tick");
-    });
+    await recheckAchievements(userId, "checklist tick");
 
     logger.info(
       { operation: "curated_item_tick", userId, itemId: item.id, placeId: place.id },
@@ -454,9 +487,7 @@ router.delete("/items/:itemId/tick", async (req: AuthRequest, res: Response, nex
     });
     if (updated.count === 0) throw new AppError("Checklist item not ticked", 404);
 
-    checkAndUpdateAchievements(userId).catch((error) => {
-      logger.error({ error, userId }, "Failed to update achievements after checklist untick");
-    });
+    await recheckAchievements(userId, "checklist untick");
 
     res.json({ success: true });
   } catch (error) {

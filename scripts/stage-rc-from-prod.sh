@@ -22,7 +22,7 @@
 # Non-interactive: FORCE=1 ./scripts/stage-rc-from-prod.sh
 set -euo pipefail
 
-PVE_NODE="${PVE_NODE:-192.168.178.180}"
+PVE_NODE="${PVE_NODE:?set PVE_NODE to the Proxmox node hosting the prod and RC containers -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519}"
 CT_PROD="${CT_PROD:-100}"
 CT_RC="${CT_RC:-107}"
@@ -88,6 +88,61 @@ ssh_node "pct exec $CT_PROD -- sh -c 'docker exec $DB_PROD_CONTAINER pg_dump -U 
 echo "==> [2/6] Move dump CT$CT_PROD -> pve node -> CT$CT_RC"
 ssh_node "pct pull $CT_PROD $DUMP $DUMP && pct push $CT_RC $DUMP $DUMP"
 
+# --- Keep the RC's OWN credentials across the clone --------------------------
+# Forgejo #32. The clone carries the database and NOT `/app/data/secrets/`, so
+# prod's `admin_settings` arrives holding prod's CIPHERTEXT while the RC holds a
+# different encryption key. Every affected provider then reads as unconfigured,
+# and it fails quietly: a failed decrypt is a warn, and the resolver treats an
+# undecryptable value as absent on purpose, so the only outward sign is a
+# provider that does nothing — indistinguishable from one nobody switched on.
+#
+# The remedy is NOT to bring prod's keys along. That would put production key
+# material on a test box to solve a bookkeeping problem. It is to keep the RC's
+# own keys, which were entered on the RC, encrypted with the RC's key, and work.
+# Same shape as the public_url block below: a value that belongs to the RC is
+# taken out of the way and put back after prod's row has landed on top of it.
+#
+# Column-agnostic on purpose. The credential columns differ between release
+# lines, so they are discovered from the row itself rather than listed here —
+# a list would go stale silently and lose exactly the key nobody noticed.
+KEY_SQL="/tmp/travstats-rc-keys.sql"
+GEN_SQL="/tmp/travstats-rc-keygen.sql"
+if [ -z "${KEEP_INHERITED_KEYS:-}" ]; then
+  echo "==> [2b/6] Save the RC's own API keys before prod's row lands on them"
+  # Sent as base64 over stdin, not quoted through ssh -> pct exec -> docker exec
+  # -> psql. Four shell layers each eat a backslash, and this statement is made
+  # of dollar-quoting and a regex; the repo's own guidance says to pipe rather
+  # than escape, and this is exactly the case it was written for.
+  #
+  # One guarded statement per column, like the public_url block below: prod's
+  # schema may predate a column the RC has, and a single wide UPDATE would fail
+  # as a whole rather than skip the one column that is missing.
+  #
+  # `-o` keeps the output ON the RC. The values are ciphertext, but they are
+  # still the RC's credentials and there is no reason for them to travel to
+  # whichever machine happens to be running this script.
+  base64 -w0 <<'GENSQL' | ssh_node "pct exec $CT_RC -- sh -c 'base64 -d > $GEN_SQL'"
+SELECT coalesce(string_agg(
+  format('DO $do$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name=''admin_settings'' AND column_name=%L) THEN UPDATE admin_settings SET %I=%L; END IF; END $do$;',
+         key, key, value), E'\n'), '')
+FROM admin_settings a, LATERAL jsonb_each_text(to_jsonb(a))
+WHERE value IS NOT NULL
+  AND key ~ '(api_key|client_id|client_secret|_token|_secret)$';
+GENSQL
+  ssh_node "pct exec $CT_RC -- docker cp $GEN_SQL $DB_RC_CONTAINER:$GEN_SQL"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -At -o $KEY_SQL -f $GEN_SQL" || true
+  ssh_node "pct exec $CT_RC -- docker cp $DB_RC_CONTAINER:$KEY_SQL $KEY_SQL" || true
+  SAVED=$(ssh_node "pct exec $CT_RC -- sh -c 'grep -c \"^DO\" $KEY_SQL 2>/dev/null || true'" | tr -d '\r\n ')
+  SAVED="${SAVED:-0}"
+  echo "    $SAVED credential column(s) held back — re-applied after the restore."
+  if [ "$SAVED" = "0" ]; then
+    echo "    NOTE: none found. After this run the RC carries prod's unreadable ciphertext, so"
+    echo "          every affected provider reads as unconfigured — and that looks exactly like"
+    echo "          a provider nobody switched on. Re-enter the keys on the RC, or the candidate"
+    echo "          is validated against providers it never actually reaches (Forgejo #32)."
+  fi
+fi
+
 echo "==> [3/6] Stop RC-Server app ($APP_RC_CONTAINER) to release DB connections"
 ssh_node "pct exec $CT_RC -- sh -c 'docker stop $APP_RC_CONTAINER'"
 
@@ -104,7 +159,7 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER
 # Re-apply RC-specific settings the prod clone wiped. The prod dump carries
 # prod's admin_settings, so the mobile-app pairing URL (public_url) now points
 # at prod, not the RC — the app's QR would encode an address it can't reach.
-# Set RC_PUBLIC_URL to the RC's own public address (e.g. https://trav.abrechen2.de).
+# Set RC_PUBLIC_URL to the RC's own address, however it is reached.
 #
 # Guarded with an IF EXISTS: older release lines (e.g. 2.2.x) predate the
 # public_url column, and a bare UPDATE would error out and abort the whole
@@ -117,8 +172,28 @@ fi
 echo "==> [5/6] Restart RC-Server app (entrypoint runs prisma migrate deploy)"
 ssh_node "pct exec $CT_RC -- sh -c 'docker start $APP_RC_CONTAINER'"
 
+# Put the RC's own keys back — AFTER the restart, not before it. The restore
+# leaves prod's schema in place and the entrypoint migrates it up; a column the
+# RC has and prod did not only exists once that has run. Applying earlier would
+# skip exactly the newest credential, which is the one a candidate is most
+# likely to be testing.
+if [ -z "${KEEP_INHERITED_KEYS:-}" ] && [ "${SAVED:-0}" != "0" ]; then
+  echo "==> [5b/6] Wait for the entrypoint migration, then re-apply the RC's own keys"
+  for _ in $(seq 1 30); do
+    if ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -Atc \"SELECT 1 FROM information_schema.tables WHERE table_name='_prisma_migrations';\"" \
+        | grep -q 1; then
+      break
+    fi
+    sleep 2
+  done
+  ssh_node "pct exec $CT_RC -- docker cp $KEY_SQL $DB_RC_CONTAINER:$KEY_SQL"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -f $KEY_SQL"
+  echo "    Re-applied. Decrypt warnings after this run mean a key that was ALREADY broken"
+  echo "    on the RC before the clone, not one this script lost."
+fi
+
 echo "==> [6/6] Cleanup dump files"
-ssh_node "pct exec $CT_PROD -- sh -c 'rm -f $DUMP' ; pct exec $CT_RC -- sh -c 'docker exec $DB_RC_CONTAINER rm -f $DUMP; rm -f $DUMP' ; rm -f $DUMP" || true
+ssh_node "pct exec $CT_PROD -- sh -c 'rm -f $DUMP' ; pct exec $CT_RC -- sh -c 'docker exec $DB_RC_CONTAINER rm -f $DUMP $KEY_SQL $GEN_SQL; rm -f $DUMP $KEY_SQL $GEN_SQL' ; rm -f $DUMP" || true
 
 echo
 echo "Done. The RC Server now holds a copy of Prod data (migrated up by the app entrypoint)."

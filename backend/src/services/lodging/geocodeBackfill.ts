@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
 import { searchPlaces } from "../geo/photon";
@@ -288,20 +289,30 @@ export async function completeMissingAddresses(
   let filled = 0;
 
   try {
+    // Same two cases as the place pass: never described, or described in a
+    // script the reader cannot read. Until the geocoder was asked for `de,en`
+    // it answered in the local language, so older rows hold text like 東京都.
     const rows = await prisma.lodging.findMany({
       where: {
         userId,
         ...(batchId ? { batchId } : {}),
         lat: { not: null },
         lon: { not: null },
-        OR: [{ address: null }, { city: null }, { country: null }],
       },
       select: { id: true, lat: true, lon: true, address: true, city: true, country: true },
       orderBy: { createdAt: "asc" },
       take: MAX_BACKFILL_ROWS,
     });
 
-    for (const row of rows) {
+    const candidates = rows.filter(
+      (r) =>
+        r.address === null ||
+        r.city === null ||
+        r.country === null ||
+        anyNonLatin(r.address, r.city, r.country),
+    );
+
+    for (const row of candidates) {
       attempted++;
       try {
         // The WHERE guarantees both are non-null; narrow for TypeScript.
@@ -309,10 +320,16 @@ export async function completeMissingAddresses(
         const parts = await reverseGeocode(row.lat, row.lon);
         if (!parts) continue;
 
+        // Unreadable counts as missing — the ONE case where this pass replaces
+        // instead of fills. It applies to the script, never the wording:
+        // "Lëtzebuerg" is Latin and stays untouched.
+        const gone = (v: string | null): boolean =>
+          !v?.trim() || hasNonLatinScript(v);
+
         const data: { address?: string; city?: string; country?: string } = {};
-        if (!row.address?.trim() && parts.address) data.address = parts.address;
-        if (!row.city?.trim() && parts.city) data.city = parts.city;
-        if (!row.country?.trim() && parts.country) data.country = parts.country;
+        if (gone(row.address) && parts.address) data.address = parts.address;
+        if (gone(row.city) && parts.city) data.city = parts.city;
+        if (gone(row.country) && parts.country) data.country = parts.country;
         if (Object.keys(data).length === 0) continue;
 
         await prisma.lodging.update({ where: { id: row.id }, data });

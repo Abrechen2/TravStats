@@ -20,7 +20,7 @@ describe("passkeyUnavailableReason", () => {
   // A LAN IP over plain http is NOT a secure context. Offering a passkey button
   // there would produce a browser error the user cannot act on.
   it("refuses http on a LAN address", () => {
-    expect(passkeyUnavailableReason("http://192.168.178.120:3010")).toBe("insecureOrigin");
+    expect(passkeyUnavailableReason("http://192.168.1.10:3010")).toBe("insecureOrigin");
     expect(passkeyUnavailableReason("http://travstats.local:3010")).toBe("insecureOrigin");
   });
 

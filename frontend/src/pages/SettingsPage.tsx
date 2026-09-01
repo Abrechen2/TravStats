@@ -17,6 +17,7 @@ import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
 import NotificationsSection from "../components/Settings/NotificationsSection";
 import BackupSection from "../components/Settings/BackupSection";
+import SpreadsheetSection from "../components/Settings/SpreadsheetSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
@@ -29,7 +30,9 @@ import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
+import RoutingProviderSection from "../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
+import DawarichConnectionCard from "../components/Settings/DawarichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
 
@@ -551,11 +554,17 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "notifications" && <NotificationsSection />}
             {activeSection === "features" && <FeaturesSection />}
             {activeSection === "backup" && (
-              <BackupSection
-                lastBackup={lastBackup}
-                backupStatus={backupStatus}
-                isAdmin={user?.isAdmin ?? false}
-              />
+              <div className="space-y-4">
+                <BackupSection
+                  lastBackup={lastBackup}
+                  backupStatus={backupStatus}
+                  isAdmin={user?.isAdmin ?? false}
+                />
+                {/* Next to the backup, because both answer "get my data out" —
+                    but they are not the same thing: a backup restores an
+                    instance, this one is for reading and editing. */}
+                <SpreadsheetSection />
+              </div>
             )}
             {activeSection === "autoupdate" && (
               <AutoUpdateSection
@@ -582,7 +591,22 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
+                {/* Admin-only AND behind the tours gate. The card configures a
+                    road router for tour legs and has no other consumer, so on a
+                    production instance with beta off it would offer to set up
+                    routing for a feature invisible everywhere else — the same
+                    defect the Dawarich card below was fixed for, which this,
+                    its sibling, kept until the merge review. */}
+                {isFeatureVisible("tourRoutes") && (
+                  <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
+                )}
                 <ImmichConnectionCard />
+                {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
+                    still meaningless where nothing consumes a recorded track,
+                    but tours stopped being the only consumer the moment cruise
+                    legs were scoped onto the same connection — a gate named
+                    after tours would then hide a card the cruise feature needs. */}
+                {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the
@@ -605,82 +629,81 @@ export default function SettingsPage(): JSX.Element {
                 "Speichern" button (profile, notifications, API keys) or none
                 at all (import), the strip's promise is simply false. */}
             {AUTO_SAVED_SECTIONS.has(activeSection) && (
-            <div
-              className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
-              style={{
-                background:
-                  autoSaveState === "saved" ? "rgba(63,185,80,0.08)" : "var(--bg-elevated)",
-                border:
-                  autoSaveState === "saved"
-                    ? "1px solid rgba(63,185,80,0.2)"
-                    : "1px solid var(--color-border)",
-              }}
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                {autoSaveState === "saved" ? (
+              <div
+                className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
+                style={{
+                  background:
+                    autoSaveState === "saved" ? "rgba(63,185,80,0.08)" : "var(--bg-elevated)",
+                  border:
+                    autoSaveState === "saved"
+                      ? "1px solid rgba(63,185,80,0.2)"
+                      : "1px solid var(--color-border)",
+                }}
+                role="status"
+                aria-live="polite"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {autoSaveState === "saved" ? (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ color: "var(--success)" }}
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : null}
+                  <span
+                    className="font-medium"
+                    style={{
+                      color: autoSaveState === "saved" ? "var(--success)" : "var(--text-muted)",
+                    }}
+                  >
+                    {autoSaveState === "saved"
+                      ? t("settings:autoSave.saved")
+                      : autoSaveState === "saving"
+                        ? t("settings:autoSave.saving")
+                        : t("settings:autoSave.idle")}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  aria-label={t("settings:scrollToTop")}
+                  title={t("settings:scrollToTop")}
+                  className="flex items-center justify-center w-7 h-7 rounded-sm transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--text-primary)";
+                    e.currentTarget.style.background = "var(--bg-elevated)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "var(--text-muted)";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
                   <svg
                     width="14"
                     height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.5"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    style={{ color: "var(--success)" }}
                     aria-hidden="true"
                   >
-                    <polyline points="20 6 9 17 4 12" />
+                    <line x1="12" y1="19" x2="12" y2="5" />
+                    <polyline points="5 12 12 5 19 12" />
                   </svg>
-                ) : null}
-                <span
-                  className="font-medium"
-                  style={{
-                    color:
-                      autoSaveState === "saved" ? "var(--success)" : "var(--text-muted)",
-                  }}
-                >
-                  {autoSaveState === "saved"
-                    ? t("settings:autoSave.saved")
-                    : autoSaveState === "saving"
-                      ? t("settings:autoSave.saving")
-                      : t("settings:autoSave.idle")}
-                </span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                aria-label={t("settings:scrollToTop")}
-                title={t("settings:scrollToTop")}
-                className="flex items-center justify-center w-7 h-7 rounded-sm transition-colors"
-                style={{ color: "var(--text-muted)" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "var(--text-primary)";
-                  e.currentTarget.style.background = "var(--bg-elevated)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </button>
-            </div>
             )}
           </main>
         </div>

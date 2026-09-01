@@ -143,7 +143,8 @@
       "timeline": "Timeline",
       "map": "Karte",
       "gallery": "Galerie",
-      "logistics": "Logistik"
+      "logistics": "Logistik",
+      "tours": "Touren"
     },
     "tabPlaceholder": {
       "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",
@@ -171,7 +172,20 @@
       "deletedStop": "Stopp gelöscht",
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
       "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
-      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen"
+      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen",
+      "showDetails": "Details anzeigen",
+      "expandedHint": "Details geöffnet",
+      "openCruise": "Kreuzfahrt öffnen",
+      "openFlight": "Flug öffnen",
+      "ship": "Schiff",
+      "route": "Route",
+      "cabin": "Kabine",
+      "price": "Preis",
+      "flightNumber": "Flugnummer",
+      "aircraft": "Flugzeug",
+      "seat": "Sitzplatz",
+      "itinerary": "Etappen",
+      "atSea": "Seetag"
     }
   },
   "journalModal": {
@@ -286,5 +300,103 @@
     "mostExpensive": "Teuerste Reise",
     "mostCountries": "Meiste Länder"
   },
-  "deleteTripConfirmTitle": "Reise löschen?"
+  "deleteTripConfirmTitle": "Reise löschen?",
+  "tours": {
+    "title": "Touren",
+    "newSection": "Tour hinzufügen",
+    "namePlaceholder": "Name der Tour",
+    "save": "Speichern",
+    "empty": "Noch keine Tour in dieser Reise",
+    "loadError": "Touren konnten nicht geladen werden",
+    "createError": "Tour konnte nicht erstellt werden",
+    "stopCount_one": "{{count}} Stopp",
+    "stopCount_other": "{{count}} Stopps",
+    "stopsHeading": "Stopps",
+    "legsHeading": "Etappen",
+    "noLegs": "Noch keine Etappe — ordne mindestens zwei Stopps zu",
+    "noStops": "Noch kein Stopp in dieser Reise — lege zuerst in der Timeline Stopps an",
+    "stopIsRoutePoint": "Streckenpunkt",
+    "needsCoordinate": "Ohne Koordinate kein Streckenpunkt",
+    "notFound": "Diese Tour gibt es nicht",
+    "backToTrip": "Zurück zur Reise",
+    "assignError": "Die Stopps konnten nicht gespeichert werden",
+    "legError": "Die Etappe konnte nicht geändert werden",
+    "clearLeg": "Linie entfernen",
+    "noLineYet": "Für diese Etappe gibt es noch keine gezeichnete Linie",
+    "mode": {
+      "road": "Straße",
+      "ferry": "Fähre",
+      "rail": "Bahn",
+      "foot": "zu Fuß",
+      "bike": "Rad"
+    },
+    "source": {
+      "straight": "Luftlinie",
+      "drawn": "gezogen",
+      "routed": "berechnet",
+      "track": "aus der Spur"
+    },
+    "routing": {
+      "routeAll": "Ganze Tour berechnen",
+      "routingAll": "Wird berechnet …",
+      "unavailableReason": "Kein Routing-Anbieter eingerichtet",
+      "notConfigured": "Für diese Instanz ist kein Routing-Anbieter eingerichtet",
+      "error": "Die Etappe konnte nicht berechnet werden",
+      "allError": "Die Tour konnte nicht berechnet werden",
+      "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
+      "result": "{{routed}} Etappen verarbeitet, {{skipped}} übersprungen"
+    },
+    "tracks": {
+      "heading": "Aufgezeichnete Tracks",
+      "loading": "Tracks werden geladen …",
+      "loadError": "Tracks konnten nicht geladen werden",
+      "empty": "Noch kein Track für diese Tour",
+      "uploadLabel": "GPX hochladen",
+      "uploading": "Wird hochgeladen …",
+      "uploadError": "Der Track konnte nicht hochgeladen werden",
+      "deleteLabel": "Löschen",
+      "deleteError": "Der Track konnte nicht gelöscht werden",
+      "pointCount_one": "{{count}} Punkt",
+      "pointCount_other": "{{count}} Punkte",
+      "truncated": "Unvollständig",
+      "truncatedReason": "Dieser Track deckt nicht das gesamte angeforderte Zeitfenster ab — es wurde nur der neueste Abschnitt gespeichert. Die Distanz ist unvollständig gemessen.",
+      "noCoverageReason": "Kein aufgezeichneter Track deckt diese Etappe ab",
+      "source": {
+        "gpx": "GPX-Upload",
+        "dawarich": "Dawarich"
+      },
+      "dawarich": {
+        "pullLabel": "Aus Dawarich abrufen",
+        "pulling": "Wird abgerufen …",
+        "unavailableReason": "Keine Dawarich-Verbindung eingerichtet",
+        "error": "Der Track konnte nicht aus Dawarich abgerufen werden",
+        "errors": {
+          "notConfigured": "Keine Dawarich-Verbindung eingerichtet",
+          "unreachable": "Dawarich ist nicht erreichbar",
+          "auth": "Dawarich hat den Schlüssel abgelehnt",
+          "notFound": "Die Dawarich-Adresse wurde nicht gefunden",
+          "protocol": "Unerwartete Antwort von Dawarich",
+          "invalidUrl": "Die Dawarich-Adresse ist ungültig"
+        }
+      }
+    },
+    "dawarichSettings": {
+      "title": "Dawarich-Verbindung",
+      "subtitle": "Für den automatischen Track-Import aus Dawarich",
+      "baseUrl": "Server-Adresse",
+      "baseUrlPlaceholder": "https://dawarich.beispiel.de",
+      "apiKey": "API-Schlüssel",
+      "apiKeyPlaceholder": "API-Schlüssel eingeben",
+      "apiKeyStored": "Ein Schlüssel ist hinterlegt",
+      "clearKey": "Entfernen",
+      "shared": "Von einer globalen Verbindung bereitgestellt",
+      "save": "Speichern",
+      "saving": "Wird gespeichert …",
+      "test": "Verbindung testen",
+      "testing": "Wird getestet …",
+      "connected": "Verbunden (Version {{version}})",
+      "loadError": "Einstellungen konnten nicht geladen werden",
+      "saveError": "Speichern fehlgeschlagen"
+    }
+  }
 }

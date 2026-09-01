@@ -243,11 +243,19 @@ frontend/src/
   in `backend/src/schemas/`.
 - **Beta gating (since 2.4.0)** — unfinished features must register in
   `frontend/src/config/betaFeatures.ts` and hide behind
-  `betaFeaturesEnabled` (admin_settings column, default `false`). Currently
-  gated: POI dashboard tab, Devices settings entry, trip AI summary. The
-  Devices entry is the ONLY phone-pairing entry point — it must be
-  un-gated when the mobile app ships. The flag is instance state: never
-  persist it client-side (see the `partialize` in `settingsStore.ts`).
+  `betaFeaturesEnabled` (admin_settings column, default `false`).
+  **That registry is the list — do not copy it here.** This paragraph named
+  three features until 2026-08-30, by which time there were seven; a list in
+  prose beside a list in code is a list that is wrong, and being wrong about
+  what is hidden is worse than saying nothing, because nobody goes looking.
+  The admin panel renders the same registry for the same reason
+  (`components/Admin/BetaFeatureList.tsx`), and a test fails when a key has no
+  user-facing copy. Each entry carries `why` it is hidden and `returnsWhen` it
+  may come back — write both, or the gate outlives the reason for it.
+  Two standing notes: the Devices entry is the ONLY phone-pairing entry point
+  and must be un-gated when the mobile app ships; and the flag is instance
+  state, never persisted client-side (see the `partialize` in
+  `settingsStore.ts`).
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through
@@ -470,7 +478,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (7532 symbols, 19521 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (7688 symbols, 20170 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -578,7 +586,7 @@ Dieses Repository hat **zwei Remotes**:
 | Remote | Ziel | Rolle |
 |--------|------|-------|
 | `origin` | GitHub | Massgeblich fuer Oeffentliches — PRs, Actions, Dependabot, GHCR |
-| `forgejo` | `ssh://git@192.168.178.254:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
+| `forgejo` | `ssh://git@<forgejo-host>:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
 
 **Regel beim Pushen:**
 
@@ -592,11 +600,47 @@ Der zweite Befehl ist der entscheidende. Am 1. August 2026 existierten
 15 Branches ueber vier Repositories ausschliesslich lokal, obwohl alle ein
 GitHub-Remote hatten.
 
-**Dateien, die `.gitignore` hier ausschliesst** (`CLAUDE.md`, `AGENTS.md`,
-Roadmaps, Pentest-Notizen), liegen im Begleitrepo **`TravStats-local`** auf
-Forgejo. Git kennt keine Ignore-Regeln pro Remote, deshalb der Umweg.
+**Dateien, die `.gitignore` hier ausschliesst** (`AGENTS.md`, `CLAUDE.local.md`,
+`roadmap.local.yaml`, `ROADMAP.local.md`, Pentest-Notizen), liegen im Begleitrepo
+**`TravStats-local`** auf Forgejo. Git kennt keine Ignore-Regeln pro Remote,
+deshalb der Umweg.
+
+> **`CLAUDE.md` gehoert NICHT dazu** — sie ist hier getrackt und oeffentlich, trotz
+> der `*.md`-Regel in `.gitignore`. Sie reist also als normaler Commit nach GitHub
+> und Forgejo. Eine Kopie im Spiegel waere eine dritte Quelle, die nur driften kann;
+> am 25.08.2026 war genau das der Fall. Gemessen: `CLAUDE.md` und `README.md` sind
+> die einzigen zwei Dateien, die beide Repos tracken — beide sind vom Spiegeln
+> ausgenommen.
+
+### Der Spiegel wird von JEDEM Rechner gepflegt (seit 2026-08-25)
+
+`TravStats-local` liegt als Schwester-Checkout **neben** diesem Repo
+(`../TravStats-local`) und traegt `sync-local-mirror.sh`:
+
+```bash
+cd ../TravStats-local
+./sync-local-mirror.sh status   # was weicht ab, wer ist voraus
+./sync-local-mirror.sh pull     # Spiegel -> Arbeits-Checkout (Sitzungsanfang)
+./sync-local-mirror.sh push     # Arbeits-Checkout -> Spiegel (Sitzungsende)
+```
+
+**`pull` beim Sitzungsanfang, `push` am Ende — auf beiden Rechnern.** Das ist
+kein Ritual, sondern die einzige Absicherung: ein `git pull` traegt diese
+Dateien nie, weil sie hier ignoriert sind.
+
+**Warum die Regel existiert:** bis zum 25.08.2026 pushte nur CT142 in den
+Spiegel, der PC kuratierte still seine eigene Fassung. Gemessen an dem Tag:
+`roadmap.local.yaml` hatte 50 gemeinsame Item-Ids, **120 nur auf dem PC und 18
+nur im Spiegel** — keine Seite war Obermenge, ein Kopieren haette also in jede
+Richtung echte Kuratierung geloescht. Das Zusammenfuehren kostete eine Sitzung.
+Deshalb bricht das Skript ab, wenn beide Seiten sich bewegt haben, statt zu
+kopieren.
+
+Nicht gespiegelt, mit Absicht: `README.md` (gehoert dem Spiegel),
+`.roadmap/*` (Leitstand-Build-Artefakte), `.claude/settings.local.json` und
+`.claude/worktrees/*` (maschinenspezifisch).
 
 **Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
-(CT 141, `192.168.178.145`).
+(CT 141, `<secrets-host>`).
 
 Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`
