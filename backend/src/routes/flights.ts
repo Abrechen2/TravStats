@@ -29,7 +29,7 @@ import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
 } from '../services/airportCoordinates';
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
+import { roundedMeasuredDurationMinutes, type FlightDurationRow } from '../utils/flightDurationColumn';
 import { fromZonedTime } from 'date-fns-tz';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
@@ -424,7 +424,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
                 });
               });
           res.status(200).json({
-            flight: merged,
+            flight: await withMeasuredDuration(merged),
             mergedFields,
           });
           return;
@@ -614,7 +614,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     }
 
     res.status(201).json({
-      flight,
+      flight: flight ? await withMeasuredDuration(flight) : flight,
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined
     });
   } catch (error) {
@@ -673,6 +673,8 @@ router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) 
       return { city: a?.city ?? null, country: a?.country ?? null };
     };
 
+    // No duration here on purpose: this block is a narrow projection for the
+    // "next flight" card, which shows a countdown, not a flight time.
     res.json({
       flight: {
         ...flight,
@@ -684,6 +686,38 @@ router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) 
     next(error);
   }
 });
+
+/**
+ * Single-row twin of the list route's duration enrichment (forgejo#45).
+ *
+ * A bare `res.json(flight)` hands out the RAW `duration_minutes`, which is null
+ * for a LEGACY_FAKE_UTC pair — the one class the column deliberately does not
+ * store. A client reading that raw null would conclude "no duration" for a
+ * flight the list endpoint answers a duration for. One rule, every endpoint.
+ */
+async function withMeasuredDuration<
+  T extends FlightDurationRow & {
+    depIata: string | null;
+    depIcao: string | null;
+    arrIata: string | null;
+    arrIcao: string | null;
+  },
+>(flight: T): Promise<T & { durationMinutes: number | null }> {
+  const codes = [flight.depIata, flight.depIcao, flight.arrIata, flight.arrIcao]
+    .filter((c): c is string => !!c);
+  let depTz: string | null = null;
+  let arrTz: string | null = null;
+  try {
+    const airports = codes.length ? await getCachedAirports(codes) : new Map();
+    const tzOf = (iata: string | null, icao: string | null): string | null =>
+      (iata && airports.get(iata)?.timezone)
+      || (icao && airports.get(icao)?.timezone)
+      || null;
+    depTz = tzOf(flight.depIata, flight.depIcao);
+    arrTz = tzOf(flight.arrIata, flight.arrIcao);
+  } catch { /* timezone lookup failed — legacy rows fall back to the naïve diff */ }
+  return { ...flight, durationMinutes: roundedMeasuredDurationMinutes(flight, depTz, arrTz) };
+}
 
 // Get flights with filters
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -757,21 +791,15 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       const arrTz = (f.arrIata && tzMap.get(f.arrIata))
         || (f.arrIcao && tzMap.get(f.arrIcao))
         || null;
-      const rawDuration = (f.departureTime && f.arrivalTime)
-        ? tzAwareDurationMinutes(
-            f.departureTime,
-            f.arrivalTime,
-            depTz,
-            arrTz,
-            f.depTimeSemantics as FlightTimeSemantics,
-            f.arrTimeSemantics as FlightTimeSemantics,
-          )
-        : null;
+      // Reads the stored `duration_minutes` for every row whose duration the
+      // row itself determines, and derives it from the catalogue only for the
+      // LEGACY_FAKE_UTC pairs where it genuinely cannot be stored (forgejo#45).
+      // Same number as the inline computation this replaced, by construction.
       // null = DATE_ONLY semantics (issue #106A) — display layer renders
       // a great-circle estimate instead of the placeholder-time duration.
       return {
         ...f,
-        durationMinutes: rawDuration === null ? null : Math.round(rawDuration),
+        durationMinutes: roundedMeasuredDurationMinutes(f, depTz, arrTz),
         depCountry: (f.depIata && countryMap.get(f.depIata)) || (f.depIcao && countryMap.get(f.depIcao)) || null,
         arrCountry: (f.arrIata && countryMap.get(f.arrIata)) || (f.arrIcao && countryMap.get(f.arrIcao)) || null,
         depTimezone: depTz,
@@ -1070,7 +1098,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!flight) {
       throw new AppError('Flight not found', 404);
     }
-    res.json(flight);
+    res.json(await withMeasuredDuration(flight));
   } catch (error) {
     next(error);
   }
@@ -1428,7 +1456,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
 
     res.json({
-      flight,
+      flight: await withMeasuredDuration(flight),
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined
     });
   } catch (error) {
