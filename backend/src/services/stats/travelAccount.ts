@@ -11,6 +11,7 @@
  */
 import { classifyStay } from "../../shared/lodgingCounting";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
+import { isCountableFlight } from "../../shared/flightCounting";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -129,7 +130,7 @@ export function buildTravelAccount(input: {
   }
 
   for (const flight of flights) {
-    if (flight.status !== "flown" && flight.status !== "historical") continue;
+    if (!isCountableFlight(flight)) continue;
     if (flight.departureTime === null || flight.arrivalTime === null) continue;
     // A night in the air is a flight that crosses a date boundary. A day-time
     // hop does not take a night from anyone.

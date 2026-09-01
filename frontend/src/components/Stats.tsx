@@ -9,6 +9,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatDistance, formatCurrency as formatCurrencyUtil } from "../lib/units";
 import { SkeletonStatCards } from "./SkeletonLoader";
+import { isCountableFlight } from "../shared/flightCounting";
 
 interface StatsProps {
   filters?: FlightFilters;
@@ -74,9 +75,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
     // logbook entries contribute to the total. Flight time stays flown-only
     // because historical entries use placeholder times that would distort
     // the duration sum.
-    const countableFlights = flights.filter(
-      (f) => f.status === "flown" || f.status === "historical"
-    );
+    const countableFlights = flights.filter(isCountableFlight);
     const flownFlights = flights.filter((f) => f.status === "flown");
     const totalDistance = countableFlights.reduce((sum, f) => {
       // Use accurate Haversine formula for distance calculation

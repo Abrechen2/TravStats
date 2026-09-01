@@ -4,6 +4,7 @@ import { useLocale } from "../hooks/useLocale";
 import { useTranslation } from "../hooks/useTranslation";
 import { FlagImg, countryName } from "../lib/countryFlag";
 import { TooltipContainer } from "./TooltipContainer";
+import { isCountableFlight } from "../shared/flightCounting";
 
 interface AirportTooltipProps {
   iata: string;
@@ -71,7 +72,7 @@ export function AirportTooltip({
       if (f.properties.airline) airlinesSet.add(f.properties.airline);
       // Only flown (or historically-known-flown) legs contribute km — a
       // scheduled-but-not-yet-flown flight hasn't covered any distance yet.
-      if (f.properties.status === "flown" || f.properties.status === "historical") {
+      if (isCountableFlight(f.properties)) {
         totalKm += f.properties.distance ?? 0;
       }
     }

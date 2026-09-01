@@ -14,6 +14,7 @@ import type {
   SeatStats,
 } from "../types";
 import { API_LIMITS } from "../lib/constants";
+import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
 import { normalizeAirline } from "../shared/airlineNormalize";
 import {
@@ -274,7 +275,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       // Historical flights have unreliable times (often 12:00 placeholders) but contribute
       // accurately to airport/distance/airline/route counts, and `calculateDuration` falls
       // back to a great-circle estimate for DATE_ONLY rows so duration aggregates stay sane.
-      setFlights(allFlights.filter((f) => f.status === "flown" || f.status === "historical"));
+      setFlights(allFlights.filter(isCountableFlight));
 
       const [fun, business, unique, airports, seat, achievements] = await Promise.all([
         statsApi.getFunStats().catch((err) => {

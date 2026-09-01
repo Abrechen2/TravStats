@@ -5,6 +5,7 @@ import type { AirportData } from '../../services/airportLookup';
 import type { FlightData } from './types';
 import { departureClockOf } from './departureClock';
 import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
+import { isCountableFlight } from '../../shared/flightCounting';
 
 export interface AirportStats {
   /** Distinct airports the user has ever used (as departure or arrival). */
@@ -103,9 +104,7 @@ export async function calculateAirportStats(
   flights: FlightData[],
   homeAirportHistory: HomeAirportEntry[] = []
 ): Promise<AirportStats> {
-  const flownFlights = flights.filter(
-    (f) => f.status === 'flown' || f.status === 'historical'
-  );
+  const flownFlights = flights.filter(isCountableFlight);
   if (flownFlights.length === 0) return emptyAirportStats();
 
   // Collect airport codes to look up names and countries in one batched call.

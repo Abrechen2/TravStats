@@ -48,6 +48,7 @@ import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeCon
 import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
+import { isCountableFlight } from "../shared/flightCounting";
 import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
@@ -813,10 +814,11 @@ export default function GlobeView({
       // multiple flights that were similar-but-not-identical routes.
       const flightWeak = !dep?.iata || !arr?.iata;
       const isScheduled = flight.properties?.status === "scheduled";
-      // Same predicate as routesLayer.ts's aggregateAllRoutes: flown covers
-      // both 'flown' and 'historical' (a route already sailed either way).
-      const isFlown =
-        flight.properties?.status === "flown" || flight.properties?.status === "historical";
+      // Same predicate as routesLayer.ts's aggregateAllRoutes — literally so
+      // now: both read shared/flightCounting, which is also what the server
+      // counts by. "Flown" covers 'historical' too (a route already travelled
+      // either way).
+      const isFlown = isCountableFlight(flight.properties);
       const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
@@ -1235,8 +1237,7 @@ export default function GlobeView({
     const distanceKm = calculateDistance(start[1], start[0], end[1], end[0]);
     const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm) * altitudeFactor;
     const isScheduled = latest.properties?.status === "scheduled";
-    const isFlown =
-      latest.properties?.status === "flown" || latest.properties?.status === "historical";
+    const isFlown = isCountableFlight(latest.properties);
     return {
       from: [start[0], start[1]],
       to: [end[0], end[1]],

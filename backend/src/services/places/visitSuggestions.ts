@@ -1,6 +1,7 @@
 import { calculateDistance } from "../../utils/geo";
 import { classifyStay } from "../../shared/lodgingCounting";
 import { classifyVisit } from "../../shared/placeCounting";
+import { isCountableFlight } from "../../shared/flightCounting";
 
 /**
  * "You were probably here."
@@ -304,7 +305,7 @@ function buildFlightAnchors(flights: readonly FlightAnchorInput[]): SuggestionAn
 
   const movements: Movement[] = [];
   for (const flight of flights) {
-    if (flight.status !== "flown" && flight.status !== "historical") continue;
+    if (!isCountableFlight(flight)) continue;
     if (usable(flight.depLat, flight.depLon)) {
       movements.push({
         code: flight.depIata ?? "",
