@@ -148,11 +148,18 @@ describe("checkAchievement — POI requirement types", () => {
       placeCountries: new Set(
         Array.from({ length: 40 }, (_, i) => `C${String(i).padStart(2, "0")}`)
       ),
-      curatedTickedByList: new Map([
-        ["world-wonders-new7", 7],
-        ["world-wonders-ancient", 7],
-        ["world-heritage", 1000],
-      ]),
+      // Derived from the seeds rather than listed by hand. A hand-kept map is a
+      // SHORT FIXTURE, and a short fixture fails this test in the same way a
+      // missing case does — which is the one thing the assertion below promises
+      // it does not do. Shipping `museum-warships` proved it: the badge existed,
+      // the checker handled it generically, and only the fixture had not heard
+      // of the list.
+      curatedTickedByList: new Map(
+        [...seedsPartG, ...seedsPartH]
+          .map((s) => s.requirementType)
+          .filter((rt) => rt.startsWith("curated_list_ticked:"))
+          .map((rt) => [rt.slice("curated_list_ticked:".length), 10_000] as const)
+      ),
       // Part H's measures, all comfortably past their highest requirement, so a
       // failure below means a missing case rather than a short fixture.
       placeCities: new Set(Array.from({ length: 80 }, (_, i) => `city-${i}`)),
