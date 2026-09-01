@@ -128,6 +128,21 @@ export function bucketSeries(
   return Array.from(buckets.values());
 }
 
+/**
+ * Keep only the rows whose calendar day falls in [from, to).
+ *
+ * Exists because the window is decided TWICE otherwise. `bucketSeries` filters
+ * internally, but `sumTotals` does not — so a caller that widens its database
+ * query (which the flight fetcher must, see `fetchFlightDatedRows`) would get a
+ * correct series beside totals that quietly counted the margin rows too.
+ *
+ * One definition of "in the window", applied once by the caller, and both
+ * consumers then agree by construction.
+ */
+export function withinWindow(rows: DatedRow[], from: Date, to: Date): DatedRow[] {
+  return rows.filter((r) => r.date.getTime() >= from.getTime() && r.date.getTime() < to.getTime());
+}
+
 export function sumTotals(rows: DatedRow[]): WindowTotals {
   return rows.reduce<WindowTotals>(
     (acc, r) => ({

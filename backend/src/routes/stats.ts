@@ -45,6 +45,7 @@ import {
   bucketSeries,
   sumTotals,
   trimZeroEdges,
+  withinWindow,
   type DatedRow,
 } from '../utils/stats/timeseries';
 import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
@@ -534,6 +535,19 @@ async function withDepartureClock<
   }));
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The calendar day a flight departed on, as the departure airport's clock saw
+ * it, expressed as that day's UTC midnight so the existing bucketing arithmetic
+ * keeps working unchanged.
+ */
+const airportCalendarDay = (
+  stored: Date,
+  timezone: string | null,
+  semantics: FlightTimeSemantics,
+): Date => new Date(`${localWallClockOf(stored, timezone, semantics).date}T00:00:00Z`);
+
 async function fetchFlightDatedRows(
   userId: string,
   from: Date,
@@ -543,7 +557,13 @@ async function fetchFlightDatedRows(
     where: {
       userId,
       status: { in: ['flown', 'historical'] },
-      departureTime: { gte: from, lt: to },
+      // Widened by a day at each edge ON PURPOSE. The query can only filter the
+      // stored INSTANT, while a bucket is the departure airport's calendar day,
+      // and the two disagree by up to fourteen hours. Without the margin a
+      // flight leaving Bangkok early on 1 January is fetched as 31 December UTC
+      // and never appears in the year it departed. The margin rows are removed
+      // again by `withinWindow` once their local day is known — see the route.
+      departureTime: { gte: new Date(from.getTime() - DAY_MS), lt: new Date(to.getTime() + DAY_MS) },
     },
     select: {
       depIata: true, depIcao: true, depLat: true, depLon: true,
@@ -575,7 +595,18 @@ async function fetchFlightDatedRows(
         depLat: f.depLat, depLon: f.depLon, arrLat: f.arrLat, arrLon: f.arrLon,
       })?.minutes ?? 0;
     return {
-      date: f.departureTime as Date,
+      // The airport's calendar day, not the UTC instant — Forgejo #46. Every
+      // other "when did I fly" figure on this server reads the clock at the
+      // departure airport (`/stats/countries`, `/stats/fun`), and the OpenAPI
+      // for this endpoint already promised the same. It did not do it: an
+      // evening departure east of UTC landed in the previous period, so the
+      // countries list and the trend chart disagreed about which year a flight
+      // belonged to.
+      date: airportCalendarDay(
+        f.departureTime as Date,
+        depTz,
+        f.depTimeSemantics as FlightTimeSemantics,
+      ),
       distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
       durationMin,
     };
@@ -622,10 +653,17 @@ router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunc
     const w = resolveWindow(window, year, fromDate, toDate, new Date());
 
     const fetchRows = domain === 'cruise' ? fetchCruiseDatedRows : fetchFlightDatedRows;
-    const [currentRows, previousRows] = await Promise.all([
+    const [fetchedCurrent, fetchedPrevious] = await Promise.all([
       fetchRows(userId, w.from, w.to),
       w.prevFrom && w.prevTo ? fetchRows(userId, w.prevFrom, w.prevTo) : Promise.resolve([] as DatedRow[]),
     ]);
+
+    // The flight fetcher deliberately over-fetches by a day at each edge, so
+    // the window is decided HERE, once, on the local calendar day — and the
+    // series and the totals below cannot disagree about what was in it.
+    const currentRows = withinWindow(fetchedCurrent, w.from, w.to);
+    const previousRows =
+      w.prevFrom && w.prevTo ? withinWindow(fetchedPrevious, w.prevFrom, w.prevTo) : [];
 
     const rawSeries = bucketSeries(currentRows, granularity, w.from, w.to);
     // The all-time window spans from the Unix epoch, so trim the leading/
