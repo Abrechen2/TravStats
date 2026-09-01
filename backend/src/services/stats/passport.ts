@@ -21,9 +21,27 @@
  *    with a single airport.
  * 4. NO FORMATTED TEXT. Dates go out as dates. A month name belongs to the
  *    reader's language, and this server does not know it.
+ * 5. EVIDENCE, NOT ONLY FLIGHTS (Forgejo #42, owner's decision 2026-08-31).
+ *    A landing proves presence; so does a cruise that called at a port, and so
+ *    does a place the user recorded visiting. The Companion already counted
+ *    this way ("31 geflogen · 5 per hafen · 2 anders erreicht") while this
+ *    server counted flights alone, so one account had two answers to "how many
+ *    countries". Each country now carries the STRONGEST evidence behind it, so
+ *    that split line comes from one implementation instead of two.
+ *
+ *    A port or a place joins on its resolved country code and never on free
+ *    text — "Deutschland" and "Germany" are one country and only the code knows
+ *    that. A place whose country was never resolved contributes NOTHING rather
+ *    than a guess: shared/placeCounting.ts makes the same cut for the same
+ *    reason.
  */
 
-import { getContinent, isoCountryCode, type Continent } from "../../utils/continents";
+import {
+  continentForCountry,
+  getContinent,
+  isoCountryCode,
+  type Continent,
+} from "../../utils/continents";
 import { CONTINENT_GROUPS, continentTotals } from "../../shared/passportContinents";
 
 /** The columns the derivation reads. Any flight row is a superset. */
@@ -41,6 +59,32 @@ export interface PassportFlight {
 /** Country per airport code, as the catalogue holds it. */
 export type AirportCountries = ReadonlyMap<string, string | null>;
 
+/**
+ * A port a SAILED cruise actually called at. Scheduled itineraries are not
+ * evidence, the same cut rule 1 makes for flights.
+ */
+export interface PassportPortCall {
+  /** Free text as the port catalogue holds it; resolved here, never trusted raw. */
+  country: string | null;
+  /** When the ship was there, if known. */
+  at: Date | null;
+}
+
+/** A place the user recorded visiting, with its country already resolved. */
+export interface PassportPlaceVisit {
+  isoCountryCode: string | null;
+  at: Date | null;
+}
+
+/**
+ * What put a country in the passport. Ordered: a landing outranks a port call,
+ * which outranks a recorded place — the order the owner's own split line reads
+ * in, and the one a row shows when several kinds apply.
+ */
+export type PassportEvidence = "flight" | "port" | "place";
+
+const EVIDENCE_RANK: Record<PassportEvidence, number> = { flight: 3, port: 2, place: 1 };
+
 export interface PassportCountry {
   /** ISO-3166 alpha-2. What a client shows — never a flag: flags are political and age. */
   code: string;
@@ -55,6 +99,8 @@ export interface PassportCountry {
   isHome: boolean;
   /** First reached in the current calendar year. */
   isNew: boolean;
+  /** The strongest reason this country is in the passport. See rule 5. */
+  evidence: PassportEvidence;
 }
 
 export interface PassportStamp {
@@ -73,6 +119,11 @@ export interface Passport {
     continentsTotal: number;
     firstStampYear: number | null;
     newThisYear: number;
+    /**
+     * Countries per strongest evidence — the source of "31 geflogen · 5 per
+     * hafen · 2 anders erreicht". Sums to `countries`.
+     */
+    byEvidence: Record<PassportEvidence, number>;
   };
   countries: PassportCountry[];
   continents: Array<{ continent: Continent; visited: number; total: number }>;
@@ -109,6 +160,7 @@ interface CountryAcc {
   lastYear: number | null;
   continent: Continent | null;
   isHome: boolean;
+  evidence: PassportEvidence;
 }
 
 export function buildPassport(
@@ -116,6 +168,9 @@ export function buildPassport(
   airportCountries: AirportCountries,
   homeIatas: readonly string[] = [],
   now: Date = new Date(),
+  /** Optional so every existing caller keeps its exact behaviour. */
+  portCalls: readonly PassportPortCall[] = [],
+  placeVisits: readonly PassportPlaceVisit[] = []
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -151,6 +206,7 @@ export function buildPassport(
           lastYear: null,
           continent: getContinent(touch.lat, touch.lon, country),
           isHome: false,
+          evidence: "flight",
         };
         byCountry.set(country, acc);
       }
@@ -168,7 +224,57 @@ export function buildPassport(
         acc.lastYear = acc.lastYear === null ? year : Math.max(acc.lastYear, year);
       }
       if (home.has(code)) acc.isHome = true;
+      if (EVIDENCE_RANK[acc.evidence] < EVIDENCE_RANK.flight) acc.evidence = "flight";
     }
+  }
+
+  /**
+   * A country reached without a landing.
+   *
+   * Deliberately does NOT touch `entries` or `airports`: those count flights and
+   * name airports, and a port call is neither. A country proved only this way
+   * shows no entries and no airports, which is honest — it is why the row
+   * carries its evidence kind at all.
+   *
+   * `continent` falls back to the country code, since a port call carries no
+   * coordinates here. `getContinent` returns null for a transcontinental
+   * country rather than guessing, and null is the right answer for one.
+   */
+  const addNonFlight = (country: string | null, at: Date | null, kind: PassportEvidence): void => {
+    if (!country) return;
+    const year = at ? at.getUTCFullYear() : null;
+    let acc = byCountry.get(country);
+    if (!acc) {
+      acc = {
+        entries: new Set<PassportFlight>(),
+        airports: new Map<string, string | null>(),
+        firstYear: null,
+        lastYear: null,
+        // Country-only: a port call carries no coordinates here, and
+        // `continentForCountry` answers null for a transcontinental country
+        // rather than picking a side — which is the right answer for one.
+        continent: continentForCountry(country),
+        isHome: false,
+        evidence: kind,
+      };
+      byCountry.set(country, acc);
+    }
+    if (EVIDENCE_RANK[acc.evidence] < EVIDENCE_RANK[kind]) acc.evidence = kind;
+    if (year !== null) {
+      acc.firstYear = acc.firstYear === null ? year : Math.min(acc.firstYear, year);
+      acc.lastYear = acc.lastYear === null ? year : Math.max(acc.lastYear, year);
+    }
+  };
+
+  for (const call of portCalls) addNonFlight(isoCountryCode(call.country), call.at, "port");
+  // Already resolved by the caller — a place whose country was never resolved
+  // contributes nothing rather than a guess.
+  for (const visit of placeVisits) {
+    addNonFlight(
+      visit.isoCountryCode ? visit.isoCountryCode.toUpperCase() : null,
+      visit.at,
+      "place"
+    );
   }
 
   const countries: PassportCountry[] = [...byCountry.entries()]
@@ -181,12 +287,12 @@ export function buildPassport(
       airports: [...acc.airports.entries()]
         .sort(
           (a, b) =>
-            (a[1] ?? "9999-99-99").localeCompare(b[1] ?? "9999-99-99") ||
-            a[0].localeCompare(b[0]),
+            (a[1] ?? "9999-99-99").localeCompare(b[1] ?? "9999-99-99") || a[0].localeCompare(b[0])
         )
         .map(([iata]) => iata),
       isHome: acc.isHome,
       isNew: acc.firstYear === thisYear,
+      evidence: acc.evidence,
     }))
     .sort((a, b) => b.entries - a.entries || a.code.localeCompare(b.code));
 
@@ -202,12 +308,10 @@ export function buildPassport(
     .sort(
       (a, b) =>
         (a.date ?? "9999-99-99").localeCompare(b.date ?? "9999-99-99") ||
-        a.iata.localeCompare(b.iata),
+        a.iata.localeCompare(b.iata)
     );
 
-  const firstYears = countries
-    .map((c) => c.firstYear)
-    .filter((y): y is number => y !== null);
+  const firstYears = countries.map((c) => c.firstYear).filter((y): y is number => y !== null);
 
   return {
     summary: {
@@ -218,6 +322,11 @@ export function buildPassport(
       continentsTotal: Object.keys(totals).length,
       firstStampYear: firstYears.length > 0 ? Math.min(...firstYears) : null,
       newThisYear: countries.filter((c) => c.isNew).length,
+      byEvidence: {
+        flight: countries.filter((c) => c.evidence === "flight").length,
+        port: countries.filter((c) => c.evidence === "port").length,
+        place: countries.filter((c) => c.evidence === "place").length,
+      },
     },
     countries,
     continents: (Object.keys(totals) as Continent[])
