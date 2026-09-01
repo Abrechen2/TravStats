@@ -24,7 +24,8 @@ import { normalizeHistory } from '../utils/homeAirport';
 import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { tzAwareDurationMinutes, localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
+import { localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
+import { measuredDurationMinutes } from '../utils/flightDurationColumn';
 import {
   addFlightDuration,
   averageDurationMinutes,
@@ -216,6 +217,9 @@ async function computeSummary(
         arrivalTime: true,
         depTimeSemantics: true,
         arrTimeSemantics: true,
+        // The stored measurement (forgejo#45). The semantics columns above
+        // stay selected because they decide whether it can be trusted.
+        durationMinutes: true,
         status: true,
       },
     }),
@@ -296,15 +300,8 @@ async function computeSummary(
     // A `historical` row's clocks are placeholders, not evidence — see
     // `businessStats.ts` for the same guard and the reason. It contributes a
     // coordinate estimate below instead.
-    const flightTime = (flight.status === 'flown' && flight.departureTime && flight.arrivalTime)
-      ? tzAwareDurationMinutes(
-          flight.departureTime,
-          flight.arrivalTime,
-          depTz,
-          arrTz,
-          flight.depTimeSemantics as FlightTimeSemantics,
-          flight.arrTimeSemantics as FlightTimeSemantics,
-        )
+    const flightTime = flight.status === 'flown'
+      ? measuredDurationMinutes(flight, depTz, arrTz)
       : null;
     // #106A still holds: a DATE_ONLY row must never contribute its placeholder
     // times, so `flightTime` stays null for it and no fiction is measured. What
@@ -573,6 +570,7 @@ async function fetchFlightDatedRows(
       arrIata: true, arrIcao: true, arrLat: true, arrLon: true,
       departureTime: true, arrivalTime: true,
       depTimeSemantics: true, arrTimeSemantics: true,
+      durationMinutes: true,
       status: true,
     },
   });
@@ -581,13 +579,7 @@ async function fetchFlightDatedRows(
     const depTz = (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
     const arrTz = (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
     const measuredMin =
-      f.status === 'flown' && f.departureTime && f.arrivalTime
-        ? tzAwareDurationMinutes(
-            f.departureTime, f.arrivalTime, depTz, arrTz,
-            f.depTimeSemantics as FlightTimeSemantics,
-            f.arrTimeSemantics as FlightTimeSemantics,
-          )
-        : null;
+      f.status === 'flown' ? measuredDurationMinutes(f, depTz, arrTz) : null;
     // Same rule as `/stats/summary` and the overview card (#268): measured
     // where there are clocks, estimated from the coordinates where there are
     // not. This used to be a bare 0, which is why the scorecard tile and the
@@ -818,7 +810,7 @@ router.get('/network', async (req: AuthRequest, res: Response, next: NextFunctio
     // Same done-predicate as every other aggregate in this file. A booked
     // flight is not a line on a map.
     const flights = await prisma.flight.findMany({
-      where: { userId, status: { in: ['flown', 'historical'] } },
+      where: { userId, ...countableFlightWhere() },
       select: {
         depIata: true,
         depIcao: true,

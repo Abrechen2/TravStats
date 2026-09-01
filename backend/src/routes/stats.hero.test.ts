@@ -88,6 +88,10 @@ describe('GET /api/v1/stats/hero', () => {
       arrivalTime: new Date('2024-04-10T09:00:00Z'),
       depTimeSemantics: 'UTC',
       arrTimeSemantics: 'UTC',
+      // What Postgres stores for those two clocks (forgejo#45). The summary
+      // reads the column instead of re-deriving, so a fixture that omits it
+      // is a fixture whose flight has no measured duration at all.
+      durationMinutes: 60,
       airline: 'Lufthansa',
       aircraft: null,
       status: 'flown',
@@ -117,6 +121,9 @@ describe('GET /api/v1/stats/hero', () => {
       arrLon: AIRPORT_DB.JFK.lon,
       departureTime: new Date('1989-03-15T12:00:00Z'),
       arrivalTime: new Date('1989-03-15T13:00:00Z'),
+      // Stored, because the clocks are what they are — and still never
+      // measured, because the `historical` status disqualifies them upstream.
+      durationMinutes: 60,
       status: 'historical',
     };
 

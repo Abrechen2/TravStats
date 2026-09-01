@@ -297,6 +297,49 @@ model Flight {
   actualRoute        Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
   overflownCountries String[]  @default([]) @map("overflown_countries")
   routeDistance      Float?    @map("route_distance")
+  // MEASURED flight time in minutes — the clocks, never an estimate. The
+  // estimate stays where it belongs, in `shared/flightDuration.ts`, which
+  // labels it as a guess; this column only ever carries evidence.
+  //
+  // Postgres computes it (GENERATED ALWAYS ... STORED). No application code
+  // writes it and none can, which is the entire point. The value has four
+  // inputs — departure_time, arrival_time and the two *_time_semantics tags —
+  // and eight code paths write at least one of them (both create routes, the
+  // update route, pendingUpdateService, flightAutoUpdate, bulkFlightRefresh
+  // and two backfill scripts). A write-through column stays true only until
+  // someone adds the ninth and does not know it exists; a stale duration is
+  // worse than a derived one, so the invariant is enforced where every writer
+  // meets — in the table — rather than asked of every writer in turn.
+  //
+  // Float, not Int, deliberately: this is byte-for-byte what
+  // `tzAwareDurationMinutes` returns, so an aggregate that sums the column
+  // lands on the total it lands on today. Rounding is the API's job at the
+  // edge, as it already was.
+  //
+  // NULL carries TWO different facts and readers must not merge them:
+  //   1. Unmeasurable — a time is missing, or a side is tagged DATE_ONLY,
+  //      whose 12:00 placeholder is not evidence (#106A). "No duration",
+  //      never 0; `resolveFlightDuration` then estimates from coordinates and
+  //      SAYS it estimated.
+  //   2. Not expressible here — BOTH sides tagged LEGACY_FAKE_UTC. Such a row
+  //      stores a wall-clock pair that only becomes an instant through its
+  //      AIRPORTS' timezones, so its duration is not a function of this row at
+  //      all: correcting an airport's tz moves the answer while the row stands
+  //      still. Storing a value the table cannot keep true is the one thing
+  //      worse than not storing one, so it stores nothing and the reader
+  //      derives it from the catalogue exactly as before. That class is closed
+  //      — nothing creates LEGACY_FAKE_UTC rows any more and
+  //      `scripts/fixMistaggedDurations.ts` retags them to UTC — so the derived
+  //      path shrinks over time instead of spreading.
+  //
+  // Read it through `measuredDurationMinutes()` (utils/flightDurationColumn.ts),
+  // which tells those two NULLs apart. Reading the column raw silently demotes
+  // a legacy row's measurement to a coordinate estimate.
+  //
+  // `@default(dbgenerated())` is how Prisma is told "the database fills this
+  // in": without it every `migrate diff` wants to DROP the generated
+  // expression it cannot see.
+  durationMinutes    Float?    @default(dbgenerated()) @map("duration_minutes")
   routeSource        String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking    Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking

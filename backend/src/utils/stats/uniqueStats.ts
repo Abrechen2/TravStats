@@ -219,6 +219,15 @@ export async function calculateUniqueStats(
         (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
         null;
 
+      // Deliberately NOT the stored `duration_minutes` column (forgejo#45).
+      // `/unique` never selects `arrTimeSemantics`, so the call below defaults
+      // it to 'UNKNOWN' and this tournament has always measured a naïve
+      // difference for rows the column reports as NULL — a DATE_ONLY ARRIVAL,
+      // or a LEGACY_FAKE_UTC pair. Reading the column here would silently drop
+      // those flights out of the fastest-route contest, which is a counting
+      // change, not a persistence one. Whether that difference is a bug is a
+      // separate question from where the number is stored; answering it here
+      // would move a figure on screen under cover of a schema change.
       const durationMinutes = tzAwareDurationMinutes(
         f.departureTime,
         f.arrivalTime,

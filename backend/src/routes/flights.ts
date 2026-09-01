@@ -25,7 +25,11 @@ import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports, compareAirportAuthority } from '../services/airportCache';
-import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
+import {
+  enrichFlightsWithAirportFacts,
+  type AirportFacts,
+  type EnrichableFlight,
+} from '../services/flightAirportFacts';
 import { withAirportTimezones } from '../services/flightTimezoneDefaults';
 import {
   buildAirportCoordinateIndex,
@@ -425,7 +429,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
                 });
               });
           res.status(200).json({
-            flight: merged,
+            flight: await withAirportFacts(merged),
             mergedFields,
           });
           return;
@@ -615,7 +619,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     }
 
     res.status(201).json({
-      flight,
+      flight: flight ? await withAirportFacts(flight) : flight,
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined
     });
   } catch (error) {
@@ -674,6 +678,8 @@ router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) 
       return { city: a?.city ?? null, country: a?.country ?? null };
     };
 
+    // No duration here on purpose: this block is a narrow projection for the
+    // "next flight" card, which shows a countdown, not a flight time.
     res.json({
       flight: {
         ...flight,
@@ -685,6 +691,39 @@ router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) 
     next(error);
   }
 });
+
+/**
+ * Single-row shorthand for the ONE enrichment — see services/flightAirportFacts.ts.
+ *
+ * The write handlers below answer with a flight the client renders straight
+ * away, which makes them read paths too. Skipping the enrichment there brings
+ * back exactly the bug that file exists to prevent: the flight just saved
+ * shows each end in UTC while the list shows it in the airport's clock.
+ *
+ * It also settles `durationMinutes`. A bare `res.json(flight)` would hand out
+ * the RAW `duration_minutes` column, which is NULL for a LEGACY_FAKE_UTC pair
+ * ON PURPOSE (forgejo#45) — a client reading that raw NULL would conclude "no
+ * duration" for a flight the list endpoint answers a duration for.
+ *
+ * Why this DERIVES the duration instead of reading that stored column: the
+ * enrichment resolves the airport catalogue anyway, for the timezones and
+ * countries, and on a row that has been through the catalogue the column and
+ * the derivation are the same function. The column holds the naive difference
+ * for precisely the rows whose derivation IS the naive difference, and NULL
+ * for the rest — DATE_ONLY and missing clocks (no duration either way) and the
+ * LEGACY_FAKE_UTC pair, which has to be derived regardless.
+ * `__tests__/flightDurationColumn.test.ts` pins that equality for all sixteen
+ * semantics combinations. Reading the column here would save nothing and would
+ * cost every caller of the enrichment an extra `select` — including
+ * `/stats/records`, which passes a deliberately narrow projection. The column
+ * keeps earning its place where the catalogue is NOT already loaded.
+ */
+async function withAirportFacts<T extends EnrichableFlight>(
+  flight: T,
+): Promise<T & AirportFacts> {
+  const [enriched] = await enrichFlightsWithAirportFacts([flight]);
+  return enriched;
+}
 
 // Get flights with filters
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -734,6 +773,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
 
     // One rule for every flight read path — see services/flightAirportFacts.ts.
+    // The `durationMinutes` it attaches OVERRIDES the raw `duration_minutes`
+    // column carried in by the spread, so no client ever sees the raw NULL a
+    // LEGACY_FAKE_UTC pair stores (forgejo#45). A null here still means
+    // "no duration" (#106A: a DATE_ONLY row's 12:00 is a placeholder, not a
+    // clock) and the display layer draws its labelled estimate — never a 0.
     const enrichedFlights = await enrichFlightsWithAirportFacts(flights);
 
     res.json({
@@ -1032,8 +1076,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     // The detail page renders each end in ITS airport's clock from these
     // fields. Without them it falls back to UTC and contradicts the list.
-    const [enriched] = await enrichFlightsWithAirportFacts([flight]);
-    res.json(enriched);
+    res.json(await withAirportFacts(flight));
   } catch (error) {
     next(error);
   }
@@ -1391,7 +1434,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
 
     res.json({
-      flight,
+      flight: await withAirportFacts(flight),
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined
     });
   } catch (error) {
