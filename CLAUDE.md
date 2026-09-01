@@ -174,21 +174,46 @@ a wish). Those carry a **title**, because they have no live anchor to read one
 from — the schema enforces it, and it enforces the mirror rule too: a `github`
 or `forgejo` item must NOT carry a title, since its title is read live.
 
-### Two trackers, and the two rules that make that safe
+### Three trackers, and the two rules that make that safe
 
 Forgejo issues were once ruled out here, for two reasons that were correct and
 have both now been answered rather than argued away.
 
 **Reference collisions — solved by convention.** The numbering spaces are
 independent, and they have already collided: GitHub `#36` is a zod dependency
-bump, Forgejo `#36` is the boarding-pass OCR bug. So:
+bump, Forgejo `#36` is the boarding-pass OCR bug. Since 2026-09-01 there is a
+third space — the Companion keeps its own Forgejo tracker on
+`dennis/TravStatsCompanion`, which started at `#1` and will therefore collide
+with both of the others within the month. So:
 
-> A bare `#36` ALWAYS means GitHub. A Forgejo issue is ALWAYS written
-> `forgejo#36`, in commit messages, in comments, everywhere.
+> | Written | Means |
+> |---|---|
+> | `#36` | GitHub, `Abrechen2/TravStats` |
+> | `forgejo#36` | Forgejo, `dennis/TravStats` |
+> | `companion#3` | Forgejo, `dennis/TravStatsCompanion` |
 
-Never write a bare number for a Forgejo issue, even where the surrounding text
-makes it obvious. It will not be obvious in `git log` two years from now, and
-GitHub will happily render it as a link to the wrong thing.
+Three rules hold that together, and each exists because of a specific way it
+would otherwise fail:
+
+1. **Never write a bare number for anything but GitHub**, even where the
+   surrounding text makes it obvious. It will not be obvious in `git log` two
+   years from now, and GitHub will happily render it as a link to the wrong
+   thing.
+2. **A reference means the same thing in every repository it is read in.**
+   `forgejo#42` is `dennis/TravStats` issue 42 *including when written inside
+   the Companion repo* — even though that repo's own `origin` is also Forgejo,
+   which is exactly the reading that would go wrong. Likewise `companion#3` is
+   the Companion's issue 3 including inside the Companion itself. A prefix that
+   depended on where you were standing would be no prefix at all.
+3. **`companion#N` is the Forgejo tracker, and stays reserved for it.** The
+   Companion also has a GitHub remote, deliberately unused (the standing rule
+   is Forgejo-only). If that tracker is ever opened, it needs a form of its own;
+   it must not inherit the bare `#N`, which is spoken for.
+
+Cross-repository references are normal here and should be written in full where
+prose allows — "`dennis/TravStats` forgejo#42" costs four words and survives
+being quoted into an issue body, a changelog, or a chat log with no repository
+around it.
 
 **Board blindness — solved in the tool.** The objection that the Leitstand
 could only measure `github` items live, and would have to hand-copy the state
