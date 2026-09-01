@@ -3,9 +3,10 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { boardingPassParseLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
+import { getAvailableProviders } from '../services/parsers/factory';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
+import { isEmpty, readBoardingPass } from '../services/boardingPassRead';
 
 const router = Router();
 
@@ -17,7 +18,10 @@ const parseBoardingpassSchema = z.object({
 
 /**
  * POST /api/v1/parse-boardingpass
- * Parse boarding pass image using configured vision parser
+ *
+ * Read a boarding pass image: its barcode first, then OCR of the printed card
+ * for the fields no barcode carries. Either half may come back empty; only a
+ * pass that yields neither is a 422.
  *
  * Body:
  * - imageBase64: string (required) - Base64-encoded image data
@@ -25,9 +29,11 @@ const parseBoardingpassSchema = z.object({
  *
  * Returns:
  * - flight: ParsedBooking - Extracted flight information
- * - provider: string - Parser provider used (ollama, openai, claude, tesseract, manual)
- * - fallbackUsed: boolean - Whether fallback was used
+ * - provider: string - OCR provider used (tesseract, manual), or "barcode" when
+ *   OCR contributed nothing
+ * - fallbackUsed: boolean - Whether the OCR fallback was used
  * - enriched: boolean - Whether data was enriched with API
+ * - sources: { barcode, ocr } - which half produced anything (additive, 2026-08-30)
  */
 router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
@@ -66,29 +72,17 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-    // Get parser config (Tesseract OCR + manual fallback only)
-    const config = await getParserConfig(undefined, undefined, userId);
+    // Barcode first, OCR for what no barcode carries, merged with the barcode
+    // winning — shared with /boardingpass/propose, see services/boardingPassRead.
+    const reading = await readBoardingPass({ imageBase64, userId });
 
-    // Parse boarding pass
-    const result = await parseBoardingPass(imageBase64, config);
-
-    logger.info({
-      provider: result.provider,
-      fallbackUsed: result.fallbackUsed,
-      flightNumber: result.flights[0]?.flightNumber,
-      route: `${result.flights[0]?.departureCode} → ${result.flights[0]?.arrivalCode}`,
-    }, '[Boarding Pass Parse] Parsing complete');
-
-    // Optional: Enrich with Flight Lookup API
-    let enriched = false;
-    const rawFlight = result.flights[0];
-
-    if (!rawFlight) {
+    if (isEmpty(reading)) {
       res.status(422).json({ error: 'No flight data could be extracted from the boarding pass' });
       return;
     }
 
-    let flight = rawFlight;
+    let enriched = false;
+    let flight = reading.merged;
 
     if (
       enrichWithApi &&
@@ -132,9 +126,13 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     res.json({
       flight,
-      provider: result.provider,
-      fallbackUsed: result.fallbackUsed,
+      provider: reading.provider,
+      fallbackUsed: reading.fallbackUsed,
       enriched,
+      // Additive, and the same vocabulary /boardingpass/propose already uses:
+      // a caller that wants to know how much to trust the answer can, and one
+      // that does not simply ignores the field.
+      sources: reading.sources,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

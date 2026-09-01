@@ -163,23 +163,75 @@ The deciding question is **not** who found it. It is:
 | Finding | Where |
 |---|---|
 | Anything a user can hit, see, or must act on — a wrong number on screen, data at risk, a broken import | **GitHub issue**, however it was found. Owner, tester, or a routine prod check makes no difference. |
-| Internal engineering and tooling — our own scripts, test-suite noise, log hygiene with no user-visible effect, chores like wiring a check into CI | **Leitstand item**, no GitHub issue |
+| The same thing, but the write-up quotes internal paths, host names, sample data or measurement runs | **Forgejo issue** on `dennis/TravStats`. Same finding, private write-up — see below. |
+| Internal engineering and tooling — our own scripts, test-suite noise, log hygiene with no user-visible effect, chores like wiring a check into CI | **Leitstand item**, no issue anywhere |
 | Exploitable **and** still open | **GitHub private security advisory** (draft), never a public issue; publish it once the fix ships |
-| Infrastructure, hosts, scope decisions, pentest notes | stays out of both — `CLAUDE.local.md`, `ROADMAP.local.md`, `TravStats-local` on Forgejo |
+| Infrastructure, hosts, scope decisions, pentest notes | stays out of all three — `CLAUDE.local.md`, `ROADMAP.local.md`, `TravStats-local` on Forgejo |
 
 An internal finding becomes an item in `roadmap.local.yaml` with
 `source: { type: audit }` (found by a sweep) or `{ type: owner }` (a decision or
 a wish). Those carry a **title**, because they have no live anchor to read one
 from — the schema enforces it, and it enforces the mirror rule too: a `github`
-item must NOT carry a title, since its title is read live.
+or `forgejo` item must NOT carry a title, since its title is read live.
 
-Why not a second, private tracker (Forgejo issues) for internal findings: a
-board item has no issue number, so it can never be mis-referenced. A bare `#12`
-in a commit message resolves on GitHub — to GitHub's issue 12, a different one.
-Two trackers turn every internal reference into a wrong link rather than a
-missing one. The board also measures `github` items live and would have to
-hand-copy the state of anything else, which is the drift the board exists to
-prevent.
+### Three trackers, and the two rules that make that safe
+
+Forgejo issues were once ruled out here, for two reasons that were correct and
+have both now been answered rather than argued away.
+
+**Reference collisions — solved by convention.** The numbering spaces are
+independent, and they have already collided: GitHub `#36` is a zod dependency
+bump, Forgejo `#36` is the boarding-pass OCR bug. Since 2026-09-01 there is a
+third space — the Companion keeps its own Forgejo tracker on
+`dennis/TravStatsCompanion`, which started at `#1` and will therefore collide
+with both of the others within the month. So:
+
+> | Written | Means |
+> |---|---|
+> | `#36` | GitHub, `Abrechen2/TravStats` |
+> | `forgejo#36` | Forgejo, `dennis/TravStats` |
+> | `companion#3` | Forgejo, `dennis/TravStatsCompanion` |
+
+Three rules hold that together, and each exists because of a specific way it
+would otherwise fail:
+
+1. **Never write a bare number for anything but GitHub**, even where the
+   surrounding text makes it obvious. It will not be obvious in `git log` two
+   years from now, and GitHub will happily render it as a link to the wrong
+   thing.
+2. **A reference means the same thing in every repository it is read in.**
+   `forgejo#42` is `dennis/TravStats` issue 42 *including when written inside
+   the Companion repo* — even though that repo's own `origin` is also Forgejo,
+   which is exactly the reading that would go wrong. Likewise `companion#3` is
+   the Companion's issue 3 including inside the Companion itself. A prefix that
+   depended on where you were standing would be no prefix at all.
+3. **`companion#N` is the Forgejo tracker, and stays reserved for it.** The
+   Companion also has a GitHub remote, deliberately unused (the standing rule
+   is Forgejo-only). If that tracker is ever opened, it needs a form of its own;
+   it must not inherit the bare `#N`, which is spoken for.
+
+Cross-repository references are normal here and should be written in full where
+prose allows — "`dennis/TravStats` forgejo#42" costs four words and survives
+being quoted into an issue body, a changelog, or a chat log with no repository
+around it.
+
+**Board blindness — solved in the tool.** The objection that the Leitstand
+could only measure `github` items live, and would have to hand-copy the state
+of anything else, was true until 2026-08-30. It now has a `forgejo` source type
+that reads titles and open/closed state through the `tea` CLI, exactly as the
+`github` one shells out to `gh`, including the unassigned column. Configure it
+with a `forgejo:` block in `roadmap.local.yaml`.
+
+So: `source: { type: forgejo, ref: 36 }` is a first-class board item, carries no
+title, and is measured live. A finding the board cannot see is a finding nobody
+is measuring — that was the real objection, and it no longer applies.
+
+**Which tracker.** GitHub is the published statement: it is what a stranger
+reads to judge whether the project is alive and honest, so it stays signal-only
+and free of internal detail. Forgejo is where the same finding can name a path
+under `~/projekte`, a container on `192.168.178.x`, or a passenger name off a
+test boarding pass. When a finding needs both, the GitHub issue is the short
+public one and links nowhere internal; the Forgejo issue carries the evidence.
 
 ## Commit Requirement
 

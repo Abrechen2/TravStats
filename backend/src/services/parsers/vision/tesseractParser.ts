@@ -1,8 +1,141 @@
 import { createWorker, Worker } from 'tesseract.js';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
-import { normalizeParsedBooking, extractFlightDataFromText, PATTERNS } from '../shared/utils';
+import {
+  normalizeParsedBooking,
+  extractFlightDataFromText,
+  validateIATACode,
+  PATTERNS,
+} from '../shared/utils';
+import { CITY_TO_IATA } from '../text/regexMappings';
+import { normalizeCityName } from '../text/regexAirportExtractor';
 import logger from '../../../utils/logger';
+
+/**
+ * Three-letter tokens that are printed ON boarding passes but are not
+ * airports: column headings, status words, honorifics.
+ *
+ * Only consulted by the last-resort branch of {@link
+ * TesseractVisionParser.extractIATACodes}; anything on the IATA whitelist wins
+ * before this list is reached. Kept to tokens that are unambiguously labels —
+ * a code that is BOTH a label somewhere and a real airport (THE = Teresina)
+ * stays out of the route by the whitelist ordering, not by being banned here.
+ */
+const NOT_AIRPORT_CODES = new Set([
+  // Pre-existing entries: ordinary English words that survive OCR.
+  'THE', 'AND', 'FOR', 'NOT', 'ARE', 'YOU',
+  // Column headings and field labels, German and English.
+  'GRP', 'SEQ', 'PNR', 'SEC', 'REF', 'FLT', 'TKT', 'ETK', 'ZON', 'ROW',
+  'DEP', 'ARR', 'GRO', 'CLS', 'STS', 'NBR',
+  // Frequent-flyer and status printing (Lufthansa: "FTL LH*S").
+  'FTL', 'FTV', 'SEN', 'HON',
+  // Honorifics in the passenger row.
+  'MRS', 'MSS',
+  // Clock/zone words.
+  'GMT', 'UTC',
+]);
+
+/**
+ * A day and a month with no clock after them, the airline way: `30AUG26`,
+ * `30AUG2026`, `30 AUG 26`, `05 DEC`.
+ *
+ * Separators are optional throughout, because the printed form runs the three
+ * parts together. The year is optional too, and a two-digit one that turns out
+ * to be an hour is refused rather than read as a year — without the lookahead,
+ * "30 AUG 18:30" would date the flight to 2018.
+ */
+const DATE_WITHOUT_TIME =
+  /\b(\d{1,2})\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*(\d{4}|\d{2}(?!\s*:))?/i;
+
+/** "26" → 2026, "2026" → 2026, nothing → this year (flagged as inferred). */
+function expandYear(captured: string | undefined): string {
+  if (!captured) return new Date().getFullYear().toString();
+  return captured.length === 2 ? `20${captured}` : captured;
+}
+
+/**
+ * Sauvola, not Otsu.
+ *
+ * Tesseract binarises before it reads, and its default (Otsu, `0`) picks ONE
+ * global threshold for the whole image. A boarding pass defeats that twice
+ * over: the card is coloured — navy on saturated orange has far less luminance
+ * contrast than it appears to have — and a phone screenshot sets it in a black
+ * letterbox, which drags the global threshold away from the card entirely. The
+ * result is not a bad read, it is no read: a real Lufthansa Wallet pass
+ * returned the status-bar clock, the word "Lufthansa" and the security number,
+ * and nothing else.
+ *
+ * Sauvola (`2`) thresholds per neighbourhood, so the card is judged against the
+ * card rather than against the margin around it.
+ *
+ * Measured 2026-08-30 over the twelve real passes in `test-samples/`, scoring
+ * flight number, both airport codes and seat against `samples.json`:
+ *
+ * | | correct | wrong | missing | produced a date |
+ * |---|---|---|---|---|
+ * | Otsu | 10 | 4 | 34 | 1/12 |
+ * | Sauvola | 35 | 3 | 10 | 8/12 |
+ *
+ * Better on every axis, including *fewer* wrong values — so this is not a
+ * recall-for-precision trade. It also costs nothing: one parameter, no
+ * preprocessing step and no new dependency.
+ */
+const THRESHOLDING_SAUVOLA = '2';
+
+/**
+ * Does this line look like the OCR reading a barcode rather than words?
+ *
+ * A field line on a boarding pass is made of words: "MUNCHEN FRANKFURT",
+ * "LH117 30AUG26 18:30". The 2D barcode has no words in it, so what comes back
+ * from that part of the card is a scatter of one- and two-character fragments —
+ * "ol i kan 24", "r ple Tr", "4 rT: Hh". Judging a line by how much of it is
+ * such fragments separates the two reliably, and does not depend on knowing
+ * which airline printed the pass.
+ *
+ * Deliberately generous: a line is only rubble when MOST of it is fragments, so
+ * a short genuine line ("MUC = FRA", two real tokens and a stray glyph) stays.
+ */
+function looksLikeRubble(line: string): boolean {
+  const tokens = line.trim().split(/\s+/).filter((t) => t !== '');
+  if (tokens.length < 3) {
+    return false;
+  }
+  const fragments = tokens.filter((t) => t.replace(/[^A-Za-z0-9]/g, '').length <= 2);
+  return fragments.length * 2 > tokens.length;
+}
+
+/** The pass with the OCR's rubble lines dropped. */
+function readableLines(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !looksLikeRubble(line))
+    .join('\n');
+}
+
+/**
+ * The route read from the city names a pass prints above its codes.
+ *
+ * Null unless BOTH ends are found and they differ — a single city says nothing
+ * about direction, and a city matched twice is a misread rather than a round
+ * trip. Order is reading order, which is the order a pass prints departure and
+ * destination in.
+ */
+function citiesToCodes(
+  text: string,
+): { departure: string; arrival: string } | null {
+  const found: string[] = [];
+  for (const word of text.split(/[^A-Za-zÀ-ÿ]+/)) {
+    if (word.length < 3) continue;
+    const code = CITY_TO_IATA[normalizeCityName(word)];
+    if (code !== undefined && !found.includes(code)) {
+      found.push(code);
+    }
+    if (found.length === 2) {
+      return { departure: found[0], arrival: found[1] };
+    }
+  }
+  return null;
+}
 
 /**
  * Tesseract OCR Vision Parser
@@ -30,6 +163,12 @@ export class TesseractVisionParser implements IVisionParser {
           logger.debug(`[Tesseract Parser] OCR Progress: ${Math.round(m.progress * 100)}%`);
         }
       },
+    });
+
+    // Set on the worker, not per call: the worker is cached and reused, and
+    // this must hold for every recognition it performs.
+    await this.worker.setParameters({
+      thresholding_method: THRESHOLDING_SAUVOLA,
     });
 
     this.isInitialized = true;
@@ -156,9 +295,13 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   /**
-   * Extract IATA codes with context awareness
+   * Extract IATA codes with context awareness.
+   *
+   * `protected` for the same reason `extractDateTimes` is: the interesting
+   * behaviour is which of a pass's many three-letter tokens it picks, and that
+   * is worth testing without spinning up a real OCR run.
    */
-  private extractIATACodes(text: string): { departure?: string; arrival?: string } {
+  protected extractIATACodes(text: string): { departure?: string; arrival?: string } {
     const result: { departure?: string; arrival?: string } = {};
 
     // Look for "FROM XXX TO YYY" pattern
@@ -179,21 +322,44 @@ export class TesseractVisionParser implements IVisionParser {
       return result;
     }
 
-    // Fallback: extract all IATA codes and take first two
+    // The city names printed above the codes, e.g. "MÜNCHEN … FRANKFURT".
+    //
+    // Stronger evidence than any leftover three-letter token, and it has to be
+    // tried before them: Sauvola thresholding reads far more of the barcode
+    // field than Otsu did, and that field turns into lines like "ol i kan 24"
+    // and "r ple Tr". On the pass that prompted this, the harvest below then
+    // produced the route KAN → PLE — a confident, entirely invented flight,
+    // from a pass whose own header says MÜNCHEN and FRANKFURT.
+    const cities = citiesToCodes(text);
+    if (cities !== null) {
+      return cities;
+    }
+
+    // Fallback: every 3-letter token on the pass, in reading order — with the
+    // OCR's own rubble left out, see `looksLikeRubble`.
     const allCodes: string[] = [];
-    const matches = text.matchAll(PATTERNS.IATA_CODE);
+    const matches = readableLines(text).matchAll(PATTERNS.IATA_CODE);
     for (const match of matches) {
       const code = match[1];
       // Filter out common false positives
-      if (!['THE', 'AND', 'FOR', 'NOT', 'ARE', 'YOU'].includes(code)) {
+      if (!NOT_AIRPORT_CODES.has(code)) {
         allCodes.push(code);
       }
     }
 
     const uniqueCodes = [...new Set(allCodes)];
-    if (uniqueCodes.length >= 2) {
-      result.departure = uniqueCodes[0];
-      result.arrival = uniqueCodes[1];
+
+    // Codes we can actually vouch for come first. A boarding pass is full of
+    // three-letter LABELS — "GRP", "SEQ", "PNR", "SEC" — and they are printed
+    // in the header, ABOVE the route. Taking the first two tokens therefore
+    // read a Lufthansa pass as GRP → MUC: the group column, then the departure
+    // airport, with the actual destination dropped. Preferring known airports
+    // costs nothing when the pass is plain and is the whole difference here.
+    const known = uniqueCodes.filter((code) => validateIATACode(code, true));
+    const candidates = known.length >= 2 ? known : uniqueCodes;
+    if (candidates.length >= 2) {
+      result.departure = candidates[0];
+      result.arrival = candidates[1];
     }
 
     return result;
@@ -244,6 +410,34 @@ export class TesseractVisionParser implements IVisionParser {
       result.departure = `${year}-${month}-${day}T${hour}:${minute}`;
       if (!yearCaptured) {
         result.inferredFields.push('departureTime');
+      }
+    }
+
+    // Last: the airline date with no departure time next to it.
+    //
+    // The pattern above needs a clock immediately after the date, and the
+    // commonest boarding-pass date of all does not have one: Lufthansa prints
+    // "DATUM 30AUG26" and puts 18:30 under BOARDING, one column away. So a
+    // real pass produced NO date, `departureTime` stayed empty, and every
+    // caller that requires a date — the Companion's photo capture among them —
+    // threw the whole parse away.
+    //
+    // The time is left at midnight rather than borrowed from elsewhere on the
+    // pass, deliberately: the clocks printed near a date are boarding and gate
+    // closing, not departure, and `T00:00` is the placeholder this codebase
+    // already reads as date-only (`regexDateExtractor` patches real times over
+    // it, and the Companion's `localClockTime` drops it).
+    if (!result.departure) {
+      const dateOnly = text.match(DATE_WITHOUT_TIME);
+      if (dateOnly) {
+        const yearCaptured = dateOnly[3];
+        const year = expandYear(yearCaptured);
+        const month = this.monthToNumber(dateOnly[2]);
+        const day = dateOnly[1].padStart(2, '0');
+        result.departure = `${year}-${month}-${day}T00:00`;
+        if (!yearCaptured) {
+          result.inferredFields.push('departureTime');
+        }
       }
     }
 

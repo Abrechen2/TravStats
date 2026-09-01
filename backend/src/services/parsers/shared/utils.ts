@@ -1,5 +1,6 @@
 import { ParsedBooking } from '../../bookingParser';
 import logger from '../../../utils/logger';
+import { AIRLINE_IATA_MAP } from '../../../data/airlines';
 
 /**
  * Get all available Claude models for text parsing, ordered by preference (newest first)
@@ -209,23 +210,56 @@ export function extractAirlineCode(flightNumber: string): string | undefined {
  */
 export const PATTERNS = {
   FLIGHT_NUMBER: /\b([A-Z]{2,3}\s?\d{1,4})\b/,
+  /** The same shape, every occurrence — see {@link pickFlightNumber}. */
+  FLIGHT_NUMBER_ALL: /\b([A-Z]{2,3}\s?\d{1,4})\b/g,
   IATA_CODE: /\b([A-Z]{3})\b/g,
   /**
-   * A booking reference has to be LABELLED.
-   *
-   * This was a bare `/\b([A-Z0-9]{6})\b/` — any six-character word — matched
-   * against text the caller upper-cases first. So a German marketing mail
-   * produced the reference "LEIDER", and an American Airlines holiday greeting
-   * produced "NSCHEN": the tail of "WÜNSCHEN", because the umlaut breaks the
-   * word boundary. Both were attached to phantom flights (Forgejo #17).
-   *
-   * The trade is deliberate. An unlabelled code is now MISSED rather than
-   * invented: a missing reference is visible and easy to add by hand, while a
-   * wrong one looks like data and gets saved.
+   * A booking reference the pass NAMES. Tried first, and the only form that is
+   * trusted on letters alone.
    */
-  PNR: /(?:BUCHUNGS(?:REFERENZ|NUMMER|CODE)|RESERVIERUNGS(?:NUMMER|CODE)|BOOKING\s*(?:REFERENCE|CODE|NUMBER)|CONFIRMATION(?:\s*(?:CODE|NUMBER))?|RESERVATION\s*CODE|RECORD\s*LOCATOR|PNR)\s*[:#-]?\s*([A-Z0-9]{6})\b/i,
+  PNR_LABELLED:
+    /(?:PNR|Booking\s*(?:Reference|Ref|Code)|Buchungs(?:code|referenz|nummer)|Reservation\s*Code|Record\s*Locator)\s*:?\s*([A-Z0-9]{6})\b/i,
+  /**
+   * An unlabelled six-character token, which must contain a digit to count.
+   *
+   * The bare `[A-Z0-9]{6}` this replaces matched any six-letter word on the
+   * pass: a German Lufthansa pass reported the PNR as "KLASSE", the column
+   * heading above the cabin. That is not a cosmetic error — `findExistingFlight`
+   * treats the PNR as its STRONGEST match key and looks it up before flight
+   * number and date, so an invented one can merge a scan into an unrelated
+   * flight. Refusing an all-letter record locator costs an optional field;
+   * accepting a heading costs the wrong flight.
+   */
+  PNR: /\b(?=[A-Z0-9]{6}\b)(?=[A-Z]*\d)([A-Z0-9]{6})\b/,
+  /*
+   * Resolution note, merge of main into dev/openapi-complete (2026-08-30).
+   *
+   * Both lines fixed the same class independently. main (Forgejo #17) required a
+   * LABEL, because a marketing mail produced "LEIDER" and an American Airlines
+   * greeting produced "NSCHEN" — the tail of "WUENSCHEN", the umlaut breaking the
+   * word boundary. The OCR line (Forgejo #36) instead let an unlabelled code
+   * through only when it carries a DIGIT, because a boarding pass prints the
+   * cabin heading "KLASSE" where a reference would sit.
+   *
+   * Kept the digit rule, because it is the superset: "NSCHEN" and "ANGEBO" carry
+   * no digit and are still refused, so main's cases hold, while a pass that
+   * prints a bare "E9VLVKC" is still read. Both suites are run against this —
+   * `pnrRequiresLabel.test.ts` from main and `fieldPatterns.test.ts` from here.
+   *
+   * The shared reason survives either way: `findExistingFlight` treats the PNR as
+   * its STRONGEST match key and looks it up before flight number and date, so an
+   * invented one merges a scan into an unrelated flight.
+   */
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
-  GATE: /(?:Gate|Boarding|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
+  /**
+   * `Boarding` is deliberately NOT a gate label: on almost every pass it
+   * introduces the boarding TIME, not the gate, so "BOARDING 18:30" was being
+   * read as gate "18". A pass that writes "Boarding Gate B12" still matches on
+   * `Gate`. The trailing guard rejects a clock even where a gate label does
+   * precede one, and the `\b` stops it from backing off to a shorter number to
+   * escape that guard ("Gate 18:30" must yield nothing, never "1").
+   */
+  GATE: /(?:Gate|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)\b(?!\s*:)/i,
   TERMINAL: /Terminal\s*:?\s*([A-Z0-9]+)/i,
   DATE_ISO: /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/g,
   PRICE_EUR: /(\d{1,5}[.,]\d{2})\s?(EUR|€)/i,
@@ -235,18 +269,52 @@ export const PATTERNS = {
 /**
  * Parse text for common flight data patterns
  */
+/**
+ * The flight number, chosen from every candidate rather than the first one.
+ *
+ * A GATE has the same shape once OCR has been at it. Gates are printed as
+ * "B08", "E06", "K18" — a letter and two digits — and the O/0 and I/1
+ * confusions turn them into "BO8", "EO6", "KII8", which match a flight number
+ * exactly. They also sit ABOVE the flight number on the card, so first-match
+ * wins meant the gate won: three of the twelve passes in `test-samples/` were
+ * reported as flight EO6, KII8 and BO8 instead of LH2415, LH2414 and LH2317.
+ *
+ * The letters settle it. `LH`, `EN` and `LX` are airlines; `EO`, `KI` and `BO`
+ * are not. The check uses the curated cold-start list rather than the airline
+ * DB on purpose — this parser has to work in a script, in a test, and before
+ * the catalogue cache is warm.
+ *
+ * A candidate with an unknown prefix is still accepted when nothing better is
+ * on the pass: the list is ~145 common carriers, not a world index, and a real
+ * flight on an obscure airline must not be dropped for being unfashionable.
+ */
+export function pickFlightNumber(text: string): string | undefined {
+  const candidates = Array.from(text.matchAll(PATTERNS.FLIGHT_NUMBER_ALL))
+    .map((m) => validateFlightNumber(m[1]))
+    .filter((f): f is string => f !== undefined);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  const known = candidates.find((f) => {
+    const prefix = f.match(/^([A-Z]{2})/)?.[1];
+    return prefix !== undefined && prefix in AIRLINE_IATA_MAP;
+  });
+  return known ?? candidates[0];
+}
+
 export function extractFlightDataFromText(text: string): Partial<ParsedBooking> {
   const result: Partial<ParsedBooking> = {};
 
   // Flight number
-  const flightMatch = text.match(PATTERNS.FLIGHT_NUMBER);
-  if (flightMatch) {
-    result.flightNumber = validateFlightNumber(flightMatch[1]);
-    result.airline = extractAirlineCode(flightMatch[1]);
+  const flightNumber = pickFlightNumber(text);
+  if (flightNumber) {
+    result.flightNumber = flightNumber;
+    result.airline = extractAirlineCode(flightNumber);
   }
 
-  // PNR/Booking reference
-  const pnrMatch = text.match(PATTERNS.PNR);
+  // PNR/Booking reference — a labelled one first, since that is the only form
+  // that can be trusted without a digit in it.
+  const pnrMatch = text.match(PATTERNS.PNR_LABELLED) ?? text.match(PATTERNS.PNR);
   if (pnrMatch) {
     result.pnr = pnrMatch[1].toUpperCase();
     result.bookingReference = pnrMatch[1].toUpperCase();
