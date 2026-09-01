@@ -4,6 +4,8 @@ import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
 import { getCachedAirports } from '../services/airportCache';
+import type { AirportData } from '../services/airportLookup';
+import { buildFlightNetwork } from '../services/stats/network';
 import { computePunctuality } from '../services/punctualityStats';
 import { Prisma } from '@prisma/client';
 import {
@@ -789,6 +791,71 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
       .slice(0, limit);
 
     res.json({ routes });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/v1/stats/network — the WHOLE network: every drawable airport with
+// its visit count, every flown airport pair with its count and distance.
+//
+// DELIBERATELY UNBOUNDED. Do NOT add a `limit` here "for symmetry" with
+// /routes: a globe drawn from a truncated network is not a smaller globe, it is
+// a WRONG one — arcs the traveller flew are simply missing and nothing on
+// screen says so. Truncating is a decision only a ranked LIST can afford, which
+// is why /routes may and this may not. If the payload ever becomes a problem,
+// the answer is compression or a conditional GET, not a shorter truth.
+//
+// Routes are the unordered PAIR (FRA-WAW and WAW-FRA are one route, count 2)
+// and airports carry coordinates — the two things that make this drawable and
+// that /routes and /airports do not both offer. See services/stats/network.ts
+// for the four rules and for why an airport without usable coordinates is
+// omitted rather than returned with nulls.
+router.get('/network', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    // Same done-predicate as every other aggregate in this file. A booked
+    // flight is not a line on a map.
+    const flights = await prisma.flight.findMany({
+      where: { userId, status: { in: ['flown', 'historical'] } },
+      select: {
+        depIata: true,
+        depIcao: true,
+        depLat: true,
+        depLon: true,
+        arrIata: true,
+        arrIcao: true,
+        arrLat: true,
+        arrLon: true,
+        status: true,
+      },
+    });
+
+    const codes = new Set<string>();
+    for (const f of flights) {
+      const dep = f.depIata ?? f.depIcao;
+      const arr = f.arrIata ?? f.arrIcao;
+      if (dep) codes.add(dep);
+      if (arr) codes.add(arr);
+    }
+
+    // The catalogue folds ICAO-only rows onto their IATA node and supplies
+    // coordinates for rows that never got any. A failed lookup is not fatal —
+    // the derivation then works from the flight rows alone, which is what it
+    // did before the catalogue was consulted at all.
+    let catalogue = new Map<string, AirportData>();
+    try {
+      catalogue = await getCachedAirports([...codes]);
+    } catch (error) {
+      logger.error({
+        operation: 'stats_network_airport_lookup_failed',
+        message: 'Airport catalogue unavailable, building network from flight rows only',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+
+    res.json(buildFlightNetwork(flights, catalogue));
   } catch (error) {
     next(error);
   }

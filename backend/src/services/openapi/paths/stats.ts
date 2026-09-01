@@ -54,6 +54,55 @@ const heroStatsResponse = registry.register(
     .openapi("HeroStats")
 );
 
+const networkResponse = registry.register(
+  "FlightNetwork",
+  z
+    .object({
+      airports: z.array(
+        z.object({
+          iata: z
+            .string()
+            .describe(
+              "IATA where the catalogue knows one, otherwise the code the " +
+                "flight row carried. Routes refer to airports by this code."
+            ),
+          lat: z.number(),
+          lon: z.number(),
+          visits: z.number().describe("Flights departing from or landing at this airport"),
+        })
+      ),
+      routes: z.array(
+        z.object({
+          aIata: z.string().describe("The alphabetically smaller code of the pair"),
+          bIata: z.string(),
+          count: z.number().describe("Flights on the pair, both directions together"),
+          distanceKm: z.number(),
+        })
+      ),
+    })
+    .openapi("FlightNetwork")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/network",
+  summary: "The whole flight network",
+  description:
+    "Every airport that can be plotted plus every airport PAIR that has been " +
+    "flown — the input for a route map or globe. A route is undirected: " +
+    "FRA-WAW and WAW-FRA are one entry with a count of two, matching how " +
+    "/stats/routes groups. Deliberately unbounded and un-paginated: a " +
+    "truncated network draws a wrong map, not a smaller one. Airports " +
+    "without usable coordinates are omitted, as are routes touching them.",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "Flight network",
+      content: { "application/json": { schema: networkResponse } },
+    },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/stats/hero",
