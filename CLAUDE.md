@@ -143,7 +143,15 @@ cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit
 
 # Frontend
 cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
+
+# Repo-level checks (file-size ratchet + Prisma schema drift).
+# check:drift needs a reachable Postgres and does not read backend/.env.
+DATABASE_URL="postgresql://…" npm run check
 ```
+
+This list is the real gate. CI runs a Prettier check on changed frontend files
+and nothing else — see **Rules** below for what is machine-enforced and what
+is not.
 
 ## Docker & Deployment
 
@@ -262,19 +270,23 @@ frontend/src/
 
 - **Code, comments, commits, CHANGELOG, README, ADRs, runbooks — always
   English**, globally (see `~/.claude/rules/common/language.md`).
-- **Frontend user-facing copy**: German primary, English secondary.
-  When adding i18n strings, always update DE and EN together.
+- **Frontend user-facing copy**: German primary, English secondary. DE and EN
+  move together — enforced by `frontend/src/i18n/__tests__/localeKeyParity.test.ts`,
+  because a missing key is silent: react-i18next renders the key itself, so a
+  German string added without its mirror ships `tours.leg.mode.ferry` as copy.
 
 ## Critical Gotchas
 
+These are design invariants — facts about how this code is wired, not rules.
+The rules, and which of them a machine actually holds, are in **Rules —
+enforced, and merely practised** below.
+
 - **NEVER run `taskkill`** — do not kill processes (`node.exe` or
   any other). If a port is busy, ask the user to handle it.
-- **`any` is FORBIDDEN** — always use `unknown` + type guards. The only
-  exception is `.d.ts` files.
-- **Pino logger** — no `console.log`. `utils/logger.ts` exports the logger as a
-  **default** export, so import it as
-  `import logger from '../utils/logger'` (there is no named `logger` export;
-  the named exports are the category loggers like `httpLogger`, `parserLogger`).
+- **Pino logger** — `utils/logger.ts` exports the logger as a **default**
+  export, so import it as `import logger from '../utils/logger'` (there is no
+  named `logger` export; the named exports are the category loggers like
+  `httpLogger`, `parserLogger`).
 - **Prisma JSON fields** — cast via
   `as unknown as Prisma.InputJsonValue`, never directly from
   `Record<string, unknown>`.
@@ -287,27 +299,20 @@ frontend/src/
 - **Auth cookie** — the JWT is an HttpOnly cookie (not a bearer
   token). Set `withCredentials: true` on every Axios instance.
 - **Prisma migrations** — schema changes always via
-  `npx prisma migrate dev` (never manually).
+  `npx prisma migrate dev` (never manually), and `npm run check:drift` must
+  stay green.
 - **React hooks** — `useTranslation` is imported from
   `'../hooks/useTranslation'` (a project wrapper), not directly from
   `react-i18next`.
-- **Zod** — mandatory for all user input and API requests. Schemas live
-  in `backend/src/schemas/`.
-- **Beta gating (since 2.4.0)** — unfinished features must register in
-  `frontend/src/config/betaFeatures.ts` and hide behind
-  `betaFeaturesEnabled` (admin_settings column, default `false`).
-  **That registry is the list — do not copy it here.** This paragraph named
-  three features until 2026-08-30, by which time there were seven; a list in
-  prose beside a list in code is a list that is wrong, and being wrong about
-  what is hidden is worse than saying nothing, because nobody goes looking.
-  The admin panel renders the same registry for the same reason
-  (`components/Admin/BetaFeatureList.tsx`), and a test fails when a key has no
-  user-facing copy. Each entry carries `why` it is hidden and `returnsWhen` it
-  may come back — write both, or the gate outlives the reason for it.
-  Two standing notes: the Devices entry is the ONLY phone-pairing entry point
-  and must be un-gated when the mobile app ships; and the flag is instance
-  state, never persisted client-side (see the `partialize` in
-  `settingsStore.ts`).
+- **Beta gating (since 2.4.0)** — unfinished features register in
+  `frontend/src/config/betaFeatures.ts` and hide behind `betaFeaturesEnabled`
+  (admin_settings column, default `false`). **That registry is the list — do
+  not restate it here**; a list in prose beside a list in code is a list that
+  is wrong. Each entry carries `why` it is hidden and `returnsWhen` it may
+  come back, and a test fails when either is missing. Two standing notes: the
+  Devices entry is the ONLY phone-pairing entry point and must be un-gated
+  when the mobile app ships; and the flag is instance state, never persisted
+  client-side (see the `partialize` in `settingsStore.ts`).
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through
@@ -387,20 +392,13 @@ frontend/src/
   of freezing forever. A nightly cron sweep (`jobs/airlineLogoRefreshScheduler.ts`,
   3 AM UTC) plus an admin re-sync (`POST /admin/airline-logos/refresh`) keep stored
   logos current.
-- **Cruise migrations (historical note — the drift is GONE)** — the initial
-  cruise migration (`20260419120000_cruise_module`) and its fixups
-  (`20260419130000_cruise_fixups`) were hand-written rather than
-  `prisma migrate dev`-generated, because schema.prisma had drift vs. the
-  migration history (NOT-NULL flips on `flights.has_live_tracking` +
-  `user_settings.historical_enrichment_*`, plus DROP INDEX reconciliations)
-  that `prisma migrate dev` would have bundled into any new migration.
-  **Re-measured 2026-08-01: that drift no longer exists.**
-  `prisma migrate diff --from-migrations prisma/migrations
-  --to-schema-datamodel prisma/schema.prisma --script` reports an empty
-  migration, so `prisma migrate dev` is usable normally again and new
-  migrations do NOT need hand-writing. Re-run that diff before assuming
-  otherwise — this note claimed the opposite for months after it stopped
-  being true and cost a design decision.
+- **Schema drift** — the two cruise migrations (`20260419120000_cruise_module`,
+  `20260419130000_cruise_fixups`) were hand-written because schema.prisma had
+  drift that `prisma migrate dev` would have bundled into any new migration.
+  That is over; `prisma migrate dev` is normal again. This paragraph used to
+  carry the measurement, and claimed the opposite for months after it stopped
+  being true — which cost a design decision. `npm run check:drift` answers it
+  now, so ask the check, not the doc.
 - **Cruise parser is live** —
   `backend/src/services/cruiseBookingParser.ts` implements the full
   AIDA / TUI / generic-LLM extraction pipeline. It is wired into
@@ -468,14 +466,161 @@ frontend/src/
   blanket cacheable header to `/api`, and if a new endpoint must cache, use
   `private`, never `public`.
 
-## Code Style
+## Rules — enforced, and merely practised
 
-- TypeScript: `strict: true`, ESLint + Prettier (printWidth 100,
-  `singleQuote: false`).
-- Async: always `async/await`, never `.then()`.
-- Immutability: spread `{...obj, field: value}`, no in-place mutation.
-- Error handling: explicit at every level, never swallow silently.
-- File size: 200–400 lines ideal, **800 lines hard maximum**.
+The split is the point. An **enforced** rule has a named check that fails; a
+**practised** one holds only while someone remembers it. Do not move a rule
+into the first list without naming its check, and do not read the second list
+as decoration — it is where the properties worth the most currently live.
+
+The gap is a tooling one, not a discipline one, and it is measurable: the
+`any` ban has three violations in this tree and all three are the word "any"
+in an English sentence, while the 800-line limit — stated for just as long,
+checked by nothing until now — is broken by 21 files, the largest at 2161.
+
+### Enforced
+
+| Rule | Check |
+|---|---|
+| `any` is forbidden — **frontend only** | `@typescript-eslint/no-explicit-any` (error, via `tseslint.configs.recommended`) + `eslint . --max-warnings 0`. The backend sets it to `'warn'` and runs bare `eslint src`, so a backend `any` passes. `.d.ts` is exempt on purpose. |
+| No unused variables (`^_` opts out) | same two eslint configs — error on the frontend, warn on the backend |
+| Frontend formatting | `prettier --check` on changed files (`.github/workflows/ci.yml`) plus a `prettier --write` pre-commit hook |
+| DE and EN move together | `frontend/src/i18n/__tests__/localeKeyParity.test.ts` — reads the namespace list from the filesystem, so a new namespace is covered the day it is added, and keeps no allow-list |
+| No source file over 800 lines | `scripts/check-file-size.mjs` (`npm run check:size`) |
+| `schema.prisma` agrees with `prisma/migrations` | `scripts/check-schema-drift.mjs` (`npm run check:drift`) — replays the migrations into a shadow DB, so the answer does not depend on which branch your dev database last saw |
+| Every served endpoint appears in the OpenAPI spec | `backend/src/__tests__/openapi.coverage.test.ts` vs `services/openapi/pending.ts` |
+| Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
+| Every beta gate key is registered, with a reason and an un-gating condition | `frontend/src/__tests__/config/betaFeatures.test.ts` — source-scans for `isFeatureVisible("…")` |
+| `/api` answers `no-store` unless a handler opts into `private` | `backend/src/__tests__/apiNoStore.test.ts` |
+| 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
+| No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
+
+Three of these are **ratchets** carrying a list of today's offenders — file
+size, OpenAPI coverage, OpenAPI response schemas. Each fails on a *stale*
+entry as well as a new one, so the list can only ever shrink.
+
+**Where they run.** Only the pre-commit hooks and the Prettier job are
+automatic; a green GitHub badge means Prettier passed on the changed frontend
+files and nothing more. Everything else is the pre-`/deploy` gate above. Two
+plan docs call `check:drift` "CI-guarded" and `backend/scripts/check-schema-drift.ts`
+says of itself "This script runs in CI" — none of that is true.
+
+**Two drift scripts disagree.** The older `backend/scripts/check-schema-drift.ts`
+(`cd backend && npm run check:drift`) compares against the connected database
+and warns that `--from-migrations` reports postgis as false drift under the
+`postgresqlExtensions` preview feature. The newer `scripts/check-schema-drift.mjs`
+(`npm run check:drift` at the root) replays the migrations into a shadow DB
+precisely so the answer does not depend on your database, and warns that the
+datasource comparison answers a weaker question — it measured 22 statements of
+"drift" that were only a branch switch. Both are right about the other's
+failure mode. One of them has to go; until then, run the root one and read a
+postgis diff as noise.
+
+**The 800-line number is provisional.** What is settled is the shape: a limit,
+a frozen baseline, and a list that only shrinks. `check-file-size.mjs` scans
+`backend/src` and `frontend/src` (tests and seed scripts excluded); 21 files
+already exceed 800 and are frozen at their current size in
+`scripts/file-size-baseline.json`, the largest at 2161. A listed file may
+shrink, may never grow, and must leave the list at 800 or below — `--update`
+refuses to raise an entry. The number itself has not been ratified by the
+owner; 800 is what CLAUDE.md happened to say.
+
+### Practised, not enforced
+
+Nothing fails when these break. They are also the candidate list for the next
+check.
+
+- **Abstention is a result.** A value that cannot be derived is null or
+  absent, never zero. `shared/flightDuration.ts` states it: "`null`, not 0 — a
+  zero would silently drag every average down, which is the bug this file
+  exists to end". `utils/continents.ts` returns null for a transcontinental
+  country with no coordinates rather than putting Vladivostok in Europe.
+  `services/punctualityStats.ts` keeps "no delay recorded" (null, out of the
+  sample) apart from "on time" (inside a 15-minute grace band) and names no
+  best/worst airline under three flights. `shared/lodgingTiming.ts` carries
+  `nightsKnown` because a same-day stay and an unknown span are both 0, "and
+  an average over the second is a lie". `routes/stats.ts` names the
+  anti-pattern it removed: a year-over-year delta on a lifetime set, "a
+  comparison that could not exist, presented as data".
+- **A counting rule has exactly one home.** `shared/lodgingCounting.ts` owns
+  "does this stay count" (owner rule: not until check-out is past),
+  `shared/placeCounting.ts` the same for places, and
+  `shared/statusDerivation.ts` / `shared/flightDuration.ts` /
+  `utils/continents.ts` their own questions. `continents.ts` exists because
+  two byte-identical copies "carried a 'keep both in sync' comment and had
+  already drifted". Most are mirrored backend↔frontend with a "change both
+  together" header, and **nothing checks the mirrors** — each side has its own
+  test asserting the same truth table, which is a convention, not a guard.
+  `shared/flightCounting.ts` is the same move for flights; it lives on
+  `refactor/flight-counting-predicate` and is not merged, so
+  `status === 'flown' || status === 'historical'` is still inlined here.
+- **Comments justify, they do not describe.** The good ones name the defect
+  that appeared when the code was the other way, and what it measured:
+  `airportLookup.ts` on merge precedence ("measured at 242 of 878 airport
+  references on a real account … the worst 1.6 km out"); `ollamaTextParser.ts`
+  on why `num_ctx` must match the other two parsers (a mismatch "did not
+  answer within 240 s — which is why a hotel confirmation timed out");
+  `config/constants.ts` on why a seed needs 1000 rows, not one ("measured in
+  the wild at 57 rows"). A comment restating the line below it is noise.
+- **Never document an invariant you do not test.** The OpenAPI description of
+  `/stats/timeseries` claimed it grouped by "the departure airport's calendar
+  day". `utils/stats/timeseries.ts` buckets on `getUTCFullYear` /
+  `getUTCMonth` and never consults the timezone map the same route builds for
+  durations. No test could have caught it: `stats.timeseries.test.ts` stubs
+  the airport cache empty, so the zone is structurally unobservable. The claim
+  was deleted rather than left standing, and the endpoint sits on the OpenAPI
+  ratchet until it can be described truthfully. An empty spec beats a
+  confident one.
+- **A visible change goes in the changelog, even when it is a fix.** `Fixed`
+  is the largest section of 2.6.0; 2.5.1 and 2.5.2 are fix-only releases. Each
+  entry is a sentence a user would recognise, then the cause — "**A backup no
+  longer loses every photograph.** The file archive carried three of the six
+  upload directories"; "**Flight costs are no longer added across
+  currencies.** 300 USD and 300 EUR were reported as '600 €'". Never "various
+  improvements".
+- **A bounded query bounds the work, not the scan.** `take`/`skip` belong in
+  the Prisma call, and a bound needs a total ordering to be correct — hence
+  the tie-breaker in `routes/flights.ts` ("departureTime is nullable and not
+  unique, so paginating on it alone would skip/duplicate rows at the 500-row
+  page boundaries"). Where the sort key is derived and cannot be pushed down,
+  the order is sort-then-slice and says so (`routes/lodging.ts`). Unevenly
+  held: `/stats/routes` and `routes/achievements.ts` load the full set and
+  `.slice()` in JS.
+- **Every behaviour change ships with a test that fails without it.** Not
+  test-first — the guard lands beside the change and names the bug in its
+  title. Where a test cannot see the thing, say so: the airline-logo chain
+  shipped an invisible logo in 2.5.0-beta.1 "and every unit test passed while
+  it was invisible", so changes there get a browser look, not just green
+  tests.
+- **Zod at every boundary; no `console.log`; `async/await`, never `.then()`;
+  spread instead of mutation; `strict: true`.** Real, and none of them
+  checked — `no-console` is explicitly `'off'` in the backend eslint config,
+  and nothing looks for an unvalidated `req.body`.
+
+### Global rules this project deliberately does not follow
+
+`~/.claude/rules/common/*` lives outside this repo and cannot be corrected
+from it, so the divergence is recorded here.
+
+- **Repository pattern** — Prisma is called from routes and services directly;
+  there are no repositories, and adding a layer would be a rewrite with no
+  beneficiary. Single-source-of-truth work happens in `shared/*` instead.
+- **The model-selection table** (Sonnet/Opus/Haiku) — stale, and a harness
+  setting rather than a property of this code.
+- **Mandatory agent usage** ("planner for complex features", "code-reviewer
+  after writing code") — solo project, no PR ceremony; the gate is the Build
+  Checks list, not a roster.
+- **"TDD is MANDATORY, write the test first"** — replaced by the weaker, truer
+  rule above: every behaviour change ships with a test that fails without it.
+  Order is not the point.
+- **80% minimum coverage** — not measured here, so not claimed.
+
+### Open — do not settle these in passing
+
+- **API response shape.** Handlers return bare objects; the global rules ask
+  for a `{success, data, error}` envelope. Switching breaks every frontend
+  caller and every generated client at once. Owner decision — forgejo#64.
+- **The 800-line number**, above.
 
 ## Version
 
@@ -486,16 +631,17 @@ Version bumps and changelog entries are managed by the `/deploy` skill
 
 ## Security
 
-- Validate all user input via **Zod schemas** (system boundaries).
-- Rate limiting on every auth and expensive endpoint
-  (`express-rate-limit`).
-- No hardcoded secrets — `.env` file (gitignored) for the few required
-  env vars; JWT/encryption keys are auto-generated on first boot and
-  persisted to `/app/data/secrets/` (a subdir of the single data volume).
-- JWT in an HttpOnly cookie (never `localStorage`).
-- XSS: React escapes automatically; no `dangerouslySetInnerHTML`.
-- SQL injection: Prisma ORM (parameterised queries).
-- Security scan: `scripts/security-scan.sh`.
+How it is built (facts): JWT in an HttpOnly cookie, never `localStorage`;
+Zod schemas at every boundary, in `backend/src/schemas/`; Prisma everywhere,
+so no hand-built SQL; React's own escaping and no `dangerouslySetInnerHTML`;
+`express-rate-limit` on auth and expensive endpoints. Secrets come from a
+gitignored `.env`, and the JWT/encryption keys are generated on first boot into
+`/app/data/secrets/` (a subdir of the single data volume).
+
+Of these, only two are checked: `detect-private-key` in
+`.pre-commit-config.yaml` stops a key entering a commit, and
+`apiNoStore.test.ts` holds the `Cache-Control` default. The rest is practised.
+`scripts/security-scan.sh` is a sweep you run, not a gate.
 
 Security findings: `PENTEST_FINDINGS.md` (when present).
 

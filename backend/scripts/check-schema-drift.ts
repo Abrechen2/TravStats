@@ -1,25 +1,43 @@
 /**
  * Schema-drift regression check.
  *
- * Runs `prisma migrate diff --from-schema-datasource --to-schema-datamodel --exit-code`
- * against a fully migrated database. If the live DB state (after `prisma
+ * Runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code`,
+ * replaying the migration folder into a scratch shadow database. If the live DB state (after `prisma
  * migrate deploy`) and `schema.prisma` disagree, exits with code 2 — the
  * same convention used by `--exit-code`.
  *
  * Why this exists: in 2026-04 the prod DB was found to have drifted from
  * `schema.prisma` (NOT NULL flips on `flights.has_live_tracking`,
  * `user_settings.historical_enrichment_*` etc.). Migration `20260419140000_schema_drift_fix`
- * resolved it. This script runs in CI so the same gap can never reopen
- * silently — the next person editing `schema.prisma` without a matching
- * migration will get a red CI build instead of a hand-written hotfix
- * after a prod incident.
+ * resolved it, and this check exists so the same gap cannot reopen silently.
  *
- * Why `--from-schema-datasource` and not `--from-migrations`: with the
- * `postgresqlExtensions` preview feature enabled, `--from-migrations`
- * does not register raw `CREATE EXTENSION` statements applied to the
- * shadow DB and reports postgis as drift on every run. Comparing the
- * live post-migration DB state directly is both more correct (it
- * matches what would actually go to prod) and avoids that quirk.
+ * It is NOT wired into CI, despite what this comment claimed until
+ * 2026-09-01. `.github/workflows/ci.yml` runs one job — Prettier on changed
+ * frontend files — and `grep check-schema-drift .github/` finds nothing. Two
+ * plan documents under `docs/superpowers/` repeat the same false claim.
+ * Wiring it in is forgejo#60; correcting the claim was free and is done here,
+ * because a check that lies about being automated is worse than one that
+ * admits it is manual.
+ *
+ * Why `--from-migrations` and not `--from-schema-datasource` (changed
+ * 2026-09-01, forgejo#74):
+ *
+ * This comment used to argue the opposite, because with the
+ * `postgresqlExtensions` preview feature enabled `--from-migrations` failed to
+ * register raw `CREATE EXTENSION` statements in the shadow database and
+ * reported postgis as drift on every run. **That feature is no longer in
+ * `schema.prisma`** — measured 2026-09-01, `postgresqlExtensions` and `postgis`
+ * appear nowhere in it — so the objection has expired. If either ever returns,
+ * this is the paragraph that explains the false positive you will then see.
+ *
+ * What replaced it is a worse failure the datasource comparison always had:
+ * it compares against whatever database happens to be connected, and this
+ * project's dev database is shared by every worktree. Measured on the same
+ * day, a dev DB still holding another branch's migrations reported 22
+ * statements of "drift" that were nothing but a branch switch. Replaying the
+ * migration folder into a scratch database instead makes the answer depend
+ * only on the two things being compared, so it is the same on any branch, at
+ * any time, with any database attached.
  *
  * Usage (local):
  *   1. cd backend && DATABASE_URL=... npx prisma migrate deploy  # bring DB up
@@ -30,9 +48,10 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
 
 const SCHEMA_PATH = resolve(__dirname, "..", "prisma", "schema.prisma");
+const MIGRATIONS_PATH = join(__dirname, "..", "prisma", "migrations");
 
 function fail(message: string, hint?: string): never {
   process.stderr.write(`\n[check:drift] ${message}\n`);
@@ -59,18 +78,28 @@ function main(): void {
     fail(`schema.prisma not found at ${SCHEMA_PATH}`);
   }
 
+  // The scratch database the migration folder is replayed into. Derived so a
+  // developer never has to set a second variable, overridable because a shared
+  // CI role may not be allowed to CREATE DATABASE. It is never written to by
+  // anything else and holds no data worth keeping.
+  const shadowUrl =
+    process.env.SHADOW_DATABASE_URL ??
+    `${databaseUrl.replace(/\/[^/?]+(\?|$)/, "/")}travstats_drift_shadow`;
+
   const args = [
     "prisma",
     "migrate",
     "diff",
-    "--from-schema-datasource",
-    SCHEMA_PATH,
+    "--from-migrations",
+    MIGRATIONS_PATH,
     "--to-schema-datamodel",
     SCHEMA_PATH,
+    "--shadow-database-url",
+    shadowUrl,
     "--exit-code",
   ];
 
-  process.stdout.write("[check:drift] Comparing live DB state → schema.prisma...\n");
+  process.stdout.write("[check:drift] Replaying migrations → comparing with schema.prisma...\n");
   const result = spawnSync("npx", args, {
     stdio: "inherit",
     shell: process.platform === "win32",
@@ -83,7 +112,7 @@ function main(): void {
 
   const code = result.status ?? 1;
   if (code === 0) {
-    process.stdout.write("[check:drift] OK — DB state and schema.prisma agree.\n");
+    process.stdout.write("[check:drift] OK — the migration history produces exactly schema.prisma.\n");
     process.exit(0);
   }
   if (code === 2) {
