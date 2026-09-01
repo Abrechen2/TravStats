@@ -22,7 +22,7 @@
     "typecheck:backend": "cd backend && npx tsc --noEmit",
     "typecheck:frontend": "cd frontend && npx tsc --noEmit",
     "check:size": "node scripts/check-file-size.mjs",
-    "check:drift": "node scripts/check-schema-drift.mjs",
+    "check:drift": "cd backend && npm run check:drift",
     "check": "npm run check:size && npm run check:drift"
   },
   "devDependencies": {
