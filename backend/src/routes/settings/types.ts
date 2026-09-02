@@ -102,6 +102,19 @@ export interface SettingsResponse extends SettingsDataJson {
    * by Zod — the write path is the admin-guarded PUT /admin/instance-settings.
    */
   instanceCountryThreshold: CountryTier;
+  /**
+   * Does this account have any track evidence at all — spec §3.4c.
+   *
+   * READ-ONLY, like the two fields above, and for the same kind of reason: the
+   * country-counting control must not offer `transited` on an account where no
+   * record can ever carry it. A choice whose every value yields the same number
+   * does not read as an empty set, it reads as a bug.
+   *
+   * A boolean and not a count: it answers a layout question, not a statistical
+   * one, and a number here would invite a client to draw it beside figures the
+   * passport derives properly.
+   */
+  hasCountryTracks: boolean;
 }
 
 export interface UserSettingsUpdateData {

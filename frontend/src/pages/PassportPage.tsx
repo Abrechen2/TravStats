@@ -80,6 +80,22 @@ export default function PassportPage(): JSX.Element {
     });
   }, [passport]);
 
+  /**
+   * Does any country here carry track evidence? — spec §3.4c.
+   *
+   * An existence check on the payload, never a re-derivation of anything: the
+   * `transited` rung and the `track` kind can only exist once a location
+   * history has been swept, and a legend entry that is permanently zero reads
+   * as a bug rather than as an empty set. Read off `kinds`, not off
+   * `byEvidence.track`, which counts only the countries where a track is the
+   * STRONGEST evidence — an account whose every track country also has a flight
+   * would score zero there and still have tracks.
+   */
+  const hasTracks = useMemo(
+    () => (passport?.countries ?? []).some((c) => c.kinds.includes("track")),
+    [passport]
+  );
+
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
 
   // While the instance flag is still unknown, wait rather than redirect: the
@@ -273,7 +289,7 @@ export default function PassportPage(): JSX.Element {
                     </dl>
 
                     {/* Why the headline is not the total — the rule, named. */}
-                    <EvidenceSummary summary={passport.summary} />
+                    <EvidenceSummary summary={passport.summary} hasTracks={hasTracks} />
 
                     <h2
                       className="text-[11px] uppercase tracking-wider mb-2"

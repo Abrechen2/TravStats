@@ -121,22 +121,22 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
   it("lets a user's own choice beat the instance default", async () => {
     if (!catalogReady) return;
     await setInstance("slept");
-    await setUser("transit");
+    await setUser("connection");
 
     const p = await passport();
 
-    expect(p.summary.countryThreshold).toBe("transit");
+    expect(p.summary.countryThreshold).toBe("connection");
     // Everything counts at the lowest rung, connection included.
     expect(p.summary.countries).toBe(p.summary.countriesTotal);
   });
 
   it("falls back to the instance default for a user who has not chosen", async () => {
     if (!catalogReady) return;
-    await setInstance("transit");
+    await setInstance("connection");
 
     const p = await passport();
 
-    expect(p.summary.countryThreshold).toBe("transit");
+    expect(p.summary.countryThreshold).toBe("connection");
     expect(p.summary.countries).toBe(3); // DE, QA, SG
   });
 
@@ -144,7 +144,7 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     if (!catalogReady) return;
 
     const seen: Record<string, Awaited<ReturnType<typeof passport>>> = {};
-    for (const tier of ["transit", "visited", "slept"] as const) {
+    for (const tier of ["connection", "transited", "slept"] as const) {
       await setUser(tier);
       seen[tier] = await passport();
     }
@@ -155,16 +155,16 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     const rows = (p: Awaited<ReturnType<typeof passport>>) =>
       JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
 
-    expect(rows(seen.visited)).toBe(rows(seen.transit));
-    expect(rows(seen.slept)).toBe(rows(seen.transit));
-    for (const tier of ["visited", "slept"] as const) {
-      expect(seen[tier].summary.countriesTotal).toBe(seen.transit.summary.countriesTotal);
+    expect(rows(seen.transited)).toBe(rows(seen.connection));
+    expect(rows(seen.slept)).toBe(rows(seen.connection));
+    for (const tier of ["transited", "slept"] as const) {
+      expect(seen[tier].summary.countriesTotal).toBe(seen.connection.summary.countriesTotal);
     }
 
     // And the headline does move, or the invariance above would be trivially
     // true because nothing was ever filtered.
-    expect(seen.transit.summary.countries).toBe(3);
-    expect(seen.visited.summary.countries).toBe(2);
+    expect(seen.connection.summary.countries).toBe(3);
+    expect(seen.transited.summary.countries).toBe(2);
     expect(seen.slept.summary.countries).toBe(0);
 
     // The connection is still IN the list at the strictest setting. A country
@@ -172,14 +172,14 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     // is how the Bucharest hotel was found.
     const qa = seen.slept.countries.find((c) => c.code === "QA");
     expect(qa).toBeDefined();
-    expect(qa?.tier).toBe("transit");
+    expect(qa?.tier).toBe("connection");
     expect(qa?.counted).toBe(false);
   });
 
   it("counts the same countries for the badges as for the passport, at every threshold", async () => {
     if (!catalogReady) return;
 
-    for (const tier of ["transit", "visited", "slept"] as const) {
+    for (const tier of ["connection", "transited", "slept"] as const) {
       await setUser(tier);
 
       await checkAndUpdateAchievements(user.id);

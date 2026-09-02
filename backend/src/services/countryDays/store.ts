@@ -75,6 +75,7 @@ export async function replaceCountryDays(
       date: utcMidnight(observation.date),
       countryCode: observation.countryCode,
       pointCount: observation.pointCount,
+      airportPointCount: observation.airportPointCount,
       spanKm: observation.spanKm,
       partialWindow: partialDays.has(observation.date),
     }))

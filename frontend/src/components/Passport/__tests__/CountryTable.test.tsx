@@ -51,6 +51,7 @@ const emptyDetail = (code: string): CountryDetail => ({
   portCalls: 0,
   places: 0,
   lodgings: 0,
+  trackDays: 0,
   anchor: null,
   timeline: [],
   timelineTruncated: false,
@@ -73,7 +74,7 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
   it("keeps an uncounted connection country in the list and marks it as not counted", () => {
     renderTable([
       country({ code: "DE" }),
-      country({ code: "ET", tier: "transit", counted: false, entries: 2, airports: ["ADD"] }),
+      country({ code: "ET", tier: "connection", counted: false, entries: 2, airports: ["ADD"] }),
     ]);
 
     // The row is THERE. A tier is inferred from records and records are
@@ -81,7 +82,7 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     // GPS-measured days in an independent tracker. Removing the row would
     // remove the only place a reader could notice that.
     expect(screen.getByText("ET")).toBeInTheDocument();
-    expect(screen.getByTestId("tier-transit")).toBeInTheDocument();
+    expect(screen.getByTestId("tier-connection")).toBeInTheDocument();
     expect(screen.getByText("passport:countries.notCounted")).toBeInTheDocument();
 
     const rows = screen.getAllByRole("row");
@@ -150,7 +151,7 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
   });
 
   it("offers no filter for a tier no record can carry", () => {
-    renderTable([country({ code: "EE", tier: "transit", counted: false })]);
+    renderTable([country({ code: "EE", tier: "connection", counted: false })]);
     // `transited` (crossed by road) needs GPS tracks that do not exist yet. A
     // control that always returns nothing reads as a defect, so there is none.
     expect(screen.queryByTestId("tier-transited")).not.toBeInTheDocument();

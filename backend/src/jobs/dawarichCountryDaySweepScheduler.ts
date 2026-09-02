@@ -48,6 +48,7 @@
 import cron from "node-cron";
 
 import { prisma } from "../db";
+import { buildKnownAirportTest } from "../services/countryDays/knownAirports";
 import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { createDawarichClient, type DawarichClient } from "../services/dawarich/dawarichClient";
 import { buildUserDawarichConnection } from "../services/dawarich/dawarichResolver";
@@ -70,6 +71,11 @@ export interface CountryDaySweepOptions {
   createClient?: (connection: DawarichConnection) => DawarichClient;
   /** Injected by tests so the boundary file is not needed. */
   countryAt?: (lat: number, lon: number) => string | null;
+  /**
+   * Injected by tests so no flight table is needed. In production it is built
+   * PER ACCOUNT below, because it is a statement about that account's flights.
+   */
+  atKnownAirport?: (lat: number, lon: number) => boolean;
   maxMonthsWithData?: number;
   maxWindows?: number;
 }
@@ -160,9 +166,22 @@ export async function runDawarichCountryDaySweep(
 
   for (const account of accounts) {
     try {
+      /**
+       * The §8.2 signal, rebuilt for each account and never shared between
+       * them: "an airport somebody flew through" is true of one traveller and
+       * false of the next, and a cache across accounts would let one person's
+       * itinerary explain another person's days away.
+       *
+       * Read fresh each night rather than cached across runs, so a flight
+       * added today is taken into account tonight.
+       */
+      const atKnownAirport =
+        options.atKnownAirport ?? (await buildKnownAirportTest(account.userId));
+
       const outcome = await sweepUserCountryDays(account.userId, {
         client: createClient(account.connection),
         countryAt,
+        atKnownAirport,
         now,
         force: options.force,
         maxMonthsWithData: options.maxMonthsWithData,

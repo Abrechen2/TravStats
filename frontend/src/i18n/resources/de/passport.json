@@ -22,17 +22,20 @@
   },
   "tiers": {
     "slept": "Übernachtet",
-    "sleptExplained": "Der Kalendertag hat gewechselt: eine abgeschlossene Übernachtung, eine erfasste Unterkunft, ein Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel.",
+    "sleptExplained": "Der Kalendertag hat gewechselt: eine abgeschlossene Übernachtung, eine erfasste Unterkunft, ein Hafenaufenthalt über Nacht, ein Flugpaar mit Tageswechsel — oder zwei aufeinanderfolgende Tage im Standortverlauf.",
     "visited": "Besucht",
-    "visitedExplained": "Ankunft und Abflug am selben Kalendertag, ein erfasster Ort oder ein Hafentag.",
-    "transit": "Nur umgestiegen",
-    "transitExplained": "Nur ein Anschlussflug und sonst nichts. Ob du den Flughafen verlassen hast, ist nirgends erfasst — deshalb zählt dieses Land nicht mit. Trag einen Ort, eine Unterkunft oder einen weiteren Flug nach, dann steigt die Stufe."
+    "visitedExplained": "Ankunft und Abflug am selben Kalendertag, ein erfasster Ort, ein Hafentag — oder ein Tag, den dein Standortverlauf ausschließlich in diesem Land verzeichnet.",
+    "connection": "Nur umgestiegen",
+    "connectionExplained": "Nur ein Anschlussflug und sonst nichts. Ob du den Flughafen verlassen hast, ist nirgends erfasst — deshalb zählt dieses Land nicht mit. Trag einen Ort, eine Unterkunft oder einen weiteren Flug nach, dann steigt die Stufe.",
+    "transited": "Durchgereist",
+    "transitedExplained": "Dein Standortverlauf zeigt dich an einem Tag hier und noch in einem anderen Land — eine Grenze, am Boden überquert. Das ist kein Umsteigen: du warst im Land, oft stundenlang, und deshalb zählt es mit."
   },
   "kinds": {
     "flight": "Flug",
     "lodging": "Unterkunft",
     "port": "Hafen",
-    "place": "Ort"
+    "place": "Ort",
+    "track": "Standortverlauf"
   },
   "value": {
     "dash": "—",
@@ -53,7 +56,9 @@
     "intro": "Diese Belege haben das Land in den Pass gebracht. Jeder führt zum Datensatz — dort kannst du ihn ändern.",
     "loadError": "Die Belege konnten nicht geladen werden. Das heißt nicht, dass es keine gibt.",
     "truncated": "Nur die neuesten Belege werden gezeigt.",
-    "none": "Kein einzelner Datensatz abrufbar. Das Land steht trotzdem zu Recht in der Liste — nur lässt sich hier kein einzelner Beleg öffnen."
+    "none": "Kein einzelner Datensatz abrufbar. Das Land steht trotzdem zu Recht in der Liste — nur lässt sich hier kein einzelner Beleg öffnen.",
+    "trackLabel": "Standortverlauf — {{days}} Tage, {{points}} Messpunkte",
+    "trackNote": "Diese Tage stammen aus deinem Standortverlauf, nicht aus einem Datensatz, den du angelegt hast. Wie viele Messpunkte einen Tag belegen, steht dabei — ob ein Punkt per GPS gemessen oder aus einem Foto geschätzt wurde, sagen die Daten nicht, und darum steht es hier auch nicht."
   },
   "continents": {
     "title": "Kontinente",
@@ -88,14 +93,16 @@
   },
   "thresholdChoice": {
     "options": {
-      "transit": "Umsteigen — alles zählt",
-      "visited": "Aufenthalt — Umsteigen zählt nicht",
-      "slept": "Übernachtung — nur wo du geschlafen hast"
+      "visited": "Aufenthalt — Umsteigen und Durchreise zählen nicht",
+      "slept": "Übernachtung — nur wo du geschlafen hast",
+      "connection": "Umsteigen — alles zählt",
+      "transited": "Durchreise — Umsteigen zählt nicht"
     },
     "effect": {
-      "transit": "Auch ein reines Umsteigen am Flughafen zählt dann als Land. Deine Länderzahl wird dadurch größer.",
-      "visited": "Ein reines Umsteigen am Flughafen zählt dann nicht. Ein Hafentag, ein erfasster Ort und jede Übernachtung zählen weiterhin. Das ist die Voreinstellung.",
-      "slept": "Es zählen nur Länder, in denen eine Übernachtung belegt ist — durch eine Unterkunft, einen Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel. Deine Länderzahl wird dadurch kleiner."
+      "visited": "Es zählen nur Länder, in denen du dich aufgehalten hast. Eine reine Durchreise am Boden und ein Umsteigen am Flughafen zählen dann beide nicht. Deine Länderzahl wird dadurch kleiner.",
+      "slept": "Es zählen nur Länder, in denen eine Übernachtung belegt ist — durch eine Unterkunft, einen Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel. Deine Länderzahl wird dadurch kleiner.",
+      "connection": "Auch ein reines Umsteigen am Flughafen zählt dann als Land. Deine Länderzahl wird dadurch größer.",
+      "transited": "Ein reines Umsteigen am Flughafen zählt dann nicht. Eine Grenze, die du am Boden überquert hast, ein Hafentag, ein erfasster Ort und jede Übernachtung zählen weiterhin. Das ist die Voreinstellung."
     },
     "listUnchanged": "Die Länderliste im Reisepass ändert sich dadurch nicht: Jedes Land mit Nachweis bleibt sichtbar, nicht gezählte werden nur ausgegraut. Verändert wird allein die Zahl in der Kopfzeile."
   }

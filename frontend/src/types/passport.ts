@@ -13,13 +13,18 @@ export type Continent =
  * How strong the proof behind a country is, strongest first — the vocabulary of
  * `backend/src/shared/countryEvidence.ts`, mirrored and never re-derived.
  *
- * The design plans a fourth rung, `transited` (crossed by road), which nothing
- * in a flight, a cruise or a hotel can record — it becomes observable only with
- * GPS tracks. It is deliberately ABSENT here: a value no record can carry must
- * not appear in a filter or a legend, because a control that always returns
- * nothing reads as a bug rather than as an empty set.
+ * `transited` is a border crossed on the ground, and `connection` is a change
+ * of planes. Only the second is excluded by the default threshold: driving
+ * through counts (spec §3.4c).
+ *
+ * `transited` is REACHABLE only through location history — nothing in a flight,
+ * a cruise or a hotel records a road crossing. So it is in this list, because
+ * the server can now produce it, but every control that OFFERS it has to check
+ * first: on an account with no track evidence it would be a choice that always
+ * returns nothing, which reads as a bug rather than as an empty set. See
+ * `hasCountryTracks` on the settings payload.
  */
-export const COUNTRY_TIERS = ["slept", "visited", "transit"] as const;
+export const COUNTRY_TIERS = ["slept", "visited", "transited", "connection"] as const;
 export type CountryTier = (typeof COUNTRY_TIERS)[number];
 
 /**
@@ -29,20 +34,56 @@ export type CountryTier = (typeof COUNTRY_TIERS)[number];
  * value the API sends (`summary.countryThreshold`, `instanceCountryThreshold`),
  * never this.
  */
-export const DEFAULT_COUNTRY_TIER: CountryTier = "visited";
+export const DEFAULT_COUNTRY_TIER: CountryTier = "transited";
 
 /**
- * The same three tiers in the order the SETTING offers them: lowest bar first,
- * so the list reads as a rising requirement — everything counts, then a
- * connection does not, then only a night does.
+ * The tiers in the order the SETTING offers them: lowest bar first, so the list
+ * reads as a rising requirement — everything counts, then a connection does
+ * not, then a road crossing does not either, then only a night does.
  *
- * Derived from `COUNTRY_TIERS` rather than written out, so a fourth rung
- * (`transited`, spec §3.4c) cannot appear in the ranking and be forgotten here.
+ * Derived from `COUNTRY_TIERS` rather than written out, so a rung added to the
+ * ranking cannot be forgotten here.
+ *
+ * It is the FULL list. Which of them a given account may be offered is a
+ * separate question — see `countryTierChoicesFor`, and §3.4c on why a choice
+ * that always returns the same number must not be drawn at all.
  */
 export const COUNTRY_TIER_CHOICES: readonly CountryTier[] = [...COUNTRY_TIERS].reverse();
 
-/** What KIND of record proved a country. Not how strong — that is the tier. */
-export type PassportEvidenceKind = "flight" | "lodging" | "port" | "place";
+/**
+ * The choices this account can meaningfully make.
+ *
+ * `transited` only exists once a location history has been swept. Offered
+ * without one it would sit between `connection` and `visited` producing exactly
+ * the same headline as `visited`, which is not an empty set — it is a control
+ * that looks broken.
+ *
+ * A user who ALREADY has the value stored keeps seeing it even without tracks,
+ * because a `<select>` whose current value is missing from its options silently
+ * shows the wrong one. Their choice is theirs to see and to change.
+ */
+export function countryTierChoicesFor(
+  hasTracks: boolean,
+  current: CountryTier | null = null
+): readonly CountryTier[] {
+  if (hasTracks) return COUNTRY_TIER_CHOICES;
+  return COUNTRY_TIER_CHOICES.filter((tier) => tier !== "transited" || current === "transited");
+}
+
+/**
+ * What KIND of record proved a country. Not how strong — that is the tier.
+ *
+ * `track` is measured presence: location history reduced to country-days on the
+ * server (spec §8), never positions. It is the only kind that names no record
+ * the user typed, and the only one that can raise a country nobody logged.
+ *
+ * It carries an honesty the others do not need. §8.3: the payload cannot say
+ * whether a fix was measured by GPS or estimated from a photograph, so nothing
+ * drawn from it may imply that it knows. What IS observable — how many points
+ * held a day up — travels as a number, and the UI shows the number rather than
+ * inventing a word for it.
+ */
+export type PassportEvidenceKind = "flight" | "lodging" | "port" | "place" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b, mirrored
@@ -196,7 +237,18 @@ export type CountryTimelineEntry =
     }
   | { kind: "port"; date: string | null; cruiseId: string; portName: string | null }
   | { kind: "place"; date: string | null; placeId: string; name: string }
-  | { kind: "lodging"; date: string | null; lodgingId: string; name: string };
+  | { kind: "lodging"; date: string | null; lodgingId: string; name: string }
+  /**
+   * Measured presence — ONE entry for the whole country, not one per day, and
+   * the only entry with no record behind it to open. What can be opened is the
+   * connection that produced it, which lives in the settings.
+   *
+   * `points` is raw on purpose (§8.3). Four hundred fixes and one fix are
+   * different things and a reader can see that they are; deciding on their
+   * behalf that one of them is "estimated" would be the inference-dressed-as-a-
+   * measurement this whole design exists to remove.
+   */
+  | { kind: "track"; date: string | null; days: number; points: number };
 
 export interface CountryAirportUse {
   iata: string;
@@ -217,6 +269,9 @@ export interface CountryDetail {
   places: number;
   /** Houses in this country whose record proves presence. */
   lodgings: number;
+  /** Distinct days a location history placed the traveller here. Zero on an
+   *  account with none, which is most of them. */
+  trackDays: number;
   anchor: { iata: string; lat: number; lon: number } | null;
   /** Newest first, undated last. Raw parts, never composed prose. */
   timeline: CountryTimelineEntry[];

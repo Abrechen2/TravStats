@@ -33,13 +33,8 @@ import {
 } from '../shared/flightDuration';
 import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
 import { buildTzMap, withDepartureClock } from '../services/stats/departureClock';
-import {
-  loadAirportCountries,
-  loadHomeIatas,
-  loadPassport,
-  passportAirportCodes,
-} from '../services/stats/passportLoader';
-import { buildCountryDetail } from '../services/stats/countryDetail';
+import { loadPassport } from '../services/stats/passportLoader';
+import { loadCountryDetail } from '../services/stats/countryDetailLoader';
 import { buildWrapped } from '../services/stats/wrapped';
 import { buildTravelRecords } from '../services/stats/records';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
@@ -1285,101 +1280,7 @@ router.get(
         return;
       }
 
-      const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
-        select: {
-          id: true,
-          flightNumber: true,
-          depIata: true,
-          depLat: true,
-          depLon: true,
-          arrIata: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-          status: true,
-        },
-      });
-
-      // The same three sources the passport counts, so the row and the page
-      // can only ever agree.
-      const [airportCountries, portCalls, places, lodgings, homeIatas] = await Promise.all([
-        loadAirportCountries(passportAirportCodes(flights)),
-        prisma.cruiseStop.findMany({
-          where: {
-            cruise: { userId, status: { in: ['flown', 'historical'] } },
-            port: { isNot: null },
-          },
-          select: {
-            cruiseId: true,
-            arrivalTime: true,
-            date: true,
-            port: { select: { name: true, country: true } },
-          },
-        }),
-        prisma.place.findMany({
-          where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: {
-            id: true,
-            name: true,
-            isoCountryCode: true,
-            visits: { select: { visitedAt: true } },
-          },
-        }),
-        // The fourth source, and the one the owner's instruction is about: a
-        // house proves a country, so the page behind that row must be able to
-        // open it. `visited: false` is excluded — a bookmarked house is not a
-        // visit — and the stays travel UNFILTERED with their status, because
-        // `lodgingEvidence` owns which of them count and a house whose only
-        // stay was filtered away would arrive as a house with no stay, which
-        // counts as a night.
-        prisma.lodging.findMany({
-          where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: {
-            id: true,
-            name: true,
-            isoCountryCode: true,
-            stays: { select: { status: true, checkIn: true, checkOut: true } },
-          },
-        }),
-        loadHomeIatas(userId),
-      ]);
-
-      const detail = buildCountryDetail(
-        parsed.data.code,
-        flights,
-        airportCountries,
-        homeIatas,
-        portCalls.map((stop) => ({
-          cruiseId: stop.cruiseId,
-          portName: stop.port?.name ?? null,
-          country: stop.port?.country ?? null,
-          at: stop.arrivalTime ?? stop.date,
-        })),
-        places.flatMap((place) =>
-          place.visits.length > 0
-            ? place.visits.map((v) => ({
-                placeId: place.id,
-                name: place.name,
-                isoCountryCode: place.isoCountryCode,
-                at: v.visitedAt,
-              }))
-            : [
-                {
-                  placeId: place.id,
-                  name: place.name,
-                  isoCountryCode: place.isoCountryCode,
-                  at: null,
-                },
-              ],
-        ),
-        lodgings.map((lodging) => ({
-          lodgingId: lodging.id,
-          name: lodging.name,
-          isoCountryCode: lodging.isoCountryCode,
-          stays: lodging.stays,
-        })),
-      );
+      const detail = await loadCountryDetail(userId, parsed.data.code);
 
       if (!detail) {
         // Nothing evidences this country — including a code the catalogue does

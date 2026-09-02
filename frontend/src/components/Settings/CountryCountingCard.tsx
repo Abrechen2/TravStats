@@ -1,7 +1,11 @@
 import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
-import { COUNTRY_TIER_CHOICES, DEFAULT_COUNTRY_TIER, type CountryTier } from "../../types/passport";
+import {
+  DEFAULT_COUNTRY_TIER,
+  countryTierChoicesFor,
+  type CountryTier,
+} from "../../types/passport";
 
 /**
  * "Ein Land zählt ab …" — the user's own answer to the one question the data
@@ -29,6 +33,16 @@ import { COUNTRY_TIER_CHOICES, DEFAULT_COUNTRY_TIER, type CountryTier } from "..
  * There is deliberately no hours-based option. §2 refuses duration thresholds on
  * principle and has the measurement: six hours and twelve hours returned the
  * same set of countries, so a dial would promise precision the data lacks.
+ *
+ * ## And one option is not always offered
+ *
+ * `transited` — a border crossed on the ground — only exists once a location
+ * history has been swept, and until then choosing it produces exactly the same
+ * number as `visited`. §3.4c: *"the UI must not offer it as a filter that
+ * always returns nothing"*. A control with two settings that do the same thing
+ * does not read as an empty set; it reads as broken. So it appears only for an
+ * account that has track evidence — or one that already chose it, because a
+ * `<select>` whose value is absent from its options shows the wrong one.
  */
 
 /** The sentinel the `<select>` uses for "no choice of my own". A select cannot
@@ -41,6 +55,9 @@ export default function CountryCountingCard(): JSX.Element {
   const countryThreshold = useSettingsStore((s) => s.countryThreshold);
   const instanceCountryThreshold = useSettingsStore((s) => s.instanceCountryThreshold);
   const setCountryThreshold = useSettingsStore((s) => s.setCountryThreshold);
+  // `null` = /settings has not answered. Read as "no tracks": drawing an option
+  // that cannot work is worse than withholding one for a moment.
+  const hasCountryTracks = useSettingsStore((s) => s.hasCountryTracks) === true;
 
   // Null while /settings has not answered yet. Falling back to the module
   // default only names the fallback in the label — it never decides anything,
@@ -73,7 +90,7 @@ export default function CountryCountingCard(): JSX.Element {
               tier: t(`passport:thresholdChoice.options.${instanceTier}`),
             })}
           </option>
-          {COUNTRY_TIER_CHOICES.map((tier) => (
+          {countryTierChoicesFor(hasCountryTracks, countryThreshold).map((tier) => (
             <option key={tier} value={tier}>
               {t(`passport:thresholdChoice.options.${tier}`)}
             </option>

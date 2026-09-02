@@ -161,7 +161,7 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, threshold] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -204,6 +204,31 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
     }),
     loadHomeIatas(userId),
     /**
+     * Measured presence — spec §8. The country-days a background sweep already
+     * reduced from this account's location history, which is the only evidence
+     * class that can raise a country nobody logged.
+     *
+     * A cheap table read by construction: §8.4 put the expensive part in the
+     * nightly sweep precisely so this request does not do it. An account with
+     * no Dawarich connection has no rows, gets an empty array, and reaches
+     * exactly the code it did before.
+     *
+     * Every column the tier rule needs, and not one more — no coordinate has
+     * ever been in this table, and `spanKm` is deliberately left behind: it is
+     * evidence for a reader, not an input to the rule (see
+     * `./trackEvidence.ts`).
+     */
+    prisma.countryDay.findMany({
+      where: { userId },
+      select: {
+        date: true,
+        countryCode: true,
+        pointCount: true,
+        airportPointCount: true,
+        partialWindow: true,
+      },
+    }),
+    /**
      * Which tier the headline counts from — the user's own choice, else the
      * instance default (spec §3.2). Read HERE rather than inside
      * `buildPassport` so that function stays pure and testable against
@@ -235,6 +260,16 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
         : [{ isoCountryCode: place.isoCountryCode, at: null }]
     ),
     lodgings,
-    threshold
+    threshold,
+    // The stored `date` is midnight UTC — the one clock a GPS fix carries — so
+    // it is read back as a UTC day and never through a local calendar, which
+    // would move a border crossing onto the neighbouring day.
+    countryDays.map((row) => ({
+      date: row.date.toISOString().slice(0, 10),
+      countryCode: row.countryCode,
+      pointCount: row.pointCount,
+      airportPointCount: row.airportPointCount,
+      partialWindow: row.partialWindow,
+    }))
   );
 }

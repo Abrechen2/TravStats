@@ -31,7 +31,12 @@ import { useSettingsStore } from "../../../store/settingsStore";
 describe("CountryCountingCard", () => {
   beforeEach(() => {
     update.mockClear();
-    useSettingsStore.setState({ countryThreshold: null, instanceCountryThreshold: "visited" });
+    useSettingsStore.setState({
+      countryThreshold: null,
+      instanceCountryThreshold: "visited",
+      // Most accounts. The two cases that differ set it themselves.
+      hasCountryTracks: null,
+    });
   });
 
   it("offers the instance default as a value, and names it", () => {
@@ -51,10 +56,10 @@ describe("CountryCountingCard", () => {
   it("shows the effect of the tier currently in force, not of the user's own field", () => {
     // No choice of their own: what applies is the instance's, so that is the
     // sentence the user must read.
-    useSettingsStore.setState({ countryThreshold: null, instanceCountryThreshold: "transit" });
+    useSettingsStore.setState({ countryThreshold: null, instanceCountryThreshold: "connection" });
     render(<CountryCountingCard />);
 
-    expect(screen.getByText("passport:thresholdChoice.effect.transit")).toBeTruthy();
+    expect(screen.getByText("passport:thresholdChoice.effect.connection")).toBeTruthy();
   });
 
   it("always states that the country list does not move", () => {
@@ -85,16 +90,42 @@ describe("CountryCountingCard", () => {
     expect(update).toHaveBeenCalledWith({ countryThreshold: null });
   });
 
-  it("offers exactly the three tiers, lowest bar first, and no hours-based option", () => {
-    render(<CountryCountingCard />);
-
-    const values = Array.from(
+  /** Every value the `<select>` currently offers, in order. */
+  const optionValues = (): string[] =>
+    Array.from(
       screen.getByRole("combobox").querySelectorAll("option"),
       (o) => (o as HTMLOptionElement).value
     );
+
+  it("offers the tiers lowest bar first, and no hours-based option", () => {
+    useSettingsStore.setState({ hasCountryTracks: true });
+    render(<CountryCountingCard />);
+
     // §2 refuses duration thresholds on principle: six hours and twelve hours
     // returned the same set of countries, so a dial would promise precision the
     // data does not hold.
-    expect(values).toEqual(["__instance__", "transit", "visited", "slept"]);
+    expect(optionValues()).toEqual(["__instance__", "connection", "transited", "visited", "slept"]);
+  });
+
+  it("withholds `transited` from an account with no location history", () => {
+    // §3.4c: a road crossing is observable only through a location history, so
+    // on an account without one this option would produce exactly the same
+    // number as `visited`. A control with two settings that do the same thing
+    // does not read as an empty set — it reads as broken.
+    useSettingsStore.setState({ hasCountryTracks: null, countryThreshold: null });
+    render(<CountryCountingCard />);
+
+    expect(optionValues()).toEqual(["__instance__", "connection", "visited", "slept"]);
+  });
+
+  it("still shows `transited` to somebody who already chose it", () => {
+    // A `<select>` whose current value is missing from its options silently
+    // displays a different one. Their choice stays theirs to see and to change,
+    // whatever the sweep has found so far.
+    useSettingsStore.setState({ hasCountryTracks: false, countryThreshold: "transited" });
+    render(<CountryCountingCard />);
+
+    expect(optionValues()).toContain("transited");
+    expect(screen.getByRole("combobox")).toHaveValue("transited");
   });
 });

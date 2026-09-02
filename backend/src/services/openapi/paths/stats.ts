@@ -188,7 +188,15 @@ readOnlyStat(
     "spell — a one-way arrival, a row with no usable clock, or a gap spanning more " +
     "nights than a stay could — and `notApplicable` where no flight touched it at " +
     "all. A country proved only by a hotel has an unknown ground time, not a zero " +
-    "one, and is never given a synthesised number."
+    "one, and is never given a synthesised number. Since 2026-09-02 a country may " +
+    "also be proved by `track` — location history reduced to country-days on the " +
+    "server, never positions — which is the only evidence that can raise a country " +
+    "no flight, cruise or house records, such as one crossed by car. It brings the " +
+    "`transited` tier with it: a day shared with another country is a border " +
+    "crossed on the ground, which counts, while a country whose every recorded " +
+    "point lay at an airport the traveller demonstrably flew through stays a " +
+    "`connection`, which does not. A track proves DAYS and never hours: it bounds " +
+    "no departure, so its ground time is `notApplicable`."
 );
 
 readOnlyStat(
@@ -219,7 +227,11 @@ registry.registerPath({
     "editable — the point of the drill-down, not a detail of it. No country name " +
     "and no composed prose: the client names the code in the reader's language. " +
     "The tier, the days present and the ground time are NOT here: they belong to " +
-    "the passport row, where one derivation owns them.",
+    "the passport row, where one derivation owns them. A country proved by " +
+    "location history answers here too, as a single `track` timeline entry " +
+    "carrying the number of days and the number of recorded points — a count, " +
+    "never a verdict: the upstream payload cannot say whether a point was " +
+    "measured by GPS or estimated from a photograph, so nothing here claims to.",
   tags: statsTag,
   request: { params: z.object({ code: z.string() }) },
   responses: {

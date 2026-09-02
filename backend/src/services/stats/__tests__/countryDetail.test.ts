@@ -317,7 +317,7 @@ describe("buildCountryDetail", () => {
 
   it("caps the timeline and says that it did", () => {
     const many = Array.from({ length: 5 }, (_, i) => flight(`f${i}`, "MUC", "FRA"));
-    const detail = buildCountryDetail("DE", many, countries, [], [], [], [], 2);
+    const detail = buildCountryDetail("DE", many, countries, [], [], [], [], [], 2);
 
     expect(detail?.timeline).toHaveLength(2);
     expect(detail?.timelineTruncated).toBe(true);

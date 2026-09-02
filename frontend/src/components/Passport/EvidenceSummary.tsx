@@ -13,13 +13,15 @@ import TierBadge from "./TierBadge";
  * The threshold is NAMED rather than implied. It is a rule, and a rule the
  * reader did not choose should at least be legible.
  *
- * ## Three tiers, and no fourth
+ * ## The band lists the tiers this ACCOUNT can have, not the four that exist
  *
- * The band lists exactly the tiers the data can produce. The design plans a
- * `transited` rung for a border crossed by road; nothing in a flight, a cruise
- * or a hotel records one, so until GPS tracks arrive no record can carry it. It
- * is not shown, because a category that is permanently zero is indistinguishable
- * from a category that is broken.
+ * `transited` — a border crossed on the ground — is reachable only through
+ * location history. On an account with none it would be a permanent zero, and a
+ * category that is always zero is indistinguishable from a category that is
+ * broken (spec §3.4c). So the rung is drawn only where a row could carry it,
+ * which `hasTracks` answers by looking at the payload rather than by guessing
+ * from a count of zero: an account WITH location history and no road crossing
+ * yet should see the honest zero.
  *
  * ## No hour buckets
  *
@@ -31,15 +33,19 @@ import TierBadge from "./TierBadge";
  */
 export default function EvidenceSummary({
   summary,
+  hasTracks,
 }: {
   summary: Passport["summary"];
+  /** Does any country in this passport carry track evidence? See above. */
+  hasTracks: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
 
   const tiers = [
     { tier: "slept" as const, count: summary.byTier.slept },
     { tier: "visited" as const, count: summary.byTier.visited },
-    { tier: "transit" as const, count: summary.byTier.transit },
+    ...(hasTracks ? [{ tier: "transited" as const, count: summary.byTier.transited }] : []),
+    { tier: "connection" as const, count: summary.byTier.connection },
   ];
 
   const kinds = [
@@ -47,6 +53,7 @@ export default function EvidenceSummary({
     { kind: "port" as const, count: summary.byEvidence.port },
     { kind: "place" as const, count: summary.byEvidence.place },
     { kind: "lodging" as const, count: summary.byEvidence.lodging },
+    ...(hasTracks ? [{ kind: "track" as const, count: summary.byEvidence.track }] : []),
   ];
 
   return (

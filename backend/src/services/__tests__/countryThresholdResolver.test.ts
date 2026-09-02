@@ -69,40 +69,41 @@ describe("resolveCountryThreshold", () => {
 
   it("lets a user override beat the instance default", async () => {
     await setInstance("slept");
-    await setUser("transit");
+    await setUser("connection");
 
     const resolved = await resolveCountryThreshold(userId);
 
-    expect(resolved.effective).toBe("transit");
-    expect(resolved.user).toBe("transit");
+    expect(resolved.effective).toBe("connection");
+    expect(resolved.user).toBe("connection");
     // The instance default keeps travelling even when it is overridden — the
     // settings UI has to NAME what clearing the choice would return to.
     expect(resolved.instance).toBe("slept");
   });
 
   it("returns to the instance default when the user clears their choice", async () => {
-    await setInstance("transit");
+    await setInstance("connection");
     await setUser("slept");
     expect(await countryThresholdFor(userId)).toBe("slept");
 
     await setUser(null);
 
-    expect(await countryThresholdFor(userId)).toBe("transit");
+    expect(await countryThresholdFor(userId)).toBe("connection");
   });
 
   it("answers the instance default for a caller with no user at all", async () => {
-    await setInstance("transit");
+    await setInstance("connection");
 
     const resolved = await resolveCountryThreshold();
 
-    expect(resolved.effective).toBe("transit");
+    expect(resolved.effective).toBe("connection");
     expect(resolved.user).toBeNull();
   });
 
   it("treats an unreadable stored value as no choice rather than as a filter", async () => {
     // The columns are plain TEXT — `CountryTier` owns the closed set in
     // TypeScript. So a row written by an older build, edited by hand, or
-    // carrying a retired vocabulary (`transit` becomes `connection` in §3.4c)
+    // carrying a retired vocabulary (`transit` became `connection` in §3.4c,
+    // and a database the rename migration never ran against still holds it)
     // can hold something the ranking does not know. Filtering against a rank
     // that does not exist would count ZERO countries and look like data loss.
     await setInstance("slept");
@@ -114,14 +115,14 @@ describe("resolveCountryThreshold", () => {
     expect(resolved.effective).toBe("slept");
   });
 
-  it("falls back to `visited` when the INSTANCE value is unreadable", async () => {
+  it("falls back to `transited` when the INSTANCE value is unreadable", async () => {
     await setInstance("whatever_the_admin_typed");
 
-    expect((await resolveCountryThreshold(userId)).instance).toBe("visited");
+    expect((await resolveCountryThreshold(userId)).instance).toBe("transited");
   });
 
   it("treats a user with no settings row at all as unset", async () => {
-    await setInstance("transit");
+    await setInstance("connection");
     const stranger = await prisma.user.create({
       data: {
         username: `threshold-nosettings-${Date.now()}`,
@@ -131,7 +132,7 @@ describe("resolveCountryThreshold", () => {
     });
 
     try {
-      expect(await countryThresholdFor(stranger.id)).toBe("transit");
+      expect(await countryThresholdFor(stranger.id)).toBe("connection");
     } finally {
       await prisma.user.delete({ where: { id: stranger.id } }).catch(() => {});
     }

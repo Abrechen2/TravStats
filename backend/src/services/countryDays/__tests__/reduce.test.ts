@@ -45,14 +45,20 @@ describe("reduceToCountryDays", () => {
   });
 
   /**
-   * The whole point of the module: what comes back is a day, a code and two
+   * The whole point of the module: what comes back is a day, a code and three
    * scalars. A caller cannot reconstruct where anybody was, which is what makes
    * the table safe to keep and safe to read.
    */
   it("returns no coordinate of any kind", () => {
     const [row] = reduceToCountryDays([at(MARCH_3, 59.4, 24.7)], countryAt);
 
-    expect(Object.keys(row).sort()).toEqual(["countryCode", "date", "pointCount", "spanKm"]);
+    expect(Object.keys(row).sort()).toEqual([
+      "airportPointCount",
+      "countryCode",
+      "date",
+      "pointCount",
+      "spanKm",
+    ]);
     expect(JSON.stringify(row)).not.toContain("59.4");
     expect(JSON.stringify(row)).not.toContain("24.7");
   });

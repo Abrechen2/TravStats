@@ -26,7 +26,13 @@
  *    the passport, and finding it took a database session. With the lodging in
  *    this timeline, carrying its id, it takes two clicks.
  *
- * Rules 5 and 6 are the reason this returns a country the user has never flown
+ * 7. MEASURED PRESENCE IS EVIDENCE TOO (spec §8). A country-day is the one
+ *    kind that names no record a user typed, so it cannot be opened the way a
+ *    flight or a house can — but leaving it out would answer 404 for a country
+ *    that only a location history proves, and put the list and this page back
+ *    into exactly the disagreement rule 6 was written about.
+ *
+ * Rules 5, 6 and 7 are the reason this returns a country the user has never flown
  * to. A passport row evidenced by a cruise or a hotel is clickable; answering
  * 404 for it would put the list and the detail page into exactly the
  * disagreement #42 is about. Such a country carries no entries and no
@@ -96,6 +102,24 @@ export interface CountryDetailPlaceVisit {
 }
 
 /**
+ * One stored `CountryDay`, as this page reads it — the days a location history
+ * placed the traveller somewhere (spec §8).
+ *
+ * No `airportPointCount` and no `partialWindow`: those exist for the TIER, and
+ * the tier is the passport row's, not this page's. Asking for them here would
+ * invite deriving a second answer to "how strong is this evidence", which is
+ * exactly what the header refuses.
+ */
+export interface CountryDetailTrackDay {
+  /** UTC calendar day, `YYYY-MM-DD`. */
+  date: string;
+  /** ISO 3166-1 alpha-2. */
+  countryCode: string;
+  /** How many points attested this country on this day. */
+  pointCount: number;
+}
+
+/**
  * A house the user recorded, with the stays that say when — the kind this page
  * could not open until 2026-09-02, and the motivating case of the whole design.
  *
@@ -138,7 +162,24 @@ export type CountryTimelineEntry =
     }
   | { kind: "port"; date: string | null; cruiseId: string; portName: string | null }
   | { kind: "place"; date: string | null; placeId: string; name: string }
-  | { kind: "lodging"; date: string | null; lodgingId: string; name: string };
+  | { kind: "lodging"; date: string | null; lodgingId: string; name: string }
+  /**
+   * Measured presence — ONE entry for the whole country, not one per day.
+   *
+   * The others name a record somebody typed and can go and edit. A country-day
+   * is not that: it is a reduction of a location history that lives on the
+   * user's own server, and there is nothing here to correct except the
+   * connection that produced it. So the entry carries what was observed —
+   * `days` and `points` — and the client links to where that connection is
+   * configured.
+   *
+   * `points` is published RAW and deliberately not turned into a word. Spec
+   * §8.3: the Dawarich payload cannot say whether a fix was measured by GPS or
+   * estimated from a photograph, so a day held up by four hundred fixes and a
+   * day held up by one must be distinguishable by a reader without anyone
+   * deciding on their behalf what the difference means.
+   */
+  | { kind: "track"; date: string | null; days: number; points: number };
 
 export interface CountryDetail {
   /** ISO-3166 alpha-2. Never a flag: flags are political and age. */
@@ -160,6 +201,9 @@ export interface CountryDetail {
   places: number;
   /** Houses in this country whose record proves presence. See rule 6. */
   lodgings: number;
+  /** Distinct days a location history placed the traveller here. Zero for an
+   *  account that has none, which is most of them. */
+  trackDays: number;
   /**
    * The busiest visited airport that carries coordinates — what a map centres
    * on. Null when none does, so the client drops its globe control rather than
@@ -194,6 +238,7 @@ const KIND_RANK: Record<CountryTimelineEntry["kind"], number> = {
   port: 1,
   place: 2,
   lodging: 3,
+  track: 4,
 };
 
 const isoDay = (at: Date | null): string | null => (at ? at.toISOString().slice(0, 10) : null);
@@ -220,6 +265,7 @@ export function buildCountryDetail(
   portCalls: readonly CountryDetailPortCall[] = [],
   placeVisits: readonly CountryDetailPlaceVisit[] = [],
   lodgings: readonly CountryDetailLodging[] = [],
+  trackDays: readonly CountryDetailTrackDay[] = [],
   timelineLimit: number = COUNTRY_TIMELINE_LIMIT
 ): CountryDetail | null {
   const wanted = isoCountryCode(code);
@@ -353,7 +399,41 @@ export function buildCountryDetail(
     });
   }
 
-  if (entries === 0 && portCallCount === 0 && placeCount === 0 && lodgingCount === 0) return null;
+  /**
+   * Measured presence, folded into ONE entry rather than one per day.
+   *
+   * A country driven through for a fortnight would otherwise contribute
+   * fourteen rows that all say the same thing and push the records a reader
+   * actually came for past the limit. What matters is that the days are
+   * there, how many, and how thinly they were observed.
+   *
+   * Dated at the LATEST day, because the timeline is newest-first and a summary
+   * belongs beside the most recent thing it describes. `stretchYears` still
+   * sees both ends, so the period the page reports covers the whole track.
+   */
+  const trackHere = trackDays.filter((row) => row.countryCode.toUpperCase() === wanted);
+  const trackDayCount = new Set(trackHere.map((row) => row.date)).size;
+  if (trackDayCount > 0) {
+    const days = [...new Set(trackHere.map((row) => row.date))].sort();
+    stretchYears(new Date(`${days[0]}T00:00:00.000Z`));
+    stretchYears(new Date(`${days[days.length - 1]}T00:00:00.000Z`));
+    timeline.push({
+      kind: "track",
+      date: days[days.length - 1],
+      days: trackDayCount,
+      points: trackHere.reduce((sum, row) => sum + row.pointCount, 0),
+    });
+  }
+
+  if (
+    entries === 0 &&
+    portCallCount === 0 &&
+    placeCount === 0 &&
+    lodgingCount === 0 &&
+    trackDayCount === 0
+  ) {
+    return null;
+  }
 
   // A country reached without a landing has no airport to take a continent
   // from. `continentForCountry` answers null for a transcontinental one rather
@@ -376,7 +456,15 @@ export function buildCountryDetail(
   // house. The rank decides which single LABEL the page wears, not how strong
   // the proof is — that is the passport row's `tier`.
   const evidence: PassportEvidence =
-    entries > 0 ? "flight" : portCallCount > 0 ? "port" : placeCount > 0 ? "place" : "lodging";
+    entries > 0
+      ? "flight"
+      : portCallCount > 0
+        ? "port"
+        : placeCount > 0
+          ? "place"
+          : lodgingCount > 0
+            ? "lodging"
+            : "track";
 
   return {
     code: wanted,
@@ -394,6 +482,7 @@ export function buildCountryDetail(
     portCalls: portCallCount,
     places: placeCount,
     lodgings: lodgingCount,
+    trackDays: trackDayCount,
     anchor: anchored ? { iata: anchored[0], lat: anchored[1].lat, lon: anchored[1].lon } : null,
     timeline: ordered.slice(0, timelineLimit),
     timelineTruncated: ordered.length > timelineLimit,

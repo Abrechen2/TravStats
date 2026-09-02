@@ -68,6 +68,7 @@ import {
   createCountryDayAccumulator,
   drainCountryDays,
   utcDay,
+  type KnownAirportTest,
 } from "../countryDays/reduce";
 import { replaceCountryDays } from "../countryDays/store";
 import type { DawarichClient } from "./dawarichClient";
@@ -105,6 +106,16 @@ export interface CountryDaySweepDeps {
   client: DawarichClient;
   /** `services/geo/countryFromCoordinates.ts`, loaded once by the caller. */
   countryAt: (lat: number, lon: number) => string | null;
+  /**
+   * "Is this position on the grounds of an airport this account flew through?"
+   * — `services/countryDays/knownAirports.ts`, built once per account by the
+   * caller because it reads that account's flights.
+   *
+   * Optional: omitted, every point answers no, which reports "nothing was
+   * airside" and lifts a country onto a stronger rung than a connection. The
+   * safe direction, and the one an account with no flights genuinely deserves.
+   */
+  atKnownAirport?: KnownAirportTest;
   now: Date;
   /** Re-walk the whole history from scratch, ignoring the stored cursors. */
   force?: boolean;
@@ -187,7 +198,7 @@ async function pullWindow(
   });
 
   if (!truncated) {
-    accumulateCountryDays(accumulator, points, deps.countryAt);
+    accumulateCountryDays(accumulator, points, deps.countryAt, deps.atKnownAirport);
     return;
   }
 
@@ -195,7 +206,7 @@ async function pullWindow(
   if (spanMs <= DAY_MS) {
     // The floor. Keep the newest slice Dawarich handed back — those points are
     // real observations — and record that this day's silence proves nothing.
-    accumulateCountryDays(accumulator, points, deps.countryAt);
+    accumulateCountryDays(accumulator, points, deps.countryAt, deps.atKnownAirport);
     for (const day of daysCovered(startAt, endAtExclusive)) run.partialDays.add(day);
     return;
   }

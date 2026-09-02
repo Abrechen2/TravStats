@@ -46,6 +46,15 @@ jest.mock("../../services/geo/countryFromCoordinates", () => ({
   getCountryResolver: () => getCountryResolver(),
 }));
 
+/**
+ * Built from the account's own flights (§8.2). A scheduling test has no flight
+ * table and does not need one — what matters here is WHO is swept, and the
+ * airport rule is `services/countryDays/__tests__` business.
+ */
+jest.mock("../../services/countryDays/knownAirports", () => ({
+  buildKnownAirportTest: async () => () => false,
+}));
+
 jest.mock("../../services/dawarich/dawarichResolver", () => ({
   buildUserDawarichConnection: (baseUrl: string | null, apiKey: string | null) =>
     baseUrl && apiKey ? { baseUrl, apiKey, source: "user" } : null,

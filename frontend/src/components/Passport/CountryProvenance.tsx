@@ -60,10 +60,26 @@ const linkFor = (entry: CountryTimelineEntry): string => {
       // The house itself, not the list. A list is where a reader starts
       // hunting; the design's promise is that they do not have to.
       return `/lodging/${entry.lodgingId}`;
+    case "track":
+      // There is no record to open — a country-day is a reduction of a
+      // location history, not something anybody typed. What CAN be reached is
+      // the connection that produced it, and reaching it is the same promise:
+      // the reader sees where the entry came from and can change it.
+      return "/settings";
   }
 };
 
-const labelFor = (entry: CountryTimelineEntry): string => {
+/**
+ * What the link says. Takes the translator because ONE kind has no name of its
+ * own: a country-day names no record, so its label has to be composed from the
+ * two figures it does carry, and composing user-facing prose here rather than
+ * on the server is the existing rule (`passport.ts` rule 4 — the month has a
+ * language).
+ */
+const labelFor = (
+  entry: CountryTimelineEntry,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string => {
   switch (entry.kind) {
     case "flight": {
       // A flight with no number is named by its route, and one with neither by
@@ -76,6 +92,11 @@ const labelFor = (entry: CountryTimelineEntry): string => {
     case "place":
     case "lodging":
       return entry.name;
+    case "track":
+      // The two observable facts, and no verdict between them (§8.3): how many
+      // days were recorded, and how thinly. A phrase like "GPS-measured" would
+      // claim a provenance the Dawarich payload does not carry.
+      return t("passport:provenance.trackLabel", { days: entry.days, points: entry.points });
   }
 };
 
@@ -113,6 +134,13 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
   }, [code]);
 
   const timeline = detail?.timeline ?? [];
+  /**
+   * §8.3, said out loud rather than implied. A track entry names days and
+   * points and NOT a provenance, because the upstream payload carries none —
+   * so the panel states that, instead of leaving a reader to assume the figure
+   * is a GPS measurement.
+   */
+  const hasTrack = timeline.some((entry) => entry.kind === "track");
   // A 404 is an ANSWER, not a failure: the drill-down says "nothing evidences
   // this country" — all four kinds consulted. Only a real load error failed.
   const brokeDown = failure === "loadError";
@@ -141,7 +169,7 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
                   to={linkFor(entry)}
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  {labelFor(entry)}
+                  {labelFor(entry, t)}
                 </Link>
                 <span className="ml-2" style={{ color: "var(--text-muted)" }}>
                   {t(`passport:kinds.${entry.kind}`)}
@@ -153,6 +181,10 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
               </li>
             );
           })}
+
+          {hasTrack && (
+            <li style={{ color: "var(--text-muted)" }}>{t("passport:provenance.trackNote")}</li>
+          )}
 
           {detail?.timelineTruncated === true && (
             <li style={{ color: "var(--text-muted)" }}>{t("passport:provenance.truncated")}</li>

@@ -779,8 +779,15 @@ model AdminSettings {
   ///
   /// Non-nullable with a default, deliberately: there is no ENV fallback and no
   /// "unset" state a caller has to handle, exactly like `betaFeaturesEnabled`.
-  /// The default is "visited" — a connection does not count.
-  countryThreshold String @default("visited") @map("country_threshold")
+  ///
+  /// The default is "transited" — a connection does not count, and everything
+  /// else does. That is the SAME rule the earlier default "visited" stated,
+  /// re-spelled: while there were three rungs, "everything but the bottom one"
+  /// was called `visited`; §3.4c added `transited` beneath it and renamed the
+  /// bottom rung `connection`, so the same sentence is now spelled `transited`.
+  /// Migration `20260902160000_country_tier_connection_rename` rewrites stored
+  /// values along that mapping, so no instance's headline moves.
+  countryThreshold String @default("transited") @map("country_threshold")
 
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
@@ -1027,15 +1034,37 @@ model CountryDay {
   /// count is published raw and whoever displays it decides. Same discipline as
   /// the ground time in §3.4b: shown as evidence, never used as a threshold.
   pointCount Int   @map("point_count")
+  /// How many of that day's points lay on the grounds of an airport this
+  /// account is KNOWN to have flown through — the §8.2 signal.
+  ///
+  /// *"A GPS point in Doha is still a point in Qatar even if you never left the
+  /// terminal."* Location history cannot tell a connection from a visit by
+  /// itself; it becomes able to when the flights are read beside it. So each
+  /// point is tested, while it is still in memory, against the coordinates of
+  /// the airports this user's own flown flights name — and only those, because
+  /// "an airport" is a place anybody might drive past, while "an airport you
+  /// flew through" is a fact assembled from two records this server holds.
+  ///
+  /// Recovering it afterwards is impossible by construction: the positions are
+  /// discarded inside `services/countryDays/reduce.ts` and never stored. That
+  /// is why it is a column and not a derivation.
+  ///
+  /// A COUNT and not a verdict, the same discipline `pointCount` follows. The
+  /// rule that reads it — every point airside means the country stays a
+  /// `connection` — lives in `services/stats/trackEvidence.ts`, in one place,
+  /// where it can be argued with. Rows written before this column existed read
+  /// zero, which claims nothing was airside and so errs towards the STRONGER
+  /// tier: the safe direction, since it keeps a country in the headline rather
+  /// than dropping one out of it.
+  airportPointCount Int @default(0) @map("airport_point_count")
   /// The diagonal of the bounding box of that day's points inside this country,
   /// in kilometres — how far apart they were, never where they were.
   ///
-  /// Exists for §3.4c, the `transited` rung, which the design says "no other
-  /// data source can populate": driving across Estonia and changing planes in
-  /// Doha both leave points in a country, and the thing that tells them apart
-  /// is that one set is spread across the country and the other sits at one
-  /// airport. Deriving that later is impossible by construction — the points
-  /// are gone — so the scalar is kept and the decision is not made here.
+  /// Kept as evidence a reader can weigh, NOT as the rule that separates the
+  /// two lower rungs. That job went to `airport_point_count` above, because a
+  /// bare kilometre cut-off is exactly the dial §2 refuses — it would call a
+  /// compact city a connection and a sprawling airport a visit, and there is no
+  /// value of it that is right.
   spanKm     Float @map("span_km")
   /// True when the window this day came out of hit the client's `MAX_PAGES`
   /// cap even after being subdivided to a single day (`dawarichClient.ts`).

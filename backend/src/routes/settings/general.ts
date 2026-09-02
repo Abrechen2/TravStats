@@ -163,9 +163,15 @@ export const settingsUpdateSchema = settingsSchema;
  * (Aufenthalt)"), and a client that guessed the word would say the wrong one on
  * any instance whose admin had changed it.
  */
-function buildSettingsResponse(instance: {
+function buildSettingsResponse(extra: {
   betaFeaturesEnabled: boolean;
   countryThreshold: CountryTier;
+  /**
+   * Whether THIS account has any track evidence. Per-user, unlike the two
+   * above — which is why the parameter is not called `instance`: a name that
+   * said "instance" would invite the next reader to cache it across users.
+   */
+  hasCountryTracks: boolean;
 }, name: {
   firstName: string | null;
   lastName: string | null;
@@ -220,9 +226,29 @@ function buildSettingsResponse(instance: {
     countryThreshold: parseCountryTier(record.countryThreshold),
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
-    betaFeaturesEnabled: instance.betaFeaturesEnabled,
-    instanceCountryThreshold: instance.countryThreshold,
+    betaFeaturesEnabled: extra.betaFeaturesEnabled,
+    instanceCountryThreshold: extra.countryThreshold,
+    hasCountryTracks: extra.hasCountryTracks,
   };
+}
+
+/**
+ * Does this account have any country-day at all?
+ *
+ * Spec §3.4c: *"the UI must not offer it as a filter that always returns
+ * nothing"*. Two of the four evidence tiers — `transited` and the `track` kind
+ * behind it — can only exist once a location history has been swept, so on the
+ * overwhelming majority of accounts offering them would be a control whose
+ * every setting produces the identical number. That does not read as an empty
+ * set; it reads as a bug.
+ *
+ * An existence check and NOT a count: a number would invite a client to draw
+ * it, and this answers a layout question, not a statistical one. `findFirst`
+ * on the `(user_id, …)` prefix of the unique key, so it costs an index probe.
+ */
+async function hasCountryTracks(userId: string): Promise<boolean> {
+  const row = await prisma.countryDay.findFirst({ where: { userId }, select: { id: true } });
+  return row !== null;
 }
 
 // GET /
@@ -231,7 +257,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const userId = req.userId!;
     const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
       await getInstanceSettings();
-    const instance = { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold };
+    const extra = {
+      betaFeaturesEnabled,
+      countryThreshold: instanceCountryThreshold,
+      hasCountryTracks: await hasCountryTracks(userId),
+    };
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
@@ -260,12 +290,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(instance, name, created);
+      const response = buildSettingsResponse(extra, name, created);
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(instance, name, existing);
+    const response = buildSettingsResponse(extra, name, existing);
 
     logger.info({
       operation: 'get_settings_response',
@@ -290,7 +320,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
     const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
       await getInstanceSettings();
-    const instance = { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold };
+    const extra = {
+      betaFeaturesEnabled,
+      countryThreshold: instanceCountryThreshold,
+      hasCountryTracks: await hasCountryTracks(userId),
+    };
     logger.info({ operation: 'settings_update', userId });
 
     const existing = await prisma.userSettings.findUnique({
@@ -446,7 +480,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       select: { firstName: true, lastName: true },
     });
     const response = buildSettingsResponse(
-      instance,
+      extra,
       { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
       saved
     );

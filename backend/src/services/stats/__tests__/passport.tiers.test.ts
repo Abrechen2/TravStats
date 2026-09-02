@@ -14,7 +14,7 @@ import { buildPassport, type PassportFlight, type PassportLodging } from "../pas
  *      because lodging was not evidence here. Three of the owner's countries
  *      exist only that way.
  *
- * And the two boundaries that keep the fix honest: a country classed `transit`
+ * And the two boundaries that keep the fix honest: a country classed `connection`
  * still appears in the LIST (the tier is a hint, not a verdict — Ethiopia shows
  * 4.7 hours of ground time here and three GPS-measured days in an independent
  * tracker), and a stay that has not happened yet is a booking, not a visit.
@@ -187,11 +187,11 @@ describe("a house is evidence", () => {
 });
 
 describe("a connection is not a visit", () => {
-  it("calls a country reached only by a same-day change of planes `transit`", () => {
+  it("calls a country reached only by a same-day change of planes `connection`", () => {
     const p = buildPassport(CONNECTION, AIRPORTS, [], NOW);
 
     const qa = p.countries.find((c) => c.code === "QA");
-    expect(qa?.tier).toBe("transit");
+    expect(qa?.tier).toBe("connection");
     expect(qa?.counted).toBe(false);
   });
 
@@ -206,8 +206,8 @@ describe("a connection is not a visit", () => {
     expect(p.countries.map((c) => c.code).sort()).toEqual(["DE", "QA", "SG"]);
     expect(p.summary.countriesTotal).toBe(3);
     expect(p.summary.countries).toBe(2);
-    expect(p.summary.countryThreshold).toBe("visited");
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transit: 1 });
+    expect(p.summary.countryThreshold).toBe("transited");
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 1 });
   });
 
   it("calls the same two legs `slept` when the local day changed in between", () => {
@@ -245,12 +245,12 @@ describe("a connection is not a visit", () => {
       NOW
     );
 
-    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("transit");
+    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("connection");
   });
 
   it("does not call a domestic hop a connection", () => {
     // MUC -> TXL touches Germany twice on one day, which is the same SHAPE as a
-    // connection and is nothing like one. Reading it as a transit would have
+    // connection and is nothing like one. Reading it as a connection would have
     // dropped the home country of anybody who only flies domestically.
     const domestic = new Map<string, string | null>(AIRPORTS).set("TXL", "DE");
     const p = buildPassport([flight("MUC", "TXL", "2021-05-01")], domestic, [], NOW);
@@ -265,7 +265,7 @@ describe("a connection is not a visit", () => {
     // change of planes, and both were correct before this change.
     const p = buildPassport([flight("MUC", "SIN", "2024-03-01")], AIRPORTS, [], NOW);
 
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transit: 0 });
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 0 });
     expect(p.summary.countries).toBe(2);
   });
 });
@@ -280,7 +280,7 @@ describe("a day trip is not a connection", () => {
   ];
 
   it("counts a same-day out-and-back — the country came back, so it was not a connection", () => {
-    // THE DEFECT. Both same-day shapes were filed as `transit`, so a day spent
+    // THE DEFECT. Both same-day shapes were filed as `connection`, so a day spent
     // in Rome dropped Italy out of the headline. A connection continues ONWARD;
     // this one returns to the country it started in.
     const p = buildPassport(DAY_TRIP, AIRPORTS, [], NOW);
@@ -289,17 +289,17 @@ describe("a day trip is not a connection", () => {
     expect(it_?.tier).toBe("visited");
     expect(it_?.counted).toBe(true);
     expect(p.summary.countries).toBe(2);
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transit: 0 });
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 0 });
   });
 
-  it("still calls a same-day change of planes `transit` when the journey goes on", () => {
+  it("still calls a same-day change of planes `connection` when the journey goes on", () => {
     // The boundary. MUC -> DOH -> SIN is the same two-flight shape and means the
     // opposite: nobody came back, the traveller passed through. If this ever
     // turned `visited`, the seven sub-five-hour connections §1.1 measured would
     // all be back in the headline.
     const p = buildPassport(CONNECTION, AIRPORTS, [], NOW);
 
-    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("transit");
+    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("connection");
   });
 
   it("reads the return at COUNTRY level, not airport level", () => {
@@ -321,10 +321,10 @@ describe("a day trip is not a connection", () => {
     expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
   });
 
-  it("keeps the AMBIGUOUS same-day triangle at `transit`", () => {
+  it("keeps the AMBIGUOUS same-day triangle at `connection`", () => {
     // MUC -> FCO -> BCN cannot be told from a morning in Rome. It is also the
     // exact shape of every hub connection there is, so reading it as `visited`
-    // would empty the `transit` tier rather than err at its margin. The country
+    // would empty the `connection` tier rather than err at its margin. The country
     // keeps its row in the list, where a reader can see it and disagree.
     const p = buildPassport(
       [
@@ -338,7 +338,7 @@ describe("a day trip is not a connection", () => {
       NOW
     );
 
-    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("transit");
+    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("connection");
     expect(p.summary.countriesTotal).toBe(3);
     expect(p.summary.countries).toBe(2);
   });
@@ -395,7 +395,7 @@ describe("a day trip is not a connection", () => {
       NOW
     );
 
-    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("transit");
+    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("connection");
   });
 });
 
@@ -403,7 +403,7 @@ describe("strongest evidence wins, once", () => {
   it("reports a country both flown through and slept in as `slept`, in a single row", () => {
     // Austria in the owner's account: 24 houses, 9 stays — and the passport
     // counted it ONLY because of a single 0.9-hour connection. Remove that
-    // transit and a country with nine stays disappeared.
+    // connection and a country with nine stays disappeared.
     const p = buildPassport(
       CONNECTION,
       AIRPORTS,
@@ -546,7 +546,7 @@ describe("the evidence beside the tier", () => {
     });
     // And it still decides nothing: three hours is a connection because the
     // journey went onward, not because three is below some number.
-    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("transit");
+    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("connection");
   });
 
   it("reports a lodging-only country as notApplicable — never as zero", () => {
@@ -752,7 +752,7 @@ describe("a gap in the flight log is not time spent in a country", () => {
 
     expect(qa?.daysPresent).toBe(1);
     expect(qa?.groundTime).toEqual({ state: "measured", minutes: 180 });
-    expect(qa?.tier).toBe("transit");
+    expect(qa?.tier).toBe("connection");
   });
 
   it("leaves a LODGING stay counting its full span — only the inferred gap lost its middle", () => {
@@ -797,66 +797,66 @@ describe("the counting threshold moves the headline and nothing else", () => {
    * One country per tier, so every threshold has something to include AND
    * something to exclude:
    *
-   *   QA `transit` — MUC → DOH → SIN, both legs on the same local day at Doha
+   *   QA `connection` — MUC → DOH → SIN, both legs on the same local day at Doha
    *   SG `visited` — flown to, never out of again
    *   CZ `slept`   — a house with no stay at all (owner's decision 1.4)
    *
    * DE rides along as a second `visited`, which is what makes the middle
    * threshold's count a number rather than a coincidence.
    */
-  const at = (threshold: "transit" | "visited" | "slept") =>
+  const at = (threshold: "connection" | "transited" | "slept") =>
     buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")], threshold);
 
   /** Every row, with the ONE field the threshold is allowed to touch removed. */
   const rowsWithoutVerdict = (p: ReturnType<typeof buildPassport>) =>
     JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
 
-  it("returns a byte-identical country list at all three thresholds", () => {
-    const [transit, visited, slept] = [at("transit"), at("visited"), at("slept")];
+  it("returns a byte-identical country list at every threshold", () => {
+    const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
 
-    expect(rowsWithoutVerdict(visited)).toBe(rowsWithoutVerdict(transit));
-    expect(rowsWithoutVerdict(slept)).toBe(rowsWithoutVerdict(transit));
+    expect(rowsWithoutVerdict(transited)).toBe(rowsWithoutVerdict(connection));
+    expect(rowsWithoutVerdict(slept)).toBe(rowsWithoutVerdict(connection));
   });
 
   it("keeps `countriesTotal` and the tier split fixed while the headline moves", () => {
-    const [transit, visited, slept] = [at("transit"), at("visited"), at("slept")];
+    const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
 
     // The list is the same list, so everything that describes the WHOLE list
     // is the same too. Only the number that applies a rule to it moves.
-    for (const p of [visited, slept]) {
-      expect(p.summary.countriesTotal).toBe(transit.summary.countriesTotal);
-      expect(p.summary.byTier).toEqual(transit.summary.byTier);
-      expect(p.summary.byEvidence).toEqual(transit.summary.byEvidence);
+    for (const p of [transited, slept]) {
+      expect(p.summary.countriesTotal).toBe(connection.summary.countriesTotal);
+      expect(p.summary.byTier).toEqual(connection.summary.byTier);
+      expect(p.summary.byEvidence).toEqual(connection.summary.byEvidence);
     }
 
-    expect(transit.summary.countries).toBe(4); // DE, QA, SG, CZ
-    expect(visited.summary.countries).toBe(3); // …minus the Doha connection
+    expect(connection.summary.countries).toBe(4); // DE, QA, SG, CZ
+    expect(transited.summary.countries).toBe(3); // …minus the Doha connection
     expect(slept.summary.countries).toBe(1); // …only the house
-    expect(transit.summary.countriesTotal).toBe(4);
+    expect(connection.summary.countriesTotal).toBe(4);
   });
 
   it("never removes the connection country, at any threshold", () => {
     // The row a stricter setting stops COUNTING is exactly the row a user most
     // needs to see: it is the one they might want to correct.
-    for (const threshold of ["transit", "visited", "slept"] as const) {
+    for (const threshold of ["connection", "transited", "slept"] as const) {
       const qa = at(threshold).countries.find((c) => c.code === "QA");
       expect(qa).toBeDefined();
-      expect(qa?.tier).toBe("transit");
-      expect(qa?.counted).toBe(threshold === "transit");
+      expect(qa?.tier).toBe("connection");
+      expect(qa?.counted).toBe(threshold === "connection");
     }
   });
 
   it("publishes the threshold it actually counted from", () => {
     // Stated rather than assumed, so a client never explains the number with a
     // rule that is not the one that produced it.
-    for (const threshold of ["transit", "visited", "slept"] as const) {
+    for (const threshold of ["connection", "transited", "slept"] as const) {
       expect(at(threshold).summary.countryThreshold).toBe(threshold);
     }
   });
 
-  it("counts from `visited` when the caller names no threshold", () => {
+  it("counts from `transited` when the caller names no threshold", () => {
     const p = buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")]);
-    expect(p.summary.countryThreshold).toBe("visited");
+    expect(p.summary.countryThreshold).toBe("transited");
     expect(p.summary.countries).toBe(3);
   });
 });

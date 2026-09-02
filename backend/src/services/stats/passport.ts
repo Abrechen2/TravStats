@@ -61,10 +61,24 @@
  *      independent tracker. The tier is a hint, never a verdict, so nothing may
  *      disappear from the list on the strength of one.
  *
+ * 7. MEASURED PRESENCE IS EVIDENCE TOO (spec §8). Rules 5 and 6 count curated
+ *    EVENTS — a flight, a cruise, a house — and driving across a border is not
+ *    one, which is why Estonia and Lithuania were absent from this passport
+ *    while Latvia survived only because there happened to be a house in it.
+ *    Location history, reduced to country-days and nothing else, is the
+ *    evidence class that answers it, and it brings the `transited` rung with
+ *    it: no other source can populate one.
+ *
+ *    It also brings the obligation §8.3 puts on it. The payload cannot say
+ *    whether a fix was measured by GPS or estimated from a photograph, so
+ *    nothing here claims to know — `pointCount` is stored as a number and left
+ *    to be read. A track proves DAYS, never hours: it bounds no departure.
+ *
  * What the FLIGHTS prove — the spells on the ground, their tiers, their days and
- * their measured durations — lives in `./flightEvidence.ts`. It moved out when
- * this file crossed the 800-line limit; it is the same code, and the seam is
- * that this file assembles a card around an answer it does not compute.
+ * their measured durations — lives in `./flightEvidence.ts`, and what the
+ * TRACKS prove in `./trackEvidence.ts`. Both moved out when this file crossed
+ * the 800-line limit; the seam is that this file assembles a card around
+ * answers it does not compute.
  */
 
 import {
@@ -93,6 +107,7 @@ import {
   isoDayOf,
   type PassportFlight,
 } from "./flightEvidence";
+import { trackEvidence, type CountryDayRow } from "./trackEvidence";
 
 /**
  * Re-exported so every caller and every test keeps importing the passport's
@@ -154,22 +169,26 @@ export interface PassportLodging {
  * `shared/countryEvidence.ts` folds on, so the two cannot drift apart.
  *
  * Ordered: a landing outranks a port call, which outranks a recorded place,
- * which outranks a house — the order the owner's own split line reads in, and
- * the one a row shows when several kinds apply.
+ * which outranks a house, which outranks a track — the order the owner's own
+ * split line reads in, and the one a row shows when several kinds apply.
  *
- * Lodging joins the bottom of that order deliberately. The rank decides which
- * single LABEL a row wears, not how strong the proof is — `tier` answers that
- * now, and a house is the strongest proof there is. Putting lodging anywhere
- * else would have relabelled countries whose `evidence` is already correct, and
- * moved `byEvidence` figures for a reason that has nothing to do with the bug.
+ * Lodging and track join the bottom of that order deliberately. The rank
+ * decides which single LABEL a row wears, not how strong the proof is — `tier`
+ * answers that now, and a house is the strongest proof there is. Putting either
+ * anywhere else would relabel countries whose `evidence` is already correct and
+ * move `byEvidence` figures for a reason that has nothing to do with the
+ * change. `track` in particular arrives for countries that already have four
+ * kinds of evidence, so it takes the bottom rung and nothing a reader has
+ * already seen moves.
  */
 export type PassportEvidence = EvidenceKind;
 
 const EVIDENCE_RANK: Record<PassportEvidence, number> = {
-  flight: 4,
-  port: 3,
-  place: 2,
-  lodging: 1,
+  flight: 5,
+  port: 4,
+  place: 3,
+  lodging: 2,
+  track: 1,
 };
 
 /** The strongest kind among several. `kinds` is never empty by construction. */
@@ -359,7 +378,18 @@ export function buildPassport(
    * design rests on, because a country wrongly classed as a connection has to
    * stay VISIBLE to be corrected.
    */
-  threshold: CountryTier = PASSPORT_COUNTRY_THRESHOLD
+  threshold: CountryTier = PASSPORT_COUNTRY_THRESHOLD,
+  /**
+   * MEASURED presence — the stored country-days of spec §8, which is the one
+   * evidence class that can raise a country nobody logged. Everything else in
+   * this function is a curated event, and driving across a border is not one.
+   *
+   * Last in the list and defaulted, like every parameter before it, so an
+   * account with no location history — which is most of them — reaches exactly
+   * the same code it did before. What a track proves lives in
+   * `./trackEvidence.ts`; nothing about it is decided here.
+   */
+  trackDays: readonly CountryDayRow[] = []
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -558,6 +588,11 @@ export function buildPassport(
       at: visit.at,
     })),
     ...lodgingInputs,
+    // Measured presence. It creates its OWN rows for countries no curated
+    // record mentions — the fold loop below calls `addNonFlight` for any code
+    // `byCountry` does not already hold — which is the entire point: Estonia
+    // and Lithuania exist in this account only because somebody drove there.
+    ...trackEvidence(trackDays),
   ]);
 
   for (const row of evidence) {
@@ -649,11 +684,13 @@ export function buildPassport(
         port: countries.filter((c) => c.evidence === "port").length,
         place: countries.filter((c) => c.evidence === "place").length,
         lodging: countries.filter((c) => c.evidence === "lodging").length,
+        track: countries.filter((c) => c.evidence === "track").length,
       },
       byTier: {
         slept: countries.filter((c) => c.tier === "slept").length,
         visited: countries.filter((c) => c.tier === "visited").length,
-        transit: countries.filter((c) => c.tier === "transit").length,
+        transited: countries.filter((c) => c.tier === "transited").length,
+        connection: countries.filter((c) => c.tier === "connection").length,
       },
     },
     countries,

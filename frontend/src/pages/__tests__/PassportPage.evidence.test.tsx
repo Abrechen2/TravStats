@@ -68,8 +68,8 @@ const passport = (over: Partial<Passport["summary"]>, countries: PassportCountry
     continentsTotal: 7,
     firstStampYear: 2008,
     newThisYear: 1,
-    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5 },
-    byTier: { slept: 12, visited: 28, transit: 3 },
+    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5, track: 0 },
+    byTier: { slept: 12, visited: 28, transited: 0, connection: 3 },
     ...over,
   },
   countries,
@@ -86,7 +86,7 @@ describe("PassportPage — headline, total and threshold", () => {
 
   it("renders the headline and the total distinctly, and names the threshold", async () => {
     getPassportMock.mockResolvedValue(
-      passport({}, [country({}), country({ code: "ET", tier: "transit", counted: false })])
+      passport({}, [country({}), country({ code: "ET", tier: "connection", counted: false })])
     );
 
     render(
@@ -107,14 +107,37 @@ describe("PassportPage — headline, total and threshold", () => {
     // The rule between them is named rather than implied.
     expect(screen.getByText("passport:evidence.headlineNote")).toBeInTheDocument();
 
-    // And the strengths behind the total are broken out — three tiers, because
-    // three is what the data can produce. The planned road-transit rung has no
-    // record that can carry it and is deliberately absent.
+    // And the strengths behind the total are broken out. THREE rungs here, not
+    // four: this account has no location history, so no row could ever be
+    // `transited`, and §3.4c refuses a category that is permanently zero —
+    // it is indistinguishable from one that is broken.
     const band = screen.getByLabelText("passport:evidence.title");
     expect(within(band).getByTestId("tier-slept")).toBeInTheDocument();
     expect(within(band).getByTestId("tier-visited")).toBeInTheDocument();
-    expect(within(band).getByTestId("tier-transit")).toBeInTheDocument();
+    expect(within(band).getByTestId("tier-connection")).toBeInTheDocument();
     expect(within(band).queryByTestId("tier-transited")).not.toBeInTheDocument();
+  });
+
+  it("shows the road-crossing rung once an account HAS location history", async () => {
+    // The other half of §3.4c. The rung is withheld where no row can carry it,
+    // and it must appear where one can — including at zero, which is then an
+    // honest zero rather than a permanently empty category.
+    getPassportMock.mockResolvedValue(
+      passport({ byTier: { slept: 12, visited: 28, transited: 2, connection: 1 } }, [
+        country({}),
+        country({ code: "EE", tier: "transited", kinds: ["track"], evidence: "track" }),
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PassportPage />
+      </MemoryRouter>
+    );
+
+    const band = await screen.findByLabelText("passport:evidence.title");
+    expect(within(band).getByTestId("tier-transited")).toBeInTheDocument();
+    expect(within(band).getByTestId("tier-connection")).toBeInTheDocument();
   });
 
   it("does not call a passport empty when every country was only a connection", async () => {
@@ -123,13 +146,13 @@ describe("PassportPage — headline, total and threshold", () => {
         {
           countries: 0,
           countriesTotal: 3,
-          byEvidence: { flight: 3, port: 0, place: 0, lodging: 0 },
-          byTier: { slept: 0, visited: 0, transit: 3 },
+          byEvidence: { flight: 3, port: 0, place: 0, lodging: 0, track: 0 },
+          byTier: { slept: 0, visited: 0, transited: 0, connection: 3 },
         },
         [
-          country({ code: "QA", tier: "transit", counted: false }),
-          country({ code: "ET", tier: "transit", counted: false }),
-          country({ code: "SG", tier: "transit", counted: false }),
+          country({ code: "QA", tier: "connection", counted: false }),
+          country({ code: "ET", tier: "connection", counted: false }),
+          country({ code: "SG", tier: "connection", counted: false }),
         ]
       )
     );

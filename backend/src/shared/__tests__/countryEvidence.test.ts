@@ -61,7 +61,7 @@ describe("COUNTRY_TIERS", () => {
     // The module header says "the order IS the ranking". Reordering this array
     // to taste would silently redefine what the strongest evidence is, and the
     // headline count is a filter on exactly that ranking.
-    expect(COUNTRY_TIERS).toEqual(["slept", "visited", "transit"]);
+    expect(COUNTRY_TIERS).toEqual(["slept", "visited", "transited", "connection"]);
   });
 });
 
@@ -71,7 +71,7 @@ describe("foldCountryEvidence — strongest tier wins, once", () => {
     // connection while ignoring its nine stays. A country that is both must
     // report the stronger fact — and must not appear twice for the two facts.
     const rows = foldCountryEvidence([
-      { country: "AT", kind: "flight", tier: "transit", at: d("2024-03-01") },
+      { country: "AT", kind: "flight", tier: "connection", at: d("2024-03-01") },
       { country: "AT", kind: "lodging", tier: "slept", at: d("2024-07-14") },
     ]);
 
@@ -88,28 +88,28 @@ describe("foldCountryEvidence — strongest tier wins, once", () => {
     // the first) writer would pass the test above and fail this one.
     const rows = foldCountryEvidence([
       { country: "AT", kind: "lodging", tier: "slept", at: d("2024-07-14") },
-      { country: "AT", kind: "flight", tier: "transit", at: d("2024-03-01") },
+      { country: "AT", kind: "flight", tier: "connection", at: d("2024-03-01") },
     ]);
 
     expect(rows).toHaveLength(1);
     expect(rows[0].tier).toBe<CountryTier>("slept");
   });
 
-  it("keeps a country whose only evidence is a connection at `transit`", () => {
+  it("keeps a country whose only evidence is a connection at `connection`", () => {
     // Qatar in the owner's account: 2.2 hours on the ground, nothing else. It
     // must stay countable-but-weak, so the threshold setting can exclude it —
     // dropping it here would take the decision away from the user.
     const rows = foldCountryEvidence([
-      { country: "QA", kind: "flight", tier: "transit", at: d("2023-11-02") },
+      { country: "QA", kind: "flight", tier: "connection", at: d("2023-11-02") },
     ]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].tier).toBe<CountryTier>("transit");
+    expect(rows[0].tier).toBe<CountryTier>("connection");
   });
 
   it("lists the strongest tier first, then by code, so the UI list is stable", () => {
     const rows = foldCountryEvidence([
-      { country: "QA", kind: "flight", tier: "transit", at: d("2023-11-02") },
+      { country: "QA", kind: "flight", tier: "connection", at: d("2023-11-02") },
       { country: "IT", kind: "lodging", tier: "slept", at: d("2022-06-01") },
       { country: "FR", kind: "place", tier: "visited", at: d("2021-05-01") },
       { country: "CZ", kind: "lodging", tier: "slept", at: d("2019-08-01") },
@@ -142,7 +142,7 @@ describe("foldCountryEvidence — joins on codes, never on names", () => {
     // the `country` column, not invented variants.
     const rows = foldCountryEvidence([
       { country: "Österreich", kind: "lodging", tier: "slept", at: null },
-      { country: "Austria", kind: "flight", tier: "transit", at: d("2024-03-01") },
+      { country: "Austria", kind: "flight", tier: "connection", at: d("2024-03-01") },
       { country: "Schweiz/Suisse/Svizzera/Svizra", kind: "lodging", tier: "slept", at: null },
       { country: "Switzerland", kind: "flight", tier: "visited", at: d("2024-04-01") },
       { country: "Česko", kind: "lodging", tier: "slept", at: null },
@@ -170,8 +170,8 @@ describe("foldCountryEvidence — joins on codes, never on names", () => {
     const rows = foldCountryEvidence([
       { country: "Atlantis", kind: "place", tier: "visited", at: d("2024-01-01") },
       { country: "Nowhere Land", kind: "lodging", tier: "slept", at: d("2024-01-02") },
-      { country: "", kind: "flight", tier: "transit", at: d("2024-01-03") },
-      { country: null, kind: "flight", tier: "transit", at: d("2024-01-04") },
+      { country: "", kind: "flight", tier: "connection", at: d("2024-01-03") },
+      { country: null, kind: "flight", tier: "connection", at: d("2024-01-04") },
     ]);
 
     expect(rows).toEqual([]);
@@ -277,7 +277,7 @@ describe("foldCountryEvidence — dates and undated evidence", () => {
     // year's figures. Without it, an undated house looks like a missing year.
     const rows = foldCountryEvidence([
       { country: "RO", kind: "lodging", tier: "slept", at: null },
-      { country: "RO", kind: "flight", tier: "transit", at: d("2015-06-01") },
+      { country: "RO", kind: "flight", tier: "connection", at: d("2015-06-01") },
     ]);
 
     expect(rowFor(rows, "RO").hasUndatedEvidence).toBe(true);
@@ -289,7 +289,7 @@ describe("foldCountryEvidence — dates and undated evidence", () => {
     // The undated branch is a different code path depending on whether the
     // country row already exists; both must set the flag.
     const rows = foldCountryEvidence([
-      { country: "RO", kind: "flight", tier: "transit", at: d("2015-06-01") },
+      { country: "RO", kind: "flight", tier: "connection", at: d("2015-06-01") },
       { country: "RO", kind: "lodging", tier: "slept", at: null },
     ]);
 
@@ -328,19 +328,36 @@ describe("countCountries", () => {
   const EVIDENCE = foldCountryEvidence([
     { country: "CZ", kind: "lodging", tier: "slept", at: d("2019-08-01") },
     { country: "FR", kind: "place", tier: "visited", at: d("2021-05-01") },
-    { country: "QA", kind: "flight", tier: "transit", at: d("2023-11-02") },
+    { country: "QA", kind: "flight", tier: "connection", at: d("2023-11-02") },
   ]);
 
-  it("counts everything from `transit`", () => {
-    expect(countCountries(EVIDENCE, "transit")).toBe(3);
+  it("counts everything from `connection`", () => {
+    expect(countCountries(EVIDENCE, "connection")).toBe(3);
   });
 
-  it("excludes connections from `visited` — the default the design proposes", () => {
-    // "A country counts as visited from … ○ transit ○ stay (default) ○ overnight".
-    // Seven of the owner's countries are connections under five hours; this is
-    // the setting that decides whether they belong in the headline.
-    expect(countCountries(EVIDENCE, "visited")).toBe(2);
+  it("excludes connections from `transited` — the default, and driving through counts", () => {
+    // §3.4c: only the bottom rung is excluded by default. Seven of the owner's
+    // countries are connections under five hours and this is the setting that
+    // decides whether they belong in the headline; Estonia and Lithuania are
+    // road crossings and must stay in it, which is why the default reads
+    // `transited` and not `visited`.
+    expect(countCountries(EVIDENCE, "transited")).toBe(2);
     expect(countCountries(EVIDENCE)).toBe(2);
+  });
+
+  it("excludes a road crossing too, from `visited` — a rung that now means something", () => {
+    // The middle rung was unreachable while there were three tiers. With four
+    // it is the honest "a stay, not a passing-through" answer, so it has to
+    // exclude `transited` as well as `connection`.
+    const withRoad = foldCountryEvidence([
+      { country: "CZ", kind: "lodging", tier: "slept", at: d("2019-08-01") },
+      { country: "FR", kind: "place", tier: "visited", at: d("2021-05-01") },
+      { country: "EE", kind: "track", tier: "transited", at: d("2024-06-02") },
+      { country: "QA", kind: "flight", tier: "connection", at: d("2023-11-02") },
+    ]);
+
+    expect(countCountries(withRoad, "transited")).toBe(3);
+    expect(countCountries(withRoad, "visited")).toBe(2);
   });
 
   it("counts only overnights from `slept`", () => {
@@ -351,13 +368,13 @@ describe("countCountries", () => {
     // The whole point of folding first: a country with four touches is one
     // country. This is the shape of the 88-vs-40 failure, one tier lower.
     const folded = foldCountryEvidence([
-      { country: "DE", kind: "flight", tier: "transit", at: d("2020-01-05") },
+      { country: "DE", kind: "flight", tier: "connection", at: d("2020-01-05") },
       { country: "Germany", kind: "port", tier: "visited", at: d("2021-02-05") },
       { country: "Deutschland", kind: "lodging", tier: "slept", at: d("2022-03-05") },
       { country: "DE", kind: "place", tier: "visited", at: d("2022-03-06") },
     ]);
 
-    expect(COUNTRY_TIERS.map((tier) => countCountries(folded, tier))).toEqual([1, 1, 1]);
+    expect(COUNTRY_TIERS.map((tier) => countCountries(folded, tier))).toEqual([1, 1, 1, 1]);
   });
 });
 
@@ -752,14 +769,14 @@ describe("foldCountryEvidence — days present and ground time", () => {
       {
         country: "QA",
         kind: "flight",
-        tier: "transit",
+        tier: "connection",
         at: d("2024-03-01"),
         groundMinutes: 132,
       },
       {
         country: "QA",
         kind: "flight",
-        tier: "transit",
+        tier: "connection",
         at: d("2024-06-01"),
         groundMinutes: 282,
       },
@@ -771,7 +788,7 @@ describe("foldCountryEvidence — days present and ground time", () => {
     // The mixed country. A hotel adds days and proves the tier; it adds no
     // minutes, and it must not make the missing measurement look like one.
     const rows = foldCountryEvidence([
-      { country: "AT", kind: "flight", tier: "transit", at: d("2024-03-01") },
+      { country: "AT", kind: "flight", tier: "connection", at: d("2024-03-01") },
       { country: "AT", kind: "lodging", tier: "slept", at: d("2019-08-04") },
     ]);
     expect(rowFor(rows, "AT").groundTime).toEqual({ state: "unknown" });
@@ -782,7 +799,7 @@ describe("foldCountryEvidence — days present and ground time", () => {
     // that really did measure under a minute is a fact, and abstaining from it
     // would be the same dishonesty in the other direction.
     const rows = foldCountryEvidence([
-      { country: "QA", kind: "flight", tier: "transit", at: d("2024-03-01"), groundMinutes: 0 },
+      { country: "QA", kind: "flight", tier: "connection", at: d("2024-03-01"), groundMinutes: 0 },
     ]);
     expect(rowFor(rows, "QA").groundTime).toEqual({ state: "measured", minutes: 0 });
   });

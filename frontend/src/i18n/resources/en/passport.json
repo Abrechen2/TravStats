@@ -22,17 +22,20 @@
   },
   "tiers": {
     "slept": "Stayed overnight",
-    "sleptExplained": "The calendar day changed: a completed stay, a recorded lodging, a port call spanning a night, or a pair of flights across a day boundary.",
+    "sleptExplained": "The calendar day changed: a completed stay, a recorded lodging, a port call spanning a night, a pair of flights across a day boundary — or two consecutive days in your location history.",
     "visited": "Visited",
-    "visitedExplained": "Arrival and departure on the same calendar day, a recorded place, or a day in port.",
-    "transit": "Connection only",
-    "transitExplained": "A connecting flight and nothing else. Nothing records whether you left the airport — which is why this country is not counted. Add a place, a lodging or another flight and the tier rises."
+    "visitedExplained": "Arrival and departure on the same calendar day, a recorded place, a day in port — or a day your location history records in this country and no other.",
+    "connection": "Connection only",
+    "connectionExplained": "A connecting flight and nothing else. Nothing records whether you left the airport, so this country does not count. Add a place, a stay or another flight and the tier goes up.",
+    "transited": "Passed through",
+    "transitedExplained": "Your location history places you here on a day you were also in another country — a border crossed on the ground. That is not a change of planes: you were in the country, often for hours, so it counts."
   },
   "kinds": {
     "flight": "Flight",
     "lodging": "Lodging",
     "port": "Port call",
-    "place": "Place"
+    "place": "Place",
+    "track": "Location history"
   },
   "value": {
     "dash": "—",
@@ -53,7 +56,9 @@
     "intro": "These records put the country in the passport. Each one opens the record — that is where you change it.",
     "loadError": "The records could not be loaded. That does not mean there are none.",
     "truncated": "Only the most recent records are shown.",
-    "none": "No individual record available. The country belongs in the list all the same — there is simply no single record to open here."
+    "none": "No individual record available. The country belongs in the list all the same — there is simply no single record to open here.",
+    "trackLabel": "Location history — {{days}} days, {{points}} recorded points",
+    "trackNote": "These days come from your location history, not from a record you created. How many points held each day up is shown; whether a point was measured by GPS or estimated from a photograph is not something the data says, so it is not said here either."
   },
   "continents": {
     "title": "Continents",
@@ -88,14 +93,16 @@
   },
   "thresholdChoice": {
     "options": {
-      "transit": "Connection — everything counts",
-      "visited": "Stay — a connection does not count",
-      "slept": "Overnight — only where you slept"
+      "visited": "Stay — neither a connection nor passing through counts",
+      "slept": "Overnight — only where you slept",
+      "connection": "Connection — everything counts",
+      "transited": "Passing through — a connection does not count"
     },
     "effect": {
-      "transit": "Merely changing planes at an airport then counts as a country. Your country total goes up.",
-      "visited": "Merely changing planes at an airport does not count. A day in port, a recorded place and every overnight stay still do. This is the default.",
-      "slept": "Only countries with a recorded night count — through a lodging, a port call spanning a night, or a pair of flights across a day boundary. Your country total goes down."
+      "visited": "Only countries you actually stayed in count. Passing straight through on the ground and changing planes at an airport then both fail to count. Your country total goes down.",
+      "slept": "Only countries with a recorded night count — through a lodging, a port call spanning a night, or a pair of flights across a day boundary. Your country total goes down.",
+      "connection": "Merely changing planes at an airport then counts as a country. Your country total goes up.",
+      "transited": "Merely changing planes at an airport does not count. A border you crossed on the ground, a day in port, a recorded place and every overnight stay still do. This is the default."
     },
     "listUnchanged": "This does not change the country list in your passport: every country with evidence stays visible, uncounted ones are merely greyed out. Only the headline number moves."
   }

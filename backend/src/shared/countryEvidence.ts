@@ -22,16 +22,31 @@
  *
  * ## The tiers, strongest first
  *
- * - `slept`   — a completed lodging stay; a lodging with NO stay at all; a
- *               flight arrival and departure on different local calendar days;
- *               a port call spanning a night.
- * - `visited` — arrival and departure the same local day; a recorded place; a
- *               same-day port call.
- * - `transit` — a connection and nothing else.
+ * - `slept`     — a completed lodging stay; a lodging with NO stay at all; a
+ *                 flight arrival and departure on different local calendar
+ *                 days; a port call spanning a night; a track holding two
+ *                 consecutive days.
+ * - `visited`   — arrival and departure the same local day; a recorded place; a
+ *                 same-day port call; a track day on which no other country was
+ *                 recorded.
+ * - `transited` — passed through on the ground. A track day shared with another
+ *                 country: a border crossed by car (spec §3.4c). No curated
+ *                 event can produce this rung — nothing in a flight, a cruise or
+ *                 a hotel records a road crossing — so an account with no
+ *                 location history never carries one.
+ * - `connection`— a change of planes and nothing else.
  *
  * Strongest wins, so a country both flown through and slept in reports `slept`
  * once, never twice. This mirrors `passport.ts` rule 5, which the tiers replace
  * rather than sit beside.
+ *
+ * ## Why `transited` sits ABOVE `connection` and not beside it
+ *
+ * Owner, 2026-09-02, confirming Estonia and Lithuania were crossed by car:
+ * passing a border on the road is not changing planes. You are in the country,
+ * on the ground, often for hours. Only `connection` is excluded by the default
+ * threshold — driving through counts, which was the entire point of the Baltic
+ * question, and folding it into `connection` would have answered it wrongly.
  *
  * ## Two figures stand BESIDE the tier, and never decide it
  *
@@ -157,10 +172,10 @@ export function unionCountries(...countrySets: Array<Set<string>>): Set<string> 
 }
 
 /** Strongest first. The order IS the ranking — do not reorder to taste. */
-export const COUNTRY_TIERS = ["slept", "visited", "transit"] as const;
+export const COUNTRY_TIERS = ["slept", "visited", "transited", "connection"] as const;
 export type CountryTier = (typeof COUNTRY_TIERS)[number];
 
-const RANK: Record<CountryTier, number> = { slept: 3, visited: 2, transit: 1 };
+const RANK: Record<CountryTier, number> = { slept: 4, visited: 3, transited: 2, connection: 1 };
 
 /**
  * The tier the headline counts from when nobody has chosen one — a connection
@@ -169,20 +184,32 @@ const RANK: Record<CountryTier, number> = { slept: 3, visited: 2, transit: 1 };
  * Lives here rather than beside the setting because the setting stores a value
  * from THIS vocabulary and nothing else. §2 refuses an hours-based option on
  * principle (six hours and twelve hours returned the same set of countries on
- * real data), so there are exactly three values and this is one of them.
+ * real data), so the values are exactly the rungs above and this is one of them.
+ *
+ * It reads `transited` and not `visited`, and that is the SAME rule it always
+ * was rather than a loosening: while there were three rungs, "everything except
+ * the bottom one" was spelled `visited`. The bottom rung is now `connection`,
+ * so "everything except the bottom one" is spelled `transited`. The migration
+ * `20260902160000_country_tier_connection_rename` rewrites stored values along
+ * exactly that mapping, so no instance's answer moves.
  */
-export const DEFAULT_COUNTRY_TIER: CountryTier = "visited";
+export const DEFAULT_COUNTRY_TIER: CountryTier = "transited";
 
 /**
  * A stored or submitted value read back as a tier, or null when it is not one.
  *
  * The columns behind the setting are plain TEXT — `CountryTier` owns the closed
  * set in TypeScript and a duplicate DB enum would be a second place for it to
- * drift. That makes this the boundary guard: a row written by an older build, a
- * hand-edited database, or a value from a vocabulary that no longer exists
- * (`transit` is renamed `connection` in spec §3.4c) must fall back to the
- * default rather than filter the headline against a rank that does not exist —
- * which would silently count zero countries.
+ * drift. That makes this the boundary guard: a row written by an older build or
+ * a hand-edited database must fall back to the default rather than filter the
+ * headline against a rank that does not exist — which would silently count zero
+ * countries.
+ *
+ * The retired word `transit` reaches it only from a database the migration
+ * never ran against. Falling back is the right answer for THAT case and would
+ * have been the wrong one for a normal upgrade: it would have turned an admin's
+ * "everything counts" into "a connection does not", silently. Which is why the
+ * rename is a data migration and this is only the guard behind it.
  */
 export function parseCountryTier(value: unknown): CountryTier | null {
   return typeof value === "string" && (COUNTRY_TIERS as readonly string[]).includes(value)
@@ -190,9 +217,23 @@ export function parseCountryTier(value: unknown): CountryTier | null {
     : null;
 }
 
-/** What kind of record proved the country. Kept beside the tier because a tier
- *  alone cannot answer "why is Romania in my passport". */
-export type EvidenceKind = "flight" | "lodging" | "port" | "place";
+/**
+ * What kind of record proved the country. Kept beside the tier because a tier
+ * alone cannot answer "why is Romania in my passport".
+ *
+ * `track` is measured presence — location history reduced to country-days
+ * (spec §8). It is the only kind that is not a curated event, and the only one
+ * that can raise a country nobody logged: TravStats stores flights, cruises and
+ * houses, and driving across a border is none of those.
+ *
+ * It carries an honesty the other four do not have to. §8.3: *"An estimated
+ * presence is evidence, but it is not GPS, and the row must say which it was."*
+ * The Dawarich payload, as measured against 1.9.2, carries no provenance field
+ * at all, so nothing here may claim the difference — see
+ * `services/countryDays/countryDaySource.ts`, which stores `pointCount` as a
+ * number precisely so that no one has to invent a verdict.
+ */
+export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b.
@@ -218,8 +259,14 @@ export type EvidenceKind = "flight" | "lodging" | "port" | "place";
  *                     we cannot read it.
  * - `notApplicable` — no flight touched this country at all. A ground time is
  *                     not merely unmeasured here, it is not a thing this
- *                     evidence could ever carry: a house, a port call and a
- *                     recorded place bound no departure. Never synthesise one.
+ *                     evidence could ever carry: a house, a port call, a
+ *                     recorded place and a track all bound no departure. A
+ *                     track is worth naming separately, because it is the one
+ *                     kind that could look like it bounds one — the first and
+ *                     last fix of a day are two clocks. They are not a landing
+ *                     and a take-off: nothing says the traveller was still
+ *                     there between them, and nothing says they left after.
+ *                     Never synthesise one.
  *
  * The two lower states are kept apart because they ask the reader for different
  * things. `unknown` says "your flight data is thin here, and adding the return
@@ -276,7 +323,10 @@ export interface EvidenceInput {
    *
    * These are the days the record ATTESTS, never the days it merely fails to
    * contradict. A stay hands over its whole span (`daysBetween`); a spell
-   * between two flights hands over its two ends alone (`attestedGroundDays`).
+   * between two flights hands over its two ends alone (`attestedGroundDays`);
+   * a track hands over the days it actually recorded a fix on, which is the
+   * cleanest case there is — every one of them was observed, and a gap in a
+   * track is a gap, never an inference (§3.4b-bis).
    *
    * Given by the CALLER rather than derived from `at` here, because which clock
    * a day is read on differs by kind and only the caller knows: a flight's day

@@ -154,6 +154,8 @@ export interface UserSettings {
    * the user has not chosen; PUT /settings ignores it.
    */
   instanceCountryThreshold?: CountryTier;
+  /** Read-only: does this account have any track evidence? See spec §3.4c. */
+  hasCountryTracks?: boolean;
   /**
    * Instance-level beta gate — READ-ONLY. Served by GET /settings for
    * convenience; PUT /settings ignores it (Zod strips it server-side). Only

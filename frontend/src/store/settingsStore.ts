@@ -186,6 +186,17 @@ export interface SettingsState {
    */
   instanceCountryThreshold: CountryTier | null;
   /**
+   * Does this ACCOUNT have any country-day at all — mirrored read-only from
+   * `GET /settings`. `null` = not loaded yet.
+   *
+   * Spec §3.4c: the country-counting control must not offer `transited` where
+   * no record can ever carry it, because a choice whose every value produces
+   * the same number reads as a bug. Not persisted, for the same reason
+   * `instanceCountryThreshold` is not: a cached `true` from a previous session
+   * would draw an option this account cannot use.
+   */
+  hasCountryTracks: boolean | null;
+  /**
    * Instance-level beta gate, mirrored read-only from `GET /settings`.
    * `null` = not loaded yet → consumers must treat it as OFF (see
    * `hooks/useBetaFeatures.ts`). It is never persisted or sent back: only an
@@ -369,6 +380,7 @@ const defaultSettings: Omit<
   // No choice yet, and no instance answer yet — both are the server's to fill.
   countryThreshold: null,
   instanceCountryThreshold: null,
+  hasCountryTracks: null,
   betaFeaturesEnabled: null,
 };
 
@@ -540,6 +552,12 @@ export const useSettingsStore = create<SettingsState>()(
               newState.countryThreshold = asCountryTier(remote.countryThreshold);
               // Instance-level, read-only, same guard.
               newState.instanceCountryThreshold = asCountryTier(remote.instanceCountryThreshold);
+              // Per-account, read-only. Anything that is not an explicit
+              // boolean — a missing field on an older backend — stays `null`,
+              // which every consumer must read as "no tracks": drawing an
+              // option that cannot work is worse than withholding one.
+              newState.hasCountryTracks =
+                typeof remote.hasCountryTracks === "boolean" ? remote.hasCountryTracks : null;
               // Instance-level, read-only. Anything that isn't an explicit
               // `true`/`false` (missing field, older backend) stays `null` =
               // gate closed.
@@ -619,6 +637,7 @@ export const useSettingsStore = create<SettingsState>()(
         const {
           betaFeaturesEnabled: _beta,
           instanceCountryThreshold: _instanceThreshold,
+          hasCountryTracks: _hasTracks,
           remoteSnapshot: _snapshot,
           enabledDomainsLoaded: _domainsLoaded,
           ...rest
@@ -636,6 +655,7 @@ export const useSettingsStore = create<SettingsState>()(
         // Drop any value written before `partialize` existed.
         delete s["betaFeaturesEnabled"];
         delete s["instanceCountryThreshold"];
+        delete s["hasCountryTracks"];
         return s;
       },
     }

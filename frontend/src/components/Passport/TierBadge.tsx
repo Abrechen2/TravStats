@@ -8,17 +8,23 @@ import type { CountryTier } from "../../types/passport";
  * the tint only reinforces it. A reader who cannot tell the three tints apart
  * still reads "Übernachtet" / "Nur umgestiegen".
  *
- * There are exactly THREE tiers because there are exactly three the data can
- * produce. The design plans a fourth — crossed by road — that only GPS tracks
- * can populate; offering it before a record can carry it would be a category
- * that is permanently empty, which reads as a defect rather than as an
- * honest zero.
+ * FOUR tiers, and the two weakest are not the same thing. `transited` is a
+ * border crossed on the ground — driving through, which counts by default —
+ * while `connection` is a change of planes, which does not. Only a location
+ * history can produce the first, so a badge saying "Durchgefahren" appears only
+ * on an account that has one; nothing here has to gate it, because a tier no
+ * row carries simply never renders.
+ *
+ * The two share a tint deliberately: they are the two rungs below a stay, and
+ * the WORD is what tells them apart. A fourth grey would be a distinction the
+ * eye cannot make, dressed as one it can.
  */
 
 const TINT: Record<CountryTier, string> = {
   slept: "var(--accent)",
   visited: "var(--text-secondary)",
-  transit: "var(--text-muted)",
+  transited: "var(--text-muted)",
+  connection: "var(--text-muted)",
 };
 
 export default function TierBadge({ tier }: { tier: CountryTier }): JSX.Element {
