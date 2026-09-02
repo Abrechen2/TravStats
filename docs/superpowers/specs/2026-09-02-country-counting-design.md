@@ -99,12 +99,31 @@ Portugal, Romania — rest *entirely* on stayless rows from that batch. Italy,
 Slovenia and Czechia also gained houses there but carry dated stays of their
 own, so they would count regardless.
 
-That undermines the reasoning above rather than the rule itself. "Somebody took
-the trouble to enter the house" is true of a hand-entered row and false of 150
-rows that arrived from a file. The distinction is available in the data —
-`batch_id` is null for a hand-entered house — so a narrower rule is possible:
-an undated house counts when it was entered deliberately, not when it was
-imported in bulk. **Open, and the owner's.**
+This was put to the owner as a reason to narrow the rule — `batch_id` is null
+for a hand-entered house, so "entered deliberately" is available in the data and
+the four countries would fall away without touching a single row.
+
+**He declined, on 2026-09-02, having been shown the measurement:**
+
+> *"Alle aus dem Import zählen als besucht, nur welche mit status Storniert für
+> einen Aufenthalt zählen nicht sonst 1 Nacht"*
+
+So bulk import is NOT a disqualifier. The only thing that stops a house proving
+a country is a **cancellation** — the record positively saying the visit did not
+happen. Everything else, imported or hand-entered, dated or not, is one night.
+
+That is what the code already does, and it is the shape `lodgingEvidence`
+already had; nothing changed as a result of this measurement except this
+paragraph. The consequence, accepted knowingly: **Romania stays in the owner's
+passport**, proved by a Bucharest hotel he has never stayed in, and the inbox
+reports it as resting only on undated evidence.
+
+One reading is deliberately NOT taken from that sentence. "Only cancelled ones
+do not count" could be read as promoting a *future booking* to a visit, which
+would reverse the owner's earlier and explicit rule that a stay counts only once
+its check-out is past — a booking is not a visit. The sentence answered a
+question about imports, so the older rule stands and a future booking still
+proves nothing.
 
 Two things follow, and they are not optional:
 
