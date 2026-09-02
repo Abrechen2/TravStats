@@ -89,8 +89,33 @@ never was. There are **two different hotels**, each internally consistent:
 
 The Bucharest row's address, city, country and coordinates all agree with each
 other. That is why the `address_country_mismatch` check never fired on it —
-there is no contradiction to find. It is a real hotel in a city the owner has
-never been to, recorded as `visited` with no stay.
+there is no contradiction to find.
+
+**And the reading that they are two unrelated hotels was ALSO wrong.** The owner,
+shown the two rows: *"Das war das Sport Hotel in Slowenien."* The Bucharest row
+is not a hotel he saved. It is his Slovenian stay, matched on the NAME to a
+different hotel that happens to share it, with that hotel's address, city,
+country and coordinates written in wholesale.
+
+That is the finding worth keeping, and it is uncomfortable for this feature:
+
+> **Internal consistency does not mean correctness. It means the geocoder was
+> confident.**
+
+A wrong-match import produces a perfectly self-consistent row, so
+`address_country_mismatch` — which compares a row against itself — can never
+catch one. Nor can any check we could add: nothing in the data distinguishes
+"the right hotel" from "a hotel with the same name 1,300 km away". Only the
+traveller knows. What DID surface it was `undated_country_evidence`, and only
+because the wrong row happened to carry no stay: the country stood on nothing
+dated, the inbox said so, and the owner recognised it. That is the check earning
+its place, and it is a weaker guarantee than section 3.5 implies — a wrong match
+that arrives WITH a stay would pass every check we have.
+
+This document has now been wrong twice about this one row: first calling it a
+mis-geocode of a correct address, then calling it a second hotel. Both readings
+were built from the data alone, and the data supported both. The correction came
+from the only source that could give it.
 
 And it is not one stray row. **One import batch on 2026-08-14 brought in 197
 lodgings, 150 of them with no stay at all, and marked every one `visited`.** The
