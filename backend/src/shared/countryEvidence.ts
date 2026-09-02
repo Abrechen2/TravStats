@@ -513,21 +513,21 @@ export function countCountries(
  * would then PROVE a country — the exact opposite of what a cancellation says.
  * So the module needs the status, and the caller hands the stays over unfiltered.
  *
- * ## Where this and `shared/lodgingCounting.ts` disagree — deliberately, and it
- * is a question for that module's owner, not one settled here
+ * ## Where this and `shared/lodgingCounting.ts` used to disagree — settled
  *
  * `classifyStay` is asked for the cancellation verdict rather than reading the
  * status column, because "does this stay count" has exactly one home and a
  * cancellation is the one lodging status that is a user STATEMENT rather than a
  * cache of the dates (`LODGING_PASSTHROUGH` in shared/statusDerivation.ts).
  *
- * `classifyLodging` in that same module, however, answers `visited` for a house
- * whose only stay was cancelled: its last line reads "no stay to judge by — the
- * user's own claim stands", and a list of nothing but `excluded` states falls
- * through to it. This module answers null instead. The two are asking different
- * questions — "is this house a visited house" against "does this house prove a
- * country" — but the fall-through looks like an oversight there too, and it
- * belongs to `lodgingCounting.ts` to decide. It is NOT re-decided here.
+ * `classifyLodging` in that same module used to answer `visited` for a house
+ * whose only stay was cancelled — a list of nothing but `excluded` states fell
+ * through its last line, "no stay to judge by — the user's own claim stands" —
+ * while this module answered null. The owner aligned them on 2026-09-02: an
+ * all-cancelled house is `excluded` there too, so a cancelled stay reads as no
+ * visit in the country count AND in every lodging figure. The fall-through is
+ * still there and still load-bearing; it now catches only a house with NO stay
+ * at all, which is the case decision 1.4 keeps countable.
  */
 export interface LodgingEvidence {
   tier: CountryTier;

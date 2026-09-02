@@ -488,8 +488,22 @@ model UserAchievement {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
   achievementId String   @map("achievement_id")
-  unlockedAt    DateTime @default(now()) @map("unlocked_at")
-  progress      Int      @default(0) // current progress towards achievement
+  /// When the badge was EARNED, and null while it is not held.
+  ///
+  /// It used to be `DateTime @default(now())`, so every row carried a date —
+  /// including the progress-tracking rows the engine creates the moment a
+  /// measure first moves off zero. A row at 86 of a required 100 therefore read
+  /// as "unlocked on <the day tracking started>", which is how the owner's
+  /// account came to show COUNTRIES_100 four months BEFORE COUNTRIES_50. Nothing
+  /// user-facing was wrong (every read derives held-ness from
+  /// `progress >= requirement`), but the column asserted something false and an
+  /// audit of the table believed it.
+  ///
+  /// Nullable and WITHOUT a default is what makes revocation durable too: a
+  /// badge that falls below its requirement has its date cleared, so "revoked"
+  /// is a state the row can express instead of only a log line.
+  unlockedAt    DateTime? @map("unlocked_at")
+  progress      Int       @default(0) // current progress towards achievement
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)

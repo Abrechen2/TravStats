@@ -49,6 +49,12 @@ export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState
  * owner decision keeps a hand-entered hotel countable); with only future stays
  * it is planned, because `visited` defaults to `true` for anything parsed from a
  * booking — including a booking for next month.
+ *
+ * A house whose stays were ALL CANCELLED is `excluded` (owner's decision,
+ * 2026-09-02). It looks exactly like the stay-less case — neither list holds
+ * anything to count — and says the opposite: an absent stay is a forgotten date,
+ * a cancelled stay is the record saying the visit did not happen. Separated by
+ * whether any stay exists at all, never by what the states say.
  */
 export function classifyLodging(
   lodging: CountableLodging,
@@ -57,6 +63,7 @@ export function classifyLodging(
   if (!lodging.visited) return "excluded";
   if (stayStates.some((s) => s === "visited")) return "visited";
   if (stayStates.some((s) => s === "planned")) return "planned";
+  if (stayStates.length > 0) return "excluded";
   return "visited";
 }
 

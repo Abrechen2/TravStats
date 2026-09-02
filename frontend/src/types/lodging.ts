@@ -383,7 +383,11 @@ export interface LodgingStats {
   plannedStaysCount: number;
   plannedNights: number;
   plannedLodgingsCount: number;
-  /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
+  /**
+   * Houses that are no visit and have none coming: bookmarked
+   * (`visited === false`), or every stay cancelled (owner's decision,
+   * 2026-09-02). Never part of any other figure.
+   */
   notedLodgingsCount: number;
   /** Nights by the house's OFFICIAL star count ("1".."5"); a house with none has no key. */
   nightsByStars: Record<string, number>;

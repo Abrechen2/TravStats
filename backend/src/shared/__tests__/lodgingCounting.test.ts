@@ -99,8 +99,34 @@ describe("classifyLodging", () => {
     expect(classifyLodging({ visited: true }, [])).toBe<LodgingCountState>("visited");
   });
 
-  it("keeps a house whose only stay was cancelled — the house was not cancelled", () => {
-    expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("visited");
+  it("excludes a house whose every stay was cancelled — the record says it did not happen", () => {
+    // Owner's decision, 2026-09-02. This used to answer "visited": a list of
+    // nothing but `excluded` fell through to the stay-less line, so CANCELLING
+    // a booking proved a visit.
+    expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("excluded");
+    expect(classifyLodging({ visited: true }, ["excluded", "excluded"])).toBe<LodgingCountState>(
+      "excluded",
+    );
+  });
+
+  it("tells 'no stay at all' apart from 'stays, all cancelled'", () => {
+    // The pair that made the fall-through a bug: same empty result, opposite
+    // meaning. Adding a house must never REMOVE it from the count, so the
+    // stay-less house keeps counting.
+    expect(classifyLodging({ visited: true }, [])).toBe<LodgingCountState>("visited");
+    expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("excluded");
+  });
+
+  it("still counts a house with one cancelled stay and one finished one", () => {
+    expect(classifyLodging({ visited: true }, ["excluded", "visited"])).toBe<LodgingCountState>(
+      "visited",
+    );
+  });
+
+  it("still plans a house with one cancelled stay and one booking ahead", () => {
+    expect(classifyLodging({ visited: true }, ["excluded", "planned"])).toBe<LodgingCountState>(
+      "planned",
+    );
   });
 });
 

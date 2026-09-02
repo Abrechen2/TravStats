@@ -400,13 +400,32 @@ A number that changes without explanation reads as data loss.
 
 ## 6. What this does not solve
 
-**Achievements already granted.** 103 badges in the owner's account are unlocked
-with a progress value **below their own requirement** — `COUNTRIES_100` stands at
-86, and it unlocked on 2026-04-12 while `COUNTRIES_50` unlocked on 2026-08-15.
-The harder badge came four months before the easier one. The mechanism is that
-nothing ever re-locks an achievement, so a past miscount is permanent. Fixing the
-count does not repair them, and whether a badge may be revoked is a separate
-product decision. Filed separately.
+**~~Achievements already granted.~~ Measured 2026-09-02, and the stated
+mechanism was wrong.** The observation stands: 103 rows in the owner's account
+carry an `unlocked_at` date with a progress value **below their own
+requirement**, `COUNTRIES_100` at 86 dated 2026-04-12 while `COUNTRIES_50` is
+dated 2026-08-15 — the harder badge four months before the easier one.
+
+The explanation "nothing ever re-locks an achievement" is false. Re-locking is
+exactly what happens: held-ness is derived as `progress >= requirement` in every
+read (`routes/achievements.ts` list, recent and leaderboard) and in
+`planAchievementWrites`, which writes the true progress back and logs a
+`revoke_achievements` line when it crosses down. `achievements.revocation.test.ts`
+has pinned it since the forgejo#39 work, and it fires: a run that dropped a test
+account's flights logged eight codes revoked, `COUNTRIES_5` and `COUNTRIES_10`
+among them.
+
+What was actually wrong was the column. `unlocked_at` was
+`NOT NULL DEFAULT now()`, so the progress-tracking row the engine creates the
+moment a measure first moves off zero also carried a date. None of the 103 was
+ever held or ever displayed as held; each is a ladder rung being tracked, dated
+by its row's birthday. That is the whole of the inverted ordering. Migration
+`20260902170000_achievement_unlocked_at_nullable` makes the column nullable
+without a default, nulls those rows, and the write path now clears it on a
+revocation — so "revoked" is a state the row can express, not only a log line.
+
+Fixing the country count therefore DOES repair the country badges, on the next
+run, by the mechanism that was already there.
 
 **Hong Kong is its own ISO code**, and so are several territories a traveller may
 consider part of another country. The tiers do not touch this. It should stay
@@ -422,9 +441,12 @@ it was and stop there.
 
 1. **Default tier** for the instance. Proposal: `stay`.
 2. **Per-user override** — yes or admin-only? Proposal: yes.
-3. **Retroactive achievements** — may a badge be revoked when the count falls?
-   Three options: never revoke (list stays untrue) · revoke (an earned thing is
-   taken away) · keep the badge, tell the truth in the progress bar.
+3. ~~**Retroactive achievements** — may a badge be revoked when the count
+   falls?~~ **Decided 2026-09-02: revoke.** It also turned out to be what the
+   code already did — see §6. The implementation work was therefore not to build
+   revocation but to make it legible: `unlocked_at` is nullable now, set only
+   when a badge is earned and cleared when it is lost, so the row states the
+   verdict the read paths were deriving all along.
 4. ~~**Wrong imports are now visible in the count.**~~ **Decided 2026-09-02:
    flag, do not refuse.** See 3.5 — the record is written, the contradiction is
    raised in the inbox, and the count follows the stated rule until the user

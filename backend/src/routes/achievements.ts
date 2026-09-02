@@ -117,10 +117,16 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
         },
       },
       include: { achievement: true },
-      orderBy: { unlockedAt: 'desc' },
+      // `unlockedAt` is null for a badge the user does not hold, and NULLS FIRST
+      // is Postgres' default for DESC — which would put every un-earned row at
+      // the head of the list the filter below then throws away. Ordering them
+      // last keeps the "recent" order recent.
+      orderBy: { unlockedAt: { sort: 'desc', nulls: 'last' } },
     });
 
-    // Only return actually unlocked achievements (progress >= requirement)
+    // Only return actually unlocked achievements (progress >= requirement).
+    // Held-ness is derived from the numbers, never from `unlockedAt` — the date
+    // is a label on that fact, not the fact itself.
     const recentAchievements = allRecent
       .filter(ua => ua.progress >= ua.achievement.requirement)
       .slice(0, limit);

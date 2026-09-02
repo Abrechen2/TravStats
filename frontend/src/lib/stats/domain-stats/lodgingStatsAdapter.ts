@@ -31,8 +31,9 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
 
   for (const lodging of lodgings) {
     // Mirrors calculateLodgingStats: a house the user only bookmarked
-    // contributes nothing, and neither does one whose every stay is still
-    // ahead — the cross-domain heatmap shows days that HAPPENED.
+    // contributes nothing, nor does one whose every stay is still ahead, nor
+    // one whose every stay was cancelled — the cross-domain heatmap shows days
+    // that HAPPENED.
     const stayStates = lodging.stays.map((s) =>
       classifyStay({
         status: s.status,

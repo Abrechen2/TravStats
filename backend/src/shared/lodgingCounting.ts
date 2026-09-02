@@ -80,6 +80,20 @@ export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState
  * flag defaults to `true` for everything parsed from a booking, including a
  * booking for next month, so the flag alone cannot tell "have been" from "will
  * be". The dates can.
+ *
+ * A house whose stays were ALL CANCELLED is `excluded` — owner's decision,
+ * 2026-09-02. That case and the stay-less case arrive here looking identical:
+ * neither list holds anything to count. They state opposite things. An ABSENT
+ * stay is a forgotten date — somebody took the trouble to enter the house, so
+ * they were there. A CANCELLED stay is the record saying the visit did not
+ * happen, and letting it fall through to the last line meant that CANCELLING a
+ * booking proved a visit. So the two are separated by whether any stay exists at
+ * all, not by what the states say.
+ *
+ * This is the alignment with `shared/countryEvidence.ts`, whose `lodgingEvidence`
+ * already refused an all-cancelled house as evidence for a country and recorded
+ * the disagreement as a question for this module. It is answered here now, and
+ * a cancelled stay reads as no visit everywhere.
  */
 export function classifyLodging(
   lodging: CountableLodging,
@@ -88,6 +102,10 @@ export function classifyLodging(
   if (!lodging.visited) return "excluded";
   if (stayStates.some((s) => s === "visited")) return "visited";
   if (stayStates.some((s) => s === "planned")) return "planned";
+  // Stays exist and not one of them counts. At stay level `excluded` is
+  // reachable only through a stored "cancelled" (see `classifyStay`), so this
+  // is the all-cancelled house and the record has already answered.
+  if (stayStates.length > 0) return "excluded";
   // No stay to judge by — the user's own claim stands.
   return "visited";
 }

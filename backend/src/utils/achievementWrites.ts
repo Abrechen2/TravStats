@@ -50,7 +50,11 @@ export type UserAchievementWithRelation = UserAchievement & { achievement: Achie
  */
 type PlannedWrite =
   | { kind: "unlock"; achievementId: string; requirement: number; wasUnlocked: boolean }
-  | { kind: "progress"; rowId: string; progress: number }
+  // `revoking` says the row is being written DOWN through its requirement, and
+  // is what clears `unlockedAt`. Carried on the write rather than re-derived at
+  // apply time because the comparison needs the requirement and the snapshot,
+  // and neither is in scope there — the plan is where that is known.
+  | { kind: "progress"; rowId: string; progress: number; revoking: boolean }
   | { kind: "track"; achievementId: string; progress: number };
 
 export interface AchievementWritePlan {
@@ -108,10 +112,18 @@ export function planAchievementWrites(
         // The user holds this badge but no longer meets its requirement — the
         // flights behind it were deleted, or it was granted by a scoring bug.
         // Writing the true progress drops it back below the threshold, which is
-        // what "revoked" means here (there is no separate unlocked flag).
+        // what "revoked" means here: held-ness is derived from
+        // `progress >= requirement` everywhere, so there is no flag to clear.
+        // `unlockedAt` is cleared alongside it, so the ROW says so too and not
+        // only this log line.
         revoked.push(achievement.code);
       }
-      writes.push({ kind: "progress", rowId: existing.id, progress });
+      writes.push({
+        kind: "progress",
+        rowId: existing.id,
+        progress,
+        revoking: wasUnlocked,
+      });
     } else if (progress > 0) {
       // Only create a progress row when there's something to track.
       writes.push({ kind: "track", achievementId: achievement.id, progress });
@@ -153,12 +165,17 @@ export async function applyAchievementWrites(
                 // Keep the ORIGINAL unlock date. Re-checking an achievement the user
                 // already holds must not make it look freshly earned — that would
                 // reshuffle the trophy case on every flight they add.
+                //
+                // The other branch is the only place a date is ever set: a badge
+                // being earned, now or again after a revocation cleared the old
+                // one. Every other write leaves the column null.
                 ...(write.wasUnlocked ? {} : { unlockedAt: new Date() }),
               },
               create: {
                 userId,
                 achievementId: write.achievementId,
                 progress: write.requirement,
+                unlockedAt: new Date(),
               },
               include: { achievement: true },
             });
@@ -170,7 +187,14 @@ export async function applyAchievementWrites(
           } else if (write.kind === "progress") {
             await tx.userAchievement.update({
               where: { id: write.rowId },
-              data: { progress: write.progress },
+              data: {
+                progress: write.progress,
+                // A revocation clears the date; an ordinary progress tick on a
+                // badge that was never held has nothing to clear and must not
+                // write the column at all, or a concurrent unlock could be
+                // undone by a stale plan.
+                ...(write.revoking ? { unlockedAt: null } : {}),
+              },
             });
           } else {
             await tx.userAchievement.upsert({

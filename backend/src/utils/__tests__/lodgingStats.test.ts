@@ -309,6 +309,70 @@ describe("calculateLodgingStats", () => {
       expect(s.countries.has("IT")).toBe(false);
     });
 
+    it("does not count a house whose every stay was cancelled", () => {
+      // Owner's decision, 2026-09-02. `classifyLodging` used to fall through to
+      // "no stay to judge by — the user's own claim stands" for a list of
+      // nothing but cancellations, so calling a booking off PROVED the house.
+      // Every visited figure the house touches moves: the count itself, its
+      // chain, its country and its city.
+      const lodgings = [
+        { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true },
+        { id: "l7", chainId: 7, type: "hotel", country: "PT", city: "Lisbon", visited: true },
+      ];
+      const s = calculateLodgingStats(
+        [
+          stay({ lodgingId: "l1" }),
+          stay({ lodgingId: "l7", chainId: 7, country: "PT", city: "Lisbon", status: "cancelled" }),
+        ],
+        "EUR",
+        lodgings,
+        NOW,
+      );
+      expect(s.lodgingsCount).toBe(1);
+      expect(s.chainsUnique).toBe(1);
+      expect(s.countries.has("PT")).toBe(false);
+      expect(s.citiesUnique).toBe(1);
+      // Not a visit and none coming — it joins the bookmarks, which is what
+      // keeps visited/planned/noted a partition of the list.
+      expect(s.notedLodgingsCount).toBe(1);
+      expect(s.plannedLodgingsCount).toBe(0);
+    });
+
+    it("still counts a house that has one cancelled stay and one that happened", () => {
+      // The cut is per HOUSE, not per stay: one cancellation among several must
+      // not take the house away, and the cancelled stay itself still counts
+      // nowhere (staysCount/nights are unchanged by it).
+      const lodgings = [
+        { id: "l7", chainId: 7, type: "hotel", country: "PT", city: "Lisbon", visited: true },
+      ];
+      const s = calculateLodgingStats(
+        [
+          stay({ lodgingId: "l7", chainId: 7, country: "PT", city: "Lisbon" }),
+          stay({ lodgingId: "l7", chainId: 7, country: "PT", city: "Lisbon", status: "cancelled" }),
+        ],
+        "EUR",
+        lodgings,
+        NOW,
+      );
+      expect(s.lodgingsCount).toBe(1);
+      expect(s.countries.has("PT")).toBe(true);
+      expect(s.staysCount).toBe(1);
+      expect(s.notedLodgingsCount).toBe(0);
+    });
+
+    it("keeps counting a house with NO stay at all — the case the fall-through is for", () => {
+      // The pair that made the old fall-through a bug. Both lists are empty of
+      // anything countable; they say opposite things. Adding a house must never
+      // REMOVE it from the count, so this one still counts.
+      const lodgings = [
+        { id: "l8", chainId: 8, type: "hotel", country: "HR", city: "Split", visited: true },
+      ];
+      const s = calculateLodgingStats([], "EUR", lodgings, NOW);
+      expect(s.lodgingsCount).toBe(1);
+      expect(s.countries.has("HR")).toBe(true);
+      expect(s.notedLodgingsCount).toBe(0);
+    });
+
     it("counts a long-past stay whose status column was never converged", () => {
       const s = calculateLodgingStats(
         [stay({ status: "scheduled" })],

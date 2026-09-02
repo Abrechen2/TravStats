@@ -210,8 +210,10 @@ export function calculateLodgingStats(
     for (const l of lodgings) {
       const state = classifyLodging(l, statesByLodgingId.get(l.id) ?? []);
       if (state === "planned") plannedLodgingsCount += 1;
-      // `excluded` here can only mean "bookmarked" — a cancelled stay leaves
-      // its house countable, the house itself was never cancelled.
+      // `excluded` is the "no visit, and none coming" bucket: a house the user
+      // only bookmarked, or one whose every stay was cancelled (owner's
+      // decision, 2026-09-02). Keeping both here is what leaves
+      // visited/planned/noted a partition of the list.
       if (state === "excluded") notedLodgingsCount += 1;
       if (state !== "visited") continue;
       visitedLodgings += 1;

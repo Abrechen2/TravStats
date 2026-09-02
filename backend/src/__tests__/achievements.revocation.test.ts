@@ -9,9 +9,16 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
  *   - an achievement whose requirement is no longer met is revoked
  *   - one that is still met keeps its ORIGINAL unlock date (re-checking must not make it
  *     look freshly earned and reshuffle the trophy case on every new flight)
+ *
+ * Since 2026-09-02 they also pin what `unlocked_at` MEANS. It used to be
+ * `NOT NULL DEFAULT now()`, so a plain progress row — 86 of a required 100 —
+ * carried a date and read as an unlock that never happened. Held-ness has always
+ * been derived from `progress >= requirement`, so nothing on screen was wrong;
+ * the column was, and an audit of the table believed it.
  */
 
 const AIRPORTS_10 = 'AIRPORTS_10'; // requirement: 10 distinct airports
+const AIRPORTS_50 = 'AIRPORTS_50'; // far out of reach here — a pure progress row
 
 interface Leg {
   dep: string;
@@ -57,7 +64,7 @@ async function seedFlights(count: number) {
   }
 }
 
-async function progressOf(code: string): Promise<{ progress: number; requirement: number; unlockedAt: Date } | null> {
+async function progressOf(code: string): Promise<{ progress: number; requirement: number; unlockedAt: Date | null } | null> {
   const row = await prisma.userAchievement.findFirst({
     where: { userId, achievement: { code } },
     include: { achievement: true },
@@ -106,6 +113,29 @@ describe('achievement re-evaluation', () => {
     expect(after!.progress).toBe(4);
     // Below the requirement is what "revoked" means — there is no separate flag.
     expect(after!.progress).toBeLessThan(after!.requirement);
+    // And the row says so. Leaving the old date behind would let the table go on
+    // asserting an unlock that has been withdrawn.
+    expect(after!.unlockedAt).toBeNull();
+  });
+
+  it('never dates a badge that was only ever tracked, not earned', async () => {
+    // The defect behind "103 badges stand unlocked with a progress value below
+    // their own requirement": `unlocked_at` was NOT NULL DEFAULT now(), so the
+    // progress row created the moment a measure moved off zero carried a date.
+    // Read as an unlock date it inverted the ladder — a 100-badge sitting at 86
+    // appeared to predate the 50-badge that was genuinely earned later.
+    await seedFlights(6);
+    await checkAndUpdateAchievements(userId);
+
+    const tracked = await progressOf(AIRPORTS_50);
+    expect(tracked).not.toBeNull();
+    expect(tracked!.progress).toBeLessThan(tracked!.requirement);
+    expect(tracked!.unlockedAt).toBeNull();
+
+    // The badge actually earned off the same twelve airports carries one.
+    const held = await progressOf(AIRPORTS_10);
+    expect(held!.progress).toBeGreaterThanOrEqual(held!.requirement);
+    expect(held!.unlockedAt).toBeInstanceOf(Date);
   });
 
   it('keeps the original unlock date when re-checking an achievement still held', async () => {
@@ -114,7 +144,7 @@ describe('achievement re-evaluation', () => {
 
     const first = await progressOf(AIRPORTS_10);
     expect(first!.progress).toBeGreaterThanOrEqual(first!.requirement);
-    const originalDate = first!.unlockedAt;
+    const originalDate = first!.unlockedAt!;
 
     // Wait long enough that a bumped timestamp would be visibly different.
     await new Promise(resolve => setTimeout(resolve, 25));
@@ -125,7 +155,7 @@ describe('achievement re-evaluation', () => {
 
     const second = await progressOf(AIRPORTS_10);
     expect(second!.progress).toBeGreaterThanOrEqual(second!.requirement);
-    expect(second!.unlockedAt.getTime()).toBe(originalDate.getTime());
+    expect(second!.unlockedAt!.getTime()).toBe(originalDate.getTime());
   });
 
   it('does not re-announce an achievement the user already holds', async () => {
@@ -140,14 +170,18 @@ describe('achievement re-evaluation', () => {
   it('re-unlocks cleanly when the data comes back', async () => {
     await seedFlights(2);
     await checkAndUpdateAchievements(userId);
-    expect((await progressOf(AIRPORTS_10))!.progress).toBe(4);
+    const revoked = await progressOf(AIRPORTS_10);
+    expect(revoked!.progress).toBe(4);
+    expect(revoked!.unlockedAt).toBeNull();
 
     await seedFlights(6);
     const newly = await checkAndUpdateAchievements(userId);
 
     const after = await progressOf(AIRPORTS_10);
     expect(after!.progress).toBeGreaterThanOrEqual(after!.requirement);
-    // It was revoked, so earning it again IS a new unlock and should be announced.
+    // It was revoked, so earning it again IS a new unlock and should be
+    // announced — and dated, off the cleared column rather than the old date.
     expect(newly.map(a => a.achievement.code)).toContain(AIRPORTS_10);
+    expect(after!.unlockedAt).toBeInstanceOf(Date);
   });
 });
