@@ -72,6 +72,10 @@ export async function loadAccountSnapshot(
         address: true,
         country: true,
         isoCountryCode: true,
+        // Read, not filtered on: the address check must still see a bookmarked
+        // house, because a wrong address is a wrong address whether or not
+        // anyone slept there. Only the COUNTRY touch below honours it.
+        visited: true,
         // `status` because `lodgingEvidence` reads it: a house whose only stay
         // was CANCELLED proves nothing, and without the column it read as a
         // house with no stay — which counts as a night.
@@ -127,6 +131,21 @@ export async function loadAccountSnapshot(
   const countryTouches: CountryTouch[] = [];
 
   for (const lodging of lodgings) {
+    /**
+     * The same cut `passportLoader.ts` makes (`where: { visited: true }`): a
+     * house with `visited = false` is a bookmark, and a bookmark proves no
+     * country.
+     *
+     * Missing it made the inbox disagree with the passport in BOTH directions,
+     * measured on the owner's account on 2026-09-02. A Bucharest hotel he had
+     * never stayed in was un-marked as visited; the country vanished from the
+     * passport, and the flag saying "Romania rests only on undated evidence"
+     * stayed open for a country that no longer existed — a question outliving
+     * its subject. The mirror of that is worse: a bookmarked house could raise a
+     * flag about a country nothing counts at all.
+     */
+    if (!lodging.visited) continue;
+
     const evidence = lodgingEvidence(lodging.stays, now);
     // Null means every stay is still in the future — a booking, not a visit.
     if (!evidence) continue;
