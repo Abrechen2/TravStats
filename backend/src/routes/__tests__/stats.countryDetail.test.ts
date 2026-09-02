@@ -19,6 +19,8 @@ describe("GET /api/v1/stats/countries/:code and /wrapped", () => {
   let stranger: { id: string };
   let authCookie: string;
   let catalogReady = false;
+  /** The house that proves Slovenia and nothing else. See the test below. */
+  let lodgingId = "";
 
   beforeAll(async () => {
     const [muc, jfk] = await Promise.all([
@@ -63,6 +65,26 @@ describe("GET /api/v1/stats/countries/:code and /wrapped", () => {
       },
     });
 
+    /**
+     * A country proved ONLY by a house — the shape that used to 404 here.
+     *
+     * `Hotel Sport` is the live case: one house, no stay, a Google Place ID
+     * saying Bucharest while its address says Otočec in Slovenia. It put a
+     * country in the owner's passport and took a database session to find. The
+     * owner's instruction (spec §3.4) is that such a record must be one click
+     * from the row AND editable, which needs its id to travel.
+     */
+    const house = await prisma.lodging.create({
+      data: {
+        userId: user.id,
+        name: "Hotel Sport",
+        country: "Slovenia",
+        isoCountryCode: "SI",
+        visited: true,
+      },
+    });
+    lodgingId = house.id;
+
     // A different account's flight to a country the owner has never been to.
     await prisma.flight.create({
       data: {
@@ -94,6 +116,41 @@ describe("GET /api/v1/stats/countries/:code and /wrapped", () => {
     expect(res.body.evidence).toBe("flight");
     expect(res.body.airports.map((a: { iata: string }) => a.iata)).toEqual(["MUC"]);
     expect(res.body.timeline[0]).toMatchObject({ kind: "flight", airportIata: "MUC" });
+  });
+
+  it("opens a country proved only by a house, and hands back its id", async () => {
+    // Before this the union was flight | port | place, so the drill-down for
+    // the single case the design was written about was empty by construction:
+    // a lodging-only country answered 404 and the provenance the passport row
+    // named could not be reached at all.
+    if (!catalogReady) return;
+    const res = await request(app).get("/api/v1/stats/countries/SI").set("Cookie", authCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe("SI");
+    expect(res.body.evidence).toBe("lodging");
+    expect(res.body.lodgings).toBe(1);
+    expect(res.body.timeline).toEqual([
+      { kind: "lodging", date: null, lodgingId, name: "Hotel Sport" },
+    ]);
+    // The existing honesty, unchanged: a house is not an airport and not a
+    // flight, so the country reports neither.
+    expect(res.body.entries).toBe(0);
+    expect(res.body.airports).toEqual([]);
+  });
+
+  it("hands back an id that resolves to the real record, so the row can be edited", async () => {
+    // The half of §3.4 a count cannot satisfy: `kinds: ["lodging"]` says what
+    // sort of thing proved the country, never WHICH thing. An id that named no
+    // row would turn a diagnosis into a dead end just as thoroughly as a 404.
+    if (!catalogReady) return;
+    const res = await request(app).get("/api/v1/stats/countries/SI").set("Cookie", authCookie);
+    const named = res.body.timeline[0].lodgingId as string;
+
+    const record = await prisma.lodging.findUnique({ where: { id: named } });
+    expect(record).not.toBeNull();
+    expect(record?.userId).toBe(user.id);
+    expect(record?.name).toBe("Hotel Sport");
   });
 
   it("does not swallow the /countries list route mounted after it", async () => {

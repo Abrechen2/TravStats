@@ -3,7 +3,9 @@
 // 800-line limit mandated by CLAUDE.md.
 
 import { calculateDistance } from './geo';
-import { getContinent } from './continents';
+import { getContinent, isoCountryCode } from './continents';
+import { resolveCountryCode } from '../shared/geo/countryCode';
+import { computeFlightSequenceStats } from './flightSequenceStats';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
@@ -55,6 +57,9 @@ export interface UserStats {
   flightsCount: number;
   totalDistance: number;
   totalFlightHours: number;
+  /** Countries visited, as ISO 3166-1 alpha-2 CODES — never country names.
+   *  See `toCountryCode` for why the codes are the only thing that may be
+   *  counted here. Every producer of this set must fold through it. */
   countries: Set<string>;
   airlines: Set<string>;
   airports: Set<string>;
@@ -185,6 +190,9 @@ export interface UserStats {
   lodgingStaysCount: number;
   lodgingNights: number;
   lodgingChainsUnique: number;
+  /** Countries slept in, as ISO alpha-2 CODES — same rule as `countries`.
+   *  `LodgingStats.countries` holds the free-text column, so it has to be
+   *  folded through `toCountryCode` before it is counted. */
   lodgingCountries: Set<string>;
   lodgingSpendBase: number;
   lodgingAwardNights: number;
@@ -276,6 +284,54 @@ export interface UserStats {
 // copy — `utils/stats/uniqueStats.ts` used to carry a byte-identical duplicate.
 // Re-exported here so the existing import sites keep working.
 export { getContinent };
+
+/**
+ * Folds anything that names a country — an ISO alpha-2 code, an English name,
+ * a German name, a multilingual booking field — into ONE ISO alpha-2 code.
+ * Returns null for anything that cannot be placed, and the caller must then
+ * DROP the contribution rather than count the raw string.
+ *
+ * Why this exists: the three domains speak three vocabularies. Airports carry
+ * ISO codes ("DE"), cruise ports carry English names ("Germany"), and
+ * `Lodging.country` is free text in whatever language the booking mail used
+ * ("Deutschland", "Schweiz/Suisse/Svizzera/Svizra"). Counting those strings
+ * counts one country several times. Measured on a real account: 33 ISO codes
+ * hiding behind 56 distinct strings, and the cross-domain union reported 88
+ * countries where the passport reported 32 — enough to hand out a
+ * COUNTRIES_100 badge to someone who has been to roughly 35. Grouping and
+ * counting therefore joins on the code, never on the text column, which is the
+ * rule `Lodging.isoCountryCode` and `shared/placeCounting.ts` already follow.
+ *
+ * Dropping the unresolvable half is the same cut `placeCounting` makes: a
+ * country nobody can check by looking is worse than a missing one.
+ *
+ * Both resolvers are consulted because neither is a superset. `isoCountryCode`
+ * (continents.ts) reads an English name table; `resolveCountryCode`
+ * (shared/geo) is the multilingual index that derives `Lodging.isoCountryCode`
+ * itself — so using it here keeps the badge count and the stored column in
+ * agreement. The final guard rejects the catalogue's placeholder codes, which
+ * name no country at all.
+ */
+export function toCountryCode(country: string | null | undefined): string | null {
+  if (!country) return null;
+  const code = resolveCountryCode(country) ?? isoCountryCode(country);
+  if (!code) return null;
+  const upper = code.toUpperCase();
+  return upper === 'ZZ' || upper === 'XZ' ? null : upper;
+}
+
+/**
+ * Folds a whole set of country strings into ISO codes, dropping every entry
+ * that cannot be placed. The set-shaped companion to `toCountryCode`.
+ */
+export function normalizeCountrySet(countries: Iterable<string>): Set<string> {
+  const codes = new Set<string>();
+  for (const country of countries) {
+    const code = toCountryCode(country);
+    if (code) codes.add(code);
+  }
+  return codes;
+}
 
 export async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
   const stats: UserStats = {
@@ -499,11 +555,17 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     if (depCode) stats.airports.add(depCode);
     if (arrCode) stats.airports.add(arrCode);
 
-    // Countries
+    // Countries — stored as ISO alpha-2 codes. The airport catalogue already
+    // speaks codes, but folding through `toCountryCode` anyway is what makes
+    // `UserStats.countries` an all-codes set by construction rather than by
+    // luck, so the cross-domain union has one vocabulary to merge into. It
+    // also drops the catalogue's placeholder codes, which name no country.
     const depAirport = airportMap.get(depCode || '');
     const arrAirport = airportMap.get(arrCode || '');
-    if (depAirport?.country) stats.countries.add(depAirport.country);
-    if (arrAirport?.country) stats.countries.add(arrAirport.country);
+    const depCountry = toCountryCode(depAirport?.country);
+    const arrCountry = toCountryCode(arrAirport?.country);
+    if (depCountry) stats.countries.add(depCountry);
+    if (arrCountry) stats.countries.add(arrCountry);
 
     // Continents — resolved from the airport's ISO country, with the coordinates only
     // as a fallback. The country is exact; boxes drawn on a lat/lon grid are not.
@@ -697,123 +759,16 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
   // Reset shortestSingleFlight if no flights
   if (stats.shortestSingleFlight === Number.POSITIVE_INFINITY) stats.shortestSingleFlight = 0;
 
-  // Cross-flight computations
-  const sorted = [...flights]
-    .filter((f) => f.status === 'flown' && f.departureTime)
-    .sort((a, b) => (a.departureTime!.getTime() - b.departureTime!.getTime()));
-
-  // Window / Middle / Aisle streaks (based on seatNumber last char: A/F typically
-  // window, B/E middle, C/D aisle — rough; G/H are the wide-body aisle letters)
-  let winRun = 0;
-  let maxWin = 0;
-  let midRun = 0;
-  let maxMid = 0;
-  let aisleRun = 0;
-  let maxAisle = 0;
-  for (const f of sorted) {
-    const seat = f.seatNumber?.toUpperCase().match(/[A-Z]$/)?.[0];
-    if (!seat) {
-      winRun = 0;
-      midRun = 0;
-      aisleRun = 0;
-      continue;
-    }
-    // Conventional narrow-body mapping: A / F / K = window, C / D = aisle, B / E = middle
-    if (seat === 'A' || seat === 'F' || seat === 'K') {
-      winRun++;
-      maxWin = Math.max(maxWin, winRun);
-      midRun = 0;
-      aisleRun = 0;
-    } else if (seat === 'B' || seat === 'E') {
-      midRun++;
-      maxMid = Math.max(maxMid, midRun);
-      winRun = 0;
-      aisleRun = 0;
-    } else if (seat === 'C' || seat === 'D' || seat === 'G' || seat === 'H') {
-      aisleRun++;
-      maxAisle = Math.max(maxAisle, aisleRun);
-      winRun = 0;
-      midRun = 0;
-    } else {
-      winRun = 0;
-      midRun = 0;
-      aisleRun = 0;
-    }
-  }
-  stats.windowStreak = maxWin;
-  stats.middleStreak = maxMid;
-  stats.aisleStreak = maxAisle;
-
-  // Hat-Trick — most flights on one calendar day. Counts flown + historical
-  // alike: a historical import carries a real date even when the time of day
-  // is a placeholder.
-  const flightsPerDay = new Map<string, number>();
-  for (const f of flights) {
-    if (!f.departureTime) continue;
-    const dayKey = f.departureTime.toISOString().slice(0, 10);
-    flightsPerDay.set(dayKey, (flightsPerDay.get(dayKey) ?? 0) + 1);
-  }
-  stats.maxFlightsOneDay = Math.max(0, ...flightsPerDay.values());
-
-  // Groundhog Day — same route on three consecutive calendar days
-  const routesByDay = new Map<string, Set<string>>();
-  for (const f of sorted) {
-    const key = (f.departureTime!.toISOString().slice(0, 10));
-    const route = `${f.depIata || f.depIcao}-${f.arrIata || f.arrIcao}`;
-    if (!routesByDay.has(key)) routesByDay.set(key, new Set());
-    routesByDay.get(key)!.add(route);
-  }
-  const days = Array.from(routesByDay.keys()).sort();
-  let maxGroundhog = 0;
-  for (let i = 0; i < days.length; i++) {
-    for (const route of routesByDay.get(days[i])!) {
-      let streak = 1;
-      let prev = new Date(days[i]);
-      for (let j = i + 1; j < days.length; j++) {
-        const curr = new Date(days[j]);
-        const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000);
-        if (diff === 1 && routesByDay.get(days[j])!.has(route)) {
-          streak++;
-          prev = curr;
-        } else if (diff > 1) {
-          break;
-        }
-      }
-      maxGroundhog = Math.max(maxGroundhog, streak);
-    }
-  }
-  stats.groundhogRoute = maxGroundhog;
-
-  // There and Back Again — one calendar day holding a route AND its exact
-  // reverse. Reuses the flown-only routesByDay map built for Groundhog Day.
-  const hasReversePair = (routes: Set<string>): boolean => {
-    for (const route of routes) {
-      const [a, b] = route.split('-');
-      if (a && b && a !== 'null' && b !== 'null' && a !== b && routes.has(`${b}-${a}`)) {
-        return true;
-      }
-    }
-    return false;
-  };
-  if (Array.from(routesByDay.values()).some(hasReversePair)) {
-    stats.hasSameDayReturn = 1;
-  }
-
-  // Tight connection — any consecutive flight pair where arrival airport == next departure airport,
-  // and the gap between arrivalTime and next departureTime is < 45 minutes (but > 0).
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const a = sorted[i];
-    const b = sorted[i + 1];
-    if (!a.arrivalTime || !b.departureTime) continue;
-    const aArr = a.arrIata || a.arrIcao;
-    const bDep = b.depIata || b.depIcao;
-    if (aArr && bDep && aArr === bDep) {
-      const gapMin = (b.departureTime.getTime() - a.arrivalTime.getTime()) / 60000;
-      if (gapMin > 0 && gapMin < 45) {
-        stats.tightConnection++;
-      }
-    }
-  }
+  // Cross-flight computations — everything that needs the flights in relation
+  // to each other rather than one at a time. See `./flightSequenceStats`.
+  const sequence = computeFlightSequenceStats(flights);
+  stats.windowStreak = sequence.windowStreak;
+  stats.middleStreak = sequence.middleStreak;
+  stats.aisleStreak = sequence.aisleStreak;
+  stats.maxFlightsOneDay = sequence.maxFlightsOneDay;
+  stats.groundhogRoute = sequence.groundhogRoute;
+  stats.hasSameDayReturn = sequence.hasSameDayReturn;
+  stats.tightConnection = sequence.tightConnection;
 
   return stats;
 }
@@ -858,11 +813,21 @@ export function computeFlyAndStayFlags(trips: TripDomainCounts[]): {
  * countries can be folded in the same way the cruise-port countries
  * already are in `achievements.ts`, rather than each caller
  * re-implementing the union by hand.
+ *
+ * It is also THE seam where the three domains' vocabularies become one: every
+ * input is folded to an ISO alpha-2 code and anything unresolvable is dropped
+ * (see `toCountryCode` for the 88-vs-32 measurement that made this necessary).
+ * Normalising here rather than in each caller is deliberate — a domain added
+ * later cannot forget to do it, and the callers cannot disagree about how.
+ * Callers may pass raw names; the OUTPUT is always codes.
  */
 export function unionCountries(...countrySets: Array<Set<string>>): Set<string> {
   const union = new Set<string>();
   for (const set of countrySets) {
-    for (const country of set) union.add(country);
+    for (const country of set) {
+      const code = toCountryCode(country);
+      if (code) union.add(code);
+    }
   }
   return union;
 }

@@ -33,7 +33,10 @@ describe("the passport counts evidence", () => {
     // existing account — keeps its number until evidence is actually passed.
     const passport = buildPassport([flight("MUC", "FRA")], countries);
     expect(passport.summary.countries).toBe(1);
-    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 0, place: 0 });
+    // `lodging` joined the split on 2026-09-02 (a house is evidence too). The
+    // three figures that existed before it are untouched, which is the point of
+    // asserting the whole object rather than three keys of it.
+    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 0, place: 0, lodging: 0 });
   });
 
   it("adds a country reached only by a port call", () => {
@@ -46,7 +49,7 @@ describe("the passport counts evidence", () => {
     );
 
     expect(passport.summary.countries).toBe(2);
-    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 1, place: 0 });
+    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 1, place: 0, lodging: 0 });
     const italy = passport.countries.find((c) => c.code === "IT");
     expect(italy?.evidence).toBe("port");
     // A port call is not a flight and not an airport, so it inflates neither.
@@ -66,7 +69,7 @@ describe("the passport counts evidence", () => {
       [{ isoCountryCode: "pt", at: new Date("2022-05-01T00:00:00Z") }]
     );
 
-    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 0, place: 1 });
+    expect(passport.summary.byEvidence).toEqual({ flight: 1, port: 0, place: 1, lodging: 0 });
     // Lower-cased in the source, upper-cased in the answer: the code is the
     // join key and two spellings of it must not become two countries.
     expect(passport.countries.find((c) => c.code === "PT")?.evidence).toBe("place");

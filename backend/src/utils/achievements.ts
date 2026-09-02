@@ -1,12 +1,15 @@
 import { prisma } from '../db';
-import type { Achievement, UserAchievement } from '@prisma/client';
 import logger from './logger';
+import {
+  applyAchievementWrites,
+  planAchievementWrites,
+  type UserAchievementWithRelation,
+} from './achievementWrites';
 import {
   calculateUserStats,
   getContinent,
   type FlightData,
 } from './achievementStats';
-import { checkAchievement } from './achievementChecks';
 import {
   calculateCruiseStats,
   rangeContainsMonthDay,
@@ -17,7 +20,12 @@ import {
   type LodgingStayData as LodgingStatsInput,
   type LodgingRecord,
 } from './lodgingStats';
-import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
+import {
+  computeFlyAndStayFlags,
+  normalizeCountrySet,
+  unionCountries,
+  type TripDomainCounts,
+} from './achievementStats';
 import {
   buildMembershipContext,
   resolveStayProgramme,
@@ -37,8 +45,6 @@ import { calculatePlaceStats } from './placeStats';
  * ever moves, the cruise half of this line has to be decided separately —
  * which is the whole reason it is written out here rather than imported. */
 const isDoneStatus = (status: string): boolean => status === 'flown' || status === 'historical';
-
-type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
 // Re-export the shared types so existing callers that imported them from
 // `./achievements` keep compiling without touching every import site.
@@ -480,7 +486,11 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // Union flight + cruise + lodging countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
     // Ports store the country as an English NAME ("Germany"), airports as an ISO-3166
-    // alpha-2 code ("DE"); getContinent accepts both.
+    // alpha-2 code ("DE"), and `Lodging.country` is free text in whatever language the
+    // booking mail used ("Deutschland"); getContinent accepts all of them, and
+    // `unionCountries` folds them to ONE ISO code each — which is the only reason the
+    // country badges can be trusted at all (they counted 88 countries for a passport
+    // of 32 while the raw strings were unioned; see `toCountryCode`).
     const combinedCountries = new Set<string>(stats.countries);
     const combinedContinents = new Set<string>(stats.continents);
     for (const c of cruiseStatsInput) {
@@ -539,7 +549,10 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       lodgingStaysCount: lodgingStats.staysCount,
       lodgingNights: lodgingStats.totalNights,
       lodgingChainsUnique: lodgingStats.chainsUnique,
-      lodgingCountries: lodgingStats.countries,
+      // Folded to ISO codes for the same reason as the shared `countries` set:
+      // `LodgingStats.countries` holds the free-text column, so "Deutschland"
+      // and "Germany" would otherwise be two countries in the lodging badge too.
+      lodgingCountries: normalizeCountrySet(lodgingStats.countries),
       lodgingSpendBase: lodgingStats.spendBaseTotal,
       lodgingAwardNights: lodgingStats.awardNights,
       lodgingChainLoyaltyMax: lodgingStats.chainLoyaltyMax,
@@ -611,175 +624,19 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       curatedTickedByList: placeStats.curatedTickedByList,
     };
 
-    const newlyUnlocked: UserAchievementWithRelation[] = [];
-    const revoked: string[] = [];
+    // Decide first, write second — the plan is a value that exists before any
+    // transaction opens. See `./achievementWrites` for why that ordering is the
+    // fix for forgejo#39 and not merely tidier.
+    const plan = planAchievementWrites(
+      allAchievements,
+      existingAchievementMap,
+      augmentedStats,
+      flights as FlightData[],
+    );
 
-    /**
-     * What this run will actually write, decided before a transaction is opened.
-     *
-     * Forgejo #39. The transaction used to wrap this whole loop — all ~259
-     * achievements, including `checkAchievement`, which is pure in-memory work
-     * and touches no database. So a transaction stayed open across the entire
-     * catalogue while holding the locks its earlier writes had taken, on every
-     * save in every domain. In the ordinary case it wrote almost nothing and
-     * held that open anyway: the steady-state guards below skip a badge whose
-     * stored value already matches.
-     *
-     * That is what produced `40P01 deadlock detected` against an unrelated
-     * statement touching the same user — a test's teardown in the reported case,
-     * and in production anyone deleting their account while a re-check runs.
-     *
-     * Deciding first and writing second makes the transaction as long as the
-     * number of rows that genuinely change, instead of as long as the catalogue.
-     * When nothing changed there is NO transaction at all, and nothing to
-     * collide with. It also makes awaiting these calls affordable, which is the
-     * other half of #39.
-     *
-     * No guarantee is weakened. `existingAchievementMap` was already read before
-     * the transaction — that staleness is exactly why the writes below are
-     * `upsert` and not `create` — so the decision was never protected by it.
-     */
-    type PlannedWrite =
-      | { kind: "unlock"; achievementId: string; requirement: number; wasUnlocked: boolean }
-      | { kind: "progress"; rowId: string; progress: number }
-      | { kind: "track"; achievementId: string; progress: number };
-
-    const planned: PlannedWrite[] = [];
-
-    for (const achievement of allAchievements) {
-      const existing = existingAchievementMap.get(achievement.id);
-      const wasUnlocked = Boolean(existing && existing.progress >= achievement.requirement);
-
-      // Every achievement is re-evaluated on every run, unlocked ones included.
-      // This used to `continue` on an already-unlocked achievement, which meant a
-      // badge granted from data that was later corrected or deleted could never be
-      // taken back. It also meant a scoring bug (the Arctic being classified as
-      // Antarctica, say) stayed rewarded forever even after the bug was fixed.
-      const { isUnlocked, progress } = checkAchievement(
-        achievement,
-        augmentedStats,
-        flights as FlightData[],
-      );
-
-      if (isUnlocked) {
-        // Steady state: the user already holds it and the stored progress is
-        // already the requirement. Re-evaluating is cheap (in memory), but writing
-        // is not — without this guard every flight save would re-upsert every badge
-        // the user has ever earned.
-        if (wasUnlocked && existing && existing.progress === achievement.requirement) {
-          continue;
-        }
-        planned.push({
-          kind: "unlock",
-          achievementId: achievement.id,
-          requirement: achievement.requirement,
-          wasUnlocked,
-        });
-      } else if (existing) {
-        // Nothing changed — skip the write. (An unlocked badge that is still
-        // unlocked never reaches here; this is the progress-row steady state.)
-        if (existing.progress === progress) {
-          continue;
-        }
-        if (wasUnlocked) {
-          // The user holds this badge but no longer meets its requirement — the
-          // flights behind it were deleted, or it was granted by a scoring bug.
-          // Writing the true progress drops it back below the threshold, which is
-          // what "revoked" means here (there is no separate unlocked flag).
-          revoked.push(achievement.code);
-        }
-        planned.push({ kind: "progress", rowId: existing.id, progress });
-      } else if (progress > 0) {
-        // Only create a progress row when there's something to track.
-        planned.push({ kind: "track", achievementId: achievement.id, progress });
-      }
-    }
-
-    try {
-      // The common case: nothing to write, so no transaction is opened and this
-      // run takes no locks at all.
-      if (planned.length > 0) {
-        await prisma.$transaction(async (tx) => {
-          for (const write of planned) {
-            // `upsert`, not `create`: the snapshot this plan was built from is
-            // older than the transaction, so a concurrent invocation may have
-            // inserted the same (user, achievement) pair in between and would
-            // otherwise trip the unique constraint.
-            if (write.kind === "unlock") {
-              const updated = await tx.userAchievement.upsert({
-                where: {
-                  userId_achievementId: { userId, achievementId: write.achievementId },
-                },
-                update: {
-                  progress: write.requirement,
-                  // Keep the ORIGINAL unlock date. Re-checking an achievement the user
-                  // already holds must not make it look freshly earned — that would
-                  // reshuffle the trophy case on every flight they add.
-                  ...(write.wasUnlocked ? {} : { unlockedAt: new Date() }),
-                },
-                create: {
-                  userId,
-                  achievementId: write.achievementId,
-                  progress: write.requirement,
-                },
-                include: { achievement: true },
-              });
-              // Only count as newly-unlocked when the snapshot had no unlock yet.
-              // Re-upserting an already-unlocked row shouldn't emit another event.
-              if (!write.wasUnlocked) {
-                newlyUnlocked.push(updated);
-              }
-            } else if (write.kind === "progress") {
-              await tx.userAchievement.update({
-                where: { id: write.rowId },
-                data: { progress: write.progress },
-              });
-            } else {
-              await tx.userAchievement.upsert({
-                where: {
-                  userId_achievementId: { userId, achievementId: write.achievementId },
-                },
-                update: { progress: write.progress },
-                create: {
-                  userId,
-                  achievementId: write.achievementId,
-                  progress: write.progress,
-                },
-              });
-            }
-          }
-        });
-      }
-
-      if (revoked.length > 0) {
-        logger.info({
-          operation: 'revoke_achievements',
-          message: 'Achievements no longer met their requirement and were revoked',
-          context: { userId, codes: revoked },
-        });
-      }
-    } catch (error) {
-      logger.error({
-        operation: 'update_achievements_transaction',
-        message: 'Failed to update achievements in transaction',
-        context: { userId, achievementCount: allAchievements.length },
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      });
-      throw error;
-    }
-
-    if (newlyUnlocked.length > 0) {
-      logger.info({
-        operation: 'achievements_unlocked',
-        message: `User unlocked ${newlyUnlocked.length} achievement(s)`,
-        context: { userId, achievementIds: newlyUnlocked.map(ua => ua.achievement.id) },
-      });
-    }
-
-    return newlyUnlocked;
+    // `return await`, not `return`: a bare return would hand the promise out
+    // past the catch below, and a failed write would stop being logged here.
+    return await applyAchievementWrites(userId, plan, allAchievements.length);
   } catch (error) {
     logger.error({
       operation: 'check_and_update_achievements',

@@ -1,4 +1,8 @@
-import { buildCountryDetail, type CountryDetailFlight } from "../countryDetail";
+import {
+  buildCountryDetail,
+  type CountryDetailFlight,
+  type CountryDetailLodging,
+} from "../countryDetail";
 
 /**
  * Forgejo #42: the country page is derived once, on the server.
@@ -105,6 +109,25 @@ describe("buildCountryDetail", () => {
     expect(detail?.timeline[0]).toMatchObject({ kind: "port", portName: "Genova", cruiseId: "c1" });
   });
 
+  it("opens a port stored under its NATIVE country name, not only its English one", () => {
+    // The port catalogue's `country` is free text, so it holds "Italia" beside
+    // "Italy" and "Deutschland" beside "Germany". The passport folds it through
+    // BOTH resolvers; this file once used the English-only table alone. The
+    // result was a row that counted the country and a panel that could not name
+    // the record which counted it — the list and the detail disagreeing, which
+    // is the whole defect forgejo#42 was filed about, reappearing one layer down.
+    const detail = buildCountryDetail(
+      "IT",
+      [flight("a", "MUC", "FRA")],
+      countries,
+      [],
+      [{ cruiseId: "c1", portName: "Genova", country: "Italia", at: new Date("2023-07-04T00:00:00Z") }]
+    );
+
+    expect(detail?.portCalls).toBe(1);
+    expect(detail?.timeline[0]).toMatchObject({ kind: "port", portName: "Genova" });
+  });
+
   it("reports the STRONGEST evidence when several kinds apply", () => {
     const detail = buildCountryDetail(
       "DE",
@@ -121,6 +144,107 @@ describe("buildCountryDetail", () => {
     expect(detail?.portCalls).toBe(1);
     expect(detail?.places).toBe(1);
     expect(detail?.timeline).toHaveLength(3);
+  });
+
+  it("opens a country proved ONLY by a house, and names the house it can be edited from", () => {
+    // The motivating case of the whole design, and until now the one this page
+    // could not serve: a lodging-only country answered 404, so the drill-down
+    // for `Hotel Sport` — one house, no stay, a Place ID saying Bucharest while
+    // its address says Otočec in Slovenia — opened on nothing. The owner's
+    // instruction is that the record must be reachable AND changeable, which
+    // needs the id, not the count.
+    const detail = buildCountryDetail(
+      "SI",
+      [],
+      countries,
+      [],
+      [],
+      [],
+      [{ lodgingId: "l1", name: "Hotel Sport", isoCountryCode: "SI", stays: [] }]
+    );
+
+    expect(detail).not.toBeNull();
+    expect(detail?.code).toBe("SI");
+    expect(detail?.evidence).toBe("lodging");
+    expect(detail?.lodgings).toBe(1);
+    expect(detail?.timeline).toEqual([
+      { kind: "lodging", date: null, lodgingId: "l1", name: "Hotel Sport" },
+    ]);
+    // The honesty the passport already keeps: a house is not an airport and not
+    // a flight, so a country proved by one shows neither.
+    expect(detail?.entries).toBe(0);
+    expect(detail?.airports).toEqual([]);
+  });
+
+  it("dates a lodging row from the stay that proved it", () => {
+    const detail = buildCountryDetail(
+      "CZ",
+      [],
+      countries,
+      [],
+      [],
+      [],
+      [
+        {
+          lodgingId: "l2",
+          name: "Pension Praha",
+          isoCountryCode: "cz",
+          stays: [
+            {
+              status: "completed",
+              checkIn: new Date("2019-08-01T00:00:00Z"),
+              checkOut: new Date("2019-08-04T00:00:00Z"),
+            },
+          ],
+        },
+      ]
+    );
+
+    expect(detail?.timeline[0]).toMatchObject({
+      kind: "lodging",
+      lodgingId: "l2",
+      date: "2019-08-04",
+    });
+    expect(detail?.firstYear).toBe(2019);
+  });
+
+  it("does not open a country whose only house is a future booking or a cancellation", () => {
+    // `lodgingEvidence` owns this cut and is not second-guessed here — if it
+    // were, the page could show a house the passport row does not count, which
+    // is the disagreement between list and detail that #42 is about.
+    const booking: CountryDetailLodging = {
+      lodgingId: "l3",
+      name: "Hotel Bukarest",
+      isoCountryCode: "RO",
+      stays: [{ status: "confirmed", checkIn: null, checkOut: new Date("2099-12-24T00:00:00Z") }],
+    };
+    const cancelled: CountryDetailLodging = {
+      lodgingId: "l4",
+      name: "Hotel Bukarest",
+      isoCountryCode: "RO",
+      stays: [
+        { status: "cancelled", checkIn: null, checkOut: new Date("2019-05-04T00:00:00Z") },
+      ],
+    };
+
+    expect(buildCountryDetail("RO", [], countries, [], [], [], [booking])).toBeNull();
+    expect(buildCountryDetail("RO", [], countries, [], [], [], [cancelled])).toBeNull();
+  });
+
+  it("keeps the flight as the label when a house and a flight both apply", () => {
+    const detail = buildCountryDetail(
+      "DE",
+      [flight("a", "MUC", "FRA")],
+      countries,
+      [],
+      [],
+      [],
+      [{ lodgingId: "l5", name: "Hotel München", isoCountryCode: "DE", stays: [] }]
+    );
+
+    expect(detail?.evidence).toBe("flight");
+    expect(detail?.lodgings).toBe(1);
+    expect(detail?.timeline).toHaveLength(2);
   });
 
   it("skips a place whose country was never resolved", () => {
@@ -193,7 +317,7 @@ describe("buildCountryDetail", () => {
 
   it("caps the timeline and says that it did", () => {
     const many = Array.from({ length: 5 }, (_, i) => flight(`f${i}`, "MUC", "FRA"));
-    const detail = buildCountryDetail("DE", many, countries, [], [], [], 2);
+    const detail = buildCountryDetail("DE", many, countries, [], [], [], [], 2);
 
     expect(detail?.timeline).toHaveLength(2);
     expect(detail?.timelineTruncated).toBe(true);

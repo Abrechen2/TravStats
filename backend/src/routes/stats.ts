@@ -33,7 +33,13 @@ import {
   resolveFlightDuration,
 } from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
-import { buildPassport } from '../services/stats/passport';
+import { buildTzMap, withDepartureClock } from '../services/stats/departureClock';
+import {
+  loadAirportCountries,
+  loadHomeIatas,
+  loadPassport,
+  passportAirportCodes,
+} from '../services/stats/passportLoader';
 import { buildCountryDetail } from '../services/stats/countryDetail';
 import { buildWrapped } from '../services/stats/wrapped';
 import { buildTravelRecords } from '../services/stats/records';
@@ -482,58 +488,6 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     next(error);
   }
 });
-
-// Build a UTC-timezone map for a set of flight rows (mirrors computeSummary).
-async function buildTzMap(
-  rows: Array<{ depIata: string | null; depIcao: string | null; arrIata: string | null; arrIcao: string | null }>,
-): Promise<Map<string, string>> {
-  const codes = new Set<string>();
-  for (const f of rows) {
-    if (f.depIata) codes.add(f.depIata);
-    if (f.depIcao) codes.add(f.depIcao);
-    if (f.arrIata) codes.add(f.arrIata);
-    if (f.arrIcao) codes.add(f.arrIcao);
-  }
-  const map = new Map<string, string>();
-  try {
-    const airports = await getCachedAirports(Array.from(codes));
-    for (const [code, data] of airports.entries()) {
-      if (data?.timezone) map.set(code, data.timezone);
-    }
-  } catch {
-    // timezone lookup failed — durations fall back to naïve diff
-  }
-  return map;
-}
-
-/**
- * Attach the departure airport's timezone to each row.
- *
- * The flight table stores instants; the clock a departure happened on lives on
- * the airport. Every "when did I fly" figure — time of day, weekday, month,
- * which calendar day or year a flight belongs to — has to be read on that
- * clock, so it travels with the row into the stats modules (#266) rather than
- * each of them resolving it, or forgetting to.
- */
-async function withDepartureClock<
-  T extends {
-    depIata: string | null;
-    depIcao: string | null;
-    arrIata: string | null;
-    arrIcao: string | null;
-    depTimeSemantics: string;
-  },
->(rows: T[]): Promise<Array<T & { depTimezone: string | null; depTimeSemantics: FlightTimeSemantics }>> {
-  const tzMap = await buildTzMap(rows);
-  return rows.map((f) => ({
-    ...f,
-    depTimezone:
-      (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-      (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-      null,
-    depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
-  }));
-}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -1298,119 +1252,6 @@ router.get(
   },
 );
 
-/**
- * The airport codes a passport-shaped flight row touches, deduplicated.
- *
- * IATA only, deliberately: `buildPassport` keys its airports by that code and
- * an ICAO fallback would file the same airport twice under two names.
- */
-function passportAirportCodes(
-  flights: readonly { depIata: string | null; arrIata: string | null }[],
-): string[] {
-  return [
-    ...new Set(
-      flights.flatMap((f) => [f.depIata, f.arrIata]).filter((c): c is string => Boolean(c)),
-    ),
-  ];
-}
-
-/** Country per airport code, as the catalogue holds it. */
-async function loadAirportCountries(codes: string[]): Promise<Map<string, string | null>> {
-  // One catalogue lookup for every end of every flight. A failure here costs
-  // the countries, so it is reported rather than swallowed into an empty
-  // passport that looks like someone who has never flown.
-  const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
-  return new Map<string, string | null>(
-    [...airports.entries()].map(([code, data]) => [code, data?.country ?? null]),
-  );
-}
-
-/** The user's home airport codes, newest history first. */
-async function loadHomeIatas(userId: string): Promise<string[]> {
-  const homeSettings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { data: true },
-  });
-  const historyData =
-    homeSettings?.data && typeof homeSettings.data === 'object'
-      ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-      : undefined;
-  return normalizeHistory(historyData).map((entry) => entry.iata);
-}
-
-/**
- * Build the whole passport for a user.
- *
- * Extracted so `/stats/wrapped` can take its "new countries this year" from
- * the same object `/stats/passport` publishes. Deriving that number a second
- * time from the flight list would make the story disagree with the passport on
- * an account with a cruise — which is precisely the drift #42 is about.
- */
-async function loadPassport(userId: string): Promise<ReturnType<typeof buildPassport>> {
-  const flights = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
-    select: {
-      depIata: true,
-      depLat: true,
-      depLon: true,
-      arrIata: true,
-      arrLat: true,
-      arrLon: true,
-      departureTime: true,
-      status: true,
-    },
-  });
-
-  /**
-   * Evidence beyond landings — Forgejo #42, owner's decision 2026-08-31.
-   *
-   * A cruise that CALLED at a port and a place the user recorded visiting
-   * both prove presence. Only sailed cruises count, the same cut rule 1
-   * makes for flights, and a place joins on its resolved `isoCountryCode`
-   * because "Deutschland" and "Germany" are one country and only the code
-   * knows that.
-   *
-   * Fetched here rather than inside the service so the derivation stays a
-   * pure function of its inputs and keeps its unit tests.
-   */
-  const [airportCountries, portCalls, placeVisits, homeIatas] = await Promise.all([
-    loadAirportCountries(passportAirportCodes(flights)),
-    prisma.cruiseStop.findMany({
-      where: {
-        cruise: { userId, status: { in: ['flown', 'historical'] } },
-        port: { isNot: null },
-      },
-      select: { arrivalTime: true, date: true, port: { select: { country: true } } },
-    }),
-    prisma.place.findMany({
-      where: { userId, visited: true, isoCountryCode: { not: null } },
-      select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
-    }),
-    loadHomeIatas(userId),
-  ]);
-
-  return buildPassport(
-    flights,
-    airportCountries,
-    homeIatas,
-    new Date(),
-    portCalls.map((stop) => ({
-      country: stop.port?.country ?? null,
-      at: stop.arrivalTime ?? stop.date,
-    })),
-    // A place's visits, flattened: each dated visit is its own evidence,
-    // and a place with none still proves the country through `visited`.
-    placeVisits.flatMap((place) =>
-      place.visits.length > 0
-        ? place.visits.map((v) => ({
-            isoCountryCode: place.isoCountryCode,
-            at: v.visitedAt,
-          }))
-        : [{ isoCountryCode: place.isoCountryCode, at: null }],
-    ),
-  );
-}
-
 router.get(
   '/passport',
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -1463,7 +1304,7 @@ router.get(
 
       // The same three sources the passport counts, so the row and the page
       // can only ever agree.
-      const [airportCountries, portCalls, places, homeIatas] = await Promise.all([
+      const [airportCountries, portCalls, places, lodgings, homeIatas] = await Promise.all([
         loadAirportCountries(passportAirportCodes(flights)),
         prisma.cruiseStop.findMany({
           where: {
@@ -1484,6 +1325,22 @@ router.get(
             name: true,
             isoCountryCode: true,
             visits: { select: { visitedAt: true } },
+          },
+        }),
+        // The fourth source, and the one the owner's instruction is about: a
+        // house proves a country, so the page behind that row must be able to
+        // open it. `visited: false` is excluded — a bookmarked house is not a
+        // visit — and the stays travel UNFILTERED with their status, because
+        // `lodgingEvidence` owns which of them count and a house whose only
+        // stay was filtered away would arrive as a house with no stay, which
+        // counts as a night.
+        prisma.lodging.findMany({
+          where: { userId, visited: true, isoCountryCode: { not: null } },
+          select: {
+            id: true,
+            name: true,
+            isoCountryCode: true,
+            stays: { select: { status: true, checkIn: true, checkOut: true } },
           },
         }),
         loadHomeIatas(userId),
@@ -1517,6 +1374,12 @@ router.get(
                 },
               ],
         ),
+        lodgings.map((lodging) => ({
+          lodgingId: lodging.id,
+          name: lodging.name,
+          isoCountryCode: lodging.isoCountryCode,
+          stays: lodging.stays,
+        })),
       );
 
       if (!detail) {

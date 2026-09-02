@@ -8,20 +8,52 @@
  *      flight in one trip and a lodging stay in an unrelated trip must
  *      NOT satisfy `flyAndStay` — only a trip that itself links both
  *      domains counts.
- *   3. `unionCountries` — merges + dedups per-domain country sets.
+ *   3. `unionCountries` — merges + dedups per-domain country sets. It is also
+ *      the seam that folds the three domains' country vocabularies (ISO code /
+ *      English name / free text) into ISO codes, so one country is one country.
  */
 
 import {
   calculateUserStats,
   computeFlyAndStayFlags,
+  normalizeCountrySet,
   unionCountries,
   type FlightData,
   type TripDomainCounts,
 } from '../achievementStats';
+import { getCachedAirports } from '../../services/airportCache';
 
 jest.mock('../../services/airportCache', () => ({
   getCachedAirports: jest.fn(async () => new Map()),
 }));
+
+/** Minimal flown flight between two airports — only the fields the country
+ *  path reads carry meaning; the rest are the schema's empty values. */
+function flightBetween(depIata: string, arrIata: string): FlightData {
+  return {
+    id: `${depIata}-${arrIata}`,
+    depLat: 0,
+    depLon: 0,
+    arrLat: 0,
+    arrLon: 0,
+    depIcao: null,
+    depIata,
+    arrIcao: null,
+    arrIata,
+    airline: null,
+    aircraft: null,
+    flightNumber: null,
+    seatNumber: null,
+    seatClass: null,
+    notes: null,
+    actualDeparture: null,
+    delayMinutes: null,
+    departureTime: null,
+    arrivalTime: null,
+    status: 'flown',
+    specialType: null,
+  };
+}
 
 describe('UserStats — lodging field defaults', () => {
   it('initializes every lodging field to a sane zero/empty default for a user with no flights', async () => {
@@ -95,14 +127,14 @@ describe('computeFlyAndStayFlags', () => {
 });
 
 describe('unionCountries', () => {
-  it('merges and dedups countries across domains', () => {
+  it('merges and dedups countries across domains, as ISO codes', () => {
     const flightCountries = new Set(['Germany', 'France']);
     const cruiseCountries = new Set(['France', 'Spain']);
     const lodgingCountries = new Set(['Spain', 'Switzerland']);
 
     const union = unionCountries(flightCountries, cruiseCountries, lodgingCountries);
 
-    expect([...union].sort()).toEqual(['France', 'Germany', 'Spain', 'Switzerland']);
+    expect([...union].sort()).toEqual(['CH', 'DE', 'ES', 'FR']);
   });
 
   it('returns an empty set when every input is empty', () => {
@@ -111,6 +143,82 @@ describe('unionCountries', () => {
 
   it('handles a single input set', () => {
     const union = unionCountries(new Set(['Italy']));
-    expect([...union]).toEqual(['Italy']);
+    expect([...union]).toEqual(['IT']);
+  });
+
+  // The bug this whole seam exists for. The domains speak three vocabularies:
+  // airports carry ISO codes, cruise ports English names, `Lodging.country`
+  // free text in the booking mail's language. Unioning the raw strings reported
+  // 88 countries on an account whose passport holds 32, which handed out a
+  // COUNTRIES_100 badge to a traveller with roughly 35.
+  it('counts a flight "DE" and a lodging "Deutschland" as ONE country', () => {
+    const flightCountries = new Set(['DE']);
+    const lodgingCountries = new Set(['Deutschland']);
+
+    const union = unionCountries(flightCountries, lodgingCountries);
+
+    expect(union.size).toBe(1);
+    expect([...union]).toEqual(['DE']);
+  });
+
+  it('collapses every spelling measured on the real account', () => {
+    // Verbatim from the owner's data — 4 countries hiding behind 9 strings.
+    const union = unionCountries(
+      new Set(['AT', 'CH', 'DE', 'CZ']),
+      new Set(['Austria', 'Switzerland', 'Germany', 'Czechia']),
+      new Set([
+        'Österreich',
+        'Schweiz',
+        'Schweiz/Suisse/Svizzera/Svizra',
+        'Deutschland',
+        'Tschechien',
+        'Česko',
+      ]),
+    );
+
+    expect([...union].sort()).toEqual(['AT', 'CH', 'CZ', 'DE']);
+  });
+
+  it('DROPS a contribution it cannot place instead of counting the raw string', () => {
+    // "Dubai" is a city, not a country — the same cut `shared/placeCounting.ts`
+    // makes. A country nobody can check by looking is worse than a missing one.
+    const union = unionCountries(new Set(['Dubai', 'ZZ', '', 'Germany']));
+
+    expect([...union]).toEqual(['DE']);
+  });
+});
+
+describe('normalizeCountrySet', () => {
+  it('folds a free-text set to ISO codes and drops the unplaceable', () => {
+    const codes = normalizeCountrySet(new Set(['Deutschland', 'Germany', 'Dubai', 'italy']));
+
+    expect([...codes].sort()).toEqual(['DE', 'IT']);
+  });
+
+  it('is idempotent — feeding it codes changes nothing', () => {
+    const once = normalizeCountrySet(new Set(['Deutschland', 'FR']));
+    const twice = normalizeCountrySet(once);
+
+    expect([...twice].sort()).toEqual([...once].sort());
+  });
+});
+
+describe('calculateUserStats — country vocabulary', () => {
+  it('yields ISO codes for flights, which then merge with a German lodging name', async () => {
+    // The production path: `achievements.ts` seeds the union with
+    // `stats.countries` and folds the lodging set in on top.
+    const cacheMock = getCachedAirports as unknown as jest.Mock;
+    cacheMock.mockResolvedValueOnce(
+      new Map([
+        ['FRA', { country: 'DE', lat: 50.03, lon: 8.57 }],
+        ['MUC', { country: 'DE', lat: 48.35, lon: 11.79 }],
+      ]),
+    );
+
+    const stats = await calculateUserStats([flightBetween('FRA', 'MUC')]);
+    expect([...stats.countries]).toEqual(['DE']);
+
+    const union = unionCountries(stats.countries, new Set(['Deutschland']));
+    expect(union.size).toBe(1);
   });
 });

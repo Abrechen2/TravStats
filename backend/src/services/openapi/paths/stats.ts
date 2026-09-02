@@ -175,7 +175,14 @@ readOnlyStat(
     "says how the rows are drawn — Africa and Antarctica share a row but are two " +
     "continents, so reaching Antarctica moves the number. The per-continent " +
     "denominator is the countries THIS catalogue knows, deliberately not one of the " +
-    "several competing counts of the world's countries, none of which is a fact."
+    "several competing counts of the world's countries, none of which is a fact. " +
+    "Each country also carries `daysPresent` — the distinct calendar days any " +
+    "record places the traveller there, counted from a house and a port call as " +
+    "well as a flight — and `groundTime`, which has THREE states: `measured` with " +
+    "raw minutes (never bucketed), `unknown` where a flight touched the country " +
+    "but no pair of clocks bounds a spell, and `notApplicable` where no flight " +
+    "touched it at all. A country proved only by a hotel has an unknown ground " +
+    "time, not a zero one, and is never given a synthesised number."
 );
 
 readOnlyStat(
@@ -200,8 +207,13 @@ registry.registerPath({
     "country name. It answers for a country reached only by cruise or by a " +
     "recorded place too — the passport lists those rows, so refusing them here " +
     "would put the list and the page into disagreement; such a country carries no " +
-    "entries and no airports and says so through `evidence`. No country name and " +
-    "no composed prose: the client names the code in the reader's language.",
+    "entries and no airports and says so through `evidence`. A country proved " +
+    "only by a LODGING answers here too, and its timeline names the house with " +
+    "its id, so the record behind a country is one click from the row and " +
+    "editable — the point of the drill-down, not a detail of it. No country name " +
+    "and no composed prose: the client names the code in the reader's language. " +
+    "The tier, the days present and the ground time are NOT here: they belong to " +
+    "the passport row, where one derivation owns them.",
   tags: statsTag,
   request: { params: z.object({ code: z.string() }) },
   responses: {

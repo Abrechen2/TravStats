@@ -7,7 +7,7 @@
  * be a third copy of the same arithmetic, and the three would drift — which is
  * how one screen ends up saying five continents and another six.
  *
- * FOUR RULES, all chosen to agree with figures this server already publishes
+ * SIX RULES, all chosen to agree with figures this server already publishes
  * elsewhere. A passport that contradicts the statistics page is worse than no
  * passport.
  *
@@ -34,6 +34,37 @@
  *    that. A place whose country was never resolved contributes NOTHING rather
  *    than a guess: shared/placeCounting.ts makes the same cut for the same
  *    reason.
+ * 6. EVIDENCE HAS A STRENGTH, and the strength decides the headline
+ *    (docs/superpowers/specs/2026-09-02-country-counting-design.md). Rule 5 said
+ *    WHAT proved a country; it did not say how much. Measured on the owner's
+ *    account the count was wrong in both directions at once, which is why it
+ *    looked plausible: seven countries counted on a connection under five hours,
+ *    while three countries reached by car and slept in for a week did not count
+ *    at all, because lodging was not evidence here.
+ *
+ *    Both halves are fixed by reading shared/countryEvidence.ts — the ONE home
+ *    of the rule — instead of deriving a second answer beside it:
+ *
+ *    - a lodging is evidence, joined on `isoCountryCode` and never on the
+ *      free-text `country` column. That column holds "Deutschland", "Germany"
+ *      and "Schweiz/Suisse/Svizzera/Svizra" in one account, and unioning it with
+ *      airport codes is why the achievements reported 88 countries where this
+ *      passport reported 32.
+ *    - every country carries a `tier` and the `kinds` that produced it, so a
+ *      reader can answer "why is this country here". That is not decoration: it
+ *      is how a wrongly imported hotel — one house, no stays, geocoded to
+ *      Bucharest instead of Slovenia — was found in the owner's own data.
+ *    - only `summary.countries` applies a threshold. The LIST always holds every
+ *      country with any evidence at all, whatever its tier. A tier is inferred
+ *      from what was recorded, and what was recorded is incomplete: Ethiopia
+ *      shows 4.7 hours of ground time here and three GPS-measured days in an
+ *      independent tracker. The tier is a hint, never a verdict, so nothing may
+ *      disappear from the list on the strength of one.
+ *
+ * What the FLIGHTS prove — the spells on the ground, their tiers, their days and
+ * their measured durations — lives in `./flightEvidence.ts`. It moved out when
+ * this file crossed the 800-line limit; it is the same code, and the seam is
+ * that this file assembles a card around an answer it does not compute.
  */
 
 import {
@@ -43,18 +74,32 @@ import {
   type Continent,
 } from "../../utils/continents";
 import { CONTINENT_GROUPS, continentTotals } from "../../shared/passportContinents";
+import {
+  countCountries,
+  daysBetween,
+  foldCountryEvidence,
+  groundTier,
+  lodgingEvidence,
+  type CountableStay,
+  type CountryGroundTime,
+  type CountryTier,
+  type EvidenceInput,
+  type EvidenceKind,
+} from "../../shared/countryEvidence";
+import {
+  FLOWN,
+  flightEvidence,
+  isoDayOf,
+  type PassportFlight,
+} from "./flightEvidence";
 
-/** The columns the derivation reads. Any flight row is a superset. */
-export interface PassportFlight {
-  depIata: string | null;
-  depLat: number;
-  depLon: number;
-  arrIata: string | null;
-  arrLat: number;
-  arrLon: number;
-  departureTime: Date | null;
-  status: string;
-}
+/**
+ * Re-exported so every caller and every test keeps importing the passport's
+ * input shape from the passport. The type moved when this file crossed the
+ * 800-line limit; where it is declared is a fact about the split, not about the
+ * API.
+ */
+export type { PassportFlight };
 
 /** Country per airport code, as the catalogue holds it. */
 export type AirportCountries = ReadonlyMap<string, string | null>;
@@ -68,6 +113,12 @@ export interface PassportPortCall {
   country: string | null;
   /** When the ship was there, if known. */
   at: Date | null;
+  /**
+   * When the ship left again, if known. Only used to tell a call that spanned a
+   * night from a day in port — the design's port row. Optional so every
+   * existing caller keeps its exact behaviour.
+   */
+  until?: Date | null;
 }
 
 /** A place the user recorded visiting, with its country already resolved. */
@@ -77,13 +128,63 @@ export interface PassportPlaceVisit {
 }
 
 /**
- * What put a country in the passport. Ordered: a landing outranks a port call,
- * which outranks a recorded place — the order the owner's own split line reads
- * in, and the one a row shows when several kinds apply.
+ * A house the user recorded, with the stays that say when.
+ *
+ * Joined on `isoCountryCode` and NEVER on the free-text `country` column beside
+ * it: that column keeps whatever the source wrote, and unioning it with airport
+ * codes is the 88-versus-40 failure the design measured.
+ *
+ * The stays arrive unfiltered, WITH their status — `lodgingEvidence` owns the
+ * "does this count" cut, including the two that look like each other's opposite:
+ * a house with NO stay counts as one night, while a stay whose check-out is
+ * still ahead is a booking and counts for nothing.
+ *
+ * The status travels because dropping cancelled stays on the way in would turn a
+ * house whose only booking fell through into a house with no stay — which
+ * counts. A cancellation would then prove a country.
  */
-export type PassportEvidence = "flight" | "port" | "place";
+export interface PassportLodging {
+  isoCountryCode: string | null;
+  stays: readonly CountableStay[];
+}
 
-const EVIDENCE_RANK: Record<PassportEvidence, number> = { flight: 3, port: 2, place: 1 };
+/**
+ * What KIND of record put a country in the passport — the same vocabulary
+ * `shared/countryEvidence.ts` folds on, so the two cannot drift apart.
+ *
+ * Ordered: a landing outranks a port call, which outranks a recorded place,
+ * which outranks a house — the order the owner's own split line reads in, and
+ * the one a row shows when several kinds apply.
+ *
+ * Lodging joins the bottom of that order deliberately. The rank decides which
+ * single LABEL a row wears, not how strong the proof is — `tier` answers that
+ * now, and a house is the strongest proof there is. Putting lodging anywhere
+ * else would have relabelled countries whose `evidence` is already correct, and
+ * moved `byEvidence` figures for a reason that has nothing to do with the bug.
+ */
+export type PassportEvidence = EvidenceKind;
+
+const EVIDENCE_RANK: Record<PassportEvidence, number> = {
+  flight: 4,
+  port: 3,
+  place: 2,
+  lodging: 1,
+};
+
+/** The strongest kind among several. `kinds` is never empty by construction. */
+const strongestKind = (kinds: readonly EvidenceKind[]): PassportEvidence =>
+  [...kinds].sort((a, b) => EVIDENCE_RANK[b] - EVIDENCE_RANK[a])[0];
+
+/**
+ * The tier `summary.countries` counts from.
+ *
+ * The module's own default: a connection does not count, everything else does.
+ * Deliberately NOT a setting yet — "does a connection count" is a personal
+ * definition and the design hands it to the user in a later step (spec §3.2).
+ * Inventing a settings column ahead of that decision would ship a dial nobody
+ * has agreed on; hard-coding the module default ships the rule that was.
+ */
+export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = "visited";
 
 export interface PassportCountry {
   /** ISO-3166 alpha-2. What a client shows — never a flag: flags are political and age. */
@@ -99,8 +200,43 @@ export interface PassportCountry {
   isHome: boolean;
   /** First reached in the current calendar year. */
   isNew: boolean;
-  /** The strongest reason this country is in the passport. See rule 5. */
+  /** The strongest KIND of record behind this country. See rule 5. */
   evidence: PassportEvidence;
+  /** How strong that evidence is. See rule 6 and shared/countryEvidence.ts. */
+  tier: CountryTier;
+  /**
+   * Every kind that contributed, alphabetical. A tier alone cannot answer "why
+   * is this country in my passport", and that question is what found a wrongly
+   * geocoded hotel in real data.
+   */
+  kinds: EvidenceKind[];
+  /**
+   * At least one contribution carried no date at all — an undated house, a
+   * place ticked without a day, a flight with no departure time. Without this
+   * a country that can never appear in any year's figures looks like a gap in
+   * the data rather than a fact about it.
+   */
+  hasUndatedEvidence: boolean;
+  /**
+   * How many distinct calendar days any record places the traveller here, and
+   * how long the longest measured spell on the ground was (spec §3.4b).
+   *
+   * Both stand BESIDE the tier and neither decides it: a duration is shown as
+   * evidence, never used as a threshold. They are published so a reader can
+   * judge a tier instead of taking it on trust — the same obligation §3.4 puts
+   * on the records themselves.
+   *
+   * `groundTime` has three states because two would lie. A country proved only
+   * by a hotel reports `notApplicable`, a country flown to once and never out of
+   * reports `unknown`, and neither reports zero. See `CountryGroundTime`.
+   */
+  daysPresent: number;
+  groundTime: CountryGroundTime;
+  /**
+   * Does this country reach `summary.countries`? A `false` here is the ONLY
+   * effect the threshold has: the row itself is always present.
+   */
+  counted: boolean;
 }
 
 export interface PassportStamp {
@@ -112,7 +248,18 @@ export interface PassportStamp {
 
 export interface Passport {
   summary: {
+    /**
+     * THE HEADLINE. Countries whose evidence reaches `countryThreshold` —
+     * every country except the ones proved by a connection alone.
+     *
+     * Smaller than `countriesTotal`, and that gap is the point: the list stays
+     * complete while the number states a rule.
+     */
     countries: number;
+    /** Every row in `countries`, whatever its tier. What `byEvidence` sums to. */
+    countriesTotal: number;
+    /** Which tier `countries` counts from. Stated, so a client need not assume it. */
+    countryThreshold: CountryTier;
     airports: number;
     entries: number;
     continentsVisited: number;
@@ -120,10 +267,14 @@ export interface Passport {
     firstStampYear: number | null;
     newThisYear: number;
     /**
-     * Countries per strongest evidence — the source of "31 geflogen · 5 per
-     * hafen · 2 anders erreicht". Sums to `countries`.
+     * Countries per strongest evidence KIND — the source of "31 geflogen · 5
+     * per hafen · 2 anders erreicht". Sums to `countriesTotal`, NOT to
+     * `countries`: the split describes the whole list, the headline applies a
+     * threshold to it.
      */
     byEvidence: Record<PassportEvidence, number>;
+    /** Countries per evidence STRENGTH. Also sums to `countriesTotal`. */
+    byTier: Record<CountryTier, number>;
   };
   countries: PassportCountry[];
   continents: Array<{ continent: Continent; visited: number; total: number }>;
@@ -135,8 +286,6 @@ export interface Passport {
   groups: typeof CONTINENT_GROUPS;
   stamps: PassportStamp[];
 }
-
-const FLOWN = new Set(["flown", "historical"]);
 
 interface Touch {
   iata: string;
@@ -161,6 +310,13 @@ interface CountryAcc {
   continent: Continent | null;
   isHome: boolean;
   evidence: PassportEvidence;
+  /** Overwritten from the fold, which is the authority on all three. */
+  tier: CountryTier;
+  kinds: EvidenceKind[];
+  hasUndatedEvidence: boolean;
+  daysPresent: number;
+  groundTime: CountryGroundTime;
+  counted: boolean;
 }
 
 export function buildPassport(
@@ -170,7 +326,8 @@ export function buildPassport(
   now: Date = new Date(),
   /** Optional so every existing caller keeps its exact behaviour. */
   portCalls: readonly PassportPortCall[] = [],
-  placeVisits: readonly PassportPlaceVisit[] = []
+  placeVisits: readonly PassportPlaceVisit[] = [],
+  lodgings: readonly PassportLodging[] = []
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -207,6 +364,14 @@ export function buildPassport(
           continent: getContinent(touch.lat, touch.lon, country),
           isHome: false,
           evidence: "flight",
+          tier: "visited",
+          kinds: ["flight"],
+          hasUndatedEvidence: false,
+          // Overwritten from the fold, which is the authority on both. The
+          // seed says "nothing measured yet", never "measured as zero".
+          daysPresent: 0,
+          groundTime: { state: "notApplicable" },
+          counted: true,
         };
         byCountry.set(country, acc);
       }
@@ -240,8 +405,12 @@ export function buildPassport(
    * coordinates here. `getContinent` returns null for a transcontinental
    * country rather than guessing, and null is the right answer for one.
    */
-  const addNonFlight = (country: string | null, at: Date | null, kind: PassportEvidence): void => {
-    if (!country) return;
+  const addNonFlight = (
+    country: string | null,
+    at: Date | null,
+    kind: PassportEvidence
+  ): CountryAcc | null => {
+    if (!country) return null;
     const year = at ? at.getUTCFullYear() : null;
     let acc = byCountry.get(country);
     if (!acc) {
@@ -256,6 +425,12 @@ export function buildPassport(
         continent: continentForCountry(country),
         isHome: false,
         evidence: kind,
+        tier: "visited",
+        kinds: [kind],
+        hasUndatedEvidence: false,
+        daysPresent: 0,
+        groundTime: { state: "notApplicable" },
+        counted: true,
       };
       byCountry.set(country, acc);
     }
@@ -264,6 +439,7 @@ export function buildPassport(
       acc.firstYear = acc.firstYear === null ? year : Math.min(acc.firstYear, year);
       acc.lastYear = acc.lastYear === null ? year : Math.max(acc.lastYear, year);
     }
+    return acc;
   };
 
   for (const call of portCalls) addNonFlight(isoCountryCode(call.country), call.at, "port");
@@ -275,6 +451,106 @@ export function buildPassport(
       visit.at,
       "place"
     );
+  }
+
+  /**
+   * A house is evidence, and until now it was not — which is why a country
+   * reached by car and slept in for a week did not appear while a four-hour
+   * port call did (spec §1.2).
+   *
+   * `lodgingEvidence` decides whether and when it counts; nothing about that
+   * cut is repeated here. Like a port call it deliberately touches neither
+   * `entries` nor `airports`: a country proved only by a house has flown
+   * nothing and used no airport, and saying so is the existing honesty of this
+   * derivation, not an omission.
+   */
+  const lodgingInputs: EvidenceInput[] = [];
+  for (const lodging of lodgings) {
+    const proof = lodgingEvidence(lodging.stays, now);
+    if (!proof) continue;
+    // Validated rather than upper-cased and trusted: the column is nullable and
+    // holds whatever the geocoder wrote, so a value that is not a country must
+    // drop out here instead of becoming a row named after itself.
+    addNonFlight(isoCountryCode(lodging.isoCountryCode), proof.at, "lodging");
+    lodgingInputs.push({
+      country: lodging.isoCountryCode,
+      kind: "lodging",
+      tier: proof.tier,
+      at: proof.at,
+      // Check-in through check-out, unioned across the house's completed stays
+      // — `lodgingEvidence` owns that expansion, because it already owns which
+      // stays count. Empty for an undated house, which is the honest answer:
+      // it proves the country without proving a day of it.
+      days: proof.days,
+    });
+  }
+
+  /**
+   * The one rule, applied once.
+   *
+   * Flights resolve their country through the SAME `isoCountryCode` call the
+   * loop above uses, so the tiers describe exactly the countries this passport
+   * already counted — no flight may appear or vanish here for a reason that has
+   * nothing to do with tiers. Ports and places pass their country through as
+   * they hold it and let the module resolve it, which is strictly more
+   * generous: a port catalogued as "Deutschland" resolves in the fold and gets
+   * its row created below.
+   */
+  const countryOfAirport = (iata: string | null): string | null =>
+    iata ? isoCountryCode(airportCountries.get(iata.toUpperCase()) ?? null) : null;
+
+  const evidence = foldCountryEvidence([
+    ...flightEvidence(flights, countryOfAirport),
+    ...portCalls.map((call): EvidenceInput => {
+      const from = isoDayOf(call.at);
+      const to = isoDayOf(call.until);
+      return {
+        country: call.country,
+        kind: "port",
+        // A call that spanned a night is `slept`, a day in port is `visited`.
+        // Both times are stored instants and the port catalogue carries no
+        // timezone, so they are read as stored rather than pretending to a
+        // local clock this derivation does not have.
+        tier: from && to ? groundTier(from, to) : "visited",
+        at: call.at,
+        // The days the ship was alongside. No `groundMinutes`: a port call
+        // bounds no departure that this derivation can read, and §3.4b forbids
+        // synthesising one for anything but a flight pair.
+        days: from ? (to ? daysBetween(from, to) : [from]) : [],
+      };
+    }),
+    ...placeVisits.map((visit): EvidenceInput => ({
+      country: visit.isoCountryCode,
+      kind: "place",
+      tier: "visited",
+      at: visit.at,
+    })),
+    ...lodgingInputs,
+  ]);
+
+  for (const row of evidence) {
+    // A country only the fold could resolve — a free-text port country in a
+    // language `isoCountryCode` does not carry. It gets a row rather than being
+    // dropped, dated from the evidence itself.
+    const acc =
+      byCountry.get(row.code) ??
+      addNonFlight(
+        row.code,
+        row.firstDate ? new Date(`${row.firstDate}T00:00:00Z`) : null,
+        strongestKind(row.kinds)
+      );
+    if (!acc) continue;
+
+    acc.tier = row.tier;
+    acc.kinds = row.kinds;
+    acc.hasUndatedEvidence = row.hasUndatedEvidence;
+    acc.daysPresent = row.daysPresent;
+    acc.groundTime = row.groundTime;
+    // Asked through `countCountries` on a one-row list rather than by comparing
+    // tiers here, so the ranking that decides the headline lives in exactly one
+    // place. A second copy of "which tier outranks which" is the drift the
+    // shared module exists to end.
+    acc.counted = countCountries([row], PASSPORT_COUNTRY_THRESHOLD) === 1;
   }
 
   const countries: PassportCountry[] = [...byCountry.entries()]
@@ -293,6 +569,12 @@ export function buildPassport(
       isHome: acc.isHome,
       isNew: acc.firstYear === thisYear,
       evidence: acc.evidence,
+      tier: acc.tier,
+      kinds: acc.kinds,
+      hasUndatedEvidence: acc.hasUndatedEvidence,
+      daysPresent: acc.daysPresent,
+      groundTime: acc.groundTime,
+      counted: acc.counted,
     }))
     .sort((a, b) => b.entries - a.entries || a.code.localeCompare(b.code));
 
@@ -315,7 +597,13 @@ export function buildPassport(
 
   return {
     summary: {
-      countries: countries.length,
+      // Counted from the ROWS, not from the folded list beside them, so the
+      // number and the list it belongs to can never answer differently.
+      countries: countries.filter((c) => c.counted).length,
+      countriesTotal: countries.length,
+      countryThreshold: PASSPORT_COUNTRY_THRESHOLD,
+      // Flights and airports, untouched by any of the above: a house proves a
+      // country, it does not add an airport or an entry.
       airports: firstSeen.size,
       entries: countries.reduce((sum, c) => sum + c.entries, 0),
       continentsVisited: visitedPerContinent.size,
@@ -326,6 +614,12 @@ export function buildPassport(
         flight: countries.filter((c) => c.evidence === "flight").length,
         port: countries.filter((c) => c.evidence === "port").length,
         place: countries.filter((c) => c.evidence === "place").length,
+        lodging: countries.filter((c) => c.evidence === "lodging").length,
+      },
+      byTier: {
+        slept: countries.filter((c) => c.tier === "slept").length,
+        visited: countries.filter((c) => c.tier === "visited").length,
+        transit: countries.filter((c) => c.tier === "transit").length,
       },
     },
     countries,
