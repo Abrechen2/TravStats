@@ -76,10 +76,35 @@ deliberately recorded.
 This is a decision, not a derivation, and it has a price worth naming: **data
 quality becomes decisive.** A wrongly imported house is now a country.
 
-The live example is in the owner's own account. `Hotel Sport` was imported on
-2026-08-14 carrying a Google Place ID for **Bucharest** — one house, zero stays.
-The real hotel is Grajska cesta 2, Otočec, **Slovenia**. Under this rule that one
-bad row adds Romania to a passport, from a mistake in a third party's database.
+**The `Hotel Sport` story this section first told was wrong, and the truth is
+worse.** It claimed one house had been imported carrying a Google Place ID for
+Bucharest while the real hotel is in Otočec, Slovenia — a mis-geocode. Measured
+on 2026-09-02 against the account itself, there is no mis-geocode and there
+never was. There are **two different hotels**, each internally consistent:
+
+| name | address | country | coordinates | stays |
+|---|---|---|---|---|
+| `Hotel Sport - Terme Krka` | Grajska Cesta 2, Otočec | SI | 45.838 / 15.235 | **1** |
+| `Hotel Sport` | Bulevardul Basarabia 39, București | RO | 44.434 / 26.150 | **0** |
+
+The Bucharest row's address, city, country and coordinates all agree with each
+other. That is why the `address_country_mismatch` check never fired on it —
+there is no contradiction to find. It is a real hotel in a city the owner has
+never been to, recorded as `visited` with no stay.
+
+And it is not one stray row. **One import batch on 2026-08-14 brought in 197
+lodgings, 150 of them with no stay at all, and marked every one `visited`.** The
+four countries this rule adds to the owner's passport — Croatia, Latvia,
+Portugal, Romania — rest *entirely* on stayless rows from that batch. Italy,
+Slovenia and Czechia also gained houses there but carry dated stays of their
+own, so they would count regardless.
+
+That undermines the reasoning above rather than the rule itself. "Somebody took
+the trouble to enter the house" is true of a hand-entered row and false of 150
+rows that arrived from a file. The distinction is available in the data —
+`batch_id` is null for a hand-entered house — so a narrower rule is possible:
+an undated house counts when it was entered deliberately, not when it was
+imported in bulk. **Open, and the owner's.**
 
 Two things follow, and they are not optional:
 
