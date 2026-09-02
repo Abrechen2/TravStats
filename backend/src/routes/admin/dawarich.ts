@@ -14,7 +14,12 @@ import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
-import { dawarichConnectionSchema, dawarichTestSchema } from "../../schemas/dawarich";
+import {
+  dawarichConnectionSchema,
+  dawarichCountryDaySweepSchema,
+  dawarichTestSchema,
+} from "../../schemas/dawarich";
+import { runDawarichCountryDaySweep } from "../../jobs/dawarichCountryDaySweepScheduler";
 import { testDawarichConnection } from "../../services/dawarich/dawarichTester";
 import { DawarichError, normalizeDawarichBaseUrl } from "../../services/dawarich/errors";
 import logger from "../../utils/logger";
@@ -122,5 +127,37 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
     next(error);
   }
 });
+
+/**
+ * Run the country-day sweep now instead of waiting for 04:40 UTC (design §8.4).
+ *
+ * The nightly job is the normal path; this exists for the two moments a night
+ * is too long to wait — somebody has just connected Dawarich and wants to see
+ * whether it worked, and somebody is diagnosing a country that should or should
+ * not be there.
+ *
+ * Admin rather than per-user, because the sweep is a background job with a
+ * budget rather than a request: it may take minutes and it talks to a machine
+ * TravStats does not own. It is still per-ACCOUNT in effect — every account it
+ * touches uses that account's own connection, never the caller's.
+ */
+router.post(
+  "/country-days/sweep",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = dawarichCountryDaySweepSchema.parse(req.body ?? {});
+      const result = await runDawarichCountryDaySweep(body);
+
+      logger.info({
+        message: "dawarich_country_day_sweep_triggered",
+        context: { triggeredBy: req.userId, ...result },
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;

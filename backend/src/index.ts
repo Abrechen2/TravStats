@@ -269,6 +269,8 @@ process.on('SIGINT', async () => {
   stopPlaceAddressBackfillScheduler();
   const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
   stopDataQualitySweepScheduler();
+  const { stopDawarichCountryDaySweepScheduler } = await import('./jobs/dawarichCountryDaySweepScheduler');
+  stopDawarichCountryDaySweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -291,6 +293,8 @@ process.on('SIGTERM', async () => {
   stopPlaceAddressBackfillScheduler();
   const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
   stopDataQualitySweepScheduler();
+  const { stopDawarichCountryDaySweepScheduler } = await import('./jobs/dawarichCountryDaySweepScheduler');
+  stopDawarichCountryDaySweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -703,6 +707,25 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_data_quality_sweep_scheduler_error',
         message: 'Failed to start data-quality sweep scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start nightly Dawarich country-day sweep (04:40 UTC — clear of the
+    // outbound-heavy jobs at 03:00/03:20 and of the data-quality pass at 04:10)
+    try {
+      const { startDawarichCountryDaySweepScheduler } = await import('./jobs/dawarichCountryDaySweepScheduler');
+      startDawarichCountryDaySweepScheduler();
+      logger.info({
+        operation: 'server_start_dawarich_country_day_sweep_scheduler',
+        message: 'Dawarich country-day sweep scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_dawarich_country_day_sweep_scheduler_error',
+        message: 'Failed to start Dawarich country-day sweep scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

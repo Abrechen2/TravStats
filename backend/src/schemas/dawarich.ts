@@ -46,5 +46,22 @@ export const dawarichTestSchema = z
   })
   .strict();
 
+/**
+ * The manual country-day sweep trigger (design §8.4).
+ *
+ * `force` is the destructive-looking one and is not: it re-walks the whole
+ * history from scratch instead of resuming from the stored cursor. Nothing is
+ * lost by it — the sweep replaces a month's rows with what Dawarich says now —
+ * but it costs one request per month of history, so it is opt-in rather than
+ * the default.
+ */
+export const dawarichCountryDaySweepSchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    force: z.boolean().optional(),
+  })
+  .strict();
+
 export type DawarichConnectionInput = z.infer<typeof dawarichConnectionSchema>;
 export type DawarichTestInput = z.infer<typeof dawarichTestSchema>;
+export type DawarichCountryDaySweepInput = z.infer<typeof dawarichCountryDaySweepSchema>;

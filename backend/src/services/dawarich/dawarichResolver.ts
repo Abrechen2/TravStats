@@ -44,6 +44,35 @@ function buildConnection(
   }
 }
 
+/**
+ * The USER tier ALONE, built from a settings row the caller already holds.
+ *
+ * Not a shortcut for `getDawarichConnection` — a deliberately different
+ * question, and the difference is a privacy boundary rather than a
+ * micro-optimisation.
+ *
+ * `getDawarichConnection` falls through user -> admin -> ENV because the calls
+ * it serves are ones a person just made: they pressed "pull this window" and a
+ * shared connection is the operator lending them a server. The nightly
+ * country-day sweep is the opposite situation. It runs unattended and writes
+ * PRESENCE — "you were in Latvia on the 3rd" — into an account's passport. Run
+ * through an admin-global or ENV connection on a family instance, it would
+ * attribute one person's movements to every account on the server, silently,
+ * for as long as nobody compared two passports. So the sweep asks only for a
+ * key the user pasted in themselves, which is what "per-user opt-in" in the
+ * July concept's §3 actually means.
+ *
+ * It also makes eligibility one indexed query instead of three per account:
+ * an instance where nobody has configured Dawarich enumerates nobody, so a user
+ * without a connection costs nothing at all.
+ */
+export function buildUserDawarichConnection(
+  baseUrl: string | null | undefined,
+  encryptedApiKey: string | null | undefined,
+): DawarichConnection | null {
+  return buildConnection(baseUrl, encryptedApiKey, "user", true);
+}
+
 export async function getDawarichConnection(userId?: string): Promise<DawarichConnection | null> {
   try {
     if (userId) {

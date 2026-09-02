@@ -81,6 +81,8 @@ model User {
   companions           Companion[]
   photoJourneys        PhotoJourney[]
   dataQualityFlags     DataQualityFlag[]
+  countryDays          CountryDay[]
+  dawarichSweepState   DawarichSweepState?
 
   @@map("users")
 }
@@ -973,6 +975,136 @@ model DataQualityFlag {
   @@unique([userId, entityType, entityId, kind])
   @@index([userId, status])
   @@map("data_quality_flags")
+}
+
+/// "On this day you were in this country" — the privacy-preserving projection
+/// of a location history (design §8.4).
+///
+/// A movement trail is reduced to (day, country) and NOTHING else. TravStats
+/// stores no coordinate from Dawarich, ever: the July concept
+/// (`2026-07-04-dawarich-integration-concept.md` §3) makes location history
+/// opt-in, key-encrypted and "never sent to the frontend", and the only way to
+/// keep that promise while still counting countries is to throw the positions
+/// away at the moment they are classified. The two numeric columns below are
+/// scalars derived from points that are already out of memory by the time the
+/// row is written — neither can be inverted back into a position.
+///
+/// After this table exists the count is a cheap read and catching up costs one
+/// window, which is the whole reason §8.4 asks for it.
+model CountryDay {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  /// The UTC calendar day, at midnight UTC.
+  ///
+  /// UTC and not a local clock, deliberately, and it is a real limitation
+  /// rather than a preference: the rest of this server reads a travel day at
+  /// the DEPARTURE AIRPORT's clock, but a GPS point carries no such anchor —
+  /// there is no airport, no port and no booking to borrow a timezone from.
+  /// Guessing one from the coordinate would be an inference presented as a
+  /// measurement, which §8.3 names as the failure this whole design exists to
+  /// correct. So the bucket is the one clock the data actually carries, and a
+  /// border crossed between 23:00 and 01:00 local may land on the neighbouring
+  /// UTC day.
+  date        DateTime
+  /// ISO 3166-1 alpha-2, resolved offline by `services/geo/countryFromCoordinates.ts`.
+  /// Never a name — everything that counts here joins on the code (§1.3).
+  countryCode String   @map("country_code")
+  /// Which pipeline observed the day. See `COUNTRY_DAY_SOURCES`
+  /// (`services/countryDays/countryDaySource.ts`) for the vocabulary and for
+  /// why it does NOT say "gps" or "photo": Dawarich 1.9.2's points payload,
+  /// as measured, carries no provenance field at all, and a column that always
+  /// answered "measured" would be exactly the inference-dressed-as-measurement
+  /// §8.3 forbids. Part of the unique key so a second pipeline can observe the
+  /// same day without overwriting this one's answer.
+  source      String
+
+  /// How many points attested this country on this day.
+  ///
+  /// A measurement, never a label. It is the ONE observable that separates a
+  /// densely tracked day from a day held up by a single photo-derived fix, and
+  /// §8.3 needs that distinction visible — but naming the sparse case
+  /// "estimated" would be a judgement the payload does not support, so the
+  /// count is published raw and whoever displays it decides. Same discipline as
+  /// the ground time in §3.4b: shown as evidence, never used as a threshold.
+  pointCount Int   @map("point_count")
+  /// The diagonal of the bounding box of that day's points inside this country,
+  /// in kilometres — how far apart they were, never where they were.
+  ///
+  /// Exists for §3.4c, the `transited` rung, which the design says "no other
+  /// data source can populate": driving across Estonia and changing planes in
+  /// Doha both leave points in a country, and the thing that tells them apart
+  /// is that one set is spread across the country and the other sits at one
+  /// airport. Deriving that later is impossible by construction — the points
+  /// are gone — so the scalar is kept and the decision is not made here.
+  spanKm     Float @map("span_km")
+  /// True when the window this day came out of hit the client's `MAX_PAGES`
+  /// cap even after being subdivided to a single day (`dawarichClient.ts`).
+  ///
+  /// It does NOT weaken the row: the country named here was genuinely
+  /// observed. What it withdraws is the row's SILENCE — on a partial day the
+  /// absence of a second country proves nothing, because Dawarich answers
+  /// newest-first and the older part of the window was never seen. A partial
+  /// window recorded as if whole is the measurement that lies, which is why
+  /// this column exists rather than a log line.
+  partialWindow Boolean @default(false) @map("partial_window")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Re-sweeping is normal — the current month is re-read every night — so the
+  /// same day observed twice must be one row, not two. This key is also the
+  /// index that reads a user's days: its `(user_id)` and `(user_id, date)`
+  /// prefixes serve both "every day this account has" and "the days in this
+  /// window", so a separate index on those columns would only cost writes.
+  @@unique([userId, date, countryCode, source])
+  /// The passport's read: which countries, for this user. Not covered by the
+  /// prefix above, because `date` sits between the two columns it needs.
+  @@index([userId, countryCode])
+  @@map("country_days")
+}
+
+/// How far each account's Dawarich history has been swept — the cursor that
+/// makes catching up cost one window instead of a full replay (§8.4).
+///
+/// One row per account, created on the first sweep. An account with no
+/// per-user Dawarich connection never gets one: the sweep does not enumerate
+/// it at all, so a user without a connection costs nothing, not even a row.
+model DawarichSweepState {
+  userId String @id @map("user_id")
+
+  /// Midnight UTC on the first day of the earliest month already swept. Null
+  /// before the first run. The backwards walk continues from here.
+  backfilledFromMonth DateTime? @map("backfilled_from_month")
+  /// True once the backwards walk reached its floor and there is no more
+  /// history to ask for. From then on a run costs exactly one window.
+  backfillComplete    Boolean   @default(false) @map("backfill_complete")
+  /// The newest instant covered by a completed forward sweep. A server that
+  /// was off for three months resumes from here rather than from "now", so the
+  /// missed months are not silently skipped.
+  sweptThroughAt      DateTime? @map("swept_through_at")
+
+  lastRunAt DateTime? @map("last_run_at")
+  /// The `DawarichErrorKind` of the last failure, or null after a clean run.
+  ///
+  /// The KIND and never the message: a Dawarich error message can carry the
+  /// base URL, and a base URL is the address of the user's home server. The
+  /// kind is a closed vocabulary of five words and says everything an operator
+  /// needs in order to act.
+  lastErrorKind String? @map("last_error_kind")
+  /// Start of the most recent single-day window that was STILL truncated after
+  /// subdivision — i.e. the one case where the sweep knowingly stored an
+  /// incomplete day. Null on every healthy instance; a value here is the
+  /// pointer to the `partial_window` rows.
+  lastTruncatedAt DateTime? @map("last_truncated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("dawarich_sweep_state")
 }
 
 model SmtpConfig {
