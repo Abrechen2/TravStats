@@ -107,7 +107,10 @@ test-samples/**/results/*.json
 pgdata/
 
 # Docker
-.dockerignore
+# `.dockerignore` is deliberately NOT ignored: it is build configuration, and
+# the Dockerfile beside it is tracked. Ignoring one half meant every clone built
+# a different image — measured 2026-09-02, the context was ~1.9 GB and the
+# host's node_modules were copied over the ones `npm ci` had just installed.
 
 # Large binary files (users can download separately)
 backend/eng.traineddata

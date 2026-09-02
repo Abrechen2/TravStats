@@ -1,0 +1,57 @@
+# Keep the build context to the sources the image actually needs.
+#
+# Without this file the context was ~1.9 GB and every build shipped the host's
+# node_modules into the daemon. That is not merely slow: the Dockerfile installs
+# dependencies with `npm ci` and only THEN runs `COPY frontend/ ./`, so the
+# host's tree was copied straight over the freshly installed one. The image was
+# built against whatever happened to be on the build machine rather than against
+# package-lock.json — and on a 40 GB disk the copy is what ran the filesystem
+# out of space mid-build.
+#
+# NOTHING here may exclude runtime data. `backend/data/` carries the vendored
+# marnet graph, the land mask and the Natural Earth country outlines, and the
+# production image needs all three — without marnet.geojson the sea router
+# throws ENOENT on the first cruise request, and without countries-10m.geojson
+# the point-to-country lookup throws on the first location-history sweep.
+#
+# Watch the `**/*.test.ts` and `**/__tests__` rules below in particular: a
+# pattern written to exclude tests will happily exclude a data file that
+# happens to sit under a matching name. `backend/data/` holds none today; keep
+# it that way.
+
+# Installed dependencies — always reinstalled inside the image from the lockfile
+**/node_modules
+
+# Version control and local agent state
+.git
+.gitignore
+.claude
+.roadmap
+
+# Build output — the image builds its own
+frontend/dist
+backend/dist
+**/*.tsbuildinfo
+
+# Local runtime state that must never be baked into an image
+**/.env
+**/.env.*
+!**/.env.example
+backend/.travstats-data
+data/logs
+**/*.log
+
+# Test and development material
+e2e
+test-samples
+**/coverage
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+playwright-report
+test-results
+
+# Documentation and tooling that no runtime path reads
+docs
+tools
+.github

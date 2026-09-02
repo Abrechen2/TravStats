@@ -131,6 +131,16 @@ COPY backend/data/land-mask.bin ./data/land-mask.bin
 # ENOENT on first call and every cruise leg falls back to the coarse
 # 1° A*, which cuts across narrow Baltic and Adriatic straits.
 COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
+# Vendored Natural Earth 1:10m country outlines (public domain), read by
+# services/geo/countryBoundaries.ts via __dirname from dist/services/geo/ to
+# /app/backend/data/countries. 10.2 MB, 245 polygonal features, 239 ISO codes.
+# This is the ONLY way an instance can turn a GPS point into a country: §8.1 of
+# the country-counting design refuses to ask Dawarich, whose reverse geocoder
+# most self-hosters do not run, so a missing file is not a degraded answer but
+# no answer at all — the loader throws ENOENT on first use, exactly like the
+# marnet graph above. Guarded by services/geo/__tests__/countryBoundaries.test.ts,
+# which reads this file and fails if the line disappears.
+COPY backend/data/countries/countries-10m.geojson ./data/countries/countries-10m.geojson
 # Vendored airline logos (soaring-symbols, MIT) — the KEYLESS DEFAULT tier of
 # the logo chain (services/airlineLogo/vendoredLogos.ts), resolved via __dirname
 # from dist/services/... to /app/backend/data/airline-logos. 1.4 MB, 93 airlines.
