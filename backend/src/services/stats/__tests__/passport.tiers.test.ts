@@ -612,9 +612,12 @@ describe("the evidence beside the tier", () => {
     expect(p.countries.find((c) => c.code === "QA")?.daysPresent).toBe(1);
   });
 
-  it("counts the days a spell on the ground spanned, at the airport's clock", () => {
-    // Landed on the 1st local, left on the 4th local: four days in Italy, and
-    // the same overnight that makes the tier `slept`.
+  it("counts a spell's two ENDPOINT days, at the airport's clock — not the range", () => {
+    // Landed on the 1st local, left on the 4th local. The records attest those
+    // two days and nothing about the 2nd and the 3rd: the traveller may have
+    // driven to Slovenia and back, and the flight log cannot tell. Two days,
+    // and the same overnight that makes the tier `slept` — the contribution
+    // changed on 2026-09-02, what the spell PROVES did not.
     const p = buildPassport(
       [flight("MUC", "FCO", "2024-03-01"), flight("FCO", "MUC", "2024-03-04")],
       AIRPORTS,
@@ -623,7 +626,157 @@ describe("the evidence beside the tier", () => {
     );
 
     const it_ = p.countries.find((c) => c.code === "IT");
-    expect(it_?.daysPresent).toBe(4);
+    expect(it_?.daysPresent).toBe(2);
     expect(it_?.tier).toBe("slept");
+  });
+});
+
+/**
+ * A spell between two flights is not a stay — owner's decision, 2026-09-02.
+ *
+ * **Ground time measures the absence of a recorded departure, not presence.**
+ * Measured on the beta server that day: an account's HOME country reported
+ * `daysPresent: 2200` and a ground time of 3,136,245 minutes — 5.5 years —
+ * because the records held a landing in Munich on 2020-01-26 and the next
+ * German departure on 2025-07-16 with nothing logged in between. Both figures
+ * were literally correct and both were nonsense, and the shape is structurally
+ * guaranteed for the one country every user has: home is where the gaps are.
+ *
+ * What these pin is that the spell now contributes its two endpoint days and
+ * abstains from a duration past one night — and that NO TIER MOVED, because
+ * this is about what a spell contributes, never about what it proves.
+ */
+describe("a gap in the flight log is not time spent in a country", () => {
+  /** The measured case, reduced: land in Munich, fly out of Munich 5.5 years later. */
+  const HOME_GAP: PassportFlight[] = [
+    flight("SIN", "MUC", "2020-01-26", {
+      departureInstant: new Date("2020-01-25T22:00:00Z"),
+      arrivalInstant: new Date("2020-01-26T06:00:00Z"),
+    }),
+    flight("MUC", "SIN", "2025-07-16", {
+      departureInstant: new Date("2025-07-16T10:00:00Z"),
+      arrivalInstant: new Date("2025-07-17T04:00:00Z"),
+    }),
+  ];
+
+  it("counts TWO days for the 5.5-year home-country gap, not 2200", () => {
+    const de = buildPassport(HOME_GAP, AIRPORTS, [], NOW).countries.find((c) => c.code === "DE");
+
+    expect(de?.daysPresent).toBe(2);
+  });
+
+  it("reports that gap's ground time as unknown, not as 3,136,245 measured minutes", () => {
+    // `unknown` is the state that already means "a flight touched this country
+    // but no pair of clocks bounds a stay", and its UI copy — add the missing
+    // flight — is exactly the right instruction for a gap caused by unlogged
+    // flights. No fourth state was invented for this.
+    const de = buildPassport(HOME_GAP, AIRPORTS, [], NOW).countries.find((c) => c.code === "DE");
+
+    expect(de?.groundTime).toEqual({ state: "unknown" });
+  });
+
+  it("still calls the gap `slept`, because the tier was never the thing that was wrong", () => {
+    const de = buildPassport(HOME_GAP, AIRPORTS, [], NOW).countries.find((c) => c.code === "DE");
+
+    expect(de?.tier).toBe("slept");
+  });
+
+  it("keeps a 25-hour stopover measured — one night is still a stay", () => {
+    // The contrast §3.4b exists to draw, and the reason the boundary is one
+    // night rather than none: the owner's connection countries run 1.4 h–4.7 h
+    // and the next country is France at 25 h. Losing that figure would delete
+    // the finding the whole section was written around.
+    const p = buildPassport(
+      [
+        flight("MUC", "FCO", "2024-03-01", {
+          departureInstant: new Date("2024-03-01T08:00:00Z"),
+          arrivalInstant: new Date("2024-03-01T10:00:00Z"),
+        }),
+        flight("FCO", "BCN", "2024-03-02", {
+          departureInstant: new Date("2024-03-02T11:00:00Z"),
+          arrivalInstant: new Date("2024-03-02T13:00:00Z"),
+        }),
+      ],
+      AIRPORTS,
+      [],
+      NOW
+    );
+
+    const it_ = p.countries.find((c) => c.code === "IT");
+    expect(it_?.groundTime).toEqual({ state: "measured", minutes: 1500 });
+    expect(it_?.daysPresent).toBe(2);
+    expect(it_?.tier).toBe("slept");
+  });
+
+  it("abstains one night later, on the same shape", () => {
+    // Two nights and the interval stops describing a stay. Nothing else about
+    // the pair changed — which is what makes the night the boundary rather than
+    // a duration somebody picked.
+    const p = buildPassport(
+      [
+        flight("MUC", "FCO", "2024-03-01", {
+          departureInstant: new Date("2024-03-01T08:00:00Z"),
+          arrivalInstant: new Date("2024-03-01T10:00:00Z"),
+        }),
+        flight("FCO", "BCN", "2024-03-03", {
+          departureInstant: new Date("2024-03-03T11:00:00Z"),
+          arrivalInstant: new Date("2024-03-03T13:00:00Z"),
+        }),
+      ],
+      AIRPORTS,
+      [],
+      NOW
+    );
+
+    const it_ = p.countries.find((c) => c.code === "IT");
+    expect(it_?.groundTime).toEqual({ state: "unknown" });
+    expect(it_?.daysPresent).toBe(2);
+    expect(it_?.tier).toBe("slept");
+  });
+
+  it("leaves a same-day connection exactly as it was: one day, measured minutes", () => {
+    // The regression guard for the whole change. A connection is the case the
+    // inference was always safe for, and it must not move by a minute or a day.
+    const connection: PassportFlight[] = [
+      flight("MUC", "DOH", "2024-03-01", {
+        departureInstant: new Date("2024-03-01T08:00:00Z"),
+        arrivalInstant: new Date("2024-03-01T14:00:00Z"),
+      }),
+      flight("DOH", "SIN", "2024-03-01", {
+        departureTime: new Date("2024-03-01T17:00:00Z"),
+        departureInstant: new Date("2024-03-01T17:00:00Z"),
+        arrivalInstant: new Date("2024-03-02T05:00:00Z"),
+      }),
+    ];
+    const qa = buildPassport(connection, AIRPORTS, [], NOW).countries.find((c) => c.code === "QA");
+
+    expect(qa?.daysPresent).toBe(1);
+    expect(qa?.groundTime).toEqual({ state: "measured", minutes: 180 });
+    expect(qa?.tier).toBe("transit");
+  });
+
+  it("leaves a LODGING stay counting its full span — only the inferred gap lost its middle", () => {
+    // Decision 2 of 2026-09-02. A stay from the 1st to the 4th attests four
+    // days because the record says so; nothing was inferred, so nothing is
+    // withdrawn. A house next to the gap above must not shrink to two.
+    const p = buildPassport(
+      [],
+      AIRPORTS,
+      [],
+      NOW,
+      [],
+      [],
+      [
+        house("CZ", [
+          {
+            status: "completed",
+            checkIn: new Date("2019-08-01T00:00:00Z"),
+            checkOut: new Date("2019-08-04T00:00:00Z"),
+          },
+        ]),
+      ]
+    );
+
+    expect(p.countries.find((c) => c.code === "CZ")?.daysPresent).toBe(4);
   });
 });

@@ -211,9 +211,58 @@ zero. The UI needs three states per country, not two: measured, unknown, and not
 applicable.
 
 Per country, then: the tier, the records that proved it (3.4), the ground time
-**where it was measured**, and the number of distinct days present. Days travel
-further than hours — they exist for a lodging, a track and a flight pair alike,
-whereas hours exist only for a flight pair and a GPS track.
+**where it was measured and short enough to believe**, and the number of distinct
+days a record **attests**. Days travel further than hours — they exist for a
+lodging, a track and a flight pair alike, whereas hours exist only for a flight
+pair and a GPS track.
+
+> **This paragraph was wrong when first written, and 3.4b-bis below is the
+> correction.** It said "where it was measured", which sounds like a property of
+> the clocks and is not: a spell between two flights is measurable whether it is
+> four hours or five years, and only one of those is a stay. It also said "days
+> present" without saying attested by what. Both readings shipped, and both
+> produced the 2200-day home country that UAT found. Read the two together; this
+> one alone understates the rule.
+
+### 3.4b-bis Only attested days count — owner's decision, 2026-09-02 (UAT)
+
+Found on the beta server, not in a test. An account's **home country reported
+`daysPresent: 2200` and a ground time of 3,136,245 minutes — 5.5 years.** Both
+figures were literally correct and both were nonsense.
+
+The cause is a mistake in 3.4b above, and it is worth stating plainly:
+
+> **Ground time does not measure presence. It measures the absence of a recorded
+> departure.**
+
+The records held a landing in Munich on 2020-01-26 and the next German departure
+on 2025-07-16, with no flights between. The code read that gap as presence. For a
+four-hour connection the inference is safe; over five years it is not — the
+records attest the arrival day and the departure day and attest *nothing* about
+the days between. That is the rule this whole document rests on, broken by the
+document itself. And it is not an edge case: the gap-as-presence reading is
+guaranteed to be wrong for the one country every user has.
+
+Three consequences, decided by the owner:
+
+1. **A flight ground spell contributes only its ENDPOINT days** — the arrival
+   local day and the departure local day, never the range. Not a special case
+   for long spells: the rule for all of them, which makes the code simpler. A
+   same-day connection contributes one day, an overnight two, the 5.5-year gap
+   two.
+2. **Lodging, port calls and place visits are untouched.** A stay from the 12th
+   to the 15th attests four days, because the record says so. Only the inferred
+   gap loses its middle.
+3. **Ground time is `measured` only while the spell spans at most one night.**
+   The 25-hour stopover stays visible — that contrast is the point of 3.4b. A
+   longer spell becomes `unknown`, the state that already means "a flight
+   touched this country but no pair of clocks bounds a stay", and whose UI copy
+   ("add the missing flight") is the right instruction for a gap caused by
+   unlogged flights.
+
+No fourth state, and no dial: the boundary is the night, the same structural cut
+the tiers already use. Section 2 refuses thresholds on principle and this keeps
+that promise.
 
 ### 3.4c A fourth tier: driven through
 

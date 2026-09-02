@@ -8,9 +8,29 @@
  *
  * The tiers themselves, and the counting rule they feed, stay in
  * `shared/countryEvidence.ts`. Nothing is decided twice.
+ *
+ * ## A spell is not a stay — read this before touching the days or the minutes
+ *
+ * **Ground time measures the absence of a recorded departure, not presence.**
+ * A spell here is the interval between a landing and the next recorded
+ * departure from the same country; where the traveller was in between, the
+ * records do not say. Reading that interval as presence reported an account's
+ * home country as `daysPresent: 2200` with 3,136,245 ground minutes on the beta
+ * server (2026-09-02) — a landing in Munich on 2020-01-26 and the next German
+ * departure on 2025-07-16, with nothing logged between them.
+ *
+ * So a spell contributes its two ENDPOINT days (`attestedGroundDays`), and it
+ * publishes minutes only while it spans at most one night
+ * (`measuredGroundMinutes`). Both rules live in `shared/countryEvidence.ts`;
+ * this file only feeds them the run's own ends.
  */
 
-import { daysBetween, groundTier, type EvidenceInput } from "../../shared/countryEvidence";
+import {
+  attestedGroundDays,
+  groundTier,
+  measuredGroundMinutes,
+  type EvidenceInput,
+} from "../../shared/countryEvidence";
 
 /** A flight is a stamp only once it has been flown. Rule 1 of the passport. */
 export const FLOWN = new Set(["flown", "historical"]);
@@ -179,8 +199,16 @@ export function flightEvidence(
 
     // The maximal run of consecutive segments in this same country — one
     // uninterrupted spell on the ground, however many domestic hops it contains.
+    // `last` is carried along because the run's two ends are what the duration
+    // is judged on, and a null segment can never join a run (it has no country).
     let end = start;
-    while (end + 1 < segments.length && segments[end + 1]?.country === first.country) end += 1;
+    let last = first;
+    while (end + 1 < segments.length) {
+      const next = segments[end + 1];
+      if (!next || next.country !== first.country) break;
+      end += 1;
+      last = next;
+    }
 
     // Where the traveller came from, and where they went afterwards. Null on
     // either side means "cannot be known", and an unknown side is never read as
@@ -199,6 +227,13 @@ export function flightEvidence(
      * Null unless BOTH ends are real instants. A negative result is a record
      * contradicting itself (an arrival stored after the next departure) and
      * abstains rather than publishing a negative hour count.
+     *
+     * And null again, through `measuredGroundMinutes`, once the run spans more
+     * than one night: past that the interval stops describing a stay and starts
+     * describing a hole in the flight log. Judged on the RUN's two ends, because
+     * the run is what the interval was measured across — asking segment by
+     * segment would let a three-year gap publish itself as long as each
+     * individual hop happened to be short.
      */
     const landed = chain[start].arrivalInstant;
     const leftAgain = chain[end + 1].departureInstant;
@@ -206,6 +241,7 @@ export function flightEvidence(
       landed && leftAgain && leftAgain.getTime() >= landed.getTime()
         ? Math.round((leftAgain.getTime() - landed.getTime()) / 60_000)
         : null;
+    const runMinutes = measuredGroundMinutes(first.arrivalDay, last.departureDay, spellMinutes);
 
     for (let i = start; i <= end; i += 1) {
       const segment = segments[i];
@@ -222,11 +258,13 @@ export function flightEvidence(
               ? "visited"
               : "transit",
         at: chain[i].departureTime,
-        // Read on the airports' own clocks, never on the UTC instant beside
-        // them: a red-eye that lands after midnight UTC would otherwise report
-        // a day in a country the traveller connected through in three hours.
-        days: daysBetween(segment.arrivalDay, segment.departureDay),
-        groundMinutes: spellMinutes,
+        // The two ends of the spell and nothing between them — the days the
+        // records attest. Read on the airports' own clocks, never on the UTC
+        // instant beside them: a red-eye that lands after midnight UTC would
+        // otherwise report a day in a country the traveller connected through
+        // in three hours.
+        days: attestedGroundDays(segment.arrivalDay, segment.departureDay),
+        groundMinutes: runMinutes,
       });
     }
 

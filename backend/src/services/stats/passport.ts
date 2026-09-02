@@ -229,6 +229,14 @@ export interface PassportCountry {
    * `groundTime` has three states because two would lie. A country proved only
    * by a hotel reports `notApplicable`, a country flown to once and never out of
    * reports `unknown`, and neither reports zero. See `CountryGroundTime`.
+   *
+   * Both figures count only ATTESTED days. A spell between two flights measures
+   * the absence of a recorded departure, not presence, so it contributes its two
+   * endpoint days and publishes minutes only while it spans at most one night
+   * (`shared/countryEvidence.ts`). Without that, this account's home country
+   * reported 2200 days present and 5.5 years on the ground — both literally
+   * correct, both nonsense. A lodging stay is unaffected and still counts its
+   * whole span: nothing about it was inferred.
    */
   daysPresent: number;
   groundTime: CountryGroundTime;

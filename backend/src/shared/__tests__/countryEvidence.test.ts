@@ -1,10 +1,12 @@
 import {
+  attestedGroundDays,
   COUNTRY_TIERS,
   countCountries,
   daysBetween,
   foldCountryEvidence,
   groundTier,
   lodgingEvidence,
+  measuredGroundMinutes,
   type CountableStay,
   type CountryEvidence,
   type CountryTier,
@@ -539,6 +541,75 @@ describe("daysBetween", () => {
     // Reporting the two days it actually names is the honest floor; 3661 would
     // be a fabrication with a lot of decimal places.
     expect(daysBetween("2000-01-01", "2030-01-01")).toEqual(["2000-01-01", "2030-01-01"]);
+  });
+});
+
+/**
+ * A spell between two flights is not a stay — owner's decision, 2026-09-02.
+ *
+ * Ground time measures the ABSENCE OF A RECORDED DEPARTURE, not presence. The
+ * defect these pin was measured on the beta server: an account's home country
+ * reported `daysPresent: 2200` and 3,136,245 ground minutes (5.5 years), from a
+ * landing in Munich on 2020-01-26 and the next German departure on 2025-07-16.
+ * Both figures were literally correct and both were nonsense, and the shape is
+ * guaranteed for the one country every user has.
+ */
+describe("attestedGroundDays", () => {
+  it("names the two ends of a years-long gap, never the range between them", () => {
+    // THE 2200-DAY DEFECT. The records attest the day of the landing and the
+    // day of the next departure. About the two thousand days in between they
+    // say nothing at all, and `daysBetween` would have counted every one.
+    expect(attestedGroundDays("2020-01-26", "2025-07-16")).toEqual(["2020-01-26", "2025-07-16"]);
+  });
+
+  it("gives a same-day connection exactly one day", () => {
+    expect(attestedGroundDays("2024-03-01", "2024-03-01")).toEqual(["2024-03-01"]);
+  });
+
+  it("gives an overnight two days — the endpoints ARE the whole span here", () => {
+    // Which is why the rule is not a special case for long spells: for every
+    // spell short enough to believe, the endpoints and the range agree.
+    expect(attestedGroundDays("2024-03-01", "2024-03-02")).toEqual(["2024-03-01", "2024-03-02"]);
+  });
+
+  it("names only the arrival when the record contradicts itself", () => {
+    // A departure before the arrival, as `daysBetween` treats the same shape.
+    expect(attestedGroundDays("2024-03-04", "2024-03-01")).toEqual(["2024-03-04"]);
+  });
+});
+
+describe("measuredGroundMinutes", () => {
+  it("publishes a same-day connection", () => {
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-01", 180)).toBe(180);
+  });
+
+  it("publishes a 25-hour stopover — one night is still a stay", () => {
+    // The contrast §3.4b exists to draw, and the reason the boundary is one
+    // night rather than none: the owner's connection countries run 1.4 h–4.7 h
+    // and the next country is France at 25 h. Losing France's figure would
+    // delete the finding.
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-02", 1500)).toBe(1500);
+  });
+
+  it("abstains beyond one night, however plausible the number looks", () => {
+    // Two nights is where the interval stops describing a stay and starts
+    // describing a hole in the flight log. `null` becomes `unknown` in the
+    // fold — "add the missing flight" — and never a zero.
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-03", 3000)).toBeNull();
+  });
+
+  it("abstains for the 5.5-year home-country gap", () => {
+    expect(measuredGroundMinutes("2020-01-26", "2025-07-16", 3_136_245)).toBeNull();
+  });
+
+  it("abstains where nothing was measured, and where the record runs backwards", () => {
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-01", null)).toBeNull();
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-01", undefined)).toBeNull();
+    expect(measuredGroundMinutes("2024-03-04", "2024-03-01", 120)).toBeNull();
+  });
+
+  it("keeps a measured zero, because zero is only forbidden as a stand-in", () => {
+    expect(measuredGroundMinutes("2024-03-01", "2024-03-01", 0)).toBe(0);
   });
 });
 

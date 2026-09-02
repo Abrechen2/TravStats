@@ -129,16 +129,20 @@ export type EvidenceKind = "flight" | "lodging" | "port" | "place";
  * *unknown*, and writing `0 h` there would be a fabrication that drags every
  * average down — the defect `shared/flightDuration.ts` was written to end.
  *
- * - `measured`      — a flight pair bounds a spell on the ground. `minutes` is
- *                     the LONGEST such spell, published raw: §3.4b decided
- *                     against buckets because the owner's connection countries
- *                     run 1.4 h–4.7 h and the next is 25 h, so fixed bins would
- *                     sit permanently empty and hide the gap, which IS the
- *                     finding.
+ * - `measured`      — a flight pair bounds a spell on the ground AND that spell
+ *                     spans at most one night (see `measuredGroundMinutes`).
+ *                     `minutes` is the LONGEST such spell, published raw: §3.4b
+ *                     decided against buckets because the owner's connection
+ *                     countries run 1.4 h–4.7 h and the next is 25 h, so fixed
+ *                     bins would sit permanently empty and hide the gap, which
+ *                     IS the finding.
  * - `unknown`       — a flight touched this country, but no pair of clocks
  *                     bounds a spell. A one-way arrival, a DATE_ONLY row whose
  *                     stored time is a placeholder, a legacy row whose airport
- *                     has no timezone. The value exists; we cannot read it.
+ *                     has no timezone — and, since 2026-09-02, a gap spanning
+ *                     more than one night, which measures the absence of a
+ *                     recorded departure rather than a stay. The value exists;
+ *                     we cannot read it.
  * - `notApplicable` — no flight touched this country at all. A ground time is
  *                     not merely unmeasured here, it is not a thing this
  *                     evidence could ever carry: a house, a port call and a
@@ -197,6 +201,10 @@ export interface EvidenceInput {
    * `YYYY-MM-DD`. Absent means "the day of `at`, if it has one" — which is what
    * a place visit is.
    *
+   * These are the days the record ATTESTS, never the days it merely fails to
+   * contradict. A stay hands over its whole span (`daysBetween`); a spell
+   * between two flights hands over its two ends alone (`attestedGroundDays`).
+   *
    * Given by the CALLER rather than derived from `at` here, because which clock
    * a day is read on differs by kind and only the caller knows: a flight's day
    * is the DEPARTURE airport's local day (a red-eye read in UTC lands on a day
@@ -208,9 +216,10 @@ export interface EvidenceInput {
   /**
    * Minutes on the ground this record measured, when it measured any.
    *
-   * ONLY a flight pair may set this. A house, a port call and a place bound no
-   * departure, so they leave it absent and the country reports `notApplicable`
-   * rather than a synthesised zero.
+   * ONLY a flight pair may set this, and only through `measuredGroundMinutes` —
+   * a raw interval is not a measurement once it spans more than a night. A
+   * house, a port call and a place bound no departure, so they leave it absent
+   * and the country reports `notApplicable` rather than a synthesised zero.
    */
   groundMinutes?: number | null;
 }
@@ -483,4 +492,105 @@ export function lodgingEvidence(
  */
 export function groundTier(arrivalLocalDay: string, departureLocalDay: string): CountryTier {
   return departureLocalDay > arrivalLocalDay ? "slept" : "visited";
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * What a spell between two flights may CONTRIBUTE — owner's decision, 2026-09-02
+ * ---------------------------------------------------------------------------
+ *
+ * **Ground time measures the absence of a recorded departure, not presence.**
+ * That sentence is the whole of it. A spell on the ground is the interval
+ * between a landing and the next recorded departure from the same country, and
+ * for a four-hour connection reading that interval as presence is safe. Over
+ * years it is not: the records attest the arrival day and the departure day and
+ * attest NOTHING about the days between.
+ *
+ * Measured on the beta server, 2026-09-02: an account's HOME country reported
+ * `daysPresent: 2200` and a ground time of 3,136,245 minutes — 5.5 years. Both
+ * figures were literally correct and both were nonsense. The records held a
+ * landing in Munich on 2020-01-26 and the next German departure on 2025-07-16,
+ * with no flight in between, so the derivation concluded five and a half years
+ * of continuous presence in Germany. This is structurally guaranteed to happen
+ * for the ONE country every user has, because home is where the gaps are.
+ *
+ * Two rules follow, and they apply to EVERY spell rather than to long ones —
+ * which makes the code smaller, not larger, and leaves no threshold to tune:
+ *
+ * 1. `attestedGroundDays` — a spell contributes its two ENDPOINT days and never
+ *    the range between them.
+ * 2. `measuredGroundMinutes` — a duration is `measured` only while the spell
+ *    spans at most one night; beyond that it abstains, and the country reports
+ *    `unknown`.
+ *
+ * Neither touches what a spell PROVES: `groundTier` is unchanged, so a day
+ * change is still `slept` and a same day is still `visited`. This is about the
+ * contribution, never about the tier.
+ *
+ * Lodging, port calls and place visits are UNCHANGED and still expand through
+ * `daysBetween`: a stay from the 12th to the 15th attests four days because the
+ * record says so. Only the INFERRED gap between two flights loses its middle.
+ */
+
+/**
+ * The most nights a spell may span and still publish a duration.
+ *
+ * ONE, because the boundary is the night — the same structural cut the tiers
+ * already make, and the only one this data holds. A 25-hour stopover therefore
+ * keeps its measured value, which is the contrast §3.4b exists to draw: the
+ * owner's connection countries run 1.4 h–4.7 h and the next is France at 25 h.
+ * A spell spanning more nights is not a longer stopover; it is a gap in the
+ * flight log, and `unknown` already means "a flight touched this country but no
+ * pair of clocks bounds a stay" — whose UI copy, "add the missing flight", is
+ * exactly the right instruction for it.
+ *
+ * NOT configurable, and there must be no fourth ground-time state. §2 refuses
+ * dials on principle: a number the user can turn until the total feels right is
+ * not a measurement any more.
+ */
+const MAX_MEASURED_NIGHTS = 1;
+
+/** Nights between two ISO days, or null when either cannot be read. Negative
+ *  when the record contradicts itself — the caller decides what that means. */
+function nightsBetween(from: string, to: string): number | null {
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return Math.round((end - start) / MS_PER_DAY);
+}
+
+/**
+ * The days a spell between two flights attests: the arrival day, the departure
+ * day, and nothing in between.
+ *
+ * A same-day connection therefore contributes ONE day, an overnight two, and
+ * the 5.5-year Munich gap two. The days it declines to name are not lost
+ * evidence — no record ever held them.
+ *
+ * A departure day BEFORE the arrival day is a record contradicting itself, and
+ * names only the arrival: the same abstention `daysBetween` makes, for the same
+ * reason. Counting backwards would turn a typo into a span.
+ */
+export function attestedGroundDays(arrivalLocalDay: string, departureLocalDay: string): string[] {
+  const nights = nightsBetween(arrivalLocalDay, departureLocalDay);
+  return nights !== null && nights > 0 ? [arrivalLocalDay, departureLocalDay] : [arrivalLocalDay];
+}
+
+/**
+ * The minutes a spell may publish, or null where the interval no longer says
+ * anything about presence.
+ *
+ * `null` here becomes `unknown` in the fold, never a zero — the country still
+ * carries flight evidence, so `notApplicable` would be the wrong fact and a
+ * zero would be a fabrication.
+ */
+export function measuredGroundMinutes(
+  arrivalLocalDay: string,
+  departureLocalDay: string,
+  minutes: number | null | undefined
+): number | null {
+  if (typeof minutes !== "number") return null;
+  const nights = nightsBetween(arrivalLocalDay, departureLocalDay);
+  if (nights === null || nights < 0 || nights > MAX_MEASURED_NIGHTS) return null;
+  return minutes;
 }

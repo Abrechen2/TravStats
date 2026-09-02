@@ -176,13 +176,19 @@ readOnlyStat(
     "continents, so reaching Antarctica moves the number. The per-continent " +
     "denominator is the countries THIS catalogue knows, deliberately not one of the " +
     "several competing counts of the world's countries, none of which is a fact. " +
-    "Each country also carries `daysPresent` — the distinct calendar days any " +
-    "record places the traveller there, counted from a house and a port call as " +
-    "well as a flight — and `groundTime`, which has THREE states: `measured` with " +
-    "raw minutes (never bucketed), `unknown` where a flight touched the country " +
-    "but no pair of clocks bounds a spell, and `notApplicable` where no flight " +
-    "touched it at all. A country proved only by a hotel has an unknown ground " +
-    "time, not a zero one, and is never given a synthesised number."
+    "Each country also carries `daysPresent` — the distinct calendar days a record " +
+    "ATTESTS, which is not the same as the days it spans. A house or a port call " +
+    "attests its whole range, because the record says so; a pair of flights attests " +
+    "only the arrival day and the departure day, never the gap between them. The " +
+    "gap is the absence of a recorded departure, not evidence of presence, and " +
+    "reading it as presence once reported 2200 days in a traveller's home country. " +
+    "Alongside it `groundTime` has THREE states: `measured` with raw minutes " +
+    "(never bucketed) where a flight pair bounds a spell of at most one night, " +
+    "`unknown` where a flight touched the country but nothing bounds a believable " +
+    "spell — a one-way arrival, a row with no usable clock, or a gap spanning more " +
+    "nights than a stay could — and `notApplicable` where no flight touched it at " +
+    "all. A country proved only by a hotel has an unknown ground time, not a zero " +
+    "one, and is never given a synthesised number."
 );
 
 readOnlyStat(
