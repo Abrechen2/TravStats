@@ -132,13 +132,15 @@ describe("DomainTabStrip", () => {
     });
   });
 
-  // The "Touren" tab is complete, unlike the POI domain above — it hides
-  // behind the SAME shape of gate (`tourRoutes`, config/betaFeatures.ts) only
-  // because the feature has not yet been through the owner's release
-  // decision. It also has no domain behind it: `counts`/`enabled` are keyed
-  // by DomainKey and never carry a "tour" entry, so the tab must render with
-  // no count badge and — unlike POI — must never be dimmed either.
-  describe("beta gate: tourRoutes", () => {
+  // The "Touren" tab used to hide behind `tourRoutes` — the same SHAPE of gate
+  // as POI above, but only because the feature was awaiting the owner's
+  // release decision rather than because anything was unfinished. That
+  // decision came on 2026-09-01, so the tab is unconditional now and these
+  // cases pin the flag having no say over it in any of its three states.
+  // It still has no domain behind it: `counts`/`enabled` are keyed by
+  // DomainKey and never carry a "tour" entry, so the tab must render with no
+  // count badge and — unlike POI — must never be dimmed either.
+  describe("the Touren tab is no longer gated", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
@@ -153,19 +155,14 @@ describe("DomainTabStrip", () => {
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-    ])("hides the Touren tab when the beta flag is %s", (_label, flag) => {
+      ["on", true],
+    ])("shows the Touren tab, never dimmed, while the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
-      renderStrip();
-      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
-      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
-    });
-
-    it("shows the Touren tab, never dimmed, when the beta flag is on", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: true });
       renderStrip();
       const tour = screen.getByRole("tab", { name: /tours/i });
       expect(tour).toBeTruthy();
       expect(tour.getAttribute("data-disabled")).toBe("false");
+      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
     });
   });
 });

@@ -6,7 +6,6 @@ import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
 import { useDomainTabs } from "../hooks/useDomainTabs";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { DOMAINS } from "../shared/domains";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
@@ -109,8 +108,6 @@ export default function SettingsPage(): JSX.Element {
     setShowPasswordModal,
   } = useSettingsPage();
 
-  const { isFeatureVisible } = useBetaFeatures();
-
   // ── Section MODEL vs section NAV ────────────────────────────────────────
   // `sectionsByTab` is the MODEL: every section that EXISTS and can render.
   // It is what the validation / deep-link effects below consult, so a section
@@ -118,10 +115,10 @@ export default function SettingsPage(): JSX.Element {
   //
   // `navSectionsByTab` (further down) is what the sidebar and the mobile
   // picker actually LIST. The two are not the same thing, and conflating them
-  // is exactly the trap: `devices` is hidden from the nav behind the beta gate
-  // but MUST still open at /settings?section=devices — it is the only way to
-  // pair a phone until the mobile app ships (see config/betaFeatures.ts).
-  // Removing it from the model would bounce that URL back to "profile".
+  // is exactly the trap: `lodgingPreferences` exists for everyone but is
+  // listed only for admins, because the card inside it renders nothing for
+  // anyone else. Removing it from the MODEL would bounce its URL back to
+  // "profile" instead of simply leaving it unadvertised.
   //
   // Sections are grouped into one of four tabs. The cruise group is empty
   // for now; a placeholder is shown so users see the scaffold exists.
@@ -194,19 +191,18 @@ export default function SettingsPage(): JSX.Element {
     // section from `general`, so nothing in this memo reads it.
   }, [t]);
 
-  // The NAV list — the model minus everything the beta gate hides. Rendering
-  // reads this; validation and deep-linking never do.
+  // The NAV list — the model minus everything that is not advertised.
+  // Rendering reads this; validation and deep-linking never do.
   const navSectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const isHidden = (id: string): boolean =>
-      (id === "devices" && !isFeatureVisible("devicePairing")) ||
-      (id === "lodgingPreferences" && !(user?.isAdmin ?? false));
+      id === "lodgingPreferences" && !(user?.isAdmin ?? false);
     return {
       general: sectionsByTab.general.filter((s) => !isHidden(s.id)),
       flight: sectionsByTab.flight.filter((s) => !isHidden(s.id)),
       cruise: sectionsByTab.cruise.filter((s) => !isHidden(s.id)),
       lodging: sectionsByTab.lodging.filter((s) => !isHidden(s.id)),
     };
-  }, [sectionsByTab, isFeatureVisible, user?.isAdmin]);
+  }, [sectionsByTab, user?.isAdmin]);
 
   // Visible tabs + active-tab state + URL sync + drift guard now live
   // in the shared useDomainTabs hook. Hotel / POI tabs plug in via the
@@ -591,28 +587,14 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
-                {/* Admin-only AND behind the tours gate. The card configures a
-                    road router for tour legs and has no other consumer, so on a
-                    production instance with beta off it would offer to set up
-                    routing for a feature invisible everywhere else — the same
-                    defect the Dawarich card below was fixed for, which this,
-                    its sibling, kept until the merge review. */}
-                {isFeatureVisible("tourRoutes") && (
-                  <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
-                )}
+                {/* Admin-only: the card configures a road router for tour
+                    legs, and a non-admin cannot change an instance-wide
+                    provider. */}
+                <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
-                {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
-                    still meaningless where nothing consumes a recorded track,
-                    but tours stopped being the only consumer the moment cruise
-                    legs were scoped onto the same connection — a gate named
-                    after tours would then hide a card the cruise feature needs. */}
-                {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
+                <DawarichConnectionCard />
               </>
             )}
-            {/* Intentionally NOT gated: the nav entry is hidden behind the
-                beta flag, but the section itself must still render for anyone
-                who reaches /settings?section=devices directly — that URL is
-                the only remaining way to pair a phone. */}
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "security" && <SecuritySection />}

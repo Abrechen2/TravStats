@@ -309,10 +309,17 @@ enforced, and merely practised** below.
   (admin_settings column, default `false`). **That registry is the list — do
   not restate it here**; a list in prose beside a list in code is a list that
   is wrong. Each entry carries `why` it is hidden and `returnsWhen` it may
-  come back, and a test fails when either is missing. Two standing notes: the
-  Devices entry is the ONLY phone-pairing entry point and must be un-gated
-  when the mobile app ships; and the flag is instance state, never persisted
-  client-side (see the `partialize` in `settingsStore.ts`).
+  come back, and a test fails when either is missing. Un-gating means deleting
+  the entry AND every `isFeatureVisible` call it named — a gate left wired to a
+  key that no longer exists reads like a gate that is still there. Two standing
+  notes: the flag is instance state, never persisted client-side (see the
+  `partialize` in `settingsStore.ts`); and the whole point of `returnsWhen` is
+  that it is acted on — on 2026-09-01 `devicePairing`, `tourRoutes` and
+  `dawarich` came off together, the first because the phone app it named
+  (TravStatsCompanion, not the abandoned TravStatsApp the entry still said)
+  had shipped while the gate hid the only place a claim code is minted, and
+  the last because releasing tour routes WAS the event its own `returnsWhen`
+  was waiting for.
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through
