@@ -139,10 +139,22 @@ the rest of this server already follows.
 
 > **A country counts as visited from …** ○ transit ○ **stay** (default) ○ overnight
 
-Effect on the owner's account, with undated houses counted: transit ≈ 32 ·
-stay **40** · overnight ≈ 36. (Without the 2026-09-02 decision the middle figure
-would be 35 — the difference is five countries whose only evidence is a house
-somebody entered without a date.)
+**The figures this section first carried were impossible and are withdrawn.** It
+read "transit ≈ 32 · stay 40 · overnight ≈ 36", which cannot be: the thresholds
+are nested, so *lowering* the bar can never yield fewer countries. `transit ≥
+stay ≥ overnight` holds by construction. The numbers were assembled from separate
+measurements taken before lodging was folded in, and mixing them produced an
+ordering the rule forbids.
+
+They are not re-estimated here. The three counts must be **re-measured against
+the implementation** — read-only on the owner's account — before any of them is
+quoted in a changelog or a UI notice. A number that contradicts its own rule is
+worse than no number, and this document exists because a plausible-looking total
+went unchecked for months.
+
+What does hold, and was measured directly: five countries in the owner's account
+are proved **only** by a house entered without a date, so they exist at every
+threshold under the 1.4 decision and at none without it.
 
 **Instance default set by admin, overridable per user.** "Does a connection
 count?" is a personal definition, not a property of the server — imposing one
@@ -172,6 +184,60 @@ this it should take two clicks.
 
 It also constrains the API: a country row carries record IDs, not just counts.
 `kinds: ["lodging"]` says what sort of thing; it does not say *which* thing.
+
+### 3.4b The stats SHOW hours — they still do not decide by them
+
+Owner, 2026-09-02: *"Die Stats zeigen dann auch entsprechend die verschiedenen
+Werte, also durchfahren, übernachtet, Transit 1h 3h <10h usw."*
+
+This does not reverse section 2, and the distinction must stay legible to whoever
+reads this next: **a duration is shown as evidence; it is never a threshold.**
+The tier still comes from structure — did the local day change, does a record
+exist. The measured ground time stands beside it so a reader can judge, which is
+the same obligation as 3.4.
+
+**Show the measured value, not buckets.** Fixed classes ("1 h / 3 h / <10 h")
+would imply a distribution this data does not have. Measured on the owner's
+account, the seven connection countries run 1.4 h → 4.7 h and the next country is
+France at **25 h**. Nothing lies between. Buckets would leave the middle bins
+permanently empty and hide the one thing the numbers actually say, which is that
+there IS a gap and it falls exactly where the tiers already cut.
+
+**Most countries have no hour figure at all, and must not be given one.** Czechia,
+Italy and Slovenia are proved only by hotels: their ground time is not small, it
+is *unknown*. Writing `0 h` there would be a fabrication, and `Abstention is a
+result` already governs it — a value that cannot be derived is absent, never
+zero. The UI needs three states per country, not two: measured, unknown, and not
+applicable.
+
+Per country, then: the tier, the records that proved it (3.4), the ground time
+**where it was measured**, and the number of distinct days present. Days travel
+further than hours — they exist for a lodging, a track and a flight pair alike,
+whereas hours exist only for a flight pair and a GPS track.
+
+### 3.4c A fourth tier: driven through
+
+Owner, 2026-09-02, confirming Estonia and Lithuania were crossed by car. Passing
+a border on the road is not changing planes: you are in the country, on the
+ground, often for hours. It deserves its own rung rather than being flattened
+into either neighbour.
+
+**`slept` › `visited` › `transited` (by road) › `connection` (airside)**
+
+Only the last is excluded by the default threshold. Driving through counts —
+that was the entire point of the Baltic question, and folding it into
+`connection` would answer it wrongly.
+
+The rung is **not derivable from curated events**: nothing in a flight, a cruise
+or a hotel records a border crossing by car. It becomes observable only with the
+track evidence of section 8, and the airport-proximity rule there is precisely
+what separates the two lower rungs — points spread across a country versus points
+sitting at one airport. Until Dawarich is connected, no record can carry this
+tier, and the UI must not offer it as a filter that always returns nothing.
+
+The existing `transit` value is renamed `connection` when this lands, because
+after the split "transit" is the word a reader will attach to the road case.
+Renaming it later, once it is in stored rows and client code, costs far more.
 
 ### 3.5 What cannot be believed goes to the inbox — owner's decision, 2026-09-02
 
@@ -346,13 +412,18 @@ frontend.
 3. Fix the achievements union to join on `isoCountryCode`. This alone moves the
    owner's figure from 88 to 40.
 4. Point every consumer at the module; delete the local re-derivations.
-5. **Provenance in the UI** (3.4): each country row names the records that proved
-   it and links to them.
+5. **Provenance in the UI** (3.4, 3.4b): each country row names the records that
+   proved it and links to them, and shows its tier, its distinct days present,
+   and its ground time **where one was measured** — blank, never `0 h`, where it
+   was not.
 6. **Plausibility flags and the inbox** (3.5): the checks, the flag model, the
    second section on the pending-updates page, renamed to Posteingang.
 7. The setting, with the instance default.
 8. **Dawarich track evidence** (8): boundaries, the sweep, country-days, the
-   airport-proximity rule that keeps a connection a connection.
+   airport-proximity rule that keeps a connection a connection — and with it the
+   `transited` rung of 3.4c, which no other data source can populate. The rename
+   `transit` → `connection` belongs to this step and must not be deferred past
+   it, since the value is by then in stored rows and client code.
 9. Changelog and the one-time notice.
 
 Steps 2–4 are bug fixes and can ship without the setting. Steps 5 and 6 are what
