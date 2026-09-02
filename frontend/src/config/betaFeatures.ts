@@ -49,23 +49,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The "Devices" section in user settings (QR claim-code pairing flow).
-   *
-   * READ THIS BEFORE REMOVING THE GATE OR FORGETTING ABOUT IT: the Devices
-   * page is the ONLY way to pair a phone. It starts the claim-code flow that
-   * `backend/src/routes/pairing.ts` completes. With the gate OFF, nobody but
-   * the instance owner can pair a device — and the owner only can because the
-   * page is still reachable by URL (`/settings?section=devices`), which is a
-   * hard requirement of this gate, not an accident. Do not "clean up" the
-   * URL-reachability by dropping `devices` from the section model.
-   */
-  devicePairing: Object.freeze({
-    reason: "advanced",
-    why: "Pairing works, but it is pointless without the mobile app, which is not released. It is the only entry point to the QR claim-code flow, so it stays reachable at /settings?section=devices even while hidden from the nav.",
-    returnsWhen: "The mobile app (TravStatsApp) is released.",
-  }),
-
-  /**
    * The passport page — /passport, its nav entry, and GET /stats/passport.
    *
    * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
@@ -131,42 +114,6 @@ export const BETA_FEATURES = Object.freeze({
     why: "Places can only be added one at a time, by hand. There is no import route of any kind, so Settings → Import renders the POI group empty — `poiAdapter.tsx` still reads POI_IMPORT_READY = false and nothing references it. The picker compounds it: it writes no `externalRef`, so the @@unique([userId, externalRef]) index on Place never fires and the same place entered twice stays two rows. Offering a domain whose only way in is manual, and which cannot recognise its own duplicates, is what this gate is holding back.",
     returnsWhen:
       "Phase D lands an import route and the picker mints an identity — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md, §3.1 for the picker and §4 for the cheapest import. Custom lists (phase B), which this gate used to wait for, shipped.",
-  }),
-
-  /**
-   * The "Touren" tab on the trip detail page (tour route sections: a named
-   * ordered chain of stops with driven legs — the road-trip counterpart to
-   * cruise itineraries), and its editor at
-   * `/trips/:id/route/:routeId` — gated the same way as the tab, since the
-   * editor is otherwise reachable by URL with the tab hidden.
-   *
-   * The list AND its editor (stop assignment, per-leg mode/source
-   * overrides, the route map) are both feature-complete now. The gate stays
-   * on because the feature as a whole is still awaiting the owner's release
-   * decision, not because anything named here is unfinished.
-   */
-  tourRoutes: Object.freeze({
-    reason: "beta",
-    why: "The section list and its editor both work end-to-end, but the feature has not yet been through the owner's review — the gate is what keeps it off production until that happens.",
-    returnsWhen: "The owner accepts the feature for release.",
-  }),
-
-  /**
-   * The Dawarich connection — a self-hosted location-history server TravStats
-   * PULLS recorded tracks from, never writes to.
-   *
-   * It has its own key rather than riding on `tourRoutes`, even though tours
-   * are its only consumer today. Dawarich is an integration, not a feature of
-   * one domain: `dev/cruise-tracks` will take cruise legs from the same
-   * connection, and a gate named after tours would then hide a card the cruise
-   * feature needs. Gating an integration on one of its consumers is only ever
-   * right while there is exactly one.
-   */
-  dawarich: Object.freeze({
-    reason: "beta",
-    why: "The connection, the pull and the settings card all work, but every consumer of a recorded track is itself still behind a gate — a Dawarich card on production would offer a connection with nothing to connect to.",
-    returnsWhen:
-      "A feature that consumes recorded tracks ships — tour routes today, cruise legs next.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

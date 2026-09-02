@@ -14,7 +14,6 @@ import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -376,11 +375,8 @@ interface TabBarProps {
 }
 
 function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
-  // "tours" is the only tab gated by the instance-level beta flag today —
-  // see `config/betaFeatures.ts` (`tourRoutes`) for why.
-  const { isFeatureVisible } = useBetaFeatures();
-  const visibleTabs = TABS.filter((key) => key !== "tours" || isFeatureVisible("tourRoutes"));
-
+  // No tab is filtered here any more. "tours" was withheld behind the
+  // `tourRoutes` beta gate until the owner released it (2026-09-01).
   return (
     <div
       className="sticky top-0 z-30"
@@ -390,7 +386,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
-        {visibleTabs.map((key) => {
+        {TABS.map((key) => {
           const isActive = tab === key;
           return (
             <button
