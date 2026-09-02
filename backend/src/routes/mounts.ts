@@ -41,6 +41,7 @@ import setupRoutes from './setup';
 import adminRoutes from './admin';
 import backupRoutes from './backup';
 import pendingUpdatesRoutes from './pendingUpdates';
+import dataQualityFlagRoutes from './dataQualityFlags';
 import templateStatusRoutes from './templateStatus';
 import parserTemplatesRoutes from './parserTemplates';
 import trainingRoutes from './training';
@@ -128,6 +129,10 @@ export const apiMounts: ApiMount[] = [
   { id: 'parserTemplates', base: '/api/v1/parser-templates', router: parserTemplatesRoutes },
   { id: 'backup', base: '/api/v1/backup', router: backupRoutes },
   { id: 'pendingUpdates', base: '/api/v1/pending-updates', router: pendingUpdatesRoutes },
+  // The other half of the Posteingang: questions about a record rather than a
+  // provider's proposed field values. Own prefix, own table — see the router's
+  // header for why it is not a generalised PendingFlightUpdate.
+  { id: 'dataQualityFlags', base: '/api/v1/data-quality-flags', router: dataQualityFlagRoutes },
   { id: 'templateStatus', base: '/api/v1/template-status', router: templateStatusRoutes },
   { id: 'training', base: '/api/v1/training', router: trainingRoutes },
   { id: 'trips', base: '/api/v1', router: tripsRoutes },

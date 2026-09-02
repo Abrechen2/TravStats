@@ -80,6 +80,7 @@ model User {
   importBatches        ImportBatch[]
   companions           Companion[]
   photoJourneys        PhotoJourney[]
+  dataQualityFlags     DataQualityFlag[]
 
   @@map("users")
 }
@@ -883,6 +884,67 @@ model PendingFlightUpdate {
   @@index([expiresAt])
   @@index([createdAt])
   @@map("pending_flight_updates")
+}
+
+/// A record that contradicts itself, raised as a QUESTION rather than settled.
+///
+/// Owner's decision, 2026-09-02 ("Unplausible Sachen markieren und in den
+/// Posteingang", design §3.5): a geocoder that disagrees with the rest of a row
+/// is not authority enough to refuse the user's own data — but it is more than
+/// enough to ask. So the record is written unchanged, the disagreement is
+/// flagged, and the question is queued where the user already answers questions
+/// about their data.
+///
+/// **A flag never changes a number.** Counting continues under the stated rule
+/// until the user answers. Withholding a country because a check was suspicious
+/// would reintroduce, from the other direction, exactly the invisible arithmetic
+/// the country-counting design removes.
+///
+/// ## Why this is not `PendingFlightUpdate`
+///
+/// That model carries a required `flightId`, an `apiSource` and an `expiresAt`:
+/// it is flight-shaped by construction, and 858 lines of service depend on that
+/// shape. It answers "a provider proposes these field values"; this answers "two
+/// sources inside one of YOUR records disagree". One inbox in the UI, two tables
+/// underneath, because the two are genuinely different things.
+///
+/// ## The subject is polymorphic, so there is no foreign key
+///
+/// `entityType` + `entityId` address a lodging, a place, or — for a finding that
+/// is about a country rather than about a row — an ISO 3166-1 alpha-2 code.
+/// Postgres cannot enforce that, which is the price of one inbox over one table
+/// per subject. `dataQualityFlagService.listFlags` therefore drops a flag whose
+/// subject has been deleted, and a re-run resolves it.
+///
+/// The column is a plain string on purpose: the vocabulary lives in
+/// `schemas/dataQualityFlag.ts` (Zod) and widening it — a flight check, a cruise
+/// check — costs no migration.
+model DataQualityFlag {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// "lodging" | "place" | "country"
+  entityType String    @map("entity_type")
+  /// A row id, or an ISO 3166-1 alpha-2 code when entityType is "country".
+  entityId   String    @map("entity_id")
+  /// Which check fired. See `DATA_QUALITY_FLAG_KINDS`.
+  kind       String
+  /// "open" | "resolved" | "dismissed"
+  status     String    @default("open")
+  /// What disagreed, both values, and the records that proved it — so the row
+  /// can be read without re-running the check, and so the UI can link to the
+  /// records themselves (design §3.4).
+  details    Json
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Re-running the checks must never duplicate a flag. It will run repeatedly
+  /// — after an import, on demand — and a second copy of the same question is
+  /// how an inbox becomes something people stop reading.
+  @@unique([userId, entityType, entityId, kind])
+  @@index([userId, status])
+  @@map("data_quality_flags")
 }
 
 model SmtpConfig {

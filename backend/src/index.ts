@@ -267,6 +267,8 @@ process.on('SIGINT', async () => {
   stopStatusSweepScheduler();
   const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
   stopPlaceAddressBackfillScheduler();
+  const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
+  stopDataQualitySweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -287,6 +289,8 @@ process.on('SIGTERM', async () => {
   stopStatusSweepScheduler();
   const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
   stopPlaceAddressBackfillScheduler();
+  const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
+  stopDataQualitySweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -680,6 +684,25 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_status_sweep_scheduler_error',
         message: 'Failed to start status sweep scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start nightly data-quality sweep (04:10 UTC — after the place address
+    // backfill at 03:20, which fills the columns the checks read)
+    try {
+      const { startDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
+      startDataQualitySweepScheduler();
+      logger.info({
+        operation: 'server_start_data_quality_sweep_scheduler',
+        message: 'Data-quality sweep scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_data_quality_sweep_scheduler_error',
+        message: 'Failed to start data-quality sweep scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

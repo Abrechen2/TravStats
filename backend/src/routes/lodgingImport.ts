@@ -17,6 +17,7 @@ import {
 } from "../services/lodging/lodgingImportBatches";
 import { backfillLodgingLocations } from "../services/lodging/geocodeBackfill";
 import { suggestLodgingCsvMapping } from "../services/lodging/mappingSuggestion";
+import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
 
 // Mounted at /api/v1/lodging-import — deliberately NOT under
 // /api/v1/lodging/import: routes/lodging.ts has a `GET /:id` handler that
@@ -72,13 +73,37 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
     // second, independent backstop — an unhandled rejection on a
     // fire-and-forget promise crashes the whole Node process, so this path
     // must never rely on the callee's own discipline alone.
-    void backfillLodgingLocations(userId, result.batchId).catch((error: unknown) => {
-      logger.error({
-        operation: "lodging_geocode_backfill_unhandled",
-        batchId: result.batchId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+    void backfillLodgingLocations(userId, result.batchId)
+      .catch((error: unknown) => {
+        logger.error({
+          operation: "lodging_geocode_backfill_unhandled",
+          batchId: result.batchId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+      /**
+       * The data-quality checks run AFTER the backfill, not beside it, and the
+       * ordering is the whole reason this is a chain rather than a second
+       * `void`.
+       *
+       * `addressCountryMismatch` abstains where either the address or the
+       * claimed country is missing — so a row imported with a pin and no
+       * address has nothing to disagree with at commit time. The backfill is
+       * what gives it one. Worse, it can CREATE the contradiction: a row with
+       * an address and no country gets its country from a geocoder, and a
+       * geocoder putting a Slovenian hotel in Bucharest is precisely the case
+       * this feature exists for (design §1.4).
+       *
+       * `.then` after `.catch` runs in both outcomes — a backfill that failed
+       * still leaves rows worth checking. Neither link rejects, so the `void`
+       * above cannot become an unhandled rejection.
+       */
+      .then(() =>
+        triggerDataQualityChecks(userId, {
+          trigger: "lodging_import",
+          batchId: result.batchId,
+        }),
+      );
 
     res.status(201).json({ success: true, data: result });
   } catch (err) {

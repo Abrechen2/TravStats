@@ -28,6 +28,7 @@ import "./lodging";
 import "./settings";
 import "./places";
 import "./operations";
+import "./dataQuality";
 import "./accounts";
 import "./integrations";
 import "./catalog";

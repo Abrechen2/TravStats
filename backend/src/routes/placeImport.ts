@@ -5,6 +5,7 @@ import { AppError } from "../middleware/errorHandler";
 import { placeImportCommitSchema, placeImportPreviewSchema } from "../schemas/placeImport";
 import { previewPlaceImport } from "../services/places/placeImportPreview";
 import { commitPlaceImport } from "../services/places/placeImportCommit";
+import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
 
 /**
  * Mounted at /api/v1/place-import — deliberately NOT under /api/v1/places/import.
@@ -56,6 +57,24 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
       parsed.data.fileName ?? null,
       parsed.data.rows
     );
+
+    // An import is where the owner's case arises: a row carrying a third
+    // party's Place ID for one country against an address that names another.
+    // Asking now, while the user is still looking at the result, beats asking
+    // at 04:10 tomorrow — the nightly sweep is the backstop, not the plan.
+    //
+    // Detached and never rejecting, on purpose: `triggerDataQualityChecks`
+    // swallows, and the reason it is allowed to is written there. The rows are
+    // already committed and the 201 below must not depend on a plausibility
+    // check. Nothing is fired for an import that wrote nothing — a file whose
+    // every row was a duplicate changed nothing to ask about.
+    if (result.created > 0) {
+      void triggerDataQualityChecks(userId, {
+        trigger: "place_import",
+        batchId: result.batchId,
+      });
+    }
+
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     next(error);
