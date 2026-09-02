@@ -412,6 +412,20 @@ frontend.
 3. Fix the achievements union to join on `isoCountryCode`. This alone moves the
    owner's figure from 88 to 40.
 4. Point every consumer at the module; delete the local re-derivations.
+   **This is now overdue and measurable.** `shared/countryEvidence.ts` carries a
+   private `toCountryCode`, and `utils/achievementStats.ts` carries its own
+   `toCountryCode` / `normalizeCountrySet` / `unionCountries`. Two copies of the
+   name→code join exist as of 2026-09-02 — the exact shape `utils/continents.ts`
+   was written to end, where two byte-identical copies "carried a 'keep both in
+   sync' comment and had already drifted". The achievements side must import the
+   shared module, not keep a sibling.
+
+   The extraction was built and backed out once, for a reason worth recording:
+   removing those functions drops `achievementStats.ts` below 800, which the
+   size ratchet reports as a **stale baseline entry** — a hard failure. A
+   baselined file therefore has a *corridor*, not a ceiling, and leaving the
+   list requires `check:size -- --update` as a deliberate, coordinated step once
+   no agent holds a file. Do that first, then move the code.
 5. **Provenance in the UI** (3.4, 3.4b): each country row names the records that
    proved it and links to them, and shows its tier, its distinct days present,
    and its ground time **where one was measured** — blank, never `0 h`, where it
