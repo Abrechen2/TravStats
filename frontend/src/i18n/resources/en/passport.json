@@ -85,5 +85,18 @@
     "undatedExplained": "At least one record carries no date. This country therefore cannot appear in any year's figures.",
     "showRecords": "Show records",
     "hideRecords": "Hide records"
+  },
+  "thresholdChoice": {
+    "options": {
+      "transit": "Connection — everything counts",
+      "visited": "Stay — a connection does not count",
+      "slept": "Overnight — only where you slept"
+    },
+    "effect": {
+      "transit": "Merely changing planes at an airport then counts as a country. Your country total goes up.",
+      "visited": "Merely changing planes at an airport does not count. A day in port, a recorded place and every overnight stay still do. This is the default.",
+      "slept": "Only countries with a recorded night count — through a lodging, a port call spanning a night, or a pair of flights across a day boundary. Your country total goes down."
+    },
+    "listUnchanged": "This does not change the country list in your passport: every country with evidence stays visible, uncounted ones are merely greyed out. Only the headline number moves."
   }
 }

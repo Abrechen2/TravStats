@@ -33,6 +33,7 @@ const SETTINGS_FIXTURE = {
   betaFeaturesEnabled: false,
   photonUrl: "https://photon.komoot.io",
   nominatimUrl: "https://nominatim.openstreetmap.org",
+  countryThreshold: "visited" as const,
 };
 
 /** The endpoint answers with the settings PLUS a derived passkey status; this
@@ -175,10 +176,13 @@ describe("GeocoderSettingsCard", () => {
   it("shows the hit count when the connection test succeeds", async () => {
     const user = userEvent.setup();
     vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
-    vi.mocked(searchPlaces).mockResolvedValue({ results: [
-      { name: "Berlin", lat: 52.52, lon: 13.405 },
-      { name: "Berlin, Connecticut", lat: 41.62, lon: -72.75 },
-    ], degraded: false });
+    vi.mocked(searchPlaces).mockResolvedValue({
+      results: [
+        { name: "Berlin", lat: 52.52, lon: 13.405 },
+        { name: "Berlin, Connecticut", lat: 41.62, lon: -72.75 },
+      ],
+      degraded: false,
+    });
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 

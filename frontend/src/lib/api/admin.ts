@@ -9,6 +9,7 @@ import type {
   SmtpConfigResponse,
 } from "./types";
 import type { RoutingProviderId } from "../../types/tour";
+import type { CountryTier } from "../../types/passport";
 
 export interface InstanceSettings {
   instanceName: string;
@@ -27,6 +28,12 @@ export interface InstanceSettings {
   // unlike the nullable URL fields above. See `resolveGeocoderUrls()`.
   photonUrl: string;
   nominatimUrl: string;
+  /**
+   * The instance's starting point for "a country counts as visited from …".
+   * Any user may override it in their own settings; this is what applies until
+   * they do. Always resolved — there is no "unset" state to handle.
+   */
+  countryThreshold: CountryTier;
 }
 
 /**
@@ -57,6 +64,7 @@ export interface InstanceSettingsPatch {
   // Empty string clears the DB override, reverting to ENV/default.
   photonUrl?: string;
   nominatimUrl?: string;
+  countryThreshold?: CountryTier;
 }
 
 export const adminApi = {

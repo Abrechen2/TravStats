@@ -117,6 +117,34 @@ export type CountryTier = (typeof COUNTRY_TIERS)[number];
 
 const RANK: Record<CountryTier, number> = { slept: 3, visited: 2, transit: 1 };
 
+/**
+ * The tier the headline counts from when nobody has chosen one — a connection
+ * does not count, everything else does.
+ *
+ * Lives here rather than beside the setting because the setting stores a value
+ * from THIS vocabulary and nothing else. §2 refuses an hours-based option on
+ * principle (six hours and twelve hours returned the same set of countries on
+ * real data), so there are exactly three values and this is one of them.
+ */
+export const DEFAULT_COUNTRY_TIER: CountryTier = "visited";
+
+/**
+ * A stored or submitted value read back as a tier, or null when it is not one.
+ *
+ * The columns behind the setting are plain TEXT — `CountryTier` owns the closed
+ * set in TypeScript and a duplicate DB enum would be a second place for it to
+ * drift. That makes this the boundary guard: a row written by an older build, a
+ * hand-edited database, or a value from a vocabulary that no longer exists
+ * (`transit` is renamed `connection` in spec §3.4c) must fall back to the
+ * default rather than filter the headline against a rank that does not exist —
+ * which would silently count zero countries.
+ */
+export function parseCountryTier(value: unknown): CountryTier | null {
+  return typeof value === "string" && (COUNTRY_TIERS as readonly string[]).includes(value)
+    ? (value as CountryTier)
+    : null;
+}
+
 /** What kind of record proved the country. Kept beside the tier because a tier
  *  alone cannot answer "why is Romania in my passport". */
 export type EvidenceKind = "flight" | "lodging" | "port" | "place";

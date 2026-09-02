@@ -780,3 +780,83 @@ describe("a gap in the flight log is not time spent in a country", () => {
     expect(p.countries.find((c) => c.code === "CZ")?.daysPresent).toBe(4);
   });
 });
+
+/**
+ * The setting — spec §3.2, step 7.
+ *
+ * What is being pinned here is not that a threshold filters (that is
+ * `countCountries`, tested in `shared/__tests__/countryEvidence.test.ts`) but
+ * the boundary the whole design rests on: **changing the setting must never
+ * change what is IN the list.** A country wrongly classed as a connection has
+ * to stay visible to be corrected — that is how the Bucharest hotel was found —
+ * so a threshold that hid rows would put back, from the other direction, the
+ * invisible arithmetic this design removes.
+ */
+describe("the counting threshold moves the headline and nothing else", () => {
+  /**
+   * One country per tier, so every threshold has something to include AND
+   * something to exclude:
+   *
+   *   QA `transit` — MUC → DOH → SIN, both legs on the same local day at Doha
+   *   SG `visited` — flown to, never out of again
+   *   CZ `slept`   — a house with no stay at all (owner's decision 1.4)
+   *
+   * DE rides along as a second `visited`, which is what makes the middle
+   * threshold's count a number rather than a coincidence.
+   */
+  const at = (threshold: "transit" | "visited" | "slept") =>
+    buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")], threshold);
+
+  /** Every row, with the ONE field the threshold is allowed to touch removed. */
+  const rowsWithoutVerdict = (p: ReturnType<typeof buildPassport>) =>
+    JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
+
+  it("returns a byte-identical country list at all three thresholds", () => {
+    const [transit, visited, slept] = [at("transit"), at("visited"), at("slept")];
+
+    expect(rowsWithoutVerdict(visited)).toBe(rowsWithoutVerdict(transit));
+    expect(rowsWithoutVerdict(slept)).toBe(rowsWithoutVerdict(transit));
+  });
+
+  it("keeps `countriesTotal` and the tier split fixed while the headline moves", () => {
+    const [transit, visited, slept] = [at("transit"), at("visited"), at("slept")];
+
+    // The list is the same list, so everything that describes the WHOLE list
+    // is the same too. Only the number that applies a rule to it moves.
+    for (const p of [visited, slept]) {
+      expect(p.summary.countriesTotal).toBe(transit.summary.countriesTotal);
+      expect(p.summary.byTier).toEqual(transit.summary.byTier);
+      expect(p.summary.byEvidence).toEqual(transit.summary.byEvidence);
+    }
+
+    expect(transit.summary.countries).toBe(4); // DE, QA, SG, CZ
+    expect(visited.summary.countries).toBe(3); // …minus the Doha connection
+    expect(slept.summary.countries).toBe(1); // …only the house
+    expect(transit.summary.countriesTotal).toBe(4);
+  });
+
+  it("never removes the connection country, at any threshold", () => {
+    // The row a stricter setting stops COUNTING is exactly the row a user most
+    // needs to see: it is the one they might want to correct.
+    for (const threshold of ["transit", "visited", "slept"] as const) {
+      const qa = at(threshold).countries.find((c) => c.code === "QA");
+      expect(qa).toBeDefined();
+      expect(qa?.tier).toBe("transit");
+      expect(qa?.counted).toBe(threshold === "transit");
+    }
+  });
+
+  it("publishes the threshold it actually counted from", () => {
+    // Stated rather than assumed, so a client never explains the number with a
+    // rule that is not the one that produced it.
+    for (const threshold of ["transit", "visited", "slept"] as const) {
+      expect(at(threshold).summary.countryThreshold).toBe(threshold);
+    }
+  });
+
+  it("counts from `visited` when the caller names no threshold", () => {
+    const p = buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")]);
+    expect(p.summary.countryThreshold).toBe("visited");
+    expect(p.summary.countries).toBe(3);
+  });
+});

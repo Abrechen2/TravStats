@@ -33,6 +33,7 @@ import {
 import { classifyStay } from '../shared/lodgingCounting';
 import { countableFlightWhere } from '../shared/flightCounting';
 import { calculatePlaceStats } from './placeStats';
+import { loadPassport } from '../services/stats/passportLoader';
 
 /** Shared "did this actually happen" check for flights and cruises alike —
  * both domains use the same status vocabulary (`flown` / `historical` are
@@ -502,7 +503,50 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
         }
       }
     }
-    const finalCountries = unionCountries(combinedCountries, lodgingStats.countries);
+    const unionedCountries = unionCountries(combinedCountries, lodgingStats.countries);
+
+    /**
+     * The counting THRESHOLD, applied to the badge figure as well — spec §3.2.
+     *
+     * A passport counting from one tier while the badges count from another is
+     * the drift forgejo#42 was filed about, arriving from a new angle: the user
+     * would read "32 Länder" on the passport and be handed a COUNTRIES_50 badge
+     * off a set of 40. So the tier comes from the same resolver
+     * (`services/countryThresholdResolver.ts`), and the evidence it is applied
+     * to is the passport's own fold — the module is the one home for "which
+     * tier did this country earn", and re-deriving it here is exactly the
+     * second copy §4 is trying to delete.
+     *
+     * TWO things are deliberately NOT taken from the passport:
+     *
+     * 1. **Places stay out.** The comment above says why — the cross-domain
+     *    country badges mean "I travelled there", and a place is a pin, so a
+     *    McDonald's around the corner must not move a travel badge. The passport
+     *    counts places; a row proved ONLY by a place is dropped here.
+     * 2. **The union is still the floor.** A country the passport cannot place
+     *    but this union can (an unresolvable port name, a lodging row the
+     *    passport's `visited: true` filter excludes) keeps counting. Narrowing
+     *    the badge set is a threshold decision, not a licence to silently drop
+     *    countries a user already earned a badge with — `intersection`, not
+     *    `replacement`, is what keeps this a change of RULE rather than a change
+     *    of data.
+     */
+    const passport = await loadPassport(userId);
+    const countedByPassport = new Set(
+      passport.countries
+        .filter((c) => c.counted && c.kinds.some((kind) => kind !== 'place'))
+        .map((c) => c.code),
+    );
+    const finalCountries = new Set(
+      [...unionedCountries].filter(
+        (code) =>
+          countedByPassport.has(code) ||
+          // Not in the passport's list at all — a country only this union can
+          // see. It is not below the threshold; it was never measured against
+          // one, and abstention is not exclusion.
+          !passport.countries.some((c) => c.code === code),
+      ),
+    );
 
     const augmentedStats = {
       ...stats,

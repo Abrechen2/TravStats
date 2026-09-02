@@ -3,7 +3,22 @@ import { persist } from "zustand/middleware";
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
+import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
+
+/**
+ * A value off the wire read back as a tier, or null when it is not one.
+ *
+ * Mirrors `parseCountryTier` on the server, and exists for the same reason: the
+ * column behind the setting is plain text, so an older backend, a hand-edited
+ * row or a retired vocabulary can all put something here that the counting rule
+ * does not know. Null then means "no choice", which returns the account to the
+ * instance default — never a rank nothing can match.
+ */
+const asCountryTier = (value: unknown): CountryTier | null =>
+  typeof value === "string" && (COUNTRY_TIERS as readonly string[]).includes(value)
+    ? (value as CountryTier)
+    : null;
 
 type ThemePreference = "light" | "dark";
 type LanguagePreference = "de" | "en";
@@ -153,6 +168,24 @@ export interface SettingsState {
    */
   autoCreateTrips: boolean;
   /**
+   * Which evidence tier the country headline counts from, for THIS user — the
+   * user's OWN choice, or `null` when they follow the instance default.
+   *
+   * The null is a value, not a gap: it means "keep tracking the admin", so an
+   * account that never opened the setting still moves when the admin changes
+   * their mind. Do not collapse it to `DEFAULT_COUNTRY_TIER` on load.
+   */
+  countryThreshold: CountryTier | null;
+  /**
+   * The instance default, mirrored read-only from `GET /settings` — what
+   * applies while `countryThreshold` is null. `null` = not loaded yet.
+   *
+   * Instance state, so it is stripped in `partialize` for the same reason
+   * `betaFeaturesEnabled` is: a value cached from a previous session must not
+   * decide what the settings page NAMES as the fallback today.
+   */
+  instanceCountryThreshold: CountryTier | null;
+  /**
    * Instance-level beta gate, mirrored read-only from `GET /settings`.
    * `null` = not loaded yet → consumers must treat it as OFF (see
    * `hooks/useBetaFeatures.ts`). It is never persisted or sent back: only an
@@ -189,6 +222,15 @@ export interface SettingsState {
   setBaseCurrency: (currency: string) => void;
   /** Persists immediately, like `setBaseCurrency` — same rationale. */
   setAutoCreateTrips: (enabled: boolean) => void;
+  /**
+   * Sets (or, with `null`, CLEARS) the user's country-counting threshold and
+   * persists it immediately — same rationale as `setBaseCurrency`.
+   *
+   * `null` is sent to the server explicitly rather than omitted, because
+   * omitting the key means "leave my choice alone" and this has to mean "I no
+   * longer have one, follow the instance".
+   */
+  setCountryThreshold: (tier: CountryTier | null) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -274,6 +316,7 @@ const defaultSettings: Omit<
   | "setEnabledDomains"
   | "setBaseCurrency"
   | "setAutoCreateTrips"
+  | "setCountryThreshold"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -323,6 +366,9 @@ const defaultSettings: Omit<
   enabledDomainsLoaded: false,
   baseCurrency: "EUR",
   autoCreateTrips: true,
+  // No choice yet, and no instance answer yet — both are the server's to fill.
+  countryThreshold: null,
+  instanceCountryThreshold: null,
   betaFeaturesEnabled: null,
 };
 
@@ -371,6 +417,12 @@ export const useSettingsStore = create<SettingsState>()(
         set({ autoCreateTrips: enabled });
         settingsApi.update({ autoCreateTrips: enabled }).catch((error: unknown) => {
           logger.warn("Failed to save autoCreateTrips", error);
+        });
+      },
+      setCountryThreshold: (tier) => {
+        set({ countryThreshold: tier });
+        settingsApi.update({ countryThreshold: tier }).catch((error: unknown) => {
+          logger.warn("Failed to save countryThreshold", error);
         });
       },
       loadApiKeysStatus: async () => {
@@ -480,6 +532,14 @@ export const useSettingsStore = create<SettingsState>()(
               if (typeof remote.autoCreateTrips === "boolean") {
                 newState.autoCreateTrips = remote.autoCreateTrips;
               }
+              // The user's own threshold choice. Anything that is not one of
+              // the three tiers — a missing field on an older backend, a value
+              // from a vocabulary that no longer exists — reads as "no choice",
+              // which puts the account back on the instance default rather than
+              // on a rank nothing can match.
+              newState.countryThreshold = asCountryTier(remote.countryThreshold);
+              // Instance-level, read-only, same guard.
+              newState.instanceCountryThreshold = asCountryTier(remote.instanceCountryThreshold);
               // Instance-level, read-only. Anything that isn't an explicit
               // `true`/`false` (missing field, older backend) stays `null` =
               // gate closed.
@@ -558,6 +618,7 @@ export const useSettingsStore = create<SettingsState>()(
         // previous session decide what we skip writing today.
         const {
           betaFeaturesEnabled: _beta,
+          instanceCountryThreshold: _instanceThreshold,
           remoteSnapshot: _snapshot,
           enabledDomainsLoaded: _domainsLoaded,
           ...rest
@@ -574,6 +635,7 @@ export const useSettingsStore = create<SettingsState>()(
         delete s["map"];
         // Drop any value written before `partialize` existed.
         delete s["betaFeaturesEnabled"];
+        delete s["instanceCountryThreshold"];
         return s;
       },
     }

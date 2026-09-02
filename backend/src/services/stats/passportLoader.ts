@@ -24,6 +24,7 @@ import {
   type FlightTimeSemantics,
 } from "../../utils/timezone";
 import type { SettingsDataJson } from "../../routes/settings/types";
+import { countryThresholdFor } from "../countryThresholdResolver";
 import { buildTzMap, withDepartureClock } from "./departureClock";
 import { buildPassport } from "./passport";
 
@@ -159,7 +160,8 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
    * flights, and a place joins on its resolved `isoCountryCode` because
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas] = await Promise.all([
+  // prettier-ignore
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, threshold] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -201,6 +203,16 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
       },
     }),
     loadHomeIatas(userId),
+    /**
+     * Which tier the headline counts from — the user's own choice, else the
+     * instance default (spec §3.2). Read HERE rather than inside
+     * `buildPassport` so that function stays pure and testable against
+     * hand-written rows, which is the split this whole file exists for.
+     *
+     * It changes the headline and nothing else: every country below is loaded,
+     * folded and returned at every threshold.
+     */
+    countryThresholdFor(userId),
   ]);
 
   return buildPassport(
@@ -222,6 +234,7 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
         ? place.visits.map((v) => ({ isoCountryCode: place.isoCountryCode, at: v.visitedAt }))
         : [{ isoCountryCode: place.isoCountryCode, at: null }]
     ),
-    lodgings
+    lodgings,
+    threshold
   );
 }

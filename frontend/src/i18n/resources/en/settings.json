@@ -745,5 +745,12 @@
     "removeFailed": "The passkey could not be removed.",
     "insecureOrigin": "Passkeys need HTTPS. Browsers refuse them on a plain LAN address — reached through the tunnel they work.",
     "notConfigured": "An administrator has to set this instance's public address before passkeys can be used."
+  },
+  "countryCounting": {
+    "title": "Counting countries",
+    "description": "Which kind of evidence makes a country count towards your total.",
+    "label": "A country counts from …",
+    "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
+    "useInstanceDefault": "Use this instance's default ({{tier}})"
   }
 }

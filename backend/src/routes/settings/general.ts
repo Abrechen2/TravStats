@@ -12,6 +12,11 @@ import {
 } from './types';
 import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
 import { ECB_CURRENCIES } from '../../shared/currencies';
+import {
+  COUNTRY_TIERS,
+  parseCountryTier,
+  type CountryTier,
+} from '../../shared/countryEvidence';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
@@ -130,6 +135,17 @@ const settingsSchema = z.object({
   // Silent trip auto-creation during flight import (column-backed, default
   // true). The explicit "detect trips" button is not gated by this.
   autoCreateTrips: z.boolean().optional(),
+  /**
+   * Which evidence tier the country headline counts from, for THIS user
+   * (spec §3.2). `.nullable()` because null is a value and not an absence:
+   * sending it clears the override and returns the account to the instance
+   * default, while omitting the key leaves the choice alone.
+   *
+   * The enum comes from `COUNTRY_TIERS`, so the boundary can never accept a
+   * vocabulary the counting rule does not know — and can never grow an
+   * hours-based option, which §2 refuses on principle.
+   */
+  countryThreshold: z.enum(COUNTRY_TIERS).nullable().optional(),
 }).partial();
 
 export const settingsUpdateSchema = settingsSchema;
@@ -141,8 +157,16 @@ export const settingsUpdateSchema = settingsSchema;
  * it rides along on this payload purely so the frontend learns the value at
  * boot without a second request. It is read-only here: the write path is the
  * admin-guarded PUT /api/v1/admin/instance-settings.
+ *
+ * `instanceCountryThreshold` rides along for the same reason and one more: the
+ * user control has to NAME the default it falls back to ("Standard der Instanz
+ * (Aufenthalt)"), and a client that guessed the word would say the wrong one on
+ * any instance whose admin had changed it.
  */
-function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
+function buildSettingsResponse(instance: {
+  betaFeaturesEnabled: boolean;
+  countryThreshold: CountryTier;
+}, name: {
   firstName: string | null;
   lastName: string | null;
 }, record: {
@@ -159,6 +183,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
   enabledDomains: string[];
   baseCurrency: string;
   autoCreateTrips: boolean;
+  countryThreshold: string | null;
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -189,9 +214,14 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
     enabledDomains: record.enabledDomains,
     baseCurrency: record.baseCurrency,
     autoCreateTrips: record.autoCreateTrips ?? true,
+    // `parseCountryTier`, not a cast: the column is TEXT, so an unreadable
+    // value reads as "no override" and the account follows the instance —
+    // which is the same thing it was doing before anybody typed the bad value.
+    countryThreshold: parseCountryTier(record.countryThreshold),
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
-    betaFeaturesEnabled,
+    betaFeaturesEnabled: instance.betaFeaturesEnabled,
+    instanceCountryThreshold: instance.countryThreshold,
   };
 }
 
@@ -199,7 +229,9 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { betaFeaturesEnabled } = await getInstanceSettings();
+    const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
+      await getInstanceSettings();
+    const instance = { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold };
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
@@ -228,12 +260,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(betaFeaturesEnabled, name, created);
+      const response = buildSettingsResponse(instance, name, created);
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(betaFeaturesEnabled, name, existing);
+    const response = buildSettingsResponse(instance, name, existing);
 
     logger.info({
       operation: 'get_settings_response',
@@ -255,8 +287,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
-    const { enabledDomains, baseCurrency, autoCreateTrips, ...rest } = payload;
-    const { betaFeaturesEnabled } = await getInstanceSettings();
+    const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
+    const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
+      await getInstanceSettings();
+    const instance = { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold };
     logger.info({ operation: 'settings_update', userId });
 
     const existing = await prisma.userSettings.findUnique({
@@ -367,6 +401,13 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.autoCreateTrips = autoCreateTrips;
     }
 
+    // Country-counting threshold. `undefined` = not mentioned, leave the choice
+    // alone; an explicit `null` = clear the override and follow the instance
+    // again. Collapsing the two would make "back to default" impossible to say.
+    if (countryThreshold !== undefined) {
+      updateData.countryThreshold = countryThreshold;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -387,6 +428,9 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         enabledDomains: enabledDomains ?? ['flight'],
         baseCurrency: baseCurrency ?? 'EUR',
         autoCreateTrips: autoCreateTrips ?? true,
+        // null on a fresh row means "follow the instance", which is what an
+        // account that has never opened the setting should do.
+        countryThreshold: countryThreshold ?? null,
       },
     });
 
@@ -402,7 +446,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       select: { firstName: true, lastName: true },
     });
     const response = buildSettingsResponse(
-      betaFeaturesEnabled,
+      instance,
       { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
       saved
     );

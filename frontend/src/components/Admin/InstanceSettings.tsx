@@ -6,6 +6,7 @@ import BetaFeatureList from "./BetaFeatureList";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
+import { COUNTRY_TIER_CHOICES, DEFAULT_COUNTRY_TIER, type CountryTier } from "../../types/passport";
 
 interface Settings {
   instanceName: string;
@@ -23,6 +24,11 @@ interface Settings {
   webauthnRpId: string | null;
   /** Edited as one origin per line — the API takes an array. */
   webauthnOrigins: string;
+  /**
+   * The instance default for "a country counts as visited from …". A starting
+   * point, not a verdict: every user may override it in their own settings.
+   */
+  countryThreshold: CountryTier;
 }
 
 /**
@@ -52,7 +58,7 @@ function parseOrigins(text: string): string[] {
 }
 
 export default function InstanceSettings(): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t } = useTranslation(["admin", "common", "passport"]);
   const addToast = useToastStore((s) => s.addToast);
   const syncBetaFeaturesEnabled = useSettingsStore((s) => s.syncBetaFeaturesEnabled);
 
@@ -68,6 +74,7 @@ export default function InstanceSettings(): JSX.Element {
     lanUrl: "",
     webauthnRpId: "",
     webauthnOrigins: "",
+    countryThreshold: DEFAULT_COUNTRY_TIER,
   });
   const [passkeyStatus, setPasskeyStatus] = useState<PasskeyStatus | null>(null);
 
@@ -87,6 +94,7 @@ export default function InstanceSettings(): JSX.Element {
           lanUrl: settings.lanUrl ?? "",
           webauthnRpId: settings.webauthnRpId ?? "",
           webauthnOrigins: (settings.webauthnOrigins ?? []).join("\n"),
+          countryThreshold: settings.countryThreshold,
         });
         setPasskeyStatus(status);
         setLoaded(true);
@@ -119,6 +127,7 @@ export default function InstanceSettings(): JSX.Element {
         lanUrl: (form.lanUrl ?? "").trim(),
         webauthnRpId: (form.webauthnRpId ?? "").trim(),
         webauthnOrigins: parseOrigins(form.webauthnOrigins),
+        countryThreshold: form.countryThreshold,
       });
       setForm({
         instanceName: settings.instanceName,
@@ -130,6 +139,7 @@ export default function InstanceSettings(): JSX.Element {
         lanUrl: settings.lanUrl ?? "",
         webauthnRpId: settings.webauthnRpId ?? "",
         webauthnOrigins: (settings.webauthnOrigins ?? []).join("\n"),
+        countryThreshold: settings.countryThreshold,
       });
       setPasskeyStatus(status);
       // Mirror the server-confirmed flag into the settings store, so gated UI
@@ -322,6 +332,39 @@ export default function InstanceSettings(): JSX.Element {
           </span>
         </span>
       </label>
+
+      <div>
+        <label
+          htmlFor="country-threshold"
+          className="mb-1 block text-sm font-medium text-(--text-primary)"
+        >
+          {t("admin:instance.fields.countryThreshold.label")}
+        </label>
+        <select
+          id="country-threshold"
+          value={form.countryThreshold}
+          onChange={(e) => setForm({ ...form, countryThreshold: e.target.value as CountryTier })}
+          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+        >
+          {COUNTRY_TIER_CHOICES.map((tier) => (
+            <option key={tier} value={tier}>
+              {t(`passport:thresholdChoice.options.${tier}`)}
+            </option>
+          ))}
+        </select>
+        {/* The effect, in plain language, at the point of choosing — spec §5:
+            this moves a number every user has already seen, and a number that
+            changes without explanation reads as data loss. */}
+        <p className="mt-1 text-xs text-(--text-muted)">
+          {t("admin:instance.fields.countryThreshold.help")}
+        </p>
+        <p className="mt-1 text-xs text-(--text-muted)">
+          {t(`passport:thresholdChoice.effect.${form.countryThreshold}`)}
+        </p>
+        <p className="mt-1 text-xs text-(--text-muted)">
+          {t("passport:thresholdChoice.listUnchanged")}
+        </p>
+      </div>
 
       <label className="flex items-start gap-3 text-sm text-(--text-primary)">
         <input

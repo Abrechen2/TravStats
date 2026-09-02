@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 
+import type { CountryTier } from "../../shared/countryEvidence";
+
 // ---- Interfaces for settings data stored as JSON ----
 
 export interface SettingsDataJson {
@@ -80,6 +82,26 @@ export interface SettingsResponse extends SettingsDataJson {
    * Zod — only an admin can change it, via PUT /admin/instance-settings.
    */
   betaFeaturesEnabled: boolean;
+  /**
+   * The user's OWN choice of which evidence tier the country headline counts
+   * from, or null when they follow the instance (spec §3.2).
+   *
+   * Null is a real value here, not an absence: it means "keep tracking the
+   * admin's default", so an account that never opened the setting still moves
+   * when the admin changes their mind. Clearing the field must therefore send
+   * an explicit `null`, which is why the Zod field is `.nullable()`.
+   */
+  countryThreshold: CountryTier | null;
+  /**
+   * READ-ONLY mirror of the instance default, like `betaFeaturesEnabled` above
+   * and for a sharper reason: the UI has to NAME what applies when the user has
+   * not chosen. "Standard der Instanz (Aufenthalt)" is only writable if the
+   * client knows the word in the brackets.
+   *
+   * Deliberately absent from `settingsSchema`, so a PUT carrying it is stripped
+   * by Zod — the write path is the admin-guarded PUT /admin/instance-settings.
+   */
+  instanceCountryThreshold: CountryTier;
 }
 
 export interface UserSettingsUpdateData {
@@ -96,6 +118,8 @@ export interface UserSettingsUpdateData {
   enabledDomains?: string[];
   baseCurrency?: string;
   autoCreateTrips?: boolean;
+  /** `null` clears the override and returns the user to the instance default. */
+  countryThreshold?: CountryTier | null;
 }
 
 export interface ParserSettingsUpdateData {

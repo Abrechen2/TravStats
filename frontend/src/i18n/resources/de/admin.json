@@ -161,6 +161,10 @@
             "what": "Der ganze Bereich Orte: Anlegen, Bearbeiten, Detailseite, Liste, Karte, eigene Listen und die mitgelieferten Checklisten."
           }
         }
+      },
+      "countryThreshold": {
+        "label": "Ein Land zählt ab …",
+        "help": "Der Startpunkt für diese Instanz: Damit muss sich ein neues Konto nicht entscheiden. Jede Person kann den Wert in ihren eigenen Einstellungen überschreiben — „Zählt Umsteigen?“ ist eine persönliche Auffassung, keine Eigenschaft des Servers."
       }
     },
     "passkeys": {

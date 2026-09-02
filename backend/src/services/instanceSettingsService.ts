@@ -10,6 +10,11 @@
 import type { Request } from "express";
 
 import { prisma } from "../db";
+import {
+  DEFAULT_COUNTRY_TIER,
+  parseCountryTier,
+  type CountryTier,
+} from "../shared/countryEvidence";
 import { encryptApiKey, decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
 
@@ -53,6 +58,17 @@ export interface InstanceSettings {
    * deliberate, so the owner can still pair a phone while the UI is hidden.
    */
   betaFeaturesEnabled: boolean;
+  /**
+   * The instance's STARTING POINT for "a country counts as visited from …" —
+   * one of `COUNTRY_TIERS` (spec §3.2). Any user may override it in their own
+   * settings; this is what applies until they do, and what a fresh account
+   * gets without having to decide anything.
+   *
+   * No ENV fallback, same as `betaFeaturesEnabled`: the column always holds a
+   * value. Resolution for an actual user is
+   * `services/countryThresholdResolver.ts`, never this field read alone.
+   */
+  countryThreshold: CountryTier;
 }
 
 export interface WebDAVSettings {
@@ -97,6 +113,11 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // Non-nullable column (default false) — no ENV fallback on purpose: an
     // instance is either flagged beta by an admin or it is not.
     betaFeaturesEnabled: row.betaFeaturesEnabled,
+    // TEXT column, so a value written by an older build or edited by hand can
+    // fail to be a tier. `parseCountryTier` answers null then and the instance
+    // counts the normal way — an unreadable setting must never leave the
+    // headline filtering against a rank that does not exist.
+    countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
   };
 }
 
@@ -151,6 +172,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.betaFeaturesEnabled !== undefined && {
         betaFeaturesEnabled: patch.betaFeaturesEnabled,
+      }),
+      ...(patch.countryThreshold !== undefined && {
+        countryThreshold: patch.countryThreshold,
       }),
     },
   });

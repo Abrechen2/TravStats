@@ -576,6 +576,23 @@ model UserSettings {
   // Base currency for lodging FX snapshots (§7.1) and cross-domain totals.
   baseCurrency String @default("EUR") @map("base_currency")
 
+  /// Which evidence tier the country headline counts from — one of
+  /// `COUNTRY_TIERS` (shared/countryEvidence.ts): "transit" | "visited" | "slept".
+  ///
+  /// NULLABLE, and the null is the point: it means "follow the instance
+  /// default" rather than "visited". "Does a connection count?" is a personal
+  /// definition (spec §3.2), so the admin sets a starting point and a user may
+  /// disagree — but an account that never opened the setting must keep
+  /// following the admin, not freeze whatever the default happened to be on the
+  /// day it was created.
+  ///
+  /// A bare string, not a Prisma enum, for the reason `routingProvider` gives:
+  /// `CountryTier` already owns the closed set in TypeScript and Zod validates
+  /// it at the boundary; a DB-level enum would be a second place for the list
+  /// to drift. It changes NO stored row and NO country list — only which rows
+  /// the headline counts.
+  countryThreshold String? @map("country_threshold")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -751,6 +768,17 @@ model AdminSettings {
   // Admin-settable via PUT /api/v1/admin/instance-settings; every logged-in
   // user reads it (read-only) from GET /api/v1/settings.
   betaFeaturesEnabled Boolean @default(false) @map("beta_features_enabled")
+
+  /// The instance's STARTING POINT for "a country counts as visited from …" —
+  /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
+  /// account must not have to decide anything, so the admin picks the default;
+  /// any user may then override it in their own settings
+  /// (`UserSettings.countryThreshold`, where null means "follow this").
+  ///
+  /// Non-nullable with a default, deliberately: there is no ENV fallback and no
+  /// "unset" state a caller has to handle, exactly like `betaFeaturesEnabled`.
+  /// The default is "visited" — a connection does not count.
+  countryThreshold String @default("visited") @map("country_threshold")
 
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.

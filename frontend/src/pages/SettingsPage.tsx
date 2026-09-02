@@ -13,6 +13,7 @@ import HomeAirportSection from "../components/Settings/HomeAirportSection";
 import DisplaySection from "../components/Settings/DisplaySection";
 import ModuleSection from "../components/Settings/ModuleSection";
 import UnitsSection from "../components/Settings/UnitsSection";
+import CountryCountingCard from "../components/Settings/CountryCountingCard";
 import DefaultsSection from "../components/Settings/DefaultsSection";
 import NotificationsSection from "../components/Settings/NotificationsSection";
 import BackupSection from "../components/Settings/BackupSection";
@@ -537,12 +538,19 @@ export default function SettingsPage(): JSX.Element {
               <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
             )}
             {activeSection === "units" && (
-              <UnitsSection
-                units={units}
-                onSetUnits={setUnits}
-                baseCurrency={baseCurrency}
-                onSetBaseCurrency={setBaseCurrency}
-              />
+              <div className="space-y-4">
+                <UnitsSection
+                  units={units}
+                  onSetUnits={setUnits}
+                  baseCurrency={baseCurrency}
+                  onSetBaseCurrency={setBaseCurrency}
+                />
+                {/* Beside the base currency for the same reason it sits here:
+                    both decide how a cross-domain figure is COMPUTED rather
+                    than which domain it belongs to. The card persists itself,
+                    so this section stays out of AUTO_SAVED_SECTIONS. */}
+                <CountryCountingCard />
+              </div>
             )}
             {activeSection === "defaults" && (
               <DefaultsSection defaults={defaults} onSetDefaults={setDefaults} />

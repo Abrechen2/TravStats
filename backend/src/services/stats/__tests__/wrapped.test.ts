@@ -112,9 +112,29 @@ describe("buildWrapped", () => {
     const wrapped = buildWrapped(
       [flight()],
       [],
-      [{ firstYear: 2024 }, { firstYear: 2024 }, { firstYear: 2019 }, { firstYear: null }]
+      [
+        { firstYear: 2024, counted: true },
+        { firstYear: 2024, counted: true },
+        { firstYear: 2019, counted: true },
+        { firstYear: null, counted: true },
+      ]
     );
     expect(wrapped?.newCountries).toBe(2);
+  });
+
+  it("leaves out a country the user's threshold does not count", () => {
+    // A country first reached in 2024 but proved only by a connection. The
+    // passport greys the row and does not count it; the story must not open
+    // with a new country the headline beside it denies (spec §3.2).
+    const wrapped = buildWrapped(
+      [flight()],
+      [],
+      [
+        { firstYear: 2024, counted: true },
+        { firstYear: 2024, counted: false },
+      ]
+    );
+    expect(wrapped?.newCountries).toBe(1);
   });
 
   it("names the year's most-flown carrier and takes its code from the number", () => {

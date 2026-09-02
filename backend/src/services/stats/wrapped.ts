@@ -32,6 +32,9 @@
  * FLOWN to in the year; the passport on this branch counts a port call and a
  * recorded place as proof too. Taking the number from the passport's own
  * per-country first year means "new countries" means one thing on this server.
+ * It reads `counted` as well, so the story counts from the same tier the user's
+ * headline does (spec §3.2) — a threshold honoured in one place and ignored in
+ * the next is the drift forgejo#42 was filed about, arriving from a new angle.
  *
  * ## What is not here
  *
@@ -69,6 +72,12 @@ export interface WrappedCruise {
 /** What the passport already knows about a country, and all this needs of it. */
 export interface WrappedCountry {
   firstYear: number | null;
+  /**
+   * Does the row reach the user's counting threshold? Taken from the passport
+   * rather than re-decided here, so the story cannot count from a different
+   * tier than the headline it sits next to (spec §3.2).
+   */
+  counted: boolean;
 }
 
 export type WrappedRank = "top" | "second" | "other";
@@ -88,7 +97,10 @@ export interface Wrapped {
   distanceKm: number;
   /** `distanceKm` in trips around the Earth, one decimal. */
   earthFactor: number;
-  /** Countries first evidenced in this year. See the header. */
+  /**
+   * Countries first evidenced in this year AND reaching the user's counting
+   * threshold. See the header, and `PassportCountry.counted`.
+   */
   newCountries: number;
   cruises: number;
   /** The year's most-flown carrier. Null when no flight named one. */
@@ -204,7 +216,12 @@ export function buildWrapped(
     flights: inYear.length,
     distanceKm,
     earthFactor: Math.round((distanceKm / EARTH_CIRCUMFERENCE_KM) * 10) / 10,
-    newCountries: countries.filter((c) => c.firstYear === year).length,
+    // `counted`, not merely `firstYear` — the passport row already carries the
+    // resolved threshold for this user, so the story and the headline cannot
+    // disagree about whether a connection is a country. Without it, a year
+    // spent changing planes in Doha would open the wrapped with a new country
+    // the passport does not count, and neither number would explain the other.
+    newCountries: countries.filter((c) => c.counted && c.firstYear === year).length,
     cruises: cruisesPerYear.get(year) ?? 0,
     topAirline:
       topAirline === undefined

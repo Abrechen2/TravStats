@@ -1,5 +1,6 @@
 import type { DomainKey } from "../../shared/domains";
 import type { ParsedBooking } from "../../types";
+import type { CountryTier } from "../../types/passport";
 
 // ==================== Shared / Reusable Interfaces ====================
 
@@ -141,6 +142,18 @@ export interface UserSettings {
   baseCurrency?: string;
   /** Silent trip auto-creation during flight import (default true). */
   autoCreateTrips?: boolean;
+  /**
+   * Which evidence tier the country headline counts from, for this user, or
+   * `null` when they follow the instance default. Writable through
+   * PUT /settings; sending an explicit `null` clears the override.
+   */
+  countryThreshold?: CountryTier | null;
+  /**
+   * The instance default for the same setting — READ-ONLY, like
+   * `betaFeaturesEnabled` below. Served so the UI can NAME what applies while
+   * the user has not chosen; PUT /settings ignores it.
+   */
+  instanceCountryThreshold?: CountryTier;
   /**
    * Instance-level beta gate — READ-ONLY. Served by GET /settings for
    * convenience; PUT /settings ignores it (Zod strips it server-side). Only

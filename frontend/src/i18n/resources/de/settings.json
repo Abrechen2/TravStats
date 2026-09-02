@@ -745,5 +745,12 @@
     "removeFailed": "Der Passkey konnte nicht entfernt werden.",
     "insecureOrigin": "Passkeys brauchen HTTPS. Über eine reine LAN-Adresse ohne HTTPS verweigert der Browser sie — erreichbar über den Tunnel funktionieren sie.",
     "notConfigured": "Für Passkeys muss ein Administrator zuerst die öffentliche Adresse dieser Instanz hinterlegen."
+  },
+  "countryCounting": {
+    "title": "Länderzählung",
+    "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
+    "label": "Ein Land zählt ab …",
+    "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
+    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})"
   }
 }

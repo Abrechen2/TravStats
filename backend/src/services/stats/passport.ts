@@ -75,6 +75,7 @@ import {
 } from "../../utils/continents";
 import { CONTINENT_GROUPS, continentTotals } from "../../shared/passportContinents";
 import {
+  DEFAULT_COUNTRY_TIER,
   countCountries,
   daysBetween,
   foldCountryEvidence,
@@ -176,15 +177,19 @@ const strongestKind = (kinds: readonly EvidenceKind[]): PassportEvidence =>
   [...kinds].sort((a, b) => EVIDENCE_RANK[b] - EVIDENCE_RANK[a])[0];
 
 /**
- * The tier `summary.countries` counts from.
+ * The tier `summary.countries` counts from when the caller names none.
  *
- * The module's own default: a connection does not count, everything else does.
- * Deliberately NOT a setting yet — "does a connection count" is a personal
- * definition and the design hands it to the user in a later step (spec §3.2).
- * Inventing a settings column ahead of that decision would ship a dial nobody
- * has agreed on; hard-coding the module default ships the rule that was.
+ * A connection does not count, everything else does. It stopped being THE
+ * threshold on 2026-09-02 (spec §3.2): "does a connection count" is a personal
+ * definition, so an admin now sets the instance default and any user may
+ * override it — `services/countryThresholdResolver.ts` resolves the pair, and
+ * `loadPassport` passes the answer in. This constant is what a caller with no
+ * user in hand gets, which is what every unit test in this directory is.
+ *
+ * It is an alias for the shared default rather than a second copy of the word:
+ * two places naming a default is how they start disagreeing about it.
  */
-export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = "visited";
+export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = DEFAULT_COUNTRY_TIER;
 
 export interface PassportCountry {
   /** ISO-3166 alpha-2. What a client shows — never a flag: flags are political and age. */
@@ -266,7 +271,14 @@ export interface Passport {
     countries: number;
     /** Every row in `countries`, whatever its tier. What `byEvidence` sums to. */
     countriesTotal: number;
-    /** Which tier `countries` counts from. Stated, so a client need not assume it. */
+    /**
+     * Which tier `countries` counts from — the RESOLVED value for this user
+     * (their override, else the instance default), not a constant.
+     *
+     * Published rather than assumed because it is now settable: a client that
+     * hard-coded "visited" would explain the number with a rule that is not the
+     * one that produced it.
+     */
     countryThreshold: CountryTier;
     airports: number;
     entries: number;
@@ -335,7 +347,19 @@ export function buildPassport(
   /** Optional so every existing caller keeps its exact behaviour. */
   portCalls: readonly PassportPortCall[] = [],
   placeVisits: readonly PassportPlaceVisit[] = [],
-  lodgings: readonly PassportLodging[] = []
+  lodgings: readonly PassportLodging[] = [],
+  /**
+   * Which tier the HEADLINE counts from — the resolved value for this user
+   * (`services/countryThresholdResolver.ts`), not a module constant, since
+   * 2026-09-02.
+   *
+   * It reaches exactly two things: `PassportCountry.counted` per row and
+   * `summary.countries`. Every row is built and returned whatever it is, and
+   * `summary.countriesTotal` does not move — that is the invariant the whole
+   * design rests on, because a country wrongly classed as a connection has to
+   * stay VISIBLE to be corrected.
+   */
+  threshold: CountryTier = PASSPORT_COUNTRY_THRESHOLD
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -558,7 +582,7 @@ export function buildPassport(
     // tiers here, so the ranking that decides the headline lives in exactly one
     // place. A second copy of "which tier outranks which" is the drift the
     // shared module exists to end.
-    acc.counted = countCountries([row], PASSPORT_COUNTRY_THRESHOLD) === 1;
+    acc.counted = countCountries([row], threshold) === 1;
   }
 
   const countries: PassportCountry[] = [...byCountry.entries()]
@@ -609,7 +633,9 @@ export function buildPassport(
       // number and the list it belongs to can never answer differently.
       countries: countries.filter((c) => c.counted).length,
       countriesTotal: countries.length,
-      countryThreshold: PASSPORT_COUNTRY_THRESHOLD,
+      // The RESOLVED value, so a client never has to guess which rule produced
+      // the number it is showing.
+      countryThreshold: threshold,
       // Flights and airports, untouched by any of the above: a house proves a
       // country, it does not add an airport or an entry.
       airports: firstSeen.size,

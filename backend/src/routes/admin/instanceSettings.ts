@@ -10,6 +10,7 @@ import {
 } from '../../services/instanceSettingsService';
 import { testConnection as testWebDAVConnection } from '../../services/cloudSyncService';
 import { isValidRpId, passkeyUnavailableReason } from '../../services/webauthn/rpConfig';
+import { COUNTRY_TIERS } from '../../shared/countryEvidence';
 
 const router = Router();
 
@@ -74,6 +75,16 @@ const instancePatchSchema = z.object({
   // Every logged-in user reads the resulting value read-only via
   // GET /api/v1/settings; only this admin-guarded route can write it.
   betaFeaturesEnabled: z.boolean().optional(),
+  /**
+   * The instance default for "a country counts as visited from …" (spec §3.2).
+   *
+   * The enum is built from `COUNTRY_TIERS` rather than written out, so the
+   * boundary and the rule cannot drift — and so an hours-based value can never
+   * be accepted here by accident. §2 refuses duration thresholds on principle:
+   * six hours and twelve hours returned the same set of countries on real data,
+   * and a dial would promise precision that is not there.
+   */
+  countryThreshold: z.enum(COUNTRY_TIERS).optional(),
 });
 
 /**
@@ -135,6 +146,9 @@ router.put('/instance-settings', async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.betaFeaturesEnabled !== undefined && {
         betaFeaturesEnabled: patch.betaFeaturesEnabled,
+      }),
+      ...(patch.countryThreshold !== undefined && {
+        countryThreshold: patch.countryThreshold,
       }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });

@@ -19,7 +19,27 @@ export type Continent =
  * not appear in a filter or a legend, because a control that always returns
  * nothing reads as a bug rather than as an empty set.
  */
-export type CountryTier = "slept" | "visited" | "transit";
+export const COUNTRY_TIERS = ["slept", "visited", "transit"] as const;
+export type CountryTier = (typeof COUNTRY_TIERS)[number];
+
+/**
+ * The tier the headline counts from when nobody has chosen one — mirrors
+ * `DEFAULT_COUNTRY_TIER` on the server. Only ever a seed for a form control
+ * before the server has answered; what actually applies is always the resolved
+ * value the API sends (`summary.countryThreshold`, `instanceCountryThreshold`),
+ * never this.
+ */
+export const DEFAULT_COUNTRY_TIER: CountryTier = "visited";
+
+/**
+ * The same three tiers in the order the SETTING offers them: lowest bar first,
+ * so the list reads as a rising requirement — everything counts, then a
+ * connection does not, then only a night does.
+ *
+ * Derived from `COUNTRY_TIERS` rather than written out, so a fourth rung
+ * (`transited`, spec §3.4c) cannot appear in the ranking and be forgotten here.
+ */
+export const COUNTRY_TIER_CHOICES: readonly CountryTier[] = [...COUNTRY_TIERS].reverse();
 
 /** What KIND of record proved a country. Not how strong — that is the tier. */
 export type PassportEvidenceKind = "flight" | "lodging" | "port" | "place";

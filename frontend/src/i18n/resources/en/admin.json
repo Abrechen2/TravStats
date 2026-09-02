@@ -161,6 +161,10 @@
             "what": "The whole Places domain: create, edit, detail page, list, map, custom lists and the shipped checklists."
           }
         }
+      },
+      "countryThreshold": {
+        "label": "A country counts from …",
+        "help": "The starting point for this instance, so a fresh account does not have to decide anything. Anyone may override it in their own settings — “does a connection count?” is a personal definition, not a property of the server."
       }
     },
     "passkeys": {
