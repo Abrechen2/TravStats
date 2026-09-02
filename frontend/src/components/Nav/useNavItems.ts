@@ -48,11 +48,17 @@ function collapseSingleChild(group: NavGroup): NavNode {
  * `pathname` is passed in (not read via useLocation) so the model stays
  * testable without a router and so the caller controls re-render timing.
  */
+/**
+ * `inboxCount` is the WHOLE Posteingang — pending flight updates plus open
+ * data-quality questions. Two tables, one badge: the user is being told there
+ * is something to answer, and splitting that into two numbers would make them
+ * open the page twice to find out which. `NavigationBar` sums it.
+ */
 export function useNavItems(
-  pendingUpdatesCount: number,
+  inboxCount: number,
   pathname: string
 ): { center: NavNode[]; system: NavNode } {
-  const { t } = useTranslation(["dashboard", "common", "trips", "passport"]);
+  const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
@@ -107,17 +113,20 @@ export function useNavItems(
         : []),
     ];
 
-    const showPendingUpdates = pendingUpdatesCount > 0 || pathname === "/pending-updates";
+    // The path stays `/pending-updates` although the page is now the
+    // Posteingang: it is bookmarked, and `Settings/AutoUpdateSection` links to
+    // it. Only the label changed.
+    const showInbox = inboxCount > 0 || pathname === "/pending-updates";
     const systemChildren: NavLeaf[] = [
       { kind: "leaf", id: "settings", path: "/settings", label: t("dashboard:settings") },
-      ...(showPendingUpdates
+      ...(showInbox
         ? [
             {
               kind: "leaf" as const,
               id: "pending-updates",
               path: "/pending-updates",
-              label: t("dashboard:pendingUpdates"),
-              badge: pendingUpdatesCount,
+              label: t("dataQuality:inbox.nav"),
+              badge: inboxCount,
               warn: true,
             },
           ]
@@ -140,10 +149,10 @@ export function useNavItems(
       kind: "group",
       id: "system",
       label: t("dashboard:nav.system"),
-      badge: pendingUpdatesCount > 0 ? pendingUpdatesCount : undefined,
+      badge: inboxCount > 0 ? inboxCount : undefined,
       children: systemChildren,
     });
 
     return { center, system };
-  }, [t, isEnabled, placesVisible, isAdmin, pendingUpdatesCount, pathname]);
+  }, [t, isEnabled, placesVisible, isAdmin, inboxCount, pathname]);
 }

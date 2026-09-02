@@ -9,9 +9,51 @@
   "stamps": "Stempel",
   "summary": {
     "countries": "Länder",
+    "countriesTotal": "gezählt / mit Nachweis",
+    "countriesTotalExplained": "Die zweite Zahl sind alle Länder, für die überhaupt ein Nachweis vorliegt. Die erste zählt nur die, deren Nachweis die Schwelle erreicht.",
     "airports": "Flughäfen",
     "entries": "Einreisen",
     "continents": "Kontinente"
+  },
+  "evidence": {
+    "title": "Nachweis",
+    "headlineNote": "{{counted}} von {{total}} Ländern mit Nachweis werden gezählt — gezählt wird ab der Stufe „{{threshold}}“. Die übrigen bleiben in der Liste stehen, ausgegraut, damit du sie prüfen und korrigieren kannst.",
+    "kindsSumNote": "diese Aufteilung summiert sich auf alle Länder mit Nachweis, nicht auf die gezählte Kopfzahl"
+  },
+  "tiers": {
+    "slept": "Übernachtet",
+    "sleptExplained": "Der Kalendertag hat gewechselt: eine abgeschlossene Übernachtung, eine erfasste Unterkunft, ein Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel.",
+    "visited": "Besucht",
+    "visitedExplained": "Ankunft und Abflug am selben Kalendertag, ein erfasster Ort oder ein Hafentag.",
+    "transit": "Nur umgestiegen",
+    "transitExplained": "Nur ein Anschlussflug und sonst nichts. Ob du den Flughafen verlassen hast, ist nirgends erfasst — deshalb zählt dieses Land nicht mit. Trag einen Ort, eine Unterkunft oder einen weiteren Flug nach, dann steigt die Stufe."
+  },
+  "kinds": {
+    "flight": "Flug",
+    "lodging": "Unterkunft",
+    "port": "Hafen",
+    "place": "Ort"
+  },
+  "value": {
+    "dash": "—",
+    "undated": "ohne Datum",
+    "notApplicableEntries": "Entfällt: kein Flug belegt dieses Land — nicht null Einreisen, sondern keine, die zu zählen wären.",
+    "notApplicableAirports": "Entfällt: hier wurde kein Flughafen benutzt.",
+    "unknownPeriod": "Unbekannt: kein Beleg trägt ein Datum.",
+    "daysPresentExplained": "Verschiedene Kalendertage, an denen dich ein Beleg in diesem Land verortet. Gezählt, nicht geschätzt — und die Zahl entscheidet die Stufe nicht.",
+    "noDatedDays": "Null gezählte Tage: kein Beleg nennt einen Tag. Das ist kein fehlender Wert, sondern das Ergebnis der Zählung — der Hinweis „ohne Datum“ in dieser Zeile sagt, woran es liegt."
+  },
+  "ground": {
+    "unknown": "unbekannt",
+    "measuredExplained": "Gemessen: der längste Aufenthalt am Boden zwischen einer Landung und dem nächsten Abflug in diesem Land. Roh angezeigt, nicht in Klassen einsortiert — und er entscheidet die Stufe nicht.",
+    "unknownExplained": "Unbekannt: ein Flug hat dieses Land berührt, aber kein Uhrenpaar begrenzt einen Aufenthalt — etwa ein Hinflug ohne Rückflug oder eine Buchung, die nur ein Datum trägt. Trag den fehlenden Flug nach, dann steht hier eine Zeit.",
+    "notApplicableExplained": "Entfällt: kein Flug hat dieses Land berührt. Eine Unterkunft, ein Hafentag oder ein Ort begrenzt keinen Abflug — hier ist nichts nachzutragen und nichts zu messen."
+  },
+  "provenance": {
+    "intro": "Diese Belege haben das Land in den Pass gebracht. Jeder führt zum Datensatz — dort kannst du ihn ändern.",
+    "loadError": "Die Belege konnten nicht geladen werden. Das heißt nicht, dass es keine gibt.",
+    "truncated": "Nur die neuesten Belege werden gezeigt.",
+    "none": "Kein einzelner Datensatz abrufbar. Das Land steht trotzdem zu Recht in der Liste — nur lässt sich hier kein einzelner Beleg öffnen."
   },
   "continents": {
     "title": "Kontinente",
@@ -25,11 +67,23 @@
   },
   "countries": {
     "title": "Länder",
+    "listNote": "Diese Liste zeigt jedes Land mit irgendeinem Nachweis — auch die, die nicht mitgezählt werden. Die stehen ausgegraut da, statt zu verschwinden, damit du sie prüfen kannst.",
+    "dashLegend": "„—“ heißt nicht null, sondern nicht ableitbar: ein Land, das nur durch eine Unterkunft oder einen Hafen belegt ist, hat keine Flüge und keine Flughäfen — und ohne datierten Beleg auch keinen Zeitraum.",
+    "groundTimeLegend": "„Zeit am Boden“ kennt drei Antworten, und zwei davon sind kein Wert: „unbekannt“ heißt, ein Flug war hier, aber kein zweiter begrenzt den Aufenthalt — das kannst du nachtragen. „—“ heißt, hier war überhaupt kein Flug; eine Unterkunft begrenzt keinen Abflug, da ist nichts nachzutragen. „Tage“ ist dagegen immer gezählt: 0 heißt, kein Beleg nennt einen Tag.",
     "country": "Land",
+    "evidence": "Nachweis",
     "entries": "Einreisen",
+    "daysPresent": "Tage",
+    "groundTime": "Zeit am Boden",
     "period": "Zeitraum",
     "airports": "Flughäfen",
     "home": "Heimat",
-    "new": "neu"
+    "new": "neu",
+    "notCounted": "zählt nicht mit",
+    "notCountedExplained": "Dieses Land erreicht die Schwelle für die Kopfzahl nicht. Es bleibt trotzdem in der Liste: die Einstufung stammt aus dem, was erfasst ist, und das ist unvollständig.",
+    "undated": "ohne Datum",
+    "undatedExplained": "Mindestens ein Beleg trägt kein Datum. Dieses Land kann deshalb in keiner Jahresauswertung auftauchen.",
+    "showRecords": "Belege zeigen",
+    "hideRecords": "Belege ausblenden"
   }
 }

@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
+import CountryTable from "../components/Passport/CountryTable";
+import EvidenceSummary from "../components/Passport/EvidenceSummary";
+import { countryName } from "../components/Passport/countryName";
 import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { useTranslation } from "../hooks/useTranslation";
@@ -26,21 +29,17 @@ import type { Passport, PassportContinentGroup } from "../types/passport";
  *
  * NO FLAGS. The ISO code is the glyph. Flags are political, go out of date,
  * and render differently on every platform.
+ *
+ * ONE NUMBER IS NOT THE WHOLE ANSWER. `summary.countries` applies a threshold
+ * and `summary.countriesTotal` does not, and both are shown. The page is empty
+ * only when the TOTAL is empty: a passport whose every country was reached on a
+ * connection has three countries and a headline of zero, and showing "no
+ * flights yet" over it would delete exactly the rows a reader needs to correct.
  */
 
 const monthStamp = (iso: string | null, locale: string): string => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(locale, { month: "short", year: "2-digit" });
-};
-
-const countryName = (code: string, locale: string): string => {
-  try {
-    return new Intl.DisplayNames([locale], { type: "region" }).of(code) ?? code;
-  } catch {
-    // A locale the browser has no region names for. The code is still correct,
-    // just terser — better than an empty cell.
-    return code;
-  }
 };
 
 export default function PassportPage(): JSX.Element {
@@ -130,7 +129,7 @@ export default function PassportPage(): JSX.Element {
             <Link to="/stats" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               ← {t("passport:backToStats")}
             </Link>
-            {passport && passport.summary.countries > 0 && (
+            {passport && passport.summary.countriesTotal > 0 && (
               <button
                 type="button"
                 onClick={(): void => window.print()}
@@ -169,7 +168,7 @@ export default function PassportPage(): JSX.Element {
 
           {!loading && failure === null && passport !== null && (
             <>
-              {passport.summary.countries === 0 ? (
+              {passport.summary.countriesTotal === 0 ? (
                 <div
                   className="rounded-xl p-8 text-center"
                   style={{ background: "var(--bg-elevated)" }}
@@ -205,8 +204,36 @@ export default function PassportPage(): JSX.Element {
                     </div>
 
                     <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                      {/* The headline and the total, side by side and labelled.
+                          `airports` and `entries` count flights and are
+                          deliberately untouched by any of this: a house proves
+                          a country, it does not add an airport. */}
+                      <div>
+                        <dt
+                          className="text-[11px] uppercase tracking-wider"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {t("passport:summary.countries")}
+                        </dt>
+                        <dd
+                          className="text-2xl font-semibold"
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                        >
+                          {passport.summary.countries}
+                          <span
+                            className="text-base"
+                            style={{ color: "var(--text-muted)" }}
+                            title={t("passport:summary.countriesTotalExplained")}
+                          >
+                            {" / "}
+                            {passport.summary.countriesTotal}
+                          </span>
+                        </dd>
+                        <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          {t("passport:summary.countriesTotal")}
+                        </dd>
+                      </div>
                       {[
-                        ["countries", passport.summary.countries],
                         ["airports", passport.summary.airports],
                         ["entries", passport.summary.entries],
                       ].map(([key, value]) => (
@@ -244,6 +271,9 @@ export default function PassportPage(): JSX.Element {
                         </dd>
                       </div>
                     </dl>
+
+                    {/* Why the headline is not the total — the rule, named. */}
+                    <EvidenceSummary summary={passport.summary} />
 
                     <h2
                       className="text-[11px] uppercase tracking-wider mb-2"
@@ -319,96 +349,10 @@ export default function PassportPage(): JSX.Element {
                     </ul>
                   </section>
 
-                  {/* ── the full table, which is what a desktop adds ────── */}
-                  <section
-                    className="rounded-xl border overflow-hidden"
-                    style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
-                    aria-labelledby="countries-heading"
-                  >
-                    <h2 id="countries-heading" className="text-sm font-semibold px-6 pt-6 pb-3">
-                      {t("passport:countries.title")}
-                    </h2>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr
-                            className="text-left text-[11px] uppercase tracking-wider"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            <th className="px-6 py-2 font-medium">
-                              {t("passport:countries.country")}
-                            </th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              {t("passport:countries.entries")}
-                            </th>
-                            <th className="px-3 py-2 font-medium">
-                              {t("passport:countries.period")}
-                            </th>
-                            <th className="px-6 py-2 font-medium">
-                              {t("passport:countries.airports")}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {passport.countries.map((row) => (
-                            <tr
-                              key={row.code}
-                              className="border-t"
-                              style={{ borderColor: "var(--border)" }}
-                            >
-                              <td className="px-6 py-2.5">
-                                <span className="font-mono text-xs mr-2 opacity-70">
-                                  {row.code}
-                                </span>
-                                {countryName(row.code, locale)}
-                                {row.isHome && (
-                                  <span
-                                    className="ml-2 text-[10px] uppercase tracking-wide"
-                                    style={{ color: "var(--text-muted)" }}
-                                  >
-                                    {t("passport:countries.home")}
-                                  </span>
-                                )}
-                                {row.isNew && (
-                                  <span
-                                    className="ml-2 text-[10px] uppercase tracking-wide"
-                                    style={{ color: "var(--accent)" }}
-                                  >
-                                    {t("passport:countries.new")}
-                                  </span>
-                                )}
-                              </td>
-                              <td
-                                className="px-3 py-2.5 text-right"
-                                style={{ fontVariantNumeric: "tabular-nums" }}
-                              >
-                                {row.entries}
-                              </td>
-                              <td
-                                className="px-3 py-2.5 whitespace-nowrap"
-                                style={{
-                                  color: "var(--text-muted)",
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {row.firstYear === null
-                                  ? "—"
-                                  : row.firstYear === row.lastYear
-                                    ? row.firstYear
-                                    : `${row.firstYear}–${row.lastYear}`}
-                              </td>
-                              <td
-                                className="px-6 py-2.5 font-mono text-xs"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                {row.airports.join(" · ")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
+                  {/* ── the full table, which is what a desktop adds ──────
+                      Every country with any evidence, including the ones the
+                      headline does not count: those are greyed, never dropped. */}
+                  <CountryTable countries={passport.countries} locale={locale} />
                 </>
               )}
             </>

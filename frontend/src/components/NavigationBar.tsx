@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
+import { dataQualityFlagsApi } from "../lib/api/dataQualityFlags";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
@@ -108,7 +109,9 @@ export default function NavigationBar(): JSX.Element {
   const location = useLocation();
   const { t } = useTranslation(["dashboard", "common", "cruise", "trips", "lodging"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Two tables, one badge — the Posteingang is one page (see useNavItems).
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
+  const [openFlagCount, setOpenFlagCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
@@ -116,16 +119,24 @@ export default function NavigationBar(): JSX.Element {
 
   useEffect(() => {
     if (user) {
-      const loadPendingCount = async () => {
+      // Counted separately and awaited separately: one endpoint failing must
+      // not zero the other half of the badge.
+      const loadInboxCounts = async () => {
         try {
           const data = await pendingUpdatesApi.getAll({ status: "pending" });
           setPendingUpdatesCount(data.count || 0);
         } catch {
           logger.warn("Failed to load pending updates count");
         }
+        try {
+          const data = await dataQualityFlagsApi.getAll({ status: "open" });
+          setOpenFlagCount(data.count || 0);
+        } catch {
+          logger.warn("Failed to load data-quality flag count");
+        }
       };
-      loadPendingCount();
-      const interval = setInterval(loadPendingCount, 30000);
+      loadInboxCounts();
+      const interval = setInterval(loadInboxCounts, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -135,7 +146,7 @@ export default function NavigationBar(): JSX.Element {
     navigate("/login");
   };
 
-  const { center, system } = useNavItems(pendingUpdatesCount, location.pathname);
+  const { center, system } = useNavItems(pendingUpdatesCount + openFlagCount, location.pathname);
 
   const supportLinks: ExternalLink[] = [
     {

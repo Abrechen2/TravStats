@@ -46,12 +46,16 @@ describe("PassportPage — the beta gate", () => {
     getPassportMock.mockResolvedValue({
       summary: {
         countries: 0,
+        countriesTotal: 0,
+        countryThreshold: "visited",
         airports: 0,
         entries: 0,
         continentsVisited: 0,
         continentsTotal: 7,
         firstStampYear: null,
         newThisYear: 0,
+        byEvidence: { flight: 0, port: 0, place: 0, lodging: 0 },
+        byTier: { slept: 0, visited: 0, transit: 0 },
       },
       countries: [],
       continents: [],

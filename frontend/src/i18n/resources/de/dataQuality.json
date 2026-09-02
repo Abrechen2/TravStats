@@ -1,0 +1,88 @@
+{
+  "inbox": {
+    "title": "Posteingang",
+    "description": "Offene Fragen zu deinen Daten und vorgeschlagene Flug-Updates an einer Stelle.",
+    "nav": "Posteingang",
+    "flightUpdates": {
+      "title": "Flug-Updates",
+      "description": "Von einer API vorgeschlagene Änderungen an deinen Flügen."
+    },
+    "review": {
+      "title": "Zu prüfen",
+      "description": "Bei diesen Einträgen widersprechen sich zwei Angaben. Wir ändern nichts – du entscheidest.",
+      "recheck": "Erneut prüfen",
+      "rechecking": "Wird geprüft …",
+      "filter": {
+        "label": "Status",
+        "open": "Offen",
+        "resolved": "Korrigiert",
+        "dismissed": "Passt so",
+        "all": "Alle"
+      },
+      "empty": {
+        "title": "Nichts zu prüfen",
+        "description": "Bei keinem deiner Einträge widersprechen sich gerade zwei Angaben."
+      }
+    },
+    "messages": {
+      "resolved": "Danke – wir prüfen den Eintrag beim nächsten Durchlauf erneut.",
+      "dismissed": "Verstanden. Diese Frage wird nicht mehr gestellt.",
+      "checked": "Prüfung abgeschlossen: {{open}} offene Frage(n)."
+    },
+    "errors": {
+      "loadFailed": "Die offenen Fragen konnten nicht geladen werden.",
+      "resolveFailed": "Die Antwort konnte nicht gespeichert werden.",
+      "dismissFailed": "Die Antwort konnte nicht gespeichert werden.",
+      "runFailed": "Die Prüfung konnte nicht gestartet werden."
+    }
+  },
+  "flag": {
+    "unnamedRecord": "Eintrag ohne Namen",
+    "unknownCountry": "Unbekanntes Land ({{code}})",
+    "unreadable": "Diese Frage kennt diese Version der Oberfläche noch nicht. Beantworten kannst du sie trotzdem.",
+    "neitherIsCorrect": "Keiner der beiden Werte ist als richtig markiert. Am Eintrag wurde nichts geändert, und er zählt unverändert weiter.",
+    "entityType": {
+      "lodging": "Unterkunft",
+      "place": "Ort",
+      "country": "Land"
+    },
+    "status": {
+      "open": "Offen",
+      "resolved": "Als korrigiert gemeldet",
+      "dismissed": "Als richtig bestätigt"
+    },
+    "actions": {
+      "resolve": {
+        "label": "Ich habe es korrigiert",
+        "hint": "Du hast den Eintrag geändert. Besteht der Widerspruch danach weiter, fragen wir erneut."
+      },
+      "dismiss": {
+        "label": "Das stimmt so",
+        "hint": "Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt."
+      }
+    }
+  },
+  "kinds": {
+    "address_country_mismatch": {
+      "title": "Land widerspricht der Adresse",
+      "question": "Die Adresse nennt ein anderes Land als das, das gespeichert ist. Welches stimmt?",
+      "stored": "Gespeichertes Land",
+      "fromAddress": "Land laut Adresse",
+      "addressLabel": "Adresse"
+    },
+    "undated_country_evidence": {
+      "title": "Land ohne datierten Beleg",
+      "question": "{{country}} steht ausschließlich auf Einträgen ohne Datum. Warst du dort?",
+      "dated": "Belege mit Datum",
+      "datedNone": "keine",
+      "undated": "Belege ohne Datum",
+      "recordsTitle": "Diese Einträge nennen das Land:"
+    },
+    "stay_dates_reversed": {
+      "title": "Check-out vor Check-in",
+      "question": "Das Check-out-Datum liegt vor dem Check-in. Beide Daten stehen so im Eintrag – welches gehört wohin?",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out"
+    }
+  }
+}

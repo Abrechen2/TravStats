@@ -1,5 +1,5 @@
 import type { TravelAccountResponse } from "../../types/travelAccount";
-import type { Passport } from "../../types/passport";
+import type { CountryDetail, Passport } from "../../types/passport";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -30,6 +30,16 @@ export const statsApi = {
    */
   getPassport: async (): Promise<Passport> => {
     const { data } = await api.get<Passport>("/stats/passport");
+    return data;
+  },
+
+  /**
+   * One country's records, so a passport row's provenance can be OPENED and not
+   * only read. A row states that a flight or a place proved the country; this
+   * names which one, and the id is what the link needs.
+   */
+  getCountryDetail: async (code: string): Promise<CountryDetail> => {
+    const { data } = await api.get<CountryDetail>(`/stats/countries/${encodeURIComponent(code)}`);
     return data;
   },
 

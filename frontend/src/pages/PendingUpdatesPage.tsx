@@ -1,7 +1,23 @@
 /**
- * Pending Updates Page
+ * Posteingang — the one place the user answers questions about their data.
  *
- * Page for reviewing and managing pending flight updates
+ * Two sections, two backends, on purpose (design §3.5, owner 2026-09-02):
+ *
+ * - **Zu prüfen** — `DataQualityFlag` rows: a record whose own two sources
+ *   disagree, raised as a QUESTION. Nothing has been changed and nothing is
+ *   marked correct.
+ * - **Flug-Updates** — `PendingFlightUpdate` rows: a provider's proposed field
+ *   values for one flight, with a diff and an apply/reject decision.
+ *
+ * `PendingFlightUpdate` carries a required `flightId`, `apiSource` and
+ * `expiresAt` — it is flight-shaped by construction, and 858 lines of service
+ * code depend on that shape. So the flag model got its own table with a generic
+ * subject rather than being forced through it. The user sees one inbox; the
+ * schema keeps apart two things that genuinely differ.
+ *
+ * The route stays `/pending-updates`. It is linked from the nav and from
+ * `Settings/AutoUpdateSection`, and renaming a page is not a reason to break a
+ * bookmark.
  */
 
 import { useState, useEffect } from "react";
@@ -12,6 +28,7 @@ import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
+import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 
@@ -73,7 +90,7 @@ interface Statistics {
 }
 
 export default function PendingUpdatesPage(): JSX.Element {
-  const { t } = useTranslation(["common", "pendingUpdates"]);
+  const { t } = useTranslation(["common", "pendingUpdates", "dataQuality"]);
   const addToast = useToastStore((state) => state.addToast);
 
   const [updates, setUpdates] = useState<PendingUpdate[]>([]);
@@ -182,9 +199,25 @@ export default function PendingUpdatesPage(): JSX.Element {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-            {t("pendingUpdates:title")}
+            {t("dataQuality:inbox.title")}
           </h1>
-          <p style={{ color: "var(--text-muted)" }}>{t("pendingUpdates:description")}</p>
+          <p style={{ color: "var(--text-muted)" }}>{t("dataQuality:inbox.description")}</p>
+        </div>
+
+        {/* Questions about the user's own records. First, because they are the
+            ones nobody else will answer — a flight update expires on its own. */}
+        <DataQualityFlagsSection />
+
+        {/* Flight updates — behaviour unchanged from before the Posteingang
+            rename; only the heading above it is new, because the page title is
+            no longer this section's title. */}
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+            {t("dataQuality:inbox.flightUpdates.title")}
+          </h2>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("dataQuality:inbox.flightUpdates.description")}
+          </p>
         </div>
 
         {/* Statistics Dashboard */}

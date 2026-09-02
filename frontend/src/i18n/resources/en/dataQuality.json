@@ -1,0 +1,88 @@
+{
+  "inbox": {
+    "title": "Inbox",
+    "description": "Open questions about your data and proposed flight updates, in one place.",
+    "nav": "Inbox",
+    "flightUpdates": {
+      "title": "Flight updates",
+      "description": "Changes to your flights proposed by an API."
+    },
+    "review": {
+      "title": "To review",
+      "description": "Two pieces of information disagree on these records. We change nothing — you decide.",
+      "recheck": "Check again",
+      "rechecking": "Checking …",
+      "filter": {
+        "label": "Status",
+        "open": "Open",
+        "resolved": "Corrected",
+        "dismissed": "Fine as it is",
+        "all": "All"
+      },
+      "empty": {
+        "title": "Nothing to review",
+        "description": "None of your records currently has two pieces of information that disagree."
+      }
+    },
+    "messages": {
+      "resolved": "Thanks — we will look at this record again on the next run.",
+      "dismissed": "Understood. This question will not be asked again.",
+      "checked": "Check finished: {{open}} open question(s)."
+    },
+    "errors": {
+      "loadFailed": "The open questions could not be loaded.",
+      "resolveFailed": "Your answer could not be saved.",
+      "dismissFailed": "Your answer could not be saved.",
+      "runFailed": "The check could not be started."
+    }
+  },
+  "flag": {
+    "unnamedRecord": "Record without a name",
+    "unknownCountry": "Unknown country ({{code}})",
+    "unreadable": "This version of the interface does not know this question yet. You can still answer it.",
+    "neitherIsCorrect": "Neither value is marked as the correct one. Nothing on the record was changed, and it keeps counting exactly as before.",
+    "entityType": {
+      "lodging": "Lodging",
+      "place": "Place",
+      "country": "Country"
+    },
+    "status": {
+      "open": "Open",
+      "resolved": "Reported as corrected",
+      "dismissed": "Confirmed as correct"
+    },
+    "actions": {
+      "resolve": {
+        "label": "I have corrected it",
+        "hint": "You changed the record. If the contradiction is still there afterwards, we will ask again."
+      },
+      "dismiss": {
+        "label": "This is correct as it is",
+        "hint": "There is nothing to change on the record. This question will never be asked again."
+      }
+    }
+  },
+  "kinds": {
+    "address_country_mismatch": {
+      "title": "Country disagrees with the address",
+      "question": "The address names a different country from the one stored. Which one is right?",
+      "stored": "Stored country",
+      "fromAddress": "Country in the address",
+      "addressLabel": "Address"
+    },
+    "undated_country_evidence": {
+      "title": "Country with no dated evidence",
+      "question": "{{country}} appears only on records that carry no date. Were you there?",
+      "dated": "Records with a date",
+      "datedNone": "none",
+      "undated": "Records without a date",
+      "recordsTitle": "These records name the country:"
+    },
+    "stay_dates_reversed": {
+      "title": "Check-out before check-in",
+      "question": "The check-out date lies before the check-in. Both dates are stored exactly like this — which belongs where?",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out"
+    }
+  }
+}

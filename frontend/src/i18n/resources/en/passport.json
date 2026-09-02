@@ -9,9 +9,51 @@
   "stamps": "Stamps",
   "summary": {
     "countries": "Countries",
+    "countriesTotal": "counted / with evidence",
+    "countriesTotalExplained": "The second number is every country for which there is any evidence at all. The first counts only those whose evidence reaches the threshold.",
     "airports": "Airports",
     "entries": "Entries",
     "continents": "Continents"
+  },
+  "evidence": {
+    "title": "Evidence",
+    "headlineNote": "{{counted}} of {{total}} countries with evidence are counted — counting starts at the tier “{{threshold}}”. The rest stay in the list, greyed out, so you can check and correct them.",
+    "kindsSumNote": "this split adds up to every country with evidence, not to the counted headline"
+  },
+  "tiers": {
+    "slept": "Stayed overnight",
+    "sleptExplained": "The calendar day changed: a completed stay, a recorded lodging, a port call spanning a night, or a pair of flights across a day boundary.",
+    "visited": "Visited",
+    "visitedExplained": "Arrival and departure on the same calendar day, a recorded place, or a day in port.",
+    "transit": "Connection only",
+    "transitExplained": "A connecting flight and nothing else. Nothing records whether you left the airport — which is why this country is not counted. Add a place, a lodging or another flight and the tier rises."
+  },
+  "kinds": {
+    "flight": "Flight",
+    "lodging": "Lodging",
+    "port": "Port call",
+    "place": "Place"
+  },
+  "value": {
+    "dash": "—",
+    "undated": "undated",
+    "notApplicableEntries": "Not applicable: no flight proves this country — not zero entries, but none there would be to count.",
+    "notApplicableAirports": "Not applicable: no airport was used here.",
+    "unknownPeriod": "Unknown: no record carries a date.",
+    "daysPresentExplained": "Distinct calendar days on which a record places you in this country. Counted, not estimated — and the number does not decide the tier.",
+    "noDatedDays": "Zero days counted: no record names a day. That is not a missing value but the result of the count — the “undated” note on this row says why."
+  },
+  "ground": {
+    "unknown": "unknown",
+    "measuredExplained": "Measured: the longest spell on the ground between a landing and the next departure in this country. Shown raw rather than sorted into classes — and it does not decide the tier.",
+    "unknownExplained": "Unknown: a flight touched this country, but no pair of clocks bounds a spell — an outbound leg with no return, or a booking carrying only a date. Record the missing flight and a time appears here.",
+    "notApplicableExplained": "Not applicable: no flight touched this country. A lodging, a day in port or a place bounds no departure — there is nothing to add here and nothing to measure."
+  },
+  "provenance": {
+    "intro": "These records put the country in the passport. Each one opens the record — that is where you change it.",
+    "loadError": "The records could not be loaded. That does not mean there are none.",
+    "truncated": "Only the most recent records are shown.",
+    "none": "No individual record available. The country belongs in the list all the same — there is simply no single record to open here."
   },
   "continents": {
     "title": "Continents",
@@ -25,11 +67,23 @@
   },
   "countries": {
     "title": "Countries",
+    "listNote": "This list shows every country with any evidence — including the ones that are not counted. Those are greyed out rather than removed, so you can check them.",
+    "dashLegend": "“—” does not mean zero, it means not derivable: a country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
+    "groundTimeLegend": "“Time on the ground” has three answers, and two of them are not a value: “unknown” means a flight was here but no second one bounds the stay — that you can fill in. “—” means no flight was here at all; a lodging bounds no departure, so there is nothing to add. “Days”, by contrast, is always counted: 0 means no record names a day.",
     "country": "Country",
+    "evidence": "Evidence",
     "entries": "Entries",
+    "daysPresent": "Days",
+    "groundTime": "Time on the ground",
     "period": "Period",
     "airports": "Airports",
     "home": "Home",
-    "new": "new"
+    "new": "new",
+    "notCounted": "not counted",
+    "notCountedExplained": "This country does not reach the threshold for the headline. It stays in the list all the same: the tier comes from what was recorded, and what was recorded is incomplete.",
+    "undated": "undated",
+    "undatedExplained": "At least one record carries no date. This country therefore cannot appear in any year's figures.",
+    "showRecords": "Show records",
+    "hideRecords": "Hide records"
   }
 }
