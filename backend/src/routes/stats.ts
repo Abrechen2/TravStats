@@ -21,7 +21,6 @@ import {
   resolveStayProgramme,
 } from '../services/lodging/stayMembership';
 import { normalizeHistory } from '../utils/homeAirport';
-import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
@@ -32,7 +31,7 @@ import {
   emptyDurationTotals,
   resolveFlightDuration,
 } from '../shared/flightDuration';
-import { isoCountryCode } from '../utils/continents';
+import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
 import { buildTzMap, withDepartureClock } from '../services/stats/departureClock';
 import {
   loadAirportCountries,
@@ -1706,14 +1705,20 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
  * Unresolvable entries are dropped: they cannot be deduplicated against the
  * other catalogue, so keeping them would reintroduce the double count this
  * exists to remove.
+ *
+ * The join is `shared/countryEvidence.ts`'s, not a local one. This used to call
+ * the English-only `isoCountryCode` alone, which is the same half-resolution
+ * that gave `countryDetail.ts` a country row whose drill-down could not name
+ * the record behind it. Reading BOTH resolvers is strictly more generous —
+ * measured over the whole airport and port catalogue no code changed and none
+ * was lost — and it stops a two-character non-Latin string ("日本") being
+ * published as if it were a country code.
+ *
+ * These are LISTS, and they stay lists: the counting threshold of design §3.2
+ * moves the passport headline and nothing here.
  */
 function isoCodes(values: Iterable<string>): string[] {
-  const out = new Set<string>();
-  for (const v of values) {
-    const iso = isoCountryCode(v);
-    if (iso) out.add(iso);
-  }
-  return [...out].sort();
+  return [...normalizeCountrySet(values)].sort();
 }
 
 interface CountryStat {
@@ -2064,10 +2069,12 @@ router.get(
        * and money split between them.
        *
        * The stored column wins. When it is empty the text is resolved on the
-       * fly — the column arrived after some rows did, and an old row belongs
-       * in the same bucket as a new one. When nothing resolves, the text
-       * survives as its own key: "Dubai" is a city, and a row that names no
-       * country is a finding worth seeing, not one to drop.
+       * fly — through `shared/countryEvidence.ts`, the one home for that join,
+       * rather than through one of the two resolvers behind it: a bucket keyed
+       * differently here than the passport counts is a second opinion about
+       * what a country is. When nothing resolves, the text survives as its own
+       * key: "Dubai" is a city, and a row that names no country is a finding
+       * worth seeing, not one to drop.
        *
        * It also repairs the continents: `continentForCountry` understands ISO
        * codes and English names, so German text used to fall through to the
@@ -2075,7 +2082,7 @@ router.get(
        * coordinates lost its continent altogether.
        */
       const countryKey = (l: { country: string | null; isoCountryCode: string | null }): string | null =>
-        l.isoCountryCode ?? resolveCountryCode(l.country) ?? l.country;
+        l.isoCountryCode ?? toCountryCode(l.country) ?? l.country;
 
       const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
         id: l.id,

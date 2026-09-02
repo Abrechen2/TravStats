@@ -7,6 +7,9 @@ import {
   groundTier,
   lodgingEvidence,
   measuredGroundMinutes,
+  normalizeCountrySet,
+  toCountryCode,
+  unionCountries,
   type CountableStay,
   type CountryEvidence,
   type CountryTier,
@@ -181,6 +184,78 @@ describe("foldCountryEvidence — joins on codes, never on names", () => {
     ]);
 
     expect(rows.map((r) => r.code)).toEqual(["SI"]);
+  });
+});
+
+describe("toCountryCode — the join every consumer now shares", () => {
+  /**
+   * The guard for step 4 of the design: `utils/achievementStats.ts`,
+   * `routes/stats.ts` and `routes/trips.ts` each carried their own version of
+   * this join, and each read only ONE of the two resolvers. Neither resolver
+   * contains the other, so dropping either loses countries silently — which is
+   * why the cases below are stated as a pair rather than as one list.
+   */
+  it("reads the names ONLY the multilingual resolver carries", () => {
+    // The free-text `country` column, in whatever language wrote it. The
+    // English-only table behind `utils/continents.ts` resolves none of these.
+    expect(toCountryCode("Deutschland")).toBe("DE");
+    expect(toCountryCode("Österreich")).toBe("AT");
+    expect(toCountryCode("Česko")).toBe("CZ");
+    expect(toCountryCode("Schweiz/Suisse/Svizzera/Svizra")).toBe("CH");
+  });
+
+  it("reads the catalogue spellings ONLY the English table carries", () => {
+    // Port and airport catalogue names `Intl.DisplayNames` does not answer for.
+    // A join that kept only the multilingual resolver would drop every one.
+    expect(toCountryCode("DR Congo")).toBe("CD");
+    expect(toCountryCode("US Virgin Islands")).toBe("VI");
+    expect(toCountryCode("Kosovo")).toBe("XK");
+    expect(toCountryCode("Macau")).toBe("MO");
+    expect(toCountryCode("South Georgia")).toBe("GS");
+  });
+
+  it("refuses the catalogue's placeholders and anything that is not a country", () => {
+    // `ZZ`/`XZ` pass the multilingual resolver's shape check — two letters is
+    // all it asks — so the placeholder guard has to live after both resolvers.
+    expect(toCountryCode("ZZ")).toBeNull();
+    expect(toCountryCode("XZ")).toBeNull();
+    // What `/stats/countries` puts in the display list for an airport with no
+    // country on file. It must never become a country in the ISO list beside it.
+    expect(toCountryCode("Unknown")).toBeNull();
+    expect(toCountryCode("Dubai")).toBeNull();
+    expect(toCountryCode(null)).toBeNull();
+    expect(toCountryCode(undefined)).toBeNull();
+  });
+
+  it("does not publish a two-character string as if it were a code", () => {
+    // `isoCountryCode` upper-cases anything two characters long, so calling it
+    // alone published "日本" into `countriesIso` as a country code. Asking the
+    // multilingual resolver FIRST answers the country the string names.
+    expect(toCountryCode("日本")).toBe("JP");
+  });
+});
+
+describe("normalizeCountrySet / unionCountries", () => {
+  it("folds every spelling of one country into one code", () => {
+    expect([...normalizeCountrySet(["DE", "Germany", "Deutschland"])]).toEqual(["DE"]);
+  });
+
+  it("unions across domains on the code, never on the text", () => {
+    // THE 88-vs-40 bug, in its set-shaped form: airports contribute `DE`,
+    // ports `Germany`, lodging `Deutschland`, and unioning the strings counts
+    // one country three times.
+    const union = unionCountries(
+      new Set(["DE", "FR"]),
+      new Set(["Germany", "Italy"]),
+      new Set(["Deutschland", "Atlantis"])
+    );
+
+    expect([...union].sort()).toEqual(["DE", "FR", "IT"]);
+  });
+
+  it("is idempotent — folding an already-folded set changes nothing", () => {
+    const once = normalizeCountrySet(["Deutschland", "FR"]);
+    expect([...normalizeCountrySet(once)].sort()).toEqual([...once].sort());
   });
 });
 

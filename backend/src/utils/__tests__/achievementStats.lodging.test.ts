@@ -16,11 +16,12 @@
 import {
   calculateUserStats,
   computeFlyAndStayFlags,
-  normalizeCountrySet,
-  unionCountries,
   type FlightData,
   type TripDomainCounts,
 } from '../achievementStats';
+// Moved to the one home in step 4 of the country-counting design; the cases
+// below are unchanged, so they pin the same truth table in its new place.
+import { normalizeCountrySet, unionCountries } from '../../shared/countryEvidence';
 import { getCachedAirports } from '../../services/airportCache';
 
 jest.mock('../../services/airportCache', () => ({

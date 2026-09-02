@@ -105,10 +105,55 @@ const PLACEHOLDER_CODES: ReadonlySet<string> = new Set(["ZZ", "XZ"]);
  * "Deutschland" raised a country row whose drill-down could not name the record
  * that raised it — a row asserting evidence the panel behind it denied. Anything
  * that joins a country to a code calls THIS.
+ *
+ * `undefined` is accepted alongside `null` because the callers read the country
+ * off a lookup that can miss — `airportMap.get(code)?.country` yields undefined,
+ * not null, and a signature that refused it would push every caller into a `??
+ * null` of its own. Both mean the same thing here and both answer null.
  */
-export function toCountryCode(country: string | null): string | null {
+export function toCountryCode(country: string | null | undefined): string | null {
   const code = resolveCountryCode(country) ?? isoCountryCode(country);
   return code && !PLACEHOLDER_CODES.has(code) ? code : null;
+}
+
+/**
+ * Folds a whole set of country strings into ISO codes, dropping every entry
+ * that cannot be placed. The set-shaped companion to `toCountryCode`.
+ */
+export function normalizeCountrySet(countries: Iterable<string>): Set<string> {
+  const codes = new Set<string>();
+  for (const country of countries) {
+    const code = toCountryCode(country);
+    if (code) codes.add(code);
+  }
+  return codes;
+}
+
+/**
+ * Unions "countries visited" sets from every domain (flights, cruises, lodging
+ * stays, …) into the single figure `UserStats.countries` exposes.
+ *
+ * It is THE seam where the three domains' vocabularies become one: every input
+ * is folded to an ISO alpha-2 code and anything unresolvable is dropped (see
+ * `toCountryCode` for the 88-vs-32 measurement that made this necessary).
+ * Normalising here rather than in each caller is deliberate — a domain added
+ * later cannot forget to do it, and the callers cannot disagree about how.
+ * Callers may pass raw names; the OUTPUT is always codes.
+ *
+ * It lives beside the fold rather than in `utils/achievementStats.ts`, where it
+ * was written: a set-shaped join that keeps its own copy of the join is the
+ * second copy §4 of the design exists to delete, and the copy it kept had
+ * already grown a redundant `.toUpperCase()` neither resolver needs.
+ */
+export function unionCountries(...countrySets: Array<Set<string>>): Set<string> {
+  const union = new Set<string>();
+  for (const set of countrySets) {
+    for (const country of set) {
+      const code = toCountryCode(country);
+      if (code) union.add(code);
+    }
+  }
+  return union;
 }
 
 /** Strongest first. The order IS the ranking — do not reorder to taste. */

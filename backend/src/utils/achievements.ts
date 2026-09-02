@@ -22,10 +22,12 @@ import {
 } from './lodgingStats';
 import {
   computeFlyAndStayFlags,
-  normalizeCountrySet,
-  unionCountries,
   type TripDomainCounts,
 } from './achievementStats';
+// The country join has ONE home. `achievementStats.ts` used to carry a sibling
+// copy of `toCountryCode` beside the module's, which is the drift §4 of
+// `docs/superpowers/specs/2026-09-02-country-counting-design.md` exists to end.
+import { normalizeCountrySet, unionCountries } from '../shared/countryEvidence';
 import {
   buildMembershipContext,
   resolveStayProgramme,

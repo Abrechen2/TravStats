@@ -23,7 +23,7 @@ import {
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { deriveTripStatus } from "../shared/statusDerivation";
-import { isoCountryCode } from "../utils/continents";
+import { toCountryCode } from "../shared/countryEvidence";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -116,7 +116,7 @@ function tripCountries(
   // Germany would otherwise carry "DE" and "Germany" and count it twice. Fold
   // to one vocabulary, and keep anything unresolvable under its own name so a
   // country is never silently dropped from the list.
-  return [...new Set(derived.map((c) => isoCountryCode(c) ?? c))].sort();
+  return [...new Set(derived.map((c) => toCountryCode(c) ?? c))].sort();
 }
 
 /**
