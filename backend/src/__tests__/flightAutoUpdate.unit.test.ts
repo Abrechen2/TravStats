@@ -15,6 +15,7 @@ jest.mock("../utils/logger", () => ({
 // Import after mocks
 import {
   calculateChanges,
+  convertApiDataToProposed,
   hasSignificantChanges,
   type FlightChange,
 } from "../services/flightAutoUpdate";
@@ -169,5 +170,76 @@ describe("calculateChanges actual_* time fields", () => {
       newValue: "2026-05-01T12:15:00.000Z",
     };
     expect(hasSignificantChanges([c])).toBe(true);
+  });
+});
+
+// ─── the carrier name is filled, never replaced ─────────────────────────────
+
+/**
+ * On a codeshare the stored carrier and the provider's carrier are not old and
+ * new — they are two true answers. Measured on a real account on 2026-09-03:
+ * LX1104 Zurich→Munich, operated by Helvetic, stored as "Helvetic Airways",
+ * rewritten to "United Airlines" by an auto-applied update while
+ * `airlineIata`/`airlineIcao` stayed 2L/OAW. The row contradicted itself and
+ * nobody was asked.
+ */
+describe("convertApiDataToProposed — carrier name", () => {
+  const flight = (over: Record<string, unknown> = {}) =>
+    ({
+      airline: "Helvetic Airways",
+      aircraft: null,
+      gate: null,
+      terminal: null,
+      depIata: "ZRH",
+      depIcao: null,
+      arrIata: "MUC",
+      arrIcao: null,
+      departureTime: new Date("2026-09-03T11:15:00.000Z"),
+      arrivalTime: new Date("2026-09-03T12:10:00.000Z"),
+      actualDeparture: null,
+      actualArrival: null,
+      status: "scheduled",
+      actualRoute: null,
+      overflownCountries: [],
+      routeDistance: null,
+      ...over,
+    }) as unknown as Parameters<typeof convertApiDataToProposed>[1];
+
+  const apiSaysUnited = {
+    airline: "United Airlines",
+    actualDeparture: "2026-09-03T11:33:00.000Z",
+  } as unknown as Parameters<typeof convertApiDataToProposed>[0];
+
+  it("keeps the stored carrier when a provider reports the marketing one", () => {
+    const proposed = convertApiDataToProposed(apiSaysUnited, flight());
+
+    expect(proposed.airline).toBe("Helvetic Airways");
+  });
+
+  it("still takes everything else the provider brought", () => {
+    // The guard is about ONE column. A fix that also dropped the actual
+    // departure time would trade one silent loss for another.
+    const proposed = convertApiDataToProposed(apiSaysUnited, flight());
+
+    expect(proposed.actualDeparture).toBe("2026-09-03T11:33:00.000Z");
+  });
+
+  it("fills an empty carrier from the provider", () => {
+    // A gap is not a disagreement, and filling it takes nothing away.
+    const proposed = convertApiDataToProposed(apiSaysUnited, flight({ airline: null }));
+
+    expect(proposed.airline).toBe("United Airlines");
+  });
+
+  it("no longer proposes a change for capitalisation alone", () => {
+    // The quieter half of the same bug: "SWISS" against "Swiss" produced a
+    // change, a proposal and an inbox entry — for LX93, on the same account.
+    const original = flight({ airline: "SWISS" });
+    const proposed = convertApiDataToProposed(
+      { airline: "Swiss" } as unknown as Parameters<typeof convertApiDataToProposed>[0],
+      original
+    );
+
+    expect(proposed.airline).toBe("SWISS");
   });
 });
