@@ -129,6 +129,105 @@ describe("runBulkRefresh", () => {
     });
   });
 
+
+  /**
+   * The owner's report, 2026-09-03: three recently flown flights with no
+   * aircraft type and no actual times, and "refreshing the backlog changed
+   * nothing here". It HAD changed something — the registrations were written
+   * by an earlier run out of the very same provider response that carried the
+   * model and the times. Only five fields were ever copied out of it.
+   */
+  it("writes the aircraft type and the actual times the same response carried", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "f1", flightNumber: "LX93", departureTime: new Date(Date.now() - 2 * 86400000) },
+    ]);
+    prismaMock.flight.findUnique.mockResolvedValue({
+      aircraftRegistration: "HB-JNG",
+      aircraftModeS: "4B191C",
+      isCodeshare: true,
+      airlineIata: "LX",
+      airlineIcao: "SWR",
+      operatingAirlineIata: null,
+      operatingAirlineIcao: null,
+      // Exactly how the reported rows looked: empty STRING, not null.
+      aircraft: "",
+      actualDeparture: null,
+      actualArrival: null,
+    });
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [
+        {
+          aircraftRegistration: "HB-JNG",
+          aircraft: "Boeing 777-300ER",
+          departure: { actualTime: "2026-09-02T21:31:00.000Z" },
+          arrival: { actualTime: "2026-09-03T08:52:00.000Z" },
+        },
+      ],
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.updated).toBe(1);
+    expect(prismaMock.flight.update).toHaveBeenCalledWith({
+      where: { id: "f1" },
+      data: {
+        aircraft: "Boeing 777-300ER",
+        actualDeparture: new Date("2026-09-02T21:31:00.000Z"),
+        actualArrival: new Date("2026-09-03T08:52:00.000Z"),
+      },
+    });
+  });
+
+  it("never overwrites an aircraft type or an actual time that is already there", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "f1", flightNumber: "LX93", departureTime: new Date(Date.now() - 2 * 86400000) },
+    ]);
+    prismaMock.flight.findUnique.mockResolvedValue({
+      aircraftRegistration: "HB-JNG",
+      aircraftModeS: "4B191C",
+      isCodeshare: true,
+      airlineIata: "LX",
+      airlineIcao: "SWR",
+      operatingAirlineIata: null,
+      operatingAirlineIcao: null,
+      aircraft: "A340-300 (user typed)",
+      actualDeparture: new Date("2026-09-02T21:00:00.000Z"),
+      actualArrival: null,
+    });
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [
+        {
+          aircraft: "Boeing 777-300ER",
+          departure: { actualTime: "2026-09-02T21:31:00.000Z" },
+          arrival: { actualTime: "2026-09-03T08:52:00.000Z" },
+        },
+      ],
+    });
+
+    await runBulkRefresh(USER_ID);
+
+    // Only the one genuinely empty column is filled.
+    expect(prismaMock.flight.update).toHaveBeenCalledWith({
+      where: { id: "f1" },
+      data: { actualArrival: new Date("2026-09-03T08:52:00.000Z") },
+    });
+  });
+
+  it("treats a flight whose only gap is the aircraft type as a candidate", async () => {
+    // Without this the fix above would be unreachable for every flight that
+    // has been refreshed once: the three original fields fill on the first
+    // pass, and a filled flight is never a candidate again. Both spellings of
+    // empty are asked for, because that column holds "" as well as NULL.
+    prismaMock.flight.findMany.mockResolvedValue([]);
+
+    await runBulkRefresh(USER_ID);
+
+    const where = prismaMock.flight.findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual(
+      expect.arrayContaining([{ aircraft: null }, { aircraft: "" }])
+    );
+  });
+
   it("counts provider 'no_provider' / empty result as no_data and writes nothing", async () => {
     const flight = {
       id: "f1",

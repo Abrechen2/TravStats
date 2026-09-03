@@ -100,10 +100,28 @@ export async function findBulkRefreshCandidates(
       // OR across the new fields — a flight is a candidate if ANY of them
       // is empty. Using `equals: null` rather than `is: null` because Prisma
       // treats them subtly differently for nullable scalar columns.
+      //
+      // `aircraft` joined this list on 2026-09-03, and it had to: the three
+      // fields below fill on the FIRST successful pass, and a flight whose
+      // registration, Mode-S and codeshare flag are all set is never a
+      // candidate again. So a run that fetched the aircraft type but did not
+      // store it — which is what happened until today — locked the flight out
+      // of the only route that could ever fetch it again. Adding the write
+      // without adding this line would have fixed nothing for any flight that
+      // had already been refreshed once.
       OR: [
         { aircraftRegistration: null },
         { aircraftModeS: null },
         { isCodeshare: null },
+        // Both spellings of empty, and the pair is not padding. `aircraft`
+        // predates the three fields above and reaches the database through the
+        // flight form and the parsers, where Prisma's default writes "" rather
+        // than NULL. Measured on a real account: 125 rows NULL, 35 rows "" —
+        // and the three flights that prompted this fix were all in the 35. A
+        // `{ aircraft: null }` on its own would have missed every one of them
+        // and looked like a fix while changing nothing.
+        { aircraft: null },
+        { aircraft: '' },
       ],
     },
     select: {
@@ -210,6 +228,9 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
           airlineIcao?: string;
           operatingAirlineIata?: string;
           operatingAirlineIcao?: string;
+          aircraft?: string;
+          actualDeparture?: Date;
+          actualArrival?: Date;
         } = {};
         const fieldsUpdated: string[] = [];
 
@@ -226,6 +247,9 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
             airlineIcao: true,
             operatingAirlineIata: true,
             operatingAirlineIcao: true,
+            aircraft: true,
+            actualDeparture: true,
+            actualArrival: true,
           },
         });
 
@@ -259,6 +283,47 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         if (!current.airlineIcao && match.airlineIcao) {
           patch.airlineIcao = match.airlineIcao;
           fieldsUpdated.push('airlineIcao');
+        }
+
+        /**
+         * The aircraft TYPE and the two actual times, which the provider has
+         * been returning in the same response all along and this function
+         * threw away.
+         *
+         * Reported by the owner on 2026-09-03: three recently flown flights
+         * with no aircraft and no actual times, and "refreshing the backlog
+         * changed nothing here". It had in fact changed something — the
+         * registrations HB-AZD, HB-JNG and D-ABYT were all written by an
+         * earlier run. The one response carried the model beside the
+         * registration (`aerodataboxLookup.ts` maps `aircraft.model || reg`),
+         * and only five fields were ever copied out of it.
+         *
+         * `!current.aircraft` is deliberately falsy-tested rather than
+         * null-checked: that column holds "" as often as NULL, and a
+         * `=== null` here would refuse to fill exactly the rows that prompted
+         * the report.
+         *
+         * The times are filled on the same never-overwrite terms as everything
+         * else. A stored actual time came from a live check or from the user;
+         * a later provider answer is not better evidence about a departure
+         * that already happened.
+         */
+        if (!current.aircraft && match.aircraft) {
+          patch.aircraft = match.aircraft;
+          fieldsUpdated.push('aircraft');
+        }
+        // Nested, not top-level: the provider result is flattened into
+        // `FlightData` on its way here, and the two actual times land beside
+        // the scheduled ones inside `departure`/`arrival`. They are already
+        // UTC — `parseAerodataboxUtc` reads the `.utc` member of the
+        // provider's payload, never the local one.
+        if (!current.actualDeparture && match.departure?.actualTime) {
+          patch.actualDeparture = new Date(match.departure.actualTime);
+          fieldsUpdated.push('actualDeparture');
+        }
+        if (!current.actualArrival && match.arrival?.actualTime) {
+          patch.actualArrival = new Date(match.arrival.actualTime);
+          fieldsUpdated.push('actualArrival');
         }
 
         if (fieldsUpdated.length > 0) {
