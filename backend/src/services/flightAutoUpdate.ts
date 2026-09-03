@@ -13,6 +13,7 @@ import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 import { sweepStatuses } from './statusSweep';
+import { runFinalArrivalSweep } from './finalArrivalLookup';
 import {
   getAirportTimezone,
   normalizeFlightTimeUtc,
@@ -625,6 +626,37 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     // in "scheduled" (replaces the retired transitionZombieFlights /
     // transitionPastCruises one-way flips; see services/statusSweep.ts).
     await sweepStatuses();
+
+    /**
+     * The flights that sweep just flipped to `flown` WITHOUT an actual arrival
+     * get their one last question here, through the provider that can answer
+     * for a past date (services/finalArrivalLookup.ts).
+     *
+     * Right after the sweep on purpose: the sweep is what marks them, and the
+     * mark is `nextApiCheckAt` left standing on a `flown` row. Running every
+     * five minutes costs nothing extra — a flight is marked once and cleared
+     * on its single attempt, so the volume is the number of flights the user
+     * actually took, not the size of their logbook.
+     *
+     * Failure here must not stop the ordinary check below: this is a
+     * best-effort backfill for legs that would otherwise never be asked about
+     * again, not a precondition for anything.
+     */
+    try {
+      const finalArrivals = await runFinalArrivalSweep();
+      if (finalArrivals.attempted > 0) {
+        logger.info(
+          { ...finalArrivals, operation: 'final_arrival_sweep_complete' },
+          `Last-attempt lookups: ${finalArrivals.attempted} attempted, ${finalArrivals.filled} filled`,
+        );
+      }
+    } catch (error) {
+      logger.warn(
+        { err: error instanceof Error ? error.message : String(error),
+          operation: 'final_arrival_sweep_failed' },
+        'Final-arrival sweep failed; continuing with the scheduled checks',
+      );
+    }
 
     // Get all users with auto-update enabled
     const users = await prismaClient.userSettings.findMany({

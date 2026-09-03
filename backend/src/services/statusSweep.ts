@@ -37,16 +37,39 @@ export async function sweepStatuses(
   const cruiseCutoff = new Date(now.getTime() - CRUISE_SLACK_HOURS * H);
 
   // Flights: scheduled -> flown (stale) and flown -> scheduled (future-dated)
-  const staleFlights = await prisma.flight.updateMany({
-    where: {
-      status: "scheduled",
-      OR: [
-        { arrivalTime: { not: null, lt: arrivalCutoff } },
-        { arrivalTime: null, departureTime: { not: null, lt: departureCutoff } },
-      ],
-    },
+  //
+  // Split in two on 2026-09-03, over what `nextApiCheckAt` is set to.
+  //
+  // Clearing it unconditionally is what shut the door: `checkAndUpdate` only
+  // looks at flights with a due check, so a leg that landed without its actual
+  // times was never asked about again — by anything, ever. Measured on a real
+  // account: every long-haul flight, because the two checks that could have
+  // captured an arrival both fell on the day AFTER departure and were refused
+  // by the free plan's date filter.
+  //
+  // So a flight that HAS its actual arrival is finished and the field is
+  // cleared, as before. One that does not keeps a single late check, and
+  // `finalArrivalLookup` clears the field whether that check succeeds or not.
+  // "Exactly once" is therefore structural — the same field means "a last
+  // attempt is outstanding" — rather than a new column nobody would maintain.
+  const staleWhere = {
+    status: "scheduled",
+    OR: [
+      { arrivalTime: { not: null, lt: arrivalCutoff } },
+      { arrivalTime: null, departureTime: { not: null, lt: departureCutoff } },
+    ],
+  };
+  const staleComplete = await prisma.flight.updateMany({
+    where: { ...staleWhere, NOT: { actualArrival: null } },
     data: { status: "flown", lastModifiedBy: "status_sweep", nextApiCheckAt: null },
   });
+  const staleMissingArrival = await prisma.flight.updateMany({
+    where: { ...staleWhere, actualArrival: null },
+    data: { status: "flown", lastModifiedBy: "status_sweep", nextApiCheckAt: now },
+  });
+  const staleFlights = {
+    count: staleComplete.count + staleMissingArrival.count,
+  };
   const futureFlown = await prisma.flight.updateMany({
     where: {
       status: "flown",
