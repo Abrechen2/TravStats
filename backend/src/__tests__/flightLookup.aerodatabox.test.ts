@@ -248,6 +248,111 @@ describe("lookupFlightAerodatabox", () => {
     expect(result?.flightNumber).toBe("LH400");
   });
 
+  /**
+   * The overnight case, from the owner's account on 2026-09-03. LX93
+   * GRU→ZRH departs on the 2nd and lands on the 3rd, so a query for the 2nd
+   * matches TWO flights: ours, and the one that left on the 1st and landed on
+   * the 2nd. The picker chooses on codeshare grounds and knows nothing about
+   * dates, so it returned the wrong day's flight — `flightAutoUpdate`'s
+   * rotation guard then rejected it with "24h away from ours", twice, and the
+   * flight kept no actual times at all.
+   */
+  it("ignores an entry that merely LANDS on the requested date", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          // Departed the 1st, landed the 2nd. AeroDataBox returns it for the
+          // 2nd, and it is not our flight.
+          number: "LX 93",
+          codeshareStatus: "isOperator",
+          airline: { name: "Swiss" },
+          aircraft: { reg: "HB-WRONG" },
+          departure: {
+            airport: { iata: "GRU" },
+            scheduledTime: { utc: "2026-09-01 21:25Z", local: "2026-09-01 18:25-03:00" },
+          },
+          arrival: {
+            airport: { iata: "ZRH" },
+            scheduledTime: { utc: "2026-09-02 08:40Z", local: "2026-09-02 10:40+02:00" },
+          },
+        },
+        {
+          number: "LX 93",
+          codeshareStatus: "isOperator",
+          airline: { name: "Swiss" },
+          aircraft: { reg: "HB-JNG" },
+          departure: {
+            airport: { iata: "GRU" },
+            scheduledTime: { utc: "2026-09-02 21:25Z", local: "2026-09-02 18:25-03:00" },
+          },
+          arrival: {
+            airport: { iata: "ZRH" },
+            scheduledTime: { utc: "2026-09-03 08:40Z", local: "2026-09-03 10:40+02:00" },
+          },
+        },
+      ],
+    });
+
+    const result = await lookupFlightAerodatabox("LX93", "2026-09-02");
+
+    expect(result?.aircraftRegistration).toBe("HB-JNG");
+    expect(result?.departureTime).toBe("2026-09-02T21:25:00.000Z");
+  });
+
+  it("returns null when nothing in the response departs on the requested date", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          number: "LX 94",
+          codeshareStatus: "isOperator",
+          airline: { name: "Swiss" },
+          departure: {
+            airport: { iata: "GRU" },
+            scheduledTime: { utc: "2026-09-01 21:25Z", local: "2026-09-01 18:25-03:00" },
+          },
+          arrival: {
+            airport: { iata: "ZRH" },
+            scheduledTime: { utc: "2026-09-02 08:40Z", local: "2026-09-02 10:40+02:00" },
+          },
+        },
+      ],
+    });
+
+    // Better an honest nothing than the neighbouring day's aeroplane: the
+    // rotation guard downstream would have discarded it anyway, two steps
+    // later and under a message that blames the provider.
+    const result = await lookupFlightAerodatabox("LX94", "2026-09-02");
+
+    expect(result).toBeNull();
+  });
+
+  it("keeps an entry whose local departure time is missing", async () => {
+    // The filter removes a wrong answer; it does not invent a stricter one.
+    // Providers that answer without a local timestamp must still be usable.
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          number: "LX 95",
+          codeshareStatus: "isOperator",
+          airline: { name: "Swiss" },
+          aircraft: { reg: "HB-ONLY" },
+          departure: { airport: { iata: "GRU" }, scheduledTime: { utc: "2026-09-02 21:25Z" } },
+          arrival: { airport: { iata: "ZRH" }, scheduledTime: { utc: "2026-09-03 08:40Z" } },
+        },
+      ],
+    });
+
+    const result = await lookupFlightAerodatabox("LX95", "2026-09-02");
+
+    expect(result?.aircraftRegistration).toBe("HB-ONLY");
+  });
+
   it("returns null when the response is empty", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
     mockedAxios.get.mockResolvedValueOnce({ data: [] });
