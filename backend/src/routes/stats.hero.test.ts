@@ -25,6 +25,21 @@ jest.mock('../db', () => ({
 jest.mock('../services/airportCache', () => ({
   getCachedAirports: mockGetCachedAirports,
 }));
+/**
+ * The country count comes from the passport now, not from the airport
+ * calculator (design §4). Mocked here because this suite is about the
+ * COMPOSITION of the tile — which field is read from which source — and the
+ * country rule itself is measured over a real request in
+ * `routes/__tests__/stats.heroCountries.test.ts`.
+ *
+ * The number below is deliberately one the airport calculator cannot produce
+ * from this fixture (it would say 2: DE and US). A fixture where the two agree
+ * proves nothing about which of them was read.
+ */
+const mockLoadPassport = jest.fn();
+jest.mock('../services/stats/passportLoader', () => ({
+  loadPassport: mockLoadPassport,
+}));
 jest.mock('../middleware/auth', () => ({
   authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
   AuthRequest: {},
@@ -56,13 +71,15 @@ describe('GET /api/v1/stats/hero', () => {
     mockCount.mockReset();
     mockGroupBy.mockReset();
     mockGetCachedAirports.mockReset();
+    mockLoadPassport.mockReset();
+    mockLoadPassport.mockResolvedValue({ summary: { countries: 5 } });
     const { default: statsRoutes } = await import('./stats');
     app = express();
     app.use(express.json());
     app.use('/api/v1/stats', statsRoutes);
   });
 
-  it('composes distanceKm/flights/flightTimeMinutes from computeSummary and countries/airports/co2Kg from the airport+fun calculators', async () => {
+  it('composes distanceKm/flights/flightTimeMinutes from computeSummary, airports/co2Kg from the airport+fun calculators, and countries from the passport', async () => {
     mockGetCachedAirports.mockImplementation(async (...args: unknown[]) => {
       const codes = args[0] as string[];
       const map = new Map<string, unknown>();
@@ -171,7 +188,9 @@ describe('GET /api/v1/stats/hero', () => {
     expect(res.body).toEqual({
       distanceKm: expectedDistanceKm,
       flights: 2,
-      countries: 2, // DE, US
+      // From the passport, NOT from the airport calculator — which would say 2
+      // (DE, US) for this fixture. The gap is what pins the source.
+      countries: 5,
       airports: 3, // FRA, MUC, JFK
       co2Kg: expectedCo2Kg,
       flightTimeMinutes: 539, // 60 measured + 479 estimated (#268)
