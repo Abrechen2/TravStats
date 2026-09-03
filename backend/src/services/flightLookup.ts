@@ -538,6 +538,9 @@ export async function lookupFlightDetails(
   userId?: string,
   departureTime?: Date | string | null,
   arrivalTime?: Date | string | null,
+  /** Our flight's departure airport, where the caller knows it — see the
+   *  AeroDataBox adapter for why a flight number alone is not unique. */
+  depAirportCode?: string,
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
@@ -781,7 +784,14 @@ export async function lookupFlightDetails(
   // Aviationstack 429'd or returned nothing; out-of-window it's the
   // only free provider that can serve the request.
   if (date) {
-    const aerodataboxResult = await lookupFlightAerodatabox(trimmedNumber, date, userId);
+    // The departure airport disambiguates a flight number flown more than
+    // once on one day — see the adapter's own note for the measured case.
+    const aerodataboxResult = await lookupFlightAerodatabox(
+      trimmedNumber,
+      date,
+      userId,
+      depAirportCode,
+    );
     if (aerodataboxResult) {
       logger.info(
         { flightNumber: trimmedNumber, date, api: 'aerodatabox', operation: 'lookup_aerodatabox_hit' },
@@ -1110,7 +1120,14 @@ export async function lookupFlightWithHistorical(
   }
 
   const dateStr = requestedStr;
-  const result = await lookupFlightDetails(trimmed, dateStr, userId);
+  const result = await lookupFlightDetails(
+    trimmed,
+    dateStr,
+    userId,
+    undefined,
+    undefined,
+    depAirportCode,
+  );
 
   if (!result) {
     if (isOutsideLiveWindow) {
