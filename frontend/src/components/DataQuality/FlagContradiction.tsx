@@ -176,6 +176,32 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
     );
   }
 
+  if (flag.kind === "coordinates_outside_country") {
+    const { claimedCountryCode, coordinateCountryCode, lat, lon } = flag.details;
+    return (
+      <div className="space-y-3">
+        <p className="text-sm" style={{ color: "var(--text-primary)" }}>
+          {t("dataQuality:kinds.coordinates_outside_country.question")}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Side
+            label={t("dataQuality:kinds.coordinates_outside_country.stored")}
+            value={countryLabel(claimedCountryCode, locale)}
+          />
+          <Side
+            label={t("dataQuality:kinds.coordinates_outside_country.fromCoordinates")}
+            value={countryLabel(coordinateCountryCode, locale)}
+            // The point itself, so the user can judge instead of trusting the
+            // verdict. Fixed to five decimals — about a metre, and far more
+            // than the boundaries resolve; the stored float would print
+            // seventeen digits of false precision.
+            note={`${lat.toFixed(5)}, ${lon.toFixed(5)}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // A `kind` this build has no rendering for — a server running a check newer
   // than this bundle. The one thing the discriminated union cannot rule out, so
   // it is the one fallback left. Saying so is honest and keeps the two answer

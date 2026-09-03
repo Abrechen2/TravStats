@@ -17,7 +17,10 @@ export type DataQualityEntityType = "lodging" | "place" | "country";
 
 /** Which check fired. */
 export type DataQualityFlagKind =
-  "address_country_mismatch" | "undated_country_evidence" | "stay_dates_reversed";
+  | "address_country_mismatch"
+  | "undated_country_evidence"
+  | "stay_dates_reversed"
+  | "coordinates_outside_country";
 
 /**
  * `resolved` and `dismissed` are NOT two spellings of "done" — the UI must keep
@@ -73,9 +76,27 @@ export interface StayDatesReversedDetails {
   stays: { stayId: string; checkIn: string; checkOut: string }[];
 }
 
+/**
+ * Where the record says it is, against where its coordinates fall.
+ *
+ * Both codes are present and neither is marked correct, like every other flag.
+ * `lat`/`lon` are here so the card can show the point that was tested: a
+ * coordinate two degrees out is a typo the user recognises at a glance, and one
+ * that is right means the country is the field to fix.
+ */
+export interface CoordinatesOutsideCountryDetails {
+  claimedCountryCode: string;
+  coordinateCountryCode: string;
+  lat: number;
+  lon: number;
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
-  AddressCountryMismatchDetails | UndatedCountryEvidenceDetails | StayDatesReversedDetails;
+  | AddressCountryMismatchDetails
+  | UndatedCountryEvidenceDetails
+  | StayDatesReversedDetails
+  | CoordinatesOutsideCountryDetails;
 
 /**
  * Everything a flag carries that does not depend on its `kind`.
@@ -123,7 +144,11 @@ export type DataQualityFlag =
       kind: "undated_country_evidence";
       details: UndatedCountryEvidenceDetails;
     })
-  | (DataQualityFlagBase & { kind: "stay_dates_reversed"; details: StayDatesReversedDetails });
+  | (DataQualityFlagBase & { kind: "stay_dates_reversed"; details: StayDatesReversedDetails })
+  | (DataQualityFlagBase & {
+      kind: "coordinates_outside_country";
+      details: CoordinatesOutsideCountryDetails;
+    });
 
 /** What `POST /data-quality-flags/run` answers. */
 export interface DataQualityRunSummary {

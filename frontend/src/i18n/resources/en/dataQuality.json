@@ -83,6 +83,12 @@
       "question": "The check-out date lies before the check-in. Both dates are stored exactly like this — which belongs where?",
       "checkIn": "Check-in",
       "checkOut": "Check-out"
+    },
+    "coordinates_outside_country": {
+      "title": "Coordinates fall in another country",
+      "question": "The stored coordinates fall inside a different country than the one on the record. Which is right – the point or the country?",
+      "stored": "Stored country",
+      "fromCoordinates": "Country at the coordinates"
     }
   }
 }

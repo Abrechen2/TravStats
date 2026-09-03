@@ -2,7 +2,12 @@ import { prisma } from "../../db";
 import { lodgingEvidence } from "../../shared/countryEvidence";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
 import { getCachedAirports } from "../airportCache";
+import { getCountryResolver } from "../geo/countryFromCoordinates";
 import type { AddressBearingRecord } from "./checks/addressCountryMismatch";
+import type {
+  CoordinateCountryLookup,
+  LocatedRecord,
+} from "./checks/coordinatesOutsideCountry";
 import type { CountryTouch } from "./checks/undatedCountryEvidence";
 import type { LodgingWithStays } from "./checks/stayDatesReversed";
 
@@ -30,6 +35,20 @@ export interface AccountSnapshot {
   lodgingStays: LodgingWithStays[];
   /** Every claim on a country this account holds, for the undated check. */
   countryTouches: CountryTouch[];
+  /** Lodgings and places that carry coordinates, for the boundary check. */
+  locatedRecords: LocatedRecord[];
+  /**
+   * The offline boundaries, loaded once per run.
+   *
+   * A LOAD FAILURE IS DELIBERATELY NOT CAUGHT. It would be tempting to log it
+   * and carry on with the other three checks, but the runner reconciles: a run
+   * that produces no coordinate findings tells it every such flag is fixed, and
+   * a missing data file would silently resolve the whole class. Failing the run
+   * leaves the inbox exactly as it was, which is the truthful outcome — and the
+   * file is shipped by the Dockerfile, so its absence is a broken deployment,
+   * not a state to degrade into.
+   */
+  countryLookup: CoordinateCountryLookup;
 }
 
 /**
@@ -58,7 +77,7 @@ export async function loadAccountSnapshot(
   userId: string,
   now: Date = new Date()
 ): Promise<AccountSnapshot> {
-  const [lodgings, places, flights, portCalls] = await Promise.all([
+  const [lodgings, places, flights, portCalls, countryLookup] = await Promise.all([
     // Ordered by id, here and for places below, because a finding's `details`
     // carries a LIST of records and an unordered read would reshuffle it
     // between runs — which the reconciler would read as a change and write
@@ -76,6 +95,11 @@ export async function loadAccountSnapshot(
         // house, because a wrong address is a wrong address whether or not
         // anyone slept there. Only the COUNTRY touch below honours it.
         visited: true,
+        // Read for the boundary check, on the same terms as `address` above: a
+        // coordinate in the wrong country is wrong whether or not anyone slept
+        // there.
+        lat: true,
+        lon: true,
         // `status` because `lodgingEvidence` reads it: a house whose only stay
         // was CANCELLED proves nothing, and without the column it read as a
         // house with no stay — which counts as a night.
@@ -92,6 +116,8 @@ export async function loadAccountSnapshot(
         country: true,
         isoCountryCode: true,
         visited: true,
+        lat: true,
+        lon: true,
         visits: { select: { visitedAt: true } },
       },
     }),
@@ -109,6 +135,9 @@ export async function loadAccountSnapshot(
       where: { cruise: { userId }, date: { not: null }, portId: { not: null } },
       select: { date: true, port: { select: { country: true, unlocode: true } } },
     }),
+    // Last in the list on purpose: appended rather than inserted, so the
+    // destructuring above keeps its meaning.
+    getCountryResolver(),
   ]);
 
   const addressRecords: AddressBearingRecord[] = [
@@ -123,6 +152,25 @@ export async function loadAccountSnapshot(
       entityType: "place" as const,
       id: place.id,
       address: place.address,
+      country: place.country,
+      isoCountryCode: place.isoCountryCode,
+    })),
+  ];
+
+  const locatedRecords: LocatedRecord[] = [
+    ...lodgings.map((lodging) => ({
+      entityType: "lodging" as const,
+      id: lodging.id,
+      lat: lodging.lat,
+      lon: lodging.lon,
+      country: lodging.country,
+      isoCountryCode: lodging.isoCountryCode,
+    })),
+    ...places.map((place) => ({
+      entityType: "place" as const,
+      id: place.id,
+      lat: place.lat,
+      lon: place.lon,
       country: place.country,
       isoCountryCode: place.isoCountryCode,
     })),
@@ -201,5 +249,7 @@ export async function loadAccountSnapshot(
     addressRecords,
     lodgingStays: lodgings.map((lodging) => ({ id: lodging.id, stays: lodging.stays })),
     countryTouches,
+    locatedRecords,
+    countryLookup,
   };
 }

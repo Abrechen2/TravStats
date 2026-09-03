@@ -3,6 +3,7 @@ import type { DataQualityFlag, Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { findAddressCountryMismatches } from "./checks/addressCountryMismatch";
+import { findCoordinatesOutsideCountry } from "./checks/coordinatesOutsideCountry";
 import { findReversedStayDates } from "./checks/stayDatesReversed";
 import { findUndatedCountryEvidence } from "./checks/undatedCountryEvidence";
 import { loadAccountSnapshot } from "./gather";
@@ -93,6 +94,7 @@ export function collectFindings(
     ...findAddressCountryMismatches(snapshot.addressRecords),
     ...findUndatedCountryEvidence(snapshot.countryTouches),
     ...findReversedStayDates(snapshot.lodgingStays),
+    ...findCoordinatesOutsideCountry(snapshot.locatedRecords, snapshot.countryLookup),
   ];
 }
 

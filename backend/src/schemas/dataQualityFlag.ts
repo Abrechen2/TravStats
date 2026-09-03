@@ -51,6 +51,8 @@ export const DATA_QUALITY_FLAG_KINDS = [
   "undated_country_evidence",
   /** A stay whose check-out precedes its check-in. */
   "stay_dates_reversed",
+  /** The stored coordinates fall inside a different country than the one claimed. */
+  "coordinates_outside_country",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -141,6 +143,23 @@ export const undatedCountryEvidenceDetailsSchema = z.object({
   records: z.array(flaggedRecordSchema),
 });
 
+/**
+ * Where the record says it is, against where its coordinates actually are.
+ *
+ * Both codes travel and neither is marked correct — the same trade the address
+ * check makes. `lat`/`lon` come along so the user can see the point that was
+ * tested rather than take the verdict on trust; a coordinate two degrees out is
+ * a typo they will recognise instantly, and one that is right means the country
+ * is what needs correcting.
+ */
+export const coordinatesOutsideCountryDetailsSchema = z.object({
+  claimedCountryCode: z.string(),
+  /** What the boundaries answered. Never null: an abstention is not a disagreement. */
+  coordinateCountryCode: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+});
+
 /** The offending stays of one lodging, with both dates as stored. */
 export const stayDatesReversedDetailsSchema = z.object({
   stays: z.array(
@@ -184,6 +203,10 @@ const stayDatesReversedPayload = z.object({
   kind: z.literal("stay_dates_reversed"),
   details: stayDatesReversedDetailsSchema,
 });
+const coordinatesOutsideCountryPayload = z.object({
+  kind: z.literal("coordinates_outside_country"),
+  details: coordinatesOutsideCountryDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -196,6 +219,7 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   addressCountryMismatchPayload,
   undatedCountryEvidencePayload,
   stayDatesReversedPayload,
+  coordinatesOutsideCountryPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -242,6 +266,7 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   addressCountryMismatchPayload.merge(dataQualityFlagBase),
   undatedCountryEvidencePayload.merge(dataQualityFlagBase),
   stayDatesReversedPayload.merge(dataQualityFlagBase),
+  coordinatesOutsideCountryPayload.merge(dataQualityFlagBase),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

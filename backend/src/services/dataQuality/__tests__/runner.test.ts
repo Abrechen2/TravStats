@@ -91,8 +91,21 @@ import { runDataQualityChecks } from "../runner";
 
 const mockedSnapshot = loadAccountSnapshot as jest.MockedFunction<typeof loadAccountSnapshot>;
 
+/**
+ * What a fixture that is not about coordinates still has to carry.
+ *
+ * The lookup answers null everywhere and knows no codes, which is the neutral
+ * setting rather than a disabled one: the boundary check abstains on every
+ * record, so each fixture below keeps measuring the single thing it is about.
+ */
+const noCoordinates = () => ({
+  locatedRecords: [],
+  countryLookup: { countryAt: () => null, codes: new Set<string>() },
+});
+
 /** One house whose stay runs backwards — the least arguable finding there is. */
 const reversedStay = (checkOut: string) => ({
+  ...noCoordinates(),
   addressRecords: [],
   countryTouches: [],
   lodgingStays: [
@@ -110,6 +123,7 @@ const reversedStay = (checkOut: string) => ({
  * come back in the order they went in.
  */
 const mismatchedAddress = () => ({
+  ...noCoordinates(),
   addressRecords: [
     {
       entityType: "lodging" as const,
@@ -123,7 +137,12 @@ const mismatchedAddress = () => ({
   lodgingStays: [],
 });
 
-const cleanAccount = () => ({ addressRecords: [], countryTouches: [], lodgingStays: [] });
+const cleanAccount = () => ({
+  ...noCoordinates(),
+  addressRecords: [],
+  countryTouches: [],
+  lodgingStays: [],
+});
 
 beforeEach(() => {
   rows = [];

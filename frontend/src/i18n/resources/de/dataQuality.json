@@ -83,6 +83,12 @@
       "question": "Das Check-out-Datum liegt vor dem Check-in. Beide Daten stehen so im Eintrag – welches gehört wohin?",
       "checkIn": "Check-in",
       "checkOut": "Check-out"
+    },
+    "coordinates_outside_country": {
+      "title": "Koordinaten liegen in einem anderen Land",
+      "question": "Die gespeicherten Koordinaten liegen in einem anderen Land als dem, das am Eintrag steht. Was stimmt – der Punkt oder das Land?",
+      "stored": "Gespeichertes Land",
+      "fromCoordinates": "Land laut Koordinaten"
     }
   }
 }
