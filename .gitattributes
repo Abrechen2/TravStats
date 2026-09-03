@@ -19,6 +19,25 @@
 *.otf binary
 *.eot binary
 
+# Vendored geodata. Not binary in the "do not diff it" sense — it is text —
+# but it must reach disk BYTE for byte, because the country outlines are
+# NDJSON: `services/geo/countryBoundaries.ts` walks the file line by line and
+# parses each one as a feature, so an appended \r sits after the closing brace
+# and JSON.parse throws "Unexpected non-whitespace character after JSON".
+#
+# Measured 2026-09-03 on a Windows checkout: countries-10m.geojson came out
+# 10195682 bytes against a 10195429-byte blob — 253 rewritten line endings,
+# one per feature — and every caller of countryFromCoordinates() failed. That
+# includes the Dawarich country-day sweep and the boundary check in the data
+# quality inbox. marnet.geojson escaped with one byte and kept working only
+# because its loader parses the whole file at once, where CR is whitespace.
+#
+# The Dockerfile COPYs both straight out of the build context, and this
+# project builds its images locally — so on a Windows build host the corrupt
+# file shipped into the image. Same failure the land mask had, same fix, one
+# extension later.
+*.geojson binary
+
 # Machine-generated catalogues are written with LF by their generator
 # (scripts/generate-airline-catalog.ts) and byte-compared against fresh
 # generator output by the drift-guard test
