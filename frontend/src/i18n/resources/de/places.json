@@ -181,11 +181,13 @@
     "noAnchors": "Sobald Flüge, Kreuzfahrten oder Unterkünfte erfasst sind, schlägt TravStats hier vor, wo du wahrscheinlich schon warst.",
     "acceptSuggestion": "War ich",
     "anchorUnnamed": "einem erfassten Ort",
+    "anchorUnnamedPhoto": "einem Foto",
     "anchor": {
       "lodging": "Du hast {{distance}} übernachtet — {{label}}",
       "cruise_port": "Dein Schiff lag {{distance}} — {{label}}",
       "flight": "Du bist {{distance}} geflogen — {{label}}",
-      "place": "Du warst {{distance}} — {{label}}"
+      "place": "Du warst {{distance}} — {{label}}",
+      "photo": "Du hast {{distance}} fotografiert — {{label}}"
     },
     "confidence": {
       "high": "sehr wahrscheinlich",

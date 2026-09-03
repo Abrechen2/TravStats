@@ -135,8 +135,26 @@ export interface CuratedProgress {
 /** How strong the evidence is that the user already stood there. */
 export type SuggestionConfidence = "high" | "medium" | "low";
 
-/** What kind of recorded travel produced a suggestion. */
-export type SuggestionAnchorKind = "place" | "lodging" | "cruise_port" | "flight";
+/**
+ * What kind of recorded travel produced a suggestion.
+ *
+ * Mirrors `SuggestionAnchorKind` in backend/src/services/places/visitSuggestions.ts.
+ * It is a runtime array, not a bare union, because the union alone drifted
+ * silently: the backend gained a fifth kind (`photo`) and this copy kept four,
+ * so nothing was red while every photo suggestion rendered the raw i18n key
+ * `places:checklist.anchor.photo` on screen. A list a test can iterate is a
+ * list a test can hold against the translations — see
+ * src/i18n/__tests__/suggestionAnchorCopy.test.ts.
+ */
+export const SUGGESTION_ANCHOR_KINDS = [
+  "place",
+  "lodging",
+  "cruise_port",
+  "flight",
+  "photo",
+] as const;
+
+export type SuggestionAnchorKind = (typeof SUGGESTION_ANCHOR_KINDS)[number];
 
 /**
  * "You were probably here", with its reason attached.
