@@ -428,8 +428,9 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     };
     const baseCurrency = await getBaseCurrency(userId);
 
-    const [summary, flights] = await Promise.all([
+    const [summary, passport, flights] = await Promise.all([
       computeSummary(buildWhere(userId, undefined, undefined), baseCurrency),
+      loadPassport(userId),
       prisma.flight.findMany({
         where: flightsWhere,
         select: {
@@ -460,8 +461,8 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     const datedFlights = await withDepartureClock(flights);
 
     // homeAirportHistory=[] is deliberate: this endpoint only reads
-    // countryCount/airportCount, which don't depend on home-airport history —
-    // only the unused farthestFromHome field does. Skips /airports's extra
+    // airportCount, which doesn't depend on home-airport history — only the
+    // unused farthestFromHome field does. Skips /airports's extra
     // userSettings.findUnique lookup.
     const [airportStats, funStats] = await Promise.all([
       calculateAirportStats(datedFlights, []),
@@ -471,7 +472,23 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     const hero: HeroStats = {
       distanceKm: summary.totalDistance,
       flights: summary.totalFlights,
-      countries: airportStats.countryCount,
+      /**
+       * The SAME number the passport shows, from the same module — not
+       * `airportStats.countryCount`, which this tile read until 2026-09-03.
+       *
+       * That field counts the countries a FLIGHT touched. It is blind to a
+       * country reached by car and slept in for a week, and it counts one
+       * reached by a four-hour connection, so it was wrong in both directions
+       * at once — which is why it looked plausible for so long.
+       *
+       * This tile is the Companion's Start board, and the Companion draws a
+       * passport too. One screen therefore had two answers to "how many
+       * countries", which is the exact drift the design named as the reason
+       * for a single home: "folding lodging in without unifying the rule
+       * would create a fifth answer" (§4 of the country-counting design).
+       * The tile was that answer.
+       */
+      countries: passport.summary.countries,
       airports: airportStats.airportCount,
       co2Kg: funStats.co2FootprintKg,
       flightTimeMinutes: summary.totalFlightTime,
