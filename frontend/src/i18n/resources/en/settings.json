@@ -487,6 +487,7 @@
       "summaryScanned": "Scanned: {{count}}",
       "summaryUpdated": "Updated: {{count}}",
       "summaryNoData": "No provider data: {{count}}",
+      "summaryAlreadyComplete": "Already complete: {{count}}",
       "summaryFailed": "Failed: {{count}}",
       "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
     },

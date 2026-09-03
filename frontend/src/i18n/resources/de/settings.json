@@ -487,6 +487,7 @@
       "summaryScanned": "Geprüft: {{count}}",
       "summaryUpdated": "Aktualisiert: {{count}}",
       "summaryNoData": "Keine Provider-Daten: {{count}}",
+      "summaryAlreadyComplete": "Bereits vollständig: {{count}}",
       "summaryFailed": "Fehlgeschlagen: {{count}}",
       "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten."
     },

@@ -247,6 +247,58 @@ describe("runBulkRefresh", () => {
     expect(prismaMock.flight.update).not.toHaveBeenCalled();
   });
 
+  it("separates 'already complete' from 'the provider has nothing'", async () => {
+    // These were one number, and the owner read the wrong meaning out of it:
+    // "refreshing changed nothing" was true of the fields he was watching and
+    // false of the run, which had filled others minutes earlier. One word for
+    // "the API has nothing on this leg" and "the API has it and you already
+    // do" makes that unreadable.
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "f1", flightNumber: "LH401", departureTime: new Date(Date.now() - 30 * 86400000) },
+    ]);
+    prismaMock.flight.findUnique.mockResolvedValue({
+      aircraftRegistration: "D-ABYT",
+      aircraftModeS: "3C4B34",
+      isCodeshare: true,
+      airlineIata: "LH",
+      airlineIcao: "DLH",
+      operatingAirlineIata: null,
+      operatingAirlineIcao: null,
+      aircraft: "Boeing 747-8",
+      actualDeparture: new Date("2026-08-30T20:11:00.000Z"),
+      actualArrival: new Date("2026-08-31T07:44:00.000Z"),
+    });
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [{ aircraftRegistration: "D-ABYT", aircraft: "Boeing 747-8" }],
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.alreadyComplete).toBe(1);
+    expect(summary.noData).toBe(0);
+    expect(summary.results[0].outcome).toBe("already_complete");
+    expect(prismaMock.flight.update).not.toHaveBeenCalled();
+  });
+
+  it("says WHY a flight yielded nothing", async () => {
+    // A missing key, a date the free tier refuses and a leg the provider does
+    // not know are three different answers that shared one word.
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "f1", flightNumber: "LH401", departureTime: new Date(Date.now() - 30 * 86400000) },
+    ]);
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [],
+      unavailableReason: "no_provider",
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.results[0]).toMatchObject({
+      outcome: "no_data",
+      reason: "no_provider",
+    });
+  });
+
   it("captures lookup exceptions as failed without aborting the batch", async () => {
     const flights = [
       { id: "f1", flightNumber: "LH401", departureTime: new Date(Date.now() - 30 * 86400000) },

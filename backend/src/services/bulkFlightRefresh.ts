@@ -1,8 +1,16 @@
 /**
  * Bulk historical refresh — re-runs the AeroDataBox/Aviationstack lookup
- * for the user's existing flights and patches in only the metadata fields
- * that landed via the Phase-2 commit (`aircraftRegistration`, `aircraftModeS`,
- * `isCodeshare`, plus airline/operating-airline IATA/ICAO when missing).
+ * for the user's existing flights and patches in the fields that provider
+ * response carries: `aircraftRegistration`, `aircraftModeS`, `isCodeshare`,
+ * airline/operating-airline IATA/ICAO, the aircraft TYPE, and the two actual
+ * times.
+ *
+ * The last three joined the list on 2026-09-03, after the owner reported three
+ * flights with no aircraft and no actual times where "refreshing changed
+ * nothing". It had changed something — the tail numbers were written by an
+ * earlier run, out of the same response that carried the model and the times
+ * and had them dropped. Five fields were copied out of it and the rest thrown
+ * away, so keep this list and the patch below in step.
  *
  * Why a separate service instead of reusing `enrich-historical`:
  *   `enrich-historical` aggregates from the user's *own* other flight
@@ -56,12 +64,32 @@ export interface BulkRefreshSummary {
   /** Estimate of how many candidates remain after this batch. The frontend
    *  uses this to decide whether to offer a follow-up click. */
   remaining: number;
+  /**
+   * Flights the provider answered for, where every field we could have filled
+   * was already filled. Counted apart from `noData` because the two look
+   * identical to a user and mean opposite things: "the API has nothing on this
+   * leg" against "the API has it and your record is already complete".
+   *
+   * They were one number until 2026-09-03, and the owner read the wrong
+   * meaning out of it — reasonably. "Refreshing changed nothing" was true of
+   * the fields he was watching and false of the run, which had written tail
+   * numbers on the same flights minutes earlier.
+   */
+  alreadyComplete: number;
   /** Per-flight outcome list for the UI's progress display. */
   results: Array<{
     flightId: string;
     flightNumber: string;
-    outcome: 'updated' | 'no_data' | 'failed';
+    outcome: 'updated' | 'no_data' | 'already_complete' | 'failed';
     fieldsUpdated?: string[];
+    /**
+     * WHY nothing was written, in the provider's own vocabulary
+     * (`no_provider`, `no_match`, `no_match_api_gap`, …). Without it every
+     * silent outcome shares one word, and a missing API key, a date the free
+     * tier refuses, and a leg the provider genuinely does not know are
+     * indistinguishable — to the user and to whoever reads the logs later.
+     */
+    reason?: string;
     error?: string;
   }>;
 }
@@ -194,6 +222,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
     scanned: candidates.length,
     updated: 0,
     noData: 0,
+    alreadyComplete: 0,
     failed: 0,
     remaining: 0,
     results: [],
@@ -216,6 +245,9 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
           flightId: candidate.id,
           flightNumber: candidate.flightNumber,
           outcome: 'no_data',
+          // The provider's own word for it where there is one — a missing key
+          // and an unknown leg are different answers and were the same number.
+          reason: unavailableReason ?? 'no_match',
         });
       } else {
         // Pick the first match — provider already filtered by date.
@@ -260,6 +292,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
             flightId: candidate.id,
             flightNumber: candidate.flightNumber,
             outcome: 'no_data',
+            reason: 'flight_deleted',
           });
           continue;
         }
@@ -339,14 +372,15 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
             fieldsUpdated,
           });
         } else {
-          // Provider returned data but everything was already populated —
-          // count as no_data so the UI doesn't claim a write that didn't
-          // happen.
-          summary.noData++;
+          // The provider answered and every field it could have filled was
+          // already filled. This used to be counted as `no_data`, which reads
+          // as "the API has nothing on this leg" — the opposite of what
+          // happened. Its own outcome, so the UI can say which it was.
+          summary.alreadyComplete++;
           summary.results.push({
             flightId: candidate.id,
             flightNumber: candidate.flightNumber,
-            outcome: 'no_data',
+            outcome: 'already_complete',
           });
         }
       }
