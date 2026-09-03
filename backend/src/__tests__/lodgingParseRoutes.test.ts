@@ -43,6 +43,21 @@ jest.mock("../services/bookingParser", () => ({
   })),
 }));
 
+// Same reason as the flight branch above, and it was simply not carried over
+// when the cruise branch stopped being a 501 stub: the regression below only
+// proves the route still REACHES the cruise parser and does not fall into the
+// lodging branch. Left unmocked it dialled a real Ollama instance, and on a
+// machine without one the test spent the full 30 s budget and failed — the
+// only red suite in an otherwise green backend run, on main as well as on
+// every branch off it.
+jest.mock("../services/cruiseBookingParser", () => ({
+  parseCruiseBookingText: jest.fn(async () => ({
+    cruises: [],
+    parserUsed: "ollama",
+    ollamaAvailable: false,
+  })),
+}));
+
 import { parseLodgingBookingText } from "../services/lodging/lodgingBookingParser";
 import { parseBookingEmail } from "../services/bookingParser";
 
