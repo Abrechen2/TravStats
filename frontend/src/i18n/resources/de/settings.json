@@ -467,7 +467,7 @@
     },
     "bulkRefresh": {
       "title": "Bestandsflüge auffrischen",
-      "description": "Holt fehlende Felder (Kennzeichen, Mode-S, Codeshare, Airline-ICAO/IATA) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
+      "description": "Holt fehlende Felder (Kennzeichen, Flugzeugtyp, Mode-S, Codeshare, Airline-ICAO/IATA sowie tatsächliche Ab- und Ankunftszeiten) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
       "remainingPrefix": "Es sind",
       "remainingSuffix": "Flüge zum Auffrischen vorgemerkt.",
       "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
@@ -487,6 +487,7 @@
       "summaryScanned": "Geprüft: {{count}}",
       "summaryUpdated": "Aktualisiert: {{count}}",
       "summaryNoData": "Keine Provider-Daten: {{count}}",
+      "summaryAlreadyComplete": "Bereits vollständig: {{count}}",
       "summaryFailed": "Fehlgeschlagen: {{count}}",
       "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten."
     },

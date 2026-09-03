@@ -189,13 +189,22 @@ export interface BulkRefreshSummary {
   scanned: number;
   updated: number;
   noData: number;
+  /**
+   * The provider answered and there was nothing left to fill. Kept apart from
+   * `noData`, which means the opposite — that the provider has nothing on the
+   * leg at all. One number for both is what made "refreshing changed nothing"
+   * unreadable: it was true of the fields being watched and false of the run.
+   */
+  alreadyComplete: number;
   failed: number;
   remaining: number;
   results: Array<{
     flightId: string;
     flightNumber: string;
-    outcome: "updated" | "no_data" | "failed";
+    outcome: "updated" | "no_data" | "already_complete" | "failed";
     fieldsUpdated?: string[];
+    /** Why nothing was written, in the provider's vocabulary. */
+    reason?: string;
     error?: string;
   }>;
   aerodataboxQuota?: AerodataboxQuota | null;

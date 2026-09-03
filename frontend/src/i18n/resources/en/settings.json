@@ -467,7 +467,7 @@
     },
     "bulkRefresh": {
       "title": "Refresh existing flights",
-      "description": "Backfill missing fields (tail number, Mode-S, codeshare flag, airline ICAO/IATA) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
+      "description": "Backfill missing fields (tail number, aircraft type, Mode-S, codeshare flag, airline ICAO/IATA and actual departure/arrival times) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
       "remainingPrefix": "There are",
       "remainingSuffix": "flights queued for refresh.",
       "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
@@ -487,6 +487,7 @@
       "summaryScanned": "Scanned: {{count}}",
       "summaryUpdated": "Updated: {{count}}",
       "summaryNoData": "No provider data: {{count}}",
+      "summaryAlreadyComplete": "Already complete: {{count}}",
       "summaryFailed": "Failed: {{count}}",
       "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
     },
