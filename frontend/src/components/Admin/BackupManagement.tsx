@@ -61,7 +61,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
         <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--danger)" }}>
           ⚠️ {t("admin:backup.restore.title")}
@@ -391,9 +391,7 @@ export default function BackupManagement(): JSX.Element {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-(--text-primary)">
-            {t("admin:backup.title")}
-          </h2>
+          <h2 className="text-2xl font-bold text-(--text-primary)">{t("admin:backup.title")}</h2>
           <p className="text-sm text-(--text-muted) mt-1">{t("admin:backup.description")}</p>
         </div>
         <button
@@ -408,7 +406,6 @@ export default function BackupManagement(): JSX.Element {
               : t("admin:backup.createNow")}
         </button>
       </div>
-
 
       {/* Backup Schedule Settings */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6 mb-6">

@@ -228,7 +228,7 @@ export default function FlightLookupStep({
       {showScanner && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-(--bg-surface) rounded-lg p-8">
                 <GlobeLoader size={160} label={t("flights:form.loadingScanner")} />
               </div>

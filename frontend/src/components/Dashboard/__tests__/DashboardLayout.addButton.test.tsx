@@ -47,6 +47,21 @@ vi.mock("../../NavigationBar", () => ({
   default: () => <div data-testid="navigation-bar-stub" />,
 }));
 
+// #288: the places domain is behind the instance beta flag, which the global
+// settingsStore mock leaves unset (so `usePlacesVisible` would answer
+// "denied" and the menu would never list POI). Answer "yes" outright — the
+// combined rule has its own tests; what is under test here is what the
+// layout does with a POI pick.
+vi.mock("../../../hooks/usePlacesVisible", () => ({
+  usePlacesVisible: () => true,
+}));
+
+// The real form pulls in the location search and the map picker; a stub is
+// enough to prove the layout mounts it.
+vi.mock("../../places/PlaceFormModal", () => ({
+  PlaceFormModal: () => <div data-testid="place-form-modal" />,
+}));
+
 // Imported after the mocks above so the module graph picks them up.
 import { DashboardLayout } from "../DashboardLayout";
 
@@ -79,5 +94,37 @@ describe("DashboardLayout: the per-tab add button only targets real domains", ()
     renderAt("tour");
     expect(screen.queryByRole("button", { name: /addPerTab\.tour/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/addPerTab\.tour/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * #288: the "+" menu listed "POI hinzufügen" and the click set
+ * `addingDomain = "poi"` — and then nothing rendered for it. The modal block
+ * covered flight, cruise and lodging and held a stale "not wired until V2"
+ * comment where the POI form should have been. The per-tab button on
+ * /dashboard/poi was the same dead end.
+ *
+ * Deliberate-break protocol: put the comment back in place of the
+ * `addingDomain === "poi"` block in DashboardLayout.tsx — both tests fail on
+ * the missing form.
+ */
+describe("DashboardLayout: adding a POI from the map", () => {
+  it("opens the place form when POI is picked from the add menu (#288)", () => {
+    renderAt("all");
+    expect(screen.queryByTestId("place-form-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /addPicker\.button/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.poi/i }));
+
+    expect(screen.getByTestId("place-form-modal")).toBeInTheDocument();
+  });
+
+  it("opens the place form from the per-tab button on the POI tab", () => {
+    renderAt("poi");
+    expect(screen.queryByTestId("place-form-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /addPerTab\.poi/i }));
+
+    expect(screen.getByTestId("place-form-modal")).toBeInTheDocument();
   });
 });
