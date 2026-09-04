@@ -25,8 +25,10 @@
  */
 
 import { prisma } from "../../db";
+import type { Prisma } from "@prisma/client";
 import logger from "../../utils/logger";
 import { completeAddressFromCoordinates } from "../geo/nominatim";
+import { collectBackfillCandidates } from "../geo/backfillScan";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 
@@ -45,6 +47,7 @@ export interface PlaceBackfillResult {
 
 /** The columns the backfill reads and may write. */
 const SELECT = { id: true, lat: true, lon: true, address: true, city: true, country: true } as const;
+type PlaceRow = Prisma.PlaceGetPayload<{ select: typeof SELECT }>;
 
 /**
  * Fill one place's empty location fields from its coordinates.
@@ -80,19 +83,30 @@ export async function completeMissingPlaceAddresses(
     // and مصر — text the reader cannot read, sort or type. Those are refetched
     // rather than left, which is the one case where this pass overwrites
     // instead of filling. See `writeCompletion`.
-    const rows = await prisma.place.findMany({
-      where: { userId },
-      select: SELECT,
-      orderBy: { createdAt: "asc" },
-      take: limit,
-    });
-    const candidates = rows.filter(
-      (r) =>
+    //
+    // `limit` bounds the rows handed to the geocoder, not the rows looked at:
+    // the scan pages through every place of the user until that many
+    // candidates are in hand. See `geo/backfillScan.ts` for why the predicate
+    // cannot be a WHERE, and forgejo#43 for what happened when the page was
+    // the bound.
+    const candidates = await collectBackfillCandidates<PlaceRow>({
+      limit,
+      needsWork: (r) =>
         r.address === null ||
         r.city === null ||
         r.country === null ||
         anyNonLatin(r.address, r.city, r.country),
-    );
+      loadPage: (afterId, take) =>
+        prisma.place.findMany({
+          where: { userId },
+          select: SELECT,
+          // createdAt is not unique, so the id breaks ties — without it a page
+          // boundary could skip or repeat a row.
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take,
+          ...(afterId ? { cursor: { id: afterId }, skip: 1 } : {}),
+        }),
+    });
 
     for (const row of candidates) {
       attempted++;

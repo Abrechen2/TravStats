@@ -1,7 +1,9 @@
 import { prisma } from "../../db";
+import type { Prisma } from "@prisma/client";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
+import { collectBackfillCandidates } from "../geo/backfillScan";
 import { searchPlaces } from "../geo/photon";
 import { findLodgingPlace } from "../geo/googlePlaces";
 
@@ -281,6 +283,16 @@ export async function backfillMissingCoordinates(
  * Same constraints as the forward pass: sequential (shared 1 req/s budget),
  * user-scoped, bounded, never throws.
  */
+const PINNED_SELECT = {
+  id: true,
+  lat: true,
+  lon: true,
+  address: true,
+  city: true,
+  country: true,
+} as const;
+type PinnedRow = Prisma.LodgingGetPayload<{ select: typeof PINNED_SELECT }>;
+
 export async function completeMissingAddresses(
   userId: string,
   batchId?: string,
@@ -292,25 +304,32 @@ export async function completeMissingAddresses(
     // Same two cases as the place pass: never described, or described in a
     // script the reader cannot read. Until the geocoder was asked for `de,en`
     // it answered in the local language, so older rows hold text like 東京都.
-    const rows = await prisma.lodging.findMany({
-      where: {
-        userId,
-        ...(batchId ? { batchId } : {}),
-        lat: { not: null },
-        lon: { not: null },
-      },
-      select: { id: true, lat: true, lon: true, address: true, city: true, country: true },
-      orderBy: { createdAt: "asc" },
-      take: MAX_BACKFILL_ROWS,
-    });
-
-    const candidates = rows.filter(
-      (r) =>
+    //
+    // MAX_BACKFILL_ROWS bounds the rows handed to the geocoder, not the rows
+    // looked at: the scan pages through every pinned lodging of the user (or
+    // of the batch) until that many candidates are in hand. See
+    // `geo/backfillScan.ts` and forgejo#43.
+    const candidates = await collectBackfillCandidates<PinnedRow>({
+      limit: MAX_BACKFILL_ROWS,
+      needsWork: (r) =>
         r.address === null ||
         r.city === null ||
         r.country === null ||
         anyNonLatin(r.address, r.city, r.country),
-    );
+      loadPage: (afterId, take) =>
+        prisma.lodging.findMany({
+          where: {
+            userId,
+            ...(batchId ? { batchId } : {}),
+            lat: { not: null },
+            lon: { not: null },
+          },
+          select: PINNED_SELECT,
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take,
+          ...(afterId ? { cursor: { id: afterId }, skip: 1 } : {}),
+        }),
+    });
 
     for (const row of candidates) {
       attempted++;
