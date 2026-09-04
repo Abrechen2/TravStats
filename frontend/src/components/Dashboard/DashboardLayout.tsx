@@ -3,6 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
@@ -17,6 +18,7 @@ import { isValidDomain } from "../../shared/domains";
 import DomainImportPanel from "../import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../import/adapters/lodgingAdapter";
 import { DashboardEmptyState } from "./DashboardEmptyState";
+import { PlaceFormModal } from "../places/PlaceFormModal";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
@@ -48,6 +50,7 @@ export function DashboardLayout({
   const cruiseAdapter = useCruiseImportAdapter();
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
+  const placesVisible = usePlacesVisible();
   const { addToast } = useToastStore();
   // What is coming up, per domain. Fetched HERE rather than inside the strip so
   // it reloads with the same `onDataChanged` signal the counts do — adding a
@@ -74,6 +77,15 @@ export function DashboardLayout({
     poi: isEnabled("poi"),
     lodging: isEnabled("lodging"),
   };
+
+  // What the "+" menu offers. One entry differs from `enabledDomains`, on
+  // purpose: the tab strip DIMS a domain the user switched off (so they can
+  // click through and turn it back on), whereas a menu entry that opens
+  // nothing is a dead end. POI therefore follows the same combined rule the
+  // strip's visibility does — instance flag AND user toggle — where the menu
+  // used to offer "POI hinzufügen" on the user toggle alone, and then did
+  // nothing with the click (#288).
+  const addableDomains = { ...enabledDomains, poi: placesVisible };
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already
@@ -126,7 +138,7 @@ export function DashboardLayout({
         )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
-            <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />
+            <AddDomainPicker enabled={addableDomains} onPick={setAddingDomain} />
           ) : (
             // `isValidDomain` narrows `tab` to `DomainKey` — the actual set
             // this button knows how to handle — rather than a cast that
@@ -185,7 +197,22 @@ export function DashboardLayout({
         onItemsCreated={() => onDataChanged?.()}
         adapter={lodgingAdapter}
       />
-      {/* POI: deliberately not wired — domain is disabled until V2. */}
+      {/* This slot held a "not wired — domain is disabled until V2" comment
+          long after the domain had shipped, so the menu offered "POI
+          hinzufügen" and the click went nowhere (#288). */}
+      {addingDomain === "poi" && (
+        <PlaceFormModal
+          place={null}
+          onClose={() => setAddingDomain(null)}
+          onSaved={() => {
+            // Stay on the map. The places list navigates to the new place's
+            // page after a save; from here the user was looking at the map
+            // and wants to see the pin, not leave it.
+            setAddingDomain(null);
+            onDataChanged?.();
+          }}
+        />
+      )}
     </div>
   );
 }
