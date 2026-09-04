@@ -204,6 +204,30 @@ export function formatCurrency(
 }
 
 /**
+ * An amount whose currency may be unknown — a booking or flight row stored
+ * before the field existed, or parsed without one.
+ *
+ * With a code it is `formatCurrency`. Without one it is a bare localised
+ * number: abstention, not a guess. Three screens used to write `?? "EUR"` /
+ * `|| "EUR"` here (forgejo#86), which turned "we do not know" into a claim
+ * about euros; two others glued the raw code onto `toFixed(2)`, so the same
+ * amount read "40.206 €" on one page and "40206.00 EUR" on the next.
+ */
+export function formatAmount(
+  value: number,
+  currency: Currency | null | undefined,
+  opts?: { compact?: boolean; language?: string }
+): string {
+  if (currency) return formatCurrency(value, currency, opts);
+  if (value === undefined || value === null || isNaN(value)) return "";
+  const locale = localeForLanguage(opts?.language ?? activeLanguage());
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: opts?.compact ? 0 : 2,
+  }).format(value);
+}
+
+/**
  * Get the locale-resolved currency symbol (€, $, ₹, ¥, …) without a
  * formatted number. Falls back to the ISO code if the runtime can't
  * resolve a symbol.

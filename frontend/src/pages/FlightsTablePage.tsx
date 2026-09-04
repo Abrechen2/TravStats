@@ -36,6 +36,7 @@ import { formatDurationWithEstimate } from "../lib/formatters";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { priceCellState } from "../lib/flightPriceCell";
+import { formatAmount } from "../lib/units";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
@@ -118,7 +119,7 @@ const MONTH_KEYS = [
 ] as const;
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation([
+  const { t, i18n } = useTranslation([
     "flights",
     "common",
     "dashboard",
@@ -825,12 +826,9 @@ export default function FlightsTablePage(): JSX.Element {
                                   }}
                                 >
                                   {priceCellState(flight) === "amount" ? (
-                                    <>
-                                      {flight.price!.toFixed(2)}
-                                      <span className="ml-1 text-[11px]">
-                                        {flight.currency || "EUR"}
-                                      </span>
-                                    </>
+                                    formatAmount(flight.price!, flight.currency, {
+                                      language: i18n.language,
+                                    })
                                   ) : priceCellState(flight) === "package" ? (
                                     <span title={t("flights:price.packageHint")}>
                                       {t("flights:price.package")}

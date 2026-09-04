@@ -1,6 +1,7 @@
 import type { Trip } from "../../types";
 import { calculateDistance } from "../geo";
 import { sumByCurrency, tripCostSources } from "../bookingCost";
+import { formatCurrency } from "../units";
 
 /**
  * Trip-level insights (#3): the standout trips across the whole logbook. The
@@ -12,7 +13,7 @@ import { sumByCurrency, tripCostSources } from "../bookingCost";
 export interface TripInsightWinner {
   tripId: string;
   name: string;
-  /** Pre-formatted headline value, e.g. "18.420 km" or "EUR 3360". */
+  /** Pre-formatted headline value, e.g. "18.420 km" or "3.360 €". */
   value: string;
   /** Raw magnitude, for the caller that wants to sort or compare. */
   amount: number;
@@ -86,7 +87,7 @@ export function computeTripInsights(trips: Trip[], language: string): TripInsigh
       (t) => tripDominantCost(t)?.amount ?? 0,
       (t) => {
         const c = tripDominantCost(t)!;
-        return `${c.currency} ${nf.format(Math.round(c.amount))}`;
+        return formatCurrency(c.amount, c.currency, { compact: true, language });
       }
     ),
     mostCountries: winner(

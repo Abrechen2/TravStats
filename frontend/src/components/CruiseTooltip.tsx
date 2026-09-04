@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import type { JSX } from "react";
 import type { Cruise } from "../types/cruise";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { formatAmount } from "../lib/units";
 import { useTranslation } from "../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./Cruise/cruiseStatusStyle";
 
@@ -19,7 +20,7 @@ interface CruiseTooltipProps {
  * primary "Details" action (→ cruise detail page).
  */
 export function CruiseTooltip({ cruise, onClose }: CruiseTooltipProps): JSX.Element {
-  const { t } = useTranslation(["cruise", "common"]);
+  const { t, i18n } = useTranslation(["cruise", "common"]);
   const navigate = useNavigate();
 
   const shipName = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
@@ -29,7 +30,9 @@ export function CruiseTooltip({ cruise, onClose }: CruiseTooltipProps): JSX.Elem
   const startDate = cruise.startDate ? formatDateInTimezone(cruise.startDate, "UTC") : "—";
   const endDate = cruise.endDate ? formatDateInTimezone(cruise.endDate, "UTC") : "—";
   const price =
-    cruise.price !== null ? `${cruise.price.toFixed(0)} ${cruise.currency ?? ""}` : null;
+    cruise.price !== null
+      ? formatAmount(cruise.price, cruise.currency, { compact: true, language: i18n.language })
+      : null;
 
   return (
     <div

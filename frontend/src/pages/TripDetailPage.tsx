@@ -5,6 +5,7 @@ import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
 import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { formatDateTimeInTimezone } from "../lib/dateUtils";
 import { useSettingsStore } from "../store/settingsStore";
@@ -196,7 +197,12 @@ export default function TripDetailPage(): JSX.Element {
             </div>
           )}
           {tab === "overview" && (
-            <OverviewTab trip={shownTrip} t={t} onChanged={() => void load()} />
+            <OverviewTab
+              trip={shownTrip}
+              t={t}
+              language={i18n.language}
+              onChanged={() => void load()}
+            />
           )}
           {tab === "timeline" && (
             <TimelineTab
@@ -216,7 +222,12 @@ export default function TripDetailPage(): JSX.Element {
             />
           )}
           {tab === "logistics" && (
-            <LogisticsTab trip={shownTrip} t={t} onChanged={() => void load()} />
+            <LogisticsTab
+              trip={shownTrip}
+              t={t}
+              language={i18n.language}
+              onChanged={() => void load()}
+            />
           )}
           {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
         </div>
@@ -414,15 +425,17 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
 function OverviewTab({
   trip,
   t,
+  language,
   onChanged,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  language: string | undefined;
   onChanged: () => void;
 }): JSX.Element {
   return (
     <>
-      <TripStatsRow trip={trip} t={t} />
+      <TripStatsRow trip={trip} t={t} language={language} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
         <div className="lg:col-span-2 space-y-4">
           <TripSummaryPanel trip={trip} t={t} onChanged={onChanged} />
@@ -854,7 +867,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                     boxShadow: "0 0 0 3px var(--bg-base)",
                   }}
                 />
-                {ev.kind === "flight" && <FlightCard ev={ev} t={t} />}
+                {ev.kind === "flight" && <FlightCard ev={ev} language={language} t={t} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
@@ -1090,9 +1103,11 @@ function OpenFullLink({ to, label }: { to: string; label: string }): JSX.Element
 
 function FlightCard({
   ev,
+  language,
   t,
 }: {
   ev: Extract<TimelineEvent, { kind: "flight" }>;
+  language: string | undefined;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -1120,7 +1135,7 @@ function FlightCard({
       <DetailRow label={t("trips:detail.timeline.seat")} value={seat || null} />
       <DetailRow
         label={t("trips:detail.timeline.price")}
-        value={f.price != null ? `${f.price} ${f.currency ?? ""}`.trim() : null}
+        value={f.price != null ? formatAmount(f.price, f.currency, { language }) : null}
       />
       <OpenFullLink to={`/flights/${f.id}`} label={t("trips:detail.timeline.openFlight")} />
     </ExpandableEventCard>
@@ -1165,7 +1180,7 @@ function CruiseCard({
       />
       <DetailRow
         label={t("trips:detail.timeline.price")}
-        value={c.price != null ? `${c.price} ${c.currency ?? ""}`.trim() : null}
+        value={c.price != null ? formatAmount(c.price, c.currency, { language }) : null}
       />
 
       {stops.length > 0 && (
@@ -1415,10 +1430,12 @@ function truncate(text: string, n: number): string {
 function LogisticsTab({
   trip,
   t,
+  language,
   onChanged,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  language: string | undefined;
   onChanged: () => void;
 }): JSX.Element {
   const flights = trip.flights ?? [];
@@ -1533,7 +1550,9 @@ function LogisticsTab({
               <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
                 · {t("trips:detail.logistics.totalBooked")}:{" "}
                 <strong style={{ color: "var(--text-primary)" }}>
-                  {costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")}
+                  {costTotals
+                    .map((c) => formatCurrency(c.total, c.currency, { compact: true, language }))
+                    .join(" + ")}
                 </strong>
               </span>
             )}
@@ -1554,7 +1573,7 @@ function LogisticsTab({
                 <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
                   <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {b.price != null ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}` : "—"}
+                    {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
@@ -1604,9 +1623,11 @@ function LogisticsTab({
 function TripStatsRow({
   trip,
   t,
+  language,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  language: string | undefined;
 }): JSX.Element {
   // Domain-gating: the cruise/lodging tile disappears entirely when that
   // domain is disabled (a "0" tile would still advertise the domain).
@@ -1634,10 +1655,14 @@ function TripStatsRow({
       {lodgingEnabled && <StatTile value={lodgingCount} label={t("trips:detail.stats.lodging")} />}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
+      {/* Through `formatCurrency`, like the trip card: the tile wrote
+          "EUR 40206" while the card beside it wrote "40.206 €" (forgejo#86). */}
       <StatTile
         value={
           costTotals.length > 0
-            ? costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")
+            ? costTotals
+                .map((c) => formatCurrency(c.total, c.currency, { compact: true, language }))
+                .join(" + ")
             : "—"
         }
         label={t("trips:totalCost")}
