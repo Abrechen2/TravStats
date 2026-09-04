@@ -338,6 +338,23 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   };
 }
 
+describe("adaptFlight — airlines (forgejo#81)", () => {
+  it("counts one airline for two spellings of the same code, named by the catalogue", () => {
+    const stats = adaptFlight({
+      flights: [
+        makeFlight({ id: "a", airline: "Swiss", airlineIata: "LX" }),
+        makeFlight({ id: "b", airline: "SWISS" }),
+        makeFlight({ id: "c", airline: "Lufthansa" }),
+      ],
+      countries: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    const airlines = stats.summary.headlineKpis.find((k) => k.label === "Airlines");
+    expect(airlines?.value).toBe(2);
+    expect(stats.summary.topItems?.items.map((i) => i.label)).toEqual(["SWISS", "Lufthansa"]);
+  });
+});
+
 describe("adaptLodging", () => {
   it("returns hasData=false when the stats endpoint reports no stays", () => {
     const stats = adaptLodging({ stats: baseLodgingStats, lodgings: [] });

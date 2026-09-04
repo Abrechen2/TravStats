@@ -8,6 +8,8 @@ interface FlightWithDuration {
 
 interface StatsFlightBreakdownProps {
   sortedAirlines: [string, { count: number; totalDuration: number; flights: Flight[] }][];
+  /** Counted flights that name no airline — said, never ranked (forgejo#81). */
+  flightsWithoutAirline?: number;
   sortedAirports: [string, number][];
   seatClassStats: Record<string, number>;
   sortedAircraft: [string, number][];
@@ -20,6 +22,7 @@ interface StatsFlightBreakdownProps {
 
 export default function StatsFlightBreakdown({
   sortedAirlines,
+  flightsWithoutAirline = 0,
   sortedAirports,
   seatClassStats,
   sortedAircraft,
@@ -54,6 +57,11 @@ export default function StatsFlightBreakdown({
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
             {t("stats:airlines.title")}
           </h2>
+          {flightsWithoutAirline > 0 && (
+            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+              {t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
+            </p>
+          )}
           <div className="space-y-3">
             {sortedAirlines.map(([airline, data]) => (
               <div key={airline} className="flex items-center justify-between">

@@ -1,4 +1,6 @@
 // Adapter: Flight[] + country list -> DomainStats. Pure, sync.
+import { groupAirlines } from "../../../shared/airlineNormalize";
+import { airlineResolvers } from "../../airlineUtils";
 import type { Flight } from "../../../types";
 import { getFlightDuration } from "../../flightDuration";
 import { localWallClockOf } from "../../../shared/localWallClock";
@@ -28,16 +30,16 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
   const monthlyActiveDays: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
-  const airlineCounts = new Map<string, number>();
+  // Same airline = same code (forgejo#81) — the rule the server's ranking uses.
+  const { groups: airlineGroups } = groupAirlines(
+    flights.map((f) => ({ ...f, count: 1 })),
+    airlineResolvers
+  );
 
   let totalDistanceKm = 0;
   let totalDurationHours = 0;
 
   for (const f of flights) {
-    if (f.airline) {
-      airlineCounts.set(f.airline, (airlineCounts.get(f.airline) ?? 0) + 1);
-    }
-
     if (f.departureTime !== null) {
       const d = new Date(f.departureTime);
       if (!Number.isNaN(d.getTime())) {
@@ -70,10 +72,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     }
   }
 
-  const topAirlines = [...airlineCounts.entries()]
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([label, value]) => ({ label, value }));
+  const topAirlines = airlineGroups.slice(0, 5).map((g) => ({ label: g.label, value: g.count }));
 
   return {
     domain: "flight",
@@ -92,7 +91,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
       headlineKpis: [
         { label: "Distanz", value: `${NUMBER_FMT.format(totalDistanceKm)} km` },
         { label: "Flugzeit", value: `${NUMBER_FMT.format(totalDurationHours)} h` },
-        { label: "Airlines", value: airlineCounts.size },
+        { label: "Airlines", value: airlineGroups.length },
       ],
       topItems: { title: "Top-Airlines", items: topAirlines },
       detailRoute: "/stats?tab=flight",

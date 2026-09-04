@@ -8,6 +8,7 @@
  *
  *   cd backend && npx tsx scripts/generate-airline-catalog.ts
  */
+import type { AirlineResolvers } from "../shared/airlineNormalize";
 import { AIRLINE_CATALOG } from "./generated/airlineCatalog";
 
 /** IATA code (2 chars, e.g. "LH") → airline name. */
@@ -136,9 +137,23 @@ export function resolveAirlineIata(source: AirlineCodeSource): string | undefine
     if (byName) return byName;
   }
   if (flightNumber) {
-    const match = flightNumber.trim().toUpperCase().match(/^([A-Z]{2})\d/);
+    const match = flightNumber
+      .trim()
+      .toUpperCase()
+      .match(/^([A-Z]{2})\d/);
     if (match && AIRLINE_IATA_MAP[match[1]]) return match[1];
   }
 
   return undefined;
 }
+
+/**
+ * The catalogue, in the shape `shared/airlineNormalize.ts` asks for — so
+ * the KPI tile, the breakdown and the logbook header group airlines exactly
+ * as the server's ranking does (forgejo#81).
+ */
+export const airlineResolvers: AirlineResolvers = {
+  iataForName: (name) => resolveAirlineIata({ airline: name }),
+  iataForIcao: (icao) => AIRLINE_ICAO_TO_IATA_MAP[icao.trim().toUpperCase()],
+  nameForIata: (iata) => AIRLINE_IATA_MAP[iata.trim().toUpperCase()],
+};

@@ -39,11 +39,8 @@ import { buildWrapped } from '../services/stats/wrapped';
 import { buildTravelRecords } from '../services/stats/records';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
 import { countableFlightWhere } from '../shared/flightCounting';
-import {
-  normalizeAirline,
-  mergeAirlineCounts,
-  resolveAirlineCodes,
-} from '../utils/airlineNormalize';
+import { mergeAirlineCounts, airlineResolvers } from '../utils/airlineNormalize';
+import { groupAirlines } from '../shared/airlineNormalize';
 import {
   resolveWindow,
   bucketSeries,
@@ -1791,14 +1788,16 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     const [total, airlineCounts] = await Promise.all([
       prisma.flight.count({ where }),
       prisma.flight.groupBy({
-        by: ['airline'],
+        by: ['airline', 'airlineIata', 'airlineIcao'],
         where,
         _count: true,
-        orderBy: { _count: { airline: 'desc' } },
       }),
     ]);
 
-    // Merge duplicates caused by different import-source spellings.
+    // Same airline = same CODE, not same spelling (forgejo#81): "SWISS" and
+    // "Swiss" are one carrier once either row's code is known, and the
+    // catalogue names the group. The rule lives in shared/airlineNormalize.ts
+    // and every client surface uses the same one.
     //
     // A row without an airline is NOT an airline. It used to be folded in
     // under the label "Unknown", which could top the loyalty ranking on an
@@ -1806,30 +1805,23 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     // denominator too, quietly diluting every real airline's share. Such rows
     // are excluded from both, and reported separately so the ranking can say
     // what it is silent about.
-    const merged = new Map<string, number>();
-    let flightsWithoutAirline = 0;
-    for (const row of airlineCounts) {
-      if (!row.airline || row.airline.trim().length === 0) {
-        flightsWithoutAirline += row._count;
-        continue;
-      }
-      const canonical = normalizeAirline(row.airline);
-      merged.set(canonical, (merged.get(canonical) ?? 0) + row._count);
-    }
+    const { groups, withoutAirline: flightsWithoutAirline } = groupAirlines(
+      airlineCounts.map((row) => ({
+        airline: row.airline,
+        airlineIata: row.airlineIata,
+        airlineIcao: row.airlineIcao,
+        count: row._count,
+      })),
+      airlineResolvers,
+    );
     const attributedTotal = total - flightsWithoutAirline;
 
-    const airlines: AirlineRankingItem[] = Array.from(merged.entries())
-      .map(([airline, count]) => {
-        const iata = resolveAirlineCodes(airline)?.iata;
-        return {
-          airline,
-          count,
-          percentage:
-            attributedTotal > 0 ? Math.round((count / attributedTotal) * 1000) / 10 : 0,
-          ...(iata ? { iata } : {}),
-        };
-      })
-      .sort((a, b) => b.count - a.count);
+    const airlines: AirlineRankingItem[] = groups.map((g) => ({
+      airline: g.label,
+      count: g.count,
+      percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
+      ...(g.iata ? { iata: g.iata } : {}),
+    }));
 
     const response: AirlineRankingResponse = {
       airlines,

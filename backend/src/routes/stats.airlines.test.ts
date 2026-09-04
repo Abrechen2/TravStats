@@ -58,6 +58,26 @@ describe('GET /api/v1/stats/airlines', () => {
     });
   });
 
+  // forgejo#81 — identity is the code, not the spelling. Four surfaces once
+  // counted 31/27/26/25 airlines for one account because "SWISS" and "Swiss"
+  // were two names and "LOT" and "LOT - Polish Airlines" two more.
+  it('returns one row for two spellings that share an airline code, named by the catalogue', async () => {
+    mockCount.mockResolvedValue(10);
+    mockGroupBy.mockResolvedValue([
+      { airline: 'Swiss', airlineIata: 'LX', airlineIcao: null, _count: 3 },
+      { airline: 'SWISS', airlineIata: null, airlineIcao: 'SWR', _count: 2 },
+      { airline: 'Swiss International Air Lines', airlineIata: null, airlineIcao: null, _count: 1 },
+      { airline: 'LOT - Polish Airlines', airlineIata: null, airlineIcao: null, _count: 2 },
+      { airline: 'LOT', airlineIata: null, airlineIcao: null, _count: 2 },
+    ]);
+
+    const res = await request(app).get('/api/v1/stats/airlines');
+    expect(res.status).toBe(200);
+    expect(res.body.airlines).toHaveLength(2);
+    expect(res.body.airlines[0]).toMatchObject({ iata: 'LX', count: 6, percentage: 60.0 });
+    expect(res.body.airlines[1]).toMatchObject({ iata: 'LO', count: 4, percentage: 40.0 });
+  });
+
   // The page shows this ranking a few hundred pixels below the client-side
   // breakdown, which keeps only flown + historical. Counting every status here
   // made the same airline read 16 in one card and 14 in the other.

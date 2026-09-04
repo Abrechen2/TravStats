@@ -4,6 +4,8 @@
  * Dedicated page for viewing all flights in a comprehensive table format
  */
 
+import { airlineGroupKey } from "../shared/airlineNormalize";
+import { airlineResolvers } from "../lib/airlineUtils";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
@@ -463,7 +465,9 @@ export default function FlightsTablePage(): JSX.Element {
     const airlines = new Set<string>();
     const airports = new Set<string>();
     for (const f of displayedFlights) {
-      if (f.airline) airlines.add(f.airline);
+      // Same airline = same code (forgejo#81), like every other surface.
+      const key = airlineGroupKey(f, airlineResolvers);
+      if (key !== null) airlines.add(key);
       if (f.depIata) airports.add(f.depIata);
       if (f.arrIata) airports.add(f.arrIata);
     }

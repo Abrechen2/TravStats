@@ -273,7 +273,9 @@
   },
   "airlines": {
     "title": "Top Fluggesellschaften",
-    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt"
+    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt",
+    "withoutAirline_one": "{{count}} Flug ohne Fluggesellschaft — nicht in der Liste",
+    "withoutAirline_other": "{{count}} Flüge ohne Fluggesellschaft — nicht in der Liste"
   },
   "airports": {
     "title": "Meistbesuchte Flughäfen"

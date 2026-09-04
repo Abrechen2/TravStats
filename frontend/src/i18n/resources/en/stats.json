@@ -273,7 +273,9 @@
   },
   "airlines": {
     "title": "Top Airlines",
-    "flightsTotal": "{{count}} flights • {{hours}}h total"
+    "flightsTotal": "{{count}} flights • {{hours}}h total",
+    "withoutAirline_one": "{{count}} flight without an airline — not ranked",
+    "withoutAirline_other": "{{count}} flights without an airline — not ranked"
   },
   "airports": {
     "title": "Most Visited Airports"
