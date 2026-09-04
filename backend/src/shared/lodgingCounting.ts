@@ -27,8 +27,11 @@ import { deriveLodgingStatus } from "./statusDerivation";
  * - `visited`  — happened, feeds every actual figure
  * - `planned`  — lies in the future, feeds forward-looking figures only
  * - `excluded` — cancelled, or a house the user only bookmarked
+ * - `asserted` — a HOUSE with no stay at all whose `visited` flag is set: the
+ *   user's own claim, with nothing to check it against. It counts as a house
+ *   (owner decision, 2026-08-15) but proves no place — see `classifyLodging`.
  */
-export type LodgingCountState = "visited" | "planned" | "excluded";
+export type LodgingCountState = "visited" | "planned" | "excluded" | "asserted";
 
 export interface CountableStay {
   status: string;
@@ -70,11 +73,16 @@ export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState
  * A house is visited when the user says they have been there AND that claim is
  * backed by a stay that is over.
  *
- * The one exception is a house with NO stays at all: `visited === true` is then
- * the user's own assertion with nothing to check it against, and an earlier
- * owner decision (see routes/stats.ts) is that a hotel entered by hand without
- * a stay still counts. So it counts — the alternative would silently drop rows
- * a user deliberately added.
+ * A house with NO stays at all is `asserted`: `visited === true` is then the
+ * user's own word with nothing to check it against. Two owner decisions meet
+ * here and both hold. The first (2026-08-15): a hotel entered by hand without
+ * a stay still counts as a house — dropping it would silently lose rows the
+ * user deliberately added. The second (forgejo#80): it does NOT prove a city
+ * or a country. The import sets the flag by default, so on one real account
+ * 155 stay-less houses carried it, and "Länder besucht" said 31 where 21
+ * countries had a stay that happened. Counting the house and not the place
+ * is what keeps both decisions true; until 2026-09-04 this returned
+ * `visited` and the statistics could not tell the two apart.
  *
  * A house whose only stays lie ahead is `planned`, however `visited` reads: the
  * flag defaults to `true` for everything parsed from a booking, including a
@@ -88,8 +96,15 @@ export function classifyLodging(
   if (!lodging.visited) return "excluded";
   if (stayStates.some((s) => s === "visited")) return "visited";
   if (stayStates.some((s) => s === "planned")) return "planned";
-  // No stay to judge by — the user's own claim stands.
-  return "visited";
+  if (stayStates.length === 0) return "asserted";
+  // Every stay was cancelled — the house was not, and the user says they
+  // have been there.
+  return "asserted";
+}
+
+/** A house that counts as a house — visited, or asserted without a stay. */
+export function countsAsLodging(state: LodgingCountState): boolean {
+  return state === "visited" || state === "asserted";
 }
 
 /** Convenience for the common "only the ones that actually happened" filter. */

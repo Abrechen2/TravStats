@@ -211,9 +211,11 @@ describe("calculateLodgingStats", () => {
     expect(afterCopy).toEqual(frozenCopy);
   });
 
-  it("counts a lodging with zero stays via the optional lodgings param", () => {
-    // Owner-decision fix: lodgingsCount/chainsUnique must reflect hotels the
-    // user HAS, including ones with no stay yet (a newly added hotel).
+  it("counts a lodging with zero stays as a house, but not as a visited country", () => {
+    // Two owner decisions, both kept: a hotel entered by hand without a stay
+    // still counts as a lodging (2026-08-15), and a house nobody has stayed
+    // in proves no country (forgejo#80 — 155 such houses said "31 countries"
+    // where 21 had a stay that happened).
     const lodgings = [
       { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true },
       { id: "l2-no-stay", chainId: 2, type: "hotel", country: "AT", city: "Vienna", visited: true },
@@ -221,9 +223,25 @@ describe("calculateLodgingStats", () => {
     const s = calculateLodgingStats([stay({ lodgingId: "l1", chainId: 1 })], "EUR", lodgings);
     expect(s.lodgingsCount).toBe(2);
     expect(s.chainsUnique).toBe(2);
-    // The stay-less hotel's country/city count even before any stay exists.
-    expect(s.countries.has("AT")).toBe(true);
-    expect(s.citiesUnique).toBe(2);
+    expect(s.countries.has("AT")).toBe(false);
+    expect(s.countries.has("DE")).toBe(true);
+    expect(s.citiesUnique).toBe(1);
+  });
+
+  it("keys the countries of stays that happened by their check-in year (forgejo#80)", () => {
+    const s = calculateLodgingStats(
+      [
+        stay({ lodgingId: "l1", country: "DE", checkIn: new Date("2024-03-01T00:00:00Z"), checkOut: new Date("2024-03-03T00:00:00Z") }),
+        stay({ lodgingId: "l2", country: "CH", checkIn: new Date("2025-07-01T00:00:00Z"), checkOut: new Date("2025-07-02T00:00:00Z") }),
+        // Undated: in the lifetime set, in no year — like an undated flight.
+        stay({ lodgingId: "l3", country: "IT", checkIn: null, checkOut: null, datePrecision: "NONE", nights: 2, status: "completed" }),
+        // Still ahead: nowhere yet.
+        stay({ lodgingId: "l4", country: "ES", checkIn: new Date("2099-01-01T00:00:00Z"), checkOut: new Date("2099-01-03T00:00:00Z") }),
+      ],
+      "EUR",
+    );
+    expect(s.countriesByYear).toEqual({ "2024": ["DE"], "2025": ["CH"] });
+    expect([...s.countries].sort()).toEqual(["CH", "DE", "IT"]);
   });
 
   it("falls back to stay-derived counting when lodgings is omitted (back-compat)", () => {

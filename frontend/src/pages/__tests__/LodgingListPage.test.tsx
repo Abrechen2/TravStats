@@ -27,6 +27,7 @@ const defaultStats: LodgingStats = {
   citiesUnique: 1,
   countries: ["DE"],
   countriesCount: 1,
+  countriesByYear: {},
   spendBaseTotal: 883,
   spendByCurrency: { EUR: 883 },
   spendUnconvertedStays: 0,
@@ -294,9 +295,7 @@ describe("LodgingListPage", () => {
     await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
     await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "campsite" })
-      );
+      expect(listLodgingsMock).toHaveBeenCalledWith(expect.objectContaining({ type: "campsite" }));
     });
 
     listLodgingsMock.mockClear();
@@ -334,11 +333,35 @@ describe("LodgingListPage", () => {
     // of its own, so the stay supplies it — and a PLANNED stay counts as the
     // newest, which is why Zebra (2099) leads and not Alpha (2024).
     const stay = (checkIn: string) =>
-      ({ id: `s-${checkIn}`, checkIn, checkOut: null, datePrecision: "DAY", nights: null }) as never;
+      ({
+        id: `s-${checkIn}`,
+        checkIn,
+        checkOut: null,
+        datePrecision: "DAY",
+        nights: null,
+      }) as never;
     const ordered: Lodging[] = [
-      makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500, stays: [stay("2099-01-01")] }),
-      makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10, stays: [stay("2024-01-01")] }),
-      makeLodging({ id: "l-3", name: "Mid Motel", nights: 4, totalSpendBase: 250, stays: [stay("2026-01-01")] }),
+      makeLodging({
+        id: "l-1",
+        name: "Zebra Lodge",
+        nights: 1,
+        totalSpendBase: 500,
+        stays: [stay("2099-01-01")],
+      }),
+      makeLodging({
+        id: "l-2",
+        name: "Alpha Inn",
+        nights: 9,
+        totalSpendBase: 10,
+        stays: [stay("2024-01-01")],
+      }),
+      makeLodging({
+        id: "l-3",
+        name: "Mid Motel",
+        nights: 4,
+        totalSpendBase: 250,
+        stays: [stay("2026-01-01")],
+      }),
     ];
     listLodgingsMock.mockResolvedValue(ordered);
 
@@ -541,9 +564,7 @@ describe("LodgingListPage", () => {
       expect(deleteLodgingMock).not.toHaveBeenCalled();
 
       // Scoped to the dialog: the row's own delete icon carries the same name.
-      await userEvent.click(
-        within(dialog).getByRole("button", { name: /common:buttons\.delete/ })
-      );
+      await userEvent.click(within(dialog).getByRole("button", { name: /common:buttons\.delete/ }));
       await waitFor(() => expect(deleteLodgingMock).toHaveBeenCalledWith("l1"));
     });
 

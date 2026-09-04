@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyLodging, classifyStay, isVisited } from "../lodgingCounting";
+import { classifyLodging, classifyStay, isVisited, countsAsLodging } from "../lodgingCounting";
 
 /**
  * MIRROR of `backend/src/shared/__tests__/lodgingCounting.test.ts` — the same
@@ -84,12 +84,15 @@ describe("classifyLodging", () => {
     expect(classifyLodging({ visited: true }, ["planned", "planned"])).toBe("planned");
   });
 
-  it("keeps a stay-less house countable — the user's own claim stands", () => {
-    expect(classifyLodging({ visited: true }, [])).toBe("visited");
+  // forgejo#80: mirror of the backend rule — the house counts, the place does not.
+  it("marks a stay-less house asserted — countable as a house, proving no place", () => {
+    expect(classifyLodging({ visited: true }, [])).toBe("asserted");
+    expect(countsAsLodging("asserted")).toBe(true);
+    expect(isVisited("asserted")).toBe(false);
   });
 
-  it("keeps a house whose only stay was cancelled — the house was not cancelled", () => {
-    expect(classifyLodging({ visited: true }, ["excluded"])).toBe("visited");
+  it("marks a house whose only stay was cancelled asserted — the house was not cancelled", () => {
+    expect(classifyLodging({ visited: true }, ["excluded"])).toBe("asserted");
   });
 });
 

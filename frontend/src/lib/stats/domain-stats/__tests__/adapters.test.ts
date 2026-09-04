@@ -241,6 +241,7 @@ const baseLodgingStats: LodgingStats = {
   citiesUnique: 0,
   countries: [],
   countriesCount: 0,
+  countriesByYear: {},
   spendBaseTotal: 0,
   spendByCurrency: {},
   spendUnconvertedStays: 0,
@@ -257,7 +258,9 @@ const baseLodgingStats: LodgingStats = {
   ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
-function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lodging["stays"][number] {
+function makeLodgingStay(
+  overrides: Partial<Lodging["stays"][number]> = {}
+): Lodging["stays"][number] {
   return {
     id: "stay-1",
     lodgingId: "lodging-1",
@@ -343,7 +346,14 @@ describe("adaptLodging", () => {
 
   it("returns real headline figures and expands a stay into per-day buckets", () => {
     const stats = adaptLodging({
-      stats: { ...baseLodgingStats, staysCount: 1, totalNights: 2, lodgingsCount: 1, chainsUnique: 1, countries: ["CH"] },
+      stats: {
+        ...baseLodgingStats,
+        staysCount: 1,
+        totalNights: 2,
+        lodgingsCount: 1,
+        chainsUnique: 1,
+        countries: ["CH"],
+      },
       lodgings: [
         makeLodging({
           chain: {
@@ -376,6 +386,20 @@ describe("adaptLodging", () => {
     expect(stats.yearlyActiveDays[2024]).toBe(2);
     expect(stats.monthlyActiveDays["2024-06"]).toBe(2);
     expect(stats.summary.topItems?.items[0].label).toBe("Marriott");
+  });
+
+  it("hands the server's per-year country index through, keyed by number (forgejo#80)", () => {
+    const stats = adaptLodging({
+      stats: {
+        ...baseLodgingStats,
+        staysCount: 1,
+        countries: ["CH", "DE"],
+        countriesByYear: { "2024": ["DE"], "2026": ["CH"] },
+      },
+      lodgings: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countriesByYear).toEqual({ 2024: ["DE"], 2026: ["CH"] });
   });
 
   it("excludes a cancelled stay from every bucket", () => {

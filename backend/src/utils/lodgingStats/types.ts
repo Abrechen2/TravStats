@@ -188,6 +188,15 @@ export interface LodgingStats {
   countries: Set<string>;
   countriesCount: number;
   /**
+   * The countries of stays that happened, keyed by the check-in year — the
+   * year-scoped counterpart to `countries`, in the same counting vocabulary.
+   * Until 2026-09-04 the lodging domain had no such index, so the overview's
+   * single-year "countries visited" tile fell back to the LIFETIME set under
+   * a "Year 2024" header (forgejo#80). An undated stay is in `countries` and
+   * in no year, like an undated flight.
+   */
+  countriesByYear: Record<string, string[]>;
+  /**
    * Sum of totalPriceBase, but ONLY for stays whose `fxBaseCurrency` matches
    * the CURRENT base currency passed into `calculateLodgingStats` — a stay
    * snapshotted before the user switched their base currency keeps its OLD

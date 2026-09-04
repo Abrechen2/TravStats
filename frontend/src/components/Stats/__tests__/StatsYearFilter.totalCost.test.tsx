@@ -46,7 +46,7 @@ const renderWith = (yearSummary: SummaryStats): ReturnType<typeof render> =>
       onSelectedYearChange={() => {}}
       onCompareYearChange={() => {}}
       onCompareEnabledChange={() => {}}
-    />,
+    />
   );
 
 // forgejo#83 — a year with no priced flight read "Gesamtkosten 0 €": a claim
@@ -64,7 +64,9 @@ describe("StatsYearFilter — total cost", () => {
   it("formats a real total and says nothing about missing prices", () => {
     renderWith(summary({ totalCost: 1234, unpricedFlights: 0 }));
 
-    expect(screen.getByText(/1[.,  ]?234/)).toBeInTheDocument();
+    // The thousands separator depends on the locale the test runner resolves
+    // (a dot, a comma, a narrow or a plain space), so only the digits are pinned.
+    expect(screen.getByText(/1\D?234/)).toBeInTheDocument();
     expect(screen.queryByText(/noPricesRecorded/)).toBeNull();
   });
 });

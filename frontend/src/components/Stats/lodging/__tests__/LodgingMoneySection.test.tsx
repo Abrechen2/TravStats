@@ -26,6 +26,7 @@ const base: LodgingStats = {
   citiesUnique: 2,
   countries: ["DE"],
   countriesCount: 1,
+  countriesByYear: {},
   spendBaseTotal: 1234,
   spendByCurrency: {},
   spendUnconvertedStays: 0,

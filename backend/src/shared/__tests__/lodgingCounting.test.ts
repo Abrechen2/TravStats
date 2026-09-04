@@ -3,6 +3,7 @@ import {
   classifyStay,
   isVisited,
   type LodgingCountState,
+  countsAsLodging,
 } from "../lodgingCounting";
 
 /**
@@ -95,12 +96,16 @@ describe("classifyLodging", () => {
     );
   });
 
-  it("keeps a stay-less house countable — the user's own claim stands", () => {
-    expect(classifyLodging({ visited: true }, [])).toBe<LodgingCountState>("visited");
+  // forgejo#80: the house counts, the place does not — both owner decisions
+  // hold only if the verdict can tell "a stay happened" from "the user says so".
+  it("marks a stay-less house asserted — countable as a house, proving no place", () => {
+    expect(classifyLodging({ visited: true }, [])).toBe<LodgingCountState>("asserted");
+    expect(countsAsLodging("asserted")).toBe(true);
+    expect(isVisited("asserted")).toBe(false);
   });
 
-  it("keeps a house whose only stay was cancelled — the house was not cancelled", () => {
-    expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("visited");
+  it("marks a house whose only stay was cancelled asserted — the house was not cancelled", () => {
+    expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("asserted");
   });
 });
 
@@ -109,5 +114,6 @@ describe("isVisited", () => {
     expect(isVisited("visited")).toBe(true);
     expect(isVisited("planned")).toBe(false);
     expect(isVisited("excluded")).toBe(false);
+    expect(isVisited("asserted")).toBe(false);
   });
 });

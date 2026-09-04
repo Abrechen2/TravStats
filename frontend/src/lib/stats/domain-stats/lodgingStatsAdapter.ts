@@ -9,6 +9,7 @@
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import { classifyLodging, classifyStay } from "../../../shared/lodgingCounting";
 import type { DomainStats } from "./types";
+import { toYearKeyed } from "./yearKeyed";
 
 export interface LodgingAdapterInput {
   stats: LodgingStats;
@@ -76,6 +77,9 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
     hasData: true,
     totalEvents: stats.staysCount,
     countries: stats.countries,
+    // Without this index the overview's single-year tile fell back to the
+    // lifetime set — "35 countries" under a "Year 2024" header (forgejo#80).
+    countriesByYear: toYearKeyed(stats.countriesByYear),
     yearlyEvents,
     yearlyActiveDays,
     monthlyActiveDays,

@@ -245,7 +245,11 @@ describe("GET /api/v1/stats/lodging", () => {
       await prisma.user.deleteMany({ where: { id: noStayUserId } });
     });
 
-    it("counts both hotels and both their countries even though one has no stay", async () => {
+    it("counts both hotels, but only the country of the one somebody stayed in", async () => {
+      // Finding 1 (2026-08-15) still holds: the stay-less hotel is a lodging.
+      // forgejo#80 adds the second half: it proves no country. On the owner's
+      // account 155 such houses made "Länder besucht" say 31 where 21 had a
+      // stay that happened.
       const res = await request(app)
         .get("/api/v1/stats/lodging")
         .set("Cookie", noStayAuthCookie);
@@ -254,7 +258,8 @@ describe("GET /api/v1/stats/lodging", () => {
       expect(res.body.data.lodgingsCount).toBe(2);
       expect(res.body.data.chainsUnique).toBe(1);
       expect(res.body.data.staysCount).toBe(1);
-      expect(res.body.data.countries.sort()).toEqual(["AT", "DE"]);
+      expect(res.body.data.countries).toEqual(["DE"]);
+      expect(res.body.data.countriesByYear).toEqual(expect.any(Object));
     });
   });
 

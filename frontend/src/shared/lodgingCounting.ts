@@ -13,7 +13,7 @@
  */
 import { deriveLodgingStatus } from "./statusDerivation";
 
-export type LodgingCountState = "visited" | "planned" | "excluded";
+export type LodgingCountState = "visited" | "planned" | "excluded" | "asserted";
 
 export interface CountableStay {
   status: string;
@@ -57,7 +57,13 @@ export function classifyLodging(
   if (!lodging.visited) return "excluded";
   if (stayStates.some((s) => s === "visited")) return "visited";
   if (stayStates.some((s) => s === "planned")) return "planned";
-  return "visited";
+  // No stay that happened — the house counts, the place is not proven
+  // (forgejo#80; see the backend copy for the two owner decisions).
+  return "asserted";
+}
+
+export function countsAsLodging(state: LodgingCountState): boolean {
+  return state === "visited" || state === "asserted";
 }
 
 export function isVisited(state: LodgingCountState): boolean {

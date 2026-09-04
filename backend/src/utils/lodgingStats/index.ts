@@ -15,6 +15,7 @@ import {
   classifyLodging,
   classifyStay,
   type LodgingCountState,
+  countsAsLodging,
 } from "../../shared/lodgingCounting";
 import { resolveStayTiming, type StayTiming } from "../../shared/lodgingTiming";
 import { computeGeoStats } from "./geography";
@@ -82,6 +83,7 @@ export function calculateLodgingStats(
   const chainIds = new Set<number>();
   const cities = new Set<string>();
   const countries = new Set<string>();
+  const countriesByYear = new Map<string, Set<string>>();
   const nightsByYear: Record<string, number> = {};
   const nightsByMonth: Record<string, number> = {};
   const spendByCurrency: Record<string, number> = {};
@@ -112,7 +114,15 @@ export function calculateLodgingStats(
     lodgingIds.add(stay.lodgingId);
     if (stay.chainId !== null) chainIds.add(stay.chainId);
     if (stay.city) cities.add(stay.city);
-    if (stay.country) countries.add(stay.country);
+    if (stay.country) {
+      countries.add(stay.country);
+      if (stay.checkIn) {
+        const year = String(stay.checkIn.getUTCFullYear());
+        const bucket = countriesByYear.get(year) ?? new Set<string>();
+        bucket.add(stay.country);
+        countriesByYear.set(year, bucket);
+      }
+    }
 
     lodgingCounts.set(stay.lodgingId, (lodgingCounts.get(stay.lodgingId) ?? 0) + 1);
     if (stay.chainId !== null) {
@@ -197,9 +207,10 @@ export function calculateLodgingStats(
   }
 
   // When the caller supplies the user's full lodgings list, lodgingsCount/
-  // chainsUnique count hotels the user HAS BEEN TO (including ones with no
-  // stay recorded — see classifyLodging), and their cities/countries fold
-  // into the shared sets too.
+  // chainsUnique count hotels the user HAS BEEN TO, including ones with no
+  // stay recorded (`asserted` — see classifyLodging). Only a VISITED house
+  // folds its city and country into the shared sets: a stay-less house is
+  // the user's word about the house, not evidence of the place (forgejo#80).
   let lodgingsCount = lodgingIds.size;
   let chainsUnique = chainIds.size;
   let plannedLodgingsCount = 0;
@@ -213,9 +224,10 @@ export function calculateLodgingStats(
       // `excluded` here can only mean "bookmarked" — a cancelled stay leaves
       // its house countable, the house itself was never cancelled.
       if (state === "excluded") notedLodgingsCount += 1;
-      if (state !== "visited") continue;
+      if (!countsAsLodging(state)) continue;
       visitedLodgings += 1;
       if (l.chainId !== null) lodgingChainIds.add(l.chainId);
+      if (state !== "visited") continue;
       if (l.city) cities.add(l.city);
       if (l.country) countries.add(l.country);
     }
@@ -234,6 +246,9 @@ export function calculateLodgingStats(
     citiesUnique: cities.size,
     countries,
     countriesCount: countries.size,
+    countriesByYear: Object.fromEntries(
+      [...countriesByYear.entries()].map(([year, set]) => [year, [...set].sort()]),
+    ),
     spendBaseTotal: spendBaseByCurrency[currentBaseCurrency] ?? 0,
     spendByCurrency,
     spendUnconvertedStays,

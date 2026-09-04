@@ -357,6 +357,8 @@ export interface LodgingStats {
   citiesUnique: number;
   countries: string[];
   countriesCount: number;
+  /** Countries of stays that happened, keyed by check-in year (forgejo#80). */
+  countriesByYear: Record<string, string[]>;
   /**
    * Sum of totalPriceBase, but ONLY for stays whose FX snapshot matches the
    * user's CURRENT base currency — see `spendBaseByCurrency` for the rest.
