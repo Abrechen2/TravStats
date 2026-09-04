@@ -494,7 +494,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Frontend formatting | `prettier --check` on changed files (`.github/workflows/ci.yml`) plus a `prettier --write` pre-commit hook |
 | DE and EN move together | `frontend/src/i18n/__tests__/localeKeyParity.test.ts` — reads the namespace list from the filesystem, so a new namespace is covered the day it is added, and keeps no allow-list |
 | No source file over 800 lines | `scripts/check-file-size.mjs` (`npm run check:size`) |
-| `schema.prisma` agrees with `prisma/migrations` | `scripts/check-schema-drift.mjs` (`npm run check:drift`) — replays the migrations into a shadow DB, so the answer does not depend on which branch your dev database last saw |
+| `schema.prisma` agrees with `prisma/migrations` | `backend/scripts/check-schema-drift.ts` (`npm run check:drift`, root or backend) — replays the migrations into a shadow DB (`--from-migrations`), so the answer does not depend on which branch your dev database last saw |
 | Every served endpoint appears in the OpenAPI spec | `backend/src/__tests__/openapi.coverage.test.ts` vs `services/openapi/pending.ts` |
 | Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
 | Every beta gate key is registered, with a reason and an un-gating condition | `frontend/src/__tests__/config/betaFeatures.test.ts` — source-scans for `isFeatureVisible("…")` |
@@ -508,20 +508,19 @@ entry as well as a new one, so the list can only ever shrink.
 
 **Where they run.** Only the pre-commit hooks and the Prettier job are
 automatic; a green GitHub badge means Prettier passed on the changed frontend
-files and nothing more. Everything else is the pre-`/deploy` gate above. Two
-plan docs call `check:drift` "CI-guarded" and `backend/scripts/check-schema-drift.ts`
-says of itself "This script runs in CI" — none of that is true.
+files and nothing more. Everything else is the pre-`/deploy` gate above. Nothing runs `check:drift` in CI (forgejo#60); the script has said so since
+2026-09-01, and the two plan docs that called it "CI-guarded" were corrected
+on 2026-09-04.
 
-**Two drift scripts disagree.** The older `backend/scripts/check-schema-drift.ts`
-(`cd backend && npm run check:drift`) compares against the connected database
-and warns that `--from-migrations` reports postgis as false drift under the
-`postgresqlExtensions` preview feature. The newer `scripts/check-schema-drift.mjs`
-(`npm run check:drift` at the root) replays the migrations into a shadow DB
-precisely so the answer does not depend on your database, and warns that the
-datasource comparison answers a weaker question — it measured 22 statements of
-"drift" that were only a branch switch. Both are right about the other's
-failure mode. One of them has to go; until then, run the root one and read a
-postgis diff as noise.
+**One drift script, since 2026-09-01.** There were two, and they disagreed:
+`scripts/check-schema-drift.mjs` at the root replayed the migrations into a
+shadow DB, while `backend/scripts/check-schema-drift.ts` compared against the
+connected database because `--from-migrations` reported postgis as false
+drift under the `postgresqlExtensions` preview feature. That feature left
+`schema.prisma`, the objection expired with it, and `e24c9a57` (forgejo#74)
+deleted the root script and moved the backend one onto `--from-migrations`.
+`npm run check:drift` at the root delegates to it. A postgis diff, should
+one ever appear again, is the feature coming back — not noise.
 
 **The 800-line number is provisional.** What is settled is the shape: a limit,
 a frozen baseline, and a list that only shrinks. `check-file-size.mjs` scans
@@ -683,7 +682,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (7688 symbols, 20170 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (8408 symbols, 22327 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
