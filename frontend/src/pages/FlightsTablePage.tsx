@@ -4,6 +4,8 @@
  * Dedicated page for viewing all flights in a comprehensive table format
  */
 
+import { airlineGroupKey } from "../shared/airlineNormalize";
+import { airlineResolvers } from "../lib/airlineUtils";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
@@ -36,6 +38,7 @@ import { formatDurationWithEstimate } from "../lib/formatters";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { priceCellState } from "../lib/flightPriceCell";
+import { formatAmount } from "../lib/units";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
@@ -118,7 +121,7 @@ const MONTH_KEYS = [
 ] as const;
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation([
+  const { t, i18n } = useTranslation([
     "flights",
     "common",
     "dashboard",
@@ -462,7 +465,9 @@ export default function FlightsTablePage(): JSX.Element {
     const airlines = new Set<string>();
     const airports = new Set<string>();
     for (const f of displayedFlights) {
-      if (f.airline) airlines.add(f.airline);
+      // Same airline = same code (forgejo#81), like every other surface.
+      const key = airlineGroupKey(f, airlineResolvers);
+      if (key !== null) airlines.add(key);
       if (f.depIata) airports.add(f.depIata);
       if (f.arrIata) airports.add(f.arrIata);
     }
@@ -825,12 +830,9 @@ export default function FlightsTablePage(): JSX.Element {
                                   }}
                                 >
                                   {priceCellState(flight) === "amount" ? (
-                                    <>
-                                      {flight.price!.toFixed(2)}
-                                      <span className="ml-1 text-[11px]">
-                                        {flight.currency || "EUR"}
-                                      </span>
-                                    </>
+                                    formatAmount(flight.price!, flight.currency, {
+                                      language: i18n.language,
+                                    })
                                   ) : priceCellState(flight) === "package" ? (
                                     <span title={t("flights:price.packageHint")}>
                                       {t("flights:price.package")}

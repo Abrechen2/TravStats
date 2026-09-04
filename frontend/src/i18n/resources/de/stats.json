@@ -211,7 +211,9 @@
     "airlines": "Fluggesellschaften",
     "scopeLabel": "── Gesamt (alle Jahre) ──",
     "scopeHint": "unabhängig vom Jahres-Filter oben",
-    "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten"
+    "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten",
+    "noPricesRecorded_one": "Kein Preis erfasst — {{count}} Flug ohne Preis",
+    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {
@@ -271,7 +273,9 @@
   },
   "airlines": {
     "title": "Top Fluggesellschaften",
-    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt"
+    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt",
+    "withoutAirline_one": "{{count}} Flug ohne Fluggesellschaft — nicht in der Liste",
+    "withoutAirline_other": "{{count}} Flüge ohne Fluggesellschaft — nicht in der Liste"
   },
   "airports": {
     "title": "Meistbesuchte Flughäfen"
@@ -395,7 +399,8 @@
     "avgFlightDurationDesc": "{{hours}} Stunden",
     "busiestMonth": "Reisestärkster Monat",
     "busiestMonthDesc": "{{month}} mit {{count}} Flügen",
-    "unconvertedNote": "Nicht umgerechnet: {{amounts}}"
+    "unconvertedNote": "Nicht umgerechnet: {{amounts}}",
+    "noPricesRecorded": "Kein Flug trägt einen Preis"
   },
   "unique": {
     "title": "🌟 Einzigartige Statistiken",
@@ -454,7 +459,7 @@
     "countryCount": "Besuchte Länder",
     "countryCountDesc": "Unterschiedliche Länder auf deiner Flugkarte.",
     "continentCount": "Kontinente",
-    "continentCountDesc": "Wie viele der 7 Kontinente du bereits beflogen hast.",
+    "continentCountDesc": "Wie viele der {{total}} Kontinente du bereits beflogen hast.",
     "topAirports": "Meistbesuchte Flughäfen",
     "topCountries": "Top-Länder",
     "rarestAirports": "Nur einmal besucht",
@@ -471,12 +476,6 @@
     "flightsCount_one": "{{count}} Flug",
     "empty": "Keine Daten vorhanden.",
     "continent": {
-      "europe": "Europa",
-      "northAmerica": "Nordamerika",
-      "southAmerica": "Südamerika",
-      "asia": "Asien",
-      "africa": "Afrika",
-      "oceania": "Ozeanien",
       "other": "Sonstige"
     }
   },

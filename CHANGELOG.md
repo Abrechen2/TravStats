@@ -20,6 +20,11 @@ for this one. The admin panel now lists exactly what that switch turns on, read
 from the same registry the application itself checks.
 
 ### Added
+- **A fresh install lands on a starting point, not an empty dashboard.** The
+  empty state says what the map will show and routes to the import section
+  (#237).
+- **An account carries a first and last name**, shown in the account menu and
+  returned with the profile (#241).
 - **Tours: a trip can be walked, driven and cycled, not only flown.** A trip
   now carries route sections of its own — road, hike, bike and ferry — each
   with a section list, an editor that works with the mouse, and its own line on
@@ -351,8 +356,9 @@ from the same registry the application itself checks.
   have a swatch of their own.
 - **Every `/api` response is `Cache-Control: no-store` by default.** A shared
   cache was observed serving one signed-in user's response to another.
-- **The import hub carries every domain**, including the e-mail and PDF routes,
-  instead of scattering entry points across the app.
+- **The import hub carries every enabled domain.** The e-mail and PDF routes
+  moved back out of it on purpose (2026-08-15): one door for lists, one for a
+  single entry, in each area's own add dialog.
 
 - **A stay counts once it is over.** Lodging figures counted every house on
   record, including ones only bookmarked from a saved-places import, and
@@ -365,6 +371,16 @@ from the same registry the application itself checks.
   statistics, where figures belong.
 
 ### Fixed
+- **A missing flight-data API key is reported as such**, not as "no flights
+  found" — the lookup answers `not_configured` instead of an empty result
+  (#232).
+- **Manual flight entry no longer warns about an estimate "based on boarding
+  time"** that was never computed (#235).
+- **The German UI says du throughout.** Formal and informal address were
+  mixed, sometimes on one screen; a test now reads every German string for
+  the formal form (#236).
+- **Airport fields no longer render a second, empty label** holding only a
+  required asterisk (#239).
 - **Ordinary marketing email was being read as a flight booking.** An Emirates
   promotion and an airline's holiday greeting each came back as a bookings with
   a reference of "LEIDER" and "NSCHEN" — the latter being the tail of
@@ -594,10 +610,6 @@ from the same registry the application itself checks.
   listed 60 entries for 33 countries, "Deutschland" beside "Germany". Grouping
   now runs on the ISO code; the original text is kept untouched as the record of
   what the source said.
-- **Flight arcs start at the airport again.** Every flight kept its own copy of
-  the airport coordinates, and providers quote different reference points, so
-  one airport sat in several places at once — 58 of 694 references off, the
-  worst by 1.6 km, which drew arcs that visibly missed their own airport dot.
 - **The import looks for the house before creating it a second time.** It
   compared names and cities only, so one building became two records whenever a
   booking mail and a saved-places export wrote it differently. It now also
@@ -605,9 +617,6 @@ from the same registry the application itself checks.
   "Restaurant" or "GmbH".
 - **A house number goes where the country puts it** — "50 Southwest Morrison
   Street", not "Southwest Morrison Street 50".
-- **The map says what is clickable**, and beta features can be switched on from
-  the admin surface instead of only through an API call.
-- **Unticking a chain no longer looks like deleting the loyalty card.**
 
 - **A total that leaves entries out now says so** — on the stay, on the lodging,
   in the list and in the statistics strip, rather than quietly summing what it

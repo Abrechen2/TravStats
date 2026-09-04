@@ -26,7 +26,7 @@
 - **Code / comments / commits — English.** UI copy — German + English.
 - **NEVER touch `backend/VERSION` or `CHANGELOG.md`** on this dev branch (owned by `/deploy`).
 - **NEVER run `taskkill`** — if a port/DLL is locked, ask the user to stop the process.
-- **Migration** — drift is already fixed + CI-guarded; generate with `npx prisma migrate dev` and keep `npm run check:drift` green.
+- **Migration** — drift is already fixed and checked by `npm run check:drift` in the pre-deploy gate (it is NOT in CI — forgejo#60; this line claimed otherwise until 2026-09-04); generate with `npx prisma migrate dev` and keep the check green.
 - **deck.gl + MapLibre** — `MapboxOverlay` + `useControl`, never `<DeckGL>`.
 - **GitNexus** — run `gitnexus_impact` before editing a shared symbol; `gitnexus_detect_changes` before committing.
 

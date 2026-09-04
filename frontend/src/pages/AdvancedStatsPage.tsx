@@ -16,7 +16,8 @@ import type {
 import { API_LIMITS } from "../lib/constants";
 import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
-import { normalizeAirline } from "../shared/airlineNormalize";
+import { airlineGroupKey, groupAirlines } from "../shared/airlineNormalize";
+import { airlineResolvers } from "../lib/airlineUtils";
 import {
   addFlightDuration,
   averageDurationMinutes,
@@ -351,19 +352,22 @@ export default function AdvancedStatsPage(): JSX.Element {
     return R * c;
   };
 
-  // Airline statistics. Grouped by the CANONICAL name (#268): this used to
-  // group the raw string, so "Lufthansa" and "Deutsche Lufthansa" counted as
-  // two carriers in the KPI tile and as one in the loyalty ranking directly
-  // below — same screen, same question, two answers.
-  const airlineStats = flights.reduce(
-    (acc, flight) => {
-      const airline = normalizeAirline(flight.airline ?? "");
-      if (!acc[airline]) {
-        acc[airline] = { count: 0, totalDuration: 0, flights: [] };
-      }
-      acc[airline].count++;
-      acc[airline].totalDuration += calculateDuration(flight);
-      acc[airline].flights.push(flight);
+  // Airline statistics. Grouped by the CODE (forgejo#81), through the same
+  // rule the server's ranking uses: "SWISS" and "Swiss" are one carrier, and
+  // a flight with no airline is counted apart instead of becoming a group
+  // whose label is the empty string — that was the empty row in the list.
+  const { groups: airlineGroups, withoutAirline: flightsWithoutAirline } = groupAirlines(
+    flights.map((f) => ({ ...f, count: 1 })),
+    airlineResolvers
+  );
+  const airlineStats = airlineGroups.reduce(
+    (acc, group) => {
+      const members = flights.filter((f) => airlineGroupKey(f, airlineResolvers) === group.key);
+      acc[group.label] = {
+        count: group.count,
+        totalDuration: members.reduce((sum, f) => sum + calculateDuration(f), 0),
+        flights: members,
+      };
       return acc;
     },
     {} as Record<string, { count: number; totalDuration: number; flights: Flight[] }>
@@ -880,6 +884,7 @@ export default function AdvancedStatsPage(): JSX.Element {
               {sections.isVisible("breakdown") && (
                 <StatsFlightBreakdown
                   sortedAirlines={sortedAirlines}
+                  flightsWithoutAirline={flightsWithoutAirline}
                   sortedAirports={sortedAirports}
                   seatClassStats={seatClassStats}
                   sortedAircraft={sortedAircraft}

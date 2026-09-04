@@ -82,6 +82,7 @@ const AVS_URL = "https://api.aviationstack.com/v1/flights";
 const AIRLABS_URL = "https://airlabs.co/api/v9/schedules";
 
 const today = new Date().toISOString().slice(0, 10);
+const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
 type AxiosGetParams = { params?: Record<string, string> };
 
@@ -151,6 +152,62 @@ describe("Aviationstack date-filter restriction handling", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0][1]?.params?.flight_date).toBe(today);
     expect(calls[1][1]?.params?.flight_date).toBeUndefined();
+  });
+
+  /**
+   * The overnight case, and the owner's own objection: "surely the live
+   * tracker must work for a +1 flight, since it tracks while you are in the
+   * air".
+   *
+   * He is right, and the machinery was already here — the date-less
+   * (real-time) query the free plan still allows, plus the
+   * `aviationstack_date_mismatch` guard that discards an answer belonging to
+   * another service day. Only the up-front gate stopped them being reached,
+   * on the reasoning that "real-time queries only cover today". An aeroplane
+   * that took off yesterday and has not landed is on the real-time feed this
+   * minute, so that reasoning does not hold for the one case it mattered
+   * most: LX93's two arrival checks both ran the day after departure, were
+   * both refused, and the flight kept no actual times at all.
+   */
+  it("asks Aviationstack for a flight that is in the air, whatever day it left on", async () => {
+    __setAviationstackDateFilterRestrictedForTests(true);
+    mockedAxios.get.mockResolvedValueOnce(aviationstackBody(yesterday));
+
+    // Departed 8h ago, lands in 2h — airborne right now.
+    const departed = new Date(Date.now() - 8 * 3600 * 1000);
+    const lands = new Date(Date.now() + 2 * 3600 * 1000);
+
+    const result = await lookupFlightDetails("LH123", yesterday, undefined, departed, lands);
+
+    expect(result).not.toBeNull();
+    expect(result?.source).toBe("aviationstack");
+    // Asked exactly once, and without the filter the plan rejects.
+    const calls = avsCalls();
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]?.params?.flight_date).toBeUndefined();
+  });
+
+  it("still refuses a past date when the flight is NOT in the air", async () => {
+    // The guard that keeps the exception from becoming a hole. A flight that
+    // landed long ago is a historical question, and the free plan cannot
+    // answer it — burning a call on it would be the waste this gate exists
+    // to prevent.
+    __setAviationstackDateFilterRestrictedForTests(true);
+    mockedAxios.get.mockResolvedValue({ data: { response: [] } });
+
+    const landedLongAgo = new Date(Date.now() - 40 * 3600 * 1000);
+    const alsoLongAgo = new Date(Date.now() - 30 * 3600 * 1000);
+
+    const result = await lookupFlightDetails(
+      "LH123",
+      "2026-05-01",
+      undefined,
+      landedLongAgo,
+      alsoLongAgo,
+    );
+
+    expect(result).toBeNull();
+    expect(avsCalls()).toHaveLength(0);
   });
 
   it("skips Aviationstack entirely for past dates once the restriction is known", async () => {

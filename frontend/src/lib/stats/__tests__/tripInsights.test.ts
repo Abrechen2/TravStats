@@ -55,7 +55,9 @@ describe("tripInsights", () => {
     const r = computeTripInsights(trips, "en");
     expect(r.longest?.tripId).toBe("long");
     expect(r.mostExpensive?.tripId).toBe("long");
-    expect(r.mostExpensive?.value).toBe("EUR 5,000");
+    // Through `formatCurrency` like every other money figure (forgejo#86):
+    // this used to be a hand-glued "EUR 5,000" while the trip card wrote "€5,000".
+    expect(r.mostExpensive?.value).toBe("€5,000");
     expect(r.mostCountries?.tripId).toBe("wide");
     expect(r.mostCountries?.value).toBe("5");
   });

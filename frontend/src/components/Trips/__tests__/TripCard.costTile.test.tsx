@@ -6,7 +6,9 @@ import type { Trip } from "../../../types";
 /**
  * The trip card hid its total behind `enableCostTracking`, while the trip
  * DETAIL page renders the same total ungated. Same trip, two answers: the card
- * said "—" where the detail page said "EUR 2832".
+ * said "—" where the detail page said "EUR 2832" (the detail page's own
+ * spelling at the time; since forgejo#86 both go through `formatCurrency`
+ * and read "2.832 €").
  *
  * Since 2.4.0 (#192) the toggle gates the taxes/fees BREAKDOWN and the business
  * statistics — not whether a price is shown at all. The card was still on the

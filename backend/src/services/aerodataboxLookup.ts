@@ -132,6 +132,55 @@ interface PickedFlights {
  * user typed a marketing flight number, also pick the matching
  * codeshare entry so the marketing airline can be surfaced.
  */
+/**
+ * Keep only the entries that actually DEPART on the day we asked about.
+ *
+ * `/flights/number/{n}/{date}` answers with every flight that touches that
+ * local date — the ones departing on it AND the ones landing on it. For a
+ * daytime flight those are the same aeroplane and the distinction never
+ * surfaces. For an overnight flight they are two different flights a day
+ * apart, and `pickOperatorAndMarketing` chooses between them on codeshare
+ * grounds alone, with no notion of a date at all.
+ *
+ * Measured on the owner's account, 2026-09-03: LX93 GRU→ZRH, stored departure
+ * 2026-09-02T21:25Z, and AeroDataBox handed back the flight of
+ * 2026-09-01T21:25Z — the one that LANDED on the 2nd. `flightAutoUpdate`'s
+ * rotation guard caught it both times ("scheduled departure 24h away from
+ * ours — wrong rotation") and threw the response away, which is why that
+ * flight ended up with no actual times at all while the short hop beside it
+ * got its own. The guard was right; the answer should never have reached it.
+ *
+ * An entry whose local departure date cannot be read is KEPT rather than
+ * dropped. This filter exists to remove a wrong answer, not to invent a
+ * stricter one — and an unreadable timestamp is not evidence of the wrong day.
+ */
+export function departsOnLocalDate(flight: AerodataboxFlight, date: string): boolean {
+  const local = flight.departure?.scheduledTime?.local;
+  if (typeof local !== "string" || local.length < 10) return true;
+  return local.slice(0, 10) === date;
+}
+
+/**
+ * Narrow to the entries leaving from OUR airport — but only if any do.
+ *
+ * PREFERENCE, not a filter, and the difference is deliberate: the stored code
+ * may be ICAO where the provider answers IATA, or absent entirely on an older
+ * row. Where nothing matches, the caller is no worse off than before this
+ * existed; where something matches, the ambiguity is gone.
+ */
+export function departsFrom(
+  flights: AerodataboxFlight[],
+  depAirportCode: string | undefined
+): AerodataboxFlight[] {
+  if (!depAirportCode) return flights;
+  const wanted = depAirportCode.toUpperCase();
+  const matching = flights.filter((f) => {
+    const airport = f.departure?.airport;
+    return airport?.iata?.toUpperCase() === wanted || airport?.icao?.toUpperCase() === wanted;
+  });
+  return matching.length > 0 ? matching : flights;
+}
+
 function pickOperatorAndMarketing(
   flights: AerodataboxFlight[],
   requestedNumber: string,
@@ -163,6 +212,18 @@ export async function lookupFlightAerodatabox(
   flightNumber: string,
   date: string,
   userId?: string,
+  /**
+   * The departure airport of OUR flight, when the caller knows it.
+   *
+   * A flight number is not unique within a day. Measured 2026-09-03: LX93 on
+   * 2026-09-02 comes back three times — the GRU→ZRH that left the day before
+   * and landed on the 2nd, an EZE→GRU feeder that same afternoon, and the
+   * GRU→ZRH the owner actually took. Filtering on the departure DATE removes
+   * the first and leaves the other two, and the codeshare-based pick then has
+   * a one-in-two chance. Backfilling by hand with only the date filter picked
+   * the feeder and wrote its arrival time onto the long-haul row.
+   */
+  depAirportCode?: string,
 ): Promise<FlightLookupResult | null> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
@@ -174,7 +235,10 @@ export async function lookupFlightAerodatabox(
 
   const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
   const providerNumber = toProviderFlightNumber(trimmed) ?? normalized;
-  const cacheKey = `${normalized}_${date}`;
+  // The airport is part of the key because it is part of the ANSWER: two
+  // flights sharing a number on one day resolve to different rows, and a key
+  // without it would serve the first caller's aeroplane to the second.
+  const cacheKey = `${normalized}_${date}_${depAirportCode ?? "*"}`;
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
   if (cached !== undefined) {
@@ -210,7 +274,27 @@ export async function lookupFlightAerodatabox(
 
     captureRateLimit(response.headers as Record<string, unknown>, userId);
 
-    const picked = pickOperatorAndMarketing(response.data ?? [], normalized);
+    const returned: AerodataboxFlight[] = response.data ?? [];
+    const departingToday = returned.filter((f) => departsOnLocalDate(f, date));
+    if (returned.length > 0 && departingToday.length === 0) {
+      // Every entry belongs to another day — an overnight neighbour, not our
+      // flight. Saying so here is worth a line: without it this arrives two
+      // steps later as "wrong rotation", which reads like a provider fault
+      // rather than a question we asked imprecisely.
+      logger.info(
+        {
+          flightNumber: normalized,
+          date,
+          api: "aerodatabox",
+          returned: returned.length,
+          operation: "aerodatabox_no_departure_on_date",
+        },
+        `AeroDataBox returned ${returned.length} entr${returned.length === 1 ? "y" : "ies"} for ${normalized}, none departing on ${date}`,
+      );
+    }
+
+    const atOurAirport = departsFrom(departingToday, depAirportCode);
+    const picked = pickOperatorAndMarketing(atOurAirport, normalized);
     if (!picked) {
       logger.info(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "api_empty_response" },

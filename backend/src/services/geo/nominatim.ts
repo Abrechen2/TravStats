@@ -69,6 +69,12 @@ interface NominatimAddress {
   town?: unknown;
   village?: unknown;
   municipality?: unknown;
+  hamlet?: unknown;
+  suburb?: unknown;
+  district?: unknown;
+  county?: unknown;
+  state_district?: unknown;
+  state?: unknown;
   country?: unknown;
   /** ISO 3166-1 alpha-2, lowercase — decides whether the number leads the street. */
   country_code?: unknown;
@@ -251,7 +257,25 @@ async function fetchAddress(
   // spellings have to be consulted — a hotel in a village returns `village`
   // and no `city`, and dropping that would leave the field empty for exactly
   // the addresses hardest to type by hand.
-  const city = str(a.city) ?? str(a.town) ?? str(a.village) ?? str(a.municipality);
+  //
+  // Below the settlement, fall back to the next-larger unit. A pin in a
+  // national park or a bay is in no settlement at all: measured on the
+  // owner's account, Nominatim answered `suburb` + `state` for the Greater
+  // Blue Mountains, `county` + `state` for Redwood, and only `district` for
+  // Ha Long Bay — five landmarks read "—" in the place column while every
+  // one of them has a place it belongs to. Owner's ruling: show the district
+  // or the state rather than nothing.
+  const city =
+    str(a.city) ??
+    str(a.town) ??
+    str(a.village) ??
+    str(a.municipality) ??
+    str(a.hamlet) ??
+    str(a.suburb) ??
+    str(a.district) ??
+    str(a.county) ??
+    str(a.state_district) ??
+    str(a.state);
   const road = str(a.road);
   const houseNumber = str(a.house_number);
   // Order by country, not by our own habit: "50 Southwest Morrison Street", not

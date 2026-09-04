@@ -34,6 +34,7 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { useMapCameraStore } from "../store/mapCameraStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
@@ -328,6 +329,14 @@ export default function GlobeView({
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
   const mapRef = useRef<MapRef>(null);
+  // Read ONCE, at mount — the same trap as the flat map (#290): every tab
+  // switch mounts a fresh globe, and a constant `initialViewState` put it back
+  // at the overview pose each time. The globe keeps its own entry because its
+  // zoom scale differs from the flat map's for the same framing.
+  const [initialViewState] = useState<MapViewState>(
+    () => useMapCameraStore.getState().camera.globe ?? INITIAL_VIEW_STATE
+  );
+  const rememberCamera = useMapCameraStore((s) => s.remember);
 
   const [styleId, setStyleId] = useState<StyleId>(() => {
     const stored = loadMapAppearance().styleId;
@@ -1518,10 +1527,16 @@ export default function GlobeView({
     >
       <MapGL
         ref={mapRef}
-        initialViewState={INITIAL_VIEW_STATE}
+        initialViewState={initialViewState}
         mapStyle={currentStyle.url}
         attributionControl={false}
         onLoad={onMapLoad}
+        // Auto-rotation drives `jumpTo` per frame, so this fires ~60 times a
+        // second while it spins — the write is a five-field copy that no
+        // component re-renders on (the only selector here picks the stable
+        // `remember` function), cheap enough that writing on unmount instead
+        // is not worth the extra lifecycle.
+        onMoveEnd={(e) => rememberCamera("globe", e.viewState)}
         // Right-mouse drag-rotate / pitch is disabled on the globe.
         // The deck.gl overlay's MapLibre-globe sync isn't reliable
         // under bearing+pitch changes (layers detach into a flat

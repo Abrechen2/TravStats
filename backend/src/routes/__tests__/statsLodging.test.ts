@@ -246,6 +246,9 @@ describe("GET /api/v1/stats/lodging", () => {
     });
 
     it("counts both hotels and both their countries even though one has no stay", async () => {
+      // Finding 1 (2026-08-15) and the country-counting design §1.4
+      // (2026-09-02): a saved house without a stay counts, as a house and as
+      // its country. forgejo#80 asked for the opposite; the decision stands.
       const res = await request(app)
         .get("/api/v1/stats/lodging")
         .set("Cookie", noStayAuthCookie);
@@ -255,6 +258,7 @@ describe("GET /api/v1/stats/lodging", () => {
       expect(res.body.data.chainsUnique).toBe(1);
       expect(res.body.data.staysCount).toBe(1);
       expect(res.body.data.countries.sort()).toEqual(["AT", "DE"]);
+      expect(res.body.data.countriesByYear).toEqual(expect.any(Object));
     });
   });
 

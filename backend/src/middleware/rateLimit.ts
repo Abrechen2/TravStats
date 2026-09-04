@@ -220,7 +220,12 @@ export const authLimiter = rateLimit({
 /**
  * Rate limiter for flight lookup API endpoints
  * Protects external API keys from abuse (AirLabs, OpenSky)
- * Allows 30 lookups per 15 minutes per IP
+ * Allows 30 lookups per 15 minutes per user.
+ *
+ * Per USER, not per address: the route sits behind `authenticate`, and a
+ * household — or every user behind one reverse proxy — shares one address.
+ * Until 2026-09-04 this bucket had no key generator, so one person's lookups
+ * blocked everyone else on the same connection (forgejo#68).
  */
 export const flightLookupLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_LOOKUP_WINDOW_MS,
@@ -228,12 +233,14 @@ export const flightLookupLimiter = rateLimit({
   message: 'Too many flight lookup requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
  * Rate limiter for analytics events
  * Protects against DoS attacks via large payloads
- * Allows 100 requests per 15 minutes per IP
+ * Allows 100 requests per 15 minutes per user (behind `authenticate`;
+ * see flightLookupLimiter for why the key is the user, not the address).
  */
 export const analyticsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -241,6 +248,7 @@ export const analyticsLimiter = rateLimit({
   message: 'Too many analytics requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -340,7 +348,9 @@ export const adminReseedLimiter = rateLimit({
 
 /**
  * Rate limiter for PDF parse endpoint
- * Allows 20 requests per 15 minutes per user
+ * Allows 20 requests per 15 minutes per user. The comment always said "per
+ * user"; the key generator that makes it true arrived on 2026-09-04
+ * (forgejo#68).
  */
 export const pdfParseLimiter = rateLimit({
   windowMs: RATE_LIMITS.PDF_PARSE_WINDOW_MS,
@@ -348,6 +358,7 @@ export const pdfParseLimiter = rateLimit({
   message: 'Too many PDF parse requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**

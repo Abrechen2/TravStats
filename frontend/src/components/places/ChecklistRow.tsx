@@ -135,7 +135,18 @@ export function ChecklistRow({
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
             <span style={{ color: "var(--success)" }}>
               {t(`places:checklist.anchor.${suggestion.anchorKind}`, {
-                label: suggestion.anchorLabel || t("places:checklist.anchorUnnamed"),
+                // A photo anchor labels itself with the TRIP it belongs to, and a
+                // photo need not belong to one — so the empty label is the normal
+                // case here, not the exception. The generic fallback would then
+                // claim "a recorded place", which is the one thing this anchor is
+                // not: it is a GPS fix from a shutter, with no place behind it.
+                label:
+                  suggestion.anchorLabel ||
+                  t(
+                    suggestion.anchorKind === "photo"
+                      ? "places:checklist.anchorUnnamedPhoto"
+                      : "places:checklist.anchorUnnamed"
+                  ),
                 distance,
               })}
               {suggestedDate ? ` · ${suggestedDate}` : ""}

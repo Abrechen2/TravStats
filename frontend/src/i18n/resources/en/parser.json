@@ -38,6 +38,15 @@
   },
   "communityTemplates": {
     "title": "Community Templates",
-    "description": "Pre-loaded airline templates from the public repository"
+    "description": "Pre-loaded airline templates from the public repository",
+    "status": {
+      "title": "Airline e-mail templates",
+      "loading": "Loading templates …",
+      "sync": "Refresh now",
+      "syncing": "Refreshing …",
+      "addTemplate": "Add a template →",
+      "loaded": "{{count}} templates loaded · daily auto-update from GitHub",
+      "adminOnly": "Only an admin can refresh. The daily auto-update still runs."
+    }
   }
 }

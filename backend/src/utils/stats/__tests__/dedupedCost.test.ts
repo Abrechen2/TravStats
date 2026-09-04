@@ -58,8 +58,34 @@ describe("computeDedupedTotalCost", () => {
     expect(computeDedupedTotalCost([f(shared), f(shared), f({ price: 100 })], BASE).base).toBe(400);
   });
 
-  it("returns 0 for empty input and rounds to cents", () => {
-    expect(computeDedupedTotalCost([], BASE).base).toBe(0);
+  // forgejo#83: a year with no priced flight read "Gesamtkosten 0 €" — a
+  // claim that the flights were free. Nothing recorded is null.
+  it("abstains with null when no flight carries a price — a zero would read as a free year", () => {
+    const out = computeDedupedTotalCost(
+      [f({ price: null, taxes: null, fees: null }), f({ price: null })],
+      "EUR",
+    );
+    expect(out.base).toBeNull();
+    expect(out.pricedFlights).toBe(0);
+    expect(out.unpricedFlights).toBe(2);
+  });
+
+  it("counts every segment of a priced booking as priced, and adds its amount once", () => {
+    const out = computeDedupedTotalCost(
+      [
+        f({ price: null, bookingId: "b1", booking: booking(500) }),
+        f({ price: null, bookingId: "b1", booking: booking(500) }),
+        f({ price: null }),
+      ],
+      "EUR",
+    );
+    expect(out.base).toBe(500);
+    expect(out.pricedFlights).toBe(2);
+    expect(out.unpricedFlights).toBe(1);
+  });
+
+  it("returns null for empty input and rounds a real total to cents", () => {
+    expect(computeDedupedTotalCost([], BASE).base).toBeNull();
     expect(computeDedupedTotalCost([f({ price: 0.105 }), f({ price: 0.105 })], BASE).base).toBe(0.21);
   });
 
@@ -93,7 +119,7 @@ describe("computeDedupedTotalCost", () => {
         [f({ price: 300, currency: "USD", priceBase: 276.5, fxBaseCurrency: "CHF" })],
         BASE,
       );
-      expect(out.base).toBe(0);
+      expect(out.base).toBeNull();
       expect(out.unconvertedByCurrency).toEqual({ USD: 300 });
     });
 
@@ -104,7 +130,7 @@ describe("computeDedupedTotalCost", () => {
         [f({ price: 120, currency: null, priceBase: null, fxBaseCurrency: null })],
         BASE,
       );
-      expect(out.base).toBe(0);
+      expect(out.base).toBeNull();
       expect(out.unconvertedByCurrency).toEqual({ unknown: 120 });
     });
 
@@ -126,7 +152,7 @@ describe("computeDedupedTotalCost", () => {
         booking: { price: 900, currency: "GBP", priceBase: null, fxBaseCurrency: null },
       };
       const out = computeDedupedTotalCost([f(shared), f(shared)], BASE);
-      expect(out.base).toBe(0);
+      expect(out.base).toBeNull();
       expect(out.unconvertedByCurrency).toEqual({ GBP: 900 });
     });
   });

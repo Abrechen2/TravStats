@@ -13,6 +13,7 @@ import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 import { sweepStatuses } from './statusSweep';
+import { runFinalArrivalSweep } from './finalArrivalLookup';
 import {
   getAirportTimezone,
   normalizeFlightTimeUtc,
@@ -191,12 +192,34 @@ export function hasSignificantChanges(changes: FlightChange[]): boolean {
  * Note: apiData.departureTime and apiData.arrivalTime should already be in UTC
  * (converted by lookupFlightDetails from local airport time to UTC)
  */
-function convertApiDataToProposed(
+export function convertApiDataToProposed(
   apiData: FlightLookupResult,
   originalFlight: Flight
 ): FlightDataSnapshot {
   const proposed: FlightDataSnapshot = {
-    airline: apiData.airline || originalFlight.airline,
+    /**
+     * FILLED, never replaced — the one field on this list where the stored
+     * value outranks the provider's, and the operand order says so.
+     *
+     * On a codeshare the two are not "old" and "new", they are two true
+     * answers to different questions: the MARKETING carrier sells the seat,
+     * the OPERATING carrier flies the aeroplane. A provider may report either.
+     * Measured on a real account on 2026-09-03: LX1104, Zurich to Munich,
+     * operated by Helvetic — stored as "Helvetic Airways", and rewritten to
+     * "United Airlines" by an auto-applied update. The row then contradicted
+     * itself, because `airlineIata`/`airlineIcao` still read 2L/OAW, which is
+     * Helvetic. Nobody was asked, and nothing said it had happened.
+     *
+     * The identity of the carrier lives in those two CODES; this column is the
+     * display name beside them, and the user's own text is the better source
+     * for it. The same swap also ends a quieter nuisance: "SWISS" against
+     * "Swiss" produced a change, a proposal and an inbox entry for a
+     * difference of capitalisation.
+     *
+     * An empty column is still filled from the provider — that is a gap, not a
+     * disagreement, and filling it takes nothing away.
+     */
+    airline: originalFlight.airline || apiData.airline,
     aircraft: apiData.aircraft || originalFlight.aircraft,
     gate: apiData.departure?.gate || originalFlight.gate,
     terminal: apiData.departure?.terminal || originalFlight.terminal,
@@ -603,6 +626,37 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     // in "scheduled" (replaces the retired transitionZombieFlights /
     // transitionPastCruises one-way flips; see services/statusSweep.ts).
     await sweepStatuses();
+
+    /**
+     * The flights that sweep just flipped to `flown` WITHOUT an actual arrival
+     * get their one last question here, through the provider that can answer
+     * for a past date (services/finalArrivalLookup.ts).
+     *
+     * Right after the sweep on purpose: the sweep is what marks them, and the
+     * mark is `nextApiCheckAt` left standing on a `flown` row. Running every
+     * five minutes costs nothing extra — a flight is marked once and cleared
+     * on its single attempt, so the volume is the number of flights the user
+     * actually took, not the size of their logbook.
+     *
+     * Failure here must not stop the ordinary check below: this is a
+     * best-effort backfill for legs that would otherwise never be asked about
+     * again, not a precondition for anything.
+     */
+    try {
+      const finalArrivals = await runFinalArrivalSweep();
+      if (finalArrivals.attempted > 0) {
+        logger.info(
+          { ...finalArrivals, operation: 'final_arrival_sweep_complete' },
+          `Last-attempt lookups: ${finalArrivals.attempted} attempted, ${finalArrivals.filled} filled`,
+        );
+      }
+    } catch (error) {
+      logger.warn(
+        { err: error instanceof Error ? error.message : String(error),
+          operation: 'final_arrival_sweep_failed' },
+        'Final-arrival sweep failed; continuing with the scheduled checks',
+      );
+    }
 
     // Get all users with auto-update enabled
     const users = await prismaClient.userSettings.findMany({

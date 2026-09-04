@@ -82,6 +82,7 @@ export function calculateLodgingStats(
   const chainIds = new Set<number>();
   const cities = new Set<string>();
   const countries = new Set<string>();
+  const countriesByYear = new Map<string, Set<string>>();
   const nightsByYear: Record<string, number> = {};
   const nightsByMonth: Record<string, number> = {};
   const spendByCurrency: Record<string, number> = {};
@@ -112,7 +113,15 @@ export function calculateLodgingStats(
     lodgingIds.add(stay.lodgingId);
     if (stay.chainId !== null) chainIds.add(stay.chainId);
     if (stay.city) cities.add(stay.city);
-    if (stay.country) countries.add(stay.country);
+    if (stay.country) {
+      countries.add(stay.country);
+      if (stay.checkIn) {
+        const year = String(stay.checkIn.getUTCFullYear());
+        const bucket = countriesByYear.get(year) ?? new Set<string>();
+        bucket.add(stay.country);
+        countriesByYear.set(year, bucket);
+      }
+    }
 
     lodgingCounts.set(stay.lodgingId, (lodgingCounts.get(stay.lodgingId) ?? 0) + 1);
     if (stay.chainId !== null) {
@@ -197,9 +206,11 @@ export function calculateLodgingStats(
   }
 
   // When the caller supplies the user's full lodgings list, lodgingsCount/
-  // chainsUnique count hotels the user HAS BEEN TO (including ones with no
-  // stay recorded — see classifyLodging), and their cities/countries fold
-  // into the shared sets too.
+  // chainsUnique count hotels the user HAS BEEN TO — including ones with no
+  // stay recorded, whose city and country fold into the shared sets too.
+  // Owner's decision, 2026-09-02 (country-counting design §1.4): somebody took
+  // the trouble to enter the house, so they were there; forgejo#80 asked for
+  // the opposite and the decision stands.
   let lodgingsCount = lodgingIds.size;
   let chainsUnique = chainIds.size;
   let plannedLodgingsCount = 0;
@@ -236,6 +247,9 @@ export function calculateLodgingStats(
     citiesUnique: cities.size,
     countries,
     countriesCount: countries.size,
+    countriesByYear: Object.fromEntries(
+      [...countriesByYear.entries()].map(([year, set]) => [year, [...set].sort()]),
+    ),
     spendBaseTotal: spendBaseByCurrency[currentBaseCurrency] ?? 0,
     spendByCurrency,
     spendUnconvertedStays,

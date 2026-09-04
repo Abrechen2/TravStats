@@ -379,6 +379,46 @@ describe("LodgingDetailPage", () => {
     expect(perNightLabel.closest("div")?.textContent).toMatch(/—/);
   });
 
+  it("renders — (never 0 €) for the spend card when the only priced stay is still planned", async () => {
+    // forgejo#82, the detail-page twin of the list cell: `priced` was asked
+    // of all stays while `totalSpendBase` is summed over the counted ones,
+    // so a planned, priced stay printed the empty sum as "0 €".
+    const plannedStay: LodgingStay = {
+      ...baseStay,
+      status: "scheduled",
+      checkIn: "2099-09-07T00:00:00.000Z",
+      checkOut: "2099-09-08T00:00:00.000Z",
+      totalPrice: 149.9,
+      currency: "EUR",
+      totalPriceBase: 149.9,
+      fxBaseCurrency: "EUR",
+      fxRate: 1,
+      fxRateDate: "2026-01-01",
+      ratingRoom: null,
+      ratingBreakfast: null,
+      ratingService: null,
+      ratingOverall: null,
+    };
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {}, nights: 0, stayCount: 0 }, [
+        plannedStay,
+      ])
+    );
+
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+
+    const spendBaseLabel = screen.getByText("lodging:detail.spendBase");
+    expect(spendBaseLabel.closest("div")?.textContent).toMatch(/—/);
+    expect(spendBaseLabel.closest("div")?.textContent).not.toMatch(/0\s*€/);
+    expect(screen.getByTestId("lodging-spend-planned")).toHaveTextContent(
+      "lodging:list.spendPlanned"
+    );
+  });
+
   /**
    * Notes were accepted and then shown nowhere.
    *

@@ -3,7 +3,7 @@ import TripPill from "../Trips/TripPill";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
-import { formatCurrency } from "../../lib/units";
+import { formatAmount } from "../../lib/units";
 
 export type CruiseColumnId =
   | "ship"
@@ -52,7 +52,7 @@ export function CruiseRow({
   // (a yen amount has none), the code instead of the symbol, and the
   // machine's decimal point inside a German page.
   const price =
-    cruise.price !== null ? formatCurrency(cruise.price, cruise.currency ?? "EUR") : "—";
+    cruise.price !== null ? formatAmount(cruise.price, cruise.currency) : "—";
   return (
     <tr
       onClick={onOpen}

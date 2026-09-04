@@ -111,9 +111,9 @@ export const BETA_FEATURES = Object.freeze({
    */
   poiDomain: Object.freeze({
     reason: "beta",
-    why: "Places can only be added one at a time, by hand. There is no import route of any kind, so Settings → Import renders the POI group empty — `poiAdapter.tsx` still reads POI_IMPORT_READY = false and nothing references it. The picker compounds it: it writes no `externalRef`, so the @@unique([userId, externalRef]) index on Place never fires and the same place entered twice stays two rows. Offering a domain whose only way in is manual, and which cannot recognise its own duplicates, is what this gate is holding back.",
+    why: "Places can still only be added one at a time, by hand — but the reason has moved, and this entry said the wrong one until 2026-09-03. The import EXISTS now: `POST /place-import/preview` and `/commit` (backend/src/routes/placeImport.ts) take CSV rows, dedupe them and write them behind an ImportBatch that can be undone. Nothing in the frontend calls either route, and `frontend/src/lib/importers/placeCsv.ts` is referenced only by its own test. Settings → Import therefore still renders the POI group empty, because `poiAdapter.tsx` reads POI_IMPORT_READY = false and hides both tiles. What this gate holds back is no longer a missing capability; it is a built capability with no way in.",
     returnsWhen:
-      "Phase D lands an import route and the picker mints an identity — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md, §3.1 for the picker and §4 for the cheapest import. Custom lists (phase B), which this gate used to wait for, shipped.",
+      "The CSV import gets its surface: an import tile, a client for the two routes, and a preview dialog for the rows that need a decision — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md §5, which rules that an unplaceable row is an OFFER, not a drop, and so cannot ship without somewhere to make the offer. The other two conditions this gate used to wait for are MET: the picker mints an identity (`externalRef: osmRef(props)`, backend/src/services/geo/photon.ts), so the @@unique([userId, externalRef]) index now fires and the duplicate argument is gone; custom lists (phase B) shipped earlier.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

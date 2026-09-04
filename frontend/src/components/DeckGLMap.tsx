@@ -1,5 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import MapGL, { useControl, useMap, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import MapGL, {
+  useControl,
+  useMap,
+  type MapRef,
+  type MapLayerMouseEvent,
+} from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { applyHoverCursor } from "./map/mapCursor";
 import { createMarkerTooltip } from "./map/markerTooltip";
@@ -15,6 +20,7 @@ import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
+import { useMapCameraStore } from "../store/mapCameraStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -242,6 +248,15 @@ export function DeckGLMap({
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
   const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
+  // Read ONCE, at mount. `reuseMaps` re-applies whatever `initialViewState`
+  // says on every reuse, so seeding it from the constant is what sent every
+  // domain switch back to zoom 2 (#290). Seeding from the store brings the
+  // recycled map back where the user left it; a plain prop expression would
+  // instead follow the store and re-seed on every moveend.
+  const [initialViewState] = useState<MapViewState>(
+    () => useMapCameraStore.getState().camera.flat ?? INITIAL_VIEW_STATE
+  );
+  const rememberCamera = useMapCameraStore((s) => s.remember);
 
   // Hand cursor over any pickable deck object — airports, ports, lodging pins
   // (#247). Driven by picking, so it needs no per-layer wiring.
@@ -366,7 +381,7 @@ export function DeckGLMap({
   // Zoom is read from MapGL viewState on every move so layers can hide
   // labels / decimate symbols at low zoom. Updated via the move handler
   // to avoid an extra render path.
-  const [zoom, setZoom] = useState<number>(INITIAL_VIEW_STATE.zoom ?? 2);
+  const [zoom, setZoom] = useState<number>(initialViewState.zoom ?? 2);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
@@ -893,11 +908,12 @@ export function DeckGLMap({
       <MapGL
         ref={mapRef}
         reuseMaps
-        initialViewState={INITIAL_VIEW_STATE}
+        initialViewState={initialViewState}
         mapStyle={resolveFlatStyle(styleId)}
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
+        onMoveEnd={(e) => rememberCamera("flat", e.viewState)}
         onClick={handleNativeClick}
         interactiveLayerIds={nativeInteractiveIds}
         cursor={isHovering || nativeInteractiveIds ? "pointer" : undefined}

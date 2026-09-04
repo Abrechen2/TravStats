@@ -190,6 +190,17 @@ export default function BulkRefreshCard(): JSX.Element | null {
             <li>
               {t("settings:apiKeys.bulkRefresh.summaryNoData", { count: lastSummary.noData })}
             </li>
+            {/* Shown only when it happened, and worded as the opposite of the
+                line above: the provider answered, the record was already
+                complete. Folded into "no provider data" it read as a failure
+                of the API and hid that the run had done its job. */}
+            {lastSummary.alreadyComplete > 0 && (
+              <li>
+                {t("settings:apiKeys.bulkRefresh.summaryAlreadyComplete", {
+                  count: lastSummary.alreadyComplete,
+                })}
+              </li>
+            )}
             {lastSummary.failed > 0 && (
               <li className="text-red-700">
                 {t("settings:apiKeys.bulkRefresh.summaryFailed", { count: lastSummary.failed })}

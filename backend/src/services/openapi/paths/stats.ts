@@ -14,7 +14,11 @@ const statsResponse = registry.register(
       totalDistance: z.number().describe("Total distance flown, in km"),
       totalFlightTime: z.number().describe("Total flight time, in minutes"),
       avgDistance: z.number(),
-      totalCost: z.number(),
+      totalCost: z
+        .number()
+        .nullable()
+        .describe("Null when no flight in the window carries a price — never 0 for an unpriced year"),
+      unpricedFlights: z.number(),
       byStatus: z.record(z.string(), z.number()),
       byAirline: z.record(z.string(), z.number()),
       byCategory: z.record(z.string(), z.number()),

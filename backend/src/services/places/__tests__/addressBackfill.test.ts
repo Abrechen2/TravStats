@@ -159,6 +159,34 @@ describe("place address backfill", () => {
 
     expect(result.attempted).toBe(2);
   });
+
+  // forgejo#43: the pass used to read the first 500 rows and filter THOSE, so
+  // a place created after 500 complete ones was never looked at — "bounded"
+  // had quietly become "the first page, forever".
+  it("reaches a place past the 500th row — the limit bounds the work, not the scan", async () => {
+    await prisma.place.createMany({
+      data: Array.from({ length: 500 }, (_, i) => ({
+        userId,
+        name: `Complete ${i}`,
+        category: "landmark",
+        lat: 48 + i / 10000,
+        lon: 11 + i / 10000,
+        visited: true,
+        address: "Marienplatz 1",
+        city: "München",
+        country: "Deutschland",
+      })),
+    });
+    const late = await makePlace({ name: "Der 501." });
+    mockComplete.mockResolvedValue({ city: "Cusco" });
+
+    const result = await completeMissingPlaceAddresses(userId);
+
+    expect(result).toEqual({ attempted: 1, filled: 1 });
+    expect(mockComplete).toHaveBeenCalledTimes(1);
+    const after = await prisma.place.findUnique({ where: { id: late.id } });
+    expect(after?.city).toBe("Cusco");
+  });
 });
 
 /**

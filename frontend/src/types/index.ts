@@ -623,7 +623,8 @@ export interface FunStats {
 export interface BusinessStats {
   costPerKm: number;
   costPerHour: number;
-  totalCost: number;
+  /** Null when no counted flight carries a price (forgejo#83). */
+  totalCost: number | null;
   totalDistance: number;
   seatClassDistribution: Record<string, number>;
   mostCommonCategory: string | null;
@@ -695,6 +696,8 @@ export interface AirportStats {
   airportCount: number;
   countryCount: number;
   continentCount: number;
+  /** The denominator the server counts against — never hard-code it here (forgejo#87). */
+  continentTotal: number;
   topAirports: Array<{
     code: string;
     name: string | null;

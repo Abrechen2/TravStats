@@ -211,7 +211,9 @@
     "airlines": "Airlines",
     "scopeLabel": "── All-time totals ──",
     "scopeHint": "independent of the year filter above",
-    "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times"
+    "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times",
+    "noPricesRecorded_one": "No price recorded — {{count}} flight without one",
+    "noPricesRecorded_other": "No price recorded — {{count}} flights without one"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {
@@ -271,7 +273,9 @@
   },
   "airlines": {
     "title": "Top Airlines",
-    "flightsTotal": "{{count}} flights • {{hours}}h total"
+    "flightsTotal": "{{count}} flights • {{hours}}h total",
+    "withoutAirline_one": "{{count}} flight without an airline — not ranked",
+    "withoutAirline_other": "{{count}} flights without an airline — not ranked"
   },
   "airports": {
     "title": "Most Visited Airports"
@@ -395,7 +399,8 @@
     "avgFlightDurationDesc": "{{hours}} hours",
     "busiestMonth": "Busiest Month",
     "busiestMonthDesc": "{{month}} with {{count}} flights",
-    "unconvertedNote": "Not converted: {{amounts}}"
+    "unconvertedNote": "Not converted: {{amounts}}",
+    "noPricesRecorded": "No flight carries a price"
   },
   "unique": {
     "title": "🌟 Unique Statistics",
@@ -454,7 +459,7 @@
     "countryCount": "Countries visited",
     "countryCountDesc": "Distinct countries on your flight map.",
     "continentCount": "Continents",
-    "continentCountDesc": "How many of the 7 continents you've flown to.",
+    "continentCountDesc": "How many of the {{total}} continents you've flown to.",
     "topAirports": "Most visited airports",
     "topCountries": "Top countries",
     "rarestAirports": "Visited only once",
@@ -471,12 +476,6 @@
     "flightsCount_one": "{{count}} flight",
     "empty": "No data yet.",
     "continent": {
-      "europe": "Europe",
-      "northAmerica": "North America",
-      "southAmerica": "South America",
-      "asia": "Asia",
-      "africa": "Africa",
-      "oceania": "Oceania",
       "other": "Other"
     }
   },

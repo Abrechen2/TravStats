@@ -429,7 +429,9 @@ brainstorming review:**
   ECB rate for the check-in day (Frankfurter.app, keyless); per-currency breakdown
   kept alongside. Full design in §7.1. (Supersedes the earlier "per-currency-only v1".)
 - **Migration → normal `prisma migrate dev`.** The drift that once forced hand-written
-  migrations is already fixed on `main` and CI-guarded (§3).
+  migrations is already fixed on `main` and checked by `npm run check:drift`
+  in the pre-deploy gate — not in CI, whatever this line said until 2026-09-04
+  (forgejo#60) (§3).
 - **Rating scale storage:** `Float` (half-stars, e.g. 4.5); UI is a 5-star picker with
   half steps.
 

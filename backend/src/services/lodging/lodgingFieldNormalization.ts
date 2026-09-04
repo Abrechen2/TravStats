@@ -31,6 +31,49 @@ export function cleanText(value: unknown): string | null {
 }
 
 /**
+ * A postal code standing in front of the city, in the shapes confirmations
+ * actually print: "188973 Singapur" (six digits — the template's own regex
+ * stopped at five), "BW 78467 Konstanz" (a state abbreviation first),
+ * "2718 RL Zoetermeer" (Dutch letters after the digits), "L-5836 Luxemburg",
+ * "TX 78401 Corpus Christi". Everything after the code is the city.
+ */
+const LEADING_POSTCODE =
+  /^(?:[A-Z]{1,3}\s+)?((?:[A-Z]{1,2}-)?\d{4,7}(?:[\s-]\d{2,4})?(?:\s+[A-Z]{2})?)\s+(\S.*)$/;
+
+/** "Kroměříž 1", "Hurghada 2" — a district number, not part of the name. */
+const TRAILING_DISTRICT = /^(.{3,}?)\s+\d{1,2}$/;
+
+/**
+ * The city, and only the city.
+ *
+ * Both parsers stored whatever stood in the city segment — "188973 Singapur",
+ * "BW 78467 Konstanz", "Kroměříž 1" — and the geocoder never repairs a city
+ * that is merely wrong rather than empty (forgejo#85). The code is returned
+ * separately so the caller can keep it in the address, where the geocoder
+ * wants it. A segment that matches neither shape comes back untouched.
+ */
+export function splitPostcodeFromCity(segment: string | null): {
+  postcode: string | null;
+  city: string | null;
+} {
+  const text = cleanText(segment);
+  if (text === null) return { postcode: null, city: null };
+
+  const leading = text.match(LEADING_POSTCODE);
+  let postcode: string | null = null;
+  let city = text;
+  if (leading) {
+    postcode = leading[1];
+    city = leading[2].trim();
+  }
+
+  const trailing = city.match(TRAILING_DISTRICT);
+  if (trailing) city = trailing[1].trim();
+
+  return { postcode, city: city.length > 0 ? city : null };
+}
+
+/**
  * Board, as printed. Order is the whole trick: every phrase below contains the
  * word "board", and "Halbpension"/"Vollpension" share a suffix — so the
  * specific phrases have to be tested before the generic ones, and

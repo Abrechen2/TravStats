@@ -13,6 +13,7 @@
  * data. Unknown names return null and the row keeps its IATA/ICAO empty.
  */
 
+import type { AirlineResolvers } from '../shared/airlineNormalize';
 import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
 import { AIRLINES } from '../data/airlines';
 // The canonical-spelling half now lives in `shared/` so the browser groups
@@ -143,3 +144,14 @@ export function resolveAirlineCodes(
 
   return null;
 }
+
+/**
+ * The catalogue, in the shape `shared/airlineNormalize.ts` asks for — so
+ * every surface that groups airlines resolves codes the same way
+ * (forgejo#81). `resolveAirlineCodes` already answers all three questions.
+ */
+export const airlineResolvers: AirlineResolvers = {
+  iataForName: (name) => resolveAirlineCodes(name)?.iata,
+  iataForIcao: (icao) => resolveAirlineCodes(icao)?.iata,
+  nameForIata: (iata) => resolveAirlineCodes(iata)?.name,
+};

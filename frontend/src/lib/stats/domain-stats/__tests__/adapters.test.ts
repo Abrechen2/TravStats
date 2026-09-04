@@ -241,6 +241,7 @@ const baseLodgingStats: LodgingStats = {
   citiesUnique: 0,
   countries: [],
   countriesCount: 0,
+  countriesByYear: {},
   spendBaseTotal: 0,
   spendByCurrency: {},
   spendUnconvertedStays: 0,
@@ -257,7 +258,9 @@ const baseLodgingStats: LodgingStats = {
   ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
-function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lodging["stays"][number] {
+function makeLodgingStay(
+  overrides: Partial<Lodging["stays"][number]> = {}
+): Lodging["stays"][number] {
   return {
     id: "stay-1",
     lodgingId: "lodging-1",
@@ -335,6 +338,23 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   };
 }
 
+describe("adaptFlight — airlines (forgejo#81)", () => {
+  it("counts one airline for two spellings of the same code, named by the catalogue", () => {
+    const stats = adaptFlight({
+      flights: [
+        makeFlight({ id: "a", airline: "Swiss", airlineIata: "LX" }),
+        makeFlight({ id: "b", airline: "SWISS" }),
+        makeFlight({ id: "c", airline: "Lufthansa" }),
+      ],
+      countries: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    const airlines = stats.summary.headlineKpis.find((k) => k.label === "Airlines");
+    expect(airlines?.value).toBe(2);
+    expect(stats.summary.topItems?.items.map((i) => i.label)).toEqual(["SWISS", "Lufthansa"]);
+  });
+});
+
 describe("adaptLodging", () => {
   it("returns hasData=false when the stats endpoint reports no stays", () => {
     const stats = adaptLodging({ stats: baseLodgingStats, lodgings: [] });
@@ -343,7 +363,14 @@ describe("adaptLodging", () => {
 
   it("returns real headline figures and expands a stay into per-day buckets", () => {
     const stats = adaptLodging({
-      stats: { ...baseLodgingStats, staysCount: 1, totalNights: 2, lodgingsCount: 1, chainsUnique: 1, countries: ["CH"] },
+      stats: {
+        ...baseLodgingStats,
+        staysCount: 1,
+        totalNights: 2,
+        lodgingsCount: 1,
+        chainsUnique: 1,
+        countries: ["CH"],
+      },
       lodgings: [
         makeLodging({
           chain: {
@@ -376,6 +403,20 @@ describe("adaptLodging", () => {
     expect(stats.yearlyActiveDays[2024]).toBe(2);
     expect(stats.monthlyActiveDays["2024-06"]).toBe(2);
     expect(stats.summary.topItems?.items[0].label).toBe("Marriott");
+  });
+
+  it("hands the server's per-year country index through, keyed by number (forgejo#80)", () => {
+    const stats = adaptLodging({
+      stats: {
+        ...baseLodgingStats,
+        staysCount: 1,
+        countries: ["CH", "DE"],
+        countriesByYear: { "2024": ["DE"], "2026": ["CH"] },
+      },
+      lodgings: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countriesByYear).toEqual({ 2024: ["DE"], 2026: ["CH"] });
   });
 
   it("excludes a cancelled stay from every bucket", () => {

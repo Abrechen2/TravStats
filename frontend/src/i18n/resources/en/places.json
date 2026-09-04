@@ -181,11 +181,13 @@
     "noAnchors": "Once you have recorded flights, cruises or stays, TravStats will suggest here which of these you have probably already seen.",
     "acceptSuggestion": "I was there",
     "anchorUnnamed": "a recorded place",
+    "anchorUnnamedPhoto": "a photo",
     "anchor": {
       "lodging": "You slept {{distance}} — {{label}}",
       "cruise_port": "Your ship called {{distance}} — {{label}}",
       "flight": "You flew {{distance}} — {{label}}",
-      "place": "You were {{distance}} — {{label}}"
+      "place": "You were {{distance}} — {{label}}",
+      "photo": "You took a photo {{distance}} — {{label}}"
     },
     "confidence": {
       "high": "very likely",

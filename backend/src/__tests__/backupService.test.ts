@@ -144,6 +144,8 @@ describe("backupService", () => {
       mockBackupFindUnique.mockResolvedValue(null);
 
       await expect(getBackup("nonexistent-id")).rejects.toThrow("Backup not found");
+      // forgejo#77: the status travels with the error, so the route need not guess.
+      await expect(getBackup("nonexistent-id")).rejects.toMatchObject({ statusCode: 404 });
     });
   });
 
@@ -201,6 +203,7 @@ describe("backupService", () => {
       mockBackupFindUnique.mockResolvedValue(null);
 
       await expect(deleteBackup("nonexistent-id")).rejects.toThrow("Backup not found");
+      await expect(deleteBackup("nonexistent-id")).rejects.toMatchObject({ statusCode: 404 });
       expect(mockBackupDelete).not.toHaveBeenCalled();
     });
   });

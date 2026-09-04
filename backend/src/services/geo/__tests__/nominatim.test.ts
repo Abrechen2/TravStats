@@ -291,6 +291,32 @@ describe("nominatim geocoder", () => {
     expect(seen).toEqual(["Place-town", "Place-village", "Place-municipality"]);
   });
 
+  it("falls back to the district or state when the pin is in no settlement", async () => {
+    // A national park or a bay has no city, town or village. Nominatim still
+    // names the unit it lies in — measured: `suburb`+`state` for the Greater
+    // Blue Mountains, `county`+`state` for Redwood, `district` alone for Ha
+    // Long Bay. The smallest of those is the place column, not "—".
+    // Three cases, not five: the throttle is real (1 req/s, process-wide), so
+    // every case costs a second of the test budget.
+    const cases: Array<[Record<string, string>, string]> = [
+      [{ suburb: "Hampton", state: "New South Wales" }, "Hampton"],
+      [{ county: "Humboldt County", state: "California" }, "Humboldt County"],
+      // A settlement, when present, still wins over every larger unit.
+      [{ village: "Ramsau", county: "Berchtesgadener Land", state: "Bayern" }, "Ramsau"],
+    ];
+    const seen: string[] = [];
+    let n = 0;
+    for (const [address, _expected] of cases) {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue(reverseResponse({ ...address, country: "X" })) as unknown as typeof fetch;
+      n += 1;
+      const out = await reverseGeocode(70 + n, 30 + n);
+      seen.push(out?.city ?? "MISSING");
+    }
+    expect(seen).toEqual(cases.map(([, expected]) => expected));
+  }, 10_000);
+
   it("returns null (never throws) when reverse lookup fails or is empty", async () => {
     global.fetch = jest
       .fn()

@@ -2,6 +2,7 @@ import http from "http";
 import https from "https";
 import logger from "../../utils/logger";
 import {
+  splitPostcodeFromCity,
   cleanText,
   normalizeBoard,
   normalizeGuestCount,
@@ -247,7 +248,11 @@ function normalizeBooking(
         (24 * 60 * 60 * 1000),
     ),
   );
-  const city = cleanText(raw.city);
+  // The model copies the city "as printed", and confirmations print the
+  // postcode in front of it (forgejo#85). Take the code off; keep it as the
+  // postcode when the model gave none.
+  const citySplit = splitPostcodeFromCity(cleanText(raw.city));
+  const city = citySplit.city;
   const roomCategory = cleanText(raw.roomCategory);
   const confirmationNumber = cleanText(raw.confirmationNumber);
 
@@ -303,7 +308,7 @@ function normalizeBooking(
     nights: nightsRaw !== null && nightsRaw > 0 ? Math.floor(nightsRaw) : nightsFromDates,
     roomCategory,
     address: cleanText(raw.address),
-    postcode: cleanText(raw.postcode),
+    postcode: cleanText(raw.postcode) ?? citySplit.postcode,
     city,
     // `cleanText`, not `asString`: the model emits the four characters "null"
     // for an absent country often enough that it was being stored that way.

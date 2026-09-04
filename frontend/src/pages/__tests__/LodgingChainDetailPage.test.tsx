@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import type { LodgingChainDetail } from "../../types/lodging";
+import type { LodgingChainDetail, LodgingStay } from "../../types/lodging";
 
 const getChainDetailMock = vi.fn();
 const listMembershipsMock = vi.fn();
@@ -95,6 +95,95 @@ describe("LodgingChainDetailPage", () => {
 
     expect(screen.getByTestId("chain-loyalty-program")).toHaveTextContent("Marriott Bonvoy");
     expect(screen.getByText("Sheraton Zürich")).toBeInTheDocument();
+  });
+
+  it("renders — (never 0 €) for a hotel whose only priced stay is still planned", async () => {
+    // forgejo#82 on the chain page: the hotel cell and the spend tile both
+    // asked "is anything priced" of ALL stays while the figure is the
+    // counted-only sum, so a planned, priced stay printed "0 €" twice.
+    const plannedStay: LodgingStay = {
+      id: "stay-1",
+      lodgingId: "l1",
+      userId: "u1",
+      tripId: null,
+      bookingId: null,
+      checkInTime: null,
+      checkOutTime: null,
+      checkIn: "2099-09-07T00:00:00.000Z",
+      checkOut: "2099-09-08T00:00:00.000Z",
+      datePrecision: "DAY",
+      nights: null,
+      status: "scheduled",
+      roomNumber: null,
+      roomCategory: null,
+      board: "none",
+      pricePerNight: null,
+      currency: "EUR",
+      totalPrice: 149.9,
+      totalPriceBase: 149.9,
+      fxRate: 1,
+      fxRateDate: "2026-01-01",
+      fxBaseCurrency: "EUR",
+      fxSource: null,
+      isAwardStay: false,
+      ratingRoom: null,
+      ratingBreakfast: null,
+      ratingService: null,
+      ratingOverall: null,
+      roomAmenities: [],
+      bookingReference: null,
+      membershipId: null,
+      membershipOptOut: false,
+      receiptUrl: null,
+      guests: null,
+      companions: [],
+      notes: null,
+      parserTemplate: null,
+      parserConfidence: null,
+      dataSource: null,
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    };
+    const detail = makeDetail({
+      lodgings: [
+        {
+          id: "l1",
+          userId: "u1",
+          type: "hotel",
+          name: "Sheraton Zürich",
+          chainId: 1,
+          chain: null,
+          address: null,
+          city: "Zürich",
+          country: "CH",
+          isoCountryCode: null,
+          lat: null,
+          lon: null,
+          stars: 4,
+          amenities: [],
+          visited: true,
+          notes: null,
+          dataSource: null,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+          stays: [plannedStay],
+          overallRating: null,
+          stayCount: 0,
+          nights: 0,
+          totalSpendBase: 0,
+          totalSpendBaseByCurrency: {},
+        },
+      ],
+      stats: { hotelCount: 1, stayCount: 0, nights: 0, totalSpendBase: 0, avgRating: null },
+    });
+    await renderChainDetail(detail);
+
+    const row = screen.getByText("Sheraton Zürich").closest("tr");
+    expect(row?.textContent).not.toMatch(/0\s?€/);
+    expect(row?.textContent).toContain("—");
+    expect(row?.textContent).toContain("lodging:list.spendPlanned");
+    const tile = screen.getByText("lodging:chainDetail.stats.spend").closest("div");
+    expect(tile?.textContent).not.toMatch(/0\s?€/);
   });
 
   it("shows an empty state when the caller has no hotels in this chain", async () => {

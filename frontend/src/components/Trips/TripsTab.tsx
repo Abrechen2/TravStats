@@ -10,6 +10,7 @@ import DetectTripsBanner from "./DetectTripsBanner";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { TRIP_GRID_CLASS } from "./tripGrid";
 
 interface TripsTabProps {
   trips: Trip[];
@@ -274,7 +275,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             {t("trips:filterBar.noResults")}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={TRIP_GRID_CLASS}>
             {filtered.map((trip) => (
               <div
                 key={trip.id}

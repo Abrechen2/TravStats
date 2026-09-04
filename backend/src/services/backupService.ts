@@ -13,6 +13,7 @@ import {
 import { createDatabaseDump } from './backup/backupDatabase';
 import { archiveUploads, getMetadata } from './backup/backupFiles';
 import { restoreBackup as restoreBackupImpl } from './backup/backupRestore';
+import { AppError } from '../middleware/errorHandler';
 
 // Re-export types for backward compatibility
 export type { BackupOptions, RestoreOptions } from './backup/backupConfig';
@@ -283,7 +284,7 @@ export async function getBackup(id: string): Promise<Backup & { fileExists: bool
   });
 
   if (!backup) {
-    throw new Error('Backup not found');
+    throw new AppError('Backup not found', 404);
   }
 
   // Check if backup file still exists
@@ -304,7 +305,7 @@ export async function deleteBackup(id: string): Promise<void> {
   });
 
   if (!backup) {
-    throw new Error('Backup not found');
+    throw new AppError('Backup not found', 404);
   }
 
   // Delete backup files

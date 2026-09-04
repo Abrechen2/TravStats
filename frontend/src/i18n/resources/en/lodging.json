@@ -32,6 +32,7 @@
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
     "bookmarkedHint": "Not visited yet — counted in no statistic.",
+    "spendPlanned": "planned: {{amount}}",
     "sortBy": "Sort by {{col}}",
     "footer": {
       "showing": "{{count}} lodgings",
@@ -305,7 +306,9 @@
       "lodging_exact_ref": "Already imported (exact reference match)",
       "lodging_name_city": "Matching hotel found (name + city)",
       "stay_exact_ref": "Stay already on file (exact reference match)",
-      "stay_same_dates": "Stay already on file (same dates)"
+      "stay_same_dates": "Stay already on file (same dates)",
+      "lodging_name_similar": "Similarly named hotel found — the same house?",
+      "lodging_nearby": "Hotel at the same spot found — the same house?"
     },
     "noBookings": "No booking data was found in this email or PDF.",
     "csv": {

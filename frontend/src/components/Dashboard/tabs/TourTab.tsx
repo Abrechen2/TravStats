@@ -16,13 +16,7 @@ import {
 } from "./tourMapOverlay";
 import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
-
-/**
- * Bottom offset for overlays in MapLibre's attribution corner — the same
- * 44 px bar plus 8 px breathing room every other dashboard overlay uses
- * (AllTab.tsx documents the exact measurement).
- */
-const ATTRIBUTION_CLEARANCE = 52;
+import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 
 function isLegMode(value: string): value is LegMode {
   return (LEG_MODES as readonly string[]).includes(value);

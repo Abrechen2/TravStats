@@ -83,6 +83,7 @@ registry.registerPath({
   request: { params: z.object({ id: z.string() }) },
   responses: {
     202: { description: "Restore started" },
+    400: { description: "Backup is not completed", content: errorContent },
     404: notFound,
     409: { description: "Another operation is running", content: errorContent },
   },
@@ -111,7 +112,13 @@ registry.registerPath({
   summary: "Copy one backup to the configured cloud target",
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },
-  responses: { 202: { description: "Sync started" }, 404: notFound },
+  responses: {
+    202: { description: "Sync started" },
+    400: { description: "Backup is not completed", content: errorContent },
+    404: notFound,
+    409: { description: "WebDAV sync is not enabled", content: errorContent },
+    502: { description: "The WebDAV share did not answer as expected", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -119,7 +126,11 @@ registry.registerPath({
   path: "/backup/cloud/list",
   summary: "List backups on the cloud target",
   tags: backupTag,
-  responses: { 200: { description: "Remote backups" }, 400: badInput },
+  responses: {
+    200: { description: "Remote backups" },
+    409: { description: "WebDAV sync is not enabled", content: errorContent },
+    502: { description: "The WebDAV share did not answer as expected", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -127,7 +138,13 @@ registry.registerPath({
   path: "/backup/cloud/download",
   summary: "Fetch a backup back from the cloud target",
   tags: backupTag,
-  responses: { 202: { description: "Download started" }, 400: badInput },
+  responses: {
+    202: { description: "Download started" },
+    400: badInput,
+    404: { description: "No such backup on the share", content: errorContent },
+    409: { description: "WebDAV sync is not enabled", content: errorContent },
+    502: { description: "The WebDAV share did not answer as expected", content: errorContent },
+  },
 });
 
 registry.registerPath({

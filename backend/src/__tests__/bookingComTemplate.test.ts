@@ -212,6 +212,31 @@ describe("Booking.com template parser (synthetic)", () => {
     "",
   ].join("\n");
 
+  // forgejo#85 — a six-digit Singapore postcode and a state-prefixed German one
+  // both slipped past the template's five-digit regex into the city column.
+  it("reads the city off '122 Middle Road, Victoria, 188973 Singapur, Singapur' without the postcode", () => {
+    const singapore = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "122 Middle Road, Victoria, 188973 Singapur, Singapur",
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", singapore);
+    expect(r?.city).toBe("Singapur");
+    expect(r?.postcode).toBe("188973");
+    expect(r?.address).toBe("122 Middle Road, Victoria");
+    expect(r?.country).toBe("Singapur");
+  });
+
+  it("reads the city off 'Seestraße 1, BW 78467 Konstanz, Deutschland' without the state and the code", () => {
+    const konstanz = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "Seestraße 1, BW 78467 Konstanz, Deutschland",
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", konstanz);
+    expect(r?.city).toBe("Konstanz");
+    expect(r?.postcode).toBe("78467");
+    expect(r?.address).toBe("Seestraße 1");
+  });
+
   it("parses the stacked layout, where each value sits on the line below its label", () => {
     const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", stacked);
     expect(r?.checkIn).toBe("2026-01-05");

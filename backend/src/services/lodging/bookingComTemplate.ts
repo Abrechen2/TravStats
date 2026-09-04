@@ -1,3 +1,4 @@
+import { splitPostcodeFromCity } from "./lodgingFieldNormalization";
 import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
 import type { LodgingBoard } from "./lodgingFieldNormalization";
 import type { LODGING_TYPES } from "../../schemas/lodging";
@@ -244,14 +245,21 @@ function parseLage(raw: string | null): AddressParts {
     return {
       address: address.length > 0 ? address : null,
       postcode: rest[i],
-      city: rest[i - 1],
+      city: splitPostcodeFromCity(rest[i - 1]).city,
       country,
     };
   }
+  // The last segment before the country is the city — but not always ONLY
+  // the city. "188973 Singapur" has six digits, which `postcodeRe` above does
+  // not admit, and "BW 78467 Konstanz" starts with a state abbreviation; both
+  // reached the database verbatim (forgejo#85). The shared splitter takes
+  // the code off and keeps it for the address.
+  const lastSegment = rest[rest.length - 1] ?? null;
+  const split = splitPostcodeFromCity(lastSegment);
   return {
     address: rest.slice(0, -1).join(", ") || null,
-    postcode: null,
-    city: rest[rest.length - 1] ?? null,
+    postcode: split.postcode,
+    city: split.city,
     country,
   };
 }

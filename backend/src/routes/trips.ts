@@ -96,6 +96,7 @@ function tripCountries(
   flights: Array<{ depIata: string | null; arrIata: string | null }>,
   facts: Map<string, { country: string | null; timezone: string | null }>,
   cruiseCountries: string[] = [],
+  lodgingCountries: string[] = [],
 ): string[] {
   // A list the user filled in themselves is theirs — returned untouched.
   if (stored.length) return stored;
@@ -109,6 +110,9 @@ function tripCountries(
     // left them reading "?" for a voyage that plainly called at six countries.
     // Their countries come from the ports they visited.
     ...cruiseCountries,
+    // Same shape for hotel-only trips: a stay linked to the trip is itinerary
+    // evidence even when no flight or cruise exists.
+    ...lodgingCountries,
   ];
 
   // The two catalogues speak different languages — airports store ISO alpha-2,
@@ -131,7 +135,7 @@ async function cruiseCountriesByTrip(tripIds: string[]): Promise<Map<string, str
   if (tripIds.length === 0) return out;
 
   const cruises = await prisma.cruise.findMany({
-    where: { tripId: { in: tripIds } },
+    where: { tripId: { in: tripIds }, status: { not: "cancelled" } },
     select: {
       tripId: true,
       departurePort: { select: { country: true } },
@@ -152,6 +156,40 @@ async function cruiseCountriesByTrip(tripIds: string[]): Promise<Map<string, str
     }
     out.set(c.tripId, acc);
   }
+  return out;
+}
+
+/**
+ * Countries reached by each trip's lodging stays, keyed by trip id.
+ *
+ * A linked stay is part of the trip itinerary just like a linked flight or
+ * cruise. Use the lodging's ISO code when it exists, because the free-text
+ * country field intentionally preserves the source wording.
+ */
+async function lodgingCountriesByTrip(tripIds: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (tripIds.length === 0) return out;
+
+  const stays = await prisma.lodgingStay.findMany({
+    // A cancelled booking never put anyone in that country. Planned stays do
+    // count — a trip's itinerary is what it will visit, like its flights.
+    where: { tripId: { in: tripIds }, status: { not: "cancelled" } },
+    select: {
+      tripId: true,
+      lodging: { select: { isoCountryCode: true, country: true } },
+    },
+  });
+
+  for (const stay of stays) {
+    if (!stay.tripId) continue;
+    const country = stay.lodging.isoCountryCode ?? stay.lodging.country;
+    if (!country) continue;
+
+    const acc = out.get(stay.tripId) ?? [];
+    acc.push(country);
+    out.set(stay.tripId, acc);
+  }
+
   return out;
 }
 
@@ -304,9 +342,10 @@ router.get(
       // port-to-port hop. One grouped query over every cruise on the page keeps
       // this at a constant query count, like the airport lookup above.
       const cruiseIds = trips.flatMap((t) => t.cruises.map((c) => c.id));
-      const [facts, cruiseCountries, legSums] = await Promise.all([
+      const [facts, cruiseCountries, lodgingCountries, legSums] = await Promise.all([
         airportFactsFor(trips.flatMap((t) => t.flights)),
         cruiseCountriesByTrip(trips.map((t) => t.id)),
+        lodgingCountriesByTrip(trips.map((t) => t.id)),
         cruiseIds.length > 0
           ? prisma.cruiseLeg.groupBy({
               by: ["cruiseId"],
@@ -330,6 +369,7 @@ router.get(
             t.flights,
             facts,
             cruiseCountries.get(t.id) ?? [],
+            lodgingCountries.get(t.id) ?? [],
           ),
         })),
       });
@@ -581,18 +621,22 @@ router.get(
       // off), and the countries tile stayed at 0 because `trips.countries` is a
       // stored column nobody derives and `overflownCountries` is empty for
       // manually created flights.
-      const facts = await airportFactsFor(trip.flights);
+      const [facts, cruiseCountries, lodgingCountries] = await Promise.all([
+        airportFactsFor(trip.flights),
+        cruiseCountriesByTrip([trip.id]),
+        lodgingCountriesByTrip([trip.id]),
+      ]);
       const flights = trip.flights.map((f) => ({
         ...f,
         depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
         arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
       }));
-      const cruiseCountries = await cruiseCountriesByTrip([trip.id]);
       const countries = tripCountries(
         trip.countries,
         trip.flights,
         facts,
         cruiseCountries.get(trip.id) ?? [],
+        lodgingCountries.get(trip.id) ?? [],
       );
       res.json({ trip: { ...trip, photos, flights, countries } });
     } catch (error) {

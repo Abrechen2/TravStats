@@ -1,3 +1,4 @@
+import { namesCouldBeOneHouse } from "./nameSimilarity";
 import { prisma } from "../../db";
 import { findNearbyLodgings } from "./proximityMatch";
 import logger from "../../utils/logger";
@@ -126,6 +127,29 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     }
   }
 
+  // The same house under a decorated name. The exact key above reads "Hotel
+  // Meteora" and "Hotel Restaurant Meteora" as two buildings, and the
+  // coordinate rule below never fires for a booking mail or a saved-places
+  // export — neither carries a pin at preview time — so five pairs on the
+  // owner's account became ten houses (forgejo#84). nameSimilarity.ts was
+  // written for exactly this and had no caller. A hit is a GUESS: surfaced
+  // for confirmation, never a silent merge.
+  if (!matchedLodgingId && lodging) {
+    const cityKey = normalizeCity(lodging.city);
+    const similar = idx.allLodgings.filter((stored) => {
+      const storedCity = normalizeCity(stored.city);
+      const sameCity = cityKey && storedCity ? cityKey === storedCity : null;
+      return namesCouldBeOneHouse(lodging.name, stored.name, sameCity);
+    });
+    if (similar.length === 1) {
+      dedupeHint = "lodging_name_similar";
+      matchedLodgingId = similar[0].id;
+    } else if (similar.length > 1) {
+      dedupeHint = "lodging_name_similar";
+      flags = [...flags, "ambiguous_lodging_name"];
+    }
+  }
+
   // Last resort before declaring a new house: the same SPOT. The matcher above
   // keys on the name, so "Hotel Fortuna" and "Hotel - Restaurant Fortuna" read
   // as two buildings — measured on a real library, 25 pairs among 293 houses,
@@ -209,6 +233,8 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     action = "needs_input";
   } else if (
     dedupeHint === "lodging_name_city" ||
+    dedupeHint === "lodging_name_similar" ||
+    dedupeHint === "lodging_nearby" ||
     dedupeHint === "stay_same_dates"
   ) {
     action = "needs_input";

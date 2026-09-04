@@ -6,6 +6,7 @@ import logger from '../../utils/logger';
 import { DATABASE_URL } from '../../utils/database';
 import { BACKUP_BASE_DIR, DOCKER_DB_CONTAINER, RestoreOptions } from './backupConfig';
 import { parseDatabaseUrl } from './backupDatabase';
+import { AppError } from '../../middleware/errorHandler';
 
 /**
  * Restore backup
@@ -19,16 +20,19 @@ export async function restoreBackup(
     where: { id },
   });
 
+  // Each precondition carries its status (forgejo#77): the route passes the
+  // error straight to errorHandler, and a bare Error would reach the admin as
+  // a 500 — a server fault — for an id that simply does not exist.
   if (!backup) {
-    throw new Error('Backup not found');
+    throw new AppError('Backup not found', 404);
   }
 
   if (backup.status !== 'completed') {
-    throw new Error('Backup is not completed');
+    throw new AppError('Backup is not completed', 400);
   }
 
   if (!backup.backupPath || !fs.existsSync(backup.backupPath)) {
-    throw new Error('Backup file not found');
+    throw new AppError('Backup file not found', 404);
   }
 
   // Create backup before restore if requested

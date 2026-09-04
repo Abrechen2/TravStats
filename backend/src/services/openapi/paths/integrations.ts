@@ -558,9 +558,14 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/template-status/sync",
-  summary: "Refresh the template status",
+  summary: "Refresh the airline templates from GitHub (admin only)",
+  description:
+    "Replaces the instance-wide template registry every user parses with, so it is an operator action: a non-admin account is answered 403.",
   tags: parseTag,
-  responses: { 200: { description: "Synced" } },
+  responses: {
+    200: { description: "Synced" },
+    403: { description: "Not an admin", content: errorContent },
+  },
 });
 
 registry.registerPath({

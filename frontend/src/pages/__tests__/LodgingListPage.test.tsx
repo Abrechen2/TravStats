@@ -27,6 +27,7 @@ const defaultStats: LodgingStats = {
   citiesUnique: 1,
   countries: ["DE"],
   countriesCount: 1,
+  countriesByYear: {},
   spendBaseTotal: 883,
   spendByCurrency: { EUR: 883 },
   spendUnconvertedStays: 0,
@@ -294,9 +295,7 @@ describe("LodgingListPage", () => {
     await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
     await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "campsite" })
-      );
+      expect(listLodgingsMock).toHaveBeenCalledWith(expect.objectContaining({ type: "campsite" }));
     });
 
     listLodgingsMock.mockClear();
@@ -334,11 +333,35 @@ describe("LodgingListPage", () => {
     // of its own, so the stay supplies it — and a PLANNED stay counts as the
     // newest, which is why Zebra (2099) leads and not Alpha (2024).
     const stay = (checkIn: string) =>
-      ({ id: `s-${checkIn}`, checkIn, checkOut: null, datePrecision: "DAY", nights: null }) as never;
+      ({
+        id: `s-${checkIn}`,
+        checkIn,
+        checkOut: null,
+        datePrecision: "DAY",
+        nights: null,
+      }) as never;
     const ordered: Lodging[] = [
-      makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500, stays: [stay("2099-01-01")] }),
-      makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10, stays: [stay("2024-01-01")] }),
-      makeLodging({ id: "l-3", name: "Mid Motel", nights: 4, totalSpendBase: 250, stays: [stay("2026-01-01")] }),
+      makeLodging({
+        id: "l-1",
+        name: "Zebra Lodge",
+        nights: 1,
+        totalSpendBase: 500,
+        stays: [stay("2099-01-01")],
+      }),
+      makeLodging({
+        id: "l-2",
+        name: "Alpha Inn",
+        nights: 9,
+        totalSpendBase: 10,
+        stays: [stay("2024-01-01")],
+      }),
+      makeLodging({
+        id: "l-3",
+        name: "Mid Motel",
+        nights: 4,
+        totalSpendBase: 250,
+        stays: [stay("2026-01-01")],
+      }),
     ];
     listLodgingsMock.mockResolvedValue(ordered);
 
@@ -463,10 +486,51 @@ describe("LodgingListPage", () => {
     // The spend cell must read "—", never a false "0 €" (a cleared price is
     // not the same as a confirmed free stay).
     // Positional index — it moved by one when the "Letzter Aufenthalt" column
-    // was added on 2026-08-25. Indexing cells by number is brittle; it is kept
-    // only because this assertion is about the spend cell's CONTENT.
-    const spendCell = row?.querySelectorAll("td")[7];
+    // was added on 2026-08-25, and the index here was NOT moved with it: [7]
+    // is the rating cell, which also reads "—", so this passed for a year
+    // without looking at the spend cell at all (found while fixing forgejo#82).
+    // Indexing cells by number is brittle; it is kept only because this
+    // assertion is about the spend cell's CONTENT.
+    const spendCell = row?.querySelectorAll("td")[8];
     expect(spendCell?.textContent).toBe("—");
+  });
+
+  it("renders — (never 0 €) when the only priced stay is still planned", async () => {
+    // forgejo#82: the cell chose its branch from ALL stays but printed the
+    // visited-only aggregate. A planned, priced stay passed `hasAnyPrice`,
+    // fell through to the converted total, and the row read "0 €" — a hotel
+    // not yet slept in, reported as free. The price is not dropped either:
+    // it gets its own "planned" line.
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 0,
+        totalSpendBaseByCurrency: {},
+        stays: [
+          makeStay({
+            status: "scheduled",
+            checkIn: "2099-09-07T00:00:00.000Z",
+            checkOut: "2099-09-08T00:00:00.000Z",
+            totalPrice: 149.9,
+            currency: "EUR",
+            totalPriceBase: 149.9,
+            fxBaseCurrency: "EUR",
+            fxRate: 1,
+            fxRateDate: "2026-01-01",
+          }),
+        ],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const spendCell = row?.querySelectorAll("td")[8];
+    expect(spendCell?.textContent).not.toMatch(/0\s?€/);
+    expect(spendCell?.textContent).toMatch(/^—/);
+    expect(spendCell?.textContent).toContain("lodging:list.spendPlanned");
   });
 
   it("surfaces an error state (not a blank page) when the filtered fetch fails", async () => {
@@ -541,9 +605,7 @@ describe("LodgingListPage", () => {
       expect(deleteLodgingMock).not.toHaveBeenCalled();
 
       // Scoped to the dialog: the row's own delete icon carries the same name.
-      await userEvent.click(
-        within(dialog).getByRole("button", { name: /common:buttons\.delete/ })
-      );
+      await userEvent.click(within(dialog).getByRole("button", { name: /common:buttons\.delete/ }));
       await waitFor(() => expect(deleteLodgingMock).toHaveBeenCalledWith("l1"));
     });
 

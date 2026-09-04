@@ -147,6 +147,8 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  /** A decorated spelling of a stored name, in the same town or with two identifying words in common. */
+  | "lodging_name_similar"
   | "lodging_nearby"
   | "stay_exact_ref"
   | "stay_same_dates";

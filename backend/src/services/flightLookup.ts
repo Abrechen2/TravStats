@@ -538,6 +538,9 @@ export async function lookupFlightDetails(
   userId?: string,
   departureTime?: Date | string | null,
   arrivalTime?: Date | string | null,
+  /** Our flight's departure airport, where the caller knows it — see the
+   *  AeroDataBox adapter for why a flight number alone is not unique. */
+  depAirportCode?: string,
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
@@ -557,11 +560,40 @@ export async function lookupFlightDetails(
     ? isInLiveWindow(departureTime, arrivalTime)
     : true;
   const budgetOk = aviationstackKey ? await hasAviationstackBudget() : false;
-  // Once the plan is known to reject the `flight_date` filter, non-today
-  // lookups can't be served at all (real-time queries only cover today) —
-  // skip up-front instead of burning a budget call on a guaranteed 403.
+  // Once the plan is known to reject the `flight_date` filter, a lookup for
+  // another day can't be served — skip up-front instead of burning a budget
+  // call on a guaranteed 403.
+  //
+  // UNLESS THE FLIGHT IS IN THE AIR RIGHT NOW. This used to read "non-today
+  // lookups can't be served at all (real-time queries only cover today)", and
+  // for an overnight flight that is simply wrong: it departed yesterday and is
+  // aboard the real-time feed this minute, because it has not landed. The
+  // date-less query below is exactly the one the free plan still allows, and
+  // the `aviationstack_date_mismatch` guard after it discards an answer that
+  // turns out to belong to another service day. Both were already here; only
+  // this gate stopped them being reached.
+  //
+  // What that cost, measured on the owner's account 2026-09-03: LX93
+  // GRU→ZRH, departing the 2nd and landing the 3rd. Its two arrival checks
+  // (arrival −60 min and +30 min) both ran on the 3rd, both were refused here
+  // with `date_filter_restricted`, and the flight kept no actual times at all
+  // — while the short hop beside it, whose checks all fell on its departure
+  // day, got its own. Every long-haul leg fails the same way.
+  //
+  // `inLiveWindow` is what makes this safe rather than a hole: it is already a
+  // precondition of `aviationstackAvailable`, it spans in-flight through two
+  // hours past scheduled arrival, and outside it nothing changes at all.
+  // Deliberately NOT `inLiveWindow`, which defaults to true when the caller
+  // passes no departureTime — that default means "ad-hoc lookup from the UI",
+  // and a user typing a date from last May is asking a historical question
+  // that the free plan genuinely cannot answer. The exception here needs a
+  // MEASURED position in the air, so it asks for a departure time and gets one.
+  const flyingRightNow = departureTime
+    ? isInLiveWindow(departureTime, arrivalTime)
+    : false;
   const requestedDateIsToday = !date || date === currentUtcDay();
-  const dateFilterBlocked = aviationstackDateFilterRestricted && !requestedDateIsToday;
+  const dateFilterBlocked =
+    aviationstackDateFilterRestricted && !requestedDateIsToday && !flyingRightNow;
   const aviationstackAvailable =
     !!aviationstackKey &&
     !isAviationstackCooledDown() &&
@@ -752,7 +784,14 @@ export async function lookupFlightDetails(
   // Aviationstack 429'd or returned nothing; out-of-window it's the
   // only free provider that can serve the request.
   if (date) {
-    const aerodataboxResult = await lookupFlightAerodatabox(trimmedNumber, date, userId);
+    // The departure airport disambiguates a flight number flown more than
+    // once on one day — see the adapter's own note for the measured case.
+    const aerodataboxResult = await lookupFlightAerodatabox(
+      trimmedNumber,
+      date,
+      userId,
+      depAirportCode,
+    );
     if (aerodataboxResult) {
       logger.info(
         { flightNumber: trimmedNumber, date, api: 'aerodatabox', operation: 'lookup_aerodatabox_hit' },
@@ -1081,7 +1120,14 @@ export async function lookupFlightWithHistorical(
   }
 
   const dateStr = requestedStr;
-  const result = await lookupFlightDetails(trimmed, dateStr, userId);
+  const result = await lookupFlightDetails(
+    trimmed,
+    dateStr,
+    userId,
+    undefined,
+    undefined,
+    depAirportCode,
+  );
 
   if (!result) {
     if (isOutsideLiveWindow) {

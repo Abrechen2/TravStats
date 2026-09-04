@@ -196,6 +196,71 @@ describe("trip countries are derived on the list, not only on the detail", () =>
     }
   });
 
+  it("derives countries for a LODGING-ONLY trip from linked stays", async () => {
+    // The current RC exposed that a trip can have real lodging evidence without
+    // any flight or cruise segment. That should still show a country on both
+    // trip surfaces.
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Lodging only", status: "completed" },
+    });
+    const lodging = await prisma.lodging.create({
+      data: {
+        userId,
+        name: "UAT Hotel CH",
+        type: "hotel",
+        country: "Schweiz",
+        isoCountryCode: "CH",
+      },
+    });
+    // A cancelled booking in another country is not evidence of anything.
+    const cancelledLodging = await prisma.lodging.create({
+      data: {
+        userId,
+        name: "UAT Hotel AT (cancelled)",
+        type: "hotel",
+        country: "Österreich",
+        isoCountryCode: "AT",
+      },
+    });
+    const stays = await Promise.all([
+      prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: lodging.id,
+          tripId: trip.id,
+          checkIn: new Date("2026-05-01T00:00:00.000Z"),
+          checkOut: new Date("2026-05-03T00:00:00.000Z"),
+          status: "completed",
+        },
+      }),
+      prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: cancelledLodging.id,
+          tripId: trip.id,
+          checkIn: new Date("2026-05-03T00:00:00.000Z"),
+          checkOut: new Date("2026-05-04T00:00:00.000Z"),
+          status: "cancelled",
+        },
+      }),
+    ]);
+
+    try {
+      const [list, detail] = await Promise.all([
+        request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200),
+        request(app).get(`/api/v1/trips/${trip.id}`).set("Cookie", authCookie).expect(200),
+      ]);
+      const listed = list.body.trips.find((t: { id: string }) => t.id === trip.id);
+
+      expect(listed.countries).toEqual(["CH"]);
+      expect(detail.body.trip.countries).toEqual(["CH"]);
+    } finally {
+      await prisma.lodgingStay.deleteMany({ where: { id: { in: stays.map((s) => s.id) } } });
+      await prisma.lodging.deleteMany({ where: { id: { in: [lodging.id, cancelledLodging.id] } } });
+      await prisma.trip.deleteMany({ where: { id: trip.id } });
+    }
+  });
+
   it("counts a country once when a flight AND a cruise both reach it", async () => {
     // The catalogues speak different languages: the airport says "DE", the port
     // says "Germany". Without folding, this trip would carry both and report

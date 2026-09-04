@@ -16,6 +16,7 @@ import TripPill from "../components/Trips/TripPill";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
@@ -30,7 +31,7 @@ const fmtDate = (iso: string | null): string => {
 export default function CruiseDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation("cruise");
+  const { t, i18n } = useTranslation("cruise");
   const [cruise, setCruise] = useState<Cruise | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   // Two states, not one: a 404 means the cruise is gone, anything else
@@ -286,7 +287,7 @@ export default function CruiseDetailPage(): JSX.Element {
                   <dt>{t("field.price")}</dt>
                   <dd>
                     {cruise.price !== null
-                      ? `${cruise.price.toFixed(2)} ${cruise.currency ?? ""}`
+                      ? formatAmount(cruise.price, cruise.currency, { language: i18n.language })
                       : "—"}
                   </dd>
                 </div>

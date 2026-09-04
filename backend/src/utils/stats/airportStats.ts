@@ -6,6 +6,7 @@ import type { FlightData } from './types';
 import { departureClockOf } from './departureClock';
 import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
 import { isCountableFlight } from '../../shared/flightCounting';
+import { CONTINENTS, getContinent } from '../continents';
 
 export interface AirportStats {
   /** Distinct airports the user has ever used (as departure or arrival). */
@@ -14,6 +15,13 @@ export interface AirportStats {
   countryCount: number;
   /** Distinct continents covered. */
   continentCount: number;
+  /**
+   * The denominator for `continentCount` — how many continents the shared
+   * table knows (seven, Antarctica included). Sent rather than hard-coded on
+   * the client: the tile printed "/ 6" for months while its own caption said
+   * "of the 7" and the passport said 6/7 (forgejo#87). One source, one number.
+   */
+  continentTotal: number;
   /** Top airports by visit count (departure + arrival combined). */
   topAirports: Array<{ code: string; name: string | null; country: string | null; visits: number }>;
   /** Airports visited only once. Capped to keep payload small. */
@@ -30,8 +38,26 @@ export interface AirportStats {
   } | null;
   /** Top visited countries by flight count. */
   topCountries: Array<{ country: string; count: number }>;
-  /** Flights per continent (continent derived from country code). */
+  /**
+   * Flights per continent, keyed by the continent's name from
+   * `utils/continents.ts` ("Europe", "Antarctica", …). "Other" holds the
+   * flights whose airport resolved to no continent at all — the absence of
+   * one, never a further one.
+   */
   continentDistribution: Record<string, number>;
+}
+
+/**
+ * The continent an airport lies on, through the one shared resolver.
+ *
+ * This file used to carry its own six-bucket country table with no
+ * Antarctica and 'Other' for everything it did not list — the third copy of
+ * a rule `utils/continents.ts` was written to end. A flight to McMurdo
+ * counted as 'Other', and Bermuda pushed the tile to "7 of 6".
+ */
+function continentOfAirport(info: AirportData | undefined): string {
+  if (!info) return 'Other';
+  return getContinent(info.lat, info.lon, info.country) ?? 'Other';
 }
 
 function emptyAirportStats(): AirportStats {
@@ -39,6 +65,7 @@ function emptyAirportStats(): AirportStats {
     airportCount: 0,
     countryCount: 0,
     continentCount: 0,
+    continentTotal: CONTINENTS.length,
     topAirports: [],
     rarestAirports: [],
     newThisYear: [],
@@ -46,49 +73,6 @@ function emptyAirportStats(): AirportStats {
     topCountries: [],
     continentDistribution: {},
   };
-}
-
-// Small, approximate country-to-continent map. Covers the common cases; an
-// unknown country falls into "Other" rather than being dropped so the user
-// still sees 100% of their flights accounted for.
-const CONTINENT_BY_COUNTRY: Record<string, string> = {
-  // Europe (partial — enough for usual travel)
-  DE: 'EU', AT: 'EU', CH: 'EU', FR: 'EU', IT: 'EU', ES: 'EU', PT: 'EU', NL: 'EU',
-  BE: 'EU', LU: 'EU', DK: 'EU', SE: 'EU', NO: 'EU', FI: 'EU', IS: 'EU', IE: 'EU',
-  GB: 'EU', UK: 'EU', PL: 'EU', CZ: 'EU', SK: 'EU', HU: 'EU', RO: 'EU', BG: 'EU',
-  GR: 'EU', HR: 'EU', SI: 'EU', RS: 'EU', BA: 'EU', MK: 'EU', AL: 'EU', ME: 'EU',
-  EE: 'EU', LV: 'EU', LT: 'EU', BY: 'EU', UA: 'EU', MD: 'EU', MT: 'EU', CY: 'EU',
-  XK: 'EU', VA: 'EU', SM: 'EU', MC: 'EU', LI: 'EU', AD: 'EU', FO: 'EU',
-  // North America
-  US: 'NA', CA: 'NA', MX: 'NA', CU: 'NA', JM: 'NA', DO: 'NA', HT: 'NA', BS: 'NA',
-  PR: 'NA', GT: 'NA', HN: 'NA', SV: 'NA', NI: 'NA', CR: 'NA', PA: 'NA', BZ: 'NA',
-  TT: 'NA', BB: 'NA', GL: 'NA',
-  // South America
-  BR: 'SA', AR: 'SA', CL: 'SA', PE: 'SA', CO: 'SA', VE: 'SA', EC: 'SA', BO: 'SA',
-  PY: 'SA', UY: 'SA', GY: 'SA', SR: 'SA', GF: 'SA',
-  // Asia
-  CN: 'AS', JP: 'AS', KR: 'AS', KP: 'AS', TW: 'AS', HK: 'AS', MO: 'AS', MN: 'AS',
-  IN: 'AS', PK: 'AS', BD: 'AS', LK: 'AS', NP: 'AS', BT: 'AS', MV: 'AS', AF: 'AS',
-  ID: 'AS', PH: 'AS', VN: 'AS', TH: 'AS', MY: 'AS', SG: 'AS', KH: 'AS', LA: 'AS',
-  MM: 'AS', BN: 'AS', TL: 'AS',
-  AE: 'AS', SA: 'AS', QA: 'AS', BH: 'AS', KW: 'AS', OM: 'AS', YE: 'AS', IL: 'AS',
-  JO: 'AS', LB: 'AS', SY: 'AS', IQ: 'AS', IR: 'AS', TR: 'AS',
-  KZ: 'AS', UZ: 'AS', TM: 'AS', KG: 'AS', TJ: 'AS', AZ: 'AS', AM: 'AS', GE: 'AS',
-  RU: 'AS', // lumped with Asia for simplicity; could split by region later.
-  // Africa
-  ZA: 'AF', EG: 'AF', MA: 'AF', DZ: 'AF', TN: 'AF', LY: 'AF', SD: 'AF', ET: 'AF',
-  KE: 'AF', TZ: 'AF', UG: 'AF', RW: 'AF', BI: 'AF', SO: 'AF', DJ: 'AF', ER: 'AF',
-  NG: 'AF', GH: 'AF', CI: 'AF', SN: 'AF', ML: 'AF', BF: 'AF', NE: 'AF', TD: 'AF',
-  CM: 'AF', CF: 'AF', GA: 'AF', CG: 'AF', CD: 'AF', AO: 'AF', ZM: 'AF', ZW: 'AF',
-  BW: 'AF', NA: 'AF', MZ: 'AF', MW: 'AF', MG: 'AF', MU: 'AF', SC: 'AF', RE: 'AF',
-  // Oceania
-  AU: 'OC', NZ: 'OC', PG: 'OC', FJ: 'OC', SB: 'OC', VU: 'OC', NC: 'OC', PF: 'OC',
-  WS: 'OC', TO: 'OC', KI: 'OC', FM: 'OC', MH: 'OC', PW: 'OC', NR: 'OC', TV: 'OC',
-};
-
-function continentOf(country: string | null | undefined): string {
-  if (!country) return 'Other';
-  return CONTINENT_BY_COUNTRY[country.toUpperCase()] || 'Other';
 }
 
 /**
@@ -163,8 +147,8 @@ export async function calculateAirportStats(
     if (depCountry) bump(countryCount, depCountry);
     if (arrCountry && arrCountry !== depCountry) bump(countryCount, arrCountry);
 
-    const depContinent = continentOf(depCountry);
-    const arrContinent = continentOf(arrCountry);
+    const depContinent = continentOfAirport(dep ? airportInfo.get(dep) : undefined);
+    const arrContinent = continentOfAirport(arr ? airportInfo.get(arr) : undefined);
     bump(continentCount, depContinent);
     if (arrContinent !== depContinent) bump(continentCount, arrContinent);
   }
@@ -243,6 +227,7 @@ export async function calculateAirportStats(
     // the ABSENCE of a continent, not a seventh one. Counting it let a flight
     // to Bermuda or Curaçao push the tile to "7 of 6".
     continentCount: [...continentCount.keys()].filter((c) => c !== 'Other').length,
+    continentTotal: CONTINENTS.length,
     topAirports,
     rarestAirports,
     newThisYear,

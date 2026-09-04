@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ExpandableEventCard } from "../../components/Trip/ExpandableEventCard";
@@ -106,22 +106,35 @@ describe("ExpandableEventCard", () => {
  */
 describe("cabinLabel", () => {
   const t = ((key: string) => key) as never;
+  let cabinLabel: (typeof import("../TripDetailPage"))["cabinLabel"];
 
-  it("translates the four types the schema names", async () => {
-    const { cabinLabel } = await import("../TripDetailPage");
+  /**
+   * The import is the expensive part, not the assertions: it pulls a
+   * 1700-line page module and its whole dependency tree through the
+   * transform pipeline. Inside a test it counted against the 5s default, and
+   * under the full suite — where the environment alone takes minutes — that
+   * budget ran out and failed whichever cabinLabel test happened to import
+   * first. Green alone, red in company, and nothing to do with cabin labels.
+   *
+   * Paying it once in beforeAll, with room, makes the cost explicit and
+   * leaves the three tests measuring only what they are about.
+   */
+  beforeAll(async () => {
+    ({ cabinLabel } = await import("../TripDetailPage"));
+  }, 30_000);
+
+  it("translates the four types the schema names", () => {
     expect(cabinLabel("balcony", t)).toBe("cruise:cabinType.balcony");
     expect(cabinLabel("inside", t)).toBe("cruise:cabinType.inside");
   });
 
-  it("shows an unknown cabin exactly as it is stored", async () => {
+  it("shows an unknown cabin exactly as it is stored", () => {
     // A word we cannot translate is still a word the user recognises.
-    const { cabinLabel } = await import("../TripDetailPage");
     expect(cabinLabel("Balkonkabine", t)).toBe("Balkonkabine");
     expect(cabinLabel("The Haven Penthouse", t)).toBe("The Haven Penthouse");
   });
 
-  it("says nothing when there is no cabin", async () => {
-    const { cabinLabel } = await import("../TripDetailPage");
+  it("says nothing when there is no cabin", () => {
     expect(cabinLabel(null, t)).toBeNull();
     expect(cabinLabel("", t)).toBeNull();
   });
