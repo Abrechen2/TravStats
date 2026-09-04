@@ -160,6 +160,27 @@ export function departsOnLocalDate(flight: AerodataboxFlight, date: string): boo
   return local.slice(0, 10) === date;
 }
 
+/**
+ * Narrow to the entries leaving from OUR airport — but only if any do.
+ *
+ * PREFERENCE, not a filter, and the difference is deliberate: the stored code
+ * may be ICAO where the provider answers IATA, or absent entirely on an older
+ * row. Where nothing matches, the caller is no worse off than before this
+ * existed; where something matches, the ambiguity is gone.
+ */
+export function departsFrom(
+  flights: AerodataboxFlight[],
+  depAirportCode: string | undefined
+): AerodataboxFlight[] {
+  if (!depAirportCode) return flights;
+  const wanted = depAirportCode.toUpperCase();
+  const matching = flights.filter((f) => {
+    const airport = f.departure?.airport;
+    return airport?.iata?.toUpperCase() === wanted || airport?.icao?.toUpperCase() === wanted;
+  });
+  return matching.length > 0 ? matching : flights;
+}
+
 function pickOperatorAndMarketing(
   flights: AerodataboxFlight[],
   requestedNumber: string,
@@ -191,6 +212,18 @@ export async function lookupFlightAerodatabox(
   flightNumber: string,
   date: string,
   userId?: string,
+  /**
+   * The departure airport of OUR flight, when the caller knows it.
+   *
+   * A flight number is not unique within a day. Measured 2026-09-03: LX93 on
+   * 2026-09-02 comes back three times — the GRU→ZRH that left the day before
+   * and landed on the 2nd, an EZE→GRU feeder that same afternoon, and the
+   * GRU→ZRH the owner actually took. Filtering on the departure DATE removes
+   * the first and leaves the other two, and the codeshare-based pick then has
+   * a one-in-two chance. Backfilling by hand with only the date filter picked
+   * the feeder and wrote its arrival time onto the long-haul row.
+   */
+  depAirportCode?: string,
 ): Promise<FlightLookupResult | null> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
@@ -202,7 +235,10 @@ export async function lookupFlightAerodatabox(
 
   const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
   const providerNumber = toProviderFlightNumber(trimmed) ?? normalized;
-  const cacheKey = `${normalized}_${date}`;
+  // The airport is part of the key because it is part of the ANSWER: two
+  // flights sharing a number on one day resolve to different rows, and a key
+  // without it would serve the first caller's aeroplane to the second.
+  const cacheKey = `${normalized}_${date}_${depAirportCode ?? "*"}`;
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
   if (cached !== undefined) {
@@ -257,7 +293,8 @@ export async function lookupFlightAerodatabox(
       );
     }
 
-    const picked = pickOperatorAndMarketing(departingToday, normalized);
+    const atOurAirport = departsFrom(departingToday, depAirportCode);
+    const picked = pickOperatorAndMarketing(atOurAirport, normalized);
     if (!picked) {
       logger.info(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "api_empty_response" },

@@ -56,6 +56,43 @@ describe("sweepStatuses", () => {
     );
   });
 
+  /**
+   * The door this sweep used to close for good.
+   *
+   * `checkAndUpdate` only looks at flights with a due check, so clearing
+   * `nextApiCheckAt` on every flip meant a leg that landed without its actual
+   * times was never asked about again by anything. On a `flown` row the field
+   * now carries a second meaning — "a last attempt is outstanding" — and
+   * `finalArrivalLookup` is what spends it, exactly once.
+   */
+  it("leaves a last check outstanding when the flight landed without an actual arrival", async () => {
+    const missing = await flight({ arrivalTime: past(7), nextApiCheckAt: past(7) });
+
+    await sweepStatuses();
+
+    const row = await prisma.flight.findUnique({ where: { id: missing.id } });
+    expect(row?.status).toBe("flown");
+    expect(row?.nextApiCheckAt).not.toBeNull();
+  });
+
+  it("closes the door on a flight that already has its actual arrival", async () => {
+    // Nothing left to ask about, so the field is cleared as it always was.
+    // Without this half the sweep would hand every landed flight to the
+    // provider, which is the opposite of the quota discipline everything
+    // around it is built for.
+    const complete = await flight({
+      arrivalTime: past(7),
+      actualArrival: past(7),
+      nextApiCheckAt: past(7),
+    });
+
+    await sweepStatuses();
+
+    const row = await prisma.flight.findUnique({ where: { id: complete.id } });
+    expect(row?.status).toBe("flown");
+    expect(row?.nextApiCheckAt).toBeNull();
+  });
+
   it("moves cruises through scheduled -> in_progress -> flown and leaves passthroughs", async () => {
     const running = await prisma.cruise.create({
       data: { userId, status: "scheduled", startDate: past(24), endDate: future(72) },
