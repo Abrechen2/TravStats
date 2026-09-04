@@ -127,9 +127,62 @@ describe("cloudSyncService", () => {
     });
   });
 
+  // forgejo#77 — every failure carries its HTTP status, so the routes above
+  // pass it straight to errorHandler instead of guessing from the message.
+  describe("failures carry their status", () => {
+    it("answers 409 for a disabled or unconfigured WebDAV, on every entry point", async () => {
+      const { listCloudBackups, downloadFromCloud, syncToCloud } = await loadModule(false);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+
+      await expect(listCloudBackups()).rejects.toMatchObject({ statusCode: 409 });
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 409 });
+      await expect(syncToCloud("backup-1")).rejects.toMatchObject({ statusCode: 409 });
+    });
+
+    it("answers 404 for an unknown backup even when sync is disabled — the missing id is the more specific fact", async () => {
+      const { syncToCloud } = await loadModule(false);
+      mockBackupFindUnique.mockResolvedValue(null);
+
+      await expect(syncToCloud("nope")).rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("answers 400 for a backup that is not finished and 404 for one whose file is gone", async () => {
+      const { syncToCloud } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue({ ...MOCK_BACKUP, status: "running" });
+      await expect(syncToCloud("backup-1")).rejects.toMatchObject({ statusCode: 400 });
+
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(false);
+      await expect(syncToCloud("backup-1")).rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("maps a 404 from the share to 404 and any other share failure to 502", async () => {
+      const { downloadFromCloud } = await loadModule(true);
+
+      mockClient.getFileContents.mockRejectedValue(
+        Object.assign(new Error("Invalid response: 404 Not Found"), { status: 404 }),
+      );
+      await expect(downloadFromCloud("gone.tar.gz", "/tmp/gone")).rejects.toMatchObject({
+        statusCode: 404,
+      });
+
+      mockClient.getFileContents.mockRejectedValue(
+        Object.assign(new Error("Invalid response: 500"), { status: 500 }),
+      );
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 502 });
+
+      mockClient.getFileContents.mockRejectedValue(new Error("ECONNREFUSED"));
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 502 });
+    });
+  });
+
   describe("syncToCloud", () => {
     it("throws when WebDAV sync is not enabled", async () => {
       const { syncToCloud } = await loadModule(false);
+      // The backup is looked up first (forgejo#77) — give it one to find.
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
 
       await expect(syncToCloud("backup-1")).rejects.toThrow(/not enabled/i);
     });

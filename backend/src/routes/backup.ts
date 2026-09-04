@@ -22,6 +22,7 @@ import {
 } from '../services/cloudSyncService';
 import { serializeBigInt } from '../utils/serializeBigInt';
 import { backupRestoreLimiter } from '../middleware/rateLimit';
+import { BACKUP_BASE_DIR } from '../services/backup/backupConfig';
 
 const router = Router();
 
@@ -81,13 +82,9 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
   try {
     const body = createBackupSchema.parse(req.body);
 
-    // Pre-compute paths so we can store them in the DB record created inside the transaction.
-    // The BACKUP_PATH env and path logic must match backupService.ts exactly.
-    const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
-      process.platform === 'win32'
-        ? path.join(process.cwd(), 'data', 'backups')
-        : '/app/data/backups'
-    );
+    // Pre-compute paths so we can store them in the DB record created inside
+    // the transaction. BACKUP_BASE_DIR is the service's own constant, so the
+    // two cannot disagree.
     const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const precomputedId = `backup-${timestamp}`;
@@ -216,7 +213,8 @@ router.post('/cloud/download', async (req: AuthRequest, res: Response, next: Nex
       throw new AppError('Invalid backupName', 400);
     }
 
-    const BACKUP_BASE_DIR = process.env.BACKUP_PATH || '/app/data/backups';
+    // One definition of the backup directory, shared with the service — this
+    // copy used to lack the win32 branch its sibling below had.
     const baseDirResolved = path.resolve(BACKUP_BASE_DIR);
     const localPath = path.join(BACKUP_BASE_DIR, sanitized);
     const localPathResolved = path.resolve(localPath);
@@ -248,11 +246,8 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     const backup = await getBackup(id);
     res.json({ backup: serializeBigInt(backup) });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Backup not found') {
-      next(new AppError('Backup not found', 404));
-    } else {
-      next(error);
-    }
+    // The service throws with its status (forgejo#77); errorHandler reads it.
+    next(error);
   }
 });
 
@@ -274,11 +269,6 @@ router.get('/:id/download', async (req: AuthRequest, res: Response, next: NextFu
     }
 
     // Path containment check: ensure backupPath is within the expected base directory
-    const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
-      process.platform === 'win32'
-        ? path.join(process.cwd(), 'data', 'backups')
-        : '/app/data/backups'
-    );
     const resolvedPath = path.resolve(backup.backupPath);
     const resolvedBase = path.resolve(BACKUP_BASE_DIR);
     if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
@@ -349,11 +339,8 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
       message: 'Backup deleted successfully',
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Backup not found') {
-      next(new AppError('Backup not found', 404));
-    } else {
-      next(error);
-    }
+    // The service throws with its status (forgejo#77); errorHandler reads it.
+    next(error);
   }
 });
 
