@@ -61,6 +61,7 @@ const passport = (over: Partial<Passport["summary"]>, countries: PassportCountry
   summary: {
     countries: 40,
     countriesTotal: 43,
+    legacyCountries: 43,
     countryThreshold: "visited",
     airports: 61,
     entries: 210,
@@ -146,6 +147,7 @@ describe("PassportPage — headline, total and threshold", () => {
         {
           countries: 0,
           countriesTotal: 3,
+          legacyCountries: 3,
           byEvidence: { flight: 3, port: 0, place: 0, lodging: 0, track: 0 },
           byTier: { slept: 0, visited: 0, transited: 0, connection: 3 },
         },

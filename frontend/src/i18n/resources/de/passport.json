@@ -105,5 +105,10 @@
       "transited": "Ein reines Umsteigen am Flughafen zählt dann nicht. Eine Grenze, die du am Boden überquert hast, ein Hafentag, ein erfasster Ort und jede Übernachtung zählen weiterhin. Das ist die Voreinstellung."
     },
     "listUnchanged": "Die Länderliste im Reisepass ändert sich dadurch nicht: Jedes Land mit Nachweis bleibt sichtbar, nicht gezählte werden nur ausgegraut. Verändert wird allein die Zahl in der Kopfzeile."
+  },
+  "countingChanged": {
+    "text": "Zählweise geändert — vorher {{before}} Länder, jetzt {{after}}.",
+    "what": "Was zählt?",
+    "dismiss": "Verstanden"
   }
 }

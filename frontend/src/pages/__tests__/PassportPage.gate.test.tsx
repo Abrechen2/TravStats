@@ -47,6 +47,7 @@ describe("PassportPage — the beta gate", () => {
       summary: {
         countries: 0,
         countriesTotal: 0,
+        legacyCountries: 0,
         countryThreshold: "visited",
         airports: 0,
         entries: 0,

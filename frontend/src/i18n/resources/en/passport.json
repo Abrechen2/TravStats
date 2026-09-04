@@ -105,5 +105,10 @@
       "transited": "Merely changing planes at an airport does not count. A border you crossed on the ground, a day in port, a recorded place and every overnight stay still do. This is the default."
     },
     "listUnchanged": "This does not change the country list in your passport: every country with evidence stays visible, uncounted ones are merely greyed out. Only the headline number moves."
+  },
+  "countingChanged": {
+    "text": "Counting changed — {{before}} countries before, {{after}} now.",
+    "what": "What counts?",
+    "dismiss": "Got it"
   }
 }

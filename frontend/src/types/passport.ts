@@ -184,6 +184,8 @@ export interface Passport {
     countries: number;
     /** Every row in `countries`, whatever its tier. */
     countriesTotal: number;
+    /** What the rule before evidence tiers would have said — for the one-time notice (§5). */
+    legacyCountries: number;
     /** Which tier the headline counts from. Stated, so nothing has to assume it. */
     countryThreshold: CountryTier;
     /** Flights and airports only — a house proves a country, it adds no airport. */

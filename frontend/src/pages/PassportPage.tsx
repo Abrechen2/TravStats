@@ -9,6 +9,8 @@ import { countryName } from "../components/Passport/countryName";
 import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { useTranslation } from "../hooks/useTranslation";
+import { useDismissedNotice } from "../hooks/useDismissedNotice";
+import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { logger } from "../lib/logger";
@@ -44,6 +46,9 @@ const monthStamp = (iso: string | null, locale: string): string => {
 
 export default function PassportPage(): JSX.Element {
   const { t, i18n } = useTranslation(["passport", "common"]);
+  // One dismissal per user, keyed to the change it explains.
+  const userId = useAuthStore((s) => s.user?.id ?? "anonymous");
+  const countingNotice = useDismissedNotice(`passport-counting-2026-09.${userId}`);
   const { isEnabled } = useEnabledDomains();
   const gate = useBetaFeatureAccess("passport");
   const [passport, setPassport] = useState<Passport | null>(null);
@@ -248,6 +253,40 @@ export default function PassportPage(): JSX.Element {
                         <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
                           {t("passport:summary.countriesTotal")}
                         </dd>
+                        {/* Design §5: every user's number moved when evidence tiers
+                            arrived, and a number that changes without explanation
+                            reads as data loss. Said once, with the real figures. */}
+                        {passport.summary.legacyCountries !== passport.summary.countries &&
+                          !countingNotice.dismissed && (
+                            <dd
+                              className="mt-2 rounded-md px-3 py-2 text-xs"
+                              style={{
+                                background: "var(--bg-elevated)",
+                                border: "1px solid var(--color-border)",
+                                color: "var(--text-primary)",
+                              }}
+                            >
+                              <span>
+                                {t("passport:countingChanged.text", {
+                                  before: passport.summary.legacyCountries,
+                                  after: passport.summary.countries,
+                                })}
+                              </span>
+                              <span className="ml-2">
+                                <a href="#passport-evidence" className="underline">
+                                  {t("passport:countingChanged.what")}
+                                </a>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={countingNotice.dismiss}
+                                className="ml-3 underline"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {t("passport:countingChanged.dismiss")}
+                              </button>
+                            </dd>
+                          )}
                       </div>
                       {[
                         ["airports", passport.summary.airports],
@@ -289,7 +328,9 @@ export default function PassportPage(): JSX.Element {
                     </dl>
 
                     {/* Why the headline is not the total — the rule, named. */}
-                    <EvidenceSummary summary={passport.summary} hasTracks={hasTracks} />
+                    <section id="passport-evidence">
+                      <EvidenceSummary summary={passport.summary} hasTracks={hasTracks} />
+                    </section>
 
                     <h2
                       className="text-[11px] uppercase tracking-wider mb-2"

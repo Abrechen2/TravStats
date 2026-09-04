@@ -291,6 +291,15 @@ export interface Passport {
     /** Every row in `countries`, whatever its tier. What `byEvidence` sums to. */
     countriesTotal: number;
     /**
+     * The number the rule BEFORE this feature gave: a country counted when a
+     * flown flight touched one of its airports, whichever end. Every user's
+     * headline moved when evidence tiers arrived (design §5), and a number
+     * that changes without explanation reads as data loss — so the page says
+     * "vorher 32, jetzt 35" once, with the real figures. Computed from the
+     * rows so it can never drift from the list beside it.
+     */
+    legacyCountries: number;
+    /**
      * Which tier `countries` counts from — the RESOLVED value for this user
      * (their override, else the instance default), not a constant.
      *
@@ -668,6 +677,7 @@ export function buildPassport(
       // number and the list it belongs to can never answer differently.
       countries: countries.filter((c) => c.counted).length,
       countriesTotal: countries.length,
+      legacyCountries: countries.filter((c) => c.airports.length > 0).length,
       // The RESOLVED value, so a client never has to guess which rule produced
       // the number it is showing.
       countryThreshold: threshold,
