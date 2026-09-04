@@ -696,6 +696,8 @@ export interface AirportStats {
   airportCount: number;
   countryCount: number;
   continentCount: number;
+  /** The denominator the server counts against — never hard-code it here (forgejo#87). */
+  continentTotal: number;
   topAirports: Array<{
     code: string;
     name: string | null;

@@ -457,7 +457,7 @@
     "countryCount": "Countries visited",
     "countryCountDesc": "Distinct countries on your flight map.",
     "continentCount": "Continents",
-    "continentCountDesc": "How many of the 7 continents you've flown to.",
+    "continentCountDesc": "How many of the {{total}} continents you've flown to.",
     "topAirports": "Most visited airports",
     "topCountries": "Top countries",
     "rarestAirports": "Visited only once",
@@ -474,12 +474,6 @@
     "flightsCount_one": "{{count}} flight",
     "empty": "No data yet.",
     "continent": {
-      "europe": "Europe",
-      "northAmerica": "North America",
-      "southAmerica": "South America",
-      "asia": "Asia",
-      "africa": "Africa",
-      "oceania": "Oceania",
       "other": "Other"
     }
   },

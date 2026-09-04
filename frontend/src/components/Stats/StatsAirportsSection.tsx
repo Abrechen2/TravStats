@@ -1,25 +1,28 @@
 import type { AirportStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
 
 interface StatsAirportsSectionProps {
   airportStats: AirportStats | null;
 }
 
-const CONTINENT_LABEL_KEY: Record<string, string> = {
-  EU: "stats:airportStats.continent.europe",
-  NA: "stats:airportStats.continent.northAmerica",
-  SA: "stats:airportStats.continent.southAmerica",
-  AS: "stats:airportStats.continent.asia",
-  AF: "stats:airportStats.continent.africa",
-  OC: "stats:airportStats.continent.oceania",
-  Other: "stats:airportStats.continent.other",
-};
+/**
+ * The server names continents in its own vocabulary ("North America",
+ * "Antarctica"); the client only labels them, through the same keys the
+ * places domain uses. "Other" is the absence of a continent and keeps its
+ * own word.
+ */
+function continentKey(continent: string): string {
+  return continent === "Other"
+    ? "stats:airportStats.continent.other"
+    : continentI18nKey(continent);
+}
 
 export default function StatsAirportsSection({
   airportStats,
 }: StatsAirportsSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t } = useTranslation(["stats", "common"]);
 
   if (!airportStats) {
     return (
@@ -41,6 +44,7 @@ export default function StatsAirportsSection({
     airportCount,
     countryCount,
     continentCount,
+    continentTotal,
     topAirports,
     rarestAirports,
     newThisYear,
@@ -49,7 +53,7 @@ export default function StatsAirportsSection({
     continentDistribution,
   } = airportStats;
 
-  const continentTotal = Object.values(continentDistribution).reduce((s, v) => s + v, 0);
+  const distributionTotal = Object.values(continentDistribution).reduce((s, v) => s + v, 0);
   const sortedContinents = Object.entries(continentDistribution).sort(([, a], [, b]) => b - a);
 
   return (
@@ -74,10 +78,12 @@ export default function StatsAirportsSection({
           value={
             <>
               {continentCount}
-              <span className="text-xl ml-1 opacity-70">/ 6</span>
+              {/* The denominator is the server's, and it sits tight against the slash:
+                  "6/ 6" with a hard-coded six was the whole of forgejo#87. */}
+              <span className="text-xl opacity-70">/{continentTotal}</span>
             </>
           }
-          description={t("stats:airportStats.continentCountDesc")}
+          description={t("stats:airportStats.continentCountDesc", { total: continentTotal })}
         />
       </div>
 
@@ -278,12 +284,13 @@ export default function StatsAirportsSection({
           ) : (
             <ul className="space-y-2">
               {sortedContinents.map(([cont, count]) => {
-                const percent = continentTotal > 0 ? Math.round((count / continentTotal) * 100) : 0;
+                const percent =
+                  distributionTotal > 0 ? Math.round((count / distributionTotal) * 100) : 0;
                 return (
                   <li key={cont}>
                     <div className="flex items-center justify-between text-sm mb-1">
                       <span style={{ color: "var(--text-primary)" }}>
-                        {t(CONTINENT_LABEL_KEY[cont] || "stats:airportStats.continent.other")}
+                        {t(continentKey(cont))}
                       </span>
                       <span style={{ color: "var(--text-muted)" }}>
                         {count} ({percent}%)
