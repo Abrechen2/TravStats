@@ -32,6 +32,7 @@
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
     "bookmarkedHint": "Not visited yet — counted in no statistic.",
+    "spendPlanned": "planned: {{amount}}",
     "sortBy": "Sort by {{col}}",
     "footer": {
       "showing": "{{count}} lodgings",

@@ -13,7 +13,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
-import { countUnconvertedStays } from "../lib/lodgingFormat";
+import { countedStays, countUnconvertedStays } from "../lib/lodgingFormat";
+import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import {
   averageRatingsByCategory,
   formatRatingText,
@@ -188,10 +189,14 @@ export default function LodgingDetailPage(): JSX.Element {
 
   const typeIcon = lodgingTypeIcon(lodging.type);
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
-  const priced = hasAnyPrice(lodging.stays);
-  const unconvertedCount = countUnconvertedStays(lodging.stays ?? []);
+  // The stays `totalSpendBase` is summed over — never all of them, or a
+  // priced stay still ahead makes the card print the empty sum as "0 €"
+  // (forgejo#82; the list cell had the same defect).
+  const counted = countedStays(lodging.stays);
+  const priced = hasAnyPrice(counted);
+  const unconvertedCount = countUnconvertedStays(counted);
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
-  const originalSpend = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
+  const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
 
   return (
@@ -376,6 +381,7 @@ export default function LodgingDetailPage(): JSX.Element {
                   </dd>
                 </div>
               </dl>
+              <PlannedSpendNote stays={lodging.stays} />
               {/* A total that left rows out must say so. Silence here reads as
                   "this is everything", which is exactly the lie the marker on
                   each stay exists to prevent. */}
