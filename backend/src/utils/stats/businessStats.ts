@@ -65,6 +65,9 @@ export function calculateBusinessStats(
   // Deduplicate costs: if flights share a booking, count the booking price once.
   let totalDistance = 0;
   let totalCost = 0;
+  // Null, not 0, when no flight contributed (forgejo#83) — same rule as
+  // dedupedCost.ts, which this loop knowingly duplicates.
+  let anyCost = false;
   let totalDistanceWithCost = 0;
 
   const seenBookingIds = new Set<string>();
@@ -95,6 +98,7 @@ export function calculateBusinessStats(
 
     if (flightCost > 0) {
       totalCost += flightCost;
+      anyCost = true;
     }
 
     // Count distance for all flights with any cost attribution
@@ -232,7 +236,7 @@ export function calculateBusinessStats(
   return {
     costPerKm,
     costPerHour,
-    totalCost: Math.round(totalCost * 100) / 100,
+    totalCost: anyCost ? Math.round(totalCost * 100) / 100 : null,
     totalDistance: Math.round(totalDistance),
     seatClassDistribution,
     mostCommonCategory,

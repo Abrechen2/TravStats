@@ -264,15 +264,28 @@ export default function StatsYearFilter({
               </h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {formatCurrency(yearSummary.totalCost, baseCurrency)}
+                  {/* Null is "nothing recorded", not "free" (forgejo#83) — a dash, never 0 €. */}
+                  {yearSummary.totalCost === null
+                    ? "—"
+                    : formatCurrency(yearSummary.totalCost, baseCurrency)}
                 </p>
-                {compareSummary !== null && (
-                  <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
-                )}
+                {compareSummary !== null &&
+                  yearSummary.totalCost !== null &&
+                  compareSummary.totalCost !== null && (
+                    <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
+                  )}
               </div>
+              {yearSummary.totalCost === null && (
+                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.noPricesRecorded", { count: yearSummary.unpricedFlights })}
+                </p>
+              )}
               {compareSummary !== null && (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                  {formatCurrency(compareSummary.totalCost, baseCurrency)} ({compareYear})
+                  {compareSummary.totalCost === null
+                    ? "—"
+                    : formatCurrency(compareSummary.totalCost, baseCurrency)}{" "}
+                  ({compareYear})
                 </p>
               )}
             </div>

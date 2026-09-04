@@ -20,8 +20,20 @@ export interface DedupedCost {
   /**
    * Total in the user's base currency. Contains ONLY amounts that carry a
    * snapshot in that currency — never a raw figure from another one.
+   *
+   * `null`, not 0, when no amount reached it (forgejo#83): a year in which
+   * no flight carries a price used to read "Gesamtkosten 0 €", which is a
+   * claim — "these flights were free" — and not the truth, "nothing was
+   * recorded". The caller renders a dash and says how many flights had no
+   * price. Amounts that exist but could not be converted are not in `base`
+   * either; they sit in `unconvertedByCurrency`, and `base` is null when
+   * they are all there is.
    */
-  base: number;
+  base: number | null;
+  /** Flights whose own price or whose booking's price was recorded. */
+  pricedFlights: number;
+  /** Flights that contributed nothing — no price, no priced booking. */
+  unpricedFlights: number;
   /**
    * Amounts that could not be converted, kept in the currency they were paid
    * in. Reported beside the total rather than folded into it. An entry here is
@@ -52,6 +64,9 @@ export interface DedupedCost {
 export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: string): DedupedCost {
   const seenBookingIds = new Set<string>();
   let base = 0;
+  let contributedToBase = false;
+  let pricedFlights = 0;
+  let unpricedFlights = 0;
   const unconvertedByCurrency: Record<string, number> = {};
 
   const add = (
@@ -68,6 +83,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     // total of every existing logbook until some backfill ran.
     if (ownCurrency === baseCurrency) {
       base += amount;
+      contributedToBase = true;
       return;
     }
     // A snapshot only counts when it is in the base currency being reported.
@@ -75,6 +91,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     // those would be the same lie in a different coat.
     if (amountBase !== null && snapshotCurrency === baseCurrency) {
       base += amountBase;
+      contributedToBase = true;
       return;
     }
     // No unit recorded is its own bucket. It is NOT assumed to be the base
@@ -85,6 +102,9 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
 
   for (const flight of flights) {
     if (flight.bookingId && flight.booking?.price) {
+      // Every segment of a priced booking is a priced flight, even though the
+      // booking's amount is added once.
+      pricedFlights++;
       if (!seenBookingIds.has(flight.bookingId)) {
         seenBookingIds.add(flight.bookingId);
         add(
@@ -96,9 +116,16 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
       }
     } else {
       const own = (flight.price ?? 0) + (flight.taxes ?? 0) + (flight.fees ?? 0);
+      if (own > 0) pricedFlights++;
+      else unpricedFlights++;
       add(own, flight.priceBase, flight.fxBaseCurrency, flight.currency);
     }
   }
 
-  return { base: Math.round(base * 100) / 100, unconvertedByCurrency };
+  return {
+    base: contributedToBase ? Math.round(base * 100) / 100 : null,
+    pricedFlights,
+    unpricedFlights,
+    unconvertedByCurrency,
+  };
 }

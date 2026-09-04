@@ -71,13 +71,18 @@ export default function StatsBusinessSection({
             {t("stats:business.totalCost")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.totalCost, baseCurrency)}
+            {/* Null is "nothing recorded", not "free" (forgejo#83). */}
+            {businessStats.totalCost === null
+              ? "—"
+              : formatCurrency(businessStats.totalCost, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("stats:business.totalCostDesc", {
-              cost: formatCurrency(businessStats.totalCost, baseCurrency),
-              distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
-            })}
+            {businessStats.totalCost === null
+              ? t("stats:business.noPricesRecorded")
+              : t("stats:business.totalCostDesc", {
+                  cost: formatCurrency(businessStats.totalCost, baseCurrency),
+                  distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
+                })}
           </p>
         </div>
 

@@ -137,9 +137,14 @@ interface SummaryStats {
    * snapshot in that currency (#267) — this used to add every price together
    * regardless of currency and was then rendered with the user's display
    * symbol, so 300 USD + 300 EUR read as "600 €".
+   *
+   * Null when no amount reached it (forgejo#83) — a year with no priced
+   * flight is not a free year. `unpricedFlights` says how many had none.
    */
-  totalCost: number;
+  totalCost: number | null;
   totalCostCurrency: string;
+  /** Countable flights in the window that carry neither a price nor a priced booking. */
+  unpricedFlights: number;
   /**
    * What could not be converted, in the currency it was paid in. Reported
    * BESIDE the total, never folded into it. Lodging reports the same way.
@@ -362,6 +367,7 @@ async function computeSummary(
     byAirline,
     totalCost: cost.base,
     totalCostCurrency: baseCurrency,
+    unpricedFlights: cost.unpricedFlights,
     totalCostUnconverted: cost.unconvertedByCurrency,
     byCategory,
   };
@@ -1033,7 +1039,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
       businessStats = {
         costPerKm: 0,
         costPerHour: 0,
-        totalCost: 0,
+        totalCost: null,
         totalDistance: 0,
         seatClassDistribution: {},
         mostCommonCategory: null,

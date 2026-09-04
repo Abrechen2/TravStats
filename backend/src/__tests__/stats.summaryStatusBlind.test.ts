@@ -72,6 +72,22 @@ describe('summary headline figures count only flights that happened', () => {
           price: 900,
         },
         {
+          // A flown flight in a year of its own, with no price at all — the
+          // year the cost total must abstain for (forgejo#83).
+          userId,
+          flightNumber: 'LH400',
+          airline: 'Lufthansa',
+          depIata: 'FRA',
+          arrIata: 'MUC',
+          depLat: 50.0379,
+          depLon: 8.5622,
+          arrLat: 48.3538,
+          arrLon: 11.7861,
+          departureTime: new Date('2023-03-01T08:00:00Z'),
+          arrivalTime: new Date('2023-03-01T09:00:00Z'),
+          status: 'flown',
+        },
+        {
           userId,
           flightNumber: 'LH300',
           airline: 'Lufthansa',
@@ -95,13 +111,23 @@ describe('summary headline figures count only flights that happened', () => {
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it('counts the flown flight only', async () => {
+  it('counts the flown flights only', async () => {
     const res = await request(app)
       .get('/api/v1/stats/summary')
       .set('Cookie', cookie)
       .expect(200);
 
+    // LH100 (2024, priced) and LH400 (2023, unpriced) — never the booked or
+    // the cancelled one.
+    expect(res.body.totalFlights).toBe(2);
+  });
+
+  it('reports totalCost null, not 0, for a year whose flights are unpriced (forgejo#83)', async () => {
+    const res = await request(app).get('/api/v1/stats/summary?year=2023').set('Cookie', cookie);
+    expect(res.status).toBe(200);
     expect(res.body.totalFlights).toBe(1);
+    expect(res.body.totalCost).toBeNull();
+    expect(res.body.unpricedFlights).toBe(1);
   });
 
   it('sums the cost of the flown flight only', async () => {
@@ -120,7 +146,7 @@ describe('summary headline figures count only flights that happened', () => {
       .expect(200);
 
     expect(res.body.byStatus).toMatchObject({
-      flown: 1,
+      flown: 2,
       scheduled: 1,
       cancelled: 1,
     });
@@ -144,7 +170,7 @@ describe('summary headline figures count only flights that happened', () => {
     const hero = res.body.data ?? res.body;
     // Every figure in the object now describes the same population: whatever
     // count it reports, a positive count must come with a positive distance.
-    expect(hero.flights).toBe(1);
+    expect(hero.flights).toBe(2);
     expect(hero.distanceKm).toBeGreaterThan(0);
   });
 });

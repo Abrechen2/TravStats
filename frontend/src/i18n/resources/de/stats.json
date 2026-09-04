@@ -211,7 +211,9 @@
     "airlines": "Fluggesellschaften",
     "scopeLabel": "── Gesamt (alle Jahre) ──",
     "scopeHint": "unabhängig vom Jahres-Filter oben",
-    "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten"
+    "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten",
+    "noPricesRecorded_one": "Kein Preis erfasst — {{count}} Flug ohne Preis",
+    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {
@@ -395,7 +397,8 @@
     "avgFlightDurationDesc": "{{hours}} Stunden",
     "busiestMonth": "Reisestärkster Monat",
     "busiestMonthDesc": "{{month}} mit {{count}} Flügen",
-    "unconvertedNote": "Nicht umgerechnet: {{amounts}}"
+    "unconvertedNote": "Nicht umgerechnet: {{amounts}}",
+    "noPricesRecorded": "Kein Flug trägt einen Preis"
   },
   "unique": {
     "title": "🌟 Einzigartige Statistiken",

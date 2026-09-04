@@ -24,7 +24,7 @@ export interface FunStats {
 export interface BusinessStats {
   costPerKm: number;
   costPerHour: number;
-  totalCost: number;
+  totalCost: number | null;
   totalDistance: number;
   seatClassDistribution: Record<string, number>;
   mostCommonCategory: string | null;

@@ -338,7 +338,16 @@ export interface SummaryStats {
   avgDistance: number;
   byStatus: Record<string, number>;
   byAirline: Record<string, number>;
-  totalCost: number;
+  /**
+   * Null when no flight in the window carries a price (forgejo#83) — the
+   * server abstains rather than report a free year as "0 €".
+   */
+  totalCost: number | null;
+  totalCostCurrency: string;
+  /** What could not be converted, in the currency it was paid in (#267). */
+  totalCostUnconverted: Record<string, number>;
+  /** Countable flights in the window with neither a price nor a priced booking. */
+  unpricedFlights: number;
   byCategory: Record<string, number>;
 }
 
