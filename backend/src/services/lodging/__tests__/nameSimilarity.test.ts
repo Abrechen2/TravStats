@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { significantTokens, sharedSignificantTokens } from "../nameSimilarity";
+import { namesCouldBeOneHouse, significantTokens, sharedSignificantTokens } from "../nameSimilarity";
 
 /**
  * Every pair below is real, from the owner's own library, where one house was
@@ -77,5 +77,25 @@ describe("sharedSignificantTokens", () => {
     // Both are nothing but generic words; joining them would fold every
     // "Hotel Restaurant" in the catalogue into one house.
     expect(sharedSignificantTokens("Hotel Restaurant", "Restaurant Hotel")).toEqual([]);
+  });
+});
+
+// forgejo#84 — the decision the header promised the caller would make.
+describe("namesCouldBeOneHouse", () => {
+  it("never folds two houses in different towns, whatever the names share", () => {
+    expect(namesCouldBeOneHouse("Hotel Rose", "Hotel Rose", false)).toBe(false);
+  });
+
+  it("takes one shared identifying word as a guess when the town agrees", () => {
+    expect(namesCouldBeOneHouse("Hotel Meteora", "Hotel Restaurant Meteora", true)).toBe(true);
+    expect(namesCouldBeOneHouse("Hotel Post", "Gasthof Krone", true)).toBe(false);
+  });
+
+  it("needs two identifying words, or full containment, when the town is unknown", () => {
+    expect(namesCouldBeOneHouse("Emirates Palace, Abu Dhabi", "Emirates Palace Mandarin Oriental", null)).toBe(true);
+    expect(namesCouldBeOneHouse("Krafft Basel", "Hotel Krafft Basel", null)).toBe(true);
+    expect(namesCouldBeOneHouse("Corpus Christi KOA Journey", "Rockport / Corpus Christi KOA Journey", null)).toBe(true);
+    expect(namesCouldBeOneHouse("Hotel Meteora", "Hotel Restaurant Meteora", null)).toBe(false);
+    expect(namesCouldBeOneHouse("Hotel Post", "Hotel Post Garni", null)).toBe(false);
   });
 });

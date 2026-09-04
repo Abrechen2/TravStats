@@ -130,3 +130,37 @@ export function sharedSignificantTokens(nameA: string, nameB: string): string[] 
   const other = new Set(strictTokens(nameB));
   return strictTokens(nameA).filter((token) => other.has(token));
 }
+
+/**
+ * Could these two names be one house?
+ *
+ * This is the decision the header above says the caller must make, made
+ * once. `sameCity` is what the caller knows about WHERE the two sit: `true`
+ * when both carry a city and it agrees, `false` when both carry one and it
+ * does not, `null` when either has none (a saved-places export has no city).
+ *
+ * - Different towns: never. "Hotel Rose" is two real houses.
+ * - Same town: one shared identifying word is enough — "Hotel Meteora" and
+ *   "Hotel Restaurant Meteora" in the same street were two records for a year
+ *   (forgejo#84), and the answer is a GUESS the user confirms, never a silent
+ *   merge.
+ * - Unknown: two shared identifying words ("Emirates Palace" ⊂ "Emirates
+ *   Palace Mandarin Oriental"), or the shorter name's identifying words all
+ *   inside the longer one and at least two of them ("Krafft Basel" ⊂ "Hotel
+ *   Krafft Basel"). One word alone is not identity without a place.
+ */
+export function namesCouldBeOneHouse(
+  nameA: string,
+  nameB: string,
+  sameCity: boolean | null,
+): boolean {
+  if (sameCity === false) return false;
+  const shared = sharedSignificantTokens(nameA, nameB);
+  if (sameCity === true) return shared.length >= 1;
+
+  if (shared.length >= 2) return true;
+  const a = strictTokens(nameA);
+  const b = strictTokens(nameB);
+  const [shorter, longer] = a.length <= b.length ? [a, new Set(b)] : [b, new Set(a)];
+  return shorter.length >= 2 && shorter.every((t) => longer.has(t));
+}

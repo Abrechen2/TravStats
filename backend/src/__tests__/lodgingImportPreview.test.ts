@@ -65,6 +65,67 @@ describe("buildLodgingPreviewRows", () => {
     expect(summary).toEqual({ newRows: 0, alreadyPresent: 1, needsInput: 0 });
   });
 
+  // forgejo#84 — five pairs on the owner's account became ten houses because
+  // a booking mail and a saved-places export write one building differently,
+  // and neither carries a pin at preview time for the coordinate rule.
+  it("proposes the stored 'Hotel Restaurant Meteora' for an incoming 'Hotel Meteora' in the same town", async () => {
+    const stored = await prisma.lodging.create({
+      data: { userId, name: "Hotel Restaurant Meteora", city: "Tübingen" },
+    });
+    try {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Hotel Meteora", city: "Tübingen", lat: null, lon: null },
+          stay: null,
+        },
+      ]);
+      expect(rows[0].matchedLodgingId).toBe(stored.id);
+      expect(rows[0].dedupeHint).toBe("lodging_name_similar");
+      expect(rows[0].action).toBe("needs_input");
+    } finally {
+      await prisma.lodging.delete({ where: { id: stored.id } });
+    }
+  });
+
+  it("proposes 'Emirates Palace Mandarin Oriental' for a saved-places row that carries no city at all", async () => {
+    const stored = await prisma.lodging.create({
+      data: { userId, name: "Emirates Palace Mandarin Oriental", city: "Abu Dhabi" },
+    });
+    try {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Emirates Palace, Abu Dhabi", externalRef: "gmaps:123", lat: null, lon: null },
+          stay: null,
+        },
+      ]);
+      expect(rows[0].matchedLodgingId).toBe(stored.id);
+      expect(rows[0].dedupeHint).toBe("lodging_name_similar");
+    } finally {
+      await prisma.lodging.delete({ where: { id: stored.id } });
+    }
+  });
+
+  it("keeps two 'Hotel Rose' in different towns apart — one shared word is not identity", async () => {
+    const stored = await prisma.lodging.create({
+      data: { userId, name: "Hotel Rose", city: "Portland" },
+    });
+    try {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Hotel Rose", city: "Bietigheim-Bissingen", lat: null, lon: null },
+          stay: null,
+        },
+      ]);
+      expect(rows[0].matchedLodgingId).toBeNull();
+      expect(rows[0].action).toBe("create");
+    } finally {
+      await prisma.lodging.delete({ where: { id: stored.id } });
+    }
+  });
+
   it("skips a row whose stay externalRef already exists", async () => {
     const candidates: LodgingImportCandidate[] = [
       {

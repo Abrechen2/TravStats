@@ -306,7 +306,9 @@
       "lodging_exact_ref": "Bereits importiert (gleiche Referenz)",
       "lodging_name_city": "Passendes Hotel gefunden (Name + Ort)",
       "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Referenz)",
-      "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)"
+      "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)",
+      "lodging_name_similar": "Ähnlich benanntes Hotel gefunden — dasselbe Haus?",
+      "lodging_nearby": "Hotel an derselben Stelle gefunden — dasselbe Haus?"
     },
     "noBookings": "In dieser E-Mail bzw. diesem PDF wurden keine Buchungsdaten gefunden.",
     "csv": {
