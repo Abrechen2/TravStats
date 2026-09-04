@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Trip } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { computeTripInsights, type TripInsightWinner } from "../../lib/stats/tripInsights";
+import { TRIP_GRID_CLASS } from "./tripGrid";
 
 /**
  * Trip-level insights (#3): the standout trips across the whole logbook —
@@ -36,47 +37,47 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
   // were the only thing on the page running to the browser edge.
   return (
     <div className="px-4">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-      {tiles.map(({ key, label, win }) =>
-        win ? (
-          <button
-            key={key}
-            type="button"
-            onClick={() => navigate(`/trips/${win.tripId}`)}
-            className="cursor-pointer rounded-xl p-4 text-left transition-opacity hover:opacity-90"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <div
-              className="text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
+      <div className={`max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-6`}>
+        {tiles.map(({ key, label, win }) =>
+          win ? (
+            <button
+              key={key}
+              type="button"
+              onClick={() => navigate(`/trips/${win.tripId}`)}
+              className="cursor-pointer rounded-xl p-4 text-left transition-opacity hover:opacity-90"
+              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
-              {label}
-            </div>
-            <div className="text-lg font-semibold mt-1" style={{ color: "var(--accent)" }}>
-              {win.value}
-            </div>
-            <div className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
-              {win.name}
-            </div>
-          </button>
-        ) : (
-          <div
-            key={key}
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-surface)", border: "1px dashed var(--color-border)" }}
-          >
+              <div
+                className="text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {label}
+              </div>
+              <div className="text-lg font-semibold mt-1" style={{ color: "var(--accent)" }}>
+                {win.value}
+              </div>
+              <div className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                {win.name}
+              </div>
+            </button>
+          ) : (
             <div
-              className="text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
+              key={key}
+              className="rounded-xl p-4"
+              style={{ background: "var(--bg-surface)", border: "1px dashed var(--color-border)" }}
             >
-              {label}
+              <div
+                className="text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {label}
+              </div>
+              <div className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+                —
+              </div>
             </div>
-            <div className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-              —
-            </div>
-          </div>
-        )
-      )}
+          )
+        )}
       </div>
     </div>
   );

@@ -58,6 +58,7 @@ import type { ActivityItem } from "../sidebars/activityItems";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import type { Layer } from "@deck.gl/core";
+import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -85,8 +86,6 @@ function isAllMode(mode: unknown): mode is AllMode {
 // Remembered per browser: a key someone shut should stay shut on the next
 // visit, and it is a display preference rather than account state.
 const LEGEND_OPEN_KEY = "dashboard.legendOpen";
-
-const ATTRIBUTION_CLEARANCE = 52;
 
 export function AllTab(): JSX.Element {
   const { mode } = useDashboardRoute();

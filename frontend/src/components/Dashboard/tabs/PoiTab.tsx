@@ -19,13 +19,7 @@ import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
-
-/**
- * Bottom offset for overlays in MapLibre's attribution corner — the same
- * measurement the All tab documents: a 44 px bar plus the 8 px breathing room
- * the rest of the overlay set uses.
- */
-const ATTRIBUTION_CLEARANCE = 52;
+import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 
 interface HeatDatum {
   position: [number, number];
@@ -260,7 +254,12 @@ export function PoiTab(): JSX.Element {
             {legend.map((row) => (
               <li
                 key={row.slot}
-                style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "var(--text-secondary)",
+                }}
               >
                 <span
                   aria-hidden
@@ -276,9 +275,7 @@ export function PoiTab(): JSX.Element {
                     background:
                       row.slot === "wishlist" ? "transparent" : `rgb(${row.color.join(",")})`,
                     border:
-                      row.slot === "wishlist"
-                        ? `1.5px dashed rgb(${row.color.join(",")})`
-                        : "none",
+                      row.slot === "wishlist" ? `1.5px dashed rgb(${row.color.join(",")})` : "none",
                   }}
                 />
                 {row.label ?? t(`dashboard:poi.legend.${row.slot}`)}
@@ -288,9 +285,7 @@ export function PoiTab(): JSX.Element {
         </div>
       )}
 
-      {loading && (
-        <div style={overlayStyle}>{t("dashboard:poi.loading")}</div>
-      )}
+      {loading && <div style={overlayStyle}>{t("dashboard:poi.loading")}</div>}
       {loadError && (
         <div style={{ ...overlayStyle, color: "var(--danger)" }}>
           {t("dashboard:poi.loadError")}{" "}

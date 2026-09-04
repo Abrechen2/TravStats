@@ -34,6 +34,19 @@ describe("seedCuratedPlacesFromCSV", () => {
     expect(written).toBe(lists + places);
   });
 
+  // forgejo#66 — the biosphere-reserve and national-park lists shipped with
+  // no test naming them; a CSV dropped from the SOURCE_FILES array would
+  // have gone unnoticed.
+  it("seeds the biosphere-reserve and national-park lists, each with places", async () => {
+    await seedCuratedPlacesFromCSV();
+
+    for (const key of ["biosphere-reserves", "nationalparks-de", "nationalparks-us"]) {
+      const list = await prisma.curatedList.findUnique({ where: { key } });
+      const places = await prisma.curatedPlace.count({ where: { listKey: key } });
+      expect({ key, listed: list !== null, hasPlaces: places > 0 }).toEqual({ key, listed: true, hasPlaces: true });
+    }
+  });
+
   it("writes nothing on a second run", async () => {
     await seedCuratedPlacesFromCSV();
     expect(await seedCuratedPlacesFromCSV()).toBe(0);
