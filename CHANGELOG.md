@@ -402,6 +402,12 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+- **The direction arrows are back on the map.** rc.28 was the first candidate to
+  carry the page's Content-Security-Policy, and its `connect-src` did not admit
+  `data:` — deck.gl fetches its icon atlases from inline SVGs, so every cruise
+  arrow and the aeroplane marker vanished with "deck: Failed to fetch" in the
+  console. `data:` and `blob:` are allowed for connections now, and a test reads
+  the nginx config so the scheme cannot be tightened away again.
 - **Refreshing the backlog keeps the aircraft type and the actual times.** Three flights the owner had just taken came back with a registration and nothing else, out of a provider response that carried the aircraft model beside the registration and both actual times beside the scheduled ones — five fields were copied out and the rest dropped. The patch now carries all eight, on the same never-overwrite terms; the candidate query was widened so flights refreshed once are not locked out for ever, and it asks for both spellings of empty (125 rows NULL against 35 rows `""` on a real account — all three reported flights were in the 35).
 - **An overnight flight no longer gets the neighbouring day's aeroplane.** The provider answers with every flight that touches a local date — departing on it or landing on it — and for an overnight flight those are two different aeroplanes a day apart. LX93 stored as departing on the 2nd was answered with the flight that landed on the 2nd, which the rotation guard rightly refused, so every long-haul leg on the account carried no actual times while the short hop beside it had its own. Candidates are filtered on their local departure date before the pick.
 - **A flight in the air is asked about, whatever day it left on.** An up-front gate refused any live lookup for a flight whose departure date was not today — on the reasoning that real-time queries only cover today. An aeroplane that took off yesterday and has not landed is on the real-time feed this minute; both arrival checks of an overnight flight were being refused. The exception asks for a measured position in the air, so an ad-hoc lookup for a date last May is still refused as the historical question it is.
