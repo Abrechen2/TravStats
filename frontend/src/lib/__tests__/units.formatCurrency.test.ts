@@ -10,7 +10,7 @@
  * a host running under an English locale would get wrong.
  */
 import { describe, it, expect } from "vitest";
-import { formatCurrency } from "../units";
+import { formatAmount, formatCurrency } from "../units";
 
 describe("formatCurrency and the UI language", () => {
   it("writes a currency without a locale hint in German when the UI is German", () => {
@@ -53,5 +53,34 @@ describe("formatCurrency and the UI language", () => {
 
   it("compact drops the decimals", () => {
     expect(formatCurrency(1234.56, "EUR", { compact: true, language: "de" })).not.toContain("56");
+  });
+});
+
+/**
+ * forgejo#86 — three screens defaulted a missing currency to "EUR", which
+ * turned "unknown" into a claim. An amount without a code is a bare number.
+ */
+describe("formatAmount and an unknown currency", () => {
+  it("renders a null currency as a bare localised number, never as EUR", () => {
+    const out = formatAmount(40206.5, null, { language: "de" });
+    expect(out).toBe("40.206,5");
+    expect(out).not.toMatch(/EUR|€/);
+  });
+
+  it("follows the UI language for the bare number too", () => {
+    expect(formatAmount(40206.5, undefined, { language: "en" })).toBe("40,206.5");
+  });
+
+  it("is formatCurrency whenever a code is present", () => {
+    expect(formatAmount(40206, "EUR", { language: "de" })).toBe(
+      formatCurrency(40206, "EUR", { language: "de" })
+    );
+    expect(formatAmount(40206, "EUR", { compact: true, language: "de" })).toBe(
+      formatCurrency(40206, "EUR", { compact: true, language: "de" })
+    );
+  });
+
+  it("compact rounds the bare number to whole units", () => {
+    expect(formatAmount(1234.56, null, { compact: true, language: "de" })).toBe("1.235");
   });
 });

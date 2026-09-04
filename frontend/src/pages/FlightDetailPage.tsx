@@ -16,7 +16,7 @@ import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { getFlightDuration } from "../lib/flightDuration";
-import { convertDistance, getDistanceLabel } from "../lib/units";
+import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
@@ -82,7 +82,7 @@ function Card({
 export default function FlightDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation(["flights", "common", "trips", "specialFlights"]);
+  const { t, i18n } = useTranslation(["flights", "common", "trips", "specialFlights"]);
   const addToast = useToastStore((s) => s.addToast);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
 
@@ -195,7 +195,9 @@ export default function FlightDetailPage(): JSX.Element {
 
   const duration = getFlightDuration(flight);
   const money = (value: number | null | undefined): string | null =>
-    value === null || value === undefined ? null : `${value.toFixed(2)} ${flight.currency ?? ""}`;
+    value === null || value === undefined
+      ? null
+      : formatAmount(value, flight.currency, { language: i18n.language });
   const people = [...(flight.companions ?? []), ...(flight.coPassengers ?? [])];
 
   return (

@@ -1,14 +1,50 @@
 import { describe, it, expect } from "vitest";
 import {
   averageRatingsByCategory,
+  countedStays,
   derivePricePerNight,
   formatStayPriceDisplay,
   hasAnyPrice,
   nightsBetween,
   otherCurrencySpend,
+  plannedStays,
   singleOriginalCurrencySpend,
   type StayPriceSnapshot,
 } from "../lodgingFormat";
+
+// forgejo#82 — the spend cells must ask "is anything priced" of the SAME
+// stays the backend sums, or a planned, priced stay prints "0 €".
+describe("countedStays / plannedStays", () => {
+  const now = new Date("2026-09-04T12:00:00.000Z");
+  const past = {
+    status: "completed",
+    checkIn: "2024-01-01T00:00:00.000Z",
+    checkOut: "2024-01-03T00:00:00.000Z",
+  };
+  const ahead = {
+    status: "scheduled",
+    checkIn: "2099-09-07T00:00:00.000Z",
+    checkOut: "2099-09-08T00:00:00.000Z",
+  };
+  const cancelled = {
+    status: "cancelled",
+    checkIn: "2024-01-01T00:00:00.000Z",
+    checkOut: "2024-01-03T00:00:00.000Z",
+  };
+
+  it("keeps only the stays whose check-out is past", () => {
+    expect(countedStays([past, ahead, cancelled], now)).toEqual([past]);
+  });
+
+  it("names the stays still ahead, and never a cancelled one", () => {
+    expect(plannedStays([past, ahead, cancelled], now)).toEqual([ahead]);
+  });
+
+  it("reads the stored status when a stay has no dates", () => {
+    const undated = { status: "completed", checkIn: null, checkOut: null };
+    expect(countedStays([undated], now)).toEqual([undated]);
+  });
+});
 
 // The formatter takes the three state words together now (task 9): a rate the
 // user typed must be labelled as theirs, never as the ECB's.

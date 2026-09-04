@@ -1,4 +1,5 @@
 import { formatCurrency } from "./units";
+import { classifyStay, type LodgingCountState } from "../shared/lodgingCounting";
 import type { LodgingType } from "../types/lodging";
 
 const FALLBACK = "—";
@@ -241,6 +242,52 @@ export function nightsBetween(checkIn: string, checkOut: string): number {
  */
 export function formatRatingText(value: number | null): string {
   return value !== null ? `★ ${value}` : FALLBACK;
+}
+
+/** The subset of `LodgingStay` the counting rule needs, as the API delivers it (ISO strings). */
+export interface CountableStaySnapshot {
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+}
+
+function stayState(stay: CountableStaySnapshot, now?: Date): LodgingCountState {
+  // The same ISO-to-Date step `lodgingStatsAdapter` takes; the rule itself
+  // lives in `shared/lodgingCounting` and is not restated here.
+  return classifyStay(
+    {
+      status: stay.status,
+      checkIn: stay.checkIn === null ? null : new Date(stay.checkIn),
+      checkOut: stay.checkOut === null ? null : new Date(stay.checkOut),
+    },
+    now
+  );
+}
+
+/**
+ * The stays a lodging's figures are made of — the slice the backend sums
+ * into `totalSpendBase` (`computeAggregates`: a stay counts once its
+ * check-out is past).
+ *
+ * The spend cells used to decide their branch from ALL stays while the
+ * number they printed was this visited-only aggregate. A house whose only
+ * stay was planned and priced therefore passed `hasAnyPrice`, fell through to
+ * the converted total, and printed "0 €" — a hotel not yet slept in, reported
+ * as free (forgejo#82). Guard and figure must read the same set.
+ */
+export function countedStays<T extends CountableStaySnapshot>(
+  stays: readonly T[],
+  now?: Date
+): T[] {
+  return stays.filter((s) => stayState(s, now) === "visited");
+}
+
+/** The stays still ahead — what a "planned" footnote under the total is about. */
+export function plannedStays<T extends CountableStaySnapshot>(
+  stays: readonly T[],
+  now?: Date
+): T[] {
+  return stays.filter((s) => stayState(s, now) === "planned");
 }
 
 /** The subset of `LodgingStay` needed to derive a lodging's original-currency spend. */

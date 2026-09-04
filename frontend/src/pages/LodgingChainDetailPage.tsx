@@ -7,7 +7,13 @@ import { MembershipManager } from "../components/lodging/MembershipManager";
 import { useTranslation } from "../hooks/useTranslation";
 import { getChainDetail } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
-import { hasAnyPrice, lodgingTypeIcon, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import {
+  countedStays,
+  hasAnyPrice,
+  lodgingTypeIcon,
+  singleOriginalCurrencySpend,
+} from "../lib/lodgingFormat";
+import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
@@ -168,7 +174,12 @@ export default function LodgingChainDetailPage(): JSX.Element {
             being clipped by an aside that is mostly empty space. */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
-            <ChainStatsRow stats={stats} baseCurrency={baseCurrency} t={t} />
+            <ChainStatsRow
+              stats={stats}
+              lodgings={detail.lodgings}
+              baseCurrency={baseCurrency}
+              t={t}
+            />
           </div>
 
           <aside className="md:col-span-2">
@@ -277,20 +288,26 @@ function chainInitials(name: string): string {
 
 function ChainStatsRow({
   stats,
+  lodgings,
   baseCurrency,
   t,
 }: {
   stats: LodgingChainDetail["stats"];
+  lodgings: readonly Lodging[];
   baseCurrency: string;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
+  // `stats.totalSpendBase` is the sum over every hotel's counted stays, so the
+  // "is there anything to show" question is asked of that same set — not of
+  // `> 0`, which hid a genuine free stay behind a dash (forgejo#82).
+  const priced = hasAnyPrice(lodgings.flatMap((l) => countedStays(l.stays)));
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       <StatTile value={stats.hotelCount} label={t("lodging:chainDetail.stats.hotels")} />
       <StatTile value={stats.stayCount} label={t("lodging:chainDetail.stats.stays")} />
       <StatTile value={stats.nights} label={t("lodging:chainDetail.stats.nights")} />
       <StatTile
-        value={stats.totalSpendBase > 0 ? formatCurrency(stats.totalSpendBase, baseCurrency) : "—"}
+        value={priced ? formatCurrency(stats.totalSpendBase, baseCurrency) : "—"}
         label={t("lodging:chainDetail.stats.spend")}
       />
       <StatTile
@@ -319,15 +336,28 @@ function ChainHotelSpendCell({
   lodging: Lodging;
   baseCurrency: string;
 }): JSX.Element {
-  if (!hasAnyPrice(lodging.stays)) return <>—</>;
-  const original = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
-  if (!original) return <>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</>;
+  // Same set as the figure — see LodgingSpendCell on the list page (forgejo#82).
+  const counted = countedStays(lodging.stays);
+  const planned = <PlannedSpendNote stays={lodging.stays} />;
+  if (!hasAnyPrice(counted)) {
+    return <>—{planned}</>;
+  }
+  const original = singleOriginalCurrencySpend(counted, baseCurrency);
+  if (!original) {
+    return (
+      <>
+        <div>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</div>
+        {planned}
+      </>
+    );
+  }
   return (
     <>
       <div>{formatCurrency(original.amount, original.currency)}</div>
       <div className="text-[10px]" style={{ color: "var(--fx, #6ab7d8)" }}>
         ≈ {formatCurrency(lodging.totalSpendBase, baseCurrency)}
       </div>
+      {planned}
     </>
   );
 }
