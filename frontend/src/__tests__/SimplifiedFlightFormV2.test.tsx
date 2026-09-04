@@ -47,6 +47,22 @@ describe("SimplifiedFlightFormV2", () => {
     expect(screen.getByText(/flights:form\.title/i)).toBeInTheDocument();
   });
 
+  // #289: the backdrop paired `bg-black` with the Tailwind 3 `bg-opacity-*`
+  // utility. Tailwind 4 dropped that utility and emits nothing for it, so the
+  // map behind the form went solid black. The `/50` modifier is what Tailwind
+  // 4 reads. A class name is only visible to a test that looks at it, which is
+  // why this one does — the form rendered fine either way.
+  it("dims the page behind it rather than painting it black (#289)", () => {
+    const { container } = render(
+      <SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
+    );
+
+    const backdrop = container.firstElementChild;
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.className).toMatch(/\bbg-black\/50\b/);
+    expect(backdrop?.className).not.toMatch(/bg-opacity-/);
+  });
+
   it("should show error when airports are missing", async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 

@@ -55,10 +55,7 @@ export default function AirportSeedingModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
-        <div
-          className="fixed inset-0 transition-opacity bg-[var(--bg-base)]0 bg-opacity-75"
-          onClick={onClose}
-        ></div>
+        <div className="fixed inset-0 transition-opacity bg-(--bg-base)/75" onClick={onClose}></div>
 
         {/* Modal */}
         <div className="inline-block align-bottom bg-(--bg-surface) rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
