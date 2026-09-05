@@ -22,8 +22,8 @@
         "body": "Das ganze Logbuch exportiert in eine Tabelle und kommt wieder zurück — Flüge, Kreuzfahrten, Aufenthalte. Der CSV-Import zeigt vorher, was er tun wird, fragt bei möglichen Dubletten nach, und jeder Import hinterlässt eine Spur, die sich als Ganzes zurücknehmen lässt."
       },
       "tours": {
-        "title": "Touren, Companion-App und Dawarich sind aus der Beta",
-        "body": "Eine Reise kann gewandert, gefahren und geradelt werden, nicht nur geflogen: Etappen mit Routen im Reisejournal, ein Routeneditor, der mit der Maus bedient wird. Die Kopplung mit der TravStats-Companion-App und die Dawarich-Anbindung sind freigeschaltet."
+        "title": "Touren, Companion-App und Dawarich — für alle sichtbar, noch Beta",
+        "body": "Eine Reise kann gewandert, gefahren und geradelt werden, nicht nur geflogen: Etappen mit Routen im Reisejournal, ein Routeneditor, der mit der Maus bedient wird. Die Kopplung mit der TravStats-Companion-App und die Dawarich-Anbindung sind da. Alle drei sind unfertig und können sich noch ändern — sie stehen nicht hinter dem Schalter, tragen aber die Beta-Marke."
       },
       "stats": {
         "title": "Statistik und Erfolge sind gewachsen",

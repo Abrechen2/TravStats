@@ -22,8 +22,8 @@
         "body": "The whole logbook exports to one spreadsheet and comes back — flights, cruises, stays. The CSV import shows what it will do first, asks about likely duplicates, and every import leaves a trace that can be taken back as a whole."
       },
       "tours": {
-        "title": "Tours, the Companion app and Dawarich are out of beta",
-        "body": "A trip can be walked, driven and cycled, not only flown: sections with routes in the trip journal, a route editor worked with the mouse. Pairing with the TravStats Companion app and the Dawarich connection are released."
+        "title": "Tours, the Companion app and Dawarich — visible to everyone, still beta",
+        "body": "A trip can be walked, driven and cycled, not only flown: sections with routes in the trip journal, a route editor worked with the mouse. Pairing with the TravStats Companion app and the Dawarich connection are here. All three are unfinished and may still change — they are not behind the switch, but they carry the beta mark."
       },
       "stats": {
         "title": "Statistics and achievements have grown",

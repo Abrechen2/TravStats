@@ -65,6 +65,7 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
         icon: "🧭",
         titleKey: "entries.v260.tours.title",
         bodyKey: "entries.v260.tours.body",
+        beta: true,
       },
       {
         icon: "📊",
