@@ -174,7 +174,7 @@ describe("FlightEditModal", () => {
     expect(container.querySelector('option[value="flown"]')).toBeFalsy();
     // The pill renders the raw i18n key under the globally-mocked t(key) => key.
     expect(container.textContent).toContain("flights:status.flown");
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox = screen.getByLabelText("flights:status.cancelledCheckbox") as HTMLInputElement;
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
   });
@@ -199,12 +199,12 @@ describe("FlightEditModal", () => {
     expect(pill.style.color).toBe("rgb(251, 191, 36)");
   });
 
-  it("checking the cancelled checkbox submits status \"cancelled\"", async () => {
+  it('checking the cancelled checkbox submits status "cancelled"', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox = screen.getByLabelText("flights:status.cancelledCheckbox") as HTMLInputElement;
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
 
@@ -218,10 +218,10 @@ describe("FlightEditModal", () => {
   it('unchecking the cancelled checkbox on an already-cancelled flight submits status "scheduled" (backend re-derives)', async () => {
     const cancelledFlight: Flight = { ...mockFlight, status: "cancelled" };
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={cancelledFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox = screen.getByLabelText("flights:status.cancelledCheckbox") as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(false);
@@ -676,12 +676,7 @@ describe("FlightEditModal", () => {
     it("hides the stored day-01 of an UNKNOWN flight and adding a real day upgrades to DATE_ONLY", async () => {
       const onSave = vi.fn().mockResolvedValue(undefined);
       const { getByText } = render(
-        <FlightEditModal
-          flight={yearMonthFlight}
-          isOpen={true}
-          onClose={vi.fn()}
-          onSave={onSave}
-        />
+        <FlightEditModal flight={yearMonthFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
       );
 
       const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
@@ -696,6 +691,116 @@ describe("FlightEditModal", () => {
       expect(updates.departureLocal).toBe("1998-07-20T12:00");
       expect(updates.depTimeSemantics).toBe("DATE_ONLY");
       expect(updates.arrTimeSemantics).toBe("DATE_ONLY");
+    });
+  });
+
+  // 2.6.1: a historical flight had no way out. The create form offers the
+  // "historical (route only)" checkbox, the edit modal only rendered the
+  // year/month/day pickers and a read-only pill — so a flight imported without
+  // its clock could never be given one. The owner reported it as "the edit
+  // form has no way to adjust the times".
+  describe("leaving and entering historical", () => {
+    const dateOnlyFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: "1998-07-15T12:00:00.000Z",
+      arrivalTime: "1998-07-15T12:00:00.000Z",
+      depTimeSemantics: "DATE_ONLY",
+      arrTimeSemantics: "DATE_ONLY",
+    };
+
+    it("offers the historical checkbox, checked, on a historical flight", () => {
+      render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const toggle = screen.getByLabelText("flights:historicalCheckbox") as HTMLInputElement;
+      expect(toggle.checked).toBe(true);
+    });
+
+    it("unchecking it reveals the date and time inputs, keeping the known day", () => {
+      render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
+
+      const depDate = document.querySelector("#editDepartureDate") as HTMLInputElement;
+      const depTime = document.querySelector("#editDepartureTime") as HTMLInputElement;
+      expect(depDate).toBeTruthy();
+      expect(depTime).toBeTruthy();
+      expect(document.querySelector("#editHistoricalYear")).toBeFalsy();
+      expect(depDate.value).toBe("1998-07-15");
+      expect(depTime.value).toBe("");
+    });
+
+    it("unchecking it and entering times submits the clock, without DATE_ONLY semantics and no longer historical", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+      fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
+      fireEvent.change(document.querySelector("#editDepartureTime") as HTMLInputElement, {
+        target: { value: "10:00" },
+      });
+      fireEvent.change(document.querySelector("#editArrivalTime") as HTMLInputElement, {
+        target: { value: "12:30" },
+      });
+
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.status).not.toBe("historical");
+      expect(updates.departureLocal).toMatch(/^1998-07-15T10:00/);
+      expect(updates.arrivalLocal).toMatch(/^1998-07-15T12:30/);
+      expect(updates.depTimeSemantics).toBeUndefined();
+      expect(updates.arrTimeSemantics).toBeUndefined();
+    });
+
+    it("unchecking it without entering times refuses the save instead of inventing a clock", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+      fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      expect(await screen.findByText("errors:missingTimes")).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("a year-only flight leaves historical with an empty date, never a fabricated January 1st", () => {
+      const yearOnly: Flight = {
+        ...dateOnlyFlight,
+        departureTime: "1998-01-01T00:00:00.000Z",
+        arrivalTime: "1998-01-01T00:00:00.000Z",
+        depTimeSemantics: "UNKNOWN",
+        arrTimeSemantics: "UNKNOWN",
+      };
+      render(
+        <FlightEditModal flight={yearOnly} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
+      const depDate = document.querySelector("#editDepartureDate") as HTMLInputElement;
+      expect(depDate.value).toBe("");
+    });
+
+    it("checking it on a flown flight switches to the year/month/day pickers and submits historical", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+      const toggle = screen.getByLabelText("flights:historicalCheckbox") as HTMLInputElement;
+      expect(toggle.checked).toBe(false);
+      fireEvent.click(toggle);
+
+      expect(document.querySelector("#editHistoricalYear")).toBeTruthy();
+      expect(document.querySelector("#editDepartureTime")).toBeFalsy();
+
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.status).toBe("historical");
+      expect(updates.depTimeSemantics).toBe("DATE_ONLY");
     });
   });
 });
