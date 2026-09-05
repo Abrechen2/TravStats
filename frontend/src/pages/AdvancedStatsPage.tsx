@@ -62,7 +62,7 @@ import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
-import { resolveStatsTab } from "./statsTabAccess";
+import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import { DOMAINS, type DomainKey } from "../shared/domains";
 
 /**
@@ -661,7 +661,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             >
               {t("stats:filter.all")}
             </button>
-            {enabled.map((k) => {
+            {visibleStatsTabs(enabled, placesAccess).map((k) => {
               const d = DOMAINS[k];
               return (
                 <button

@@ -25,6 +25,21 @@ export type StatsTab = DomainKey | "all";
  * so it is `null` until `GET /settings` answers. Reading that "don't know yet"
  * as "no" is precisely what used to bounce people off /places on a hard reload.
  */
+/**
+ * Which domain tabs the strip draws. The same rule as `resolveStatsTab`, on
+ * the other side of the URL: on 2026-09-05 the strip still offered "POI /
+ * Besuche" on an instance with the beta flag off, because it was built from
+ * `enabled` alone while the deep link had already learned to ask
+ * `usePlacesAccess`. Pending keeps the tab (the app does not know yet);
+ * denied removes it.
+ */
+export function visibleStatsTabs(
+  enabledDomains: readonly DomainKey[],
+  placesAccess: PlacesAccess
+): DomainKey[] {
+  return enabledDomains.filter((key) => key !== "poi" || placesAccess !== "denied");
+}
+
 export function resolveStatsTab(
   requested: StatsTab,
   enabledDomains: readonly DomainKey[],

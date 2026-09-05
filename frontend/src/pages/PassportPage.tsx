@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
@@ -125,7 +125,14 @@ export default function PassportPage(): JSX.Element {
   // The nav entry is hidden behind the same gate; this closes the URL too, so
   // the gate is not merely cosmetic. The ENDPOINT stays open on purpose — the
   // Companion app is meant to read it whatever an instance's flag says.
-  if (gate === "denied" || !isEnabled("flight")) {
+  // A closed gate goes home like /places does. Until 2026-09-05 it fell into
+  // the "enable the flights domain" text below, which told a reader with
+  // flights switched on to switch them on.
+  if (gate === "denied") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!isEnabled("flight")) {
     return (
       <PageTransition>
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>

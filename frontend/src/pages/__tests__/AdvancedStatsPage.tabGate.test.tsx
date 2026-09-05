@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { resolveStatsTab } from "../statsTabAccess";
+import { resolveStatsTab, visibleStatsTabs } from "../statsTabAccess";
 
 /**
  * A deep link must not open a tab the reader does not have.
@@ -54,5 +54,29 @@ describe("resolveStatsTab", () => {
     // let the two answers drift; "allowed" with poi absent from the list is a
     // state the hook cannot produce, so it is not encoded as one.
     expect(resolveStatsTab("poi", [], "allowed")).toBe("poi");
+  });
+});
+
+// 2026-09-05, promote check with the beta flag off: the strip still drew
+// "POI / Besuche" for an account that had the domain on from beta days.
+describe("visibleStatsTabs", () => {
+  it("drops the POI tab when the instance does not allow it", () => {
+    expect(visibleStatsTabs(["flight", "cruise", "poi"], "denied")).toEqual(["flight", "cruise"]);
+  });
+
+  it("keeps the POI tab while the instance flag is still unknown", () => {
+    expect(visibleStatsTabs(["flight", "poi"], "pending")).toEqual(["flight", "poi"]);
+  });
+
+  it("keeps the POI tab once the instance allows it", () => {
+    expect(visibleStatsTabs(["flight", "poi"], "allowed")).toEqual(["flight", "poi"]);
+  });
+
+  it("never touches the other domains", () => {
+    expect(visibleStatsTabs(["flight", "cruise", "lodging"], "denied")).toEqual([
+      "flight",
+      "cruise",
+      "lodging",
+    ]);
   });
 });

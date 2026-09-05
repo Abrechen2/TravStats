@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const flag: { value: boolean | null } = { value: null };
 
@@ -79,19 +79,25 @@ describe("PassportPage — the beta gate", () => {
     expect(getPassportMock).not.toHaveBeenCalled();
   });
 
-  it("does not show the passport when the gate is closed", async () => {
+  it("goes home when the gate is closed, like /places does", async () => {
     flag.value = false;
     render(
-      <MemoryRouter>
-        <PassportPage />
+      <MemoryRouter initialEntries={["/passport"]}>
+        <Routes>
+          <Route path="/passport" element={<PassportPage />} />
+          <Route path="/" element={<div>home-marker</div>} />
+        </Routes>
       </MemoryRouter>
     );
 
     await waitFor(() => {
-      expect(screen.getByText("passport:title")).toBeInTheDocument();
+      expect(screen.getByText("home-marker")).toBeInTheDocument();
     });
-    // The title stands, but nothing from the passport itself — no stamps card.
-    expect(screen.queryByText("passport:stamps")).not.toBeInTheDocument();
+    // Neither the title nor the "enable flights" hint — the reader has flights
+    // on; the instance simply does not offer the page.
+    expect(screen.queryByText("passport:title")).not.toBeInTheDocument();
+    expect(screen.queryByText("passport:needsFlights")).not.toBeInTheDocument();
+    expect(getPassportMock).not.toHaveBeenCalled();
   });
 
   it("shows it once the gate is open", async () => {
