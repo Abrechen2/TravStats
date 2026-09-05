@@ -152,17 +152,9 @@
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
           },
-          "passport": {
-            "name": "Reisepass",
-            "what": "Eine eigene Seite mit Stempeln, Kontinent-Quoten und einer Länderliste — gespeist aus den Flugdaten."
-          },
           "domainColors": {
             "name": "Eigene Bereichsfarben",
             "what": "Die Farbe je Bereich wird einstellbar, statt fest aus der Marke zu kommen. Wirkt in Statistiken, Zeitleiste, Aktivitätsleiste und Import-Protokoll."
-          },
-          "poiDomain": {
-            "name": "Orte",
-            "what": "Der ganze Bereich Orte: Anlegen, Bearbeiten, Detailseite, Liste, Karte, eigene Listen und die mitgelieferten Checklisten."
           },
           "tourRoutes": {
             "name": "Touren",
@@ -171,6 +163,10 @@
           "dawarich": {
             "name": "Dawarich-Anbindung",
             "what": "Eine Verbindung zu einer Dawarich-Instanz, aus der aufgezeichnete Wegstrecken übernommen werden."
+          },
+          "parserTemplates": {
+            "name": "Parser-Werkstatt",
+            "what": "Die Parser-Seite für Admins: E-Mails annotieren und daraus Vorlagen ableiten, eigene und Community-Vorlagen, das Parse-Protokoll. Das Einlesen einer Buchung im Dialog „Hinzufügen“ bleibt davon unberührt."
           }
         }
       },

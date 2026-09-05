@@ -95,14 +95,16 @@ describe("DomainTabStrip", () => {
     expect(onSelect).toHaveBeenCalledWith("poi");
   });
 
-  // The POI tab hides behind `poiDomain` — a DIFFERENT gate from the
-  // `poiDashboardTab` one it replaced, and hidden for a different reason. That
-  // one hid a stub: an emoji and a "nothing here yet" line. This one hides a
-  // real domain (Place + PlaceVisit, a migration off the old trip stops, an
-  // API, a map layer, a list) that is not FINISHED — no detail page, no way to
-  // create a place from the UI, no lists yet. See config/betaFeatures.ts.
-  describe("beta gate: poiDomain", () => {
-    const renderStrip = (): void => {
+  // The POI tab sat behind `poiDomain` until 2026-09-05, when the gate's own
+  // condition (the CSV import getting a surface) was met. Pinned here so the
+  // gate does not quietly come back: the tab is drawn whatever the flag says.
+  describe("places left the beta switch", () => {
+    it.each([
+      ["off", false],
+      ["unknown (not loaded yet)", null],
+      ["on", true],
+    ])("shows the POI tab when the beta flag is %s", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
       render(
         <DomainTabStrip
           active="all"
@@ -111,23 +113,6 @@ describe("DomainTabStrip", () => {
           onSelect={() => {}}
         />
       );
-    };
-
-    it.each([
-      ["off", false],
-      ["unknown (not loaded yet)", null],
-    ])("hides the POI tab when the beta flag is %s", (_label, flag) => {
-      useSettingsStore.setState({ betaFeaturesEnabled: flag });
-      renderStrip();
-      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
-      // the ungated tabs are untouched
-      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
-      expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
-    });
-
-    it("shows the POI tab when the beta flag is on", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: true });
-      renderStrip();
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
     });
   });

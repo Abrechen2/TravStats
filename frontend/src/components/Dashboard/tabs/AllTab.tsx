@@ -147,9 +147,9 @@ export function AllTab(): JSX.Element {
   const cruisesVisible = filterDomains.includes("cruise") && isEnabled("cruise");
   const lodgingsVisible = filterDomains.includes("lodging") && isEnabled("lodging");
   const placeColorConfig = usePlaceColorStore((st) => st.config);
-  // POI carries a second gate on top of the domain switch — the instance-level
-  // beta flag. `usePlacesVisible` combines both, and hiding chrome fails closed
-  // on "don't know yet" so a tab never flashes pins in and then loses them.
+  // POI asks `usePlacesVisible`, the one home of the places rule — the user's
+  // domain choice alone since 2026-09-05 (the instance beta flag used to be a
+  // second condition here).
   const placesAllowed = usePlacesVisible();
   const placesVisible = filterDomains.includes("poi") && placesAllowed;
 

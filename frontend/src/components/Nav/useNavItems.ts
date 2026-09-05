@@ -61,9 +61,10 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
   const isAdmin = user?.isAdmin ?? false;
 
   return useMemo(() => {
-    // `poi` is available but still behind the instance beta gate, so it needs
-    // BOTH checks — the user's own enabled-domains choice and the flag. See
-    // hooks/usePlacesVisible.ts.
+    // `poi` asks through `usePlacesVisible`, the one home of the places rule.
+    // It used to combine the user's domain choice with the instance beta flag;
+    // since 2026-09-05 it is the domain choice alone, and the call site stays
+    // the same so the rule keeps one home. See hooks/usePlacesVisible.ts.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
       key === "poi" ? placesVisible : isEnabled(key)
     ).map((key) => ({

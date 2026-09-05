@@ -152,17 +152,9 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
-          "passport": {
-            "name": "Passport",
-            "what": "A page of stamps, continent quotas and a country table, built from your flight data."
-          },
           "domainColors": {
             "name": "Custom domain colours",
             "what": "Makes the per-domain colour a setting rather than a brand constant. Applies to statistics, the trip timeline, the activity rail and the import log."
-          },
-          "poiDomain": {
-            "name": "Places",
-            "what": "The whole Places domain: create, edit, detail page, list, map, custom lists and the shipped checklists."
           },
           "tourRoutes": {
             "name": "Tours",
@@ -171,6 +163,10 @@
           "dawarich": {
             "name": "Dawarich connection",
             "what": "A connection to a Dawarich instance that recorded tracks are pulled from."
+          },
+          "parserTemplates": {
+            "name": "Parser workshop",
+            "what": "The admin parser page: annotate e-mails to derive templates, own and community templates, the parse log. Reading a booking in the “Add” dialog is unaffected."
           }
         }
       },

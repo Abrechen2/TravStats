@@ -23,9 +23,8 @@ import { DOMAINS } from "../../shared/domains";
 
 describe("ModuleSection", () => {
   beforeEach(() => {
-    // The POI row only appears on a beta-flagged instance (`poiDomain`), and
-    // most cases here are about the row mechanics rather than the gate, so the
-    // flag is open by default. The gate itself is asserted separately below.
+    // The flag is set only so the assertions below can vary it; since
+    // 2026-09-05 no row here depends on it.
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
   });
 
@@ -57,20 +56,16 @@ describe("ModuleSection", () => {
     expect(screen.getByRole("switch", { name: /domain\.poi/ })).not.toBeDisabled();
   });
 
-  // The row is where the user turns the domain ON, so it cannot be gated on
-  // "already enabled" — that would make it permanently unreachable. It is
-  // gated on the instance flag alone, which is why this asserts the flag and
-  // not usePlacesVisible.
+  // Until 2026-09-05 the poi row was hidden while the instance beta flag was
+  // off or unknown. The gate's own condition was met and it came off; pinned
+  // so it does not quietly return.
   it.each([
     ["off", false],
     ["unknown (not loaded yet)", null],
-  ])("hides the poi module entirely when the beta flag is %s", (_label, flag) => {
+  ])("shows the poi module when the beta flag is %s", (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     render(<ModuleSection />);
-    expect(screen.queryByText("domain.poi")).toBeNull();
-    // the ungated modules are untouched
-    expect(screen.getByText("domain.flight")).toBeInTheDocument();
-    expect(screen.getByText("domain.lodging")).toBeInTheDocument();
+    expect(screen.getByText("domain.poi")).toBeInTheDocument();
   });
 
   it("does not disable the now-available lodging domain", () => {

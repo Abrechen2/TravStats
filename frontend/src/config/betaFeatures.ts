@@ -106,36 +106,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
-   * the module toggle, and place visits on the trip timeline.
-   *
-   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
-   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
-   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
-   *
-   * The three gaps this entry used to name are CLOSED (checked 2026-08-30):
-   * the appearance panel has `map/PlaceAppearanceSection.tsx`, the All tab
-   * loads places and place lists, and both custom lists (phase B) and the
-   * curated checklists (phase C) ship. The `why` below was rewritten because a
-   * gate whose stated reason has expired is worse than an unexplained one —
-   * nobody re-reads a reason they have already accepted.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
-   * data. A user who created places on a beta instance and then upgrades to a
-   * build with the flag off still owns those rows; they simply stop being
-   * shown. Nothing here deletes or migrates anything, and the backend
-   * endpoints stay reachable (this is a visibility gate — see the file header),
-   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
-   * intact the moment the flag comes back on.
-   */
-  poiDomain: Object.freeze({
-    reason: "beta",
-    why: "Places can still only be added one at a time, by hand — but the reason has moved, and this entry said the wrong one until 2026-09-03. The import EXISTS now: `POST /place-import/preview` and `/commit` (backend/src/routes/placeImport.ts) take CSV rows, dedupe them and write them behind an ImportBatch that can be undone. Nothing in the frontend calls either route, and `frontend/src/lib/importers/placeCsv.ts` is referenced only by its own test. Settings → Import therefore still renders the POI group empty, because `poiAdapter.tsx` reads POI_IMPORT_READY = false and hides both tiles. What this gate holds back is no longer a missing capability; it is a built capability with no way in.",
-    returnsWhen:
-      "The CSV import gets its surface: an import tile, a client for the two routes, and a preview dialog for the rows that need a decision — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md §5, which rules that an unplaceable row is an OFFER, not a drop, and so cannot ship without somewhere to make the offer. The other two conditions this gate used to wait for are MET: the picker mints an identity (`externalRef: osmRef(props)`, backend/src/services/geo/photon.ts), so the @@unique([userId, externalRef]) index now fires and the duplicate argument is gone; custom lists (phase B) shipped earlier.",
-  }),
-
-  /**
    * The "Touren" tab on the trip detail page (tour route sections: a named
    * ordered chain of stops with driven legs — the road-trip counterpart to
    * cruise itineraries), and its editor at

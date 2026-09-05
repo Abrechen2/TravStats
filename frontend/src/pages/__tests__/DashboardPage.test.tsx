@@ -94,14 +94,14 @@ beforeEach(() => {
 });
 
 describe("DashboardPage: gated tabs at a cold-load 'don't know yet' beta flag", () => {
-  it("renders neither PoiTab nor TourTab while betaFeaturesEnabled is null (pending)", () => {
+  it("renders no TourTab while betaFeaturesEnabled is null (pending) — but PoiTab, which left the switch on 2026-09-05", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null });
 
     renderAt("tour");
     expect(screen.queryByTestId("tour-tab")).not.toBeInTheDocument();
 
     renderAt("poi");
-    expect(screen.queryByTestId("poi-tab")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-tab")).toBeInTheDocument();
   });
 
   it("renders TourTab once the flag resolves true, matching PoiTab's own resolved case", () => {

@@ -58,23 +58,19 @@ export function DomainTabStrip({
   const { t } = useTranslation(["dashboard"]);
   const { isFeatureVisible } = useBetaFeatures();
 
-  // The instance beta flag ALONE, deliberately not `usePlacesVisible`. This
+  // The instance beta flag ALONE, deliberately not the enabled state. This
   // strip already receives `enabled` as a prop, and its contract is that a
   // domain the user has switched off is DIMMED, not hidden — that is what lets
   // them click through to the "coming soon" screen and turn it back on. Mixing
   // the enabled state in here would hide the tab instead and break that.
   //
-  // The Places domain is real but unfinished, so it ships to beta instances
-  // only — a different gate from the `poiDashboardTab` stub one it replaced,
-  // and hidden for a different reason. See config/betaFeatures.ts.
-  //
-  // "Touren" is gated the same shape, but on a DIFFERENT flag (`tourRoutes`)
-  // — the feature is complete, the gate is only withholding it until the
-  // owner's release decision (config/betaFeatures.ts).
+  // "Touren" is the one tab still gated: the feature is complete, the gate is
+  // only withholding it until the owner's release decision
+  // (config/betaFeatures.ts). Places sat behind a gate of the same shape
+  // (`poiDomain`) until 2026-09-05, when its own condition — the CSV import
+  // getting a surface — was met.
   const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) =>
-      (tab !== "poi" || isFeatureVisible("poiDomain")) &&
-      (tab !== "tour" || isFeatureVisible("tourRoutes"))
+    (tab) => tab !== "tour" || isFeatureVisible("tourRoutes")
   );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —

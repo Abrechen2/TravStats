@@ -94,15 +94,21 @@ describe("ImportSection — central import hub", () => {
   // POI Phase D §5. Until 2026-09-05 the places group rendered empty although
   // both backend routes existed — the `poiDomain` gate named this tile as its
   // un-gating condition.
-  it("renders the places group with its CSV tile when the domain is on and the instance allows it", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: true });
-    render(<ImportSection />);
-    expect(screen.getByText("common:domain.poi")).toBeTruthy();
-    expect(screen.getByTestId("tile-poi-csv")).toBeTruthy();
-  });
+  it.each([
+    ["off", false],
+    ["on", true],
+  ])(
+    "renders the places group with its CSV tile when the domain is on, beta flag %s",
+    (_l, flag) => {
+      useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: flag });
+      render(<ImportSection />);
+      expect(screen.getByText("common:domain.poi")).toBeTruthy();
+      expect(screen.getByTestId("tile-poi-csv")).toBeTruthy();
+    }
+  );
 
-  it("hides the places group while the instance beta switch is off, even with the domain on", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: false });
+  it("hides the places group when the user has the domain off", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     render(<ImportSection />);
     expect(screen.queryByTestId("tile-poi-csv")).toBeNull();
     expect(screen.queryByText("common:domain.poi")).toBeNull();

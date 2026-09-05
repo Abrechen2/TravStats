@@ -185,8 +185,10 @@ describe("OverviewTab — compare persistence (issue #188)", () => {
 });
 
 // 2026-09-05, promote check with the beta flag off: the tab strip had learned
-// to hide POI, the overview's chips and cards had not.
-describe("OverviewTab — the POI domain follows the instance gate", () => {
+// to hide POI, the overview's chips and cards had not. Later the same day the
+// domain left the switch altogether; what remains of the rule is the user's
+// own domain choice, asked through the same `usePlacesAccess`.
+describe("OverviewTab — the POI domain follows the user's domain choice", () => {
   beforeEach(() => {
     localStorage.clear();
     useStatsCompareStore.getState().reset();
@@ -194,15 +196,18 @@ describe("OverviewTab — the POI domain follows the instance gate", () => {
     mockDomainStats(flightStats({ 2024: 6 }));
   });
 
-  it("draws no POI chip or card when the instance does not allow the domain", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: false });
+  it("draws no POI chip or card when the user has the domain off", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     render(<OverviewTab flights={[]} achievements={null} />);
     expect(screen.queryAllByText("common:domain.poi")).toHaveLength(0);
     expect(screen.queryAllByText("common:domain.flight").length).toBeGreaterThan(0);
   });
 
-  it("draws them once the instance allows it", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: true });
+  it.each([
+    ["off", false],
+    ["on", true],
+  ])("draws them with the domain on, whatever the beta flag (%s) says", (_label, flag) => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: flag });
     render(<OverviewTab flights={[]} achievements={null} />);
     expect(screen.queryAllByText("common:domain.poi").length).toBeGreaterThan(0);
   });

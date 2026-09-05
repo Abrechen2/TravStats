@@ -1,6 +1,5 @@
 import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 
@@ -26,11 +25,10 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
     }
   };
 
-  const { isFeatureVisible } = useBetaFeatures();
-  // On a fresh install the settings request has not happened yet, so the flag
-  // is unknown and reads as OFF — which is the right answer here: a brand-new
-  // instance should not be offered a domain that is still in beta.
-  const visibleKeys = DOMAIN_KEYS.filter((key) => key !== "poi" || isFeatureVisible("poiDomain"));
+  // Every domain, since 2026-09-05. Places was withheld from a fresh install
+  // while it was in beta (the flag is unknown before the first settings
+  // request, and unknown read as OFF here on purpose); that gate is gone.
+  const visibleKeys = DOMAIN_KEYS;
 
   return (
     <div className="space-y-4">
