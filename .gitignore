@@ -27,6 +27,8 @@ CLAUDE.local.md
 !ROADMAP.md
 !SECURITY.md
 !docs/**/*.md
+!design/**/*.md
+!ClaudeDesign/**/*.md
 !backend/OLLAMA_OPTIMIZATION.md
 # Provenance of the seeded catalogs. The POI spec REQUIRES the source and
 # licence of any bulk-derived catalog to be recorded next to the data, so this
@@ -139,6 +141,7 @@ backend/data/.cache/
 .playwright-mcp/
 .superpowers/
 screenshots/
+!ClaudeDesign/screenshots/
 
 # Loose screenshots / lab renders / demo PNGs that accumulate at the
 # repo root during sessions. Tracked PNGs (docs/images/, frontend/public/,
