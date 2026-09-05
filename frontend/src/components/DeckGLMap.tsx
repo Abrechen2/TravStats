@@ -1,14 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import MapGL, {
-  useControl,
-  useMap,
-  type MapRef,
-  type MapLayerMouseEvent,
-} from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import { applyHoverCursor } from "./map/mapCursor";
+import MapGL, { type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import { DeckGLOverlay, webgl2Available } from "./map/DeckGLOverlay";
 import { createMarkerTooltip } from "./map/markerTooltip";
-import { LightingEffect, type PickingInfo } from "@deck.gl/core";
+import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
 import { applyMapOverlays } from "./Globe/mapOverlays";
@@ -43,7 +37,7 @@ import {
 } from "./layers/cruiseArcsLayer";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
-import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
+import { useCruiseGeometry } from "../hooks/useCruiseGeometry";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
@@ -67,19 +61,6 @@ import {
 // reprojection as the camera moves. Was 1800 ms, which read as sluggish.
 const TOOLTIP_DELAY_MS = 220;
 
-/** Check once whether WebGL2 is available (deck.gl requires it). */
-function hasWebGL2(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2");
-    return gl !== null;
-  } catch {
-    return false;
-  }
-}
-
-const webgl2Available = hasWebGL2();
-
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 30,
@@ -87,41 +68,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-interface DeckOverlayProps {
-  layers: Layer[];
-  effects: LightingEffect[];
-  getTooltip: ReturnType<typeof createMarkerTooltip>;
-  onHover: (info: PickingInfo) => void;
-}
-
-function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProps): null {
-  const { current: map } = useMap();
-  // Issue #247: the pointer must say what is clickable. deck.gl's own
-  // `getCursor` cannot do it here — MapboxOverlay mounts the deck canvas with
-  // `pointerEvents: 'none'` and never reads that prop, so the visible cursor
-  // belongs to the MapLibre canvas underneath.
-  const hoverWithCursor = (info: PickingInfo): void => {
-    applyHoverCursor(map, Boolean(info.object));
-    onHover(info);
-  };
-  const overlay = useControl<MapboxOverlay>(
-    () =>
-      new MapboxOverlay({
-        layers,
-        effects,
-        pickingRadius: 5,
-        getTooltip,
-        onHover: hoverWithCursor,
-      }),
-    { position: "top-left" }
-  );
-  // Push getTooltip on every render too so language switches propagate
-  // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
-  // rides along for the same reason.
-  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover: hoverWithCursor });
-  return null;
-}
 
 interface DeckGLMapProps {
   flights: GeoJSONFeature[];
@@ -386,54 +332,9 @@ export function DeckGLMap({
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
 
-  // Real A* sea-route geometry for each cruise, indexed by cruise id.
-  // Fetched lazily after mount; the arcs layer renders Bezier until an
-  // entry lands here, then swaps to the computed route. Any fetch
-  // failure is logged via the api client's interceptor and left as
-  // a missing entry — the Bezier fallback keeps the UI working.
-  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
-    () => new Map()
-  );
-
-  // Ref mirror of `cruiseGeometry` so the fetch loop can read the
-  // latest state without re-triggering the effect on every successful
-  // fetch. We only want to re-run when the cruise list itself changes.
-  const cruiseGeometryRef = useRef<Map<string, CruiseRouteFeatureCollection>>(cruiseGeometry);
-  useEffect(() => {
-    cruiseGeometryRef.current = cruiseGeometry;
-  }, [cruiseGeometry]);
-
-  useEffect(() => {
-    if (cruises.length === 0) return;
-    let cancelled = false;
-    // Single batch round-trip for all cruise geometries. Server returns
-    // a {[id]: FeatureCollection} map; we merge into local state. The
-    // server cache makes repeat calls (mode switches, refilters) cheap.
-    // Anything already in state is filtered out so we never re-fetch.
-    const run = async (): Promise<void> => {
-      const missingIds = cruises
-        .map((c) => c.id)
-        .filter((id) => !cruiseGeometryRef.current.has(id));
-      if (missingIds.length === 0) return;
-      try {
-        const batch = await cruiseApi.getGeometryBatch(missingIds);
-        if (cancelled) return;
-        setCruiseGeometry((prev) => {
-          const next = new Map(prev);
-          for (const [id, fc] of batch.entries()) {
-            if (!next.has(id)) next.set(id, fc);
-          }
-          return next;
-        });
-      } catch {
-        // Swallow — interceptor handles logging. Bezier fallback remains.
-      }
-    };
-    void run();
-    return (): void => {
-      cancelled = true;
-    };
-  }, [cruises]);
+  // Real sea-route geometry per cruise, fetched lazily after mount; the arcs
+  // layer draws a straight chord until an entry lands here.
+  const cruiseGeometry = useCruiseGeometry(cruises);
 
   // Per-field selectors. Bare `useFlightSelectionStore()` would re-render
   // the map on every field change in the store; with selectors we only

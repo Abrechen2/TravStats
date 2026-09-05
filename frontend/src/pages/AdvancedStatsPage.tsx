@@ -49,12 +49,9 @@ import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
-import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
-import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
-import TimeRangeControl, { type WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
-import CanonicalTimeSeries from "../components/Stats/scorecard/CanonicalTimeSeries";
+import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
+import type { WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
 import type { TimeseriesResponse } from "../lib/api/types";
-import { formatDistance } from "../lib/units";
 import { achievementsApi } from "../lib/api/achievements";
 import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
@@ -94,7 +91,7 @@ const FLIGHT_SECTIONS = (t: (key: string) => string): SectionOption[] => [
 ];
 
 export default function AdvancedStatsPage(): JSX.Element {
-  const { t, i18n } = useTranslation(["stats", "common"]);
+  const { t } = useTranslation(["stats", "common"]);
   const { units, features } = useSettingsStore();
   const { user } = useAuthStore();
   const addToast = useToastStore((state) => state.addToast);
@@ -749,59 +746,12 @@ export default function AdvancedStatsPage(): JSX.Element {
               {/* Scorecard: time-range control + KPI tiles + canonical chart.
                   Replaces the old separate "Yearly Trend"/"Monthly Flights"
                   charts with one range-driven view. */}
-              {(() => {
-                const takeaway =
-                  rangeWindow === "rolling12m"
-                    ? t("stats:scorecard.takeawayRolling")
-                    : rangeWindow === "year"
-                      ? t("stats:scorecard.takeawayYear", { year: selectedYear ?? "" })
-                      : t("stats:scorecard.takeawayAll");
-                const counts = timeseries?.series.map((p) => p.count) ?? [];
-                const distances = timeseries?.series.map((p) => Math.round(p.distanceKm)) ?? [];
-                const durations =
-                  timeseries?.series.map((p) => Math.round(p.durationMin / 60)) ?? [];
-                const cur = timeseries?.current ?? { count: 0, distanceKm: 0, durationMin: 0 };
-                const prev = timeseries?.previous ?? { count: 0, distanceKm: 0, durationMin: 0 };
-                const tiles: ScorecardTileVM[] = [
-                  {
-                    key: "flights",
-                    label: t("stats:scorecard.flights"),
-                    value: String(cur.count),
-                    takeaway,
-                    points: counts,
-                    current: cur.count,
-                    previous: prev.count,
-                  },
-                  {
-                    key: "distance",
-                    label: t("stats:scorecard.distance"),
-                    value: formatDistance(cur.distanceKm, units.distanceUnit, t, i18n.language),
-                    takeaway,
-                    points: distances,
-                    current: cur.distanceKm,
-                    previous: prev.distanceKm,
-                  },
-                  {
-                    key: "flightTime",
-                    label: t("stats:scorecard.flightTime"),
-                    value: `${Math.round(cur.durationMin / 60)} h`,
-                    takeaway,
-                    points: durations,
-                    current: cur.durationMin,
-                    previous: prev.durationMin,
-                  },
-                ];
-                return (
-                  <>
-                    <TimeRangeControl value={rangeWindow} onChange={setRangeWindow} />
-                    <KpiScorecard tiles={tiles} />
-                    <CanonicalTimeSeries
-                      series={timeseries?.series ?? []}
-                      title={t("stats:canonicalChart.flightsTitle")}
-                    />
-                  </>
-                );
-              })()}
+              <FlightScorecardBlock
+                timeseries={timeseries}
+                rangeWindow={rangeWindow}
+                onRangeChange={setRangeWindow}
+                selectedYear={selectedYear}
+              />
 
               {/* Year Filter + Year-Filtered Summary Cards */}
               <StatsYearFilter

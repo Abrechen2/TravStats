@@ -46,79 +46,20 @@ import RouteCell from "../components/flightsTable/RouteCell";
 import TimeCell from "../components/flightsTable/TimeCell";
 import SourceInfoDot from "../components/flightsTable/SourceInfoDot";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import {
+  FLIGHT_ALWAYS_VISIBLE,
+  FLIGHT_COLUMN_IDS,
+  FLIGHT_SORT_KEY_BY_COLUMN,
+  FLIGHT_STATUSES,
+  MONTH_KEYS,
+  flightColumnLabel,
+  type FlightStatusFilter,
+} from "../components/flightsTable/flightColumns";
+import TripBadgeCell from "../components/flightsTable/TripBadgeCell";
 
 // Trips moved to their own /trips top-level page (Phase-1 redesign).
 // This page now focuses purely on the flight table; the trip badge in
 // each flight row is a Link to /trips/:id.
-
-// Column-visibility ids (ColumnPicker) — header and row cells must agree.
-const FLIGHT_COLUMN_IDS = [
-  "airline",
-  "flightNumber",
-  "route",
-  "time",
-  "status",
-  "duration",
-  "aircraft",
-  "price",
-  "trip",
-  "actions",
-] as const;
-const FLIGHT_ALWAYS_VISIBLE = ["route", "actions"] as const;
-
-type FlightColumnId = (typeof FLIGHT_COLUMN_IDS)[number];
-type FlightSortKey = "departureTime" | "airline" | "status" | "duration";
-
-/**
- * Column id -> sort key. Columns without an entry are not sortable — which is
- * six of ten, the widest gap of the three list pages (cruises sort six of
- * eight, lodging all eight).
- */
-const FLIGHT_SORT_KEY_BY_COLUMN: Partial<Record<FlightColumnId, FlightSortKey>> = {
-  airline: "airline",
-  time: "departureTime",
-  status: "status",
-  duration: "duration",
-};
-
-/**
- * One label source for header, column picker and footer. The page used to
- * hold three separate copies of these names, which is how a column could end
- * up called one thing in the picker and another in the footer.
- */
-function flightColumnLabel(t: (key: string) => string, id: FlightColumnId): string {
-  if (id === "trip") return t("trips:tab");
-  if (id === "duration") return t("flights:table.flightTime");
-  return t(`flights:table.${id}`);
-}
-
-type FlightStatusFilter = Flight["status"] | "all";
-
-/** The statuses a flight can carry. `historical` and `duplicated` are real
- *  states, not hidden ones — the old checkbox panel force-added them to every
- *  selection, so picking "nur geflogen" quietly kept them in the table. */
-const FLIGHT_STATUSES: ReadonlyArray<Flight["status"]> = [
-  "flown",
-  "scheduled",
-  "cancelled",
-  "historical",
-  "duplicated",
-];
-
-const MONTH_KEYS = [
-  "jan",
-  "feb",
-  "mar",
-  "apr",
-  "may",
-  "jun",
-  "jul",
-  "aug",
-  "sep",
-  "oct",
-  "nov",
-  "dec",
-] as const;
 
 export default function FlightsTablePage(): JSX.Element {
   const { t, i18n } = useTranslation([
@@ -844,27 +785,7 @@ export default function FlightsTablePage(): JSX.Element {
                               )}
                               {flightColumnPrefs.isVisible("trip") && (
                                 <td className="px-3 py-2">
-                                  {tripEntry ? (
-                                    <Link
-                                      to={`/trips/${tripEntry.id}`}
-                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
-                                      style={{
-                                        background: `${tripEntry.color}18`,
-                                        borderColor: `${tripEntry.color}44`,
-                                        color: tripEntry.color,
-                                      }}
-                                    >
-                                      <span
-                                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                                        style={{ background: tripEntry.color }}
-                                      />
-                                      {tripEntry.name}
-                                    </Link>
-                                  ) : (
-                                    <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>
-                                      —
-                                    </span>
-                                  )}
+                                  <TripBadgeCell trip={tripEntry} />
                                 </td>
                               )}
                               {flightColumnPrefs.isVisible("actions") && (

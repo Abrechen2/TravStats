@@ -29,13 +29,13 @@ import {
   addFlightDuration,
   averageDurationMinutes,
   emptyDurationTotals,
-  resolveFlightDuration,
 } from '../shared/flightDuration';
 import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
-import { buildTzMap, withDepartureClock } from '../services/stats/departureClock';
+import { withDepartureClock } from '../services/stats/departureClock';
 import { loadPassport } from '../services/stats/passportLoader';
 import { loadCountryDetail } from '../services/stats/countryDetailLoader';
 import { buildWrapped } from '../services/stats/wrapped';
+import { fetchFlightDatedRows, fetchCruiseDatedRows } from '../services/stats/timeseriesRows';
 import { buildTravelRecords } from '../services/stats/records';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
 import { countableFlightWhere } from '../shared/flightCounting';
@@ -502,104 +502,6 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     next(error);
   }
 });
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * The calendar day a flight departed on, as the departure airport's clock saw
- * it, expressed as that day's UTC midnight so the existing bucketing arithmetic
- * keeps working unchanged.
- */
-const airportCalendarDay = (
-  stored: Date,
-  timezone: string | null,
-  semantics: FlightTimeSemantics,
-): Date => new Date(`${localWallClockOf(stored, timezone, semantics).date}T00:00:00Z`);
-
-async function fetchFlightDatedRows(
-  userId: string,
-  from: Date,
-  to: Date,
-): Promise<DatedRow[]> {
-  const rows = await prisma.flight.findMany({
-    where: {
-      userId,
-      ...countableFlightWhere(),
-      // Widened by a day at each edge ON PURPOSE. The query can only filter the
-      // stored INSTANT, while a bucket is the departure airport's calendar day,
-      // and the two disagree by up to fourteen hours. Without the margin a
-      // flight leaving Bangkok early on 1 January is fetched as 31 December UTC
-      // and never appears in the year it departed. The margin rows are removed
-      // again by `withinWindow` once their local day is known — see the route.
-      departureTime: { gte: new Date(from.getTime() - DAY_MS), lt: new Date(to.getTime() + DAY_MS) },
-    },
-    select: {
-      depIata: true, depIcao: true, depLat: true, depLon: true,
-      arrIata: true, arrIcao: true, arrLat: true, arrLon: true,
-      departureTime: true, arrivalTime: true,
-      depTimeSemantics: true, arrTimeSemantics: true,
-      durationMinutes: true,
-      status: true,
-    },
-  });
-  const tzMap = await buildTzMap(rows);
-  return rows.map((f) => {
-    const depTz = (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
-    const arrTz = (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
-    const measuredMin =
-      f.status === 'flown' ? measuredDurationMinutes(f, depTz, arrTz) : null;
-    // Same rule as `/stats/summary` and the overview card (#268): measured
-    // where there are clocks, estimated from the coordinates where there are
-    // not. This used to be a bare 0, which is why the scorecard tile and the
-    // card above it reported different totals for the same flights.
-    const durationMin =
-      resolveFlightDuration({
-        measuredMinutes: measuredMin,
-        depLat: f.depLat, depLon: f.depLon, arrLat: f.arrLat, arrLon: f.arrLon,
-      })?.minutes ?? 0;
-    return {
-      // The airport's calendar day, not the UTC instant — Forgejo #46. Every
-      // other "when did I fly" figure on this server reads the clock at the
-      // departure airport (`/stats/countries`, `/stats/fun`), and the OpenAPI
-      // for this endpoint already promised the same. It did not do it: an
-      // evening departure east of UTC landed in the previous period, so the
-      // countries list and the trend chart disagreed about which year a flight
-      // belonged to.
-      date: airportCalendarDay(
-        f.departureTime as Date,
-        depTz,
-        f.depTimeSemantics as FlightTimeSemantics,
-      ),
-      distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
-      durationMin,
-    };
-  });
-}
-
-async function fetchCruiseDatedRows(
-  userId: string,
-  from: Date,
-  to: Date,
-): Promise<DatedRow[]> {
-  const rows = await prisma.cruise.findMany({
-    // Sailed cruises only — the same done-predicate /stats/cruise uses, and
-    // the very leak `stats.cruiseScheduledLeak.test.ts` was written for. This
-    // twin kept `not: cancelled`, so a merely BOOKED cruise contributed both
-    // its count and its distance. Latent so far (the UI only asks for the
-    // flight series), which is exactly how it survived the fix next door.
-    where: {
-      userId,
-      ...countableFlightWhere(),
-      startDate: { gte: from, lt: to },
-    },
-    select: { startDate: true, legs: { select: { distanceKm: true } } },
-  });
-  return rows.map((c) => ({
-    date: c.startDate as Date,
-    distanceKm: c.legs.reduce((sum, l) => sum + (l.distanceKm ?? 0), 0),
-    durationMin: 0,
-  }));
-}
 
 // GET /api/v1/stats/timeseries — bucketed series (month|year) + current/previous
 // window totals, domain-parameterized (flight|cruise). Powers the Wave A

@@ -1,6 +1,6 @@
 // Shared basemap catalogue for the flat 2D map's basemap switcher.
 //
-// The globe (GlobeView) keeps its own STYLE_OPTIONS because it pairs each
+// The globe keeps its own STYLE_OPTIONS in `Globe/globeStyles.ts` because it pairs each
 // style with a globe-only `sky` config; this list is the same six styles
 // without the sky, usable as a react-map-gl `mapStyle` (a URL string or a
 // full StyleSpecification for the raster ones). All sources are key-free.
@@ -49,7 +49,9 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
     id: "satellite",
     label: "Satellite",
     style: buildRasterStyle(
-      ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
       "Tiles &copy; Esri"
     ),
   },
