@@ -269,5 +269,70 @@
       "onTrips": "Visits on a trip",
       "onTripsDesc": "of {{total}} in total"
     }
+  },
+  "import": {
+    "csv": {
+      "title": "Places from a spreadsheet",
+      "description": "A CSV file with names and coordinates. Without coordinates the place lands in the preview and you set its position yourself — which is also how a Google Takeout export the geocoder cannot resolve gets in.",
+      "uploadLabel": "Choose CSV file"
+    },
+    "fields": {
+      "name": "Name",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "category": "Category",
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "notes": "Note",
+      "visitedAt": "Visited on",
+      "externalRef": "Reference",
+      "position": "Position",
+      "hints": "Hints",
+      "action": "Decision"
+    },
+    "preview": {
+      "title_one": "Review {{count}} row",
+      "title_other": "Review {{count}} rows",
+      "newLabel": "new",
+      "presentLabel": "already here",
+      "needsInputLabel": "open",
+      "needsInputHint": "Rows without a position or with a possible duplicate need your decision before the import starts. Nothing is written without it.",
+      "commit": "Import",
+      "commitError": "The import failed. Please try again — whatever was already written is in the import log."
+    },
+    "actions": {
+      "choose": "Choose",
+      "create": "Create",
+      "skip": "Skip"
+    },
+    "flags": {
+      "missing_name": "No name",
+      "missing_coordinates": "No coordinates",
+      "malformed_date": "Unreadable date"
+    },
+    "dedupeHints": {
+      "place_exact_ref": "Already here (same reference)",
+      "place_nearby": "Similar place nearby"
+    },
+    "pickPosition": "Set position",
+    "pickPositionFor": "Where is “{{name}}”?",
+    "errors": {
+      "emptyCsv": "The file has no rows.",
+      "noRows": "No row in this file carries a name — is the “Name” column mapped correctly?",
+      "skippedRows_one": "{{count}} row without a name skipped.",
+      "skippedRows_other": "{{count}} rows without a name skipped.",
+      "parseFailed": "The file could not be read.",
+      "previewFailed": "The preview could not be loaded."
+    },
+    "commitResult": {
+      "success": "{{created}} place(s) created · {{skipped}} already here",
+      "partial": "{{created}} place(s) created · {{skipped}} already here · {{failed}} not imported ({{reasons}})",
+      "failureCodes": {
+        "invalid_row": "row unreadable",
+        "no_position": "no position",
+        "write_failed": "not saved"
+      }
+    }
   }
 }

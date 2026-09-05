@@ -269,5 +269,70 @@
       "onTrips": "Besuche in einer Reise",
       "onTripsDesc": "von {{total}} insgesamt"
     }
+  },
+  "import": {
+    "csv": {
+      "title": "Orte aus einer Tabelle",
+      "description": "Eine CSV-Datei mit Namen und Koordinaten. Ohne Koordinaten landet der Ort in der Vorschau, und du setzt seine Position selbst — so kommt auch ein Google-Takeout-Export herein, den der Geocoder nicht auflöst.",
+      "uploadLabel": "CSV-Datei wählen"
+    },
+    "fields": {
+      "name": "Name",
+      "lat": "Breitengrad",
+      "lon": "Längengrad",
+      "category": "Kategorie",
+      "address": "Adresse",
+      "city": "Stadt",
+      "country": "Land",
+      "notes": "Notiz",
+      "visitedAt": "Besucht am",
+      "externalRef": "Referenz",
+      "position": "Position",
+      "hints": "Hinweise",
+      "action": "Entscheidung"
+    },
+    "preview": {
+      "title_one": "{{count}} Zeile prüfen",
+      "title_other": "{{count}} Zeilen prüfen",
+      "newLabel": "neu",
+      "presentLabel": "schon vorhanden",
+      "needsInputLabel": "offen",
+      "needsInputHint": "Zeilen ohne Position oder mit einem möglichen Doppel brauchen deine Entscheidung, bevor der Import losgeht. Nichts wird ohne sie geschrieben.",
+      "commit": "Importieren",
+      "commitError": "Der Import ist fehlgeschlagen. Bitte noch einmal versuchen — was schon geschrieben wurde, steht im Import-Logbuch."
+    },
+    "actions": {
+      "choose": "Bitte wählen",
+      "create": "Anlegen",
+      "skip": "Überspringen"
+    },
+    "flags": {
+      "missing_name": "Kein Name",
+      "missing_coordinates": "Keine Koordinaten",
+      "malformed_date": "Datum nicht lesbar"
+    },
+    "dedupeHints": {
+      "place_exact_ref": "Schon vorhanden (gleiche Referenz)",
+      "place_nearby": "Ähnlicher Ort in der Nähe"
+    },
+    "pickPosition": "Position setzen",
+    "pickPositionFor": "Wo liegt „{{name}}“?",
+    "errors": {
+      "emptyCsv": "Die Datei enthält keine Zeilen.",
+      "noRows": "Keine Zeile dieser Datei trägt einen Namen — ist die Spalte „Name“ richtig zugeordnet?",
+      "skippedRows_one": "{{count}} Zeile ohne Namen übersprungen.",
+      "skippedRows_other": "{{count}} Zeilen ohne Namen übersprungen.",
+      "parseFailed": "Die Datei konnte nicht gelesen werden.",
+      "previewFailed": "Die Vorschau konnte nicht geladen werden."
+    },
+    "commitResult": {
+      "success": "{{created}} Ort(e) angelegt · {{skipped}} schon vorhanden",
+      "partial": "{{created}} Ort(e) angelegt · {{skipped}} schon vorhanden · {{failed}} nicht importiert ({{reasons}})",
+      "failureCodes": {
+        "invalid_row": "Zeile nicht lesbar",
+        "no_position": "keine Position",
+        "write_failed": "nicht gespeichert"
+      }
+    }
   }
 }

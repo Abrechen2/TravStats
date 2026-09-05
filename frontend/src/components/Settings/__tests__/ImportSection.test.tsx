@@ -20,6 +20,9 @@ vi.mock("../../import/LodgingCsvImportTile", () => ({
     <button data-testid="tile-lodging-csv" onClick={() => onImported?.()} />
   ),
 }));
+vi.mock("../../import/PlaceCsvImportTile", () => ({
+  PlaceCsvImportTile: () => <div data-testid="tile-poi-csv" />,
+}));
 // The log fetches on mount — render a marker that reports the reload key it
 // was handed, so a missed refresh signal is visible instead of silent.
 vi.mock("../../import/ImportLogSection", () => ({
@@ -86,6 +89,23 @@ describe("ImportSection — central import hub", () => {
     render(<ImportSection />);
     expect(screen.queryByTestId("tile-lodging-csv")).toBeNull();
     expect(screen.queryByText("common:domain.lodging")).toBeNull();
+  });
+
+  // POI Phase D §5. Until 2026-09-05 the places group rendered empty although
+  // both backend routes existed — the `poiDomain` gate named this tile as its
+  // un-gating condition.
+  it("renders the places group with its CSV tile when the domain is on and the instance allows it", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: true });
+    render(<ImportSection />);
+    expect(screen.getByText("common:domain.poi")).toBeTruthy();
+    expect(screen.getByTestId("tile-poi-csv")).toBeTruthy();
+  });
+
+  it("hides the places group while the instance beta switch is off, even with the domain on", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: false });
+    render(<ImportSection />);
+    expect(screen.queryByTestId("tile-poi-csv")).toBeNull();
+    expect(screen.queryByText("common:domain.poi")).toBeNull();
   });
 });
 
