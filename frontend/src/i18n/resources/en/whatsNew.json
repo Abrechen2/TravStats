@@ -18,7 +18,7 @@
         "body": "Booking.com mails are read by a deterministic template: measured against 95 real confirmations it finds the stay in 93 and the price in all 93 — across both layouts the sender uses. Anything it does not recognise takes the same AI path flights do. A document now announces itself: a photographed hotel bill is a document, a boarding pass is read by its barcode first, package-tour paperwork is recognised — and a marketing newsletter no longer becomes a flight. A price may be written in any currency. Conversion goes through the European Central Bank, and for the currencies it does not publish, through a free dataset you can switch off as the operator. Where no rate exists the amount stays in its own currency, is marked \"no rate\", counts towards no total — and the total tells you how many entries it is missing. You may enter a rate yourself; it is always shown as yours, never as an official one."
       },
       "imports": {
-        "title": "In and out: spreadsheet, CSV, Google Maps",
+        "title": "In and out: spreadsheet and CSV",
         "body": "The whole logbook exports to one spreadsheet and comes back — flights, cruises, stays. The CSV import shows what it will do first, asks about likely duplicates, and every import leaves a trace that can be taken back as a whole."
       },
       "tours": {

@@ -18,7 +18,7 @@
         "body": "Booking.com-Mails werden von einer festen Vorlage gelesen: an 95 echten Bestätigungen gemessen findet sie den Aufenthalt in 93 und den Preis in allen 93 — in beiden Layouts, die der Absender verschickt. Was die Vorlage nicht kennt, geht denselben Weg wie bei Flügen über die KI. Ein Dokument sagt jetzt selbst, was es ist: eine fotografierte Hotelrechnung ist ein Dokument, eine Bordkarte wird zuerst über ihren Strichcode gelesen, Pauschalreise-Unterlagen werden erkannt — und ein Werbe-Newsletter wird kein Flug mehr. Ein Preis darf in jeder Währung stehen. Umgerechnet wird über die Europäische Zentralbank, und für Währungen, die sie nicht führt, über einen freien Datensatz, den du als Betreiber abschalten kannst. Wo es keinen Kurs gibt, bleibt der Betrag in seiner Währung stehen, wird als „kein Kurs\" gekennzeichnet, zählt in keine Summe — und die Summe sagt, wie viele Einträge ihr fehlen. Einen eigenen Kurs darfst du eintragen; er wird immer als deiner ausgewiesen, nie als amtlicher."
       },
       "imports": {
-        "title": "Rein und raus: Tabelle, CSV, Google Maps",
+        "title": "Rein und raus: Tabelle und CSV",
         "body": "Das ganze Logbuch exportiert in eine Tabelle und kommt wieder zurück — Flüge, Kreuzfahrten, Aufenthalte. Der CSV-Import zeigt vorher, was er tun wird, fragt bei möglichen Dubletten nach, und jeder Import hinterlässt eine Spur, die sich als Ganzes zurücknehmen lässt."
       },
       "tours": {
