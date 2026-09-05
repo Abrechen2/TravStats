@@ -1,6 +1,8 @@
 import { TextProvider, ParserConfig, ParserResult } from './types';
 import { keepOnlyFlightsWithEvidence } from './shared/evidence';
 import { backfillRoutesFromText } from './shared/routeFromText';
+import { preferNamedAirports } from './shared/namedAirport';
+import { airportsInCityOf } from '../airportLookup';
 import { ParsedBooking } from '../bookingParser';
 import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
 import { shouldLogParserOperations } from '../loggingConfig';
@@ -13,12 +15,12 @@ import { findMatchingTemplate } from './userTemplates/matcher';
 import { applyUserTemplate } from './userTemplates/engine';
 import { TemplateParser } from './text/templateParser';
 
-function applyEmailRegexPostProcessing(
+async function applyEmailRegexPostProcessing(
   flights: ParsedBooking[],
   subject: string,
   text: string,
   html?: string
-): ParsedBooking[] {
+): Promise<ParsedBooking[]> {
   const combinedText = `${subject}\n${text || ''}\n${html || ''}`;
   const regexData = extractFlightDataFromText(combinedText.toUpperCase());
 
@@ -72,7 +74,11 @@ function applyEmailRegexPostProcessing(
   // passes combinedText in its ORIGINAL case: the uppercased copy above would
   // turn an ordinary "(die)" into a code and reintroduce the false positives
   // the bracket rule exists to avoid.
-  return backfillRoutesFromText(withFields, combinedText);
+  const routed = backfillRoutesFromText(withFields, combinedText);
+  // Then the name check (#287): a model told to answer in codes answers the
+  // CITY's code, and "Berlin-Schönefeld" in a 2008 mail becomes the airport
+  // that opened in 2020. The catalogue knows the name; the text wins.
+  return preferNamedAirports(routed, combinedText, airportsInCityOf);
 }
 
 /**
@@ -162,7 +168,7 @@ export async function parseEmail(
           { referenceDate: config.referenceDate },
         );
         if (ollamaFlights && ollamaFlights.length > 0) {
-          const finalFlights = applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
+          const finalFlights = await applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
           logger.info({ flightCount: finalFlights.length }, '[Parser Factory] Ollama succeeded — skipping templates');
           return {
             flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama"),
@@ -249,7 +255,7 @@ export async function parseEmail(
         continue;
       }
 
-      const finalFlights = applyEmailRegexPostProcessing(flights, subject, cleanedText, html);
+      const finalFlights = await applyEmailRegexPostProcessing(flights, subject, cleanedText, html);
       const finalProvider = provider;
       const finalFallbackUsed = config.textProvider !== provider;
 

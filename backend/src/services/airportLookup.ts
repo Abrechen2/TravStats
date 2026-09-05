@@ -605,3 +605,26 @@ export async function backfillAirportTimezones(): Promise<number> {
 
   return updated;
 }
+
+/**
+ * Every catalogue row of the city a code belongs to, closed ones included and
+ * rows without a code left out — the input `preferNamedAirports` (#287) needs
+ * to tell "Berlin-Schönefeld" (SXF, closed) from the city code BER. The city
+ * is read off the code's own rows; an unknown code has no city and yields
+ * nothing, so the caller changes nothing.
+ */
+export async function airportsInCityOf(
+  code: string
+): Promise<Array<{ iata: string | null; icao: string | null; name: string; city: string | null; isClosed: boolean }>> {
+  const upper = code.toUpperCase();
+  const own = await prisma.airport.findMany({
+    where: { OR: [{ iata: upper }, { icao: upper }] },
+    select: { city: true },
+  });
+  const cities = [...new Set(own.map((row) => row.city).filter((city): city is string => Boolean(city)))];
+  if (cities.length === 0) return [];
+  return prisma.airport.findMany({
+    where: { city: { in: cities }, iata: { not: null } },
+    select: { iata: true, icao: true, name: true, city: true, isClosed: true },
+  });
+}

@@ -402,6 +402,13 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+- **A booking that names its airport is filed into that airport, not into the
+  city's current one.** A 2008 Germanwings confirmation printing
+  "Berlin-Schönefeld" came back from the parser as `BER`, the code of an
+  airport that opened in 2020, and two flights were filed there. When the mail
+  carries the distinctive name of another airport of the same city, closed ones
+  included, that airport's code replaces the model's; two names on one leg, or
+  the returned airport's own name, leave the code alone.
 - **Two beta gates closed properly.** With the instance's beta switch off, the
   statistics page still offered the "POI / Besuche" tab, chip and summary card
   to an account that had the domain on from beta days, and the passport URL
