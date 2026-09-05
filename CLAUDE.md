@@ -501,10 +501,12 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | `/api` answers `no-store` unless a handler opts into `private` | `backend/src/__tests__/apiNoStore.test.ts` |
 | 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
+| A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
 
-Three of these are **ratchets** carrying a list of today's offenders — file
-size, OpenAPI coverage, OpenAPI response schemas. Each fails on a *stale*
-entry as well as a new one, so the list can only ever shrink.
+Four of these are **ratchets** carrying a list of today's offenders — file
+size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
+fails on a *stale* entry as well as a new one, so the list can only ever
+shrink.
 
 **Where they run.** Only the pre-commit hooks and the Prettier job are
 automatic; a green GitHub badge means Prettier passed on the changed frontend
@@ -611,6 +613,12 @@ from it, so the divergence is recorded here.
 - **Repository pattern** — Prisma is called from routes and services directly;
   there are no repositories, and adding a layer would be a rewrite with no
   beneficiary. Single-source-of-truth work happens in `shared/*` instead.
+- **The `{success, data, error}` envelope on every response** — this API has
+  two shapes, one per router family (bare for flights/stats/auth/settings,
+  enveloped for lodging/places/cruises/imports), and every client including
+  the Companion reads the shape its router speaks. Settled on 2026-09-05 in
+  `docs/adr/0001-api-response-shape.md`: both stay, a router never mixes
+  them, a new router declares its family in the ratchet baseline.
 - **The model-selection table** (Sonnet/Opus/Haiku) — stale, and a harness
   setting rather than a property of this code.
 - **Mandatory agent usage** ("planner for complex features", "code-reviewer
@@ -623,9 +631,6 @@ from it, so the divergence is recorded here.
 
 ### Open — do not settle these in passing
 
-- **API response shape.** Handlers return bare objects; the global rules ask
-  for a `{success, data, error}` envelope. Switching breaks every frontend
-  caller and every generated client at once. Owner decision — forgejo#64.
 - **The 800-line number**, above.
 
 ## Version
