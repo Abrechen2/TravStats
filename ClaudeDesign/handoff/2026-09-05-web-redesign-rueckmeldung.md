@@ -156,8 +156,12 @@ Heute: `tripAiSummary`, `devicePairing`, `passport`, `domainColors`,
 `poiDomain`, `tourRoutes`, `dawarich`. Ein Screen zeigt eine Beta-Plakette
 genau dann, wenn sein Einstieg einen Registerschlüssel trägt. Und weil das
 Register eine `why`- und `returnsWhen`-Zeile pro Eintrag hat, kann die
-Plakette einen Tooltip mit `why` tragen. Der Parser verliert seine Plakette;
-oder er wird gegated, aber das ist eine Owner-Entscheidung (§9).
+Plakette einen Tooltip mit `why` tragen. Für den Parser hat der Owner am
+05.09. entschieden (§9, Nr. 10): er **wird gegated**, bekommt also einen
+achten Schlüssel im Register, und die Plakette bleibt. Ohne Beta-Schalter
+verschwindet die Parser-Seite aus „Mehr → Werkzeuge"; der Einstieg
+„Buchungs-E-Mail oder PDF" in „Hinzufügen" bleibt frei, weil er das Einlesen
+ist, nicht das Template-Werkzeug.
 
 ### 2.5 Einzelstellen
 
@@ -169,7 +173,7 @@ oder er wird gegated, aber das ist eine Owner-Entscheidung (§9).
 | Statistik | Jahres-Chips 2015–2026 als Zeile; bei 20 Jahren bricht sie, mobil ist sie abgeschnitten | Chips bis 8 Jahre, darüber Segment „Jahr ▾" mit Dropdown; „Alle" und „Vergleich mit" bleiben Chips |
 | Reise-Detail | Tabs Übersicht · Timeline · Karte · Galerie · Logistik · Touren, es fehlt **Journal** | Der Tab existiert heute (`TripDetailPage.tsx`: `journal`); ergänzen |
 | Reise-Detail | „Zusammenfassung erstellen" ohne Beta-Plakette | siehe 2.4 |
-| Kreuzfahrt-Detail | „Kartenfarbe" mit sechs freien Farbpunkten | Das ist der freie Farbwähler, den der Companion abgeschafft hat; ersetzen durch `listColor` (zehn benannte) oder streichen (§9) |
+| Kreuzfahrt-Detail | „Kartenfarbe" mit sechs freien Farbpunkten pro Eintrag | Eine Farbe pro **Eintrag** gibt es nicht und soll es nicht geben. Was es gibt, ist `domainColors` (Beta): der Nutzer überschreibt die Farbe einer **Domäne** in den Einstellungen, und der Owner hat entschieden, dass das so bleibt (§9, Nr. 4). Die Karte hier also raus; die Färbung „pro Reise" bleibt ein Karten-Farbmodus mit der `chartColors`-Palette |
 | Einstellungen v3 | Eine Seite, 6486 px hoch, 98 KB | Der linke Index muss Routen sein (`/settings/account`, `/settings/display`, …), nicht Sprungmarken; eine Gruppe pro Seite bei `reading`-Breite |
 | Einstellungen v3 | „Kein Sheets-Sync" — der heutige `SpreadsheetSection` ist aber der **Excel-Export** des Nutzers, kein Sync | Excel-Export bleibt unter Daten → Meine Daten; der Admin-„Daten-Export" ist etwas anderes |
 | Einstellungen v3 | Immich nur im Admin unter „Externe Dienste" | Heute gibt es zusätzlich eine **Nutzer**-Verbindung (`ImmichConnectionCard`, eigener API-Key hat Vorrang) — Dienste → Immich ergänzen, analog zu API-Schlüsseln |
@@ -407,8 +411,10 @@ aber keine Regel für ihre Darstellung und keinen Ort, an dem man alle sieht.
 Der Entwurf braucht: Chip mit Hairline, klein, ohne Farbe (Farbe trägt
 Bedeutung, Tags tragen keine), klickbar als Filter in der jeweiligen Liste,
 Vorschlag aus den vorhandenen Tags beim Tippen, und eine Tag-Übersicht
-(Statistik oder Logbuch-Filter). Unterkünfte und Orte haben keine Tags;
-entweder bekommen sie welche, oder der Entwurf zeigt sie dort nicht.
+(Statistik oder Logbuch-Filter). Unterkünfte und Orte haben heute keine Tags;
+der Owner hat am 05.09. entschieden, dass sie welche **bekommen** (§9,
+Nr. 13). Das ist eine Migration in 2.7.0, und der Entwurf darf Tags an allen
+vier Domänen zeigen.
 
 ### 7.9 Mitreisende als Personen
 
@@ -420,8 +426,11 @@ Eintrags. Ich wünsche mir: Einstellungen → Konto → Mitreisende (Liste,
 Umbenennen, Zusammenführen von Schreibvarianten, weil `canonicalName` genau
 dafür da ist), einen Filter „mit Mia" in Logbuch und Reisen, und die
 Unterscheidung im Detail zwischen „von dir eingetragen" und „aus der Buchung
-gelesen". Unterkünfte haben heute keine Mitreisenden; der Export zeigt sie
-dort trotzdem.
+gelesen". Unterkünfte und Orte haben heute keine Mitreisenden; der Owner hat
+am 05.09. entschieden, dass die Entität auf **alle vier Domänen** ausgedehnt
+wird (§9, Nr. 13). Damit zeigt der Export sie zu Recht am Aufenthalt, und
+2.7.0 braucht `LodgingCompanion` und `PlaceVisitCompanion` neben den drei
+bestehenden Verknüpfungen.
 
 ### 7.10 Eine EN-Fassung von drei Screens
 
@@ -480,26 +489,35 @@ daraus lesen lassen, dann verschwinden die Zähler-Widersprüche von selbst.
 
 ---
 
-## 9. Entscheidungen für den Owner
+## 9. Entscheidungen des Owners (05.09.2026, abends)
 
 Aus `antwort.md` (1–4), aus der Übergabe (5–9) und neu aus dieser Rückmeldung
-(10–13). Mit meiner Empfehlung, die nichts vorwegnimmt.
+(10–13). Die Spalte „Empfehlung" ist mein Vorschlag vor der Entscheidung, die
+Spalte „Entscheidung" die Antwort des Owners vom selben Abend. Wo beide
+abweichen, gilt die Entscheidung, und die betroffenen Abschnitte oben wurden
+angepasst (§2.4, §2.5, §7.8, §7.9).
 
-| # | Frage | Empfehlung |
-|---|---|---|
-| 1 | Ortslisten und Admin als eigene Seiten; Listen-Fortschritt aus besuchten Orten abgeleitet? | **Ja.** Entspricht dem Backend (`placeCounting`). Die kuratierten Checklisten brauchen aber ein eigenes Muster (Katalog, nicht Nutzerliste). |
-| 2 | Developer Mode / LoRA-Training in Nutzer-Einstellungen oder nur Admin? | **Nur Admin.** Training ist Instanz-Ressource. Der Nutzer behält „Parser-Feedback senden" als Schalter. |
-| 3 | Öffentliches Profil (Erfolge + Reisepass)? | **Nicht jetzt.** Neues Feature mit Datenschutzfragen, kein Vereinheitlichungsthema. Der Jahresrückblick als Bild deckt den Teil-Wunsch. |
-| 4 | Nutzerfarben für Domänen behalten? | **Streichen.** Der Export zeigt selbst, warum: Farbe trägt Bedeutung in Legende, Pille, Statistik. Damit fällt `domainColors` aus dem Beta-Register, und der freie Farbwähler am Kreuzfahrt-Detail geht mit. |
-| 5 | BRAND.md §3 und travstats.de nachziehen? | **Ja, nach Block 1**, wenn die ersten echten Screens existieren. Screenshots der Website erst dann erneuern. |
-| 6 | Syne auf der Website behalten? | **Ja, nur Website.** Die App hat Hanken Grotesk 800 als Display; die Marketing-Seite darf eine eigene Stimme haben. |
-| 7 | Tokens für Zug, Wandern, Rad, Straße, Fähre? | **Ja, ableiten und in die Companion-Datei aufnehmen**, sonst haben Touren keine Farbe, sobald sie aus der Beta kommen. Vorschlag: gedeckte Erdtöne aus der bestehenden Web-Palette, im Companion ratifizieren. |
-| 8 | Zeitpunkt | **2.7.0, `dev/design-system`.** Kein Fix am 2.6.0-Stand. |
-| 9 | Die 800-Zeilen-Grenze | Unverändert offen, unabhängig hiervon. |
-| 10 | Parser gaten (Beta) oder Plakette entfernen? | **Plakette entfernen.** Der Parser ist seit 2.2 produktiv; „Nur Ollama vollständig getestet" gehört als Hinweis in die Parser-Einstellungen, nicht als Beta-Etikett auf die Seite. |
-| 11 | Einstellungen als eine Seite oder als Routen pro Gruppe? | **Routen pro Gruppe** (`/settings/account` …). 6486 px sind kein Formular. |
-| 12 | Dashboard-Tabs behalten (§2.1)? | **Behalten.** Das ist die 2.4.0-Entscheidung; sie steht in CLAUDE.md als Invariante. |
-| 13 | Mitreisende und Tags: nur zeigen, wo die Daten sie heute tragen (Flug, Reise, Kreuzfahrt), oder auf Unterkünfte und Orte ausdehnen? | **Erst zeigen, wo sie existieren**, plus die Verwaltungsseite aus §7.9. Die Ausdehnung ist eine Datenmodell-Entscheidung, kein Design-Detail. |
+| # | Frage | Empfehlung | **Entscheidung** |
+|---|---|---|---|
+| 1 | Ortslisten und Admin als eigene Seiten; Listen-Fortschritt aus besuchten Orten abgeleitet? | Ja; kuratierte Checklisten als eigenes Katalog-Muster. | **Ja, so bauen.** |
+| 2 | Developer Mode / LoRA-Training in Nutzer-Einstellungen oder nur Admin? | Nur Admin; Nutzer behält „Parser-Feedback senden". | **Nur Admin.** |
+| 3 | Öffentliches Profil (Erfolge + Reisepass)? | Nicht jetzt. | **Nicht jetzt.** |
+| 4 | Nutzerfarben für Domänen (`domainColors`) behalten? | Streichen. | **So wie jetzt:** Beta-Override über den Token-Defaults bleibt, inklusive Farbwähler. Die Token-Defaults sind die Companion-Farben; wer überschreibt, bricht die Legende wissentlich. |
+| 5 | BRAND.md §3 und travstats.de nachziehen? | Nach Block 1. | **Nach Block 1.** |
+| 6 | Syne auf der Website behalten? | Ja, nur Website. | **Nein, überall Hanken Grotesk.** Eine Schriftfamilie für App, Companion und Website; BRAND.md und TravStatsWeb ziehen mit Frage 5 nach. |
+| 7 | Tokens für Zug, Wandern, Rad, Straße, Fähre? | Fünf Farben ableiten, im Companion ratifizieren. | **Eine Farbe für alle Touren.** Touren sind eine Domäne mit einer Farbe; das Verkehrsmittel unterscheidet nur das Icon. Der Token `domainColor.tour` kommt zuerst in die Companion-Datei. Die fünf heutigen Web-Farben (train/hike/bike/road/ferry) fallen. |
+| 8 | Zeitpunkt | 2.7.0 auf `dev/design-system`. | **2.7.0 auf `dev/design-system`.** |
+| 9 | Die 800-Zeilen-Grenze | Offen lassen. | **800 ratifiziert.** Die Zahl ist ab jetzt verbindlich; CLAUDE.md nimmt sie aus „Open". |
+| 10 | Parser gaten oder Plakette entfernen? | Plakette entfernen. | **Ins Beta-Register aufnehmen.** Der Parser bekommt einen Schlüssel in `betaFeatures.ts` (mit `why` und `returnsWhen`), die Plakette bleibt und stimmt dann. Das ist eine Produktänderung für 2.7.0: Ohne Beta-Schalter verschwindet die Parser-Seite, der Parser-Einstieg in „Hinzufügen" bleibt. |
+| 11 | Einstellungen als eine Seite oder Routen pro Gruppe? | Routen pro Gruppe. | **Routen pro Gruppe** (`/settings/account` …). |
+| 12 | Dashboard-Tabs behalten (§2.1)? | Behalten. | **Behalten.** |
+| 13 | Mitreisende und Tags: nur wo die Daten sie tragen, oder ausdehnen? | Nur wo sie existieren, plus Verwaltungsseite. | **Auf alle Domänen ausdehnen.** Unterkünfte und Orte bekommen `tags` und Mitreisende im Datenmodell (Migration in 2.7.0); der Entwurf zeigt sie überall, und die Verwaltungsseite aus §7.9 kommt dazu. |
+
+**Folgen für Runde 2, die Claude Design kennen muss:** die Beta-Plakette am
+Parser bleibt (10); der Farbwähler am Kreuzfahrt-Detail bleibt, aber als
+`domainColors`-Override mit Beta-Plakette, nicht als freie Kartenfarbe pro
+Eintrag (4); Touren haben eine Farbe (7); Mitreisende und Tags erscheinen an
+allen vier Domänen (13); die Website wechselt auf Hanken Grotesk (6).
 
 ---
 

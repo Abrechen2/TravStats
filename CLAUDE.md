@@ -527,14 +527,16 @@ deleted the root script and moved the backend one onto `--from-migrations`.
 `npm run check:drift` at the root delegates to it. A postgis diff, should
 one ever appear again, is the feature coming back — not noise.
 
-**The 800-line number is provisional.** What is settled is the shape: a limit,
-a frozen baseline, and a list that only shrinks. `check-file-size.mjs` scans
-`backend/src` and `frontend/src` (tests and seed scripts excluded); 21 files
-already exceed 800 and are frozen at their current size in
-`scripts/file-size-baseline.json`, the largest at 2161. A listed file may
-shrink, may never grow, and must leave the list at 800 or below — `--update`
-refuses to raise an entry. The number itself has not been ratified by the
-owner; 800 is what CLAUDE.md happened to say.
+**The 800-line number is ratified** (owner, 2026-09-05). What was settled
+first is the shape: a limit, a frozen baseline, and a list that only shrinks.
+`check-file-size.mjs` scans `backend/src` and `frontend/src` (tests and seed
+scripts excluded); 21 files already exceed 800 and are frozen at their
+current size in `scripts/file-size-baseline.json`, the largest at 2161. A
+listed file may shrink, may never grow, and must leave the list at 800 or
+below — `--update` refuses to raise an entry. The number was provisional for
+four days — it was what CLAUDE.md happened to say — and was confirmed as the
+rule on 2026-09-05 together with the design-system decisions in
+`ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9.
 
 ### Practised, not enforced
 
@@ -634,7 +636,14 @@ from it, so the divergence is recorded here.
 
 ### Open — do not settle these in passing
 
-- **The 800-line number**, above.
+Nothing at the moment. The 800-line number was the last entry and was
+ratified on 2026-09-05. Thirteen design-system decisions from the same day
+are recorded, with the owner's answer to each, in
+`ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
+that table before re-opening any of them (dashboard tabs stay; `domainColors`
+stays as the beta override; tours are ONE domain colour; the parser goes into
+the beta registry; settings become one route per group; companions and tags
+extend to all four domains).
 
 ## Version
 
