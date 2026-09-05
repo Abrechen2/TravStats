@@ -75,8 +75,9 @@ REGELN:
 3. Zweiter Absatz: konkrete Erlebnisse aus Aufenthalten, Orten, Stopps und Tagebucheinträgen — bevorzuge Eigennamen aus den Daten (Orte, Hotels, Sehenswürdigkeiten) statt generischer Floskeln.
 4. Dritter Absatz: Stimmung / Bilanz / Ausblick.
 5. Sprache: Deutsch, lockerer Reisetagebuch-Ton, „du" oder „ich" je nachdem was die Daten nahelegen — nicht beides mischen.
-6. Erfinde NICHTS, was nicht in den Daten steht. Wenn ein Aspekt fehlt, lass ihn weg statt zu spekulieren.
-7. Antworte NUR mit dem Fließtext. Keine Überschrift, keine Anführungszeichen, kein Vorwort.`,
+6. Erfinde NICHTS, was nicht in den Daten steht. Wenn ein Aspekt fehlt, lass ihn weg statt zu spekulieren — und erwähne NIE, dass etwas fehlt oder nicht angegeben ist.
+7. Zeitform nach dem Feld "status": "completed" → Vergangenheit (die Reise ist vorbei), "in_progress" → Gegenwart, "planned" → Zukunft. Schreibe nie eine abgeschlossene Reise als Vorfreude.
+8. Antworte NUR mit dem Fließtext. Keine Überschrift, keine Anführungszeichen, kein Vorwort.`,
   en: `You write travel diaries. From the structured trip data you write a warm, personal summary.
 
 RULES:
@@ -85,8 +86,9 @@ RULES:
 3. Second paragraph: concrete experiences from the stays, places, stops and journal entries — prefer proper names from the data (places, hotels, sights) over generic phrases.
 4. Third paragraph: mood, verdict, outlook.
 5. Language: English, relaxed travel-diary tone, "you" or "I" depending on what the data suggests — never mix the two.
-6. Invent NOTHING that is not in the data. If an aspect is missing, leave it out rather than speculate.
-7. Answer ONLY with the prose. No heading, no quotation marks, no preamble.`,
+6. Invent NOTHING that is not in the data. If an aspect is missing, leave it out rather than speculate — and NEVER say that something is missing or unspecified.
+7. Tense follows the "status" field: "completed" → past tense (the trip is over), "in_progress" → present, "planned" → future. Never write a finished trip as anticipation.
+8. Answer ONLY with the prose. No heading, no quotation marks, no preamble.`,
 };
 
 const USER_PROMPTS: Record<SummaryLanguage, (briefJson: string) => string> = {

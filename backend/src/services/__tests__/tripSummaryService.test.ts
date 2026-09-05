@@ -66,6 +66,18 @@ describe("tripSummaryService", () => {
       expect(buildSystemPrompt("de")).toMatch(/Aufenthalten, Orten/);
       expect(buildSystemPrompt("en")).toMatch(/stays, places/);
     });
+
+    // The first probe (2026-09-05, gemma3:12b) wrote a finished trip as
+    // anticipation and remarked that "the occasion isn't specified" — both
+    // are prompt rules now, in both languages.
+    it("ties the tense to the trip status and forbids remarking on missing data", () => {
+      for (const language of ["de", "en"] as const) {
+        expect(buildSystemPrompt(language)).toMatch(/"completed"/);
+        expect(buildSystemPrompt(language)).toMatch(/"planned"/);
+      }
+      expect(buildSystemPrompt("de")).toMatch(/erwähne NIE/);
+      expect(buildSystemPrompt("en")).toMatch(/NEVER say/);
+    });
   });
 
   describe("cleanSummary", () => {
