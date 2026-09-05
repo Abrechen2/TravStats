@@ -308,7 +308,15 @@ export default function LodgingDetailPage(): JSX.Element {
               </button>
             </div>
             {lodging.stays.length > 0 ? (
-              <div className="flex flex-col gap-2">
+              // A scroll box of its own rather than the page: a house with
+              // dozens of stays pushed the map and the spend card off screen
+              // (owner, 2026-09-05). Bounded only from md up, where the
+              // sidebar sits beside it — a nested scroll area inside a
+              // single-column page is a scroll trap on a phone.
+              <div
+                data-testid="lodging-stays-scroll"
+                className="flex flex-col gap-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1"
+              >
                 {lodging.stays.map((stay) => {
                   // The SAME function the server resolves with
                   // (shared/membershipDerivation.ts) and the stay editor
