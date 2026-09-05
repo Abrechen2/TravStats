@@ -33,6 +33,12 @@ import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
 import TourSectionList from "../components/Trips/TourSectionList";
 import {
+  PanelHeader,
+  Placeholder,
+  SidePanel,
+  StatTile,
+} from "../components/Trips/TripDetailPanels";
+import {
   compareTimelineEvents,
   formatTimelineDate,
   isSupersededByPlaceVisit,
@@ -1559,23 +1565,6 @@ function TripStatsRow({
   );
 }
 
-function StatTile({ value, label }: { value: string | number; label: string }): JSX.Element {
-  return (
-    <div
-      className="rounded-xl p-3"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="text-xl font-display font-bold">{value}</div>
-      <div
-        className="text-[10px] uppercase tracking-wide mt-0.5"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {label}
-      </div>
-    </div>
-  );
-}
-
 function NotesPanel({
   notes,
   t,
@@ -1595,52 +1584,6 @@ function NotesPanel({
         {t("trips:detail.notes")}
       </div>
       <div className="text-sm whitespace-pre-wrap leading-relaxed">{notes}</div>
-    </div>
-  );
-}
-
-function SidePanel({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div
-        className="text-[10px] uppercase tracking-wide mb-2"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function PanelHeader({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <div
-      className="px-4 py-2.5 text-xs uppercase tracking-wide"
-      style={{
-        color: "var(--text-muted)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Placeholder({ text }: { text: string }): JSX.Element {
-  return (
-    <div
-      className="rounded-xl p-12 text-center text-sm"
-      style={{
-        background: "var(--bg-surface)",
-        border: "1px dashed var(--color-border)",
-        color: "var(--text-muted)",
-      }}
-    >
-      {text}
     </div>
   );
 }

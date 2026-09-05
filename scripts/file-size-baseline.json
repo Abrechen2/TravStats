@@ -4,7 +4,7 @@
   "files": {
     "backend/src/routes/stats.ts": 2367,
     "frontend/src/components/GlobeView.tsx": 1672,
-    "frontend/src/pages/TripDetailPage.tsx": 1642,
+    "frontend/src/pages/TripDetailPage.tsx": 1589,
     "backend/src/routes/flights.ts": 1581,
     "backend/src/routes/trips.ts": 1345,
     "backend/src/services/schematicRouter.ts": 1114,
