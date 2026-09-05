@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="25 Posteingang" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Posteingang</h1><div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Offene Fragen zu deinen Daten und vorgeschlagene Flug-Updates an einer Stelle. Wir ändern nichts – du entscheidest.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button onClick="{{ rerun }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-activity"></use></svg>{{ rerunLabel }}</button><a href="Einstellungen v3.dc.html#auto-updates" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-settings"></use></svg>Auto-Updates</a></div></div>
+    <div style="border-bottom:1px solid rgba(231,227,220,0.12);display:flex;gap:2px;overflow:auto"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;background:transparent;border:none;color:{{ t.color }};font-weight:{{ t.weight }};font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ t.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="color:#f4ece0">{{ t.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ t.count }}</span></button></sc-for></div>
+
+    <sc-if value="{{ isFlags }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <sc-for list="{{ statusChips }}" as="f" hint-placeholder-count="3"><button onClick="{{ f.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px" style-hover="border-color:rgba(231,227,220,0.3)">{{ f.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;opacity:0.7">{{ f.count }}</span></button></sc-for>
+        <span style="flex:1"></span>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Nächtlicher Durchlauf · zuletzt heute 03:10</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;align-items:start">
+        <sc-for list="{{ flags }}" as="m" hint-placeholder-count="4">
+          <article style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;border-color:{{ m.borderColor }};opacity:{{ m.opacity }}">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ m.domainColor }}"><use href="{{ m.iconHref }}"></use></svg></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:700;color:#f4ece0">{{ m.title }}</span><a href="{{ m.href }}" style="font-size:12px;color:rgba(231,227,220,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px" style-hover="color:#f4ece0;text-decoration:none">{{ m.record }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-chevron-right"></use></svg></a></div>
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ m.pill.color }};background:{{ m.pill.bg }};border:1px {{ m.pill.dash }} {{ m.pill.border }};white-space:nowrap">{{ m.pill.label }}</span>
+            </div>
+            <div style="font-size:14px;text-wrap:pretty">{{ m.question }}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:12px 14px;background:#101317;border-radius:12px">
+              <sc-for list="{{ m.fields }}" as="f" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ f.k }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;font-weight:500;color:{{ f.color }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span></div></sc-for>
+            </div>
+            <sc-if value="{{ m.open }}" hint-placeholder-val="{{ true }}">
+              <div style="animation:ts-rise 200ms ease-out;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px;border-top:1px solid rgba(231,227,220,0.12)">
+                <button onClick="{{ m.dismiss }}" title="Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt." style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>Passt so</button>
+                <a href="{{ m.href }}" style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-pencil"></use></svg>Eintrag korrigieren</a>
+              </div>
+            </sc-if>
+            <sc-if value="{{ m.answered }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:12px;border-top:1px solid rgba(231,227,220,0.12);font-size:12px;color:rgba(231,227,220,0.6)"><span>{{ m.answerText }}</span><button onClick="{{ m.reopen }}" style="background:transparent;border:none;color:#f0a947;font-weight:600;font-size:12px;cursor:pointer;height:44px;padding:0 8px">Zurücknehmen</button></div></sc-if>
+          </article>
+        </sc-for>
+      </div>
+      <sc-if value="{{ flagsEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-check"></use></svg></span><span style="font-size:16px;font-weight:700;color:#f4ece0">Nichts zu prüfen</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:380px;text-wrap:pretty">Bei keinem deiner Einträge widersprechen sich gerade zwei Angaben.</span></div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isUpdates }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Von einer API vorgeschlagene Änderungen an deinen Flügen. Erscheinen nur, wenn automatische Updates aktiv sind.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;align-items:start">
+        <sc-for list="{{ updates }}" as="u" hint-placeholder-count="2">
+          <article style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;opacity:{{ u.opacity }}">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#f4ece0;font-family:'IBM Plex Mono',ui-monospace,monospace">{{ u.code }}</span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:700;color:#f4ece0">{{ u.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ u.sub }}</span></div>
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ u.pill.color }};background:{{ u.pill.bg }};border:1px {{ u.pill.dash }} {{ u.pill.border }};white-space:nowrap">{{ u.pill.label }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:10px;padding:6px 0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(231,227,220,0.6)"><span>Feld</span><span>Aktuell</span><span>Neu</span></div>
+              <sc-for list="{{ u.changes }}" as="c" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:10px;min-height:40px;align-items:center;border-top:1px solid rgba(231,227,220,0.12);font-size:13px"><span style="color:rgba(231,227,220,0.75)">{{ c.field }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:rgba(231,227,220,0.6);text-decoration:line-through">{{ c.old }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#f4ece0;font-weight:500">{{ c.new }}</span></div></sc-for>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:rgba(231,227,220,0.6)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-bar-chart-3"></use></svg><span>Statistik-Auswirkung: {{ u.impact }}</span></div>
+            <sc-if value="{{ u.open }}" hint-placeholder-val="{{ true }}">
+              <div style="animation:ts-rise 200ms ease-out;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px;border-top:1px solid rgba(231,227,220,0.12)">
+                <button onClick="{{ u.reject }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Ablehnen</button>
+                <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-pencil"></use></svg>Bearbeiten</button>
+                <button onClick="{{ u.apply }}" style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:#f6bd66"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>Anwenden</button>
+              </div>
+            </sc-if>
+          </article>
+        </sc-for>
+      </div>
+      <sc-if value="{{ updatesEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-plane"></use></svg></span><span style="font-size:16px;font-weight:700;color:#f4ece0">Keine ausstehenden Updates</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:380px;text-wrap:pretty">Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind.</span></div>
+      </sc-if>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, tab: 'flags', status: 'Offen', ans: {}, upd: {}, running: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const FLAGS = [
+      { id: 1, dom: 'hotel', kind: 'Land widerspricht der Adresse', record: 'Motel One München-Deutsches Museum · Unterkunft', href: 'Logbuch Domaenen.dc.html#hotel', question: 'Die Adresse nennt ein anderes Land als das, das gespeichert ist. Welches stimmt?', fields: [['Gespeichertes Land', 'AT', T.warn], ['Land laut Adresse', 'DE', T.text], ['Adresse', 'Rablstraße 2, 81669 München', T.muted]] },
+      { id: 2, dom: 'poi', kind: 'Land ohne datierten Beleg', record: 'Malta · Reisepass', href: 'Reisepass v2.dc.html', question: 'Malta steht ausschließlich auf Einträgen ohne Datum. Warst du dort?', fields: [['Belege mit Datum', 'keine', T.warn], ['Belege ohne Datum', '1 · Valletta (Ort)', T.text]] },
+      { id: 3, dom: 'hotel', kind: 'Check-out vor Check-in', record: '25hours Hotel Hamburg · Unterkunft', href: 'Logbuch Domaenen.dc.html#hotel', question: 'Das Check-out-Datum liegt vor dem Check-in. Beide Daten stehen so im Eintrag – welches gehört wohin?', fields: [['Check-in', '2026-08-30', T.text], ['Check-out', '2026-08-28', T.warn]] },
+      { id: 4, dom: 'poi', kind: 'Koordinaten liegen in einem anderen Land', record: 'Plitvicer Seen · Ort', href: 'Ortslisten.dc.html', question: 'Die gespeicherten Koordinaten liegen in einem anderen Land als dem, das am Eintrag steht. Was stimmt – der Punkt oder das Land?', fields: [['Gespeichertes Land', 'SI', T.warn], ['Land laut Koordinaten', 'HR', T.text]] },
+    ];
+    const UPD = [
+      { id: 'u1', code: 'LH', title: 'LH 2058 · HAM → MUC', sub: '2026-09-18 · Quelle: AeroDataBox · Konfidenz 0,94', changes: [['Ankunft (Plan)', '08:10', '08:15'], ['Flugzeug', 'Airbus A320', 'Airbus A320neo'], ['Gate', '—', 'A14']], impact: 'Flugzeit +5 min, Flotten-Statistik ändert sich' },
+      { id: 'u2', code: 'AY', title: 'AY 183 · DUS → WAW', sub: '2026-04-01 · Quelle: FlightAware · Konfidenz 0,71', changes: [['Ankunft (Ist)', '19:52', '20:14'], ['Status', 'Geflogen', 'Geflogen · verspätet']], impact: 'Pünktlichkeits-Serie endet bei 6' },
+    ];
+    const state = f => st.ans[f.id] || 'open';
+    const filt = FLAGS.filter(f => st.status === 'Alle' || (st.status === 'Offen' && state(f) === 'open') || (st.status === 'Beantwortet' && state(f) !== 'open'));
+    const flags = filt.map(f => { const d = S.DOMAINS.find(x => x.key === f.dom); const s = state(f);
+      return { ...f, title: f.kind, iconHref: S.I(d.icon), domainColor: d.color, fields: f.fields.map(([k, v, color]) => ({ k, v, color })), open: s === 'open', answered: s !== 'open', opacity: s === 'open' ? 1 : 0.7,
+        borderColor: s === 'open' ? S.rgba(T.warn, .35) : 'rgba(231,227,220,0.12)', pill: s === 'open' ? S.pill('Offen', T.warn) : s === 'dismissed' ? S.pill('Passt so', 'rgba(231,227,220,0.62)') : S.pill('Korrigiert', T.good),
+        answerText: s === 'dismissed' ? 'Als richtig bestätigt · wird nicht mehr gefragt' : 'Als korrigiert gemeldet · wird beim nächsten Durchlauf erneut geprüft',
+        dismiss: () => set(x => ({ ans: { ...x.ans, [f.id]: 'dismissed' } })), reopen: () => set(x => { const a = { ...x.ans }; delete a[f.id]; return { ans: a }; }) }; });
+    const updates = UPD.map(u => { const s = st.upd[u.id] || 'open'; return { ...u, changes: u.changes.map(([field, o, n]) => ({ field, old: o, new: n })), open: s === 'open', opacity: s === 'open' ? 1 : 0.6, pill: s === 'open' ? S.pill('Ausstehend', T.info, true) : s === 'applied' ? S.pill('Angewendet', T.good) : S.pill('Abgelehnt', 'rgba(231,227,220,0.62)'), apply: () => set(x => ({ upd: { ...x.upd, [u.id]: 'applied' } })), reject: () => set(x => ({ upd: { ...x.upd, [u.id]: 'rejected' } })) }; });
+    const openFlags = FLAGS.filter(f => state(f) === 'open').length, openUpd = UPD.filter(u => !st.upd[u.id]).length;
+    const chip = (label, count) => ({ label, count, onClick: () => set({ status: label }), bg: st.status === label ? T.accent : 'transparent', color: st.status === label ? T.bg : T.text, border: st.status === label ? T.accent : 'rgba(231,227,220,0.18)' });
+    return { ...S.navModel('inbox', st, set), stop: e => e.stopPropagation(), inboxUnread: openFlags + openUpd > 0,
+      tabs: [['flags', 'Zu prüfen', openFlags], ['updates', 'Flug-Updates', openUpd]].map(([k, label, count]) => { const a = st.tab === k; return { label, count: String(count), onClick: () => set({ tab: k }), color: a ? T.textBright : T.muted, weight: a ? 700 : 500, bar: a ? T.accent : 'transparent' }; }),
+      isFlags: st.tab === 'flags', isUpdates: st.tab === 'updates',
+      statusChips: [chip('Offen', openFlags), chip('Beantwortet', FLAGS.length - openFlags), chip('Alle', FLAGS.length)],
+      flags, flagsEmpty: flags.length === 0, updates, updatesEmpty: updates.length === 0,
+      rerun: () => { clearTimeout(this._t); set({ running: true }); this._t = setTimeout(() => set({ running: false }), 1800); }, rerunLabel: st.running ? 'Prüfe …' : 'Jetzt prüfen' };
+  }
+}
+</script>
+</body>
+</html>

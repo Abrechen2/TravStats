@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="09c Unterkunft Detail" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <a href="Logbuch Domaenen.dc.html#hotel" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:rgba(231,227,220,0.6);text-decoration:none;align-self:flex-start;height:44px" style-hover="color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-arrow-left"></use></svg>Logbuch · Unterkünfte</a>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-bed"></use></svg></span>
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Motel One München-Deutsches Museum</h1><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ typePill.color }};background:{{ typePill.bg }};border:1px {{ typePill.dash }} {{ typePill.border }};white-space:nowrap">{{ typePill.label }}</span><span style="display:inline-flex;gap:2px;color:#f0a947;font-size:12px;letter-spacing:1px">★★★</span></div>
+          <div style="font-size:13px;color:rgba(231,227,220,0.6)">Rablstraße 2, 81669 München · Deutschland · Kette <a href="Kette Detail.dc.html">Motel One</a> · Bonusprogramm beCircle (automatisch aus der Kette)</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="Hinzufuegen.dc.html#hotel" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:44px;font-size:14px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-pencil"></use></svg>Bearbeiten</a>
+          <button onClick="{{ openDelete }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:44px;font-size:14px;border-color:rgba(230,90,79,0.45);color:#e65a4f" style-hover="background:rgba(230,90,79,0.12)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-trash-2"></use></svg>Löschen</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;padding-top:18px;border-top:1px solid rgba(231,227,220,0.12)">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:22px;font-weight:600;color:#f4ece0;line-height:1;font-variant-numeric:tabular-nums">{{ k.v }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.l }}</span></div></sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:{{ cols }};gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Aufenthalte · {{ stayCount }}</div><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px" style-hover="background:rgba(231,227,220,0.04)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>Aufenthalt hinzufügen</button></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ stays }}" as="s" hint-placeholder-count="3">
+              <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:180px"><span style="font-size:14px;font-weight:700;color:#f4ece0">{{ s.range }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ s.sub }}</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ s.pill.color }};background:{{ s.pill.bg }};border:1px {{ s.pill.dash }} {{ s.pill.border }};white-space:nowrap">{{ s.pill.label }}</span><a href="Reise Detail.dc.html" style="font-size:12px;font-weight:600;color:#f0a947;text-decoration:none;display:inline-flex;align-items:center;gap:4px" style-hover="text-decoration:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-route"></use></svg>{{ s.trip }}</a></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:12px 14px;background:#101317;border-radius:12px"><sc-for list="{{ s.fields }}" as="f" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ f.k }}</span><span style="font-size:13px;font-weight:500;text-wrap:pretty">{{ f.v }}</span></div></sc-for></div>
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px;color:rgba(231,227,220,0.6)"><span>Zimmer <span style="display:inline-flex;gap:2px;color:#f0a947;font-size:12px;letter-spacing:1px">{{ s.rRoom }}</span></span><span>Frühstück <span style="display:inline-flex;gap:2px;color:#f0a947;font-size:12px;letter-spacing:1px">{{ s.rBreak }}</span></span><span>Service <span style="display:inline-flex;gap:2px;color:#f0a947;font-size:12px;letter-spacing:1px">{{ s.rServ }}</span></span><span style="margin-left:auto">Gesamt <span style="color:#f4ece0;font-weight:600;font-family:'IBM Plex Mono',ui-monospace,monospace">{{ s.overall }}</span> · Ø aus Zimmer, Frühstück und Service</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Ausgaben</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Basiswährung EUR · EZB-Kurs</span></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px"><sc-for list="{{ spend }}" as="f" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ f.k }}</span><span style="font-family:{{ f.font }};font-size:14px;font-weight:500;color:{{ f.color }};text-wrap:pretty;overflow-wrap:anywhere">{{ f.v }}</span></div></sc-for></div></div></section>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Standort</div></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="height:140px;border-radius:12px;background:radial-gradient(circle at 50% 50%,#1a1f26 0%,#101317 70%);border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;position:relative"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-map-pin"></use></svg><span style="position:absolute;bottom:8px;right:10px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">48.1287 · 11.5936</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px"><sc-for list="{{ location }}" as="f" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ f.k }}</span><span style="font-family:{{ f.font }};font-size:14px;font-weight:500;color:{{ f.color }};text-wrap:pretty;overflow-wrap:anywhere">{{ f.v }}</span></div></sc-for></div></div></section>
+        <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Ausstattung</div></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ amenities }}" as="a" hint-placeholder-count="5"><span style="height:28px;padding:0 10px;border-radius:999px;background:#1a1f26;font-size:12px;display:inline-flex;align-items:center">{{ a }}</span></sc-for></div></div></section>
+        <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Fotos</div></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><sc-for list="{{ photos }}" as="p" hint-placeholder-count="3"><div style="aspect-ratio:1;border-radius:10px;background:{{ p }};border:1px solid rgba(231,227,220,0.12)"></div></sc-for></div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Aus Immich · 14 Fotos im Zeitraum der Aufenthalte</div></div></section>
+        <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Notizen</div></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="font-size:14px;text-wrap:pretty">Ruhige Zimmer zum Hof; U-Bahn Fraunhoferstraße 3 Minuten.</div></div></section>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);padding:0 4px">Quelle: E-Mail-Import · angelegt 2026-09-01 · ID l-0031</div>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDelete }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:440px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Unterkunft löschen?</div>
+        <div style="font-size:14px;text-wrap:pretty">„Motel One München-Deutsches Museum“ mit 3 Aufenthalten wird endgültig gelöscht. Reisen bleiben erhalten.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button onClick="{{ closeDelete }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04)">Abbrechen</button><a href="Logbuch Domaenen.dc.html#hotel" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border-color:rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;text-decoration:none" style-hover="background:rgba(230,90,79,0.2);text-decoration:none">Endgültig löschen</a></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, deleteOpen: false, narrow: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._k = e => { if (e.key === 'Escape') this.setState({ deleteOpen: false, menu: null }); }; window.addEventListener('keydown', this._k); this._r = () => this.setState({ narrow: window.innerWidth < 960 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const MONO_KEYS = /^(Buchung|Buchungscode|Buchungsnummer|Ticketnummer|Kennzeichen|Mode-S|IATA|Koordinaten|ID|Distanz|Großkreis|CO₂|Flugzeit|Preis|Steuern & Gebühren|Original|In Basiswährung|Pro Übernachtung|Kabinennummer|Nummer|Deck|Abflug \(plan\)|Tatsächl\. Abflug|Ankunft \(plan\)|Tatsächl\. Landung|Datum|Check-in|Check-out|Einschiffung|Ausschiffung|Sitz|Zimmer|Nächte|Adresse)$/; // §2.3: Mono nur für Codes, Kennungen, Messwerte, Zeitstempel
+    const kv = a => a.map(([k, v, c]) => ({ k, v, color: c || T.text, font: MONO_KEYS.test(k) ? "'IBM Plex Mono',ui-monospace,monospace" : 'inherit' }));
+    const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+    return { ...S.navModel('logbook', st, set), stop: e => e.stopPropagation(), cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1.5fr) minmax(300px,1fr)',
+      typePill: S.pill('Hotel', T.domain.hotel),
+      kpis: [['3', 'Aufenthalte'], ['8', 'Nächte'], ['4,3', 'Ø Bewertung'], ['744 €', 'Ausgaben'], ['93 €', 'pro Übernachtung']].map(([v, l]) => ({ v, l })),
+      stayCount: 3,
+      stays: [['18.–21.09.2026', '3 Nächte · Zimmer 412 · Frühstück', 'scheduled', 'München im September', [['Zimmerkategorie', 'Standard'], ['Verpflegung', 'Frühstück'], ['Preis', '297,00 € · 99 €/Nacht'], ['Buchungsnummer', '4471-22'], ['Bonusprogramm', 'beCircle · automatisch']], 0, 0, 0, '—'], ['03.–05.04.2026', '2 Nächte · Zimmer 208', 'done', 'Warschau (Zwischenstopp)', [['Zimmerkategorie', 'Standard'], ['Verpflegung', 'Ohne'], ['Preis', '178,00 € · 89 €/Nacht'], ['Check-out', '11:00'], ['Prämienübernachtung', 'nein']], 4, 0, 5, '4,5'], ['11.–14.10.2025', '3 Nächte · Zimmer 615', 'done', 'Oktoberfest-Wochenende', [['Zimmerkategorie', 'Standard'], ['Verpflegung', 'Frühstück'], ['Preis', '269,00 € · 90 €/Nacht'], ['Mitreisende', 'Mia Schmidt'], ['Beleg', 'rechnung-615.pdf']], 4, 4, 4, '4,0']].map(([range, sub, s, trip, fields, r1, r2, r3, overall]) => ({ range, sub, trip, pill: S.statusPill(s), fields: fields.map(([k, v]) => ({ k, v })), rRoom: r1 ? stars(r1) : '—', rBreak: r2 ? stars(r2) : '—', rServ: r3 ? stars(r3) : '—', overall })),
+      spend: kv([['Original', '744,00 EUR'], ['In Basiswährung', '744,00 €'], ['Pro Übernachtung', '93,00 €'], ['Zeitraum', '2025–2026 · 3 Aufenthalte']]),
+      location: kv([['Adresse', 'Rablstraße 2, 81669 München'], ['Stadt / Land', 'München · DE'], ['Herkunft', 'Nominatim · bestätigt']]),
+      amenities: ['WLAN', 'Bar', 'Barrierefrei', 'Fahrradgarage', 'Klimaanlage'],
+      photos: ['linear-gradient(135deg,#2a2f36,#1e3630)', 'linear-gradient(135deg,#3b2f1e,#2a2f36)', 'linear-gradient(135deg,#1e2a36,#2a2f36)'],
+      deleteOpen: st.deleteOpen, openDelete: () => set({ deleteOpen: true }), closeDelete: () => set({ deleteOpen: false }) };
+  }
+}
+</script>
+</body>
+</html>

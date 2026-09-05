@@ -1,0 +1,94 @@
+  <div data-screen-label="18 Statistik" style="border-bottom:1px solid rgba(231,227,220,0.12)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;gap:2px;overflow:auto">
+      <sc-for list="{{ statTabs }}" as="d" hint-placeholder-count="5">
+        <button onClick="{{ d.onClick }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;background:transparent;border:none;color:{{ d.color }};font-weight:{{ d.weight }};font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ d.bar }}" style-hover="color:#f4ece0"><sc-if value="{{ d.hasIcon }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{ d.iconColor }}"><use href="{{ d.iconHref }}"></use></svg></sc-if>{{ d.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <main style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Statistik · Gesamt</h1>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">Der Zeitraum gilt für Kennzahlen, Diagramm und Domänen-Karten.</div>
+      </div>
+      <a href="Reisepass.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-book-open"></use></svg>Reisepass</a>
+    </div>
+
+    <!-- The one chip row: years -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex:1;min-width:0;overflow:auto">
+        <sc-for list="{{ years }}" as="y" hint-placeholder-count="13">
+          <button onClick="{{ y.onClick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ y.border }};background:{{ y.bg }};color:{{ y.color }};font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums" style-hover="border-color:rgba(231,227,220,0.3)">{{ y.label }}</button>
+        </sc-for>
+      </div>
+      <button onClick="{{ toggleCompare }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ compareBorder }};background:{{ compareBg }};color:{{ compareColor }};font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px" style-hover="border-color:rgba(231,227,220,0.3)">Vergleich mit 2025</button>
+    </div>
+
+    <!-- KPI -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Übersicht</div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ periodLabel }}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <a href="{{ k.href }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none" style-hover="background:#171c22;text-decoration:none;color:inherit">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">{{ k.value }}</span><sc-if value="{{ k.chevron }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></sc-if></div>
+            <span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.label }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Chart -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Aktivität pro Jahr</div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <sc-for list="{{ series }}" as="s" hint-placeholder-count="4">
+            <button onClick="{{ s.toggle }}" style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 4px;background:transparent;border:none;color:{{ s.textColor }};font-size:13px;font-weight:600;cursor:pointer;text-decoration:{{ s.deco }}" style-hover="color:#f4ece0"><span style="width:10px;height:10px;border-radius:3px;background:{{ s.swatch }}"></span>{{ s.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ s.meta }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px 20px 14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{ measures }}" as="m" hint-placeholder-count="2">
+              <button onClick="{{ m.onClick }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.color }};font-weight:600;font-size:12px;cursor:pointer" style-hover="border-color:rgba(231,227,220,0.3)">{{ m.label }}</button>
+            </sc-for>
+          </div>
+          <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ highlightLabel }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:end;height:240px;padding-top:20px">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12">
+            <button onClick="{{ b.onClick }}" title="{{ b.title }}" style="display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;background:transparent;border:none;padding:0;cursor:pointer;position:relative;min-width:0">
+              <span style="position:absolute;top:-20px;left:0;right:0;text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:{{ b.labelWeight }};color:{{ b.labelColor }};font-variant-numeric:tabular-nums">{{ b.total }}</span>
+              <span style="display:flex;flex-direction:column;justify-content:flex-end;height:{{ b.h }};border-radius:6px 6px 0 0;overflow:hidden;box-shadow:{{ b.ring }}">
+                <sc-for list="{{ b.segs }}" as="s" hint-placeholder-count="2"><span style="height:{{ s.h }};background:{{ s.color }}"></span></sc-for>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;border-top:1px solid rgba(231,227,220,0.12);padding-top:8px">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12"><span style="text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ b.labelColor }};font-weight:{{ b.labelWeight }}">{{ b.year }}</span></sc-for>
+        </div>
+      </div>
+    </section>
+
+    <!-- Domain cards: one per non-empty domain -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Domänen</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">
+        <sc-for list="{{ domainCards }}" as="d" hint-placeholder-count="2">
+          <a href="{{ d.href }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;color:inherit;text-decoration:none" style-hover="background:#171c22;text-decoration:none;color:inherit">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700"><span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:{{ d.color }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="{{ d.iconHref }}"></use></svg></span>{{ d.label }}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+              <sc-for list="{{ d.stats }}" as="s" hint-placeholder-count="3">
+                <div style="background:#1a1f26;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">{{ s.v }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ s.l }}</span></div>
+              </sc-for>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6)">Unterkünfte und Orte haben in diesem Zeitraum keine Einträge — ihre Abschnitte erscheinen, sobald es welche gibt.</div>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell · EN" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Quick search · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Search<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Inbox.dc.html" title="Inbox" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">More<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Add" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Add</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Account" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 0;display:flex;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">EN · §7.10 length test · <a href="Logbuch Fluege.dc.html">DE</a></span></div>
+
+
+  <sc-if value="{{ zLoading }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="08 Logbuch · Laden" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="display:flex;flex-direction:column;gap:8px;animation:ts-pulse 1.2s ease-in-out infinite"><span style="height:26px;width:220px;border-radius:8px;background:#1a1f26"></span><span style="height:12px;width:320px;border-radius:6px;background:#1a1f26"></span></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden"><sc-for list="{{ skeleton }}" as="k" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:34px minmax(0,1fr) 110px 18px;gap:14px;align-items:center;padding:0 20px;height:{{ k.h }};border-bottom:1px solid rgba(231,227,220,0.12);animation:ts-pulse 1.2s ease-in-out infinite;animation-delay:{{ k.delay }}"><span style="width:34px;height:34px;border-radius:14px;background:#1a1f26"></span><span style="display:flex;flex-direction:column;gap:8px"><span style="height:12px;width:{{ k.w1 }};border-radius:6px;background:#1a1f26"></span><span style="height:9px;width:{{ k.w2 }};border-radius:6px;background:#1a1f26"></span></span><span style="height:22px;width:90px;border-radius:999px;background:#1a1f26"></span><span></span></div></sc-for></div></div>
+</sc-if>
+  <sc-if value="{{ zError }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="08 Logbuch · Fehler" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.6)"><use href="#i-wifi-off"></use></svg></span><span style="font-size:18px;font-weight:800;color:#f4ece0">Server unreachable. Is the backend running?</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:420px;text-wrap:pretty">The request to the instance failed (5xx / no connection). Your data is unaffected — the page loads it as soon as the server answers.</span><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:6px"><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-activity"></use></svg>Try again</button><a href="Anmelden.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)">Sign in again</a></div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">No number is guessed: tiles show “—”, never 0, until the answer arrives.</span></div></div>
+</sc-if>
+  <sc-if value="{{ zEmpty }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="08 Logbuch · Leer" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;animation:ts-enter 260ms ease-out"><span style="width:56px;height:56px;border-radius:18px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#f0a947"><use href="#i-plane"></use></svg></span><span style="font-size:20px;font-weight:800;color:#f4ece0">Noch keine Flights erfasst</span><span style="font-size:14px;color:rgba(231,227,220,0.6);max-width:460px;text-wrap:pretty">Füge deinen ersten Flug hinzu oder lies eine Buchung ein. Ein ganzes Logbuch auf einmal? Unter Settings › Listen importieren kommen FR24-Exporte und CSVs in einem Zug.</span><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:8px"><a href="Hinzufuegen.dc.html#flight" style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>Ersten Add flight</a><a href="Hinzufuegen.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg>Import a booking</a><a href="Settings v3.dc.html#listen-import" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)">Import a list</a></div></div></div>
+</sc-if>
+
+  <!-- Logbuch domain tabs (second level) -->
+  <div data-screen-label="08 Logbuch Flights" style="border-bottom:1px solid rgba(231,227,220,0.12)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;gap:2px;overflow:auto">
+      <sc-for list="{{ domainTabs }}" as="d" hint-placeholder-count="4">
+        <a href="{{ d.href }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;color:{{ d.color }};font-weight:{{ d.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ d.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{ d.iconColor }}"><use href="{{ d.iconHref }}"></use></svg>{{ d.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ d.count }}</span></a>
+      </sc-for>
+    </div>
+  </div>
+
+  <main style="display:{{ zMainDisplay }};max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px">
+    <!-- PageHeader -->
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Flights</h1>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);letter-spacing:0.02em">160 flights · 20 airlines · 71 airports · 789,032 km</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="Settings v3.dc.html#flug" title="Flight settings: home airport, defaults, enrichment" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sliders-horizontal"></use></svg></a>
+        <button title="Import" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;cursor:pointer" style-hover="background:#14181d;color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"></use></svg></button>
+        <div style="position:relative;display:{{ wideDisplay }}">
+          <button onClick="{{ toggleColumns }}" style="height:44px;padding:0 12px 0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-columns-3"></use></svg>Columns<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+          <sc-if value="{{ columnsOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+              <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">Table</div>
+              <sc-for list="{{ columnOpts }}" as="c" hint-placeholder-count="5">
+                <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:12px;background:transparent;border:none;color:#e7e3dc;font-size:14px;cursor:pointer;text-align:left" style-hover="background:rgba(231,227,220,0.06)"><span style="width:18px;height:18px;border-radius:6px;border:1px solid {{ c.boxBorder }};background:{{ c.boxBg }};display:flex;align-items:center;justify-content:center;color:#0b0d10"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"></use></svg></sc-if></span><span style="flex:1">{{ c.label }}</span></button>
+              </sc-for>
+              <div style="border-top:1px solid rgba(231,227,220,0.12);margin:6px 0 2px"></div>
+              <button onClick="{{ toggleDense }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;height:40px;padding:0 12px;border-radius:12px;background:transparent;border:none;color:#e7e3dc;font-size:14px;cursor:pointer;text-align:left" style-hover="background:rgba(231,227,220,0.06)"><span>Dense rows</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ denseLabel }}</span></button>
+            </div>
+          </sc-if>
+        </div>
+        <a href="Hinzufuegen.dc.html#flight" style="height:46px;padding:0 18px 0 14px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg>Add flight</a>
+      </div>
+    </div>
+
+    <!-- The one chip row + search -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex:1;min-width:0;overflow:auto;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:28px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.onClick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;color:{{ c.metaColor }}">{{ c.meta }}</span></button>
+        </sc-for>
+      </div>
+      <label style="position:relative;display:flex;width:min(320px,100%)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:13px;top:13px;color:rgba(231,227,220,0.45);pointer-events:none"><use href="#i-search"></use></svg>
+        <input placeholder="Airline, Flugnummer, Flughafen" style="width:100%;height:44px;padding:0 14px 0 40px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)">
+      </label>
+    </div>
+
+    <!-- Table -->
+    <sc-if value="{{ zFilter }}" hint-placeholder-val="{{ false }}"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:ts-enter 260ms ease-out"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.6)"><use href="#i-search"></use></svg><span style="font-size:16px;font-weight:700;color:#f4ece0">No flight in 2019 with “Long-haul”</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:420px;text-wrap:pretty">That is different from “no flights”: 160 flights exist, none matches both filters.</span><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04)">Reset filters</button></div></sc-if>
+    <div style="display:{{ tableDisplay }};background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden;flex-direction:column">
+      <sc-if value="{{ isNarrow }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+          <a href="Flug Detail.dc.html" style="display:grid;grid-template-columns:34px minmax(0,1fr) 18px;gap:12px;align-items:center;padding:10px 14px;min-height:64px;border-bottom:1px {{ r.dash }} rgba(231,227,220,0.12);color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+            <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#f4ece0">{{ r.mono }}</span>
+            <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:14px;font-weight:600;color:#f4ece0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.from }}</span> → <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.to }}</span></span><span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }};white-space:nowrap">{{ r.pill.label }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">{{ r.dep }}</span> · {{ r.code }} · {{ r.dur }}</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ isWide }}" hint-placeholder-val="{{ true }}">
+      <div style="overflow-x:auto">
+        <div style="min-width:920px">
+          <div style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;padding:0 20px;height:40px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">
+            <span></span><span>Flug</span><span>Route</span><button onClick="{{ noop }}" style="display:flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;color:#f4ece0;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer">Departure<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chevron-down"></use></svg></button><span>Status</span><sc-if value="{{ col.duration }}" hint-placeholder-val="{{ true }}"><span style="text-align:right">Flight time</span></sc-if><sc-if value="{{ col.aircraft }}" hint-placeholder-val="{{ true }}"><span>Aircraft</span></sc-if><sc-if value="{{ col.price }}" hint-placeholder-val="{{ true }}"><span style="text-align:right">Price</span></sc-if><span></span>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+            <a href="Flug Detail.dc.html" style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;padding:0 20px;height:{{ rowHeight }};border-bottom:1px {{ r.dash }} rgba(231,227,220,0.12);color:inherit;text-decoration:none;font-variant-numeric:tabular-nums" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+              <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#f4ece0;letter-spacing:0.02em">{{ r.mono }}</span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:500;color:#f4ece0">{{ r.code }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.airline }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#f4ece0"><sc-if value="{{ r.flagA }}" hint-placeholder-val="{{ false }}"><img src="{{ r.flagA }}" alt="" width="18" height="13" style="width:18px;height:13px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(231,227,220,0.18);display:block;flex-shrink:0"></sc-if><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.from }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-arrow-right"></use></svg><sc-if value="{{ r.flagB }}" hint-placeholder-val="{{ false }}"><img src="{{ r.flagB }}" alt="" width="18" height="13" style="width:18px;height:13px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(231,227,220,0.18);display:block;flex-shrink:0"></sc-if><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.to }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.sub }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px"><span style="color:#e7e3dc">{{ r.dep }}</span><span style="color:rgba(231,227,220,0.6)">{{ r.arr }}</span></span>
+              <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;white-space:nowrap;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }}">{{ r.pill.label }}</span></span>
+              <sc-if value="{{ col.duration }}" hint-placeholder-val="{{ true }}"><span style="text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px">{{ r.dur }}</span></sc-if>
+              <sc-if value="{{ col.aircraft }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.aircraft }}</span></sc-if>
+              <sc-if value="{{ col.price }}" hint-placeholder-val="{{ true }}"><span style="text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;color:{{ r.priceColor }}">{{ r.price }}</span></sc-if>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45);justify-self:end"><use href="#i-chevron-right"></use></svg>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;height:48px;gap:14px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">8 of 160 · 789 032 km · sortiert nach Departure</span><div style="display:flex;gap:6px"><button style="height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:600;font-size:13px;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Next 50</button></div></div>
+    </div>
+  </main>
+
+  <!-- States-Wähler (Prototyp) -->
+  <div style="position:fixed;left:12px;bottom:12px;z-index:70;display:flex;gap:2px;padding:3px;border-radius:999px;background:#101317;border:1px solid rgba(231,227,220,0.12);box-shadow:0 8px 20px rgba(0,0,0,0.4)"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);padding:0 8px;display:flex;align-items:center">State</span><sc-for list="{{ zChips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.onClick }}" style="height:26px;padding:0 10px;border-radius:999px;border:none;background:{{ c.bg }};color:{{ c.color }};font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 120ms ease,color 120ms ease">{{ c.label }}</button></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, chip: 'Alle', columnsOpen: false, dense: false, col: { duration: true, aircraft: true, price: true } };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._z = () => this.forceUpdate(); window.addEventListener('hashchange', this._z); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const chip = (label, meta, active, onClick) => ({ label, meta, onClick, bg: active ? T.accent : 'transparent', color: active ? T.bg : T.text, border: active ? T.accent : 'rgba(231,227,220,0.18)', metaColor: active ? 'rgba(11,13,16,0.7)' : T.muted });
+    const counts = { flight: String(S.COUNTS.flight), cruise: String(S.COUNTS.cruise), hotel: String(S.COUNTS.hotel), poi: String(S.COUNTS.poi) };
+    const flag = cc => `https://flagcdn.com/w40/${cc.toLowerCase()}.png`; // Produkt: /api/v1/country-flags/:cc (forgejo#91)
+    const data = [
+      ['SQ', 'SQ5593', 'Singapore Airlines', 'WAW', 'PL', 'GVA', 'CH', 'Warsaw → Geneva', 'Di 07.12.27 · 10:10', 'Di 07.12.27 · 11:39', 'scheduled', '1 h 29', 'Airbus A380-800', '—'],
+      ['DL', 'DL4403', 'Delta Air Lines', 'PEK', 'CN', 'TFS', 'ES', 'Beijing → Tenerife South', 'Fr 26.11.27 · 21:19', 'Sa 27.11.27 · 02:17 +1', 'scheduled', '12 h 58', 'Airbus A350-900', '584 €'],
+      ['EW', 'EW5297', 'Eurowings', 'SCL', 'CL', 'GVA', 'CH', 'Santiago → Geneva', 'Do 28.10.27 · 05:17', 'Fr 29.10.27 · 00:04 +1', 'pending', '13 h 47', 'Airbus A319', '1 032 €'],
+      ['OS', 'OS7327', 'Austrian', 'BKK', 'TH', 'KIX', 'JP', 'Bangkok → Osaka Kansai', 'Mo 23.08.27 · 10:37', 'Mo 23.08.27 · 17:30', 'scheduled', '4 h 53', 'Boeing 777-200ER', '453 €'],
+      ['AY', 'AY6543', 'Finnair', 'BOM', 'IN', 'YYZ', 'CA', 'Mumbai → Toronto', 'Mo 16.08.27 · 04:08', 'Mo 16.08.27 · 09:19', 'review', '14 h 41', 'Airbus A320', '291 €'],
+      ['AF', 'AF1004', 'Air France', 'TPE', 'TW', 'JED', 'SA', 'Taipei → Jeddah', 'Mi 23.06.27 · 04:47', 'Mi 23.06.27 · 09:29', 'scheduled', '9 h 42', 'Boeing 777-300ER', '—'],
+      ['TK', 'TK3150', 'Turkish Airlines', 'BCN', 'ES', 'STR', 'DE', 'Barcelona → Stuttgart', 'Mi 21.04.27 · 04:11', 'Mi 21.04.27 · 05:21', 'cancelled', '1 h 10', 'Airbus A350-900', '606 €'],
+      ['AY', 'AY183', 'Finnair', 'DUS', 'DE', 'WAW', 'PL', 'Düsseldorf → Warsaw', 'Do 01.04.26 · 18:43', 'Do 01.04.26 · 19:52', 'flown', '1 h 9', 'Airbus A320', '634 €'],
+    ];
+    const cols = ['44px', '150px', 'minmax(220px,1.6fr)', '170px', '110px', st.col.duration && '80px', st.col.aircraft && 'minmax(120px,1fr)', st.col.price && '80px', '24px'].filter(Boolean).join(' ');
+    return {
+      ...S.zModel(this), skeleton: S.skeletonRows(8), ...S.navModel('logbook', st, set), stop: e => e.stopPropagation(), isWide: !S.isNarrow(), tableDisplay: S.zState() === 'filter' ? 'none' : 'flex', wideDisplay: S.isNarrow() ? 'none' : 'block', noop: e => e.preventDefault(),
+      domainTabs: S.DOMAINS.filter(d => !(S.betaOff() && d.key === 'poi')).map(d => { const a = d.key === 'flight'; return { label: d.label, href: d.href, count: counts[d.key], iconHref: S.I(d.icon), iconColor: d.color, color: a ? T.textBright : T.muted, weight: a ? 700 : 500, bar: a ? T.accent : 'transparent' }; }),
+      chips: [['All', '160'], ['Scheduled', '15'], ['Flown', '142'], ['Review', '2'], ['2027', '38'], ['2026', '41'], ['Long-haul', '57']].map(([l, m]) => chip(l, m, st.chip === l, () => set({ chip: l }))),
+      columnsOpen: st.menu === 'columns', toggleColumns: e => { e.stopPropagation(); set({ menu: st.menu === 'columns' ? null : 'columns' }); },
+      columnOpts: [['duration', 'Flight time'], ['aircraft', 'Aircraft'], ['price', 'Price']].map(([k, label]) => ({ label, on: st.col[k], toggle: () => set(s => ({ col: { ...s.col, [k]: !s.col[k] } })), boxBg: st.col[k] ? T.accent : 'transparent', boxBorder: st.col[k] ? T.accent : 'rgba(231,227,220,0.3)' })),
+      toggleDense: () => set({ dense: !st.dense }), denseLabel: st.dense ? '36 px' : '64 px',
+      col: st.col, gridCols: cols, rowHeight: st.dense ? '44px' : '64px',
+      rows: data.map(([mono, code, airline, from, ca, to, cb, sub, dep, arr, status, dur, aircraft, price]) => ({ mono, code, airline, from, to, sub, dep, arr, dur, aircraft, price, flagA: flag(ca), flagB: flag(cb), pill: S.statusPill(status) /* §2.5: Statuspille aus STATUS; Domänenpille nur in gemischten Listen */, dash: status === 'pending' ? 'dashed' : 'solid', priceColor: price === '—' ? T.faint : T.text })),
+    };
+  }
+}
+</script>
+</body>
+</html>

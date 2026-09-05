@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <sc-if value="{{ zLoading }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="12 Reise · Laden" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="display:flex;flex-direction:column;gap:8px;animation:ts-pulse 1.2s ease-in-out infinite"><span style="height:26px;width:220px;border-radius:8px;background:#1a1f26"></span><span style="height:12px;width:320px;border-radius:6px;background:#1a1f26"></span></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden"><sc-for list="{{ skeleton }}" as="k" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:34px minmax(0,1fr) 110px 18px;gap:14px;align-items:center;padding:0 20px;height:{{ k.h }};border-bottom:1px solid rgba(231,227,220,0.12);animation:ts-pulse 1.2s ease-in-out infinite;animation-delay:{{ k.delay }}"><span style="width:34px;height:34px;border-radius:14px;background:#1a1f26"></span><span style="display:flex;flex-direction:column;gap:8px"><span style="height:12px;width:{{ k.w1 }};border-radius:6px;background:#1a1f26"></span><span style="height:9px;width:{{ k.w2 }};border-radius:6px;background:#1a1f26"></span></span><span style="height:22px;width:90px;border-radius:999px;background:#1a1f26"></span><span></span></div></sc-for></div></div>
+</sc-if>
+  <sc-if value="{{ zError }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="12 Reise · Fehler" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.6)"><use href="#i-wifi-off"></use></svg></span><span style="font-size:18px;font-weight:800;color:#f4ece0">Reise nicht ladbar</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:420px;text-wrap:pretty">Die Reise existiert, aber der Server antwortet nicht. Kennzahlen bleiben „—“, bis die Antwort da ist.</span><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:6px"><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-activity"></use></svg>Erneut versuchen</button></div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">Keine Zahl wird geraten: Kacheln zeigen „—“, nie 0, bis die Antwort da ist.</span></div></div>
+</sc-if>
+  <sc-if value="{{ zEmpty }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="12 Reise · Leer" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;animation:ts-enter 260ms ease-out"><span style="width:56px;height:56px;border-radius:18px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-route"></use></svg></span><span style="font-size:20px;font-weight:800;color:#f4ece0">Diese Reise ist noch leer</span><span style="font-size:14px;color:rgba(231,227,220,0.6);max-width:460px;text-wrap:pretty">„Herbst in Lissabon“ hat einen Zeitraum, aber keine Einträge. Ordne vorhandene Flüge, Unterkünfte und Orte zu — oder lies die Buchungsunterlagen ein.</span><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:8px"><button style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-link-2"></use></svg>Einträge zuordnen</button><a href="Hinzufuegen.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg>Reiseunterlagen einlesen</a></div></div></div>
+</sc-if>
+
+  <main data-screen-label="16 Reise-Detail" style="display:{{ zMainDisplay }};max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px">
+    <a href="#" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:rgba(231,227,220,0.6);width:fit-content;min-height:44px" style-hover="color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-arrow-left"></use></svg>Reisen</a>
+
+    <!-- Hero: the trip is a frame -->
+    <div style="background:linear-gradient(160deg,#171c22,#12161b);border:1px solid rgba(231,227,220,0.12);border-radius:18px;padding:28px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;white-space:nowrap;color:{{ status.color }};background:{{ status.bg }};border:1px {{ status.dash }} {{ status.border }}">{{ status.label }}</span>
+          <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">12.–28. Juli 2025 · 16 Tage · 3 Länder</span>
+        </div>
+        <h1 style="margin:0;font-size:42px;font-weight:800;letter-spacing:-1px;color:#f4ece0;line-height:1;text-wrap:pretty">Alaska Expedition</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ countries }}" as="c" hint-placeholder-count="3">
+            <span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px 0 8px;border-radius:999px;background:#1a1f26;font-size:13px;font-weight:600"><span style="width:21px;height:15px;border-radius:2px;background:{{ c.flag }}"></span>{{ c.name }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button title="Bearbeiten" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;cursor:pointer" style-hover="background:#14181d;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-pencil"></use></svg></button>
+        <div style="position:relative">
+          <button onClick="{{ toggleActions }}" title="Weitere Aktionen" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;cursor:pointer" style-hover="background:#14181d;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-ellipsis"></use></svg></button>
+          <sc-if value="{{ actionsOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="4">
+                <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;background:transparent;border:none;border-top:1px solid {{ a.sep }};color:{{ a.color }};font-size:14px;font-weight:600;cursor:pointer;text-align:left;width:100%" style-hover="background:rgba(231,227,220,0.06)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{ a.iconColor }}"><use href="{{ a.iconHref }}"></use></svg>{{ a.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:2px;border-bottom:1px solid rgba(231,227,220,0.12);overflow:auto">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="7">
+        <button onClick="{{ t.onClick }}" style="height:44px;padding:0 14px;background:transparent;border:none;color:{{ t.color }};font-weight:{{ t.weight }};font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ t.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="color:#f4ece0">{{ t.label }}<sc-if value="{{ t.beta }}" hint-placeholder-val="{{ false }}"><span title="{{ beta_tourRoutes.hint }}" style="display:inline-flex;align-items:center;height:18px;padding:0 7px;margin-left:8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#d8952f;background:rgba(216,149,47,0.12);border:1px dashed rgba(216,149,47,0.45)">Beta</span></sc-if></button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+    <!-- KPI: three tiles, no cross-domain sums -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">{{ k.value }}</span>
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:{{ detailCols }};gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <!-- Domain band: only domains that have entries (rule 4) -->
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Kreuzfahrt</div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">1 Eintrag · 7 Häfen · 2 480 sm</span></div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden">
+            <a href="Kreuzfahrt Detail.dc.html" style="display:flex;align-items:center;gap:14px;padding:0 20px;height:64px;color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+              <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:#4aa6b0;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-ship"></use></svg></span>
+              <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600;color:#f4ece0">Norwegian Bliss · Seward → Vancouver</span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">14.–21. Juli · Juneau, Skagway, Glacier Bay, Ketchikan</span></span>
+              <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">7 Nächte</span>
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;white-space:nowrap;color:#4aa6b0;background:rgba(74,166,176,0.12);border:1px solid rgba(74,166,176,0.45)">Kreuzfahrt</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+            </a>
+          </div>
+        </section>
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Orte</div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">4 Orte · 3 Länder</span></div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden">
+            <sc-for list="{{ places }}" as="p" hint-placeholder-count="4">
+              <a href="#" style="display:flex;align-items:center;gap:14px;padding:0 20px;height:64px;border-bottom:1px solid {{ p.sep }};color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+                <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:#e7e3dc;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-map-pin"></use></svg></span>
+                <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600;color:#f4ece0">{{ p.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ p.sub }}</span></span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ p.date }}</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+              </a>
+            </sc-for>
+          </div>
+        </section>
+        <!-- Notes -->
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Notizen</div>
+          <div style="background:#101317;border:1px dashed rgba(231,227,220,0.18);border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+            <span style="font-size:12px;color:rgba(231,227,220,0.6)">Noch keine Notiz zu dieser Reise.</span>
+            <button style="height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:600;font-size:13px;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Notiz schreiben</button>
+          </div>
+        </section>
+      </div>
+
+      <aside style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Reisende</div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px 20px;display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ travellers }}" as="t" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;height:44px"><span style="width:30px;height:30px;border-radius:999px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#f4ece0">{{ t.mono }}</span><span style="font-size:14px;flex:1">{{ t.name }}</span></div>
+            </sc-for>
+          </div>
+        </section>
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:{{ summaryDisplay }};align-items:center;gap:8px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Zusammenfassung</div><span title="{{ beta_tripAiSummary.hint }}" style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#d8952f;background:rgba(216,149,47,0.12);border:1px dashed rgba(216,149,47,0.45);white-space:nowrap">Beta</span></div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Ich schreibe dir aus Stopps, Tagebuch und den verknüpften Einträgen einen kurzen Text — wenn du willst.</div>
+            <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;width:fit-content;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:#f0a947"><use href="#i-sparkles"></use></svg>Zusammenfassung erstellen</button>
+          </div>
+        </section>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">Angelegt 03.03.2025 · zuletzt geändert 29.07.2025</div>
+      </aside>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Timeline · 12.–27. Juli 2025</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-pencil"></use></svg>Tagebuch-Eintrag</button><button style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-map-pin"></use></svg>Stopp / Ort</button></div></div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:8px 20px;display:flex;flex-direction:column">
+      <sc-for list="{{ timeline }}" as="e" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:70px 24px minmax(0,1fr) auto;gap:14px;align-items:start;min-height:56px;padding:10px 0">
+          <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);padding-top:4px">{{ e.date }}</span>
+          <span style="display:flex;flex-direction:column;align-items:center;align-self:stretch"><span style="width:24px;height:24px;border-radius:999px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ e.color }}"><use href="{{ e.icon }}"></use></svg></span><span style="flex:1;width:1px;background:{{ e.line }};margin-top:4px"></span></span>
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;color:#f4ece0">{{ e.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ e.sub }}</span></span>
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ e.pill.color }};background:{{ e.pill.bg }};border:1px {{ e.pill.dash }} {{ e.pill.border }};white-space:nowrap">{{ e.pill.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+
+    <sc-if value="{{ isJournal }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Journal · 3 Einträge</div><button style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-pencil"></use></svg>Tagebuch-Eintrag</button></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ journal }}" as="j" hint-placeholder-count="3">
+        <article style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap"><span style="font-size:16px;font-weight:700;color:#f4ece0">{{ j.title }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ j.date }} · {{ j.place }}</span></div>
+          <div style="font-family:'Newsreader',Georgia,serif;font-style:italic;font-size:17px;line-height:1.55;color:rgba(231,227,220,0.85);text-wrap:pretty">{{ j.text }}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:8px;border-top:1px solid rgba(231,227,220,0.12)"><sc-for list="{{ j.photos }}" as="p" hint-placeholder-count="3"><span style="width:48px;height:48px;border-radius:10px;background:{{ p }};border:1px solid rgba(231,227,220,0.12)"></span></sc-for><span style="flex:1"></span><button style="background:transparent;border:none;color:rgba(231,227,220,0.6);font-size:12px;font-weight:600;cursor:pointer;height:36px" style-hover="color:#f4ece0">Bearbeiten</button></div>
+        </article>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ isTours }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:{{ tourCols }};gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Touren · {{ tourCount }}</div><button style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>Tour hinzufügen</button></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ tours }}" as="t" hint-placeholder-count="2">
+            <button onClick="{{ t.onClick }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:{{ t.border }};padding:14px 18px;display:flex;align-items:center;gap:12px;text-align:left;color:#e7e3dc;cursor:pointer;width:100%" style-hover="border-color:rgba(231,227,220,0.3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-route"></use></svg><span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700;color:#f4ece0">{{ t.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ t.sub }}</span></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ t.km }}</span></button>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:6px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Stopps</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Streckenpunkt = zählt für Etappen</span></div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+          <sc-for list="{{ stops }}" as="s" hint-placeholder-count="5">
+            <button onClick="{{ s.toggle }}" title="{{ s.hint }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 0;border-bottom:1px solid {{ s.divider }};background:transparent;border-left:none;border-right:none;border-top:none;color:#e7e3dc;cursor:pointer;text-align:left;width:100%;opacity:{{ s.opacity }}"><span style="width:18px;height:18px;border-radius:6px;border:1px solid {{ s.boxBorder }};background:{{ s.boxBg }};display:flex;align-items:center;justify-content:center;color:#0b0d10;flex-shrink:0"><sc-if value="{{ s.on }}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg></sc-if></span><span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ s.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ s.sub }}</span></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ s.date }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Etappen · {{ selTour.name }}</div><button onClick="{{ routeAll }}" disabled="{{ routingDisabled }}" title="{{ routingHint }}" style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;opacity:{{ routingOpacity }}" style-hover="background:rgba(231,227,220,0.04)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-route"></use></svg>{{ routeAllLabel }}</button></div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+          <sc-for list="{{ legs }}" as="l" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:12px 0;border-bottom:1px solid {{ l.divider }}">
+              <div style="display:flex;align-items:center;gap:12px"><span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ l.from }} → {{ l.to }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ l.km }} · {{ l.source }}</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ l.pill.color }};background:{{ l.pill.bg }};border:1px {{ l.pill.dash }} {{ l.pill.border }};white-space:nowrap">{{ l.pill.label }}</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ l.modes }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.onClick }}" style="height:28px;padding:0 10px;border-radius:999px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.color }};font-weight:600;font-size:11px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;white-space:nowrap">{{ m.label }}</button></sc-for><span style="flex:1"></span><button style="height:28px;padding:0 8px;border-radius:999px;border:none;background:transparent;color:rgba(231,227,220,0.6);font-size:11px;cursor:pointer" style-hover="color:#f4ece0">Linie entfernen</button></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ routingNote }}</div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:6px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Aufgezeichnete Tracks</div><div style="display:flex;gap:8px"><button style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;height:36px;font-size:13px" style-hover="background:rgba(231,227,220,0.04)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg>GPX hochladen</button><button title="{{ dawarichHint }}" disabled="{{ dawarichDisabled }}" style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;height:36px;font-size:13px;opacity:{{ dawarichOpacity }}" style-hover="background:rgba(231,227,220,0.04)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-download"></use></svg>Aus Dawarich abrufen</button></div></div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+          <sc-for list="{{ tracks }}" as="k" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 0;border-bottom:1px solid {{ k.divider }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-activity"></use></svg><span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600;font-family:'IBM Plex Mono',ui-monospace,monospace">{{ k.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.sub }}</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ k.pill.color }};background:{{ k.pill.bg }};border:1px {{ k.pill.dash }} {{ k.pill.border }};white-space:nowrap">{{ k.pill.label }}</span><button title="Löschen" style="background:transparent;border:none;color:rgba(231,227,220,0.6);cursor:pointer;height:44px;width:44px;display:flex;align-items:center;justify-content:center" style-hover="color:#e65a4f"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-trash-2"></use></svg></button></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.6)"><use href="{{ otherIcon }}"></use></svg></span><span style="font-size:16px;font-weight:700;color:#f4ece0">{{ otherTitle }}</span><span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:420px;text-wrap:pretty">{{ otherText }}</span></div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDelete }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:440px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reise löschen?</div>
+        <div style="font-size:14px;text-wrap:pretty">Löschen entfernt „Alaska Expedition" auf deinem Server. Die <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">5</span> zugeordneten Einträge bleiben.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button onClick="{{ closeDelete }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Behalten</button>
+          <button onClick="{{ closeDelete }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(230,90,79,0.2)">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Zustands-Wähler (Prototyp) -->
+  <div style="position:fixed;left:12px;bottom:12px;z-index:70;display:flex;gap:2px;padding:3px;border-radius:999px;background:#101317;border:1px solid rgba(231,227,220,0.12);box-shadow:0 8px 20px rgba(0,0,0,0.4)"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);padding:0 8px;display:flex;align-items:center">Zustand</span><sc-for list="{{ zChips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.onClick }}" style="height:26px;padding:0 10px;border-radius:999px;border:none;background:{{ c.bg }};color:{{ c.color }};font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 120ms ease,color 120ms ease">{{ c.label }}</button></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, tab: 'Übersicht', deleteOpen: false, tour: 0, stopOff: {}, legMode: {}, routing: false, narrow: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._z = () => this.forceUpdate(); window.addEventListener('hashchange', this._z); this._k = e => { if (e.key === 'Escape') this.setState({ deleteOpen: false, menu: null }); }; window.addEventListener('keydown', this._k); this._r = () => this.setState({ narrow: window.innerWidth < 960 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); window.removeEventListener('resize', this._r); clearTimeout(this._t); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    return {
+      beta_tripAiSummary: S.betaPill('tripAiSummary'), summaryDisplay: S.betaOff() ? 'none' : 'flex', beta_tourRoutes: S.betaPill('tourRoutes'), ...S.zModel(this), skeleton: S.skeletonRows(8), ...S.navModel('trips', st, set), stop: e => e.stopPropagation(),
+      status: S.statusPill('done'),
+      countries: [['USA', '#3c3b6e'], ['Kanada', '#c93c3c'], ['Dänemark', '#c8102e']].map(([name, flag]) => ({ name, flag })),
+      actionsOpen: st.menu === 'actions', toggleActions: e => { e.stopPropagation(); set({ menu: st.menu === 'actions' ? null : 'actions' }); },
+      actions: [
+        { label: 'Einträge zuordnen', icon: 'link-2', onClick: () => set({ menu: null }) },
+        { label: 'Teilen', icon: 'upload', onClick: () => set({ menu: null }) },
+        { label: 'Auf Karte', icon: 'map', onClick: () => set({ menu: null }) },
+        { label: 'Löschen', icon: 'trash-2', danger: true, onClick: () => set({ menu: null, deleteOpen: true }) },
+      ].map((a, i) => ({ ...a, iconHref: S.I(a.icon), color: a.danger ? T.bad : T.text, iconColor: a.danger ? T.bad : T.muted, sep: a.danger ? 'rgba(231,227,220,0.12)' : 'transparent' })),
+      tabs: ['Übersicht', 'Timeline', 'Journal', 'Karte', 'Galerie', 'Logistik', 'Touren'].filter(t => !(S.betaOff() && t === 'Touren')).map(t => { const a = st.tab === t; return { label: t, beta: t === 'Touren', onClick: () => set({ tab: t }), color: a ? T.textBright : T.muted, weight: a ? 700 : 500, bar: a ? T.accent : 'transparent' }; }),
+      isOverview: st.tab === 'Übersicht', isTimeline: st.tab === 'Timeline', isTours: st.tab === 'Touren', isJournal: st.tab === 'Journal', isOther: ['Karte', 'Galerie', 'Logistik'].includes(st.tab),
+      otherIcon: S.I(st.tab === 'Karte' ? 'map' : st.tab === 'Galerie' ? 'image' : 'table-2'), otherTitle: st.tab === 'Karte' ? 'Karte dieser Reise' : st.tab === 'Galerie' ? 'Galerie' : 'Logistik',
+      otherText: st.tab === 'Karte' ? 'Alle Einträge der Reise auf einem Globus-Ausschnitt — Flüge, Kreuzfahrt-Route, Stopps und Touren-Etappen in den Bereichsfarben.' : st.tab === 'Galerie' ? 'Fotos zu Besuchen aus deiner Immich-Instanz, nach Tagen gruppiert. Verbindung unter Admin › Externe Dienste.' : 'Buchungen, Kosten und Reisende — Buchungsnummern gruppieren Flüge, Gesamtkosten aus allen Einträgen.',
+      timeline: [['12.07.', 'plane', T.domain.flight, 'LH 8462 · FRA → ANC', 'Abflug 13:40 · Ankunft 15:05 · 9 h 25', 'flown'], ['12.07.', 'bed', T.domain.hotel, 'Check-in: Hotel Captain Cook', 'Anchorage · 2 Nächte', 'done'], ['13.07.', 'map-pin', T.domain.poi, 'Denali Nationalpark', 'Stopp · Wanderung · Streckenpunkt', 'done'], ['14.07.', 'ship', T.domain.cruise, 'Einschiffung Norwegian Bliss', 'Seward · Kabine 11214', 'done'], ['16.07.', 'pencil', T.muted, 'Tagebuch: Seetag', '„Wale vor Juneau, den ganzen Nachmittag an Deck …“', 'done'], ['17.07.', 'map-pin', T.domain.poi, 'Glacier Bay', 'Stopp · vom Schiff', 'done'], ['21.07.', 'ship', T.domain.cruise, 'Ausschiffung', 'Vancouver', 'done'], ['27.07.', 'plane', T.domain.flight, 'LH 8463 · YVR → FRA', 'Abflug 18:15 · Ankunft 13:20 +1', 'flown']].map(([date, icon, color, title, sub, s], i, a) => ({ date, icon: S.I(icon), color, title, sub, line: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)', pill: s === 'flown' ? S.pill('Flug', T.domain.flight) : S.statusPill(s) })),
+      journal: [['Seetag vor Juneau', '16.07.2025', 'Golf von Alaska', 'Wale, den ganzen Nachmittag an Deck. Das Wasser so glatt, dass man die Berge zweimal sah. Mia hat die Buckelflossen gezählt: vierzehn.', ['linear-gradient(135deg,#1e2a36,#1d3a40)', 'linear-gradient(135deg,#2a2f36,#1e3630)']], ['Glacier Bay', '17.07.2025', 'Glacier Bay NP', 'Um sechs geweckt vom Knacken des Eises. Der Margerie-Gletscher kalbt zweimal, während wir frühstücken. Stiller als jede Kirche.', ['linear-gradient(135deg,#1d3a40,#2a2f36)']], ['Ankunft Vancouver', '21.07.2025', 'Canada Place', 'Ausschiffung in 40 Minuten, dann Kaffee auf der Granville Island. Die Reise fühlt sich schon jetzt wie eine andere Zeitrechnung an.', []]].map(([title, date, place, text, photos]) => ({ title, date, place, text, photos })),
+      detailCols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1.6fr) minmax(280px,1fr)',
+      tourCols: st.narrow ? 'minmax(0,1fr)' : 'minmax(280px,1fr) minmax(0,1.4fr)', tourCount: 2,
+      ...(() => { const TOURS = [{ name: 'Alaska-Rundfahrt', sub: '4 Stopps · Straße', km: '612 km', stops: ['Anchorage', 'Denali', 'Talkeetna', 'Seward'] }, { name: 'Vancouver Island', sub: '3 Stopps · Fähre + Rad', km: '148 km', stops: ['Vancouver', 'Nanaimo', 'Victoria'] }];
+        const sel = TOURS[st.tour]; const ALL = [['Anchorage', 'Alaska, USA', '12.07.', true], ['Denali', 'Nationalpark', '13.07.', true], ['Talkeetna', 'Alaska', '13.07.', true], ['Seward', 'Hafen', '14.07.', true], ['Glacier Bay', 'vom Schiff · keine Koordinate', '17.07.', false], ['Vancouver', 'BC, Kanada', '21.07.', true], ['Nanaimo', 'BC', '23.07.', true], ['Victoria', 'BC', '24.07.', true]];
+        const onStop = n => sel.stops.includes(n) && !st.stopOff[st.tour + n];
+        const active = ALL.filter(([n, _s, _d, c]) => onStop(n) && c).map(a => a[0]);
+        const LEG = { 'Anchorage→Denali': ['238 km', 'berechnet', 'Straße', 'routed'], 'Denali→Talkeetna': ['154 km', 'berechnet', 'Straße', 'routed'], 'Talkeetna→Seward': ['220 km', 'Luftlinie', 'Straße', 'straight'], 'Vancouver→Nanaimo': ['58 km', 'aus der Spur', 'Fähre', 'track'], 'Nanaimo→Victoria': ['90 km', 'gezogen', 'Rad', 'drawn'] };
+        const legs = active.slice(1).map((to, i, arr) => { const from = active[i]; const k = from + '→' + to; const [km, source, defMode, src] = LEG[k] || ['—', 'Luftlinie', 'Straße', 'straight']; const mode = st.legMode[k] || defMode;
+          return { from, to, km, source, divider: i === arr.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)', pill: src === 'routed' ? S.pill('berechnet', T.good) : src === 'track' ? S.pill('aus der Spur', T.info) : src === 'drawn' ? S.pill('gezogen', T.chart[3]) : S.pill('Luftlinie', 'rgba(231,227,220,0.62)', true), modes: ['Straße', 'Fähre', 'Bahn', 'zu Fuß', 'Rad'].map(m => ({ label: m, onClick: () => set(s => ({ legMode: { ...s.legMode, [k]: m } })), bg: mode === m ? T.accent : 'transparent', color: mode === m ? T.bg : T.text, border: mode === m ? T.accent : 'rgba(231,227,220,0.18)' })) }; });
+        const routing = true; // OpenRouteService set by admin
+        return { tours: TOURS.map((t, i) => ({ ...t, border: i === st.tour ? T.accent : 'rgba(231,227,220,0.12)', onClick: () => set({ tour: i }) })), selTour: sel,
+          stops: ALL.map(([name, sub, date, coord], i, a) => { const on = onStop(name); return { name, sub, date, on, hint: coord ? (on ? 'Streckenpunkt' : 'Als Streckenpunkt zuordnen') : 'Ohne Koordinate kein Streckenpunkt', opacity: coord ? 1 : 0.5, boxBg: on ? T.accent : 'transparent', boxBorder: on ? T.accent : 'rgba(231,227,220,0.3)', divider: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)', toggle: () => coord && set(s => ({ stopOff: { ...s.stopOff, [st.tour + name]: on } })) }; }),
+          legs: legs.length ? legs : [{ from: '—', to: '—', km: '', source: 'Noch keine Etappe — ordne mindestens zwei Stopps zu', divider: 'transparent', pill: S.pill('leer', 'rgba(231,227,220,0.62)', true), modes: [] }],
+          routeAll: () => { clearTimeout(this._t); set({ routing: true }); this._t = setTimeout(() => set({ routing: false }), 1600); }, routeAllLabel: st.routing ? 'Wird berechnet …' : 'Ganze Tour berechnen', routingDisabled: !routing, routingOpacity: routing ? 1 : 0.5, routingHint: routing ? 'OpenRouteService (Admin-Schlüssel)' : 'Kein Routing-Anbieter eingerichtet',
+          routingNote: st.routing ? 'Etappen werden berechnet …' : 'Ohne Anbieter bleibt jede Etappe eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten der Etappe — sie verlassen damit diese Instanz. Anbieter: Einstellungen › Routing-Anbieter.',
+          tracks: [{ name: 'alaska-loop-2025-07-13.gpx', sub: 'GPX-Upload · 4 812 Punkte · 392 km', pill: S.pill('GPX-Upload', T.info) }, { name: 'dawarich · 23.–24.07.', sub: 'Dawarich · 1 108 Punkte · nur der neueste Abschnitt gespeichert', pill: S.pill('Unvollständig', T.warn, true) }].map((t, i, a) => ({ ...t, divider: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)' })),
+          dawarichDisabled: false, dawarichOpacity: 1, dawarichHint: 'Dawarich-Verbindung: global vom Admin bereitgestellt' }; })(),
+      kpis: [['16', 'Tage unterwegs'], ['3', 'Länder'], ['3 390 €', 'Gesamtkosten']].map(([value, label]) => ({ value, label })),
+      places: [['Anchorage', 'Alaska, USA', '12. Juli'], ['Denali', 'Nationalpark · Wanderung', '13. Juli'], ['Glacier Bay', 'Nationalpark · vom Schiff', '17. Juli'], ['Vancouver', 'British Columbia, Kanada', '21. Juli']].map(([name, sub, date], i, a) => ({ name, sub, date, sep: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)' })),
+      travellers: [['JW', 'Jonas Weber'], ['MS', 'Mia Schmidt']].map(([mono, name]) => ({ mono, name })),
+      deleteOpen: st.deleteOpen, closeDelete: () => set({ deleteOpen: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

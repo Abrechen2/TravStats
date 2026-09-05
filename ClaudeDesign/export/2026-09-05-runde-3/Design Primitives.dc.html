@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-ship" viewBox="0 0 24 24"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4"/><path d="M12 2v3"/></symbol><symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol><symbol id="i-link-2" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol><symbol id="i-table-2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></symbol></svg>
+
+<div style="min-height:100vh;background:#0b0d10">
+  <!-- AppShell: top navigation -->
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:10;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:28px">
+    <div style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</div>
+    <nav style="display:flex;gap:4px;flex:1;min-width:0;overflow:auto">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="7">
+        <a href="#" style="display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;border-radius:12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;position:relative" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:#f4ece0">{{ n.label }}<sc-if value="{{ n.unread }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:999px;background:#d8952f"></span></sc-if></a>
+      </sc-for>
+    </nav>
+    <a href="Einstellungen.dc.html" title="Einstellungen" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;flex-shrink:0" style-hover="background:#14181d;color:#f4ece0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-settings"></use></svg></a>
+  </header>
+
+  <main style="max-width:1200px;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:48px">
+
+    <!-- PageHeader -->
+    <div data-screen-label="PageHeader" style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;padding-top:8px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">/design · nur dev</div>
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Primitive</h1>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">Abnahmefläche für Block 2 · jedes Primitiv in jedem Zustand · liest nur <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">tokens.json</span> v0.7.0</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="Einstellungen.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:#f4ece0">Block 1 · Einstellungen<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></a>
+      </div>
+    </div>
+
+    <!-- 1 Farbe -->
+    <section data-screen-label="Farbe" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">01 · Farbe</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+        <sc-for list="{{ colorGroups }}" as="g" hint-placeholder-count="6">
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:16px;font-weight:700">{{ g.title }}</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ g.items }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;min-height:28px">
+                  <span style="width:28px;height:28px;border-radius:999px;flex-shrink:0;background:{{ c.value }};border:1px solid rgba(231,227,220,0.12)"></span>
+                  <span style="flex:1;font-size:14px">{{ c.name }}</span>
+                  <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ c.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:14px;grid-column:1 / -1">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><div style="font-size:16px;font-weight:700">Diagramm</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Regel §2.2: Eine Serie, die eine Domäne ist, trägt <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">domainColor</span>. <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">chartColors</span> nur für Serien ohne Domäne (Airlines, Flughäfen, Klassen, Länder, Jahre).</div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Domänen-Serie</span><div style="display:flex;gap:4px;align-items:flex-end;height:72px"><sc-for list="{{ domainBars }}" as="b" hint-placeholder-count="8"><span style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><span style="height:{{ b.c }};background:#4aa6b0;border-radius:3px 3px 0 0"></span><span style="height:{{ b.f }};background:#f0a947"></span></span></sc-for></div><div style="display:flex;gap:12px;font-size:11px;color:rgba(231,227,220,0.6)"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#f0a947"></span>Flüge</span><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#4aa6b0"></span>Kreuzfahrten</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Gemischte Serie ohne Domäne</span><div style="display:flex;gap:4px;align-items:flex-end;height:72px"><sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="9"><span style="flex:1;height:{{ b.h }};background:{{ b.color }};border-radius:3px 3px 0 0"></span></sc-for></div><div style="font-size:11px;color:rgba(231,227,220,0.6)">Airlines · chartColors[0..7]</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Bei 300 px · nie geclippt</span><div style="width:300px;max-width:100%;background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:12px"><span>Aktivität pro Jahr</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:rgba(231,227,220,0.6)">2019–26</span></div><div style="display:flex;gap:3px;align-items:flex-end;height:56px"><sc-for list="{{ domainBars }}" as="b" hint-placeholder-count="8"><span style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0"><span style="height:{{ b.c }};background:#4aa6b0;border-radius:2px 2px 0 0"></span><span style="height:{{ b.f }};background:#f0a947"></span></span></sc-for></div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:9px;color:rgba(231,227,220,0.6)"><span>19</span><span>26</span></div></div></div>
+          </div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:16px;font-weight:700">Listenfarben</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <sc-for list="{{ listSlots }}" as="s" hint-placeholder-count="10">
+              <div style="aspect-ratio:1;border-radius:14px;border:1px dashed rgba(231,227,220,0.18);background:repeating-linear-gradient(135deg,rgba(231,227,220,0.04) 0 4px,transparent 4px 10px)"></div>
+            </sc-for>
+          </div>
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">listColor.palette · 10 Namen aus tokens.json · freeHex: false</div>
+        </div>
+      </div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:14px;font-weight:700">Kontrast-Regel für <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">faint</span> (§2.6)</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">faint</span> (Tinte 45 %) erreicht 3,8 : 1 auf <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">surface</span> — unter AA für Text &lt; 18 px. Nur dekorativ: Trennzeichen, Platzhalter in leeren Feldern, Icon-Ruhezustand. Jede lesbare Zeile nimmt <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">muted</span> (5,7 : 1).</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px"><span style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(231,227,220,0.6)">Sekundärzeile · muted</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#5ec2b2">5,7 : 1 ✓</span></span><span style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(231,227,220,0.45)">Sekundärzeile · faint</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#d8952f">3,8 : 1 ✗</span></span><span style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="display:flex;gap:6px;align-items:center;color:rgba(231,227,220,0.6)">Trenner · Icon <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg> · <span style="color:rgba(231,227,220,0.45)">Platzhalter …</span></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#5ec2b2">faint ok</span></span></div>
+      </div>
+    </section>
+
+    <!-- 2 Typografie -->
+    <section data-screen-label="Typografie" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">02 · Typografie</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:42px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">1 284 260 km</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-hero · 42/800</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Logbuch Flüge</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-screen-title · 26/800 · die eine h1</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-family:Newsreader,Georgia,serif;font-style:italic;font-size:30px;font-weight:400;color:#e7e3dc;line-height:1.1">Guten Abend, Jonas.</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-greeting · 30 serif italic</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:16px;font-weight:700">Kreuzfahrt Ostsee</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-card-title · 16/700</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0">47 Flüge</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-stat-number · 20/800 · tabular</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:14px;max-width:560px;text-wrap:pretty">Die Route wurde aus der Buchungsbestätigung gelesen. Ich prüfe sie, sobald der Flug gelandet ist.</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-body · 14/400</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-size:12px;color:rgba(231,227,220,0.6)">Zuletzt synchronisiert vor 4 Minuten</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-caption · 12/400 · muted</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Nächste Abflüge</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-label-mono · 11/500</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">Quelle: OpenFlights · Stand 2026-09-05</div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-meta-mono · 10/400</div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:16px 0"><div style="font-size:14px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">LO380</span> · LOT Polish Airlines · <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">WAW</span>→<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">HAM</span></div><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">.t-code · 14/500 · nur der Code ist mono</div></div>
+      </div>
+    </section>
+
+    <!-- 3 Buttons -->
+    <section data-screen-label="Buttons" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">03 · Button · IconButton</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Primary · 52 · Ruhe / Hover / Pressed / Disabled</div>
+          <button style="height:52px;padding:0 22px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px" style-hover="background:#f6bd66" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-plus"></use></svg>Eintrag anlegen</button>
+          <button style="height:52px;padding:0 22px;border-radius:12px;border:none;background:#f6bd66;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:default">Hover</button>
+          <button style="height:52px;padding:0 22px;border-radius:12px;border:none;background:#d8952f;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:default">Pressed</button>
+          <button disabled style="height:52px;padding:0 22px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;opacity:0.5">Deaktiviert</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Secondary · 46 · Hairline 18 %</div>
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Abbrechen</button>
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:rgba(231,227,220,0.04);color:#f4ece0;font-weight:700;font-size:16px;white-space:nowrap;cursor:default">Hover · 4 % Lift</button>
+          <button tabindex="0" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;box-shadow:0 0 0 3px rgba(240,169,71,0.18);cursor:default">Fokusring · :focus-visible</button>
+          <button disabled style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;opacity:0.5">Deaktiviert</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Danger · nur im Bestätigungsdialog</div>
+          <button onClick="{{ openDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(230,90,79,0.2)">Reise löschen</button>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6);margin-top:8px">IconButton · 44×44 · Radius 14 · surface2</div>
+          <div style="display:flex;gap:10px">
+            <button title="Suchen" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d;color:#f4ece0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-search"></use></svg></button>
+            <button title="Teilen" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d;color:#f4ece0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-share-2"></use></svg></button>
+            <button title="Aktiv" style="width:44px;height:44px;border-radius:14px;background:rgba(240,169,71,0.15);border:1px solid rgba(240,169,71,0.45);color:#f0a947;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-filter"></use></svg></button>
+            <button title="Deaktiviert" disabled style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;opacity:0.5;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-download"></use></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Pills + Chips -->
+    <section data-screen-label="Pill · Chip" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">04 · StatusPill · Pill · Chip</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:16px;font-weight:700">StatusPill</div>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Farbe als Text · 12 % Fläche · 45 % Rand · 11/700 Versalien · 0.6px · 10×4 · nie mono · gestrichelt = vorläufig</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <sc-for list="{{ statuses }}" as="s" hint-placeholder-count="7">
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ s.color }};background:{{ s.bg }};border:1px {{ s.dash }} {{ s.border }}">{{ s.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:16px;font-weight:700">Domänen-Pill · Icon · Zeilenmarke</div>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Jede Domäne hat Zeile, Pillenfarbe und Icon. Lucide, keine Emoji.</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ domains }}" as="d" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px">
+                <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:{{ d.color }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="{{ d.icon }}"></use></svg></span>
+                <span style="flex:1;font-size:14px">{{ d.label }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ d.hex }}</span>
+                <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ d.color }};background:{{ d.bg }};border:1px solid {{ d.border }}">{{ d.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:16px;font-weight:700">Chip · Filterzeile</div>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Aktiv = Bernstein-Füllung · höchstens eine Chip-Zeile vor einer Liste</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:6px;position:relative" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Klickziel 44px durch unsichtbaren Rahmen; sichtbar 34.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 Cards + StatTile -->
+    <section data-screen-label="Card · StatTile" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">05 · Card · Tile · HeroCard · StatTile</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:16px;font-weight:700">Card · surface · 16</div>
+          <div style="font-size:14px;text-wrap:pretty">Kein Schatten. Eine Karte hat eine Haarlinie.</div>
+          <div style="background:#1a1f26;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:12px;color:rgba(231,227,220,0.6)">Tile · tile · 14</div>
+            <div style="font-size:14px">Innere Kachel in einer Karte</div>
+          </div>
+        </div>
+        <div style="background:linear-gradient(160deg,#171c22,#12161b);border:1px solid rgba(231,227,220,0.12);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;min-height:180px;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">HeroCard · 18</div>
+            <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Live</span>
+          </div>
+          <div>
+            <div style="font-size:42px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">312</div>
+            <div style="font-size:12px;color:rgba(231,227,220,0.6);margin-top:6px">Tage unterwegs · das eine geteilte Maß</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <a href="#" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit" style-hover="background:#171c22;text-decoration:none;color:inherit">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">47</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></div>
+            <div style="font-size:12px;color:rgba(231,227,220,0.6)">Flüge · führt weiter</div>
+          </a>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">6</span>
+            <div style="font-size:12px;color:rgba(231,227,220,0.6)">Kreuzfahrten · Aussage</div>
+          </div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">23</span>
+            <div style="font-size:12px;color:rgba(231,227,220,0.6)">Unterkünfte</div>
+          </div>
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#f4ece0;line-height:1">118</span>
+            <div style="font-size:12px;color:rgba(231,227,220,0.6)">Orte</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 Formular -->
+    <section data-screen-label="Formular" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">06 · Input · Select · Switch</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">Flugnummer · Ruhe</span>
+          <input value="LO380" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500" style-hover="border-color:rgba(231,227,220,0.3)">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">Abflug · Fokus</span>
+          <input value="Hamburg" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(240,169,71,0.6);box-shadow:0 0 0 3px rgba(240,169,71,0.18);color:#e7e3dc;font-size:14px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">Datum · Fehler als Zeile, nie Toast</span>
+          <input value="31.02.2026" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(230,90,79,0.6);color:#e7e3dc;font-size:14px;font-variant-numeric:tabular-nums">
+          <span style="font-size:12px;color:#e65a4f">Diesen Tag gibt es im Februar nicht.</span>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">Select</span>
+          <span style="position:relative;display:flex">
+            <select style="width:100%;height:44px;padding:0 40px 0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;appearance:none;cursor:pointer"><option>Economy</option><option>Premium Economy</option><option>Business</option><option>First</option></select>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:13px;pointer-events:none;color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg>
+          </span>
+        </label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:rgba(231,227,220,0.6)">Switch · 44 Klickziel</span>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ switches }}" as="sw" hint-placeholder-count="2">
+              <button role="switch" aria-checked="{{ sw.on }}" onClick="{{ sw.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;height:44px;background:transparent;border:none;padding:0;color:#e7e3dc;font-size:14px;cursor:pointer;text-align:left">
+                <span>{{ sw.label }}</span>
+                <span style="width:44px;height:26px;border-radius:999px;background:{{ sw.track }};border:1px solid {{ sw.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ sw.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ sw.knob }};transition:left 120ms ease"></span></span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 Table / ListRow -->
+    <section data-screen-label="Table · ListRow" style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">07 · Table · ListRow</div>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ rowsMeta }}</div>
+      </div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:44px 90px minmax(160px,1.6fr) minmax(120px,1fr) 100px 120px 44px;gap:14px;align-items:center;padding:0 20px;height:40px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">
+          <span></span><span>Datum</span><span>Route</span><span>Airline</span><span style="text-align:right">Distanz</span><span>Status</span><span></span>
+        </div>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+          <a href="#" style="display:grid;grid-template-columns:44px 90px minmax(160px,1.6fr) minmax(120px,1fr) 100px 120px 44px;gap:14px;align-items:center;padding:0 20px;height:{{ rowHeight }};min-height:44px;border-bottom:1px {{ r.dash }} rgba(231,227,220,0.12);color:inherit;text-decoration:none;font-variant-numeric:tabular-nums" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+            <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:{{ r.domainColor }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="{{ r.icon }}"></use></svg></span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ r.date }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;color:#f4ece0"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.from }}</span> → <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.to }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.sub }}</span></span>
+            <span style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.code }}</span> · {{ r.airline }}</span>
+            <span style="text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px">{{ r.dist }}</span>
+            <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }}">{{ r.pill.label }}</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45);justify-self:end"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </sc-for>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;height:44px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)"><span>5 von 47 · 1 284 260 km</span><a href="#" style="font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13px;font-weight:600">Alle 47 anzeigen</a></div>
+      </div>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6)">Statuspille aus <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">STATUS</span>; die Domänen-Pille nur in gemischten Listen (Reise-Detail). Gestrichelte Zeile = unbestätigt. Ziffern tabellarisch.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Unter 640 px · Tabelle wird ListRow</span>
+          <div style="width:342px;max-width:100%;background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden">
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+              <a href="#" style="display:grid;grid-template-columns:34px minmax(0,1fr) 18px;gap:12px;align-items:center;padding:10px 14px;min-height:64px;border-bottom:1px {{ r.dash }} rgba(231,227,220,0.12);color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+                <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:{{ r.domainColor }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ r.icon }}"></use></svg></span>
+                <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:14px;font-weight:600;color:#f4ece0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.from }}</span> → <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.to }}</span></span><span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }};white-space:nowrap">{{ r.pill.label }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">{{ r.date }}</span> · {{ r.code }} · {{ r.dist }}</span></span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty;padding-top:26px">Zeile 1: Titel + Pille. Zeile 2: Meta (Datum · Code · Messwert). Rechts Chevron. Die Spaltenwahl entfällt; Dichte bleibt 64 px. Die Zeile ist ein Tabstopp, Aktionen liegen im Detail.</div>
+      </div>
+    </section>
+
+    <!-- 8 EmptyState -->
+    <section data-screen-label="EmptyState" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">08 · EmptyState · vier Arten · nie rot</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <span style="width:40px;height:40px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.6)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-bed"></use></svg></span>
+          <div style="font-size:16px;font-weight:700">Noch keine Unterkunft</div>
+          <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Die erste Übernachtung kommt aus einer Buchungsmail oder von Hand.</div>
+          <button style="margin-top:6px;height:52px;padding:0 22px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:#f6bd66" style-active="background:#d8952f">Unterkunft anlegen</button>
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">nothing · neutral · eine primäre CTA</div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <span style="width:40px;height:40px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:#d8952f"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-triangle-alert"></use></svg></span>
+          <div style="font-size:16px;font-weight:700">Ich konnte die Flugdaten nicht laden</div>
+          <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Die gespeicherten Einträge sind da; nur die Live-Zeiten fehlen.</div>
+          <button style="margin-top:6px;height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Erneut versuchen</button>
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);background:#101317;border-radius:8px;padding:6px 10px;text-align:left;width:100%">GET /api/flights/live · 504 · 12:41:07</div>
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">degraded · warn · Retry · mono Log</div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <span style="width:40px;height:40px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:#6fa0d6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-wifi-off"></use></svg></span>
+          <div style="font-size:16px;font-weight:700">Offline</div>
+          <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Die Änderungen werden synchronisiert, sobald du wieder online bist.</div>
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#6fa0d6;background:rgba(111,160,214,0.12);border:1px dashed rgba(111,160,214,0.45)">Wartet</span>
+          <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">pending · info · Futur, kein Fehler</div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:0;display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(216,149,47,0.12);border-bottom:1px solid rgba(216,149,47,0.45);color:#d8952f;font-size:12px;font-weight:600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-link-2"></use></svg>Kein Postfach verbunden</div>
+          <div style="padding:24px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+            <span style="width:40px;height:40px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.6)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-inbox"></use></svg></span>
+            <div style="font-size:16px;font-weight:700">Der Posteingang ist leer</div>
+            <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Verbinde ein Postfach, dann landen Buchungen hier.</div>
+            <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">unpaired · neutral + warn-Banner</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 Dialog -->
+    <section data-screen-label="Dialog" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">09 · Dialog · eine Shell für alle 24 Overlays</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px">
+        <div style="font-size:14px;color:rgba(231,227,220,0.6);max-width:620px;text-wrap:pretty">surface2 · Radius 26 an allen vier Ecken · Scrim rgba(4,6,8,.6) · Schatten sheet gespiegelt · Fokusfalle · Escape · höchstens eine Aktion im Footer. Unter 640px dockt er unten an und ist das Sheet.</div>
+        <button onClick="{{ openDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Dialog öffnen</button>
+      </div>
+    </section>
+  </main>
+
+  <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:440px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reise löschen?</div>
+          <button onClick="{{ closeDialog }}" title="Schließen" style="width:44px;height:44px;border-radius:14px;background:#14181d;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:-8px -8px 0 0" style-hover="color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-x"></use></svg></button>
+        </div>
+        <div style="font-size:14px;color:#e7e3dc;text-wrap:pretty">„Ostsee 2025" mit <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">3</span> Kreuzfahrten und <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">4</span> Unterkünften. Die Einträge bleiben im Logbuch; nur der Rahmen geht.</div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">Objekt · Reichweite · Folge — eine Vorlage.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button onClick="{{ closeDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Behalten</button>
+          <button onClick="{{ closeDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(230,90,79,0.2)">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;komfortabel&quot;,&quot;dicht&quot;],&quot;default&quot;:&quot;komfortabel&quot;,&quot;tsType&quot;:&quot;'komfortabel'|'dicht'&quot;,&quot;section&quot;:&quot;Tabelle&quot;}}">
+const I = n => `#i-${n}`;
+const rgba = (hex, a) => { const h = hex.replace('#',''); const n = parseInt(h,16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
+const pill = (label, color, dashed) => color.startsWith('rgba')
+  ? { label, color, bg: 'rgba(231,227,220,0.08)', border: 'rgba(231,227,220,0.3)', dash: dashed ? 'dashed' : 'solid' }
+  : { label, color, bg: rgba(color, .12), border: rgba(color, .45), dash: dashed ? 'dashed' : 'solid' };
+const DOM = { flight: '#f0a947', cruise: '#4aa6b0', lodging: '#5ec2b2', poi: '#e7e3dc' };
+
+class Component extends DCLogic {
+  state = { dialogOpen: false, chip: 'Alle', sw1: true, sw2: false };
+  componentDidMount() { this._k = e => { if (e.key === 'Escape') this.setState({ dialogOpen: false }); }; window.addEventListener('keydown', this._k); }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); }
+  renderVals() {
+    const dense = this.props.density === 'dicht';
+    const chartColors = ['#f0a947','#6fa0d6','#5ec2b2','#bc8cff','#f778ba','#d8952f','#e65a4f','#9ec0e8'];
+    const statuses = [
+      pill('Geplant', '#6fa0d6'), pill('Vorläufig', '#6fa0d6', true), pill('Geflogen', '#5ec2b2'),
+      pill('Storniert', '#e65a4f'), pill('Historisch', 'rgba(231,227,220,0.62)'), pill('Prüfen', '#d8952f'), pill('Dublette', '#d8952f'),
+    ];
+    const domains = [
+      { label: 'Flug', hex: DOM.flight, icon: I('plane') }, { label: 'Kreuzfahrt', hex: DOM.cruise, icon: I('ship') },
+      { label: 'Unterkunft', hex: DOM.lodging, icon: I('bed') }, { label: 'Ort', hex: DOM.poi, icon: I('map-pin') },
+    ].map(d => ({ ...d, color: d.hex, bg: rgba(d.hex, .12), border: rgba(d.hex, .45) }));
+    const chipNames = ['Alle', 'Geplant', 'Geflogen', '2026', 'Langstrecke'];
+    const chips = chipNames.map(label => { const a = this.state.chip === label; return {
+      label, onClick: () => this.setState({ chip: label }),
+      bg: a ? '#f0a947' : 'transparent', color: a ? '#0b0d10' : '#e7e3dc', border: a ? '#f0a947' : 'rgba(231,227,220,0.18)' }; });
+    const sw = (key, label) => { const on = this.state[key]; return { label, on, toggle: () => this.setState({ [key]: !on }),
+      track: on ? '#f0a947' : '#101317', trackBorder: on ? '#f0a947' : 'rgba(231,227,220,0.18)', knob: on ? '#0b0d10' : 'rgba(231,227,220,0.6)', knobLeft: on ? '21px' : '3px' }; };
+    const rows = [
+      { date: '12.09.26', from: 'HAM', to: 'WAW', sub: 'Hamburg → Warschau · 07:15', code: 'LO380', airline: 'LOT Polish Airlines', dist: '755 km', dom: 'flight', pill: pill('Geplant', '#6fa0d6') },
+      { date: '03.09.26', from: 'FRA', to: 'JFK', sub: 'Frankfurt → New York · 10:40', code: 'LH400', airline: 'Lufthansa', dist: '6 206 km', dom: 'flight', pill: pill('Vorläufig', '#6fa0d6', true), dashed: true },
+      { date: '21.08.26', from: 'KEL', to: 'OSL', sub: 'Kiel → Oslo · Color Fantasy', code: 'CF-2108', airline: 'Color Line', dist: '640 km', dom: 'cruise', pill: pill('Kreuzfahrt', DOM.cruise) },
+      { date: '14.07.26', from: 'MUC', to: 'LIS', sub: 'München → Lissabon · 06:55', code: 'LH1782', airline: 'Lufthansa', dist: '1 980 km', dom: 'flight', pill: pill('Flug', DOM.flight) },
+      { date: '02.05.26', from: 'BER', to: 'VIE', sub: 'Berlin → Wien · 18:20', code: 'OS230', airline: 'Austrian', dist: '520 km', dom: 'flight', pill: pill('Storniert', '#e65a4f') },
+    ].map(r => ({ ...r, domainColor: DOM[r.dom], icon: I(r.dom === 'cruise' ? 'ship' : 'plane'), dash: r.dashed ? 'dashed' : 'solid' }));
+    return {
+      dialogOpen: this.state.dialogOpen,
+      openDialog: () => this.setState({ dialogOpen: true }),
+      closeDialog: () => this.setState({ dialogOpen: false }),
+      stop: e => e.stopPropagation(),
+      navItems: ['Dashboard','Logbuch','Reisen','Statistik','Erfolge','Reisepass','Posteingang'].map((label, i) => ({
+        label, unread: label === 'Posteingang', color: i === 1 ? '#f4ece0' : 'rgba(231,227,220,0.6)', weight: i === 1 ? 700 : 500 })),
+      colorGroups: [
+        { title: 'Flächen', items: [['canvas','#07090c'],['bg','#0b0d10'],['surface2','#101317'],['surface','#14181d'],['tile','#1a1f26'],['paper','#f5f1e8']].map(([name,value]) => ({name,value})) },
+        { title: 'Text', items: [['textBright','#f4ece0'],['text','#e7e3dc'],['muted','rgba(231,227,220,0.6)'],['faint','rgba(231,227,220,0.45)'],['border','rgba(231,227,220,0.12)']].map(([name,value]) => ({name,value})) },
+        { title: 'Akzent · nie Status', items: [['accent','#f0a947'],['accentHover','#f6bd66'],['accentPressed','#d8952f'],['proBg','rgba(240,169,71,0.15)']].map(([name,value]) => ({name,value})) },
+        { title: 'Semantik', items: [['good / live','#5ec2b2'],['info · offline','#6fa0d6'],['warn','#d8952f'],['bad','#e65a4f']].map(([name,value]) => ({name,value})) },
+        { title: 'Domäne', items: [['flight','#f0a947'],['cruise','#4aa6b0'],['hotel','#5ec2b2'],['poi','#e7e3dc']].map(([name,value]) => ({name,value})) },
+        { title: 'Tier', items: [['bronze','#f59e0b'],['silver','rgba(231,227,220,0.62)'],['gold','#f0a947'],['platinum','#22d3ee'],['diamond','#a855f7']].map(([name,value]) => ({name,value})) },
+      ],
+      domainBars: [[9,0],[5,2],[9,3],[8,2],[8,0],[4,0],[13,3],[9,1]].map(([f,c]) => ({ f: Math.round(f/16*100)+'%', c: Math.round(c/16*100)+'%' })),
+      chartBars: [...chartColors.map((c, i) => ({ color: c, h: `${[70,55,88,40,62,48,35,58][i]}%` })), { color: '#2a2f36', h: '30%' }],
+      listSlots: Array.from({ length: 10 }, (_, i) => i),
+      statuses, domains, chips,
+      switches: [sw('sw1', 'Karten-Farbmodus: Flugfarbe'), sw('sw2', 'Nutzerfarben für Domänen (Beta)')],
+      rows, rowHeight: dense ? '36px' : '64px',
+      rowsMeta: dense ? 'dicht · 36 sichtbar · 44 Klickziel' : '64px Zeilen · 44 Klickziel',
+    };
+  }
+}
+</script>
+</body>
+</html>

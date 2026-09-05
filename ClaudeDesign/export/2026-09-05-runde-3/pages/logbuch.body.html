@@ -1,0 +1,75 @@
+  <!-- Logbuch domain tabs (second level) -->
+  <div data-screen-label="08 Logbuch Flüge" style="border-bottom:1px solid rgba(231,227,220,0.12)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;gap:2px;overflow:auto">
+      <sc-for list="{{ domainTabs }}" as="d" hint-placeholder-count="4">
+        <a href="{{ d.href }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;color:{{ d.color }};font-weight:{{ d.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ d.bar }}" style-hover="text-decoration:none;color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{ d.iconColor }}"><use href="{{ d.iconHref }}"></use></svg>{{ d.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ d.count }}</span></a>
+      </sc-for>
+    </div>
+  </div>
+
+  <main style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px">
+    <!-- PageHeader -->
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Flüge</h1>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);letter-spacing:0.02em">160 Flüge · 20 Airlines · 71 Flughäfen · 789 032 km</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="Einstellungen.dc.html#flug" title="Flug-Einstellungen: Heimatflughafen, Vorgaben, Anreicherung" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sliders-horizontal"></use></svg></a>
+        <button title="Importieren" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;cursor:pointer" style-hover="background:#14181d;color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"></use></svg></button>
+        <div style="position:relative">
+          <button onClick="{{ toggleColumns }}" style="height:44px;padding:0 12px 0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-columns-3"></use></svg>Spalten<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+          <sc-if value="{{ columnsOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+              <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">Tabelle</div>
+              <sc-for list="{{ columnOpts }}" as="c" hint-placeholder-count="5">
+                <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:12px;background:transparent;border:none;color:#e7e3dc;font-size:14px;cursor:pointer;text-align:left" style-hover="background:rgba(231,227,220,0.06)"><span style="width:18px;height:18px;border-radius:6px;border:1px solid {{ c.boxBorder }};background:{{ c.boxBg }};display:flex;align-items:center;justify-content:center;color:#0b0d10"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"></use></svg></sc-if></span><span style="flex:1">{{ c.label }}</span></button>
+              </sc-for>
+              <div style="border-top:1px solid rgba(231,227,220,0.12);margin:6px 0 2px"></div>
+              <button onClick="{{ toggleDense }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;height:40px;padding:0 12px;border-radius:12px;background:transparent;border:none;color:#e7e3dc;font-size:14px;cursor:pointer;text-align:left" style-hover="background:rgba(231,227,220,0.06)"><span>Dichte Zeilen</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ denseLabel }}</span></button>
+            </div>
+          </sc-if>
+        </div>
+        <a href="#" style="height:46px;padding:0 18px 0 14px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg>Flug anlegen</a>
+      </div>
+    </div>
+
+    <!-- The one chip row + search -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex:1;min-width:0;overflow:auto">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.onClick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;color:{{ c.metaColor }}">{{ c.meta }}</span></button>
+        </sc-for>
+      </div>
+      <label style="position:relative;display:flex;width:min(320px,100%)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:13px;top:13px;color:rgba(231,227,220,0.45);pointer-events:none"><use href="#i-search"></use></svg>
+        <input placeholder="Airline, Flugnummer, Flughafen" style="width:100%;height:44px;padding:0 14px 0 40px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)">
+      </label>
+    </div>
+
+    <!-- Table -->
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden">
+      <div style="overflow-x:auto">
+        <div style="min-width:920px">
+          <div style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;padding:0 20px;height:40px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">
+            <span></span><span>Flug</span><span>Route</span><button onClick="{{ noop }}" style="display:flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;color:#f4ece0;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer">Abflug<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chevron-down"></use></svg></button><span>Status</span><sc-if value="{{ col.duration }}" hint-placeholder-val="{{ true }}"><span style="text-align:right">Flugzeit</span></sc-if><sc-if value="{{ col.aircraft }}" hint-placeholder-val="{{ true }}"><span>Flugzeug</span></sc-if><sc-if value="{{ col.price }}" hint-placeholder-val="{{ true }}"><span style="text-align:right">Preis</span></sc-if><span></span>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+            <a href="#" style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;padding:0 20px;height:{{ rowHeight }};border-bottom:1px {{ r.dash }} rgba(231,227,220,0.12);color:inherit;text-decoration:none;font-variant-numeric:tabular-nums" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:inherit">
+              <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#f4ece0;letter-spacing:0.02em">{{ r.mono }}</span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:500;color:#f4ece0">{{ r.code }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.airline }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#f4ece0"><span style="width:21px;height:15px;border-radius:2px;background:{{ r.flagA }};flex-shrink:0"></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.from }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-arrow-right"></use></svg><span style="width:21px;height:15px;border-radius:2px;background:{{ r.flagB }};flex-shrink:0"></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">{{ r.to }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.sub }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px"><span style="color:#e7e3dc">{{ r.dep }}</span><span style="color:rgba(231,227,220,0.6)">{{ r.arr }}</span></span>
+              <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }}">{{ r.pill.label }}</span></span>
+              <sc-if value="{{ col.duration }}" hint-placeholder-val="{{ true }}"><span style="text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px">{{ r.dur }}</span></sc-if>
+              <sc-if value="{{ col.aircraft }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.aircraft }}</span></sc-if>
+              <sc-if value="{{ col.price }}" hint-placeholder-val="{{ true }}"><span style="text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;color:{{ r.priceColor }}">{{ r.price }}</span></sc-if>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45);justify-self:end"><use href="#i-chevron-right"></use></svg>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;height:48px;gap:14px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">8 von 160 · 789 032 km · sortiert nach Abflug</span><div style="display:flex;gap:6px"><button style="height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:600;font-size:13px;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Weitere 50</button></div></div>
+    </div>
+  </main>
+</div>

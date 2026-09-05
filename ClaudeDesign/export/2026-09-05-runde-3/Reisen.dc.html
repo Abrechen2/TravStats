@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+  <main data-screen-label="12 Reisen" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reisen</h1>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);letter-spacing:0.02em">31 Reisen · 214 Tage unterwegs · Einträge werden automatisch zu Reisen gruppiert</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onClick="{{ toggleView }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:44px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ viewIcon }}"></use></svg>{{ viewLabel }}</button>
+        <button onClick="{{ openNew }}" style="height:46px;padding:0 18px 0 14px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:#f6bd66" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>Reise anlegen</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasSuggestion }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:rgba(111,160,214,0.45);padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="width:38px;height:38px;border-radius:14px;background:rgba(111,160,214,0.12);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-git-merge"></use></svg></span>
+        <span style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Vorschlag: 3 Einträge zu einer Reise zusammenfassen</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">LH 2058 · Motel One München · EW 7440 — 18.–21. September 2026</span></span>
+        <div style="display:flex;gap:8px"><button onClick="{{ dismissSuggestion }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Ignorieren</button><button onClick="{{ acceptSuggestion }}" style="height:46px;padding:0 18px 0 14px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px;padding:0 16px" style-hover="background:#f6bd66"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>„München im September“ anlegen</button></div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex:1;min-width:0;overflow:auto;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:28px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6">
+          <button onClick="{{ c.onClick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ c.metaColor }}">{{ c.meta }}</span></button>
+        </sc-for>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:rgba(231,227,220,0.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><input onInput="{{ onSearch }}" value="{{ q }}" placeholder="Reise, Ort, Jahr" style="background:transparent;border:none;color:#e7e3dc;font-size:14px;outline:none;width:180px"></label>
+    </div>
+
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:baseline;gap:12px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">{{ g.year }}</div><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ g.meta }}</span></div>
+        <sc-if value="{{ isCards }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+            <sc-for list="{{ g.trips }}" as="t" hint-placeholder-count="3">
+              <a href="Reise Detail.dc.html" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;color:inherit;text-decoration:none" style-hover="border-color:rgba(231,227,220,0.3);text-decoration:none;color:#f4ece0;transform:translateY(-1px)">
+                <div style="height:110px;background:{{ t.cover }};position:relative;display:flex;align-items:flex-end;padding:12px"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ t.domains }}" as="d" hint-placeholder-count="2"><span title="{{ d.label }}" style="width:28px;height:28px;border-radius:10px;background:rgba(11,13,16,0.75);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ d.color }}"><use href="{{ d.icon }}"></use></svg></span></sc-for></div><span style="position:absolute;top:12px;right:12px"><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ t.pill.color }};background:{{ t.pill.bg }};border:1px {{ t.pill.dash }} {{ t.pill.border }};white-space:nowrap">{{ t.pill.label }}</span></span></div>
+                <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px">
+                  <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;color:#f4ece0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ t.range }}</span></span>
+                  <div style="display:flex;gap:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);flex-wrap:wrap"><span><span style="color:#e7e3dc">{{ t.days }}</span> Tage</span><span><span style="color:#e7e3dc">{{ t.countries }}</span> Länder</span><span><span style="color:#e7e3dc">{{ t.entries }}</span> Einträge</span></div>
+                </div>
+              </a>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:auto"><div style="min-width:720px">
+            <sc-for list="{{ g.trips }}" as="t" hint-placeholder-count="3">
+              <a href="Reise Detail.dc.html" style="display:grid;grid-template-columns:8px minmax(240px,1.6fr) 190px 70px 70px 80px 110px 24px;gap:14px;align-items:center;padding:0 20px;height:60px;border-bottom:1px solid rgba(231,227,220,0.12);color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.02);text-decoration:none;color:#f4ece0">
+                <span style="width:8px;height:32px;border-radius:999px;background:{{ t.cover }}"></span>
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ t.places }}</span></span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap">{{ t.range }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right">{{ t.days }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right">{{ t.countries }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right">{{ t.entries }}</span>
+                <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ t.pill.color }};background:{{ t.pill.bg }};border:1px {{ t.pill.dash }} {{ t.pill.border }};white-space:nowrap">{{ t.pill.label }}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+              </a>
+            </sc-for>
+          </div></div>
+        </sc-if>
+      </section>
+    </sc-for>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">{{ footer }}</div>
+  </main>
+
+  <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeNew }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:480px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px"><div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reise anlegen</div><button onClick="{{ closeNew }}" title="Schließen" style="width:44px;height:44px;border-radius:14px;background:#14181d;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:-8px -8px 0 0" style-hover="color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-x"></use></svg></button></div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Titel</span><input placeholder="z. B. Herbst in Lissabon" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;outline:none" style-focus="border-color:#f0a947"></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Von</span><input placeholder="2026-11-03" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;outline:none" style-focus="border-color:#f0a947"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Bis</span><input placeholder="2026-11-09" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;outline:none" style-focus="border-color:#f0a947"></label></div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Einträge im Zeitraum werden automatisch zugeordnet; du kannst sie in der Reise abwählen.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button onClick="{{ closeNew }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04)">Abbrechen</button><a href="Reise Detail.dc.html" style="height:46px;padding:0 18px 0 14px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>Anlegen</a></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, view: 'cards', chip: 'Alle', q: '', suggestion: true, newOpen: false, extra: [] };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._k = e => { if (e.key === 'Escape') this.setState({ newOpen: false }); }; window.addEventListener('keydown', this._k); }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const cover = (a, b) => 'linear-gradient(135deg, ' + a + ' 0%, ' + b + ' 100%)';
+    const base = [
+      [2027,'Asien-Rundreise','Bangkok · Osaka · Taipeh','23.08.–12.09.2027',21,3,7,'scheduled',['flight','hotel','poi'],cover('#2a2f36','#3b2f1e')],
+      [2027,'Südamerika','Santiago · Genf','28.10.–08.11.2027',12,2,3,'pending',['flight'],cover('#1e2a36','#2a2f36')],
+      [2026,'München im September','LH 2058 · Motel One · EW 7440','18.–21.09.2026',4,1,3,'scheduled',['flight','hotel'],cover('#2a2f36','#1e3630')],
+      [2026,'Westliches Mittelmeer','AIDAnova · Barcelona → Barcelona','10.–17.10.2026',8,3,6,'scheduled',['cruise','poi'],cover('#1d3a40','#2a2f36')],
+      [2026,'Warschau','AY 183 · DUS → WAW','01.–04.04.2026',4,1,3,'done',['flight','hotel'],cover('#36262a','#2a2f36')],
+      [2026,'Brasilien','Rio de Janeiro · São Paulo','12.–26.02.2026',15,1,9,'done',['flight','hotel','poi'],cover('#1e3630','#3b2f1e')],
+      [2025,'Alaska & Kanada','Anchorage · Denali · Glacier Bay · Vancouver','12.–27.07.2025',16,3,11,'done',['flight','cruise','hotel','poi'],cover('#1e2a36','#1d3a40')],
+      [2025,'Norwegens Fjorde','Mein Schiff 4 · Kiel → Kiel','19.–26.07.2025',8,2,5,'done',['cruise'],cover('#1d3a40','#2a2f36')],
+      [2025,'Kapstadt','ZA · Tafelberg · Weinland','03.–14.03.2025',12,1,8,'done',['flight','hotel','poi'],cover('#3b2f1e','#36262a')],
+    ];
+    const trips = [...st.extra, ...base];
+    const chip = (label, meta) => ({ label, meta, onClick: () => set({ chip: label }), bg: st.chip === label ? T.accent : 'transparent', color: st.chip === label ? T.bg : T.text, border: st.chip === label ? T.accent : 'rgba(231,227,220,0.18)', metaColor: st.chip === label ? 'rgba(11,13,16,0.7)' : T.muted });
+    let rows = trips.filter(t => st.chip === 'Alle' || (st.chip === 'Geplant' && t[7] !== 'done') || (st.chip === 'Abgeschlossen' && t[7] === 'done') || (st.chip === 'Mit Kreuzfahrt' && t[8].includes('cruise')) || String(t[0]) === st.chip);
+    if (st.q) rows = rows.filter(t => (t[1] + t[2] + t[0]).toLowerCase().includes(st.q.toLowerCase()));
+    const view = ([year, title, places, range, days, countries, entries, status, doms, cv]) => ({ title, places, range, days, countries, entries, cover: cv, pill: S.statusPill(status), domains: doms.map(k => { const d = S.DOMAINS.find(x => x.key === k); return { icon: S.I(d.icon), color: d.color, label: d.label }; }) });
+    const years = [...new Set(rows.map(t => t[0]))].sort((a, b) => b - a);
+    return { ...S.navModel('trips', st, set), stop: e => e.stopPropagation(),
+      toggleView: () => set({ view: st.view === 'cards' ? 'list' : 'cards' }), viewLabel: st.view === 'cards' ? 'Tabelle' : 'Karten', viewIcon: st.view === 'cards' ? '#i-list' : '#i-layers', isCards: st.view === 'cards', isList: st.view === 'list',
+      hasSuggestion: st.suggestion, dismissSuggestion: () => set({ suggestion: false }), acceptSuggestion: () => set({ suggestion: false }),
+      chips: [['Alle', String(trips.length)], ['Geplant', String(trips.filter(t => t[7] !== 'done').length)], ['Abgeschlossen', String(trips.filter(t => t[7] === 'done').length)], ['Mit Kreuzfahrt', String(trips.filter(t => t[8].includes('cruise')).length)], ['2026', String(trips.filter(t => t[0] === 2026).length)], ['2025', String(trips.filter(t => t[0] === 2025).length)]].map(([l, m]) => chip(l, m)),
+      q: st.q, onSearch: e => set({ q: e.target.value }),
+      groups: years.map(y => { const ts = rows.filter(t => t[0] === y); return { year: String(y), meta: ts.length + (ts.length === 1 ? ' Reise · ' : ' Reisen · ') + ts.reduce((a, t) => a + t[4], 0) + ' Tage', trips: ts.map(view) }; }),
+      footer: rows.length + ' von ' + trips.length + ' Reisen · ältere Jahre über die Suche',
+      newOpen: st.newOpen, openNew: () => set({ newOpen: true }), closeNew: () => set({ newOpen: false }) };
+  }
+}
+</script>
+</body>
+</html>

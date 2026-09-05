@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-ship" viewBox="0 0 24 24"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4"/><path d="M12 2v3"/></symbol><symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol><symbol id="i-link-2" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol><symbol id="i-table-2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></symbol></svg>
+
+<div style="min-height:100vh;background:#0b0d10">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:10;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:28px">
+    <div style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</div>
+    <nav style="display:flex;gap:4px;flex:1;min-width:0;overflow:auto">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="7">
+        <a href="Design Primitives.dc.html" style="display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;border-radius:12px;color:rgba(231,227,220,0.6);font-weight:500;font-size:14px;text-decoration:none;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);text-decoration:none;color:#f4ece0">{{ n.label }}<sc-if value="{{ n.unread }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:999px;background:#d8952f"></span></sc-if></a>
+      </sc-for>
+    </nav>
+    <a href="#" title="Einstellungen" aria-current="page" style="width:44px;height:44px;border-radius:14px;background:rgba(240,169,71,0.15);border:1px solid rgba(240,169,71,0.45);display:flex;align-items:center;justify-content:center;color:#f0a947;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-settings"></use></svg></a>
+  </header>
+
+  <main data-screen-label="23 Einstellungen" style="max-width:720px;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;padding-top:8px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Einstellungen</h1>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">jonas@example.de · <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">2.7.0-dev</span> · Konto seit 2021</div>
+      </div>
+      <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#f0a947;background:rgba(240,169,71,0.12);border:1px solid rgba(240,169,71,0.45)">Pro</span>
+    </div>
+
+    <!-- Profil -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Profil</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#f4ece0;flex-shrink:0">JK</div>
+          <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Jonas Kessler</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Heimatflughafen <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">HAM</span> · Zeitzone Europe/Berlin</div></div>
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;flex-shrink:0" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Bearbeiten</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Anzeigename</span><input value="Jonas Kessler" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label>
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Heimatflughafen</span><input value="HAM" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;text-transform:uppercase" style-hover="border-color:rgba(231,227,220,0.3)"></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Anzeige -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Anzeige</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <sc-for list="{{ displayRows }}" as="r" hint-placeholder-count="4">
+          <button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+            <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+          </button>
+        </sc-for>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0">
+          <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Einheiten</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Für Distanzen und Geschwindigkeit</span></span>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ units }}" as="u" hint-placeholder-count="2">
+              <button onClick="{{ u.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ u.border }};background:{{ u.bg }};color:{{ u.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ u.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Karte -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Karte</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Flugfärbung</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Der Modus wählt die Regel; die Farben kommen aus den Token-Paletten.</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ mapModes }}" as="m" hint-placeholder-count="3">
+            <button onClick="{{ m.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ m.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">Legende · so liest der Nutzer die Karte</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+              <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 10px;border-radius:999px;background:#1a1f26;font-size:13px"><span style="width:10px;height:10px;border-radius:999px;background:{{ l.color }}"></span>{{ l.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Beta -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Beta</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <sc-for list="{{ betaRows }}" as="r" hint-placeholder-count="2">
+          <button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap">{{ r.label }}<span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#d8952f;background:rgba(216,149,47,0.12);border:1px dashed rgba(216,149,47,0.45)">Offen · Owner</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+            <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Daten -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Daten</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <sc-for list="{{ dataRows }}" as="r" hint-placeholder-count="3">
+          <a href="#" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 0;border-bottom:1px solid {{ r.divider }};color:inherit;text-decoration:none" style-hover="color:#f4ece0;text-decoration:none">
+            <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.6);flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="{{ r.icon }}"></use></svg></span>
+            <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ r.sub }}</span></span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);font-variant-numeric:tabular-nums">{{ r.meta }}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Konto -->
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Konto</div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Zwei-Faktor-Anmeldung</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Aktiv seit <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">2024-03-11</span></span></span>
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Aktiv</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-log-out"></use></svg>Abmelden</button>
+          <button onClick="{{ openDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Konto löschen …</button>
+        </div>
+      </div>
+    </section>
+
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">reading · 720 · tokens.json v0.7.0 · <a href="Design Primitives.dc.html">/design</a></div>
+  </main>
+
+  <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:{{ dialogAlign }};justify-content:center;padding:{{ dialogPad }}">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:440px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:{{ dialogRadius }};box-shadow:{{ dialogShadow }};padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Konto löschen?</div>
+          <button onClick="{{ closeDialog }}" title="Schließen" style="width:44px;height:44px;border-radius:14px;background:#14181d;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:-8px -8px 0 0" style-hover="color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-x"></use></svg></button>
+        </div>
+        <div style="font-size:14px;text-wrap:pretty">Dein Konto mit <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">47</span> Flügen, <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">6</span> Kreuzfahrten und <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500">118</span> Orten. Ich lösche alles nach 14 Tagen endgültig; bis dahin kannst du dich wieder anmelden.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button onClick="{{ closeDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(231,227,220,0.04)">Behalten</button>
+          <button onClick="{{ closeDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer" style-hover="background:rgba(230,90,79,0.2)">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const I = n => `#i-${n}`;
+class Component extends DCLogic {
+  state = { dialogOpen: false, unit: 'km', mode: 'Airline', s: { compact: false, hist: true, tz: true, reduce: false, domainColors: false, spreadsheet: true }, narrow: false };
+  componentDidMount() {
+    this._k = e => { if (e.key === 'Escape') this.setState({ dialogOpen: false }); };
+    this._r = () => this.setState({ narrow: window.innerWidth < 640 });
+    window.addEventListener('keydown', this._k); window.addEventListener('resize', this._r); this._r();
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const sw = (key, label, sub, last) => { const on = this.state.s[key]; return { label, sub, on,
+      toggle: () => this.setState(st => ({ s: { ...st.s, [key]: !st.s[key] } })),
+      divider: last ? 'transparent' : 'rgba(231,227,220,0.12)',
+      track: on ? '#f0a947' : '#101317', trackBorder: on ? '#f0a947' : 'rgba(231,227,220,0.18)', knob: on ? '#0b0d10' : 'rgba(231,227,220,0.6)', knobLeft: on ? '21px' : '3px' }; };
+    const chip = (label, active, onClick) => ({ label, onClick, bg: active ? '#f0a947' : 'transparent', color: active ? '#0b0d10' : '#e7e3dc', border: active ? '#f0a947' : 'rgba(231,227,220,0.18)' });
+    const n = this.state.narrow;
+    return {
+      dialogOpen: this.state.dialogOpen,
+      openDialog: () => this.setState({ dialogOpen: true }),
+      closeDialog: () => this.setState({ dialogOpen: false }),
+      stop: e => e.stopPropagation(),
+      dialogAlign: n ? 'flex-end' : 'center', dialogPad: n ? '0' : '24px',
+      dialogRadius: n ? '26px 26px 0 0' : '26px', dialogShadow: n ? '0 -14px 30px rgba(0,0,0,0.5)' : '0 14px 30px rgba(0,0,0,0.5)',
+      navItems: ['Dashboard','Logbuch','Reisen','Statistik','Erfolge','Reisepass','Posteingang'].map(label => ({ label, unread: label === 'Posteingang' })),
+      displayRows: [
+        sw('compact', 'Dichte Tabellen', 'Zeilen 36px sichtbar, Klickziel bleibt 44px'),
+        sw('hist', 'Historische Einträge zeigen', 'Flüge vor dem Kontostart, gedämpft als Pille'),
+        sw('reduce', 'Weniger Bewegung', 'Folgt sonst der Systemeinstellung', false),
+      ],
+      units: [chip('km', this.state.unit === 'km', () => this.setState({ unit: 'km' })), chip('mi', this.state.unit === 'mi', () => this.setState({ unit: 'mi' }))],
+      mapModes: ['Airline', 'Jahr', 'Kabine'].map(m => chip(m, this.state.mode === m, () => this.setState({ mode: m }))),
+      legend: [{ label: 'Flug', color: '#f0a947' }, { label: 'Kreuzfahrt', color: '#4aa6b0' }, { label: 'Unterkunft', color: '#5ec2b2' }, { label: 'Ort', color: '#e7e3dc' }],
+      betaRows: [
+        sw('domainColors', 'Nutzerfarben für Domänen', 'Override über den Token-Defaults. Owner-Frage 4: behalten oder streichen, weil ein Override die Karten-Bedeutung bricht.', true),
+      ],
+      dataRows: [
+        { label: 'Tabellenexport', sub: 'Google Sheets, stündlich', meta: 'vor 12 min', icon: I('table-2'), divider: 'rgba(231,227,220,0.12)' },
+        { label: 'Postfächer', sub: 'jonas@example.de · IMAP', meta: '1 verbunden', icon: I('inbox'), divider: 'rgba(231,227,220,0.12)' },
+        { label: 'Export & Backup', sub: 'CSV, GPX, JSON', meta: '2026-08-30', icon: I('download'), divider: 'transparent' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

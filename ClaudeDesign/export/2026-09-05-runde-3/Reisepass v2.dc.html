@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+  <main data-screen-label="20 Reisepass v2" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reisepass</h1><span title="{{ beta_passport.hint }}" style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#d8952f;background:rgba(216,149,47,0.12);border:1px dashed rgba(216,149,47,0.45);white-space:nowrap">Beta</span></div><div style="font-size:12px;color:rgba(231,227,220,0.6)">seit 2015 · gebildet aus Flügen, Unterkünften, Häfen, Orten und Standortverlauf</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a href="Statistik.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-arrow-left"></use></svg>Zurück zur Statistik</a><a href="Druckansicht.dc.html#reisepass" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-printer"></use></svg>Drucken</a></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:baseline;gap:6px;white-space:nowrap"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:28px;font-weight:600;color:#f4ece0;line-height:1;font-variant-numeric:tabular-nums">{{ counted }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;color:rgba(231,227,220,0.6);white-space:nowrap">/ {{ total }}</span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)" title="Die zweite Zahl sind alle Länder, für die überhaupt ein Nachweis vorliegt. Die erste zählt nur die, deren Nachweis die Schwelle erreicht.">Länder · gezählt / mit Nachweis</span></div>
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:28px;font-weight:600;color:#f4ece0;line-height:1;font-variant-numeric:tabular-nums">{{ k.v }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.l }}</span></div></sc-for>
+    </div>
+
+    <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Nachweis</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Ein Land zählt ab …</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ thresholds }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" title="{{ t.effect }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;white-space:nowrap" style-hover="border-color:rgba(231,227,220,0.3)">{{ t.label }}</button></sc-for></div>
+      <div style="font-size:13px;text-wrap:pretty">{{ headlineNote }}</div>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ effect }} Die Länderliste ändert sich dadurch nicht — nicht gezählte werden nur ausgegraut.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:12px;border-top:1px solid rgba(231,227,220,0.12)"><sc-for list="{{ tierCounts }}" as="c" hint-placeholder-count="4"><span title="{{ c.hint }}" style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:#1a1f26;font-size:12px"><span style="width:8px;height:8px;border-radius:999px;background:{{ c.color }}"></span>{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:rgba(231,227,220,0.6)">{{ c.n }}</span></span></sc-for><span style="font-size:11px;color:rgba(231,227,220,0.6);align-self:center">summiert sich auf alle Länder mit Nachweis</span></div>
+      <sc-if value="{{ changed }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:rgba(111,160,214,0.12);border:1px solid rgba(111,160,214,0.45);font-size:13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-info"></use></svg><span style="flex:1">{{ changedText }}</span><button onClick="{{ dismiss }}" style="background:transparent;border:none;color:#f0a947;font-weight:600;font-size:13px;cursor:pointer;height:32px">Verstanden</button></div></sc-if>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Kontinente</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Gemessen an den Ländern, die dieser Katalog kennt</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><sc-for list="{{ continents }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.onClick }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:{{ c.border }};padding:14px 16px;display:flex;flex-direction:column;gap:6px;text-align:left;color:#e7e3dc;cursor:pointer" style-hover="border-color:rgba(231,227,220,0.3)"><span style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:600">{{ c.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ c.n }} / {{ c.of }}</span></span><span style="height:4px;border-radius:999px;background:#101317;overflow:hidden;display:block"><span style="display:block;height:100%;width:{{ c.pct }};background:#f0a947"></span></span></button></sc-for></div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Länder · {{ listLabel }}</div><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(231,227,220,0.6)"><input type="checkbox" onChange="{{ toggleStamps }}" checked="{{ stampView }}" style="width:18px;height:18px;accent-color:#f0a947">Als Stempel</label></div>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6);padding:0 4px;text-wrap:pretty">Diese Liste zeigt jedes Land mit irgendeinem Nachweis — auch die, die nicht mitgezählt werden. „—“ heißt nicht null, sondern nicht ableitbar. „Zeit am Boden“: „unbekannt“ = ein Flug war hier, aber kein zweiter begrenzt den Aufenthalt; „—“ = hier war überhaupt kein Flug.</div>
+
+      <sc-if value="{{ stampView }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+          <sc-for list="{{ countries }}" as="s" hint-placeholder-count="12">
+            <button onClick="{{ s.toggle }}" title="{{ s.name }} · {{ s.tier.label }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;aspect-ratio:1;padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:inherit;opacity:{{ s.opacity }};cursor:pointer;text-align:left" style-hover="border-color:rgba(231,227,220,0.3)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.08em;color:rgba(231,227,220,0.6)">{{ s.code }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ s.tier.color }}"><use href="{{ s.kindIcon }}"></use></svg></div>
+              <div style="width:74px;height:74px;border-radius:999px;border:2px {{ s.ringStyle }} {{ s.tier.color }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;align-self:center;--rot:{{ s.rot }};transform:rotate({{ s.rot }});animation:ts-stamp 260ms ease-out both"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:{{ s.tier.color }}">{{ s.tier.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:600;color:{{ s.tier.color }}">{{ s.first }}</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ s.entriesLabel }}</span></div>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ listView }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:auto"><div style="min-width:860px">
+          <div style="display:grid;grid-template-columns:44px minmax(160px,1.4fr) 130px 80px 70px 120px 130px 90px 24px;gap:12px;align-items:center;height:40px;padding:0 20px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(231,227,220,0.6)"><span></span><span>Land</span><span>Nachweis</span><span style="text-align:right">Einreisen</span><span style="text-align:right">Tage</span><span>Zeit am Boden</span><span>Zeitraum</span><span>Flughäfen</span><span></span></div>
+          <sc-for list="{{ countries }}" as="s" hint-placeholder-count="10">
+            <div style="border-bottom:1px solid rgba(231,227,220,0.12);opacity:{{ s.opacity }}">
+              <button onClick="{{ s.toggle }}" style="display:grid;grid-template-columns:44px minmax(160px,1.4fr) 130px 80px 70px 120px 130px 90px 24px;gap:12px;align-items:center;min-height:56px;padding:6px 20px;background:{{ s.rowBg }};border:none;color:#e7e3dc;text-align:left;width:100%;cursor:pointer" style-hover="background:rgba(231,227,220,0.02)">
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:600;color:rgba(231,227,220,0.6)">{{ s.code }}</span>
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span><sc-if value="{{ s.home }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#f0a947">Heimat</span></sc-if><sc-if value="{{ s.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#5ec2b2">neu</span></sc-if></span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ s.continent }}{{ s.flags }}</span></span>
+                <span><span title="{{ s.tier.hint }}" style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ s.tier.color }};background:{{ s.tier.bg }};border:1px {{ s.tier.dash }} {{ s.tier.border }};white-space:nowrap">{{ s.tier.label }}</span></span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right;color:{{ s.entriesColor }}" title="{{ s.entriesHint }}">{{ s.entries }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right" title="Verschiedene Kalendertage, an denen dich ein Beleg in diesem Land verortet. Gezählt, nicht geschätzt.">{{ s.days }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ s.groundColor }}" title="{{ s.groundHint }}">{{ s.ground }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ s.period }}</span>
+                <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ s.airportsColor }}">{{ s.airports }}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="{{ s.chevron }}"></use></svg>
+              </button>
+              <sc-if value="{{ s.open }}" hint-placeholder-val="{{ false }}">
+                <div style="animation:ts-rise 200ms ease-out;padding:4px 20px 16px 76px;display:flex;flex-direction:column;gap:8px">
+                  <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Diese Belege haben das Land in den Pass gebracht. Jeder führt zum Datensatz — dort kannst du ihn ändern.</div>
+                  <sc-for list="{{ s.records }}" as="r" hint-placeholder-count="3"><a href="{{ r.href }}" style="display:flex;align-items:center;gap:12px;min-height:40px;padding:0 12px;border-radius:12px;background:#101317;color:inherit;text-decoration:none" style-hover="background:#1a1f26;text-decoration:none;color:#f4ece0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ r.color }}"><use href="{{ r.icon }}"></use></svg><span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ r.kind }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ r.dateColor }}">{{ r.date }}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></a></sc-for>
+                  <sc-if value="{{ s.notCounted }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#d8952f"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-info"></use></svg><span style="text-wrap:pretty">Zählt nicht mit: Dieses Land erreicht die Schwelle für die Kopfzahl nicht. Es bleibt trotzdem in der Liste — die Einstufung stammt aus dem, was erfasst ist, und das ist unvollständig. {{ s.tier.hint }}</span></div></sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div></div>
+      </sc-if>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, threshold: 'transited', prev: null, changed: false, continent: null, stamps: false, open: {}, shown: null };
+  countTo(from, target) { if (from === target) return; const t0 = performance.now(); const step = now => { const p = Math.min(1, (now - t0) / 400); const e = 1 - Math.pow(1 - p, 3); this.setState({ shown: Math.round(from + (target - from) * e) }); if (p < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const TIER = { slept: ['Übernachtet', T.good, 3, 'Der Kalendertag hat gewechselt: eine abgeschlossene Übernachtung, eine erfasste Unterkunft, ein Hafenaufenthalt über Nacht, ein Flugpaar mit Tageswechsel — oder zwei aufeinanderfolgende Tage im Standortverlauf.'], visited: ['Besucht', T.accent, 2, 'Ankunft und Abflug am selben Kalendertag, ein erfasster Ort, ein Hafentag — oder ein Tag, den dein Standortverlauf ausschließlich in diesem Land verzeichnet.'], transited: ['Durchgereist', T.info, 1, 'Dein Standortverlauf zeigt dich an einem Tag hier und noch in einem anderen Land — eine Grenze, am Boden überquert. Kein Umsteigen: du warst im Land.'], connection: ['Nur umgestiegen', 'rgba(231,227,220,0.62)', 0, 'Nur ein Anschlussflug und sonst nichts. Ob du den Flughafen verlassen hast, ist nirgends erfasst. Trag einen Ort, eine Unterkunft oder einen weiteren Flug nach, dann steigt die Stufe.'] };
+    const RANK = { connection: 0, transited: 1, visited: 2, slept: 3 };
+    const TH = [['transited', 'Durchreise — Umsteigen zählt nicht', 'Ein reines Umsteigen am Flughafen zählt dann nicht. Eine Grenze, die du am Boden überquert hast, ein Hafentag, ein erfasster Ort und jede Übernachtung zählen weiterhin. Das ist die Voreinstellung.'], ['visited', 'Aufenthalt — Umsteigen und Durchreise zählen nicht', 'Es zählen nur Länder, in denen du dich aufgehalten hast. Deine Länderzahl wird dadurch kleiner.'], ['slept', 'Übernachtung — nur wo du geschlafen hast', 'Es zählen nur Länder, in denen eine Übernachtung belegt ist. Deine Länderzahl wird dadurch kleiner.'], ['connection', 'Umsteigen — alles zählt', 'Auch ein reines Umsteigen am Flughafen zählt dann als Land. Deine Länderzahl wird dadurch größer.']];
+    // [code, name, continent, tier, entries|null, days, ground, period, airports|null, first, home, new, kinds[], undated]
+    const C = [
+      ['DE','Deutschland','Europa','slept',188,412,'—','2015 – 2026','HAM MUC FRA DUS +3','2015',true,false,['flight','lodging','place'],false],
+      ['ES','Spanien','Europa','slept',24,61,'6 T 4 h','2016 – 2026','BCN PMI TFS','2016',false,false,['flight','lodging','port'],false],
+      ['US','Vereinigte Staaten','Nordamerika','slept',5,19,'8 T 11 h','2017 – 2025','ANC JFK','2017',false,false,['flight','lodging','port','place'],false],
+      ['CA','Kanada','Nordamerika','slept',1,6,'5 T 20 h','2025','YVR','2025',false,false,['flight','port','place'],false],
+      ['PL','Polen','Europa','slept',11,14,'3 T 2 h','2015 – 2026','WAW','2015',false,false,['flight','lodging'],false],
+      ['NO','Norwegen','Europa','visited',null,4,'—','2025','—','2025',false,false,['port'],false],
+      ['HR','Kroatien','Europa','slept',null,7,'—','2022','—','2022',false,false,['lodging','port','place'],false],
+      ['BR','Brasilien','Südamerika','slept',1,15,'14 T 3 h','2026','GIG GRU','2026',false,true,['flight','lodging','place'],false],
+      ['AU','Australien','Ozeanien','slept',1,9,'8 T 6 h','2025','SYD','2025',false,false,['flight','lodging'],false],
+      ['ZA','Südafrika','Afrika · Antarktis','slept',1,12,'11 T 2 h','2025','CPT','2025',false,false,['flight','lodging','place'],false],
+      ['AE','Vereinigte Arabische Emirate','Asien','connection',3,0,'2 h 40','2021 – 2024','DXB','2021',false,false,['flight'],false],
+      ['TR','Türkei','Asien','connection',2,0,'1 h 55','2016 – 2027','IST','2016',false,false,['flight'],false],
+      ['FI','Finnland','Europa','connection',9,0,'unbekannt','2017 – 2026','HEL','2017',false,false,['flight'],false],
+      ['AT','Österreich','Europa','transited',null,2,'—','2023','—','2023',false,false,['track'],false],
+      ['MT','Malta','Europa','visited',null,0,'—','Unbekannt','—','—',false,false,['place'],true],
+      ['JP','Japan','Asien','slept',2,11,'10 T 8 h','2018','HND KIX','2018',false,false,['flight','lodging','place'],false],
+      ['TH','Thailand','Asien','slept',2,13,'12 T 1 h','2019','BKK','2019',false,false,['flight','lodging'],false],
+      ['SG','Singapur','Asien','visited',1,1,'9 h 10','2019','SIN','2019',false,false,['flight','place'],false],
+      ['GR','Griechenland','Europa','visited',null,3,'—','2017','—','2017',false,false,['port','place'],false],
+      ['IT','Italien','Europa','visited',null,2,'—','2017 – 2022','—','2017',false,false,['port'],false],
+      ['MX','Mexiko','Nordamerika','visited',null,1,'—','2023','—','2023',false,false,['port'],false],
+      ['EG','Ägypten','Afrika · Antarktis','visited',null,1,'—','2024','—','2024',false,false,['port'],false],
+      ['GB','Vereinigtes Königreich','Europa','slept',7,9,'2 T 5 h','2015 – 2024','LHR STN','2015',false,false,['flight','lodging'],false],
+    ];
+    const thr = RANK[st.threshold]; const countedOf = c => RANK[c[3]] >= thr;
+    const total = C.length; const counted = C.filter(countedOf).length;
+    const contOf = { 'Europa': 44, 'Asien': 48, 'Nordamerika': 23, 'Südamerika': 12, 'Afrika · Antarktis': 55, 'Ozeanien': 14 };
+    const KIND = { flight: ['plane', T.domain.flight, 'Flug'], lodging: ['bed', T.domain.hotel, 'Unterkunft'], port: ['anchor', T.domain.cruise, 'Hafen'], place: ['map-pin', T.domain.poi, 'Ort'], track: ['activity', T.info, 'Standortverlauf'] };
+    const hrefOf = k => ({ flight: 'Flug Detail.dc.html', lodging: 'Unterkunft Detail.dc.html', port: 'Kreuzfahrt Detail.dc.html', place: 'Ort Detail.dc.html', track: 'Reise Detail.dc.html' })[k];
+    const list = C.filter(c => !st.continent || c[2] === st.continent).sort((a, b) => (countedOf(b) - countedOf(a)) || a[1].localeCompare(b[1], 'de'));
+    const countries = list.map(c => { const [code, name, continent, tier, entries, days, ground, period, airports, first, home, isNew, kinds, undated] = c; const ok = countedOf(c); const [tl, tc, , th] = TIER[tier]; const open = !!st.open[code]; const h = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+      return { code, name, continent, first, home, isNew, open, flags: undated ? ' · ohne Datum' : '', opacity: ok ? 1 : 0.5, notCounted: !ok, rowBg: open ? 'rgba(231,227,220,0.03)' : 'transparent', chevron: S.I(open ? 'chevron-up' : 'chevron-down'), toggle: () => set(s => ({ open: { ...s.open, [code]: !open } })),
+        tier: { ...S.pill(tl, tc, !ok), hint: th }, ringStyle: ok ? 'solid' : 'dashed', rot: ((h % 17) - 8) + 'deg', kindIcon: S.I(KIND[kinds[0]][0]),
+        entries: entries === null ? '—' : String(entries), entriesColor: entries === null ? T.faint : T.text, entriesHint: entries === null ? 'Entfällt: kein Flug belegt dieses Land — nicht null Einreisen, sondern keine, die zu zählen wären.' : entries + ' Einreisen per Flug', entriesLabel: entries === null ? (days + ' Tage · ohne Flug') : (entries + (entries === 1 ? ' Einreise' : ' Einreisen')),
+        days: String(days), ground, groundColor: ground === '—' ? T.faint : ground === 'unbekannt' ? T.warn : T.text, groundHint: ground === '—' ? 'Entfällt: kein Flug hat dieses Land berührt. Eine Unterkunft, ein Hafentag oder ein Ort begrenzt keinen Abflug.' : ground === 'unbekannt' ? 'Unbekannt: ein Flug hat dieses Land berührt, aber kein Uhrenpaar begrenzt einen Aufenthalt. Trag den fehlenden Flug nach.' : 'Gemessen: der längste Aufenthalt am Boden zwischen Landung und nächstem Abflug.',
+        period, airports, airportsColor: airports === '—' ? T.faint : T.text,
+        records: kinds.map((k, i) => ({ icon: S.I(KIND[k][0]), color: KIND[k][1], kind: KIND[k][2], href: hrefOf(k), title: k === 'flight' ? 'Letzter Flug nach ' + code : k === 'lodging' ? 'Unterkunft in ' + name : k === 'port' ? 'Hafentag · ' + name : k === 'place' ? 'Ort in ' + name : 'Standortverlauf — ' + days + ' Tage, ' + (days * 140) + ' Messpunkte', date: undated ? 'ohne Datum' : period.split(' – ').pop(), dateColor: undated ? T.warn : T.muted })) }; });
+    const tierCounts = ['slept', 'visited', 'transited', 'connection'].map(k => ({ label: TIER[k][0], color: TIER[k][1], n: C.filter(c => c[3] === k).length, hint: TIER[k][3] }));
+    return { beta_passport: S.betaPill('passport'), ...S.navModel('passport', st, set), stop: e => e.stopPropagation(),
+      counted: st.shown ?? counted, total, kpis: [{ v: '71', l: 'Flughäfen' }, { v: '258', l: 'Einreisen' }, { v: [...new Set(C.filter(countedOf).map(c => c[2]))].length + ' / 6', l: 'Kontinente' }],
+      thresholds: TH.map(([k, label, effect]) => ({ label, effect, onClick: () => { const before = counted; const after = C.filter(c => RANK[c[3]] >= RANK[k]).length; set({ threshold: k, changed: before !== after, changedText: 'Zählweise geändert — vorher ' + before + ' Länder, jetzt ' + after + '.' }); this.countTo(before, after); }, bg: st.threshold === k ? T.accent : 'transparent', color: st.threshold === k ? T.bg : T.text, border: st.threshold === k ? T.accent : 'rgba(231,227,220,0.18)' })),
+      headlineNote: counted + ' von ' + total + ' Ländern mit Nachweis werden gezählt — gezählt wird ab der Stufe „' + TIER[st.threshold === 'connection' ? 'connection' : st.threshold][0] + '“. Die übrigen bleiben in der Liste stehen, ausgegraut, damit du sie prüfen und korrigieren kannst.',
+      effect: TH.find(t => t[0] === st.threshold)[2], tierCounts, changed: st.changed, changedText: st.changedText || '', dismiss: () => set({ changed: false }),
+      continents: Object.keys(contOf).map(k => { const n = C.filter(c => c[2] === k && countedOf(c)).length; const a = st.continent === k; return { label: k, n, of: contOf[k], pct: Math.round(n / contOf[k] * 100) + '%', border: a ? T.accent : 'rgba(231,227,220,0.12)', onClick: () => set({ continent: a ? null : k }) }; }),
+      listLabel: (st.continent || 'alle Kontinente') + ' · ' + list.length, stampView: st.stamps, listView: !st.stamps, toggleStamps: () => set({ stamps: !st.stamps }), countries };
+  }
+}
+</script>
+</body>
+</html>

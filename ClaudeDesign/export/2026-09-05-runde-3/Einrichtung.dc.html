@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div data-screen-label="00b Einrichtung" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column;align-items:center;padding:40px 24px 80px;gap:28px">
+  <div style="display:flex;align-items:center;gap:12px"><img src="assets/logo.png" alt="" width="32" height="37" style="display:block;width:32px;height:37px"><span style="font-weight:800;font-size:22px;letter-spacing:-0.3px;color:#f4ece0">TravStats</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);align-self:flex-end;padding-bottom:3px">Ersteinrichtung</span></div>
+  <div style="width:100%;max-width:960px;display:grid;grid-template-columns:{{ cols }};gap:24px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:28px;font-weight:800;color:#f4ece0;line-height:1.15">Willkommen zur TravStats Einrichtung</h1><div style="font-size:14px;color:rgba(231,227,220,0.6)">Erstelle dein Admin-Konto, um zu beginnen</div></div>
+      <div style="display:flex;gap:6px"><sc-for list="{{ steps }}" as="s" hint-placeholder-count="3"><span style="flex:1;height:4px;border-radius:999px;background:{{ s.bg }}"></span></sc-for></div>
+      <sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ true }}">
+      <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Admin-Konto</div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Admin-Benutzername</span><input type="text" placeholder="admin" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Passwort</span><input type="password" placeholder="Gib ein sicheres Passwort ein" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"><span style="font-size:11px;color:rgba(231,227,220,0.6)">Mindestens 8 Zeichen</span></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Passwort bestätigen</span><input type="password" placeholder="Bestätige dein Passwort" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"></label>
+        <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:rgba(231,227,220,0.6)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-info"></use></svg><span>Der erste Benutzer, den du erstellst, wird der Administrator sein.</span></div>
+      </section>
+      <button onClick="{{ next }}" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%" style-hover="background:#f6bd66">Weiter · Instanz-Einstellungen</button>
+      </sc-if>
+      <sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Instanz-Einstellungen</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Können später jederzeit im Admin-Bereich geändert werden.</span></div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Instanz-Name</span><input type="text" placeholder="Meine TravStats Instanz" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"><span style="font-size:11px;color:rgba(231,227,220,0.6)">Dieser Name erscheint in E-Mails und Benachrichtigungen</span></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Öffentliche URL</span><input type="url" placeholder="https://travstats.kessler.example" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"><span style="font-size:11px;color:rgba(231,227,220,0.6)">Basis-URL für Einladungslinks und Passwort-Reset-Mails. Mit der aktuellen Adresse vorausgefüllt.</span></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Maximale Benutzer</span><input type="number" placeholder="8" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"><span style="font-size:11px;color:rgba(231,227,220,0.6)">Harter Deckel für die Anzahl Konten. Empfohlen 1–10 für kleine Gruppen.</span></label>
+        <button role="switch" aria-checked="{{ reg }}" onClick="{{ toggleReg }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;background:transparent;border:none;color:#e7e3dc;cursor:pointer;text-align:left;width:100%;padding:0"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Öffentliche Registrierung erlauben</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Wenn deaktiviert, können sich neue Benutzer nur über Admin-Einladung registrieren (empfohlen).</span></span><span style="width:44px;height:26px;border-radius:999px;background:{{ regTrack }};border:1px solid {{ regBorder }};position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:{{ regLeft }};width:18px;height:18px;border-radius:999px;background:{{ regKnob }};transition:left 120ms ease"></span></span></button>
+      </section>
+      <div style="display:flex;gap:10px"><button onClick="{{ prev }}" style="height:48px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;width:auto" style-hover="background:rgba(231,227,220,0.04)">Zurück</button><button onClick="{{ next }}" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%" style-hover="background:#f6bd66">{{ createLabel }}</button></div>
+      </sc-if>
+      <sc-if value="{{ isStep3 }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:rgba(94,194,178,0.45);padding:28px;display:flex;flex-direction:column;gap:14px;align-items:flex-start"><span style="width:52px;height:52px;border-radius:16px;background:rgba(94,194,178,0.12);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-check"></use></svg></span><div style="font-size:24px;font-weight:800;color:#f4ece0">Einrichtung abgeschlossen!</div><div style="font-size:14px;color:rgba(231,227,220,0.75)">Admin-Konto <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">'admin'</span> wurde erfolgreich erstellt.</div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid rgba(231,227,220,0.12);width:100%"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Was passiert als Nächstes?</span><sc-for list="{{ nextSteps }}" as="n" hint-placeholder-count="3"><span style="display:flex;gap:10px;font-size:14px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#f0a947">{{ n.n }}</span>{{ n.t }}</span></sc-for></div>
+        <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:rgba(231,227,220,0.6)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-database"></use></svg><span>Flughafen-Datenbank wird gefüllt … 18 212 von 18 240</span></div>
+        <a href="Anmelden.dc.html" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10">Zur Anmeldung</a>
+      </section>
+      </sc-if>
+    </div>
+    <aside style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Datenschutz &amp; Sicherheit</div><sc-for list="{{ privacy }}" as="p" hint-placeholder-count="4"><div style="display:flex;gap:10px;font-size:13px;color:rgba(231,227,220,0.75);text-wrap:pretty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-check"></use></svg><span>{{ p }}</span></div></sc-for></section>
+      <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Tipps</div><sc-for list="{{ tips }}" as="t" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:600">{{ t.l }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ t.v }}</span></div></sc-for></section>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6);padding:0 4px;text-wrap:pretty">Instanz-Name, öffentliche URL, User-Cap, Registrierungs-Modus und alle API-Keys werden später im Admin-Bereich konfiguriert.</div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, step: 1, reg: false, busy: false, narrow: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._r = () => this.setState({ narrow: window.innerWidth < 860 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); clearTimeout(this._t); }
+  renderVals() {
+    const st = this.state; const set = p => this.setState(p);
+    return { cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1.4fr) minmax(260px,1fr)',
+      steps: [1, 2, 3].map(i => ({ bg: i <= st.step ? '#f0a947' : 'rgba(231,227,220,0.12)' })), isStep1: st.step === 1, isStep2: st.step === 2, isStep3: st.step === 3,
+      next: () => { if (st.step === 2) { set({ busy: true }); clearTimeout(this._t); this._t = setTimeout(() => set({ busy: false, step: 3 }), 800); } else set({ step: st.step + 1 }); }, prev: () => set({ step: st.step - 1 }), createLabel: st.busy ? 'Wird erstellt...' : 'Admin-Konto erstellen',
+      reg: st.reg, toggleReg: () => set({ reg: !st.reg }), regTrack: st.reg ? '#f0a947' : '#101317', regBorder: st.reg ? '#f0a947' : 'rgba(231,227,220,0.18)', regKnob: st.reg ? '#0b0d10' : 'rgba(231,227,220,0.6)', regLeft: st.reg ? '21px' : '3px',
+      nextSteps: [['1', 'Melde dich mit deinem Admin-Konto an'], ['2', 'Lade Familie und Freunde über das Admin-Panel ein'], ['3', 'Fang an, deine Flüge zu erfassen!']].map(([n, t]) => ({ n, t })),
+      privacy: ['Alle Daten bleiben auf deinem Server – nichts wird an externe Dienste gesendet', 'Der erste Benutzer, den du erstellst, wird der Administrator sein', 'Du kannst später Familie und Freunde über das Admin-Panel einladen', 'Entworfen für kleine Gruppen (1–10 Konten)'],
+      tips: [{ l: 'Lokaler Netzwerkzugriff', v: 'Greif von anderen Geräten in deinem lokalen Netzwerk mit http://DEINE_IP:3000 auf deine Instanz zu' }, { l: 'Fernzugriff', v: 'Verwende ein VPN oder einen Reverse Proxy (nginx) für sicheren Fernzugriff' }, { l: 'Backups', v: 'Richte automatische Backups im Admin-Bereich ein — optional gespiegelt per WebDAV' }] };
+  }
+}
+</script>
+</body>
+</html>
