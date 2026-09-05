@@ -99,6 +99,8 @@ test-samples/**/*.jpg
 test-samples/**/*.png
 test-samples/**/*.gif
 test-samples/**/results/*.json
+# The corpus ratchet names the owner's own flights, hotels and dates — data, not code.
+test-samples/**/expectations.json
 # But keep directory structure and README
 !test-samples/README.md
 !test-samples/**/.gitkeep
