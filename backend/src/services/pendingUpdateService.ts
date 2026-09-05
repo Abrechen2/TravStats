@@ -9,6 +9,7 @@ import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from '@prisma/clien
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { calculateDistance } from '../utils/geo';
+import { flightDurationOf } from '../shared/flightDuration';
 import { getCachedAirports } from './airportCache';
 
 const prismaClient = prisma as PrismaClient;
@@ -316,11 +317,9 @@ async function calculateUserStats(
       totalDistance += dist;
     }
 
-    // Flight time (in minutes) — historical flights with null times contribute 0
-    const flightTime = (f.arrivalTime && f.departureTime)
-      ? (f.arrivalTime.getTime() - f.departureTime.getTime()) / (1000 * 60)
-      : 0;
-    totalFlightTime += flightTime;
+    // Flight time through the shared rule (forgejo#76) — the same number the
+    // stats pages report for the row, never a placeholder-clock difference.
+    totalFlightTime += flightDurationOf(f)?.minutes ?? 0;
 
     // Airlines
     if (f.airline) {

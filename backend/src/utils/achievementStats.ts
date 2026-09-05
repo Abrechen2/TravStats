@@ -10,6 +10,7 @@ import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
 import { isCountableFlight } from '../shared/flightCounting';
+import { flightDurationOf } from '../shared/flightDuration';
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
@@ -48,6 +49,8 @@ export interface FlightData {
   delayMinutes: number | null;
   departureTime: Date | null;
   arrivalTime: Date | null;
+  /** Whether the clocks are evidence — see `shared/flightDuration.ts`. */
+  depTimeSemantics?: string | null;
   status: string;
   /** Sonder-Flug discriminator — `null` for normal scheduled flights. */
   specialType: string | null;
@@ -496,11 +499,10 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       if (tzSpan > stats.maxTimezoneSpan) stats.maxTimezoneSpan = tzSpan;
     }
 
-    // Flight time (historical flights have null times — contribute 0 hours)
-    const flightTime = (flight.departureTime && flight.arrivalTime)
-      ? (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60 / 60
-      : 0;
-    stats.totalFlightHours += flightTime;
+    // Flight time through the shared rule (forgejo#76): a DATE_ONLY row's
+    // placeholder clocks are not subtracted, the row is estimated from its
+    // coordinates like everywhere else; a row with neither contributes nothing.
+    stats.totalFlightHours += (flightDurationOf(flight)?.minutes ?? 0) / 60;
 
     // Airports
     const depCode = flight.depIata || flight.depIcao;

@@ -5,6 +5,8 @@ import {
   addFlightDuration,
   averageDurationMinutes,
   emptyDurationTotals,
+  flightDurationOf,
+  measureFlightMinutes,
 } from '../../shared/flightDuration';
 import { isCountableFlight } from '../../shared/flightCounting';
 
@@ -115,14 +117,16 @@ export function calculateBusinessStats(
     : 0;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
-  // Time-sensitive: requires precise duration, so flown-only.
+  // Flown-only, and the hours come from the shared rule: a DATE_ONLY row's
+  // placeholder clocks are not measured (forgejo#76), it contributes the same
+  // coordinate estimate the overview shows for it.
   let totalCostForHours = 0;
   let totalFlightHoursWithCost = 0;
 
   const seenBookingIdsHours = new Set<string>();
 
   for (const f of flownFlights) {
-    const hours = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60);
+    const hours = (flightDurationOf(f)?.minutes ?? 0) / 60;
     if (hours > 0) {
       const convertedHours = baseCost(f);
       let flightCost = 0;
@@ -202,10 +206,7 @@ export function calculateBusinessStats(
     // it still holds. What changed is that such a row now contributes a
     // COORDINATE estimate, counted and labelled as one, instead of contributing
     // nothing at all while the overview card on the same screen estimated it.
-    const measuredMinutes =
-      f.status === 'flown' && f.departureTime && f.arrivalTime
-        ? (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000
-        : null;
+    const measuredMinutes = f.status === 'flown' ? measureFlightMinutes(f) : null;
     durationTotals = addFlightDuration(durationTotals, {
       measuredMinutes,
       depLat: f.depLat,

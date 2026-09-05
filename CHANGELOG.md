@@ -402,6 +402,15 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+- **A flight saved with a date and no times no longer counts its placeholder
+  clocks as flight time.** Such a row carries "12:00 → 13:00" that nobody
+  measured, and three figures subtracted it anyway — the business tile's cost
+  per flight hour, the achievement engine's hours in the air and the summary a
+  pending update compares against — while the overview beside them estimated
+  the same flight from its distance. One rule now, shared by every screen: the
+  clocks count only when they are real instants; otherwise the flight is
+  estimated from its coordinates and labelled as such, or contributes nothing
+  at all. Hours in the air and cost per hour move for accounts with such rows.
 - **The direction arrows are back on the map.** rc.28 was the first candidate to
   carry the page's Content-Security-Policy, and its `connect-src` did not admit
   `data:` — deck.gl fetches its icon atlases from inline SVGs, so every cruise

@@ -63,12 +63,7 @@ export interface FlightDurationInput {
 
 /** Great-circle distance in kilometres. Self-contained on purpose: this file
  * is mirrored from the backend, where the geo helpers are a different module. */
-export function greatCircleKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function greatCircleKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat2 - lat1) * RAD_PER_DEG;
   const dLon = (lon2 - lon1) * RAD_PER_DEG;
   const a =
@@ -86,7 +81,7 @@ export function estimateDurationMinutes(
   depLat: number | null,
   depLon: number | null,
   arrLat: number | null,
-  arrLon: number | null,
+  arrLon: number | null
 ): number | null {
   if (
     typeof depLat !== "number" ||
@@ -145,7 +140,7 @@ export function emptyDurationTotals(): FlightDurationTotals {
 /** Folds one flight into a running total. Pure — returns a new object. */
 export function addFlightDuration(
   totals: FlightDurationTotals,
-  input: FlightDurationInput,
+  input: FlightDurationInput
 ): FlightDurationTotals {
   const d = resolveFlightDuration(input);
   if (d === null) return { ...totals, unknownCount: totals.unknownCount + 1 };
@@ -174,4 +169,53 @@ export function averageDurationMinutes(totals: FlightDurationTotals): number | n
   const contributing = totals.measuredCount + totals.estimatedCount;
   if (contributing === 0) return null;
   return totals.totalMinutes / contributing;
+}
+
+/**
+ * The columns a stored flight needs for the rule to read it directly. Dates
+ * arrive as `Date` from Prisma and as ISO strings over the wire; the semantics
+ * column is the only thing that decides whether the clocks are evidence.
+ */
+export interface TimedFlightRow {
+  departureTime: Date | string | null;
+  arrivalTime: Date | string | null;
+  /**
+   * `UTC` — real instants; `DATE_ONLY` — a date with placeholder clocks;
+   * `UNKNOWN` / `LEGACY_FAKE_UTC` — instants nobody vouches for. Absent means
+   * the row predates the column and was written as UTC.
+   */
+  depTimeSemantics?: string | null;
+  depLat: number | null;
+  depLon: number | null;
+  arrLat: number | null;
+  arrLon: number | null;
+}
+
+/**
+ * Measured minutes, or null when the clocks are not evidence (forgejo#76).
+ *
+ * Only `UTC` semantics measure. A `DATE_ONLY` row carries "12:00 → 20:00" that
+ * somebody typed into a form with no time field, and four aggregates used to
+ * subtract those placeholders anyway — the business tile's cost per hour, the
+ * achievement engine's hours in the air, the pending-update summary — while the
+ * overview beside them estimated the same row from its coordinates. One rule
+ * now, the frontend row's rule, so a row is one number on every screen.
+ */
+export function measureFlightMinutes(row: TimedFlightRow): number | null {
+  if ((row.depTimeSemantics ?? "UTC") !== "UTC") return null;
+  if (!row.departureTime || !row.arrivalTime) return null;
+  const minutes =
+    (new Date(row.arrivalTime).getTime() - new Date(row.departureTime).getTime()) / 60000;
+  return minutes > 0 ? minutes : null;
+}
+
+/** The three rules applied to a stored row: measure when allowed, else estimate, else null. */
+export function flightDurationOf(row: TimedFlightRow): FlightDurationResult | null {
+  return resolveFlightDuration({
+    measuredMinutes: measureFlightMinutes(row),
+    depLat: row.depLat,
+    depLon: row.depLon,
+    arrLat: row.arrLat,
+    arrLon: row.arrLon,
+  });
 }

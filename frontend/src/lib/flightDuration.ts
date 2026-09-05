@@ -1,5 +1,9 @@
 import type { Flight } from "../types";
-import { resolveFlightDuration, type FlightDurationResult } from "../shared/flightDuration";
+import {
+  flightDurationOf,
+  measureFlightMinutes as measureRow,
+  type FlightDurationResult,
+} from "../shared/flightDuration";
 
 /** Re-exported shape so existing callers keep their import site. */
 export type FlightDuration = FlightDurationResult;
@@ -28,18 +32,14 @@ export type FlightDuration = FlightDurationResult;
  * it was (#268).
  */
 export function measureFlightMinutes(flight: Flight): number | null {
-  const semOk = (flight.depTimeSemantics ?? "UTC") === "UTC";
-  if (!semOk || !flight.departureTime || !flight.arrivalTime) return null;
-  const min =
-    (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
-  return min > 0 ? min : null;
+  return measureRow(flight);
 }
 
 export function getFlightDuration(flight: Flight): FlightDuration | null {
-  const measuredMinutes = measureFlightMinutes(flight);
-
-  return resolveFlightDuration({
-    measuredMinutes,
+  return flightDurationOf({
+    departureTime: flight.departureTime,
+    arrivalTime: flight.arrivalTime,
+    depTimeSemantics: flight.depTimeSemantics,
     depLat: flight.depLat ?? null,
     depLon: flight.depLon ?? null,
     arrLat: flight.arrLat ?? null,
