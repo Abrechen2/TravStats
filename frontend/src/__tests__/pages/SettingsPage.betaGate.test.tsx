@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage from "../../pages/SettingsPage";
+import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 
 // Real store — the beta gate lives in it.
@@ -72,39 +72,49 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
   }),
 }));
 
-// `t` echoes the key, so the Devices nav entry reads "settings:devices.title".
+// `t` echoes the key, so the Devices heading reads "settings:devices.title".
 const DEVICES_LABEL = "settings:devices.title";
 
+/**
+ * Settings became one route per group in 2.7.0, so both routes are mounted:
+ * every `?section=` link in these cases is a pre-2.7 URL and travels through
+ * the legacy redirect, which is exactly the path a real bookmark takes.
+ */
 const renderSettings = (initialEntry: string): void => {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsLegacyRedirect />} />
+        <Route path="/settings/:group" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
 };
 
-/** The nav = the sidebar buttons + the mobile <select> options. */
-const navListsDevices = (): boolean =>
-  screen.queryByRole("button", { name: DEVICES_LABEL }) !== null ||
-  screen.queryByRole("option", { name: DEVICES_LABEL }) !== null;
+/**
+ * The gate now decides whether the section is on the page at all, not whether
+ * a sidebar lists it — the sidebar lists groups. "Shown" therefore means the
+ * Devices section is mounted on the rendered group. Its landmark carries the
+ * label so the query works even with the section itself stubbed.
+ */
+const devicesShown = (): boolean => screen.queryByRole("region", { name: DEVICES_LABEL }) !== null;
 
 describe("SettingsPage — beta gate: devicePairing", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not list Devices in the nav when the flag is OFF", () => {
+  it("does not put Devices on the account page when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
-    expect(navListsDevices()).toBe(false);
+    await screen.findByRole("region", { name: "settings:profile.title" });
+    expect(devicesShown()).toBe(false);
   });
 
-  it("lists Devices in the nav when the flag is ON", () => {
+  it("puts Devices on the account page when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings");
-    expect(navListsDevices()).toBe(true);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
   /**
@@ -114,25 +124,25 @@ describe("SettingsPage — beta gate: devicePairing", () => {
    * deep link keeps working; a naive "remove devices from the sections array"
    * would bounce the user to "profile" instead.
    */
-  it("still renders DevicesSection for ?section=devices with the flag OFF, without listing it in the nav", () => {
+  it("still renders DevicesSection for ?section=devices with the flag OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings?section=devices");
 
-    expect(screen.getByTestId("devices-section")).toBeTruthy();
-    expect(navListsDevices()).toBe(false);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
-  it("renders DevicesSection for ?section=devices with the flag ON too", () => {
+  it("renders DevicesSection for ?section=devices with the flag ON too", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=devices");
 
-    expect(screen.getByTestId("devices-section")).toBeTruthy();
-    expect(navListsDevices()).toBe(true);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
+    expect(devicesShown()).toBe(true);
   });
 
-  it("falls back to the first visible section when no ?section is given", () => {
+  it("leaves Devices off the account page when nothing names it", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("devices-section")).toBeNull();
   });
 });
@@ -156,18 +166,20 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not render the Dawarich card on externalServices when the flag is OFF", () => {
+  it("does not render the Dawarich card on externalServices when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.queryByTestId("dawarich-connection-card")).toBeNull();
     // The control: Immich has no such gate and must still render.
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
   });
 
-  it("renders the Dawarich card on externalServices when the flag is ON", () => {
+  it("renders the Dawarich card on externalServices when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
@@ -188,17 +200,19 @@ describe("SettingsPage — beta gate: the routing provider card", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not render the routing provider card when the flag is OFF", () => {
+  it("does not render the routing provider card when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.queryByTestId("routing-provider-section")).toBeNull();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
   });
 
-  it("renders the routing provider card when the flag is ON", () => {
+  it("renders the routing provider card when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.getByTestId("routing-provider-section")).toBeTruthy();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();

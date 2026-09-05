@@ -607,7 +607,7 @@ export default function FlightsTablePage(): JSX.Element {
           <p className="mb-4 text-xs text-(--text-muted)">
             {t("flights:list.wholeListHint")}{" "}
             <Link
-              to="/settings?section=import"
+              to="/settings/data?section=import"
               className="underline underline-offset-4 hover:text-(--text-primary)"
             >
               {t("settings:import.openHub")}

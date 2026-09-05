@@ -1,3 +1,10 @@
 dist/
 node_modules/
 *.min.js
+
+# Generated theme layer. `src/theme/tokens.css` comes from
+# scripts/generate-theme.mjs and `src/theme/fonts.css` from
+# scripts/fetch-fonts.mjs; a test compares tokens.css to a fresh generation, so
+# a Prettier pass over it would fail the suite rather than tidy anything.
+src/theme/tokens.css
+src/theme/fonts.css

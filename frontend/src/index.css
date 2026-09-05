@@ -1,11 +1,22 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+/* Self-hosted faces, then the generated token layer. Both are build artefacts:
+   fonts.css comes from scripts/fetch-fonts.mjs, tokens.css from
+   scripts/generate-theme.mjs reading design/tokens.json. Neither is edited by
+   hand, and a test fails when tokens.css drifts from the JSON. */
+@import "./theme/fonts.css";
+@import "./theme/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-display: Syne, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
-  --font-sans: Inter, sans-serif;
+  /* One family for every role (owner, 2026-09-05): Syne and Inter are gone,
+     Hanken Grotesk carries the display roles too. The three names below are the
+     legacy Tailwind handles — `font-sans`, `font-mono`, `font-display` — kept
+     pointing at the new families so the ~600 components that still say
+     `font-display` render in the right face until block 7 retires the class. */
+  --font-display: var(--ts-font-ui);
+  --font-mono: var(--ts-font-mono);
+  --font-sans: var(--ts-font-ui);
 
   --color-surface: var(--bg-surface);
   --color-elevated: var(--bg-elevated);
@@ -59,18 +70,18 @@
   */
   button,
   summary,
-  label:has(input[type='checkbox']),
-  label:has(input[type='radio']),
-  [role='button'],
-  [role='tab'],
-  [role='option'],
-  [role='switch'] {
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]),
+  [role="button"],
+  [role="tab"],
+  [role="option"],
+  [role="switch"] {
     cursor: pointer;
   }
 
   button:disabled,
-  [aria-disabled='true'],
-  [role='tab'][aria-disabled='true'] {
+  [aria-disabled="true"],
+  [role="tab"][aria-disabled="true"] {
     cursor: not-allowed;
   }
 }
@@ -187,7 +198,7 @@
     border-color: var(--accent);
   }
   &:checked::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 1px;
     left: 4px;
@@ -304,9 +315,29 @@
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
-    font-family: "Inter", sans-serif;
+    font-family: var(--ts-font-ui);
+    font-size: 14px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus is a system state, not a per-component afterthought
+     (DESIGN_SYSTEM.md §5). The ring shows only under :focus-visible, so a
+     mouse click does not draw it but a Tab key always does. */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ts-shadow-focus-ring);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* Scrollbar styling */

@@ -43,6 +43,9 @@ const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const SettingsLegacyRedirect = lazy(() =>
+  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsLegacyRedirect }))
+);
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
@@ -467,8 +470,15 @@ function AppContent() {
                 path="/stats"
                 element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
               />
+              {/* One route per settings group since 2.7.0 (owner decision 11).
+                  `/settings` itself is the legacy entry: every `?section=` and
+                  `?tab=` link ever written still resolves through it. */}
               <Route
                 path="/settings"
+                element={isAuthenticated ? <SettingsLegacyRedirect /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/settings/:group"
                 element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
               />
               <Route

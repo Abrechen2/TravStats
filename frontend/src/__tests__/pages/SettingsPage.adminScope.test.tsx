@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage from "../../pages/SettingsPage";
+import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 
 vi.unmock("../../store/settingsStore");
@@ -60,19 +60,21 @@ const renderAt = (initialEntry: string): void => {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsLegacyRedirect />} />
+        <Route path="/settings/:group" element={<SettingsPage />} />
         <Route path="/admin" element={<div data-testid="admin-page" />} />
       </Routes>
     </MemoryRouter>
   );
 };
 
-/** `t` echoes the key, so a nav entry for the old section would read this. */
+/** `t` echoes the key, so a nav entry or a section for the old one reads this. */
 const ADMIN_LABEL = "settings:admin.title";
 
 const navListsAdmin = (): boolean =>
   screen.queryByRole("button", { name: ADMIN_LABEL }) !== null ||
-  screen.queryByRole("option", { name: ADMIN_LABEL }) !== null;
+  screen.queryByRole("option", { name: ADMIN_LABEL }) !== null ||
+  screen.queryByRole("region", { name: ADMIN_LABEL }) !== null;
 
 describe("SettingsPage — the settings/admin boundary", () => {
   beforeEach(() => {
@@ -80,14 +82,16 @@ describe("SettingsPage — the settings/admin boundary", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false, enabledDomains: ["flight"] });
   });
 
-  it("offers no Admin section to an admin — the panel is a peer, not a subsection", () => {
+  it("offers no Admin section to an admin — the panel is a peer, not a subsection", async () => {
     isAdmin = true;
     renderAt("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(navListsAdmin()).toBe(false);
   });
 
-  it("offers no Admin section to a normal user either", () => {
+  it("offers no Admin section to a normal user either", async () => {
     renderAt("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(navListsAdmin()).toBe(false);
   });
 
@@ -103,13 +107,14 @@ describe("SettingsPage — the settings/admin boundary", () => {
     expect(await screen.findByTestId("admin-page")).toBeTruthy();
   });
 
-  it("does NOT redirect a non-admin — they have no admin panel to be sent to", () => {
+  it("does NOT redirect a non-admin — they have no admin panel to be sent to", async () => {
     renderAt("/settings?section=admin");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("admin-page")).toBeNull();
   });
 
-  it("states the scope of the surface, so a same-named admin entry is distinguishable", () => {
+  it("states the scope of the surface, so a same-named admin entry is distinguishable", async () => {
     renderAt("/settings");
-    expect(screen.getByText("settings:scopeHint")).toBeTruthy();
+    expect(await screen.findByText("settings:scopeHint")).toBeTruthy();
   });
 });

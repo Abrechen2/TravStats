@@ -59,7 +59,8 @@
     "dataSources": {
       "title": "Data sources & attribution",
       "fullList": "Full list with licenses"
-    }
+    },
+    "title": "About TravStats"
   },
   "profile": {
     "title": "User Profile",
@@ -753,5 +754,11 @@
     "label": "A country counts from …",
     "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
     "useInstanceDefault": "Use this instance's default ({{tier}})"
+  },
+  "groups": {
+    "account": "Account",
+    "display": "Appearance",
+    "data": "Data",
+    "services": "Services"
   }
 }

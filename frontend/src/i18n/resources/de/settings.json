@@ -59,7 +59,8 @@
     "dataSources": {
       "title": "Datenquellen & Attribution",
       "fullList": "Vollständige Liste mit Lizenzen"
-    }
+    },
+    "title": "Über TravStats"
   },
   "profile": {
     "title": "Benutzer-Profil",
@@ -753,5 +754,11 @@
     "label": "Ein Land zählt ab …",
     "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
     "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})"
+  },
+  "groups": {
+    "account": "Konto",
+    "display": "Darstellung",
+    "data": "Daten",
+    "services": "Dienste"
   }
 }

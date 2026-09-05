@@ -7,11 +7,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0d1117" />
     <title>TravStats</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <!--
+      Fonts are self-hosted under /fonts and declared in src/theme/fonts.css.
+      The Google Fonts stylesheet that used to sit here loaded Syne, Inter and
+      IBM Plex Mono from two third-party origins that the app's CSP does not
+      allow, and Syne and Inter are retired anyway (owner, 2026-09-05: one
+      family everywhere). Preloading the two faces the first paint needs keeps
+      the swap invisible.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/hanken-grotesk-400-latin.woff2"
+      crossorigin=""
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/hanken-grotesk-700-latin.woff2"
+      crossorigin=""
     />
     <link
       rel="stylesheet"

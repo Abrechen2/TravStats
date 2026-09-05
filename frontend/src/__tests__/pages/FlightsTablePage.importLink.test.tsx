@@ -64,7 +64,12 @@ vi.mock("../../lib/api", () => ({
 
 describe("FlightsTablePage", () => {
   it("links to the central import hub in settings", async () => {
-    vi.mocked(flightsApi.getAll).mockResolvedValue({ flights: [], total: 0, limit: 100, offset: 0 });
+    vi.mocked(flightsApi.getAll).mockResolvedValue({
+      flights: [],
+      total: 0,
+      limit: 100,
+      offset: 0,
+    });
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
 
     render(
@@ -74,6 +79,6 @@ describe("FlightsTablePage", () => {
     );
 
     const link = await screen.findByRole("link", { name: /settings:import.openHub/ });
-    expect(link.getAttribute("href")).toBe("/settings?section=import");
+    expect(link.getAttribute("href")).toBe("/settings/data?section=import");
   });
 });
