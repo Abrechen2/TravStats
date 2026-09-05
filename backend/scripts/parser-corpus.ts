@@ -101,6 +101,7 @@ interface FileResult {
 type Expectation = {
   candidates?: number;
   flights?: Array<{ flightNumber?: string; from?: string; to?: string; date?: string }>;
+  lodgings?: Array<{ name?: string; checkIn?: string; checkOut?: string }>;
 };
 
 function readExpectations(dir: string): Record<string, Expectation> {
@@ -176,6 +177,15 @@ function checkExpectation(result: FileResult, expected: Expectation | undefined)
         (e.date === undefined || (f.departure ?? "").startsWith(e.date))
     );
     if (!hit) misses.push(`expected flight ${JSON.stringify(e)} not found`);
+  }
+  for (const e of expected.lodgings ?? []) {
+    const hit = (result.lodgings ?? []).some(
+      (l) =>
+        (e.name === undefined || l.name === e.name) &&
+        (e.checkIn === undefined || l.checkIn === e.checkIn) &&
+        (e.checkOut === undefined || l.checkOut === e.checkOut)
+    );
+    if (!hit) misses.push(`expected stay ${JSON.stringify(e)} not found`);
   }
   return misses;
 }
