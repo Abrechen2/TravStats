@@ -74,7 +74,7 @@ that had shipped without a test.
   prices had a cost block on every screen. Only the HIDDEN blocks are
   remembered, so a section added in a later release still appears rather than
   being silently swallowed by an old preference.
-- **Twenty-five new achievements for places**, taking the catalogue to 275.
+- **Twenty-five new achievements for places**, taking the catalogue to 276.
   Places were the thinnest domain; cities, continents, streaks, latitudes and
   ratings now count for something.
 - **The beta switch says what it turns on.** The admin panel lists every gated
