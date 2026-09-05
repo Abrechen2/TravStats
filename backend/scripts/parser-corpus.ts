@@ -191,6 +191,12 @@ async function main(): Promise<void> {
   // wrongly. `process.exit` below is what ends the registry's sync timer.
   const { templateRegistry } = await import("../src/services/parsers/templates/registry");
   await templateRegistry.initialize();
+  // Also a boot-time step: the airline catalogue that decides whether a
+  // flight-number prefix names an airline. Without it the 147-entry curated
+  // fallback answers, and the measurement is of a smaller instance than any
+  // real one.
+  const { preloadAirlineCatalog } = await import("../src/services/airlineCatalogCache");
+  await preloadAirlineCatalog();
 
   const files = fs
     .readdirSync(args.dir)
