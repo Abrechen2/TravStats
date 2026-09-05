@@ -233,3 +233,30 @@ gestellt.
 - Companion-Änderungen außer den Token-Dateien.
 - Ent-gaten von Beta-Funktionen; das läuft auf `dev/v2.7` und ist Owner-Sache.
 - Das Merge nach `dev/v2.7` oder `main`.
+
+## 10. Startprompt für die Sitzung auf CT142
+
+Vom Owner am 05.09.2026 angefordert; in der Claude-App Host `ct142`, Projekt
+TravStats, Modell Fable wählen und diesen Text als erste Nachricht senden:
+
+```
+Lies /home/claude/UEBERGABE.md und danach den dort genannten Auftrag
+ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md auf dem Zweig dev/v2.7
+(git fetch forgejo zuerst). Richte den Worktree .worktrees/design-system mit dem
+Zweig dev/design-system von forgejo/dev/v2.7 ein, wie im Auftrag beschrieben, und
+arbeite die sieben Blöcke in der angegebenen Reihenfolge ab.
+
+Arbeite autonom: keine Rückfragen an mich. Wo etwas offen ist, gelten die
+Entscheidungsregeln in Abschnitt 7 des Auftrags; wo Export und Owner-Entscheidungen
+(Abschnitt 3) auseinanderliegen, gilt die Entscheidung. Halte dich an Abschnitt 6
+(Nicht tun): kein Merge nach main oder dev/v2.7, kein Deploy, kein Discord, keine
+Issues, VERSION und CHANGELOG unberührt, Remotes immer als forgejo und github
+ausschreiben.
+
+Nach jedem Block: Gates grün (frontend tsc, lint, vitest, check:size; backend tsc
+und lint, wenn berührt), Screenshots 1440×900 und 390×844 nach
+ClaudeDesign/screenshots/design-system/<block>/, Bericht nach
+ClaudeDesign/handoff/2026-09-0N-design-system-block-<n>-bericht.md, Commit, Push nach
+forgejo und github, dann forgejo/dev/v2.7 hineinmergen. Am Sitzungsende
+/home/claude/UEBERGABE.md aktualisieren. Beginne mit Block 1.
+```
