@@ -64,7 +64,8 @@
   "tourTab": {
     "listTitle": "Touren",
     "listEmpty": "Noch keine Touren erfasst",
-    "empty": "Noch keine Touren angelegt. Lege deine erste Tour auf der Detailseite einer Reise unter „Touren“ an."
+    "empty": "Noch keine Touren angelegt. Lege deine erste Tour auf der Detailseite einer Reise unter „Touren“ an.",
+    "unavailable": "Diese Funktion ist derzeit nicht verfügbar."
   },
   "lodgingTab": {
     "loading": "Unterkünfte werden geladen …",

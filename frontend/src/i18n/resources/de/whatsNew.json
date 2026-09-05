@@ -21,10 +21,6 @@
         "title": "Rein und raus: Tabelle und CSV",
         "body": "Das ganze Logbuch exportiert in eine Tabelle und kommt wieder zurück — Flüge, Kreuzfahrten, Aufenthalte. Der CSV-Import zeigt vorher, was er tun wird, fragt bei möglichen Dubletten nach, und jeder Import hinterlässt eine Spur, die sich als Ganzes zurücknehmen lässt."
       },
-      "tours": {
-        "title": "Touren, Companion-App und Dawarich — für alle sichtbar, noch Beta",
-        "body": "Eine Reise kann gewandert, gefahren und geradelt werden, nicht nur geflogen: Etappen mit Routen im Reisejournal, ein Routeneditor, der mit der Maus bedient wird. Die Kopplung mit der TravStats-Companion-App und die Dawarich-Anbindung sind da. Alle drei sind unfertig und können sich noch ändern — sie stehen nicht hinter dem Schalter, tragen aber die Beta-Marke."
-      },
       "stats": {
         "title": "Statistik und Erfolge sind gewachsen",
         "body": "Rekorde, das ganze Streckennetz und der Jahresrückblick kommen vom Server, jeder Statistik-Reiter zeigt nur die Blöcke, die du willst, Hotels haben ihr eigenes Kapitel, und jeder Flug hat eine Seite, auf der man ihn liest. Dazu 78 neue Erfolge für Orte und Hotels."
@@ -35,7 +31,7 @@
       },
       "beta": {
         "title": "Der Beta-Schalter sagt, was er einschaltet",
-        "body": "Unfertige Bereiche liegen hinter einem Schalter in den Admin-Einstellungen: Orte als eigener Bereich mit Listen, Checklisten und dem Import gespeicherter Google-Maps-Listen, der Reisepass, eigene Farben je Bereich, die KI-Zusammenfassung einer Reise. Jeder Eintrag nennt, warum er noch versteckt ist und wann er zurückkommt. Aus ist die Vorgabe; wer testen will, schaltet ein."
+        "body": "Unfertige Bereiche liegen hinter einem Schalter in den Admin-Einstellungen: Orte als eigener Bereich mit Listen, Checklisten und dem Import gespeicherter Google-Maps-Listen, der Reisepass, eigene Farben je Bereich, die KI-Zusammenfassung einer Reise — und Touren (eine Reise gewandert, gefahren, geradelt, mit Routeneditor), die Kopplung mit der TravStats-Companion-App und die Dawarich-Anbindung. Jeder Eintrag nennt, warum er noch versteckt ist und wann er zurückkommt. Aus ist die Vorgabe; wer testen will, schaltet ein."
       }
     },
     "v250": {

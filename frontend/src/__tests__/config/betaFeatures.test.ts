@@ -78,10 +78,7 @@ describe("beta feature registry", () => {
 
   it("gates every currently hidden feature", () => {
     const used = new Set(gateKeysInSource().map(({ key }) => key));
-    // `devicePairing`, `tourRoutes` and `dawarich` were removed from this list
-    // on 2026-09-01 when the owner released all three: the registry entry AND
-    // every gate site went with them, which is what un-gating means here.
-    const expected: BetaFeatureKey[] = ["tripAiSummary", "poiDomain"];
+    const expected: BetaFeatureKey[] = ["tripAiSummary", "devicePairing", "poiDomain"];
     for (const key of expected) {
       expect(used.has(key), `${key} is registered but nothing gates it`).toBe(true);
     }

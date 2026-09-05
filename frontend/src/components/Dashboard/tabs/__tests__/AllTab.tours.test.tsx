@@ -119,14 +119,11 @@ const READY_NO_TOURS = {
   reload: vi.fn(),
 };
 
-/**
- * Tours stopped reading the beta gate on 2026-09-01, so nothing in this file
- * flips it for their sake any more. The mock stays because `usePlacesVisible`
- * still resolves through it, and it answers "denied" for every key so the POI
- * layer keeps out of these assertions — exactly what the old `betaOn()` did,
- * which only ever allowed `tourRoutes`.
- */
-function placesGated(): { betaFeaturesEnabled: boolean; isFeatureVisible: () => boolean } {
+function betaOn(): { betaFeaturesEnabled: boolean; isFeatureVisible: (key: string) => boolean } {
+  return { betaFeaturesEnabled: true, isFeatureVisible: (key: string) => key === "tourRoutes" };
+}
+
+function betaOff(): { betaFeaturesEnabled: boolean; isFeatureVisible: () => boolean } {
   return { betaFeaturesEnabled: true, isFeatureVisible: () => false };
 }
 
@@ -141,7 +138,7 @@ beforeEach(() => {
     setTab: () => {},
     setMode: () => {},
   });
-  mockUseBetaFeatures.mockReturnValue(placesGated());
+  mockUseBetaFeatures.mockReturnValue(betaOn());
   mockUseDashboardTours.mockReturnValue(READY_NO_TOURS);
 });
 
@@ -238,12 +235,8 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
     expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
   });
 
-  // Until 2026-09-01 this asserted the opposite: with the `tourRoutes` gate
-  // off, AllTab asked the hook for `enabled: false` and drew no tour UI. The
-  // owner released the feature, so the fetch is now unconditional — and the
-  // beta flag being OFF must not change that, which is what the mock state
-  // above (every key denied) proves in passing.
-  it("asks the tour hook to fetch regardless of the beta flag", () => {
+  it("never fetches or renders tour UI while the tourRoutes beta gate is off", () => {
+    mockUseBetaFeatures.mockReturnValue(betaOff());
     mockUseDashboardTours.mockReturnValue({
       ...READY_NO_TOURS,
       tours: [TOUR_A],
@@ -256,7 +249,12 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
       </MemoryRouter>
     );
 
-    expect(mockUseDashboardTours).toHaveBeenCalledWith(true);
+    // The hook is still called (rules of hooks), but with enabled=false —
+    // it must refuse to fetch on its own end; here we assert AllTab asked
+    // for it to be off.
+    expect(mockUseDashboardTours).toHaveBeenCalledWith(false);
+    expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
   });
 
   it("does not draw tour lines or legend in journey mode", async () => {

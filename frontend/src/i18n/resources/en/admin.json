@@ -148,6 +148,10 @@
             "name": "AI trip summary",
             "what": "A button on the trip detail page that summarises the journey in prose."
           },
+          "devicePairing": {
+            "name": "Device pairing",
+            "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
+          },
           "passport": {
             "name": "Passport",
             "what": "A page of stamps, continent quotas and a country table, built from your flight data."
@@ -159,6 +163,14 @@
           "poiDomain": {
             "name": "Places",
             "what": "The whole Places domain: create, edit, detail page, list, map, custom lists and the shipped checklists."
+          },
+          "tourRoutes": {
+            "name": "Tours",
+            "what": "Route sections inside a trip — the section list, its editor, a dashboard tab of its own, and the lines on the map."
+          },
+          "dawarich": {
+            "name": "Dawarich connection",
+            "what": "A connection to a Dawarich instance that recorded tracks are pulled from."
           }
         }
       },

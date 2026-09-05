@@ -90,45 +90,47 @@ const navListsDevices = (): boolean =>
   screen.queryByRole("button", { name: DEVICES_LABEL }) !== null ||
   screen.queryByRole("option", { name: DEVICES_LABEL }) !== null;
 
-/**
- * `devicePairing` was un-gated on 2026-09-01 — the phone app it was waiting on
- * (TravStatsCompanion) shipped, and the gate was hiding the only place a claim
- * code is minted. What these cases now pin is that the entry is UNCONDITIONAL:
- * the beta flag has no say over it in any of its three states, including the
- * `null` one a cold load spends in flight. A gate re-introduced by accident
- * would fail the `null` and `false` cases here.
- */
-describe("SettingsPage — Devices is no longer gated", () => {
+describe("SettingsPage — beta gate: devicePairing", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it.each([
-    ["unknown", null],
-    ["off", false],
-    ["on", true],
-  ])("lists Devices in the nav while the beta flag is %s", (_label, flag) => {
-    useSettingsStore.setState({ betaFeaturesEnabled: flag });
+  it("does not list Devices in the nav when the flag is OFF", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings");
+    expect(navListsDevices()).toBe(false);
+  });
+
+  it("lists Devices in the nav when the flag is ON", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings");
     expect(navListsDevices()).toBe(true);
   });
 
   /**
-   * Still load-bearing, for a different reason than before. The section model
-   * and the nav list remain separate concepts, and `devices` must stay in the
-   * MODEL: the deep link is what the pairing QR flow is reached by from the
-   * Companion app's own instructions. A naive "remove devices from the
-   * sections array" would bounce the user to "profile".
+   * THE load-bearing case. With the nav entry hidden, /settings?section=devices
+   * is the ONLY way to reach the QR pairing flow — the owner still uses it. The
+   * section model and the nav list are separate concepts precisely so this
+   * deep link keeps working; a naive "remove devices from the sections array"
+   * would bounce the user to "profile" instead.
    */
-  it("renders DevicesSection for ?section=devices, and lists it too", () => {
+  it("still renders DevicesSection for ?section=devices with the flag OFF, without listing it in the nav", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings?section=devices");
+
+    expect(screen.getByTestId("devices-section")).toBeTruthy();
+    expect(navListsDevices()).toBe(false);
+  });
+
+  it("renders DevicesSection for ?section=devices with the flag ON too", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=devices");
 
     expect(screen.getByTestId("devices-section")).toBeTruthy();
     expect(navListsDevices()).toBe(true);
   });
 
-  it("does not render DevicesSection when another section is active", () => {
+  it("falls back to the first visible section when no ?section is given", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
     expect(screen.queryByTestId("devices-section")).toBeNull();
@@ -136,25 +138,35 @@ describe("SettingsPage — Devices is no longer gated", () => {
 });
 
 /**
- * `DawarichConnectionCard` used to render unconditionally, then behind
- * `isFeatureVisible("tourRoutes")`, then behind its OWN `dawarich` key — the
- * card offers a connection, and a connection with no consumer is noise. Tour
- * routes shipped on 2026-09-01, which is the event that key's `returnsWhen`
- * named, so the gate came off with it.
- * `ImmichConnectionCard` is the control: it never had a gate, and pinning both
- * together is what shows the card is now as unconditional as its neighbour.
+ * MEDIUM-1 (final whole-phase review, 2026-08-29): `DawarichConnectionCard`
+ * used to render unconditionally on `externalServices` — with the beta flag
+ * OFF (production's setting), every user saw a connection card for a feature
+ * invisible everywhere else (the Touren tab, the route editor). It was first
+ * gated via `isFeatureVisible("tourRoutes")`; since `6247e262` it has its OWN
+ * `dawarich` key, because cruise legs will pull from the same connection and a
+ * gate named after tours would then hide a card the cruise feature needs.
+ * These cases flip the MASTER switch, so they hold either way — which is
+ * exactly why the docstring had to be corrected by hand rather than by a
+ * failing test.
+ * `ImmichConnectionCard` is the control: it has NO such gate and must keep
+ * rendering regardless of the flag.
  */
-describe("SettingsPage — the Dawarich connection card is no longer gated", () => {
+describe("SettingsPage — beta gate: the Dawarich connection card", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it.each([
-    ["unknown", null],
-    ["off", false],
-    ["on", true],
-  ])("renders the Dawarich card on externalServices while the flag is %s", (_label, flag) => {
-    useSettingsStore.setState({ betaFeaturesEnabled: flag });
+  it("does not render the Dawarich card on externalServices when the flag is OFF", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.queryByTestId("dawarich-connection-card")).toBeNull();
+    // The control: Immich has no such gate and must still render.
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+  });
+
+  it("renders the Dawarich card on externalServices when the flag is ON", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=externalServices");
 
     expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
@@ -163,23 +175,29 @@ describe("SettingsPage — the Dawarich connection card is no longer gated", () 
 });
 
 /**
- * `RoutingProviderSection` is the Dawarich card's sibling and was gated on
- * `tourRoutes` for the same reason: it configures a road router for TOUR legs
- * and has no other consumer. Tours shipped, so the card is unconditional now —
- * except for the `isAdmin` prop it has always had, which is a permission, not
- * a gate, and is covered where that component is tested.
+ * Found during the merge review, 2026-08-30: `RoutingProviderSection` is the
+ * Dawarich card's sibling and kept the very defect the block above records.
+ * It configures a road router for TOUR legs and has no other consumer, so on a
+ * production instance (beta OFF) an admin saw a routing card for a feature
+ * hidden everywhere else. Gating it needed no test to change, which is how it
+ * survived a whole phase — hence this one.
+ * `ImmichConnectionCard` is again the control: no gate, always rendered.
  */
-describe("SettingsPage — the routing provider card is no longer gated", () => {
+describe("SettingsPage — beta gate: the routing provider card", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it.each([
-    ["unknown", null],
-    ["off", false],
-    ["on", true],
-  ])("renders the routing provider card while the flag is %s", (_label, flag) => {
-    useSettingsStore.setState({ betaFeaturesEnabled: flag });
+  it("does not render the routing provider card when the flag is OFF", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+  });
+
+  it("renders the routing provider card when the flag is ON", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=externalServices");
 
     expect(screen.getByTestId("routing-provider-section")).toBeTruthy();

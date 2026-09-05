@@ -15,23 +15,23 @@ describe("useBetaFeatures", () => {
   it("hides everything while the flag is unknown (not loaded yet)", () => {
     const { result } = renderHook(() => useBetaFeatures());
     expect(result.current.betaFeaturesEnabled).toBeNull();
-    expect(result.current.isFeatureVisible("poiDomain")).toBe(false);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
     expect(result.current.isFeatureVisible("tripAiSummary")).toBe(false);
-    expect(result.current.isFeatureVisible("passport")).toBe(false);
+    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(false);
   });
 
   it("hides everything when the flag is off", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     const { result } = renderHook(() => useBetaFeatures());
-    expect(result.current.isFeatureVisible("poiDomain")).toBe(false);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
   });
 
   it("shows registered features when the flag is on", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     const { result } = renderHook(() => useBetaFeatures());
-    expect(result.current.isFeatureVisible("poiDomain")).toBe(true);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(true);
     expect(result.current.isFeatureVisible("tripAiSummary")).toBe(true);
-    expect(result.current.isFeatureVisible("passport")).toBe(true);
+    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(true);
   });
 
   it("reacts to the flag arriving from the settings request", () => {

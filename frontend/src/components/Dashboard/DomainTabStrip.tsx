@@ -68,11 +68,13 @@ export function DomainTabStrip({
   // only — a different gate from the `poiDashboardTab` stub one it replaced,
   // and hidden for a different reason. See config/betaFeatures.ts.
   //
-  // "Touren" carried the same shape of gate on its own flag (`tourRoutes`)
-  // until the owner released the feature on 2026-09-01; the tab is now always
-  // listed.
+  // "Touren" is gated the same shape, but on a DIFFERENT flag (`tourRoutes`)
+  // — the feature is complete, the gate is only withholding it until the
+  // owner's release decision (config/betaFeatures.ts).
   const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => tab !== "poi" || isFeatureVisible("poiDomain")
+    (tab) =>
+      (tab !== "poi" || isFeatureVisible("poiDomain")) &&
+      (tab !== "tour" || isFeatureVisible("tourRoutes"))
   );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —

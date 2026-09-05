@@ -70,12 +70,11 @@ describe("whatsNew content", () => {
     }
   });
 
-  // Owner, 2026-09-05: tours, the Companion pairing and Dawarich are beta too —
-  // ungated since 2026-09-01, but unfinished; the modal says so.
+  // Owner, 2026-09-05: tours, the Companion pairing and Dawarich are beta —
+  // back behind the switch in 2.6.1, so they are listed in the beta item.
   it("marks the 2.6.0 beta items and nothing else in that entry", () => {
     const entry = findEntryForVersion("2.6.0");
     expect(entry?.highlights.filter((h) => h.beta).map((h) => h.titleKey)).toEqual([
-      "entries.v260.tours.title",
       "entries.v260.beta.title",
     ]);
   });

@@ -21,10 +21,6 @@
         "title": "In and out: spreadsheet and CSV",
         "body": "The whole logbook exports to one spreadsheet and comes back — flights, cruises, stays. The CSV import shows what it will do first, asks about likely duplicates, and every import leaves a trace that can be taken back as a whole."
       },
-      "tours": {
-        "title": "Tours, the Companion app and Dawarich — visible to everyone, still beta",
-        "body": "A trip can be walked, driven and cycled, not only flown: sections with routes in the trip journal, a route editor worked with the mouse. Pairing with the TravStats Companion app and the Dawarich connection are here. All three are unfinished and may still change — they are not behind the switch, but they carry the beta mark."
-      },
       "stats": {
         "title": "Statistics and achievements have grown",
         "body": "Records, the whole route network and the year in review come from the server, every statistics tab shows only the blocks you want, hotels have a chapter of their own, and every flight has a page to read it on. Plus 78 new achievements for places and hotels."
@@ -35,7 +31,7 @@
       },
       "beta": {
         "title": "The beta switch says what it turns on",
-        "body": "Unfinished areas sit behind a switch in the admin settings: places as a domain of their own with lists, checklists and the import of saved Google Maps lists, the passport, a colour per domain, the AI summary of a trip. Each entry says why it is still hidden and when it comes back. Off is the default; turn it on to test."
+        "body": "Unfinished areas sit behind a switch in the admin settings: places as a domain of their own with lists, checklists and the import of saved Google Maps lists, the passport, a colour per domain, the AI summary of a trip — and tours (a trip walked, driven, cycled, with a route editor), pairing with the TravStats Companion app and the Dawarich connection. Each entry says why it is still hidden and when it comes back. Off is the default; turn it on to test."
       }
     },
     "v250": {

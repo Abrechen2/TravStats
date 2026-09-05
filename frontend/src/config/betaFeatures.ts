@@ -49,6 +49,23 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
+   * The "Devices" section in user settings (QR claim-code pairing flow).
+   *
+   * READ THIS BEFORE REMOVING THE GATE OR FORGETTING ABOUT IT: the Devices
+   * page is the ONLY way to pair a phone. It starts the claim-code flow that
+   * `backend/src/routes/pairing.ts` completes. With the gate OFF, nobody but
+   * the instance owner can pair a device — and the owner only can because the
+   * page is still reachable by URL (`/settings?section=devices`), which is a
+   * hard requirement of this gate, not an accident. Do not "clean up" the
+   * URL-reachability by dropping `devices` from the section model.
+   */
+  devicePairing: Object.freeze({
+    why: "Pairing a phone works end to end, but the Companion app and the flows behind it are unfinished. The three came off the switch on 2026-09-01 on the strength of their own release conditions; on 2026-09-05, reading the 2.6.0 announcement, the owner ruled all three beta and put them back. Off means the Devices section, the only place a claim code is minted, is not offered.",
+    returnsWhen: "The owner accepts the Companion pairing for release.",
+    reason: "advanced",
+  }),
+
+  /**
    * The passport page — /passport, its nav entry, and GET /stats/passport.
    *
    * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
@@ -114,6 +131,41 @@ export const BETA_FEATURES = Object.freeze({
     why: "Places can still only be added one at a time, by hand — but the reason has moved, and this entry said the wrong one until 2026-09-03. The import EXISTS now: `POST /place-import/preview` and `/commit` (backend/src/routes/placeImport.ts) take CSV rows, dedupe them and write them behind an ImportBatch that can be undone. Nothing in the frontend calls either route, and `frontend/src/lib/importers/placeCsv.ts` is referenced only by its own test. Settings → Import therefore still renders the POI group empty, because `poiAdapter.tsx` reads POI_IMPORT_READY = false and hides both tiles. What this gate holds back is no longer a missing capability; it is a built capability with no way in.",
     returnsWhen:
       "The CSV import gets its surface: an import tile, a client for the two routes, and a preview dialog for the rows that need a decision — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md §5, which rules that an unplaceable row is an OFFER, not a drop, and so cannot ship without somewhere to make the offer. The other two conditions this gate used to wait for are MET: the picker mints an identity (`externalRef: osmRef(props)`, backend/src/services/geo/photon.ts), so the @@unique([userId, externalRef]) index now fires and the duplicate argument is gone; custom lists (phase B) shipped earlier.",
+  }),
+
+  /**
+   * The "Touren" tab on the trip detail page (tour route sections: a named
+   * ordered chain of stops with driven legs — the road-trip counterpart to
+   * cruise itineraries), and its editor at
+   * `/trips/:id/route/:routeId` — gated the same way as the tab, since the
+   * editor is otherwise reachable by URL with the tab hidden.
+   *
+   * The list AND its editor (stop assignment, per-leg mode/source
+   * overrides, the route map) are both feature-complete now. The gate stays
+   * on because the feature as a whole is still awaiting the owner's release
+   * decision, not because anything named here is unfinished.
+   */
+  tourRoutes: Object.freeze({
+    why: "The section list and its editor work end to end, but the feature is unfinished and may change. Released on 2026-09-01 on the owner's earlier acceptance; on 2026-09-05 the owner ruled it beta again, together with the Companion pairing and Dawarich, so the three move as one.",
+    returnsWhen: "The owner accepts tours for release.",
+    reason: "beta",
+  }),
+
+  /**
+   * The Dawarich connection — a self-hosted location-history server TravStats
+   * PULLS recorded tracks from, never writes to.
+   *
+   * It has its own key rather than riding on `tourRoutes`, even though tours
+   * are its only consumer today. Dawarich is an integration, not a feature of
+   * one domain: `dev/cruise-tracks` will take cruise legs from the same
+   * connection, and a gate named after tours would then hide a card the cruise
+   * feature needs. Gating an integration on one of its consumers is only ever
+   * right while there is exactly one.
+   */
+  dawarich: Object.freeze({
+    why: "The connection, the pull and the settings card work, but every consumer of a recorded track (tours) is beta again since 2026-09-05, so the connection that feeds it is too. Its own key on purpose: cruise legs will pull from the same connection.",
+    returnsWhen: "Tours are released, or another consumer of recorded tracks ships.",
+    reason: "beta",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

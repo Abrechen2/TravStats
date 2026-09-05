@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
@@ -152,11 +153,11 @@ export function AllTab(): JSX.Element {
   const placesAllowed = usePlacesVisible();
   const placesVisible = filterDomains.includes("poi") && placesAllowed;
 
-  // Tours have no domain pill and, since the owner released the feature on
-  // 2026-09-01, no beta gate either — they are simply always fetched here.
-  // `useDashboardTours` keeps its `enabled` argument for callers that must
-  // not hit the network; this tab has no such condition.
-  const dashboardTours = useDashboardTours(true);
+  // Tours have no domain pill — gated only by the beta flag;
+  // `useDashboardTours` refuses to fetch while it is off.
+  const { isFeatureVisible } = useBetaFeatures();
+  const toursAllowed = isFeatureVisible("tourRoutes");
+  const dashboardTours = useDashboardTours(toursAllowed);
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -435,7 +436,7 @@ export function AllTab(): JSX.Element {
 
   // Tours on the main overview map only — journey mode already takes over
   // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
-  const showTours = allMode !== "journey";
+  const showTours = toursAllowed && allMode !== "journey";
 
   // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
   // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,

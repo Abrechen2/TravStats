@@ -319,7 +319,10 @@ enforced, and merely practised** below.
   (TravStatsCompanion, not the abandoned TravStatsApp the entry still said)
   had shipped while the gate hid the only place a claim code is minted, and
   the last because releasing tour routes WAS the event its own `returnsWhen`
-  was waiting for.
+  was waiting for. And on 2026-09-05, reading the 2.6.0 announcement that
+  called them "out of beta", the owner ruled all three beta and put them back
+  behind the switch (2.6.0 was re-cut) — a `returnsWhen` that has come true is a reason
+  to ask, not a licence to ship.
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through

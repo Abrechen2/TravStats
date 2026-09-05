@@ -29,10 +29,8 @@ export interface UseDashboardToursResult {
  *
  * `enabled` gates the fetch itself, not just the render — the same
  * domain-gating contract every other AllTab data effect follows for
- * flights/cruises/lodgings/places: a caller that cannot show the result must
- * never hit the network for it. Both callers pass `true` today; the argument
- * existed for the `tourRoutes` beta gate, which the owner released on
- * 2026-09-01, and is kept because the contract is the hook's, not that gate's.
+ * flights/cruises/lodgings/places: a feature hidden behind the `tourRoutes`
+ * beta gate must never hit the network for it.
  */
 export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
   const [tours, setTours] = useState<TourSummary[]>([]);

@@ -3,21 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 /**
- * What the dispatch in DashboardPage does with a beta flag that has not
- * answered yet (`betaFeaturesEnabled: null` on a cold load).
+ * M1 (fix round 1 review, 2026-08-30): the gated URL redirect
+ * (`tab === "tour" && betaFeaturesEnabled !== null && !tourAllowed`) is
+ * only HALF of the `/dashboard/poi` treatment this tab was supposed to
+ * copy -- POI also withholds `<PoiTab>` itself from the dispatch below
+ * (`tab === "poi" && placesVisible && <PoiTab .../>`) so a cold-load
+ * "don't know yet" state (`betaFeaturesEnabled: null`) shows neither tab
+ * NOR bounces. Before this fix, `TourTab` had no such conjunct, so at
+ * `betaFeaturesEnabled: null` the tour tab rendered its full shell (map,
+ * sidebar, loading banner) while the POI tab correctly rendered nothing
+ * -- the reviewer's own probe.
  *
- * POI is still gated on `poiDomain`, and its rule is the interesting one: a
- * pending flag must show nothing rather than flash the tab and take it away
- * again, so `<PoiTab>` is withheld from the dispatch as well as guarded by the
- * redirect above it. Half a treatment is what this file was written to catch —
- * the tour tab once had the redirect without the dispatch conjunct and
- * rendered its full shell (map, sidebar, loading banner) at `null`.
- *
- * Tours themselves are no longer part of that question: the owner released
- * `tourRoutes` on 2026-09-01, so `<TourTab>` renders whatever the flag says.
- * It stays in these cases as the CONTRAST — an ungated tab beside a gated one,
- * proving the pending-state rule belongs to the gate and not to the dispatch
- * in general.
+ * Deliberate-break protocol: remove `tourAllowed` from the `tab ===
+ * "tour" && tourAllowed && <TourTab .../>` line in DashboardPage.tsx --
+ * the first test below fails (TourTab renders when it must not).
  */
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
@@ -95,30 +94,17 @@ beforeEach(() => {
 });
 
 describe("DashboardPage: gated tabs at a cold-load 'don't know yet' beta flag", () => {
-  it("withholds PoiTab while betaFeaturesEnabled is null (pending), but not the ungated TourTab", () => {
+  it("renders neither PoiTab nor TourTab while betaFeaturesEnabled is null (pending)", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null });
 
-    renderAt("poi");
-    expect(screen.queryByTestId("poi-tab")).not.toBeInTheDocument();
-
     renderAt("tour");
-    expect(screen.getByTestId("tour-tab")).toBeInTheDocument();
-  });
-
-  // Separate cases rather than one flag-flipping walk: `setState` re-renders
-  // every mount still in the document, so flipping mid-test resurrects the
-  // earlier render and the query matches three nodes.
-  it("renders TourTab even with the flag definitively OFF, where PoiTab stays hidden", () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: false });
-
-    renderAt("tour");
-    expect(screen.getByTestId("tour-tab")).toBeInTheDocument();
+    expect(screen.queryByTestId("tour-tab")).not.toBeInTheDocument();
 
     renderAt("poi");
     expect(screen.queryByTestId("poi-tab")).not.toBeInTheDocument();
   });
 
-  it("renders both once the flag resolves true", () => {
+  it("renders TourTab once the flag resolves true, matching PoiTab's own resolved case", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
 
     renderAt("tour");
