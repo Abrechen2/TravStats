@@ -2,27 +2,40 @@
   "title": "New in TravStats {{version}}",
   "subtitle": "A short overview of the most important changes.",
   "dismiss": "Got it",
+  "betaBadge": "Beta",
   "entries": {
     "v260": {
+      "countries": {
+        "title": "Countries count by evidence, not by landing",
+        "body": "A country counts when something proves you were there: a completed stay, a recorded place, a port call, a night, a day driven through from your location history — no longer where a flight touched down. Every counted country names its evidence, how strictly is a setting (an instance default, overridable per account), and data that contradicts itself goes to the inbox instead of being corrected silently. The number moves for every account. The inbox is always in the menu now."
+      },
       "lodging": {
         "title": "Hotels are a domain of their own",
         "body": "Stays are now kept like flights and cruises: with chain, room, board, per-category ratings, price, loyalty programme and the trip they belong to. They appear on the map as pins and count towards statistics and achievements — and switching the domain off removes it everywhere without touching your data."
       },
-      "parser": {
-        "title": "TravStats reads your booking confirmations",
-        "body": "Booking.com mails are read by a deterministic template: measured against 95 real confirmations it finds the stay in 93 and the price in all 93 — across both layouts the sender uses. Anything it does not recognise takes the same AI path flights do. For whole lists there is a CSV import that shows what it will do first, puts doubtful rows on top, and can be reverted as one batch."
+      "documents": {
+        "title": "Bookings and documents are read for you, in any currency",
+        "body": "Booking.com mails are read by a deterministic template: measured against 95 real confirmations it finds the stay in 93 and the price in all 93 — across both layouts the sender uses. Anything it does not recognise takes the same AI path flights do. A document now announces itself: a photographed hotel bill is a document, a boarding pass is read by its barcode first, package-tour paperwork is recognised — and a marketing newsletter no longer becomes a flight. A price may be written in any currency. Conversion goes through the European Central Bank, and for the currencies it does not publish, through a free dataset you can switch off as the operator. Where no rate exists the amount stays in its own currency, is marked \"no rate\", counts towards no total — and the total tells you how many entries it is missing. You may enter a rate yourself; it is always shown as yours, never as an official one."
       },
-      "currency": {
-        "title": "Any currency — and a total that hides nothing",
-        "body": "A price may be written in any currency. Conversion goes through the European Central Bank, and for the currencies it does not publish, through a free dataset you can switch off as the operator. Where no rate exists the amount stays in its own currency, is marked \"no rate\", counts towards no total — and the total tells you how many entries it is missing. You may enter a rate yourself; it is always shown as yours, never as an official one."
+      "imports": {
+        "title": "In and out: spreadsheet, CSV, Google Maps",
+        "body": "The whole logbook exports to one spreadsheet and comes back — flights, cruises, stays. The CSV import shows what it will do first, asks about likely duplicates, and every import leaves a trace that can be taken back as a whole."
+      },
+      "tours": {
+        "title": "Tours, the Companion app and Dawarich are out of beta",
+        "body": "A trip can be walked, driven and cycled, not only flown: sections with routes in the trip journal, a route editor worked with the mouse. Pairing with the TravStats Companion app and the Dawarich connection are released."
+      },
+      "stats": {
+        "title": "Statistics and achievements have grown",
+        "body": "Records, the whole route network and the year in review come from the server, every statistics tab shows only the blocks you want, hotels have a chapter of their own, and every flight has a page to read it on. Plus 78 new achievements for places and hotels."
       },
       "security": {
         "title": "Two-factor and passkeys",
         "body": "You can protect your account with a second factor — TOTP, with single-use recovery codes — or with a passkey that replaces the password entirely. Both live in the new security section of the settings."
       },
-      "map": {
-        "title": "A tidier map",
-        "body": "What is coming up next now sits at the right of the domain strip instead of floating over the map, where it covered the map-mode switcher completely. The entry follows the selected domain and names the trip it belongs to. The legend draws lodgings as a circle rather than a line, and finally names airports and ports too."
+      "beta": {
+        "title": "The beta switch says what it turns on",
+        "body": "Unfinished areas sit behind a switch in the admin settings: places as a domain of their own with lists, checklists and the import of saved Google Maps lists, the passport, a colour per domain, the AI summary of a trip. Each entry says why it is still hidden and when it comes back. Off is the default; turn it on to test."
       }
     },
     "v250": {

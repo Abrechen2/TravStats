@@ -33,8 +33,37 @@ describe("WhatsNewModal", () => {
     expect(screen.getByText("whatsNew:entries.v240.whatsNew.body")).toBeInTheDocument();
   });
 
+  it("marks a beta highlight with the badge, and only that one", () => {
+    const withBeta: WhatsNewEntry = {
+      version: "2.6.0",
+      highlights: [
+        {
+          icon: "🛂",
+          titleKey: "entries.v260.countries.title",
+          bodyKey: "entries.v260.countries.body",
+        },
+        {
+          icon: "🧪",
+          titleKey: "entries.v260.beta.title",
+          bodyKey: "entries.v260.beta.body",
+          beta: true,
+        },
+      ],
+    };
+    render(<WhatsNewModal isOpen entry={withBeta} onClose={vi.fn()} />);
+    expect(screen.getAllByText("whatsNew:betaBadge")).toHaveLength(1);
+    expect(screen.getByText("whatsNew:entries.v260.beta.title")).toHaveTextContent(
+      "whatsNew:betaBadge"
+    );
+    expect(screen.getByText("whatsNew:entries.v260.countries.title")).not.toHaveTextContent(
+      "whatsNew:betaBadge"
+    );
+  });
+
   it("renders the extraSlot when provided", () => {
-    render(<WhatsNewModal isOpen entry={entry} onClose={vi.fn()} extraSlot={<p>consent card</p>} />);
+    render(
+      <WhatsNewModal isOpen entry={entry} onClose={vi.fn()} extraSlot={<p>consent card</p>} />
+    );
     expect(screen.getByText("consent card")).toBeInTheDocument();
   });
 

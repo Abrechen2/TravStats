@@ -62,11 +62,19 @@ describe("whatsNew content", () => {
     expect(compareVersions("2.3.0", "2.3.1")).toBeLessThan(0);
   });
 
-  it("caps highlights at five per entry", () => {
+  // Eight since 2.6.0 — see the comment on `WhatsNewEntry.highlights`.
+  it("caps highlights at eight per entry", () => {
     for (const entry of WHATS_NEW_ENTRIES) {
       expect(entry.highlights.length).toBeGreaterThan(0);
-      expect(entry.highlights.length).toBeLessThanOrEqual(5);
+      expect(entry.highlights.length).toBeLessThanOrEqual(8);
     }
+  });
+
+  it("marks the 2.6.0 beta item and nothing else in that entry", () => {
+    const entry = findEntryForVersion("2.6.0");
+    expect(entry?.highlights.filter((h) => h.beta).map((h) => h.titleKey)).toEqual([
+      "entries.v260.beta.title",
+    ]);
   });
 
   it("resolves every title and body key in BOTH de and en", () => {

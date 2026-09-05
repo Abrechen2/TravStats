@@ -14,6 +14,12 @@ export interface WhatsNewItem {
   /** dotted key inside the `whatsNew` i18n namespace */
   titleKey: string;
   bodyKey: string;
+  /**
+   * The item describes something behind the instance's beta switch. The modal
+   * marks it, so nobody looks for a page their instance does not show
+   * (owner, 2026-09-05: "mark what is beta in what's new").
+   */
+  beta?: boolean;
 }
 
 export interface WhatsNewEntry {
@@ -22,7 +28,12 @@ export interface WhatsNewEntry {
    * `appVersion` with `<=`, never `===` — see `findEntryForVersion`.
    */
   version: string;
-  /** 1-5 items. More than five is a changelog, not a modal. */
+  /**
+   * 1-8 items. Five was the rule until 2.6.0, whose changelog carries 78
+   * additions across three new domains; five would have had to leave whole
+   * domains out. Eight, with the beta items marked, was the owner's call on
+   * 2026-09-05. More than that is a changelog, not a modal.
+   */
   highlights: WhatsNewItem[];
 }
 
@@ -31,19 +42,34 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
     version: "2.6.0",
     highlights: [
       {
+        icon: "🛂",
+        titleKey: "entries.v260.countries.title",
+        bodyKey: "entries.v260.countries.body",
+      },
+      {
         icon: "🏨",
         titleKey: "entries.v260.lodging.title",
         bodyKey: "entries.v260.lodging.body",
       },
       {
         icon: "✉️",
-        titleKey: "entries.v260.parser.title",
-        bodyKey: "entries.v260.parser.body",
+        titleKey: "entries.v260.documents.title",
+        bodyKey: "entries.v260.documents.body",
       },
       {
-        icon: "💱",
-        titleKey: "entries.v260.currency.title",
-        bodyKey: "entries.v260.currency.body",
+        icon: "📥",
+        titleKey: "entries.v260.imports.title",
+        bodyKey: "entries.v260.imports.body",
+      },
+      {
+        icon: "🧭",
+        titleKey: "entries.v260.tours.title",
+        bodyKey: "entries.v260.tours.body",
+      },
+      {
+        icon: "📊",
+        titleKey: "entries.v260.stats.title",
+        bodyKey: "entries.v260.stats.body",
       },
       {
         icon: "🔐",
@@ -51,9 +77,10 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
         bodyKey: "entries.v260.security.body",
       },
       {
-        icon: "🗺️",
-        titleKey: "entries.v260.map.title",
-        bodyKey: "entries.v260.map.body",
+        icon: "🧪",
+        titleKey: "entries.v260.beta.title",
+        bodyKey: "entries.v260.beta.body",
+        beta: true,
       },
     ],
   },

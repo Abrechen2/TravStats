@@ -419,6 +419,14 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+- **"What's new" tells the whole release.** The 2.6.0 overview listed five
+  points and left out the ones a reader would notice first — countries
+  counted by evidence, tours and the Companion pairing out of beta, the
+  spreadsheet round trip, the grown statistics — and said nothing about the
+  beta switch. Eight points now, and the one that describes what sits behind
+  the switch wears a Beta mark, so nobody looks for a page their instance does
+  not show.
+### Fixed
 - **A booking that names its airport is filed into that airport, not into the
   city's current one.** A 2008 Germanwings confirmation printing
   "Berlin-Schönefeld" came back from the parser as `BER`, the code of an

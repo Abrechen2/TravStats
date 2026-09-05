@@ -2,27 +2,40 @@
   "title": "Neu in TravStats {{version}}",
   "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen.",
   "dismiss": "Verstanden",
+  "betaBadge": "Beta",
   "entries": {
     "v260": {
+      "countries": {
+        "title": "Länder zählen nach Beleg, nicht nach Landung",
+        "body": "Ein Land zählt, wenn etwas beweist, dass du dort warst: ein abgeschlossener Aufenthalt, ein erfasster Ort, ein Hafenanlauf, eine Nacht, ein durchfahrener Tag aus der Standorthistorie — nicht mehr, wo ein Flug aufgesetzt hat. Jedes gezählte Land nennt seinen Beleg, die Strenge ist eine Einstellung (Vorgabe der Instanz, je Konto übersteuerbar), und Angaben, die sich widersprechen, landen im Posteingang statt still korrigiert zu werden. Die Zahl bewegt sich für jedes Konto. Der Posteingang steht jetzt immer im Menü."
+      },
       "lodging": {
         "title": "Hotels sind ein eigener Bereich",
         "body": "Übernachtungen werden jetzt wie Flüge und Kreuzfahrten geführt: mit Kette, Zimmer, Verpflegung, Bewertungen je Kategorie, Preis, Bonusprogramm und der Reise, zu der sie gehören. Auf der Karte stehen sie als Nadel, in Statistiken und Erfolgen zählen sie mit — und wer den Bereich abschaltet, sieht ihn nirgends mehr, ohne dass Daten verloren gehen."
       },
-      "parser": {
-        "title": "Buchungsbestätigungen liest TravStats selbst",
-        "body": "Booking.com-Mails werden von einer festen Vorlage gelesen: an 95 echten Bestätigungen gemessen findet sie den Aufenthalt in 93 und den Preis in allen 93 — in beiden Layouts, die der Absender verschickt. Was die Vorlage nicht kennt, geht denselben Weg wie bei Flügen über die KI. Für ganze Listen gibt es einen CSV-Import, der vorher zeigt, was er tun wird, Zweifelsfälle nach oben sortiert und sich als Ganzes zurücknehmen lässt."
+      "documents": {
+        "title": "Buchungen und Dokumente liest TravStats selbst, in jeder Währung",
+        "body": "Booking.com-Mails werden von einer festen Vorlage gelesen: an 95 echten Bestätigungen gemessen findet sie den Aufenthalt in 93 und den Preis in allen 93 — in beiden Layouts, die der Absender verschickt. Was die Vorlage nicht kennt, geht denselben Weg wie bei Flügen über die KI. Ein Dokument sagt jetzt selbst, was es ist: eine fotografierte Hotelrechnung ist ein Dokument, eine Bordkarte wird zuerst über ihren Strichcode gelesen, Pauschalreise-Unterlagen werden erkannt — und ein Werbe-Newsletter wird kein Flug mehr. Ein Preis darf in jeder Währung stehen. Umgerechnet wird über die Europäische Zentralbank, und für Währungen, die sie nicht führt, über einen freien Datensatz, den du als Betreiber abschalten kannst. Wo es keinen Kurs gibt, bleibt der Betrag in seiner Währung stehen, wird als „kein Kurs\" gekennzeichnet, zählt in keine Summe — und die Summe sagt, wie viele Einträge ihr fehlen. Einen eigenen Kurs darfst du eintragen; er wird immer als deiner ausgewiesen, nie als amtlicher."
       },
-      "currency": {
-        "title": "Jede Währung — und eine Summe, die nichts verschweigt",
-        "body": "Ein Preis darf in jeder Währung stehen. Umgerechnet wird über die Europäische Zentralbank, und für Währungen, die sie nicht führt, über einen freien Datensatz, den du als Betreiber abschalten kannst. Wo es keinen Kurs gibt, bleibt der Betrag in seiner Währung stehen, wird als „kein Kurs\" gekennzeichnet, zählt in keine Summe — und die Summe sagt, wie viele Einträge ihr fehlen. Einen eigenen Kurs darfst du eintragen; er wird immer als deiner ausgewiesen, nie als amtlicher."
+      "imports": {
+        "title": "Rein und raus: Tabelle, CSV, Google Maps",
+        "body": "Das ganze Logbuch exportiert in eine Tabelle und kommt wieder zurück — Flüge, Kreuzfahrten, Aufenthalte. Der CSV-Import zeigt vorher, was er tun wird, fragt bei möglichen Dubletten nach, und jeder Import hinterlässt eine Spur, die sich als Ganzes zurücknehmen lässt."
+      },
+      "tours": {
+        "title": "Touren, Companion-App und Dawarich sind aus der Beta",
+        "body": "Eine Reise kann gewandert, gefahren und geradelt werden, nicht nur geflogen: Etappen mit Routen im Reisejournal, ein Routeneditor, der mit der Maus bedient wird. Die Kopplung mit der TravStats-Companion-App und die Dawarich-Anbindung sind freigeschaltet."
+      },
+      "stats": {
+        "title": "Statistik und Erfolge sind gewachsen",
+        "body": "Rekorde, das ganze Streckennetz und der Jahresrückblick kommen vom Server, jeder Statistik-Reiter zeigt nur die Blöcke, die du willst, Hotels haben ihr eigenes Kapitel, und jeder Flug hat eine Seite, auf der man ihn liest. Dazu 78 neue Erfolge für Orte und Hotels."
       },
       "security": {
         "title": "Zwei-Faktor und Passkeys",
         "body": "Du kannst dein Konto mit einem zweiten Faktor absichern — TOTP, mit einmalig nutzbaren Wiederherstellungscodes — oder gleich mit einem Passkey, der das Passwort ersetzt. Beides findest du im neuen Sicherheitsbereich der Einstellungen."
       },
-      "map": {
-        "title": "Aufgeräumte Karte",
-        "body": "Was als Nächstes ansteht, steht jetzt rechts in der Bereichsleiste statt als Kachel über der Karte — dort verdeckte es die Modus-Umschaltung vollständig. Der Eintrag folgt dem gewählten Bereich und nennt die Reise, zu der er gehört. Die Legende zeigt Unterkünfte als Kreis statt als Strecke und benennt endlich auch Flughäfen und Häfen."
+      "beta": {
+        "title": "Der Beta-Schalter sagt, was er einschaltet",
+        "body": "Unfertige Bereiche liegen hinter einem Schalter in den Admin-Einstellungen: Orte als eigener Bereich mit Listen, Checklisten und dem Import gespeicherter Google-Maps-Listen, der Reisepass, eigene Farben je Bereich, die KI-Zusammenfassung einer Reise. Jeder Eintrag nennt, warum er noch versteckt ist und wann er zurückkommt. Aus ist die Vorgabe; wer testen will, schaltet ein."
       }
     },
     "v250": {
