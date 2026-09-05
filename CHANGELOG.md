@@ -4,6 +4,31 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.6.1] - 2026-09-05
+
+Two things the owner ran into on the day 2.6.0 went live, both on the edit
+side: a flight recorded without its times could never be given them, and a
+house with many stays turned its page into a scroll marathon.
+
+### Fixed
+- **A historical flight can leave "historical" and be given its times.** The
+  edit form offered no way to enter a clock on such a flight: its status is a
+  read-only pill, and the year/month/day pickers carry no time — so a flight
+  imported without its times was stuck that way for good. The edit form now has
+  the same "historical flight (route only)" checkbox as the create form.
+  Unchecking it shows date and time; a known day is kept, a year-only or
+  year-and-month date becomes empty rather than a fabricated January 1st, and
+  the save is refused until both clocks are typed, so no midday is invented on
+  the way out. The status is then derived from the times, as everywhere else.
+  Checking the box on a flown flight is the reverse move.
+
+### Changed
+- **The stays of a house scroll in a box of their own.** A house with dozens
+  of stays stretched the whole detail page, pushing the map, the spend card
+  and the ratings off screen. The list now scrolls inside a bounded box beside
+  them, on wide screens only — on a phone the page keeps scrolling as one, so
+  there is no scroll trap inside a scroll.
+
 ## [2.6.0] - 2026-08-19
 
 The release where the other ways of travelling catch up with flying. Hotels
