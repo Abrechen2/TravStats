@@ -490,4 +490,24 @@ describe("LodgingDetailPage", () => {
       expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
     });
   });
+
+  // 2.6.1 (owner): a house with dozens of stays stretched the whole page,
+  // pushing the map and the spend card off screen. The stays now scroll in
+  // a box of their own beside the sidebar instead of the page scrolling.
+  it("renders every stay inside one scroll box of its own, in check-in order", async () => {
+    const stays = Array.from({ length: 30 }, (_, i) => ({
+      ...baseStay,
+      id: `stay-${i + 1}`,
+      checkIn: `2024-${String((i % 12) + 1).padStart(2, "0")}-01T15:00:00.000Z`,
+      checkOut: `2024-${String((i % 12) + 1).padStart(2, "0")}-03T11:00:00.000Z`,
+    }));
+    getLodgingMock.mockResolvedValue(makeLodging({}, stays));
+
+    renderDetailPage();
+
+    const box = await screen.findByTestId("lodging-stays-scroll");
+    expect(box.className).toMatch(/overflow-y-auto/);
+    expect(box.className).toMatch(/max-h-/);
+    expect(within(box).getAllByText("common:buttons.edit")).toHaveLength(30);
+  });
 });
