@@ -216,7 +216,7 @@ export interface Trip {
   icon: string | null;
   countries: string[];
 
-  _count?: { flights: number; cruises?: number; lodgingStays?: number };
+  _count?: { flights: number; cruises?: number; lodgingStays?: number; routes?: number };
   bookings?: Booking[];
   flights?: Pick<
     Flight,

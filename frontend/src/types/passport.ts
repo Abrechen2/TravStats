@@ -150,6 +150,29 @@ export interface PassportCountry {
    * recorded is incomplete, so a row must stay visible for a reader to correct.
    */
   counted: boolean;
+  /**
+   * The OTHER kinds of evidence, counted (forgejo#78) — `entries` and
+   * `airports` already say it for flights. Optional because a page may still
+   * hold a payload from before the server sent them; absent reads as unknown,
+   * never as zero.
+   */
+  portCalls?: number;
+  places?: number;
+  /** The lodging stamp (forgejo#93). Null when no house proves the country. */
+  lodging?: PassportLodgingStamp | null;
+}
+
+/**
+ * Nights slept in a country and the town that stands for them. `nights` is a
+ * count of what the stays could PROVE — a stay nobody could date proves none —
+ * so null beside a `place` means "slept here, no one knows how long"; it is
+ * never 0, which would claim zero nights. `place` is the city of the house
+ * with the most proved nights; the client abbreviates, because no canonical
+ * short code for a city exists.
+ */
+export interface PassportLodgingStamp {
+  place: string | null;
+  nights: number | null;
 }
 
 export interface PassportStamp {

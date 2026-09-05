@@ -95,7 +95,6 @@ import {
   foldCountryEvidence,
   groundTier,
   lodgingEvidence,
-  type CountableStay,
   type CountryGroundTime,
   type CountryTier,
   type EvidenceInput,
@@ -108,6 +107,8 @@ import {
   type PassportFlight,
 } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
+import { countEvidencePerCountry } from "./evidenceCountry";
+import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
 /**
  * Re-exported so every caller and every test keeps importing the passport's
@@ -158,11 +159,12 @@ export interface PassportPlaceVisit {
  * The status travels because dropping cancelled stays on the way in would turn a
  * house whose only booking fell through into a house with no stay — which
  * counts. A cancellation would then prove a country.
+ *
+ * `city`, `datePrecision` and `nights` are read by the lodging stamp
+ * (`./lodgingStamp.ts`, forgejo#93) and by nothing else here; all three are
+ * optional so a caller that proves a country and no more keeps compiling.
  */
-export interface PassportLodging {
-  isoCountryCode: string | null;
-  stays: readonly CountableStay[];
-}
+export type PassportLodging = StampLodging;
 
 /**
  * What KIND of record put a country in the passport — the same vocabulary
@@ -269,6 +271,20 @@ export interface PassportCountry {
    * effect the threshold has: the row itself is always present.
    */
   counted: boolean;
+  /**
+   * How much of each OTHER kind of evidence stands behind the row (forgejo#78)
+   * — `entries` and `airports` already say it for flights. Counted by the same
+   * predicates the drill-down counts with (`./evidenceCountry.ts`), so a row
+   * and its page cannot disagree. Plain counts; zero means none recorded.
+   */
+  portCalls: number;
+  places: number;
+  /**
+   * The lodging stamp (forgejo#93): nights slept here and the town that stands
+   * for them. Null when no house proves this country — `kinds` then holds no
+   * `lodging` either. See `./lodgingStamp.ts` for what a zero means.
+   */
+  lodging: LodgingStamp | null;
 }
 
 export interface PassportStamp {
@@ -629,6 +645,15 @@ export function buildPassport(
     acc.counted = countCountries([row], threshold) === 1;
   }
 
+  /**
+   * The per-kind figures beside the row (forgejo#78, #93). Derived from the
+   * same inputs the fold above read, grouped by the code each record resolves
+   * to, and looked up per row — a country the fold raised and these did not
+   * simply reports zero and null, which is what it has.
+   */
+  const evidenceCounts = countEvidencePerCountry(portCalls, placeVisits);
+  const lodgingStamps = lodgingStampsPerCountry(lodgings, now);
+
   const countries: PassportCountry[] = [...byCountry.entries()]
     .map(([code, acc]) => ({
       code,
@@ -651,6 +676,9 @@ export function buildPassport(
       daysPresent: acc.daysPresent,
       groundTime: acc.groundTime,
       counted: acc.counted,
+      portCalls: evidenceCounts.get(code)?.portCalls ?? 0,
+      places: evidenceCounts.get(code)?.places ?? 0,
+      lodging: lodgingStamps.get(code) ?? null,
     }))
     .sort((a, b) => b.entries - a.entries || a.code.localeCompare(b.code));
 

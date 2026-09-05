@@ -33,5 +33,6 @@ import "./accounts";
 import "./integrations";
 import "./catalog";
 import "./misc";
+import "./countryFlags";
 import "./xlsxImport";
 import "./settingsRouting";

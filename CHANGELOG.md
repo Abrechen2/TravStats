@@ -343,6 +343,23 @@ that had shipped without a test.
   window/middle trilogy, a flight below the Antarctic Circle, an equator
   crossing at sea, same-ship loyalty, and the diamond rungs of the airline and
   aircraft ladders.
+- **Country flags from the server.** `GET /api/v1/country-flags/:iso` answers
+  with a flag SVG (`variant=flat` or `square`), cached privately for a day with
+  an ETag, and a 404 is a valid answer; `GET /api/v1/country-flags?codes=DE,FR`
+  returns up to 250 flags in one request, so a client can preload the
+  countries it actually has. Flags and airline logos now come from one source.
+- **Days away, per domain and in total.** `GET /api/v1/stats/summary` carries
+  `daysAway`: the distinct calendar days on which the account flew, sailed,
+  slept or recorded a place, and their union. Days, not kilometres or nights,
+  are the one measure the domains can be compared on, and the union is what a
+  client cannot compute itself without counting a hotel night during a flight
+  three times.
+- **Passport rows say what was recorded there.** Each country on
+  `GET /api/v1/stats/passport` names its port calls and recorded places, and
+  a country proved by a stay carries the city slept in most and the nights.
+- **A trip lists its route count.** `GET /api/v1/trips` carries
+  `_count.routes` beside flights, cruises and stays, so a trip row can read
+  "6 entries · 3 sections" without one request per trip.
 
 ### Changed
 - **Tours, device pairing and the Dawarich connection are out from behind the beta switch.** Each gate stated the condition for its own removal, and each condition had come true: the pairing gate waited on a phone app that has shipped (TravStatsCompanion) while hiding the only place a claim code is minted, tours were accepted for release, and releasing tours is exactly the event the Dawarich gate was waiting for. The places domain stays gated (forgejo#65, forgejo#73).

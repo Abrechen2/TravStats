@@ -66,7 +66,8 @@ import {
   isoCountryCode,
   type Continent,
 } from "../../utils/continents";
-import { lodgingEvidence, toCountryCode, type CountableStay } from "../../shared/countryEvidence";
+import { lodgingEvidence, type CountableStay } from "../../shared/countryEvidence";
+import { lodgingCountry, placeVisitCountry, portCallCountry } from "./evidenceCountry";
 import type { PassportEvidence } from "./passport";
 
 /** The columns the derivation reads. Any flight row is a superset. */
@@ -338,12 +339,12 @@ export function buildCountryDetail(
 
   let portCallCount = 0;
   for (const call of portCalls) {
-    // `toCountryCode`, not `isoCountryCode`: the port catalogue's country is free
-    // text, and the passport folds it through both resolvers. Resolving it with
-    // the English-only table alone made a port stored as "Deutschland" count
-    // toward the country row and then vanish from that row's drill-down — the
-    // panel denying the evidence the row claimed.
-    if (toCountryCode(call.country) !== wanted) continue;
+    // The passport row counts port calls with the SAME predicate
+    // (`./evidenceCountry.ts`). It resolves free text through both resolvers;
+    // resolving it with the English-only table alone made a port stored as
+    // "Deutschland" count toward the country row and then vanish from that
+    // row's drill-down — the panel denying the evidence the row claimed.
+    if (portCallCountry(call) !== wanted) continue;
     portCallCount += 1;
     stretchYears(call.at);
     timeline.push({
@@ -358,7 +359,8 @@ export function buildCountryDetail(
   for (const visit of placeVisits) {
     // Already resolved by the caller; a place whose country was never resolved
     // contributes nothing rather than a guess, as shared/placeCounting.ts does.
-    if (!visit.isoCountryCode || visit.isoCountryCode.toUpperCase() !== wanted) continue;
+    // Same predicate as the passport row's `places` count.
+    if (placeVisitCountry(visit) !== wanted) continue;
     placeCount += 1;
     stretchYears(visit.at);
     timeline.push({
@@ -386,7 +388,7 @@ export function buildCountryDetail(
    */
   let lodgingCount = 0;
   for (const lodging of lodgings) {
-    if (!lodging.isoCountryCode || isoCountryCode(lodging.isoCountryCode) !== wanted) continue;
+    if (lodgingCountry(lodging) !== wanted) continue;
     const proof = lodgingEvidence(lodging.stays);
     if (!proof) continue;
     lodgingCount += 1;

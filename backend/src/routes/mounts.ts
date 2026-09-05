@@ -26,6 +26,7 @@ import flightLookupRoutes from './flightLookup';
 import statsRoutes from './stats';
 import airportRoutes from './airports';
 import airlineLogoRoutes from './airlineLogos';
+import countryFlagRoutes from './countryFlags';
 import achievementRoutes from './achievements';
 import settingsRoutes from './settings';
 import analyticsRoutes from './analytics';
@@ -115,6 +116,7 @@ export const apiMounts: ApiMount[] = [
   { id: 'stats', base: '/api/v1/stats', router: statsRoutes },
   { id: 'airports', base: '/api/v1/airports', router: airportRoutes },
   { id: 'airlineLogos', base: '/api/v1/airline-logos', router: airlineLogoRoutes },
+  { id: 'countryFlags', base: '/api/v1/country-flags', router: countryFlagRoutes },
   { id: 'achievements', base: '/api/v1/achievements', router: achievementRoutes },
   { id: 'settings', base: '/api/v1/settings', router: settingsRoutes },
   { id: 'analytics', base: '/api/v1/analytics', router: analyticsRoutes },

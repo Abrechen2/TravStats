@@ -525,3 +525,18 @@ export const airlineLogoLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Rate limiter for the country-flag endpoints. Every answer is a local file
+ * read served from an in-process cache, so the cap is not protecting a
+ * budget — it bounds how hard one caller can hammer a route that reads
+ * disk on a cold key. Allows 600 requests per 15 minutes per user/IP.
+ */
+export const countryFlagLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  message: 'Too many country flag requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});

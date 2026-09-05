@@ -33,6 +33,7 @@ import {
 import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
 import { withDepartureClock } from '../services/stats/departureClock';
 import { loadPassport } from '../services/stats/passportLoader';
+import { loadDaysAway } from '../services/stats/daysAwayLoader';
 import { loadCountryDetail } from '../services/stats/countryDetailLoader';
 import { buildWrapped } from '../services/stats/wrapped';
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from '../services/stats/timeseriesRows';
@@ -388,17 +389,16 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
     const { fromDate, toDate, year, compareYear } = parsed.data;
     const baseCurrency = await getBaseCurrency(userId);
 
+    // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
+    const summarize = async (scopeYear: number | undefined) => ({
+      ...(await computeSummary(buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
+      daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
+    });
     if (year !== undefined && compareYear !== undefined) {
-      // Return comparison response: { current, compare }
-      const [current, compare] = await Promise.all([
-        computeSummary(buildWhere(userId, fromDate, toDate, year), baseCurrency),
-        computeSummary(buildWhere(userId, fromDate, toDate, compareYear), baseCurrency),
-      ]);
+      const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
       res.json({ current, compare });
     } else {
-      // Return flat summary (backward-compatible)
-      const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year), baseCurrency);
-      res.json(summary);
+      res.json(await summarize(year));
     }
   } catch (error) {
     next(error);

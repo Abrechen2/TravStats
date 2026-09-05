@@ -199,7 +199,13 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
       where: { userId, visited: true, isoCountryCode: { not: null } },
       select: {
         isoCountryCode: true,
-        stays: { select: { status: true, checkIn: true, checkOut: true } },
+        // For the lodging stamp (forgejo#93): the town, and what each stay's
+        // dates are good for — `resolveStayTiming` refuses to count nights
+        // between two placeholders, and needs the precision to know.
+        city: true,
+        stays: {
+          select: { status: true, checkIn: true, checkOut: true, datePrecision: true, nights: true },
+        },
       },
     }),
     loadHomeIatas(userId),

@@ -65,15 +65,33 @@ const deleted = { description: "Deleted" };
 const notFound = { description: "Not found", content: errorContent };
 const badInput = { description: "Invalid input", content: errorContent };
 
+/**
+ * The list item carries the relation counts a card or a list row needs, so
+ * a client showing N trips does not fetch N detail pages to learn how many
+ * sections each has (forgejo#90 — the Companion paid exactly that N+1).
+ */
+const tripListItem = tripResponse.extend({
+  _count: z.object({
+    flights: z.number().int(),
+    cruises: z.number().int(),
+    lodgingStays: z.number().int(),
+    routes: z.number().int().describe("Tour sections — the rows served by GET /trips/{id}/routes"),
+  }),
+});
+
 registry.registerPath({
   method: "get",
   path: "/trips",
   summary: "List trips",
+  description:
+    "Newest first, capped at 500. Each trip carries its bookings, up to 200 " +
+    "flights, cruises and stays each, and `_count` with the size of every " +
+    "linked collection including tour sections (`routes`).",
   tags: ["Trips"],
   responses: {
     200: {
       description: "Trips",
-      content: { "application/json": { schema: z.array(tripResponse) } },
+      content: { "application/json": { schema: z.object({ trips: z.array(tripListItem) }) } },
     },
   },
 });

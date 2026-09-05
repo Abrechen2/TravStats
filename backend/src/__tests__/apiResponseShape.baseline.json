@@ -26,6 +26,7 @@
     "boardingpassMatch.ts",
     "boardingpassParse.ts",
     "companions.ts",
+    "countryFlags.ts",
     "diagnosticExport.ts",
     "diagnostics.ts",
     "emailParse.ts",

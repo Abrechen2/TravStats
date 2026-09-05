@@ -22,6 +22,28 @@ const statsResponse = registry.register(
       byStatus: z.record(z.string(), z.number()),
       byAirline: z.record(z.string(), z.number()),
       byCategory: z.record(z.string(), z.number()),
+      daysAway: z
+        .object({
+          flight: z.number().describe("Distinct days with a flight's departure or arrival"),
+          cruise: z.number().describe("Distinct days from a cruise's departure to its arrival, inclusive"),
+          lodging: z.number().describe("Distinct days from a stay's check-in to its check-out, inclusive"),
+          place: z.number().describe("Distinct days with a recorded place visit"),
+          total: z
+            .number()
+            .describe("The UNION of the four day sets — never their sum; a day with a flight and a hotel night is one day"),
+        })
+        .describe(
+          "Days away, per domain — the one measure the design charter lets every domain share. " +
+            "Per domain, the number of DISTINCT calendar days on which the account holds a record " +
+            "that HAPPENED there: a flight counts its departure day and its arrival day; a cruise " +
+            "every day from departure to arrival inclusive; a lodging stay every day from check-in " +
+            "to check-out inclusive; a place visit its visit day. Only records that count under " +
+            "the shared counting rules contribute (flown or historical flights, sailed cruises, " +
+            "stays whose check-out is past and not cancelled, visits dated no later than today). " +
+            "A day is the UTC date of the stored instant, for every domain alike. `total` is the " +
+            "size of the union of the four sets. A record with no usable date contributes no day. " +
+            "Scoped exactly like the flight figures beside it: with `year`, the year's days."
+        ),
     })
     .openapi("StatsSummary")
 );
@@ -32,7 +54,9 @@ registry.registerPath({
   summary: "Aggregate statistics",
   description:
     "Top-level totals (distance, hours, cost) plus rollups by status, " +
-    "airline and category. Other /stats/* sub-routes return more " +
+    "airline and category, and `daysAway` — distinct calendar days with a " +
+    "record that happened, per domain and as one union across all four. " +
+    "Other /stats/* sub-routes return more " +
     "specialized breakdowns (routes, fun, business, unique, seats, " +
     "airlines, countries) — see the Stats tag for the full list.",
   tags: ["Stats"],
@@ -168,10 +192,104 @@ readOnlyStat("/stats/unique", "Firsts and unique counts");
 readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
 readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
-readOnlyStat(
-  "/stats/passport",
-  "The passport: countries, their airports, and a continent quota",
-  "Derived server-side so several clients draw the same picture. A country counts " +
+const continentSchema = z.enum([
+  "Africa",
+  "Antarctica",
+  "Asia",
+  "Europe",
+  "North America",
+  "Oceania",
+  "South America",
+]);
+const evidenceKindSchema = z.enum(["flight", "lodging", "port", "place", "track"]);
+const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
+
+const passportCountrySchema = z.object({
+  code: z.string().describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
+  continent: continentSchema.nullable(),
+  entries: z.number().describe("Flights that began or ended here; 0 for a country proved another way"),
+  firstYear: z.number().nullable(),
+  lastYear: z.number().nullable(),
+  airports: z.array(z.string()).describe("IATA codes used here, first visit first"),
+  isHome: z.boolean(),
+  isNew: z.boolean().describe("First reached in the current calendar year"),
+  evidence: evidenceKindSchema.describe("The strongest KIND of record behind this country"),
+  tier: countryTierSchema.describe("How strong that evidence is"),
+  kinds: z.array(evidenceKindSchema).describe("Every kind that contributed, alphabetical"),
+  hasUndatedEvidence: z.boolean(),
+  daysPresent: z.number().describe("Distinct calendar days any record ATTESTS the traveller here"),
+  groundTime: z.discriminatedUnion("state", [
+    z.object({ state: z.literal("measured"), minutes: z.number() }),
+    z.object({ state: z.literal("unknown") }),
+    z.object({ state: z.literal("notApplicable") }),
+  ]),
+  counted: z.boolean().describe("Whether the row reaches `summary.countries`; a false greys, never removes"),
+  portCalls: z.number().describe("Port calls of sailed cruises in this country"),
+  places: z.number().describe("Recorded visits to places in this country"),
+  lodging: z
+    .object({
+      place: z
+        .string()
+        .nullable()
+        .describe("The city of the house with the most proved nights; null when none names one. The client abbreviates — there is no canonical short code for a city"),
+      nights: z
+        .number()
+        .nullable()
+        .describe("Nights proved by stays that happened. Null when no stay proves a span — 'slept here, nobody knows how long' — never 0, which would claim zero nights"),
+    })
+    .nullable()
+    .describe("The lodging stamp. Null when no house proves this country"),
+});
+
+const passportResponse = registry.register(
+  "Passport",
+  z
+    .object({
+      summary: z.object({
+        countries: z.number().describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),
+        countriesTotal: z.number().describe("Every row, whatever its tier. What `byEvidence` sums to"),
+        legacyCountries: z.number().describe("What the flights-only rule would have said"),
+        countryThreshold: countryTierSchema,
+        airports: z.number(),
+        entries: z.number(),
+        continentsVisited: z.number(),
+        continentsTotal: z.number(),
+        firstStampYear: z.number().nullable(),
+        newThisYear: z.number(),
+        byEvidence: z.record(evidenceKindSchema, z.number()),
+        byTier: z.record(countryTierSchema, z.number()),
+      }),
+      countries: z.array(passportCountrySchema),
+      continents: z.array(
+        z.object({ continent: continentSchema, visited: z.number(), total: z.number() })
+      ),
+      groups: z
+        .array(z.object({ key: z.string(), continents: z.array(continentSchema) }))
+        .describe("How the rows are drawn; several continents may share a row"),
+      stamps: z.array(
+        z.object({
+          iata: z.string(),
+          country: z.string().nullable(),
+          date: z.string().nullable().describe("First visit, ISO date. The client formats it"),
+        })
+      ),
+    })
+    .openapi("Passport")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/passport",
+  summary: "The passport: countries, their airports, and a continent quota",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The passport",
+      content: { "application/json": { schema: passportResponse } },
+    },
+  },
+  description:
+    "Derived server-side so several clients draw the same picture. A country counts " +
     "if a flight began OR ended there, matching how countries are counted elsewhere; " +
     "booked flights are excluded; each airport is stamped once, dated its first " +
     "visit. Dates go out as dates, never as month names: the month belongs to the " +
@@ -200,8 +318,12 @@ readOnlyStat(
     "crossed on the ground, which counts, while a country whose every recorded " +
     "point lay at an airport the traveller demonstrably flew through stays a " +
     "`connection`, which does not. A track proves DAYS and never hours: it bounds " +
-    "no departure, so its ground time is `notApplicable`."
-);
+    "no departure, so its ground time is `notApplicable`. Each row also counts the " +
+    "OTHER kinds of evidence behind it — `portCalls` and `places`, by the same " +
+    "predicates the country drill-down uses — and carries a `lodging` stamp: the " +
+    "nights proved by stays that happened and the town that stands for them, or null " +
+    "when no house proves the country.",
+});
 
 readOnlyStat(
   "/stats/records",
