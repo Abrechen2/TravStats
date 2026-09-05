@@ -7,6 +7,8 @@ import type { Flight, AchievementSummary } from "../../../types";
 import type { DomainKey } from "../../../shared/domains";
 import { useDomainStats } from "../../../lib/stats/domain-stats";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
+import { usePlacesAccess } from "../../../hooks/usePlacesVisible";
+import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useStatsCompareStore } from "../../../store/statsCompareStore";
 import { aggregate, collectYears, resolveStaleCompareYear } from "./aggregate";
@@ -30,7 +32,17 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
   // domains — toggle chips, summary cards, and aggregate inputs alike.
   // useDomainStats applies the same filter to its fetches, so `stats`
   // never contains a disabled domain either.
-  const { enabled } = useEnabledDomains();
+  //
+  // POI is asked a second question: is the INSTANCE allowed to show it? The
+  // tab strip and the deep link both ask it; until 2026-09-05 this overview
+  // did not, and drew a "POI / Besuche" chip and card on an instance with the
+  // beta flag off for an account that had the domain on from beta days.
+  const { enabled: enabledDomains } = useEnabledDomains();
+  const placesAccess = usePlacesAccess();
+  const enabled = useMemo(
+    () => visibleStatsTabs(enabledDomains, placesAccess),
+    [enabledDomains, placesAccess]
+  );
   const { stats, loading } = useDomainStats({ flights });
 
   const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(() =>

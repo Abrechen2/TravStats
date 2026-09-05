@@ -403,10 +403,11 @@ that had shipped without a test.
 
 ### Fixed
 - **Two beta gates closed properly.** With the instance's beta switch off, the
-  statistics page still offered the "POI / Besuche" tab to an account that had
-  the domain on from beta days, and the passport URL answered with "enable the
-  flights domain" to a reader whose flights were on. The tab follows the same
-  rule as its deep link now, and a closed passport gate goes home like /places.
+  statistics page still offered the "POI / Besuche" tab, chip and summary card
+  to an account that had the domain on from beta days, and the passport URL
+  answered with "enable the flights domain" to a reader whose flights were on.
+  The tab strip and the overview follow the same rule as the deep link now,
+  and a closed passport gate goes home like /places.
 - **The inbox is always in the menu.** The Posteingang entry under System
   appeared only while something was open, or while you were already on the
   page — an empty inbox had no way in from the UI at all. The entry is always
