@@ -34,6 +34,7 @@ const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import { TripRouteGuard } from "./components/Trips/TripRouteGuard";
+import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -482,7 +483,19 @@ function AppContent() {
               />
               <Route
                 path="/parser"
-                element={isAuthenticated ? <ParserPage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated ? (
+                    // Behind the instance beta switch since 2026-09-05 (owner
+                    // decision; `parserTemplates` in config/betaFeatures.ts).
+                    // Not a boolean guard — the flag is null for one request
+                    // on a cold load, see BetaFeatureRouteGuard.
+                    <BetaFeatureRouteGuard feature="parserTemplates" redirectTo="/">
+                      <ParserPage />
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               <Route
                 path="/pending-updates"

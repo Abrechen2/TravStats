@@ -66,19 +66,21 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The passport page — /passport, its nav entry, and GET /stats/passport.
+   * The Parser page — /parser and its admin-only nav entry: annotating a mail
+   * to derive a template, the user's own templates, the community templates
+   * and the parse log.
    *
-   * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
-   * flag is off, as every gate here does (see the file header). That matters
-   * more than usual: the Companion app is expected to READ this endpoint and
-   * drop its own client-side derivation, and it must not have to care what an
-   * instance's beta flag says.
+   * READ THIS BEFORE REMOVING THE GATE: this gates the TEMPLATE WORKSHOP, not
+   * the parsing. "Buchungs-E-Mail oder PDF" in the add dialog keeps reading
+   * bookings whatever the flag says — that path is the product, this page is
+   * the tooling behind it. The endpoints under /api/v1/templates stay open like
+   * every other gated endpoint (see the file header).
    */
-  passport: Object.freeze({
+  parserTemplates: Object.freeze({
     reason: "beta",
-    why: "The page is complete and the numbers agree with the statistics page, but it ships in the middle of a release candidate. Hiding it keeps 2.6.0's released surface unchanged while the RC still gets it in front of testers.",
+    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. Only the LLM parser (Ollama) is fully tested; the template and regex parsers this page manages are experimental.",
     returnsWhen:
-      "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
+      "The template and regex parsers are tested against the sample set under test-samples/ and the owner accepts the page for release.",
   }),
 
   /**

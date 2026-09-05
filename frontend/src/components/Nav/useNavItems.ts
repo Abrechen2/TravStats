@@ -95,8 +95,9 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
       },
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than
-      // no entry. Behind the beta gate as well while 2.6.0 is a candidate.
-      ...(isFeatureVisible("passport") && isEnabled("flight")
+      // no entry. It sat behind the beta gate while 2.6.0 was a candidate; the
+      // gate's own condition ("or 2.7.0 opens") came true on 2026-09-05.
+      ...(isEnabled("flight")
         ? [
             {
               kind: "leaf" as const,
@@ -130,13 +131,21 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
       ...(isAdmin
         ? [
             { kind: "leaf" as const, id: "admin", path: "/admin", label: t("dashboard:admin") },
-            {
-              kind: "leaf" as const,
-              id: "parser",
-              path: "/parser",
-              label: t("dashboard:parser"),
-              betaBadge: true,
-            },
+            // The badge and the gate now agree: the page is offered only while
+            // the instance beta switch is on (owner decision 2026-09-05, see
+            // `parserTemplates` in config/betaFeatures.ts). Before that the
+            // badge was a label with nothing behind it.
+            ...(isFeatureVisible("parserTemplates")
+              ? [
+                  {
+                    kind: "leaf" as const,
+                    id: "parser",
+                    path: "/parser",
+                    label: t("dashboard:parser"),
+                    betaBadge: true,
+                  },
+                ]
+              : []),
           ]
         : []),
     ];
