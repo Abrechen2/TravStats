@@ -1,67 +1,54 @@
 import type { CSSProperties } from "react";
+import { DASHED_STATUSES, STATUS_TOKEN, alpha, token } from "../ui/tokens";
 
 /**
- * One status palette for every domain list.
+ * One status palette for every domain list — now the design system's.
  *
  * Each table used to carry its own. The flights table wrote its three cases as
  * a nested ternary whose ELSE branch caught everything that was not flown or
- * scheduled — so a `historical` flight from 2019 was painted in the cancelled
+ * scheduled, so a `historical` flight from 2019 was painted in the cancelled
  * red, indistinguishable from a flight that never took off. Cruises had it
- * right in a separate file (amber: archival, not an error), and lodging had a
- * third variant.
+ * right in a separate file, and lodging had a third variant. Unifying them was
+ * the first fix; this is the second, and it is a smaller change than it looks:
+ * the palette moved from four literals in this file to `design/tokens.json`,
+ * and the geometry from "rounded-full px-2 py-1 text-xs font-semibold" to the
+ * recipe both apps share — colour as text, background at 12 %, border at 45 %,
+ * 11px bold uppercase, never mono. The web drew 15 % with no border and no
+ * capitals, which is why a status read as a label rather than as a state.
  *
- * `in_progress` was the other disagreement: purple on cruises, orange on
- * lodging, for the same state. Purple wins — orange is the brand accent and
- * already means "the thing you are looking at", which is not what a status is
- * for.
+ * The mapping itself lives in `components/ui/tokens.ts` beside the `StatusPill`
+ * primitive, so a list and a primitive cannot answer the same question
+ * differently. This module stays because four call sites take a style object
+ * rather than a component; block 7 moves them onto `StatusPill` and this file
+ * goes with them.
  */
 export type DomainStatus =
-  | "flown"
-  | "completed"
-  | "scheduled"
-  | "booked"
-  | "in_progress"
-  | "cancelled"
-  | "historical";
+  "flown" | "completed" | "scheduled" | "booked" | "in_progress" | "cancelled" | "historical";
 
 export interface StatusPillStyle {
   background: string;
   color: string;
+  border: string;
 }
-
-const STATUS_STYLES: Record<DomainStatus, StatusPillStyle> = {
-  // Done and recorded with real times.
-  flown: { background: "rgba(63,185,80,0.15)", color: "var(--success)" },
-  completed: { background: "rgba(63,185,80,0.15)", color: "var(--success)" },
-  // Ahead of us.
-  scheduled: { background: "rgba(56,139,253,0.15)", color: "#388bfd" },
-  booked: { background: "rgba(56,139,253,0.15)", color: "#388bfd" },
-  // Under way right now — its own state, not a blend of past and future.
-  in_progress: { background: "rgba(163,113,247,0.15)", color: "#a371f7" },
-  // Did not happen.
-  cancelled: { background: "rgba(248,81,73,0.15)", color: "var(--danger)" },
-  // Real, but recorded without exact times. Archival, NOT an error — which is
-  // exactly what the flights table used to imply by painting it red.
-  historical: { background: "rgba(251,191,36,0.15)", color: "#fbbf24" },
-};
 
 /**
- * An unknown status renders neutrally rather than falling into the cancelled
- * red. A status nobody has styled yet is not a failure, and the previous
- * catch-all else branch is the bug this function exists to prevent.
+ * An unknown status renders in the historical grey rather than falling into
+ * the cancelled red. A status nobody has styled yet is not a failure, and the
+ * previous catch-all else branch is the bug this function exists to prevent.
  */
-const UNKNOWN_STYLE: StatusPillStyle = {
-  background: "rgba(139,148,158,0.15)",
-  color: "var(--text-muted)",
-};
-
 export function statusPillStyle(status: string): StatusPillStyle {
-  return STATUS_STYLES[status as DomainStatus] ?? UNKNOWN_STYLE;
+  const name = STATUS_TOKEN[status] ?? "status-historical";
+  const colour = token(name);
+  const dashed = DASHED_STATUSES.has(status);
+  return {
+    color: colour,
+    background: alpha(colour, 12),
+    border: `1px ${dashed ? "dashed" : "solid"} ${alpha(colour, 45)}`,
+  };
 }
 
-/** The pill's own geometry, so all three lists render the same shape. */
-export const STATUS_PILL_CLASS =
-  "inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold";
+/** The pill's own geometry, so all four lists render the same shape. */
+export const STATUS_PILL_CLASS = "ts-status-pill";
 
 export function statusPillProps(status: string): {
   className: string;

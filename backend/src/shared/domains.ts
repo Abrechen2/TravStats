@@ -15,9 +15,14 @@ export interface DomainDescriptor {
   routePrefix: string;
 }
 
-// Per-domain hexes mirror brand/BRAND.md §3 (TravStatsWeb canonical).
-// Edits MUST stay in sync with the frontend mirror at
-// frontend/src/shared/domains.ts and tokens.css `--domain-*` values.
+// Per-domain hexes are the DEFAULTS the user's override sits on top of
+// (`hooks/useDomainColors.ts`), and since 2.7.0 they are the Companion's
+// values — one colour per domain across web and phone (owner, 2026-09-05).
+// Two hues moved: the web painted cruise in the Companion's `info` blue and
+// lodging in a rose that exists nowhere else, while the Companion's mint was
+// the web's POI colour. They now agree with `design/tokens.json → domainColor`
+// and with `--ts-domain-*` in `theme/tokens.css`. Edits MUST stay in sync with
+// the backend mirror at backend/src/shared/domains.ts.
 export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   flight: {
     key: 'flight',
@@ -32,7 +37,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: true,
     i18nKey: 'domain.cruise',
     icon: '🚢',
-    color: '#6fa0d6',
+    color: '#4aa6b0',
     routePrefix: '/cruises',
   },
   lodging: {
@@ -40,7 +45,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: true,
     i18nKey: 'domain.lodging',
     icon: '🏨',
-    color: '#d4778f',
+    color: '#5ec2b2',
     routePrefix: '/lodging',
   },
   poi: {
@@ -48,7 +53,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: true,
     i18nKey: 'domain.poi',
     icon: '📍',
-    color: '#5ec2b2',
+    color: '#e7e3dc',
     routePrefix: '/places',
   },
 };

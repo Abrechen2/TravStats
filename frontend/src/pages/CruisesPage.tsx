@@ -1,3 +1,4 @@
+import AppShell from "../components/ui/AppShell";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
@@ -8,17 +9,12 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
-import ListFilterBar, {
-  FilterField,
-  PANEL_SELECT_CLASS,
-} from "../components/table/ListFilterBar";
+import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
@@ -99,7 +95,14 @@ export default function CruisesPage(): JSX.Element {
   const [lineFilter, setLineFilter] = useState<string>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", ["date","ship","line","ports","status","price"] as const);
+  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", [
+    "date",
+    "ship",
+    "line",
+    "ports",
+    "status",
+    "price",
+  ] as const);
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
   const handleSort = (col: CruiseSortKey): void => {
@@ -243,10 +246,7 @@ export default function CruisesPage(): JSX.Element {
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   return (
-    <PageTransition>
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-
+    <AppShell width="list">
       <ListFilterBar
         search={{
           value: search,
@@ -263,8 +263,7 @@ export default function CruisesPage(): JSX.Element {
         year={{
           label: t("filter.year"),
           value: yearFilter === "all" ? "all" : String(yearFilter),
-          onChange: (v): void =>
-            setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+          onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
           allLabel: t("filter.allYears"),
           options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
         }}
@@ -292,11 +291,11 @@ export default function CruisesPage(): JSX.Element {
         }
       />
 
-      {/* Same width budget as the flights table page — owner principle:
-          the domain list pages look the same, only the content differs. */}
-      <div className="mx-auto max-w-(--breakpoint-2xl) px-4 py-6">
+      {/* The width is the shell's now — `list`, 1200px, the same one every
+          logbook page asks for by name. */}
+      <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-(--text-primary)">{t("list.title")}</h1>
+          <h1 className="t-screen-title">{t("list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
             <ColumnPicker
               columns={CRUISE_COLUMN_IDS.map((id) => ({
@@ -361,73 +360,73 @@ export default function CruisesPage(): JSX.Element {
             style={{ border: "1px solid var(--color-border)" }}
           >
             <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
-              <thead
-                style={{
-                  background: "var(--bg-elevated)",
-                  borderBottom: "1px solid var(--color-border)",
-                }}
-              >
-                <tr>
-                  {/*
+              <table className="w-full text-sm min-w-[960px]">
+                <thead
+                  style={{
+                    background: "var(--bg-elevated)",
+                    borderBottom: "1px solid var(--color-border)",
+                  }}
+                >
+                  <tr>
+                    {/*
                     One loop instead of six copied blocks. Each of those built
                     its own sort button — and showed ▼ for ascending, the
                     opposite of the shared component the lodging table uses.
                     The same sort state read differently depending on which
                     page you were on.
                   */}
-                  {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
-                    const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
-                    const label = t(`list.columns.${id}`);
-                    const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
-                    return (
-                      <th
-                        key={id}
-                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                          numeric ? "text-right" : "text-left"
-                        }`}
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {sortKey === undefined ? (
-                          label
-                        ) : (
-                          <span className={numeric ? "flex justify-end" : undefined}>
-                            <SortableHeader
-                              column={sortKey}
-                              sortBy={sortBy}
-                              sortOrder={sortOrder}
-                              onSort={handleSort}
-                              ariaLabel={t("list.sortBy", { col: label })}
-                            >
-                              {label}
-                            </SortableHeader>
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((c, i) => (
-                  <CruiseRow
-                    key={c.id}
-                    index={i}
-                    cruise={c}
-                    isColumnVisible={columnPrefs.isVisible}
-                    onOpen={() => navigate(`/cruises/${c.id}`)}
-                    actions={
-                      <CruiseRowActions
-                        cruise={c}
-                        onEdit={setEditingCruise}
-                        onDuplicate={startDuplicate}
-                        onDelete={() => setCruiseToDelete(c)}
-                      />
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
+                    {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+                      const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
+                      const label = t(`list.columns.${id}`);
+                      const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
+                      return (
+                        <th
+                          key={id}
+                          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                            numeric ? "text-right" : "text-left"
+                          }`}
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {sortKey === undefined ? (
+                            label
+                          ) : (
+                            <span className={numeric ? "flex justify-end" : undefined}>
+                              <SortableHeader
+                                column={sortKey}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                                onSort={handleSort}
+                                ariaLabel={t("list.sortBy", { col: label })}
+                              >
+                                {label}
+                              </SortableHeader>
+                            </span>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((c, i) => (
+                    <CruiseRow
+                      key={c.id}
+                      index={i}
+                      cruise={c}
+                      isColumnVisible={columnPrefs.isVisible}
+                      onOpen={() => navigate(`/cruises/${c.id}`)}
+                      actions={
+                        <CruiseRowActions
+                          cruise={c}
+                          onEdit={setEditingCruise}
+                          onDuplicate={startDuplicate}
+                          onDelete={() => setCruiseToDelete(c)}
+                        />
+                      }
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
             {/* Same closing line the flights and lodging tables carry: how many
                 rows, and what they are sorted by. The count used to sit only in
@@ -508,7 +507,6 @@ export default function CruisesPage(): JSX.Element {
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       </div>
-    </div>
-    </PageTransition>
+    </AppShell>
   );
 }

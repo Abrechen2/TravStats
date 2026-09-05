@@ -98,6 +98,26 @@
   background: var(--ts-surface);
 }
 
+/* ─── Status pill ───────────────────────────────────────────────────────── */
+/*
+ * The geometry half of the recipe, for the four call sites that take a style
+ * object rather than the `StatusPill` component. The colours come from
+ * `statusPillStyle()`; everything that is the same for every status is here.
+ */
+.ts-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--ts-radius-pill);
+  padding: 4px 10px;
+  font-family: var(--ts-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 /* ─── Rows ──────────────────────────────────────────────────────────────── */
 .ts-row:hover,
 .ts-table-row[data-clickable="yes"]:hover {

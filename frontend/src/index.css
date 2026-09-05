@@ -270,42 +270,55 @@
     --accent-glow: rgba(240, 169, 71, 0.18);
     --accent-soft: rgba(240, 169, 71, 0.1);
 
-    /* Per-domain accents (BRAND.md §3) — keep in sync with TravStatsWeb tokens.css */
-    --domain-flight: #f0a947;
-    --domain-flight-soft: rgba(240, 169, 71, 0.1);
-    --domain-flight-locked: rgba(240, 169, 71, 0.18);
+    /*
+     * Per-domain accents. Since 2.7.0 they read the generated token layer
+     * rather than carrying their own hexes, so `--domain-cruise` and
+     * `--ts-domain-cruise` cannot disagree — they were two copies of one
+     * decision, and two copies of a decision are a decision that will drift.
+     *
+     * The five tour colours (train, hike, bike, road, ferry) collapsed into
+     * one: the owner ruled on 2026-09-05 that tours are ONE domain with ONE
+     * colour and the means of transport only changes the icon. The old names
+     * stay as aliases of it, so nothing that still says `--domain-bike`
+     * renders as nothing while the layers move over in block 4.
+     */
+    --domain-flight: var(--ts-domain-flight);
+    --domain-flight-soft: color-mix(in srgb, var(--ts-domain-flight) 10%, transparent);
+    --domain-flight-locked: color-mix(in srgb, var(--ts-domain-flight) 18%, transparent);
 
-    --domain-cruise: #6fa0d6;
-    --domain-cruise-soft: rgba(111, 160, 214, 0.1);
-    --domain-cruise-locked: rgba(111, 160, 214, 0.18);
+    --domain-cruise: var(--ts-domain-cruise);
+    --domain-cruise-soft: color-mix(in srgb, var(--ts-domain-cruise) 10%, transparent);
+    --domain-cruise-locked: color-mix(in srgb, var(--ts-domain-cruise) 18%, transparent);
 
-    --domain-lodging: #d4778f;
-    --domain-lodging-soft: rgba(212, 119, 143, 0.1);
-    --domain-lodging-locked: rgba(212, 119, 143, 0.18);
+    --domain-lodging: var(--ts-domain-hotel);
+    --domain-lodging-soft: color-mix(in srgb, var(--ts-domain-hotel) 10%, transparent);
+    --domain-lodging-locked: color-mix(in srgb, var(--ts-domain-hotel) 18%, transparent);
 
-    --domain-poi: #5ec2b2;
-    --domain-poi-soft: rgba(94, 194, 178, 0.1);
-    --domain-poi-locked: rgba(94, 194, 178, 0.18);
+    --domain-poi: var(--ts-domain-poi);
+    --domain-poi-soft: color-mix(in srgb, var(--ts-domain-poi) 10%, transparent);
+    --domain-poi-locked: color-mix(in srgb, var(--ts-domain-poi) 18%, transparent);
 
-    --domain-train: #8faa5f;
-    --domain-train-soft: rgba(143, 170, 95, 0.1);
-    --domain-train-locked: rgba(143, 170, 95, 0.18);
+    --domain-tour: var(--ts-domain-tour);
+    --domain-tour-soft: color-mix(in srgb, var(--ts-domain-tour) 10%, transparent);
+    --domain-tour-locked: color-mix(in srgb, var(--ts-domain-tour) 18%, transparent);
 
-    --domain-hike: #78966a;
-    --domain-hike-soft: rgba(120, 150, 106, 0.1);
-    --domain-hike-locked: rgba(120, 150, 106, 0.18);
-
-    --domain-bike: #9fbe63;
-    --domain-bike-soft: rgba(159, 190, 99, 0.1);
-    --domain-bike-locked: rgba(159, 190, 99, 0.18);
-
-    --domain-road: #a89984;
-    --domain-road-soft: rgba(168, 153, 132, 0.1);
-    --domain-road-locked: rgba(168, 153, 132, 0.18);
-
-    --domain-ferry: #4aa6b0;
-    --domain-ferry-soft: rgba(74, 166, 176, 0.1);
-    --domain-ferry-locked: rgba(74, 166, 176, 0.18);
+    /* Aliases, not colours. They exist so block 4 can move the layers one at
+       a time without a tour route rendering in nothing meanwhile. */
+    --domain-train: var(--domain-tour);
+    --domain-hike: var(--domain-tour);
+    --domain-bike: var(--domain-tour);
+    --domain-road: var(--domain-tour);
+    --domain-ferry: var(--domain-tour);
+    --domain-train-soft: var(--domain-tour-soft);
+    --domain-hike-soft: var(--domain-tour-soft);
+    --domain-bike-soft: var(--domain-tour-soft);
+    --domain-road-soft: var(--domain-tour-soft);
+    --domain-ferry-soft: var(--domain-tour-soft);
+    --domain-train-locked: var(--domain-tour-locked);
+    --domain-hike-locked: var(--domain-tour-locked);
+    --domain-bike-locked: var(--domain-tour-locked);
+    --domain-road-locked: var(--domain-tour-locked);
+    --domain-ferry-locked: var(--domain-tour-locked);
 
     /* State colours */
     --danger-stamp: #e65a4f;

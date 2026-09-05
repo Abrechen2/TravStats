@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
@@ -54,7 +53,8 @@ const PLACE_STATUS_KEY = {
 
 type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
-type PlaceSortKey = "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
+type PlaceSortKey =
+  "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
 type PlaceColumnId = PlaceSortKey | "status" | "actions";
 
 const COLUMN_IDS: readonly PlaceColumnId[] = [
@@ -103,13 +103,7 @@ const SORT_DEFAULT_ASC: Record<PlaceSortKey, boolean> = {
   lastVisit: false,
 };
 
-function compareRows(
-  a: Place,
-  b: Place,
-  key: PlaceSortKey,
-  locale: string,
-  t: Translate
-): number {
+function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: Translate): number {
   switch (key) {
     case "category":
       return a.category.localeCompare(b.category);
@@ -160,7 +154,15 @@ export default function PlacesListPage(): JSX.Element {
   const [visited, setVisited] = useState<VisitedFilter>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", ["name","category","location","country","continent","visits","lastVisit"] as const);
+  const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", [
+    "name",
+    "category",
+    "location",
+    "country",
+    "continent",
+    "visits",
+    "lastVisit",
+  ] as const);
 
   const columnPrefs = useColumnPrefs("places", ALWAYS_VISIBLE);
 
@@ -302,25 +304,22 @@ export default function PlacesListPage(): JSX.Element {
   }, [pendingDelete, addToast, t, load]);
 
   const formatDate = useCallback(
-    (iso: string | null): string =>
-      iso ? new Date(iso).toLocaleDateString(i18n.language) : "—",
+    (iso: string | null): string => (iso ? new Date(iso).toLocaleDateString(i18n.language) : "—"),
     [i18n.language]
   );
 
   if (access === "denied") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
+      <AppShell width="reading">
+        <div className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
         </div>
-      </PageTransition>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <NavigationBar />
+    <AppShell width="list">
       {/* The shared filter bar sits directly under the navigation, the way
           it does on the other three domain lists — it is `sticky top-14`, so
           its place in the flow is what the page reads like before you scroll.
@@ -405,9 +404,7 @@ export default function PlacesListPage(): JSX.Element {
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight">
-              {t("places:list.title")}
-            </h1>
+            <h1 className="t-screen-title">{t("places:list.title")}</h1>
           </div>
           <div className="flex items-center gap-2">
             {/* The only entry point to lists and checklists. Deliberately here
@@ -438,7 +435,6 @@ export default function PlacesListPage(): JSX.Element {
             />
           </div>
         </div>
-
 
         <ListSummaryStrip
           figures={summaryFigures}
@@ -545,9 +541,7 @@ export default function PlacesListPage(): JSX.Element {
                         <td className="px-4 py-3 text-[var(--text-muted)]">
                           <span className="flex items-center gap-2">
                             {p.city ?? "—"}
-                            {p.country && (
-                              <FlagImg country={p.country} />
-                            )}
+                            {p.country && <FlagImg country={p.country} />}
                           </span>
                         </td>
                       )}
@@ -653,6 +647,6 @@ export default function PlacesListPage(): JSX.Element {
           onClose={() => setPendingDelete(null)}
         />
       )}
-    </PageTransition>
+    </AppShell>
   );
 }

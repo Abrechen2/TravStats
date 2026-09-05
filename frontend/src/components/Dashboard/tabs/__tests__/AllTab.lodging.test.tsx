@@ -129,9 +129,12 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     await waitFor(() => {
       expect(screen.getByText("dashboard:legend.lodging")).toBeInTheDocument();
     });
-    // #d4778f -> rgb(212, 119, 143)
-    expect(DOMAINS.lodging.color).toBe("#d4778f");
-    expect(swatchBackground("dashboard:legend.lodging")).toBe("rgb(212, 119, 143)");
+    // Derived from the registry, not written out: the claim is that the
+    // legend and the pin layer read the SAME constant, and a literal here
+    // would quietly turn that into a claim about one particular hue.
+    const n = parseInt(DOMAINS.lodging.color.slice(1), 16);
+    const rgb = `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+    expect(swatchBackground("dashboard:legend.lodging")).toBe(rgb);
   });
 
   it("draws the lodging swatch as a dot, because a stay is a place and not a route", async () => {

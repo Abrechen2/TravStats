@@ -17,9 +17,14 @@ const cfg = (mode: LodgingColorConfig["mode"]): LodgingColorConfig => ({
 
 describe("LODGING_COLOR", () => {
   it("is derived from DOMAINS.lodging.color, not a second hardcoded literal", () => {
-    // #d4778f -> [212, 119, 143]
-    expect(DOMAINS.lodging.color).toBe("#d4778f");
-    expect(LODGING_COLOR).toEqual([212, 119, 143]);
+    // Derived rather than written out: the point of the case is that there is
+    // exactly ONE lodging colour, and a literal here would be the second one.
+    // It was `#d4778f` until 2.7.0 moved the domain hues onto the Companion's
+    // set, and the literal is what made this case fail for the right reason at
+    // the wrong moment.
+    const hex = DOMAINS.lodging.color;
+    const n = parseInt(hex.slice(1), 16);
+    expect(LODGING_COLOR).toEqual([(n >> 16) & 255, (n >> 8) & 255, n & 255]);
   });
 });
 
