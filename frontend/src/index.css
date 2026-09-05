@@ -5,6 +5,10 @@
    hand, and a test fails when tokens.css drifts from the JSON. */
 @import "./theme/fonts.css";
 @import "./theme/tokens.css";
+/* Hand-written, but it introduces no value of its own: the states an inline
+   style cannot reach (hover, active, the narrow table layout, the keyframes)
+   expressed entirely in `--ts-*` tokens. */
+@import "./theme/ui.css";
 
 @custom-variant dark (&:is(.dark *));
 

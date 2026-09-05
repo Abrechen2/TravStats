@@ -43,6 +43,7 @@ const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const DesignPage = lazy(() => import("./pages/DesignPage"));
 const SettingsLegacyRedirect = lazy(() =>
   import("./pages/SettingsPage").then((m) => ({ default: m.SettingsLegacyRedirect }))
 );
@@ -481,6 +482,12 @@ function AppContent() {
                 path="/settings/:group"
                 element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
               />
+              {/* The design system's acceptance surface: every primitive in
+                  every state. Mounted only in a dev build — not hidden behind a
+                  flag but genuinely absent from a production bundle, because a
+                  page whose copy is untranslated on purpose has no business
+                  being reachable on someone's instance. */}
+              {import.meta.env.DEV && <Route path="/design" element={<DesignPage />} />}
               <Route
                 path="/admin"
                 element={

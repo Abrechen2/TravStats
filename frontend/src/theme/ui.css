@@ -1,0 +1,225 @@
+/*
+ * The states an inline style cannot reach: hover, active, the table's narrow
+ * layout, and the keyframes the motion tokens drive.
+ *
+ * Hand-written, unlike tokens.css — but it introduces no value of its own:
+ * every colour, duration and measure here is a `--ts-*` token. If a rule below
+ * needs a number that is not one, the number belongs in the token file.
+ */
+
+/* ─── Motion ────────────────────────────────────────────────────────────── */
+/* Named after MOTION.md so a component asking for `ts-enter` gets what the
+   specification calls `ts-enter`. Reduced motion is nulled globally in
+   index.css, so no keyframe here needs its own guard. */
+@keyframes ts-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ts-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ts-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes ts-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ts-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ─── Button ────────────────────────────────────────────────────────────── */
+/* Never a shadow on hover (DESIGN_SYSTEM.md §5) — the old btn-primary grew a
+   16px amber glow, which read as focus and competed with the real focus ring. */
+.ts-button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--ts-accent-hover);
+}
+.ts-button[data-variant="primary"]:active:not(:disabled) {
+  background: var(--ts-accent-pressed);
+}
+.ts-button[data-variant="secondary"]:hover:not(:disabled) {
+  background: var(--ts-row-hover);
+  color: var(--ts-text-bright);
+}
+.ts-button[data-variant="danger"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ts-bad) 20%, transparent);
+}
+
+.ts-icon-button:hover:not(:disabled) {
+  background: var(--ts-surface);
+  color: var(--ts-text-bright);
+}
+
+.ts-chip:hover {
+  background: var(--ts-row-hover);
+}
+.ts-chip[aria-pressed="true"]:hover {
+  background: var(--ts-accent-hover);
+}
+
+.ts-control::placeholder {
+  color: var(--ts-faint);
+}
+
+.ts-stat-tile:hover {
+  background: var(--ts-surface);
+}
+
+/* ─── Rows ──────────────────────────────────────────────────────────────── */
+.ts-row:hover,
+.ts-table-row[data-clickable="yes"]:hover {
+  background: var(--ts-row-hover);
+}
+.ts-table-row[data-clickable="yes"] {
+  cursor: pointer;
+}
+
+/* ─── Table ─────────────────────────────────────────────────────────────── */
+.ts-table-head,
+.ts-table-row {
+  display: grid;
+  grid-template-columns: var(--ts-table-template);
+  gap: var(--ts-space-lg);
+  align-items: center;
+  padding: 0 var(--ts-space-xl);
+}
+
+.ts-table-head {
+  min-height: 40px;
+  background: var(--ts-surface2);
+}
+
+/*
+ * Below 640px the table IS the list row.
+ *
+ * Same markup, different grid: the mark on the left, title over subtitle in
+ * the middle, one trailing element on the right, everything else dropped. A
+ * phone that keeps the columns gets a horizontal scrollbar, and a horizontal
+ * scrollbar in a list is how a row's right-hand half becomes invisible.
+ */
+@media (max-width: 639px) {
+  .ts-table-head {
+    display: none;
+  }
+
+  .ts-table-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "mark title trailing" "mark subtitle trailing";
+    gap: 2px var(--ts-space-lg);
+    padding: var(--ts-space-md) var(--ts-space-lg);
+    align-items: center;
+  }
+
+  .ts-table-row > [data-narrow="mark"] {
+    grid-area: mark;
+  }
+  .ts-table-row > [data-narrow="title"] {
+    grid-area: title;
+    font-weight: 700;
+    color: var(--ts-text-bright);
+  }
+  .ts-table-row > [data-narrow="subtitle"] {
+    grid-area: subtitle;
+    font-size: 12px;
+    color: var(--ts-muted);
+  }
+  .ts-table-row > [data-narrow="trailing"] {
+    grid-area: trailing;
+    justify-self: end;
+  }
+  .ts-table-row > [data-narrow="hide"] {
+    display: none;
+  }
+}
+
+/* ─── Dialog ────────────────────────────────────────────────────────────── */
+/*
+ * The whole shell lives here rather than in the component, and the reason is a
+ * defect: written as inline styles it looked right on a desktop and was wrong
+ * on a phone, because an inline `align-items: center` outranks any media query.
+ * The dialog stayed centred where it should have docked. Only the caller's
+ * width crosses the boundary, as `--ts-dialog-max`.
+ */
+.ts-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--ts-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ts-space-xxl);
+  animation: ts-fade var(--ts-motion-base) var(--ts-ease-enter);
+}
+
+.ts-dialog-panel {
+  width: 100%;
+  max-width: var(--ts-dialog-max, 440px);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--ts-surface2);
+  border: 1px solid var(--ts-border);
+  border-radius: var(--ts-radius-sheet);
+  box-shadow: var(--ts-shadow-dialog);
+  padding: var(--ts-space-xxl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ts-space-xl);
+  outline: none;
+  animation: ts-enter var(--ts-motion-enter) var(--ts-ease-enter);
+}
+
+/*
+ * The one placement difference between the web's dialog and the Companion's
+ * sheet. Below 640px it docks to the bottom edge and animates in from below —
+ * the shell, radius, scrim, shadow and one-action rule are unchanged.
+ */
+@media (max-width: 639px) {
+  .ts-dialog-scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .ts-dialog-panel {
+    max-width: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    box-shadow: var(--ts-shadow-sheet);
+    animation: ts-sheet var(--ts-motion-enter) var(--ts-ease-enter);
+    max-height: 90vh;
+  }
+}
