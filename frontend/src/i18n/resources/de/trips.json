@@ -276,13 +276,13 @@
   },
   "summary": {
     "title": "KI-Zusammenfassung",
-    "cta": "Lass die KI eine kurze, persönliche Zusammenfassung dieser Reise schreiben — auf Basis der Stopps, Tagebucheinträge und verknüpften Flüge / Kreuzfahrten.",
+    "cta": "Lass die KI eine kurze, persönliche Zusammenfassung dieser Reise schreiben — aus Flügen, Kreuzfahrten, Aufenthalten, Orten, Stopps und Tagebuch, in deiner Sprache.",
     "generateButton": "Zusammenfassung erstellen",
     "regenerate": "Neu generieren",
-    "generating": "Schreibt …",
+    "generating": "Schreibt … das kann ein paar Minuten dauern",
     "generated": "Zusammenfassung erstellt",
     "error": "Zusammenfassung fehlgeschlagen",
-    "unavailable": "KI nicht erreichbar — Ollama starten und Modell ziehen."
+    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein."
   },
   "gallery": {
     "title": "Galerie",

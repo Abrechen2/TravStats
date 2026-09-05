@@ -44,8 +44,9 @@ export const BETA_FEATURES = Object.freeze({
   /** The LLM trip-summary card on the trip detail page. */
   tripAiSummary: Object.freeze({
     reason: "beta",
-    why: "The generated summaries are buggy, and the whole Trips area is still unfinished — offering an AI summary sets an expectation the feature can't meet yet.",
-    returnsWhen: "The Trips feature is complete.",
+    why: "Until 2026-09-05 the summary ignored the admin's Ollama, wrote German for every reader, knew nothing about stays and places, and had no test — the 'buggy summaries' this gate named. Those are fixed on dev/v2.7; what remains is whether the text is GOOD, which only a reader can say.",
+    returnsWhen:
+      "The owner has read three summaries generated on the RC account — one German, one English, one for a trip with stays and place visits — and accepted them.",
   }),
 
   /**

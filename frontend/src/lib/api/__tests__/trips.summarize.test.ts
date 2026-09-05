@@ -19,10 +19,14 @@ describe("tripsApi.summarize", () => {
   beforeEach(() => postMock.mockClear());
 
   it("uses the long PARSER timeout, not the 10s default", async () => {
-    await tripsApi.summarize("t1");
-    expect(postMock).toHaveBeenCalledWith("/trips/t1/summarize", undefined, {
-      timeout: API_TIMEOUTS.PARSER,
-    });
+    await tripsApi.summarize("t1", "en");
+    // The reader's language travels in the body (since 2026-09-05 the server
+    // writes in it instead of German for everyone).
+    expect(postMock).toHaveBeenCalledWith(
+      "/trips/t1/summarize",
+      { language: "en" },
+      { timeout: API_TIMEOUTS.PARSER }
+    );
     // guard the intent: PARSER must comfortably exceed a slow LLM generation
     expect(API_TIMEOUTS.PARSER).toBeGreaterThanOrEqual(60000);
   });
