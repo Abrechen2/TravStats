@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTourPaths, TOUR_MODE_RGB, UNKNOWN_MODE_RGB } from "../tourPathsLayer";
+import { buildTourPaths, TOUR_RGB } from "../tourPathsLayer";
+import { TOUR_COLOR } from "../../../shared/domains";
 import type { LegMode, TourGeometry } from "../../../types/tour";
 
 const geo = (mode: "road" | "ferry", source: "straight" | "drawn"): TourGeometry => ({
@@ -21,11 +22,20 @@ const geo = (mode: "road" | "ferry", source: "straight" | "drawn"): TourGeometry
 });
 
 describe("buildTourPaths", () => {
-  it("colours a leg by its own mode, not the section's", () => {
+  it("gives every leg the one tour colour, whatever the mode", () => {
+    // Until 2026-09-05 a leg was coloured by its own mode — five colours, and
+    // a comment arguing that a hue is a claim about how a leg was travelled.
+    // The owner settled it the other way: one domain, one colour, and the
+    // means of transport is carried by the icon.
     const [road] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("road", "drawn") }]);
     const [ferry] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("ferry", "drawn") }]);
-    expect(road.color).toEqual(TOUR_MODE_RGB.road);
-    expect(ferry.color).toEqual(TOUR_MODE_RGB.ferry);
+    expect(road.color).toEqual(TOUR_RGB);
+    expect(ferry.color).toEqual(road.color);
+  });
+
+  it("derives that colour from the registry rather than repeating a literal", () => {
+    const n = parseInt(TOUR_COLOR.slice(1), 16);
+    expect(TOUR_RGB).toEqual([(n >> 16) & 255, (n >> 8) & 255, n & 255]);
   });
 
   it("marks a straight leg as a placeholder so it renders lighter, not measured", () => {
@@ -61,8 +71,11 @@ describe("buildTourPaths", () => {
       ],
     };
     const [leg] = buildTourPaths([{ routeId: "r1", name: "S", geometry: unknownMode }]);
-    expect(leg.color).toEqual(UNKNOWN_MODE_RGB);
-    expect(leg.color).not.toEqual(TOUR_MODE_RGB.road);
+    // An unrecognised mode used to need a neutral grey so it could not borrow
+    // road's green and claim a van made the trip. With one colour there is no
+    // claim left to make wrongly — the leg is a tour leg, and that is all the
+    // colour ever says now.
+    expect(leg.color).toEqual(TOUR_RGB);
   });
 
   it("drops a feature with fewer than two coordinates instead of crashing", () => {

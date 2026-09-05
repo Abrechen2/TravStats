@@ -58,6 +58,19 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   },
 };
 
+/**
+ * Tours are ONE domain with ONE colour (owner, 2026-09-05). The means of
+ * transport changes the icon, never the hue — the web ran five colours for
+ * train, hiking, cycling, road and ferry, and they fall with this constant.
+ *
+ * Not a member of `DOMAINS`: a tour is not a domain in the gating sense — it
+ * has no `enabledDomains` entry, no route prefix of its own and no parser
+ * target. It is a colour the map and the legend both need, and this is the one
+ * place it is written. Mirrors `domainColor.tour` in `design/tokens.json` and
+ * `--ts-domain-tour` in the generated theme.
+ */
+export const TOUR_COLOR = '#8faa5f';
+
 export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
   (k) => DOMAINS[k].available,
 );

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DOMAINS } from "../shared/domains";
+import { DOMAINS, TOUR_COLOR } from "../shared/domains";
 
 /**
  * The domain accent variables in `index.css`.
@@ -69,6 +69,10 @@ describe("index.css domain accent variables", () => {
       ["cruise", DOMAINS.cruise.color],
       ["hotel", DOMAINS.lodging.color],
       ["poi", DOMAINS.poi.color],
+      // Not a member of DOMAINS — a tour has no gating entry, no route prefix
+      // and no parser target. It is a colour the map and the legend both need,
+      // and this ties the one place it is written to the token it mirrors.
+      ["tour", TOUR_COLOR],
     ];
     for (const [tokenName, value] of expected) {
       expect(tokens, `--ts-domain-${tokenName} should be ${value}`).toMatch(

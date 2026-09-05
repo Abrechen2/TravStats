@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { rgbCss } from "../../../lib/flightColor";
-import { TOUR_MODE_RGB, type TourPathDatum } from "../../layers/tourPathsLayer";
+import { TOUR_RGB, type TourPathDatum } from "../../layers/tourPathsLayer";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 
 // Split out of AllTab.tsx purely to keep that file under its 800-line
@@ -31,13 +31,16 @@ export interface TourLegendRow {
 }
 
 /**
- * One row per known leg mode, coloured straight from `TOUR_MODE_RGB` — the
- * SAME constant `buildTourPaths` resolves the line colour through, so this
- * can never drift into a second colour source for the same mode (the exact
- * defect this branch already had to fix once for a shared constant).
+ * One row per leg mode, all in the one tour colour.
+ *
+ * Every row reads `TOUR_RGB` — the SAME constant `buildTourPaths` resolves the
+ * line colour through, so the legend cannot drift from the map. What changed
+ * on 2026-09-05 is what the legend is FOR: it no longer decodes colour into
+ * mode, because there is one colour. It lists which means of transport appear
+ * on this map, and the icon beside each row is what tells them apart.
  */
 export function buildTourLegend(): TourLegendRow[] {
-  return LEG_MODES.map((mode) => ({ mode, color: TOUR_MODE_RGB[mode] }));
+  return LEG_MODES.map((mode) => ({ mode, color: TOUR_RGB }));
 }
 
 export interface TourLegendState {
