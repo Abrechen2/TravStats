@@ -45,19 +45,14 @@ function collapseSingleChild(group: NavGroup): NavNode {
 
 /**
  * Pure nav model for NavigationBar (desktop + mobile render the same tree).
- * `pathname` is passed in (not read via useLocation) so the model stays
- * testable without a router and so the caller controls re-render timing.
- */
-/**
+ * It reads no router state, so the model stays testable without a router.
+ *
  * `inboxCount` is the WHOLE Posteingang — pending flight updates plus open
  * data-quality questions. Two tables, one badge: the user is being told there
  * is something to answer, and splitting that into two numbers would make them
  * open the page twice to find out which. `NavigationBar` sums it.
  */
-export function useNavItems(
-  inboxCount: number,
-  pathname: string
-): { center: NavNode[]; system: NavNode } {
+export function useNavItems(inboxCount: number): { center: NavNode[]; system: NavNode } {
   const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -116,21 +111,22 @@ export function useNavItems(
     // The path stays `/pending-updates` although the page is now the
     // Posteingang: it is bookmarked, and `Settings/AutoUpdateSection` links to
     // it. Only the label changed.
-    const showInbox = inboxCount > 0 || pathname === "/pending-updates";
+    //
+    // The entry is ALWAYS there. Until 2026-09-05 it appeared only while
+    // something was open (or while already on the page), so an empty inbox had
+    // no way in from the UI at all — the owner's rule is that the Posteingang
+    // is reachable from the menu, and the badge alone says whether it is
+    // empty. A dropdown with two entries is the price, and it is the right one.
+    const hasOpenItems = inboxCount > 0;
     const systemChildren: NavLeaf[] = [
       { kind: "leaf", id: "settings", path: "/settings", label: t("dashboard:settings") },
-      ...(showInbox
-        ? [
-            {
-              kind: "leaf" as const,
-              id: "pending-updates",
-              path: "/pending-updates",
-              label: t("dataQuality:inbox.nav"),
-              badge: inboxCount,
-              warn: true,
-            },
-          ]
-        : []),
+      {
+        kind: "leaf",
+        id: "pending-updates",
+        path: "/pending-updates",
+        label: t("dataQuality:inbox.nav"),
+        ...(hasOpenItems ? { badge: inboxCount, warn: true } : {}),
+      },
       ...(isAdmin
         ? [
             { kind: "leaf" as const, id: "admin", path: "/admin", label: t("dashboard:admin") },
@@ -154,5 +150,5 @@ export function useNavItems(
     });
 
     return { center, system };
-  }, [t, isEnabled, placesVisible, isAdmin, inboxCount, pathname]);
+  }, [t, isEnabled, placesVisible, isAdmin, inboxCount]);
 }

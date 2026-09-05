@@ -16,8 +16,8 @@ vi.unmock("../../../store/settingsStore");
 import { useNavItems, isNodeActive, type NavGroup, type NavLeaf } from "../useNavItems";
 import { useSettingsStore } from "../../../store/settingsStore";
 
-function run(pending = 0, pathname = "/") {
-  return renderHook(() => useNavItems(pending, pathname)).result.current;
+function run(pending = 0) {
+  return renderHook(() => useNavItems(pending)).result.current;
 }
 
 describe("useNavItems — Logbuch grouping", () => {
@@ -60,14 +60,22 @@ describe("useNavItems — System group", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
   });
 
-  it("collapses to a direct Einstellungen link for a non-admin with zero pending updates", () => {
-    const { system } = run(0, "/");
-    expect(system.kind).toBe("leaf");
-    expect((system as NavLeaf).path).toBe("/settings");
+  // Owner rule 2026-09-05: the Posteingang is reachable from the menu at all
+  // times. Until then the entry existed only while something was open, so an
+  // empty inbox had no way in from the UI.
+  it("keeps the Posteingang in the System group when nothing is open — without badge or warning", () => {
+    const { system } = run(0);
+    expect(system.kind).toBe("group");
+    const g = system as NavGroup;
+    expect(g.children.map((c) => c.path)).toEqual(["/settings", "/pending-updates"]);
+    const inbox = g.children.find((c) => c.path === "/pending-updates") as NavLeaf;
+    expect(inbox.badge).toBeUndefined();
+    expect(inbox.warn).toBeUndefined();
+    expect(g.badge).toBeUndefined();
   });
 
-  it("shows the Updates entry with badge when pending updates exist", () => {
-    const { system } = run(3, "/");
+  it("shows the Posteingang with badge and warning when something is open", () => {
+    const { system } = run(3);
     expect(system.kind).toBe("group");
     const updates = (system as NavGroup).children.find((c) => c.path === "/pending-updates");
     expect(updates?.badge).toBe(3);
@@ -75,20 +83,17 @@ describe("useNavItems — System group", () => {
     expect((system as NavGroup).badge).toBe(3);
   });
 
-  it("shows the Updates entry with zero count while ON the pending-updates route", () => {
-    const { system } = run(0, "/pending-updates");
-    expect(system.kind).toBe("group");
-    expect(
-      (system as NavGroup).children.some((c) => c.path === "/pending-updates")
-    ).toBe(true);
-  });
-
   it("adds Admin and Parser (beta) for admins only", () => {
     authState.user = { isAdmin: true };
-    const { system } = run(0, "/");
+    const { system } = run(0);
     const g = system as NavGroup;
     expect(g.kind).toBe("group");
-    expect(g.children.map((c) => c.path)).toEqual(["/settings", "/admin", "/parser"]);
+    expect(g.children.map((c) => c.path)).toEqual([
+      "/settings",
+      "/pending-updates",
+      "/admin",
+      "/parser",
+    ]);
     expect(g.children.find((c) => c.path === "/parser")?.betaBadge).toBe(true);
   });
 });
@@ -96,14 +101,14 @@ describe("useNavItems — System group", () => {
 describe("isNodeActive", () => {
   it("marks a group active when any child route matches", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
-    const { center } = run(0, "/cruises/42");
+    const { center } = run(0);
     const logbuch = center.find((n) => n.id === "logbook")!;
     expect(isNodeActive(logbuch, "/cruises/42")).toBe(true);
     expect(isNodeActive(logbuch, "/trips")).toBe(false);
   });
 
   it("dashboard leaf is active only on exact root", () => {
-    const { center } = run(0, "/");
+    const { center } = run(0);
     const dash = center.find((n) => n.id === "dashboard")!;
     expect(isNodeActive(dash, "/")).toBe(true);
     expect(isNodeActive(dash, "/flights")).toBe(false);

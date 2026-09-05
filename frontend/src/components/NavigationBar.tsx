@@ -146,7 +146,7 @@ export default function NavigationBar(): JSX.Element {
     navigate("/login");
   };
 
-  const { center, system } = useNavItems(pendingUpdatesCount + openFlagCount, location.pathname);
+  const { center, system } = useNavItems(pendingUpdatesCount + openFlagCount);
 
   const supportLinks: ExternalLink[] = [
     {

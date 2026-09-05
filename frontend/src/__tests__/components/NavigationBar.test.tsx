@@ -74,12 +74,13 @@ describe("NavigationBar grouped navigation", () => {
     expect(screen.getAllByRole("link", { name: /domain\.flight/i }).length).toBeGreaterThan(0);
   });
 
-  it("collapses System to a direct Einstellungen link for non-admin without updates", () => {
+  // Owner rule 2026-09-05: the Posteingang is reachable from the menu at all
+  // times, so System is a dropdown even for a non-admin with nothing open.
+  it("offers Einstellungen and the Posteingang under System with nothing open", () => {
     renderNav();
-    expect(screen.queryByRole("button", { name: /nav\.system/i })).toBeNull();
-    expect(
-      screen.getAllByRole("link", { name: /dashboard:settings/i }).length
-    ).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("button", { name: /nav\.system/i })[0]);
+    expect(screen.getByRole("menuitem", { name: /dashboard:settings/i })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/i })).toBeTruthy();
   });
 
   it("keeps the Bug button visible and groups support links in a dropdown", () => {
@@ -91,14 +92,17 @@ describe("NavigationBar grouped navigation", () => {
     expect(screen.getByRole("menuitem", { name: /Discord/ })).toBeTruthy();
   });
 
-  it("marks the collapsed System settings link active on /settings", () => {
+  it("marks the Einstellungen entry of the System group active on /settings", () => {
     render(
       <MemoryRouter initialEntries={["/settings"]}>
         <NavigationBar />
       </MemoryRouter>
     );
-    const settingsLinks = screen.getAllByRole("link", { name: /dashboard:settings/i });
-    expect(settingsLinks.some((l) => l.getAttribute("aria-current") === "page")).toBe(true);
+    fireEvent.click(screen.getAllByRole("button", { name: /nav\.system/i })[0]);
+    const settings = screen.getByRole("menuitem", { name: /dashboard:settings/i });
+    expect(settings.getAttribute("aria-current")).toBe("page");
+    const inbox = screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/i });
+    expect(inbox.getAttribute("aria-current")).toBeNull();
   });
 });
 
@@ -130,8 +134,6 @@ describe("NavigationBar mobile panel", () => {
       </MemoryRouter>
     );
     fireEvent.click(screen.getByLabelText(/toggleMenu/i));
-    expect(
-      screen.getAllByRole("link", { name: /dashboard:settings/i }).length
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /dashboard:settings/i }).length).toBeGreaterThan(0);
   });
 });

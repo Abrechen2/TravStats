@@ -402,6 +402,10 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+- **The inbox is always in the menu.** The Posteingang entry under System
+  appeared only while something was open, or while you were already on the
+  page — an empty inbox had no way in from the UI at all. The entry is always
+  there now; the badge alone says whether anything waits.
 - **A flight saved with a date and no times no longer counts its placeholder
   clocks as flight time.** Such a row carries "12:00 → 13:00" that nobody
   measured, and three figures subtracted it anyway — the business tile's cost
