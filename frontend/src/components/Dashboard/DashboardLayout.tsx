@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
@@ -8,7 +9,6 @@ import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
-import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
 import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
@@ -115,8 +115,7 @@ export function DashboardLayout({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <NavigationBar />
+    <AppShell width="full" viewport className="flex flex-col">
       <DomainTabStrip
         active={tab}
         counts={counts}
@@ -213,6 +212,6 @@ export function DashboardLayout({
           }}
         />
       )}
-    </div>
+    </AppShell>
   );
 }

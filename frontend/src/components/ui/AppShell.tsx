@@ -30,6 +30,17 @@ interface AppShellProps {
    * themselves (a map fills its own frame). Only meaningful with `full`.
    */
   bleed?: boolean;
+  /**
+   * The page IS the viewport: exactly 100vh, nothing scrolls at this level,
+   * and the child fills whatever the navigation leaves.
+   *
+   * The dashboard needs this and nothing else does — a map has to know its
+   * own height, and `min-h-screen` with a scrolling body cannot give it one.
+   * It is a third shape rather than a third `width` because it answers a
+   * different question: `width` says how wide the content may be, this says
+   * who owns the height.
+   */
+  viewport?: boolean;
   /** Extra classes on the inner container, for a page-level grid. */
   className?: string;
 }
@@ -46,27 +57,40 @@ export default function AppShell({
   children,
   width = "list",
   bleed = false,
+  viewport = false,
   className,
 }: AppShellProps): JSX.Element {
   const maxWidth = MAX_WIDTH[width];
-  return (
-    <PageTransition>
-      <div className="min-h-screen" style={{ background: "var(--ts-bg)" }}>
-        <NavigationBar />
-        <main
-          className={className}
-          style={{
-            maxWidth,
-            width: "100%",
-            margin: "0 auto",
-            // Screen padding is a token (24). The bottom is deliberately deeper
-            // than the top so the last card never sits flush against the fold.
-            padding: bleed ? 0 : "var(--ts-space-xl) var(--ts-space-screen-padding) 80px",
-          }}
-        >
-          {children}
-        </main>
-      </div>
-    </PageTransition>
+
+  // A viewport page is not wrapped in the page transition: the transition
+  // animates a transform, and a transformed ancestor makes every `position:
+  // fixed` descendant position against IT instead of the window — which is
+  // what a map's floating chrome relies on.
+  const frame = (
+    <div
+      className={viewport ? "flex flex-col" : "min-h-screen"}
+      style={{ background: "var(--ts-bg)", height: viewport ? "100vh" : undefined }}
+    >
+      <NavigationBar />
+      <main
+        className={className}
+        style={{
+          maxWidth,
+          width: "100%",
+          margin: "0 auto",
+          minHeight: 0,
+          flex: viewport ? 1 : undefined,
+          position: viewport ? "relative" : undefined,
+          overflow: viewport ? "hidden" : undefined,
+          // Screen padding is a token (24). The bottom is deliberately deeper
+          // than the top so the last card never sits flush against the fold.
+          padding: bleed || viewport ? 0 : "var(--ts-space-xl) var(--ts-space-screen-padding) 80px",
+        }}
+      >
+        {children}
+      </main>
+    </div>
   );
+
+  return viewport ? frame : <PageTransition>{frame}</PageTransition>;
 }
