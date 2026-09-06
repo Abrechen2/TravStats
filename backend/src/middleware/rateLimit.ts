@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { RATE_LIMITS } from '../config/constants';
 
 /**
@@ -14,12 +14,18 @@ import { RATE_LIMITS } from '../config/constants';
  *                                      authenticated user
  *   Anonymous     → "ip:<ip>"         — fallback for unauthenticated
  *                                      endpoints (auth, password reset)
+ *
+ * The anonymous key goes through `ipKeyGenerator`, which masks an IPv6
+ * address to its /56 prefix. A raw `req.ip` would give every IPv6 client
+ * a fresh bucket per address, and a single host owns far more than one —
+ * express-rate-limit 8 refuses a keyGenerator that reads `req.ip` without
+ * it (ERR_ERL_KEY_GEN_IPV6, logged on every limiter's first request).
  */
 const userOrIpKey = (req: Request): string => {
   const r = req as { userId?: string; apiToken?: { id: string } };
   if (r.apiToken) return `pat:${r.apiToken.id}`;
   if (r.userId) return `user:${r.userId}`;
-  return `ip:${req.ip ?? 'unknown'}`;
+  return `ip:${req.ip ? ipKeyGenerator(req.ip) : 'unknown'}`;
 };
 
 /**
