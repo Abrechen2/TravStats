@@ -90,7 +90,7 @@
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^2.1.0",
-    "@types/node": "^22.20.1",
+    "@types/node": "^26.4.1",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^8.0.1",
     "@types/pdf-parse": "^1.1.5",
