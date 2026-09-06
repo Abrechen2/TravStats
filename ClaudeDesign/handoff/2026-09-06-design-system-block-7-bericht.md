@@ -113,3 +113,60 @@ repo      npm run check:size  → 1154 Dateien, 20 in der Baseline, Grenze 800
 ```
 
 Backend nicht berührt.
+
+---
+
+## 5. Nachtrag — der `dark:`-Wächter ist geschlossen
+
+Aus einem Ratchet mit 18 Dateien ist eine absolute Regel geworden: **92
+`dark:`-Varianten sind weg**, in allen 18 Dateien.
+
+Beide Hälften eines Paares fallen, und die **dunkle entscheidet** — sie ist
+der Wert, der tatsächlich gerendert hat, also sagt sie, was gemeint war:
+
+| vorher | jetzt |
+|---|---|
+| `text-gray-500 dark:text-gray-400` | `text-(--text-muted)` |
+| `text-gray-900 dark:text-white` | `text-(--text-primary)` |
+| `text-gray-700 dark:text-gray-300` | `text-(--text-secondary)` |
+| `text-red-600 dark:text-red-400` | `text-(--danger)` |
+| `text-green-600 dark:text-green-400` | `text-(--success)` |
+| `text-amber-700 … dark:text-amber-400` | `text-(--warning)` |
+| `border-gray-300 dark:border-gray-600` | `border-(--color-border)` |
+
+Das erschlägt **zwei** Wächter auf einmal, denn jedes Paar waren auch zwei
+rohe Tailwind-Palettenklassen: die Palettenliste fällt von **80 auf 72
+Dateien**.
+
+Zwei Stellen brauchten ein Urteil statt einer Tabelle:
+
+- **Der Parser-Trainings-Marker** ließ vier handverlesene Tailwind-Tönungen
+  kreisen, um zu sagen „zu welchem Flug gehört dieser Token". Das ist eine
+  kategoriale Serie **ohne Domäne** — genau wofür `chartColors` da ist. Er
+  liest jetzt die Diagrammpalette.
+- **Die Vertrauens-Plaketten im Review-Dialog** waren drei Farbpaare, die für
+  einen Status standen. Sie lesen die semantischen Tokens.
+
+Der Wächter ist damit **absolut, kein Ratchet mehr**. Sein Baseline-Eintrag
+bleibt als leere Liste stehen — er hält fest, dass die Liste **null erreicht
+hat**, nicht dass es die Regel nie gebraucht hätte.
+
+**Im Browser nachgesehen, nicht nur getestet.** Eine mechanische
+Klassen-Umschreibung scheitert nicht laut, sondern leise: eine falsche
+Zuordnung macht etwas unsichtbar, nicht kaputt. Admin-Oberfläche, Posteingang
+und die 404-Seite wurden angesehen; alles liest sich.
+
+## 6. Nachtrag — der Shell-Ratchet steht bei 17
+
+`AppShell` hat eine dritte Bauform bekommen: **`viewport`** — die Seite IST
+das Fenster, exakt 100vh, nichts scrollt auf dieser Ebene. Das Dashboard war
+die letzte Hauptfläche außerhalb der Shell, und aus einem echten Grund: eine
+Karte braucht eine Höhe, und `min-h-screen` mit scrollendem Body gibt ihr
+keine. Es ist eine dritte **Form**, keine dritte **Breite** — `width` sagt,
+wie breit der Inhalt sein darf, `viewport` sagt, wem die Höhe gehört.
+
+Eine Falle, die die Form treffen musste: eine `viewport`-Seite steckt **nicht**
+in `PageTransition`. Die Übergangsanimation bewegt ein `transform`, und ein
+transformierter Vorfahr lässt jeden `position: fixed`-Nachfahren gegen **ihn**
+positionieren statt gegen das Fenster — worauf sich die schwebende
+Kartensteuerung verlässt.
