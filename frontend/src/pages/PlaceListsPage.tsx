@@ -1,3 +1,4 @@
+import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -21,14 +22,11 @@ import type { CuratedListSummary, PlaceList } from "../types/placeList";
 
 /** Quick-pick list colours. Deliberately far apart — two lists in near-identical
  *  hues make `list` colour mode say nothing on a map. */
-const LIST_COLOR_PRESETS = [
-  DOMAINS.poi.color,
-  "#e3b341",
-  "#db6d5a",
-  "#8957e5",
-  "#3fb950",
-  "#58a6ff",
-] as const;
+// The shared ten from `listColor.palette`. The six that used to stand here
+// included the green and blue the system reserves for `good` and `info`, and a
+// map reads colour as meaning — a list painted in "planned blue" breaks the
+// legend for whoever picked it.
+const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
 
 /**
  * Lists and checklists, one screen.
@@ -205,7 +203,10 @@ export default function PlaceListsPage(): JSX.Element {
                     height: 22,
                     borderRadius: "50%",
                     background: c,
-                    border: newColor === c ? "2px solid var(--text-primary)" : "1px solid var(--color-border)",
+                    border:
+                      newColor === c
+                        ? "2px solid var(--text-primary)"
+                        : "1px solid var(--color-border)",
                     cursor: "pointer",
                   }}
                 />
@@ -264,7 +265,10 @@ export default function PlaceListsPage(): JSX.Element {
         {!loading && !loadError && (
           <>
             <section className="mb-10">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-sm font-semibold uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:lists.ownSection")}
               </h2>
               {ownLists.length === 0 ? (
@@ -272,7 +276,10 @@ export default function PlaceListsPage(): JSX.Element {
                   {t("places:lists.ownEmpty")}
                 </p>
               ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ listStyle: "none", padding: 0 }}>
+                <ul
+                  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                  style={{ listStyle: "none", padding: 0 }}
+                >
                   {ownLists.map((list) => (
                     <li key={list.id}>
                       <Link
@@ -313,7 +320,10 @@ export default function PlaceListsPage(): JSX.Element {
             </section>
 
             <section>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-sm font-semibold uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:lists.curatedSection")}
               </h2>
               <ul className="grid gap-3 sm:grid-cols-2" style={{ listStyle: "none", padding: 0 }}>
@@ -323,7 +333,10 @@ export default function PlaceListsPage(): JSX.Element {
                     <li
                       key={c.key}
                       className="rounded-xl p-4"
-                      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+                      style={{
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--color-border)",
+                      }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -341,7 +354,10 @@ export default function PlaceListsPage(): JSX.Element {
                           <Link
                             to={`/places/checklists/${c.key}`}
                             className="shrink-0 rounded-lg px-3 py-1.5 text-xs"
-                            style={{ border: "1px solid var(--color-border)", color: "var(--accent)" }}
+                            style={{
+                              border: "1px solid var(--color-border)",
+                              color: "var(--accent)",
+                            }}
                           >
                             {t("places:lists.open")}
                           </Link>

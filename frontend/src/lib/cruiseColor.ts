@@ -95,12 +95,15 @@ export interface CruiseColorConfig {
   colors: CruiseColors;
 }
 
-// Status-mode defaults: blue for already-sailed legs, cyan for scheduled
-// (future) legs so upcoming cruises read as clearly "planned". These are the
-// colours that were hardcoded everywhere before — they survive as the default,
-// so nothing changes visually for a user who never opens the panel.
-export const CRUISE_STATUS_PAST_COLOR: Rgb = [74, 144, 217]; // #4a90d9
-export const CRUISE_STATUS_PLANNED_COLOR: Rgb = [34, 211, 238]; // #22d3ee
+// Status-mode defaults now live in `lib/statusColors.ts` beside the flight
+// pair, because they answer one question — what a status looks like on a map —
+// and answering it in two files is how the two domains drifted onto four
+// unrelated hues in the first place. Re-exported here so every existing import
+// of this module keeps working.
+export { CRUISE_STATUS_PAST_COLOR, CRUISE_STATUS_PLANNED_COLOR } from "./statusColors";
+import { paletteLedBy } from "./listPalette";
+import { tokens } from "../theme/tokens";
+import { CRUISE_STATUS_PAST_COLOR, CRUISE_STATUS_PLANNED_COLOR } from "./statusColors";
 
 export const DEFAULT_CRUISE_COLORS: CruiseColors = {
   past: CRUISE_STATUS_PAST_COLOR,
@@ -113,17 +116,8 @@ export const DEFAULT_CRUISE_COLOR_CONFIG: CruiseColorConfig = {
   colors: DEFAULT_CRUISE_COLORS,
 };
 
-/** Quick-pick swatches offered next to each cruise colour field. Includes the
- *  brand cruise blue [111,160,214] — the old `DEFAULT_CRUISE_ROUTE_COLOR` — so
- *  anyone who liked that tint can pick it back explicitly. */
-export const CRUISE_COLOR_PRESETS: readonly Rgb[] = [
-  [74, 144, 217], // cruise blue (status: sailed)
-  [34, 211, 238], // cyan (status: planned)
-  [111, 160, 214], // brand cruise blue
-  [126, 200, 122], // green
-  [178, 132, 224], // violet
-  [226, 232, 240], // slate-200
-];
+/** Quick-pick swatches: the shared ten, led by the cruise domain colour. */
+export const CRUISE_COLOR_PRESETS: readonly Rgb[] = paletteLedBy(tokens.domainColor.cruise);
 
 /** The minimum a colour resolver needs to know about a cruise. */
 export interface CruiseColorInput {

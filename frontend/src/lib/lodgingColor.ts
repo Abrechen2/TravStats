@@ -11,6 +11,7 @@
 // `LODGING_COLOR` survives unchanged as the brand rose and the default, so a
 // user who never opens the panel sees exactly what they saw before.
 
+import { paletteLedBy } from "./listPalette";
 import type { Rgb } from "./cruiseColor";
 import { DOMAINS } from "../shared/domains";
 import { hexToRgb } from "../components/map/controlPanelKit";
@@ -96,15 +97,8 @@ export const DEFAULT_LODGING_COLOR_CONFIG: LodgingColorConfig = {
   colors: DEFAULT_LODGING_COLORS,
 };
 
-/** Quick-pick swatches offered beside each colour field. */
-export const LODGING_COLOR_PRESETS: readonly Rgb[] = [
-  LODGING_COLOR,
-  [148, 163, 184],
-  [125, 176, 219],
-  [196, 154, 108],
-  [126, 178, 121],
-  [226, 232, 240],
-];
+/** Quick-pick swatches: the shared ten, led by the lodging domain colour. */
+export const LODGING_COLOR_PRESETS: readonly Rgb[] = paletteLedBy(DOMAINS.lodging.color);
 
 /** The minimum a colour resolver needs to know about a lodging. */
 export interface LodgingColorInput {
@@ -129,10 +123,7 @@ const TYPE_SLOT: Record<string, LodgingColorSlot> = {
  * colour, so an unknown type or a missing rating is visibly "no information",
  * not a category of its own invention.
  */
-export function resolveLodgingColor(
-  lodging: LodgingColorInput,
-  cfg: LodgingColorConfig
-): Rgb {
+export function resolveLodgingColor(lodging: LodgingColorInput, cfg: LodgingColorConfig): Rgb {
   const { mode, colors } = cfg;
   if (mode === "type") {
     const slot = TYPE_SLOT[(lodging.type ?? "").toLowerCase()];

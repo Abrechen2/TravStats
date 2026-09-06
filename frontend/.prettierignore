@@ -7,4 +7,5 @@ node_modules/
 # scripts/fetch-fonts.mjs; a test compares tokens.css to a fresh generation, so
 # a Prettier pass over it would fail the suite rather than tidy anything.
 src/theme/tokens.css
+src/theme/tokens.ts
 src/theme/fonts.css

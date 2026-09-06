@@ -1,3 +1,4 @@
+import { rgb, tokens } from "../theme/tokens";
 import { describe, it, expect } from "vitest";
 import {
   CRUISE_COLOR_MODES,
@@ -54,10 +55,12 @@ describe("resolveCruiseColor", () => {
 });
 
 describe("defaults", () => {
-  it("defaults to status mode with today's blue (sailed) + cyan (planned)", () => {
+  it("defaults to status mode with the domain colour (sailed) + info (planned)", () => {
     expect(DEFAULT_CRUISE_COLOR_CONFIG.mode).toBe("status");
-    expect(DEFAULT_CRUISE_COLOR_CONFIG.colors.past).toEqual([74, 144, 217]);
-    expect(DEFAULT_CRUISE_COLOR_CONFIG.colors.planned).toEqual([34, 211, 238]);
+    // Both were literals of their own until 2.7.0 — a blue that meant `info`
+    // everywhere else, and a cyan that is the platinum tier colour.
+    expect(DEFAULT_CRUISE_COLOR_CONFIG.colors.past).toEqual(rgb(tokens.domainColor.cruise));
+    expect(DEFAULT_CRUISE_COLOR_CONFIG.colors.planned).toEqual(rgb(tokens.color.info));
   });
 
   it("offers exactly three modes — no frequency mode for cruises", () => {

@@ -1,7 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error — the generator is a plain .mjs build script, not typed source.
-import { buildThemeCss, OUTPUT_PATH, TOKENS_PATH } from "../../../scripts/generate-theme.mjs";
+// Typed by `scripts/generate-theme.d.mts` — the generator stays a plain build
+// script that runs under node with no compile step, which is the point of an
+// `.mjs`, but the test that guards it needs no escape hatch to import it.
+import {
+  buildThemeCss,
+  buildThemeTs,
+  OUTPUT_PATH,
+  TOKENS_PATH,
+  TS_OUTPUT_PATH,
+} from "../../../scripts/generate-theme.mjs";
 
 /**
  * The first of the four guards in DESIGN_SYSTEM.md §10.
@@ -16,6 +24,15 @@ describe("theme token generation", () => {
   it("the checked-in tokens.css is exactly what the generator produces", () => {
     const onDisk = readFileSync(OUTPUT_PATH, "utf8");
     expect(onDisk).toBe(buildThemeCss());
+  });
+
+  it("the checked-in tokens.ts is exactly what the generator produces", () => {
+    // The canvas half. deck.gl and the globe take `[r, g, b]` arrays and
+    // cannot read a custom property, so without this module the map layers
+    // keep their own literals — which is precisely how the map came to
+    // disagree with the legend sitting under it.
+    const onDisk = readFileSync(TS_OUTPUT_PATH, "utf8");
+    expect(onDisk).toBe(buildThemeTs());
   });
 
   it("carries every colour in the token file, so nothing silently drops out", () => {

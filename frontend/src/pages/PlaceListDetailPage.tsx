@@ -1,3 +1,4 @@
+import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
 import type { PlaceLabelMode } from "../lib/placeLabel";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -22,19 +23,15 @@ import {
 } from "../lib/api/placeLists";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
-import { DOMAINS } from "../shared/domains";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
 
-const LIST_COLOR_PRESETS = [
-  DOMAINS.poi.color,
-  "#e3b341",
-  "#db6d5a",
-  "#8957e5",
-  "#3fb950",
-  "#58a6ff",
-] as const;
+// The shared ten from `listColor.palette`. The six that used to stand here
+// included the green and blue the system reserves for `good` and `info`, and a
+// map reads colour as meaning — a list painted in "planned blue" breaks the
+// legend for whoever picked it.
+const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
 
 /**
  * One list: what is in it, and the two things a user does to it.
@@ -484,9 +481,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                         : { color: "var(--text-muted)", border: "1px dashed var(--color-border)" }
                     }
                   >
-                    {p.visited
-                      ? t("places:list.status.visited")
-                      : t("places:list.status.wishlist")}
+                    {p.visited ? t("places:list.status.visited") : t("places:list.status.wishlist")}
                   </span>
                   <button
                     type="button"
