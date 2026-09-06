@@ -532,12 +532,13 @@ Prettier on changed frontend files as required jobs, and the backend Jest
 suite as an advisory one — it is allowed to fail, and its comment block names
 the three things that must be fixed before that changes. `security.yml` runs
 `npm audit` on production deps, Trivy and CodeQL on every push to `main` and
-weekly. CodeQL has been red on every run since it landed — not a finding,
-a rejection: "CodeQL analyses from advanced configurations cannot be
-processed when the default setup is enabled". The repository has GitHub's
-default code-scanning setup switched on, and that refuses the SARIF our own
-job uploads. One of the two has to go (repo settings, owner's call), and
-until then the red Security badge says nothing. None of the four ratchets, `check:size` or `check:drift` run
+weekly. CodeQL is NOT in that file, on purpose: the repository has GitHub's
+default code-scanning setup switched on (since 2026-08-01), and a
+workflow-defined CodeQL job is refused by it — "CodeQL analyses from
+advanced configurations cannot be processed when the default setup is
+enabled" — which kept the Security badge red for a week for no finding at
+all. The job was removed on 2026-09-06; its comment block says what to
+switch off first if it ever comes back. None of the four ratchets, `check:size` or `check:drift` run
 in CI (forgejo#60); the drift script has said so since 2026-09-01, and the
 two plan docs that called it "CI-guarded" were corrected on 2026-09-04. This
 paragraph itself claimed "only Prettier" for a week after `ci.yml` landed —
@@ -725,7 +726,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (8925 symbols, 23607 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (8969 symbols, 23656 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
