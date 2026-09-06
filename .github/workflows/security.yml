@@ -182,47 +182,16 @@ jobs:
           category: trivy-fs
 
   # ---------------------------------------------------------------------
-  # CodeQL — static analysis of the TypeScript on both sides.
+  # CodeQL — deliberately NOT here.
   #
-  # Also not a gate. CodeQL reports into the Security tab; the job fails
-  # only if the analysis itself breaks, which is a real failure worth
-  # seeing. `security-and-quality` is the wider query pack — on a codebase
-  # this size the extra queries cost minutes, not hours, and this repo has
-  # never had static analysis run over it, so the wider net is worth it on
-  # the first pass. Narrow to `security-extended` if run time becomes a
-  # problem.
+  # The repository has GitHub's default code-scanning setup switched on
+  # (since 2026-08-01: actions, javascript-typescript and python, weekly).
+  # A CodeQL job in a workflow is the "advanced" configuration, and GitHub
+  # refuses to accept both: every run of the job this file used to carry
+  # ended in "CodeQL analyses from advanced configurations cannot be
+  # processed when the default setup is enabled" — a red Security badge on
+  # every push to main for a week, saying nothing about the code. Trivy's
+  # SARIF upload above is not affected; the restriction is CodeQL-only.
+  # If CodeQL ever needs a custom query pack, switch the default setup off
+  # in the repository settings FIRST, then bring the job back.
   # ---------------------------------------------------------------------
-  codeql:
-    name: CodeQL (TypeScript)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript-typescript
-          queries: security-and-quality
-
-      # No build step: `javascript-typescript` analyses source directly.
-      # Adding one would only slow the job down.
-      - name: Analyze
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: codeql-js
-
-# Deliberately NOT here, so nobody adds them by reflex:
-#
-#   * bandit / pip-audit. Python tooling. The only Python in this repo is
-#     backend/src/scripts/*.py, developer-side helpers that are not part of
-#     the shipped runtime. `ruff` already covers them via pre-commit. A
-#     Python security stack here would scan code no user ever executes.
-#   * Trivy image scan. The release image is built on the maintainer's
-#     machine at deploy time, not in CI, so there is no image here to scan
-#     without duplicating the entire multi-stage build on every push. The
-#     filesystem scan already covers the dependency manifests that image is
-#     built from. Wire an image scan into the deploy path, not into this
-#     file, if it is wanted.

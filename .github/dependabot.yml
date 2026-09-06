@@ -29,6 +29,11 @@ updates:
       # Lift this with the ESLint 9 move.
       - dependency-name: eslint-plugin-react-refresh
         versions: ['>=0.5.0']
+      # typescript-eslint 8.68 declares typescript '>=4.8.4 <6.1.0'; the
+      # frontend lint would lose its parser on 7. Lift when typescript-eslint
+      # names 7 in its peer range (#283).
+      - dependency-name: typescript
+        versions: ['>=7.0.0']
 
   # GitHub Actions
   - package-ecosystem: github-actions
