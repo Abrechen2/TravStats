@@ -48,6 +48,22 @@ module.exports = {
     },
   },
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+  // otplib 13 pulls in @scure/base, which ships ONLY as ESM (no `require`
+  // export). Node itself is fine with that — `require(esm)` has been
+  // unflagged since 22.12, and both the tsx dev path and the compiled
+  // CommonJS build load it — but Jest's own module loader is not, and dies
+  // on its first `export`. So that one package is handed to ts-jest with
+  // allowJs instead of being skipped like the rest of node_modules. Keep
+  // the pattern to the ESM-only packages: transforming all of node_modules
+  // would turn a four-minute suite into a much longer one.
+  transform: {
+    '^.+\.tsx?$': ['ts-jest', { diagnostics: false }],
+    '^.+\.js$': ['ts-jest', { diagnostics: false, tsconfig: { allowJs: true, module: 'commonjs' } }],
+  },
+  // @noble/hashes 2 sits nested under @otplib/plugin-crypto-noble and is
+  // reached through an ESM-only subpath, so it is on the list too; @otplib
+  // itself ships .cjs and passes through the `.js` transform untouched.
+  transformIgnorePatterns: ['node_modules/(?!(@scure/base|@noble/hashes|@otplib)/)'],
   // Mock modules to avoid ESM issues
   moduleNameMapper: {
     '^uuid$': '<rootDir>/src/__mocks__/uuid.ts',
