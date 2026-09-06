@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { rgb, tokens } from "../theme/tokens";
 import { useTranslation } from "../hooks/useTranslation";
 
 export interface FlightCertificateStats {
@@ -18,13 +19,34 @@ interface FlightCertificateProps {
   onClose: () => void;
 }
 
+/** The paper's ink at a given opacity. Keeps the card to ONE ink. */
+function inkAlpha(alpha: number): string {
+  const [r, g, b] = rgb(tokens.color.paperText);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // ─── Design tokens ─────────────────────────────────────────────────────────
-const PARCHMENT = "#f1e7cd";
-const INK = "#1c2a3d";
-const INK_SOFT = "#3b4d66";
-const BRONZE = "#a17236";
-const STAMP_RED = "#bd3a3a";
-const PAPER_SHADOW = "rgba(28,42,61,0.08)";
+//
+// One paper colour for both printed documents. This file used to carry its own
+// six-value palette — a parchment, two inks, a bronze and a stamp red — while
+// the passport is the app's OTHER piece of paper. Two documents, two papers,
+// neither of them the one in the token file (DESIGN_SYSTEM.md §2.1, and the
+// wish in §7.7 of the round-2 review: "Zwei Dokumente, eine Papierfarbe").
+//
+// Resolved to literal strings rather than `var(--ts-paper)` on purpose: this
+// card is rasterised by html2canvas, and handing a rasteriser real values
+// instead of custom properties removes a whole class of "renders fine, exports
+// blank" surprises. Single-sourced all the same — the values come from the
+// generated token module, not from this file.
+const PARCHMENT = tokens.color.paper;
+const INK = tokens.color.paperText;
+/** The same ink, quieter. Not a second colour — a second weight of one. */
+const INK_SOFT = inkAlpha(0.7);
+/** The accent, in its pressed shade: the brand amber legible on light paper. */
+const BRONZE = tokens.color.accentPressed;
+/** A stamp is not an error, but it is the one red the system has. */
+const STAMP_RED = tokens.color.bad;
+const PAPER_SHADOW = inkAlpha(0.08);
 
 // Earth's equatorial circumference (km), used for the "around the Earth"
 // shareable comparison.
@@ -192,7 +214,8 @@ export function FlightCertificate({
             transition: "transform 0.15s ease, background 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            if (!downloading) e.currentTarget.style.background = "#b97f3c";
+            // The system's hover shade for the accent, not a seventh literal.
+            if (!downloading) e.currentTarget.style.background = tokens.color.accent;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = BRONZE;

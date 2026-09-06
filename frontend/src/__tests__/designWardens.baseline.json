@@ -18,7 +18,6 @@
     "components/Dashboard/tabs/LodgingTab.tsx",
     "components/Dashboard/tabs/lodging/LodgingStatStrip.tsx",
     "components/Filters.tsx",
-    "components/FlightCertificate.tsx",
     "components/FlightForm/fields/StatusField.tsx",
     "components/FlightPanel.tsx",
     "components/FlightPanel/TripDetailsSidebar.tsx",
