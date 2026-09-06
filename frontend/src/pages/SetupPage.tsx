@@ -98,10 +98,10 @@ export default function SetupPage(): JSX.Element {
             <h1 className="t-screen-title mb-2">
               {t("setup:title", { appName: t("common:app.name") })}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">{t("setup:subtitle")}</p>
+            <p className="text-(--text-muted)">{t("setup:subtitle")}</p>
           </div>
 
-          <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-sm text-center text-(--text-muted) mb-6">
             🔒 {t("setup:privacy.items.dataStays")}
           </p>
 
@@ -142,14 +142,14 @@ export default function SetupPage(): JSX.Element {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-(--text-secondary) mb-1">
                   {t("setup:form.adminUsername.label")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-(--color-border) rounded-lg focus:ring-2 focus:ring-(--accent) bg-(--bg-muted) text-(--text-primary)"
                   placeholder={t("setup:form.adminUsername.placeholder")}
                   required
                   autoFocus
@@ -157,32 +157,30 @@ export default function SetupPage(): JSX.Element {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-(--text-secondary) mb-1">
                   {t("setup:form.password.label")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-(--color-border) rounded-lg focus:ring-2 focus:ring-(--accent) bg-(--bg-muted) text-(--text-primary)"
                   placeholder={t("setup:form.password.placeholder")}
                   required
                   minLength={8}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t("setup:form.password.help")}
-                </p>
+                <p className="text-xs text-(--text-muted) mt-1">{t("setup:form.password.help")}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-(--text-secondary) mb-1">
                   {t("setup:form.confirmPassword.label")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-(--color-border) rounded-lg focus:ring-2 focus:ring-(--accent) bg-(--bg-muted) text-(--text-primary)"
                   placeholder={t("setup:form.confirmPassword.placeholder")}
                   required
                   minLength={8}
@@ -197,7 +195,7 @@ export default function SetupPage(): JSX.Element {
                 <UsageStatsConsentCard variant="setup" onDecided={setUsageStatsConsent} />
               </div>
 
-              <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
+              <p className="text-xs text-center text-(--text-muted) pt-2">
                 {t("setup:instanceSettingsLater")}
               </p>
 

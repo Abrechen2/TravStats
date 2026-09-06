@@ -90,7 +90,6 @@ export default function LoggingManager({
         </div>
       </div>
 
-
       {/* Debug Mode Warning */}
       {loggingConfig.logLevel === "debug" && (
         <div
@@ -129,9 +128,7 @@ export default function LoggingManager({
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.totalFiles")}
             </div>
-            <div className="text-2xl font-bold text-(--text-primary)">
-              {logStats.fileCount}
-            </div>
+            <div className="text-2xl font-bold text-(--text-primary)">{logStats.fileCount}</div>
           </div>
           <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
             <div className="text-(--text-muted) text-sm mb-1">
@@ -219,9 +216,7 @@ export default function LoggingManager({
               }
               className="w-full px-3 py-2 bg-(--bg-surface) border border-border rounded-lg text-(--text-primary)"
             />
-            <p className="text-xs text-(--text-muted) mt-1">
-              {t("admin:logging.retention.hint")}
-            </p>
+            <p className="text-xs text-(--text-muted) mt-1">{t("admin:logging.retention.hint")}</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -347,7 +342,7 @@ export default function LoggingManager({
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button
                         onClick={() => onDownload(file.filename)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-(--accent) hover:text-(--accent)"
                       >
                         {t("admin:logging.files.download")}
                       </button>

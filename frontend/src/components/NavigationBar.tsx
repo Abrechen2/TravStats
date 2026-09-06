@@ -31,7 +31,7 @@ function DesktopLeaf({ node, pathname }: { node: NavLeaf; pathname: string }): J
     >
       {node.label}
       {node.betaBadge && (
-        <span className="ml-1.5 inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+        <span className="ml-1.5 inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none ring-1 ring-inset text-(--warning) bg-(--warning)/10 ring-(--warning)/25">
           Beta
         </span>
       )}
@@ -83,7 +83,7 @@ function MobileLeaf({
       <span className="flex items-center gap-1.5">
         {node.label}
         {node.betaBadge && (
-          <span className="inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+          <span className="inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none ring-1 ring-inset text-(--warning) bg-(--warning)/10 ring-(--warning)/25">
             Beta
           </span>
         )}

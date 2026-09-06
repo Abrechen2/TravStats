@@ -33,13 +33,17 @@ export interface Flight {
  * the domain reservation list.
  */
 export function getFlightColorClass(flightIndex: number): string {
+  // The chart palette: this is a categorical series with no domain — "which
+  // flight does this token belong to" — which is exactly what `chartColors`
+  // is for. It replaces four hand-picked Tailwind tints that each carried a
+  // `dark:` twin in an app with no light mode.
   const colors = [
-    "bg-amber-300 dark:bg-amber-700",
-    "bg-yellow-300 dark:bg-yellow-700",
-    "bg-orange-300 dark:bg-orange-700",
-    "bg-slate-300 dark:bg-slate-700",
+    "bg-(--ts-chart-1)/30",
+    "bg-(--ts-chart-2)/30",
+    "bg-(--ts-chart-3)/30",
+    "bg-(--ts-chart-4)/30",
   ];
-  return colors[flightIndex % colors.length] || "bg-stone-300 dark:bg-stone-700";
+  return colors[flightIndex % colors.length] || "bg-(--ts-chart-muted-bar)";
 }
 
 /**

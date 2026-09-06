@@ -51,26 +51,26 @@ export default function ParserPage(): JSX.Element {
   return (
     <div className="min-h-screen bg-(--bg-base)">
       <NavigationBar />
-      <header className="bg-(--bg-elevated) border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-(--bg-elevated) border-b border-(--color-border)">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="t-screen-title">{t("parser:title")}</h1>
-            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
+            <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-(--warning)/10 text-(--warning) ring-(--warning)/25">
               {t("parser:beta")}
             </span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t("parser:description")}</p>
+          <p className="text-sm text-(--text-muted)">{t("parser:description")}</p>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Beta notice */}
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
-          <p className="text-sm text-amber-800 dark:text-amber-300">{t("parser:betaNotice")}</p>
+        <div className="mb-4 rounded-lg border p-3 border-(--warning)/30 bg-(--warning)/10">
+          <p className="text-sm text-(--warning)">{t("parser:betaNotice")}</p>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="mb-6 border-b border-(--color-border)">
           <nav className="flex gap-6 sm:gap-8 overflow-x-auto overflow-y-hidden whitespace-nowrap">
             {tabs.map((tab) => (
               <button
@@ -94,10 +94,10 @@ export default function ParserPage(): JSX.Element {
           <div className="space-y-6">
             {!uploadedFile ? (
               <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                <h2 className="text-xl font-semibold text-(--text-primary) mb-2">
                   {t("parser:annotate.title")}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                <p className="text-sm text-(--text-muted) mb-6">
                   {t("parser:annotate.description")}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,13 +114,13 @@ export default function ParserPage(): JSX.Element {
                     />
                     <button
                       onClick={() => emailFileInputRef.current?.click()}
-                      className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
+                      className="w-full p-6 border-2 border-dashed border-(--color-border) rounded-lg hover:border-(--accent) transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">📧</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">
+                      <div className="font-semibold text-(--text-primary)">
                         {t("parser:annotate.emailButton")}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-(--text-muted)">
                         {t("parser:annotate.emailFormats")}
                       </div>
                     </button>
@@ -138,13 +138,13 @@ export default function ParserPage(): JSX.Element {
                     />
                     <button
                       onClick={() => boardingPassFileInputRef.current?.click()}
-                      className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
+                      className="w-full p-6 border-2 border-dashed border-(--color-border) rounded-lg hover:border-(--accent) transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">🎫</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">
+                      <div className="font-semibold text-(--text-primary)">
                         {t("parser:annotate.boardingPassButton")}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-(--text-muted)">
                         {t("parser:annotate.boardingPassFormats")}
                       </div>
                     </button>
@@ -182,10 +182,10 @@ export default function ParserPage(): JSX.Element {
         {/* Tab: Community Templates */}
         {activeTab === "community" && (
           <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+            <h2 className="text-xl font-semibold text-(--text-primary) mb-1">
               {t("parser:communityTemplates.title")}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-sm text-(--text-muted) mb-6">
               {t("parser:communityTemplates.description")}
             </p>
             <TemplateStatusView />

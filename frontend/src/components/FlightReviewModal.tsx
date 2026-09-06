@@ -50,10 +50,9 @@ function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
 }
 
 function getConfidenceColor(confidence: number): string {
-  if (confidence >= 70) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  if (confidence >= 40)
-    return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-  return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+  if (confidence >= 70) return "text-(--success) bg-(--success)/15";
+  if (confidence >= 40) return "text-(--warning) bg-(--warning)/15";
+  return "text-(--danger) bg-(--danger)/15";
 }
 
 interface FlightReviewModalProps {

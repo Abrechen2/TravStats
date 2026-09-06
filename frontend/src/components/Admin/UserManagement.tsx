@@ -68,9 +68,7 @@ export default function UserManagement({
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-(--text-primary)">
-                    {user.username}
-                  </div>
+                  <div className="text-sm font-medium text-(--text-primary)">{user.username}</div>
                   <div className="text-xs text-(--text-muted)">
                     {format(new Date(user.createdAt), "MMM d, yyyy")}
                   </div>
@@ -101,11 +99,11 @@ export default function UserManagement({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isActive ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--success)/15 text-(--success)">
                       {t("admin:users.status.active")}
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--danger)/15 text-(--danger)">
                       {t("admin:users.status.inactive")}
                     </span>
                   )}
@@ -113,7 +111,7 @@ export default function UserManagement({
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     onClick={() => onToggleUserActive(user.id)}
-                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="text-(--accent) hover:text-(--accent)"
                   >
                     {user.isActive
                       ? t("admin:users.actions.deactivate")
@@ -148,7 +146,7 @@ export default function UserManagement({
                         onClick={() =>
                           setDeleteUserConfirm({ id: user.id, username: user.username })
                         }
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-(--danger) hover:text-(--danger)"
                       >
                         {t("admin:users.actions.delete")}
                       </button>

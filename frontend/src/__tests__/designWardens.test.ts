@@ -83,16 +83,26 @@ describe("warden: no raw Tailwind palette class", () => {
 
 // ───────────────────────────────────────────────────────────────────────────
 describe("warden: no dark: variant", () => {
+  /**
+   * CLOSED, so absolute rather than frozen.
+   *
+   * There were 92 of them across 18 files. TravStats is dark-only and
+   * `class="dark"` is fixed in index.html, so every `dark:` variant was a
+   * branch that is always taken — and the light class beside it was a colour
+   * nobody had ever seen. Both halves are gone: the dark value said what was
+   * meant, so it decided which token replaced the pair.
+   *
+   * The baseline entry stays at `[]` on purpose. It documents that this list
+   * reached zero rather than that the rule was never needed.
+   */
   const offenders = sourceFiles([".ts", ".tsx", ".css"])
     .filter((file) => /\bdark:[\w[\]/.()-]+/.test(readFileSync(file, "utf8")))
     .map(rel)
     .sort();
 
-  it("gains no new dark: variant", () => {
-    // TravStats is dark-only and `class="dark"` is fixed in index.html, so a
-    // `dark:` variant is a branch that is always taken — and the light branch
-    // beside it is a colour nobody has ever seen.
-    expectRatchet(offenders, baseline.darkVariants, "dark: variants");
+  it("has none left", () => {
+    expect(offenders, "a dark: variant is a branch that is always taken").toEqual([]);
+    expect(baseline.darkVariants).toEqual([]);
   });
 });
 

@@ -87,7 +87,7 @@ export default function MyTemplates(): JSX.Element {
 
   if (error) {
     return (
-      <div className="text-center py-16 text-red-500 dark:text-red-400">
+      <div className="text-center py-16 text-(--danger)">
         <p className="text-lg font-medium">{t(error)}</p>
       </div>
     );
@@ -95,7 +95,7 @@ export default function MyTemplates(): JSX.Element {
 
   if (templates.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-16 text-(--text-muted)">
         <div className="text-4xl mb-4">🧩</div>
         <p className="text-lg font-medium">{t("parser:myTemplates.empty")}</p>
         <p className="text-sm mt-1">{t("parser:myTemplates.emptyHint")}</p>
@@ -113,12 +113,10 @@ export default function MyTemplates(): JSX.Element {
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-gray-900 dark:text-white truncate">
-                {tmpl.name}
-              </span>
+              <span className="font-medium text-(--text-primary) truncate">{tmpl.name}</span>
               {statusBadge(tmpl.status)}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-4">
+            <div className="text-xs text-(--text-muted) flex gap-4">
               {tmpl.stats && (
                 <>
                   <span>

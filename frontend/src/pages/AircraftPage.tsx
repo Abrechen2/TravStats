@@ -46,10 +46,7 @@ export default function AircraftPage(): JSX.Element {
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <Link
-            to="/stats"
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block"
-          >
+          <Link to="/stats" className="text-sm text-(--accent) hover:underline mb-4 inline-block">
             ← {t("aircraft:backToStats")}
           </Link>
           {loading && <p className="text-sm text-gray-500">{t("common:loading.default")}</p>}
@@ -63,7 +60,7 @@ export default function AircraftPage(): JSX.Element {
             <>
               <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6 mb-6">
                 <h1 className="t-screen-title mb-1">{profile.registration}</h1>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-(--text-secondary)">
                   {profile.aircraft || t("aircraft:unknownType")}
                   {profile.airline && <span className="text-gray-500"> · {profile.airline}</span>}
                 </p>
@@ -95,7 +92,7 @@ export default function AircraftPage(): JSX.Element {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                      <tr className="text-left text-(--text-muted) border-b border-(--color-border)">
                         <th className="py-2 pr-4">{t("aircraft:flights.date")}</th>
                         <th className="py-2 pr-4">{t("aircraft:flights.flightNumber")}</th>
                         <th className="py-2 pr-4">{t("aircraft:flights.route")}</th>
@@ -104,10 +101,7 @@ export default function AircraftPage(): JSX.Element {
                     </thead>
                     <tbody>
                       {profile.flights.map((flight) => (
-                        <tr
-                          key={flight.id}
-                          className="border-b border-gray-100 dark:border-gray-700/50"
-                        >
+                        <tr key={flight.id} className="border-b border-(--color-border)">
                           <td className="py-2 pr-4">
                             {formatDate(flight.departureTime, i18n.language)}
                           </td>

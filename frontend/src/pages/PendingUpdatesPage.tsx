@@ -240,7 +240,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.applied")}
                 </div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <div className="text-2xl font-bold text-(--success)">
                   {statistics.appliedUpdates}
                 </div>
               </div>
@@ -248,7 +248,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.rejected")}
                 </div>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                <div className="text-2xl font-bold text-(--danger)">
                   {statistics.rejectedUpdates}
                 </div>
               </div>
