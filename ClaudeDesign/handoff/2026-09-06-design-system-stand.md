@@ -12,7 +12,7 @@ Sieben Blöcke: **drei fertig, vier teilweise.**
 ## Stand
 
 - Worktree `/home/claude/projekte/TravStats/.worktrees/design-system`
-- Zweig `dev/design-system`, Spitze **`8394ba53`**, auf **forgejo** und
+- Zweig `dev/design-system`, Spitze **`15507b67`**, auf **forgejo** und
   **github**. **Nicht** nach `main` oder `dev/v2.7` gemergt — Owner-Entscheidung.
 - Gates (echte Exit-Codes): frontend tsc 0, lint 0, vitest 0
   (**3715 Tests in 431 Dateien**), `check:size` 0, prettier 0, `vite build` 0;
@@ -26,7 +26,7 @@ Sieben Blöcke: **drei fertig, vier teilweise.**
 | 4 Dashboard und Karten | Kern fertig — Karte und Legende stimmen; Kopfleiste, Globus, mobiles Sheet offen | `…-block-4-bericht.md` |
 | 5 Statistik, Erfolge | teilweise — **Jahresrückblick `/review/:year` nicht gebaut** | `…-block-5-bericht.md` |
 | 6 Reisen, Reisepass, Werkzeuge | teilweise — Reisepass IST Papier, Posteingang auf `EmptyState`; Reisen/Werkzeuge offen | `…-block-6-bericht.md` |
-| 7 Aufräumen und Wächter | **Wächter fertig**, Aufräumen eingefroren | `…-block-7-bericht.md` |
+| 7 Aufräumen und Wächter | **Wächter fertig; `dark:` und die 12 Variablen zu**, Rest eingefroren | `…-block-7-bericht.md` |
 
 ## ⚠ Auf CT106 (Beta) läuft der Design-Build
 
@@ -39,7 +39,8 @@ gegen die echten Beta-Daten.
 > (11:42) und ohne Kenntnis der Ansage. Die Ansage ist die jüngere Information;
 > die Regel als Dauerregel bleibt richtig.
 
-- Läuft: `ghcr.io/abrechen2/travstats:2.7.0-design.1`, vorher `:2.6.0-rc.38`.
+- Läuft: `ghcr.io/abrechen2/travstats:2.7.0-design.3`, vorher `:2.6.0-rc.38`.
+  (`design.1` und `design.2` sind Zwischenstände desselben Zweigs.)
   **`backend/VERSION` ist unberührt** (2.6.1) — die Fassung kam als
   `--build-arg`, damit der Tag nichts über einen Release behauptet.
 - **Zurückdrehen, ein Befehl:**
@@ -78,11 +79,11 @@ also nur schrumpfen.
 |---|---|---|
 | `theme/__tests__/tokens.generated.test.ts` | Generatorausgabe = Tokendatei (CSS + TS) | absolut, grün |
 | `__tests__/designWardens.test.ts` | Hex-Literale | **80** Dateien |
-| — | rohe Tailwind-Palettenklassen | **80** Dateien |
-| — | `dark:`-Varianten | **15** Dateien |
+| — | rohe Tailwind-Palettenklassen | **72** Dateien (war 83) |
+| — | `dark:`-Varianten | **0 — geschlossen, jetzt absolut** (waren 92 in 18 Dateien) |
 | — | eigene `fixed inset-0`-Overlays | **44** Dateien |
 | — | jede gelesene CSS-Variable ist definiert | absolut, grün |
-| `__tests__/appShell.ratchet.test.ts` | Seiten, die ihre Shell selbst bauen | **17** Seiten |
+| `__tests__/appShell.ratchet.test.ts` | Seiten, die ihre Shell selbst bauen | **17** Seiten; das Dashboard ist raus |
 | `__tests__/screenTitle.test.ts` | jede `<h1>` ist `.t-screen-title` | absolut, grün |
 | `components/ui/__tests__/primitives.test.tsx` | kein Hex in `components/ui/` | absolut, grün |
 
@@ -104,12 +105,16 @@ davon. Wer den Companion-Zweig verwirft, muss auch diese Kopie zurückdrehen.
    Abfragen nach `Jahresrueckblick.dc.html`.
 3. **Kopfleiste** nach dem Export (56 px, Suchpille ⌘K, „Mehr"-Menü,
    Avatar-Menü). Die Primitive stehen seit Block 2; der Umbau berührt jede Seite.
-4. **`DashboardLayout`** braucht vermutlich eine **dritte Shell-Bauform**
-   (randlos, nicht scrollend): es ist ein `height: 100vh`-Flexlayout mit
-   `overflow: hidden`, `AppShell` bringt `min-h-screen` und Polsterung mit. Das
-   ist eine Frage an das Primitiv, kein mechanischer Umbau.
-5. **Block 3s Rest** und **Block 7s Aufräumen** — die Wächter zeigen nach jedem
-   Schritt, was übrig ist.
+4. **Block 3s Rest** und **Block 7s Aufräumen** — die Wächter zeigen nach jedem
+   Schritt, was übrig ist: 72 Dateien mit Tailwind-Palettenklassen, 44 eigene
+   Overlays, 80 mit Hex-Literalen.
+
+**Erledigt seit der ersten Fassung dieses Dokuments:** `AppShell` hat eine
+dritte Bauform `viewport` (die Seite IST das Fenster), und das Dashboard steht
+darauf — die Frage an das Primitiv ist beantwortet. Falle dabei: eine
+`viewport`-Seite darf **nicht** in `PageTransition` stecken, weil ein
+transformierter Vorfahr jeden `position: fixed`-Nachfahren gegen sich statt
+gegen das Fenster positioniert, worauf die Kartensteuerung sich verlässt.
 
 **Muster, das sich bewährt hat:** `.ts-paper` in `theme/ui.css` themt eine
 Fläche um, ohne ein einziges Kind anzufassen — es definiert die acht
