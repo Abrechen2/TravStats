@@ -8,7 +8,7 @@ import "./index.css";
 // transform), which masked the missing import until a map rendered MANY
 // markers and they stacked down the page as block elements.
 import "maplibre-gl/dist/maplibre-gl.css";
-// Import i18n config - this initializes i18n synchronously with initImmediate: false
+// Import i18n config - this initializes i18n synchronously with initAsync: false
 import "./i18n/config";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n/config";
