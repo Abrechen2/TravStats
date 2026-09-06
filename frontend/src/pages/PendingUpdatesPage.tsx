@@ -20,12 +20,14 @@
  * bookmark.
  */
 
+import AppShell from "../components/ui/AppShell";
+import EmptyState from "../components/ui/EmptyState";
+import { Card } from "../components/ui/Card";
 import { useState, useEffect } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { pendingUpdatesApi, type StatisticsImpact } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
-import NavigationBar from "../components/NavigationBar";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
@@ -192,10 +194,8 @@ export default function PendingUpdatesPage(): JSX.Element {
   const editedCount = updates.filter((u) => u.status === "edited").length;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <AppShell width="list">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-6">
           <h1 className="t-screen-title mb-2">{t("dataQuality:inbox.title")}</h1>
@@ -325,31 +325,35 @@ export default function PendingUpdatesPage(): JSX.Element {
             <GlobeLoader size={160} label={t("common:loading.default")} />
           </div>
         ) : sortedUpdates.length === 0 ? (
-          <div
-            className="rounded-lg shadow-xs p-12 text-center"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <svg
-              className="mx-auto h-12 w-12"
-              style={{ color: "var(--text-muted)" }}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium" style={{ color: "var(--text-primary)" }}>
-              {t("pendingUpdates:empty.title")}
-            </h3>
-            <p className="mt-2" style={{ color: "var(--text-muted)" }}>
-              {t("pendingUpdates:empty.description")}
-            </p>
-          </div>
+          /* `pending`, not `nothing`. The copy is already in the future tense
+             — "Updates erscheinen hier, wenn …" — so this is not "there is
+             nothing", it is "it has not happened yet", which is the kind the
+             design system paints in `info` and never in red. `nothing` would
+             have owed the reader a call to action; a waiting state does not,
+             because the nightly run is what fills this. */
+          <Card flush>
+            <EmptyState
+              kind="pending"
+              icon={
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                  <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                </svg>
+              }
+              title={t("pendingUpdates:empty.title")}
+              description={t("pendingUpdates:empty.description")}
+            />
+          </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {sortedUpdates.map((update) => (
@@ -403,6 +407,6 @@ export default function PendingUpdatesPage(): JSX.Element {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }
