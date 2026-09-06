@@ -149,9 +149,14 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 DATABASE_URL="postgresql://…" npm run check
 ```
 
-This list is the real gate. CI runs a Prettier check on changed frontend files
-and nothing else — see **Rules** below for what is machine-enforced and what
-is not.
+This list is the real gate. CI (`ci.yml`, since 2026-08-30) runs the first
+two lines of it on every push and PR — typecheck and lint in both trees, and
+Vitest — plus Prettier on changed frontend files. The backend Jest job is
+there too but **advisory** (`continue-on-error`, for three named reasons in
+the workflow's comment block), and nothing in CI runs `npm run check`. So a
+green badge covers the frontend and the static half of the backend; the
+backend suite and the repo-level checks are still yours to run. See
+**Rules** below for what is machine-enforced and what is not.
 
 ## Docker & Deployment
 
@@ -475,6 +480,16 @@ enforced, and merely practised** below.
   the default — `private` also keeps them out of shared caches. Never add a
   blanket cacheable header to `/api`, and if a new endpoint must cache, use
   `private`, never `public`.
+- **express-rate-limit 8 reads your `keyGenerator`'s source** (since
+  2026-09-06, #294). It calls `toString()` on the function and, if it finds
+  `req.ip` without `ipKeyGenerator`, logs `ERR_ERL_KEY_GEN_IPV6` through
+  `console.error` once per limiter — at BUILD time, not per request, so a
+  boot prints twenty-odd error lines and the suite stays green. The
+  complaint is right: one IPv6 host owns far more than one address, so a raw
+  `req.ip` key hands it a fresh bucket per request. `userOrIpKey` in
+  `middleware/rateLimit.ts` masks to /56 via `ipKeyGenerator`;
+  `rateLimit.ipv6.test.ts` checks the silent boot and the shared bucket. A
+  new limiter with its own key function must do the same.
 
 ## Rules — enforced, and merely practised
 
@@ -511,11 +526,22 @@ size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
 shrink.
 
-**Where they run.** Only the pre-commit hooks and the Prettier job are
-automatic; a green GitHub badge means Prettier passed on the changed frontend
-files and nothing more. Everything else is the pre-`/deploy` gate above. Nothing runs `check:drift` in CI (forgejo#60); the script has said so since
-2026-09-01, and the two plan docs that called it "CI-guarded" were corrected
-on 2026-09-04.
+**Where they run.** The pre-commit hooks and two workflows are automatic.
+`ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
+Prettier on changed frontend files as required jobs, and the backend Jest
+suite as an advisory one — it is allowed to fail, and its comment block names
+the three things that must be fixed before that changes. `security.yml` runs
+`npm audit` on production deps, Trivy and CodeQL on every push to `main` and
+weekly. CodeQL has been red on every run since it landed — not a finding,
+a rejection: "CodeQL analyses from advanced configurations cannot be
+processed when the default setup is enabled". The repository has GitHub's
+default code-scanning setup switched on, and that refuses the SARIF our own
+job uploads. One of the two has to go (repo settings, owner's call), and
+until then the red Security badge says nothing. None of the four ratchets, `check:size` or `check:drift` run
+in CI (forgejo#60); the drift script has said so since 2026-09-01, and the
+two plan docs that called it "CI-guarded" were corrected on 2026-09-04. This
+paragraph itself claimed "only Prettier" for a week after `ci.yml` landed —
+corrected 2026-09-06.
 
 **One drift script, since 2026-09-01.** There were two, and they disagreed:
 `scripts/check-schema-drift.mjs` at the root replayed the migrations into a
@@ -699,7 +725,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (8884 symbols, 23533 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (8925 symbols, 23607 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
