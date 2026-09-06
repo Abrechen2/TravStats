@@ -167,7 +167,8 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
               <li key={`${entry.kind}-${linkFor(entry)}-${entry.date ?? "undated"}`}>
                 <Link
                   to={linkFor(entry)}
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                  className="hover:underline"
+                  style={{ color: "var(--accent)" }}
                 >
                   {labelFor(entry, t)}
                 </Link>

@@ -98,6 +98,44 @@
   background: var(--ts-surface);
 }
 
+/* ─── Paper ─────────────────────────────────────────────────────────────── */
+/*
+ * The one light surface, as a scope rather than as a repaint.
+ *
+ * TravStats is dark with exactly one exception: paper. The passport is that
+ * exception, and the flight certificate is its second sheet
+ * (`lib/paperPalette.ts` carries the values for the certificate, which is
+ * rasterised and therefore cannot read a custom property).
+ *
+ * Written as a redefinition of the app's OWN variables inside this subtree,
+ * not as a new set of classes. That is what makes it survive: a passport card
+ * contains a country table and an evidence summary, and both read
+ * `--text-muted`, `--border` and `--bg-elevated` from the dark theme. Repainting
+ * only the container would have produced a light box full of dark-theme text —
+ * unreadable, and the reason this looked like a whole-page job. Redefining the
+ * eight names the subtree reads makes every child adapt without being touched,
+ * including any child added later.
+ *
+ * Every value is derived from `paper` and `paperText`, so paper stays two
+ * decisions rather than eight.
+ */
+.ts-paper {
+  --bg-base: var(--ts-paper);
+  --bg-surface: color-mix(in srgb, var(--ts-paper-text) 4%, var(--ts-paper));
+  --bg-elevated: color-mix(in srgb, var(--ts-paper-text) 5%, var(--ts-paper));
+  --bg-muted: color-mix(in srgb, var(--ts-paper-text) 8%, var(--ts-paper));
+  --text-primary: var(--ts-paper-text);
+  --text-secondary: color-mix(in srgb, var(--ts-paper-text) 78%, transparent);
+  --text-muted: color-mix(in srgb, var(--ts-paper-text) 60%, transparent);
+  --border: color-mix(in srgb, var(--ts-paper-text) 18%, transparent);
+  --color-border: var(--border);
+  /* The brand amber in its pressed shade — the accent stays legible on light. */
+  --accent: var(--ts-accent-pressed);
+
+  background: var(--ts-paper);
+  color: var(--ts-paper-text);
+}
+
 /* ─── Status pill ───────────────────────────────────────────────────────── */
 /*
  * The geometry half of the recipe, for the four call sites that take a style

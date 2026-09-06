@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import AppShell from "../components/ui/AppShell";
 import { Link } from "react-router-dom";
 
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
 import CountryTable from "../components/Passport/CountryTable";
 import EvidenceSummary from "../components/Passport/EvidenceSummary";
 import { countryName } from "../components/Passport/countryName";
@@ -103,68 +102,66 @@ export default function PassportPage(): JSX.Element {
 
   if (!isEnabled("flight")) {
     return (
-      <PageTransition>
-        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-          <NavigationBar />
-          <div className="max-w-5xl mx-auto px-4 py-10">
-            <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("passport:needsFlights")}
-            </p>
-          </div>
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("passport:needsFlights")}
+        </p>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="max-w-5xl mx-auto px-4 py-6 print:max-w-none print:py-0">
-          <div className="flex items-baseline justify-between mb-4 print:hidden">
-            <Link to="/stats" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              ← {t("passport:backToStats")}
-            </Link>
-            {passport && passport.summary.countriesTotal > 0 && (
-              <button
-                type="button"
-                onClick={(): void => window.print()}
-                className="text-sm px-3 py-1.5 rounded-lg border"
-                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
-              >
-                {t("passport:print")}
-              </button>
-            )}
-          </div>
-
-          {loading && (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("common:loading.default")}
-            </p>
-          )}
-
-          {/* A failed load says so. It must never fall through to a card of
-              zeros, which reads as "you have never travelled". */}
-          {!loading && failure !== null && (
-            <div
-              className="rounded-xl p-6"
-              style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+    <AppShell width="list">
+      <div className="print:max-w-none print:py-0">
+        <div className="flex items-baseline justify-between mb-4 print:hidden">
+          <Link to="/stats" className="text-sm hover:underline" style={{ color: "var(--accent)" }}>
+            ← {t("passport:backToStats")}
+          </Link>
+          {passport && passport.summary.countriesTotal > 0 && (
+            <button
+              type="button"
+              onClick={(): void => window.print()}
+              className="text-sm px-3 py-1.5 rounded-lg border"
+              style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
             >
-              <p className="text-sm mb-3">{t("passport:loadError")}</p>
-              <button
-                type="button"
-                onClick={(): void => window.location.reload()}
-                className="text-sm px-3 py-1.5 rounded-lg border"
-                style={{ borderColor: "var(--border)" }}
-              >
-                {t("common:buttons.retry")}
-              </button>
-            </div>
+              {t("passport:print")}
+            </button>
           )}
+        </div>
 
-          {!loading && failure === null && passport !== null && (
-            <>
+        {loading && (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("common:loading.default")}
+          </p>
+        )}
+
+        {/* A failed load says so. It must never fall through to a card of
+              zeros, which reads as "you have never travelled". */}
+        {!loading && failure !== null && (
+          <div
+            className="rounded-xl p-6"
+            style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+          >
+            <p className="text-sm mb-3">{t("passport:loadError")}</p>
+            <button
+              type="button"
+              onClick={(): void => window.location.reload()}
+              className="text-sm px-3 py-1.5 rounded-lg border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {t("common:buttons.retry")}
+            </button>
+          </div>
+        )}
+
+        {!loading && failure === null && passport !== null && (
+          <>
+            {/* Everything inside is the DOCUMENT — the one light surface in
+                  a dark app. `.ts-paper` redefines the eight variables this
+                  subtree reads, so the country table and the evidence summary
+                  follow without being touched. */}
+            <div className="ts-paper rounded-2xl p-6 print:p-0">
               {passport.summary.countriesTotal === 0 ? (
                 <div
                   className="rounded-xl p-8 text-center"
@@ -388,10 +385,10 @@ export default function PassportPage(): JSX.Element {
                   <CountryTable countries={passport.countries} locale={locale} />
                 </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

@@ -121,7 +121,8 @@ export default function CountryRow({
               type="button"
               onClick={(): void => setOpen((v) => !v)}
               aria-expanded={open}
-              className="text-[11px] underline text-blue-600 dark:text-blue-400 print:hidden"
+              className="text-[11px] underline print:hidden"
+              style={{ color: "var(--accent)" }}
             >
               {t(open ? "passport:countries.hideRecords" : "passport:countries.showRecords")}
             </button>

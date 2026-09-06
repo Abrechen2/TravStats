@@ -29,7 +29,6 @@ const STILL_BUILDS_ITS_OWN_SHELL: readonly string[] = [
   "LodgingDetailPage.tsx",
   "NotFoundPage.tsx",
   "ParserPage.tsx",
-  "PassportPage.tsx",
   "PendingUpdatesPage.tsx",
   "PlaceDetailPage.tsx",
   "PlaceListDetailPage.tsx",
