@@ -320,6 +320,31 @@
     --domain-road-locked: var(--domain-tour-locked);
     --domain-ferry-locked: var(--domain-tour-locked);
 
+    /*
+     * Twelve names that were REFERENCED and never DEFINED — 55 uses
+     * across the app, every one of them rendering as nothing at all. A missing
+     * custom property has no error: the declaration is simply dropped, so a
+     * border disappears, a star loses its gold, a field's background falls back
+     * to whatever is behind it. Some carried a fallback and were therefore
+     * merely a second hardcoded palette; the rest carried none.
+     *
+     * They are defined here as aliases of the token that was meant, so nothing
+     * renders as nothing while the references themselves are replaced. A
+     * warden (`__tests__/cssVariables.test.ts`) fails on the thirteenth.
+     */
+    --border: var(--ts-border);
+    --color-amber: var(--ts-accent);
+    --color-primary: var(--ts-accent);
+    --color-error: var(--ts-bad);
+    --fx: var(--ts-info);
+    --star: var(--ts-tier-gold);
+    --bg-inset: var(--ts-surface2);
+    --bg-surface-2: var(--ts-surface2);
+    --bg-input: var(--ts-surface);
+    --card-bg: var(--ts-surface);
+    --text-faint: var(--ts-faint);
+    --text-subtle: var(--ts-muted);
+
     /* State colours */
     --danger-stamp: #e65a4f;
     --danger: #f85149;
