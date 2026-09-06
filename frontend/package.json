@@ -51,7 +51,7 @@
     "tesseract.js": "^6.0.1",
     "topojson-client": "^3.1.0",
     "zod": "^3.22.4",
-    "zustand": "^4.5.7"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
