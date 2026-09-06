@@ -23,6 +23,12 @@ updates:
         update-types: [minor, patch]
     open-pull-requests-limit: 5
     labels: [dependencies, frontend]
+    ignore:
+      # 0.5 declares a peer of eslint ^9 || ^10; the frontend is on ESLint 8.
+      # Grouped in, it fails the whole minor-patch PR on ERESOLVE (#298).
+      # Lift this with the ESLint 9 move.
+      - dependency-name: eslint-plugin-react-refresh
+        versions: ['>=0.5.0']
 
   # GitHub Actions
   - package-ecosystem: github-actions
