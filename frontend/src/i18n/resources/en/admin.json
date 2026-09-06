@@ -585,7 +585,7 @@
     "settingsFailed": "Failed to save backup settings",
     "schedule": {
       "title": "Automatic Backup",
-      "description": "Scheduled backups run at 2:00 AM.",
+      "description": "Scheduled backups run at 02:00 UTC – daily, on Sundays or on the 1st of the month, depending on the interval.",
       "enableAutoBackup": "Enable automatic backup",
       "interval": "Interval",
       "retentionDays": "Retention (days)"

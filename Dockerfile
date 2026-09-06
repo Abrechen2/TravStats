@@ -86,7 +86,7 @@ LABEL org.opencontainers.image.title="TravStats"
 LABEL org.opencontainers.image.description="Personal flight tracking and statistics"
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/Abrechen2/TravStats"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 WORKDIR /app
 
@@ -155,11 +155,13 @@ COPY backend/data/airline-logos ./data/airline-logos
 # degrades to placeholders.
 COPY backend/data/openflights/airlines.dat ./data/openflights/airlines.dat
 COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
-# Bundle one-shot maintenance scripts (e.g. backfillRouteDistance.ts) into
-# the production image so the `docker exec TravStats npx tsx
-# /app/backend/scripts/<name>.ts` workflow advertised in the CHANGELOG
-# actually resolves. These are not part of the running app; they exist
-# only for the operator to invoke explicitly on demand.
+# Developer scripts, copied as-is. NOTE: these are .ts files and the image
+# has neither tsx nor the src/ tree they import from, so they do NOT run
+# here — that was forgejo#108, where the documented backfill could not
+# resolve `../src/services/co2Calculator`. Anything an operator is meant
+# to run inside the container lives in backend/src/scripts/ instead, is
+# compiled with the app, and runs as
+# `node /app/backend/dist/scripts/<name>.js` (see package.json backfill:*).
 COPY backend/scripts ./scripts
 RUN npx prisma generate
 

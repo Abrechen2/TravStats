@@ -585,7 +585,7 @@
     "settingsFailed": "Fehler beim Speichern der Einstellungen",
     "schedule": {
       "title": "Automatisches Backup",
-      "description": "Geplante Backups werden täglich um 2:00 Uhr ausgeführt.",
+      "description": "Geplante Backups laufen um 2:00 UTC – je nach Intervall täglich, sonntags oder am 1. des Monats.",
       "enableAutoBackup": "Automatisches Backup aktivieren",
       "interval": "Intervall",
       "retentionDays": "Aufbewahrung (Tage)"

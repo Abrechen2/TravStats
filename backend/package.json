@@ -28,6 +28,7 @@
     "generate:airline-catalog": "tsx scripts/generate-airline-catalog.ts",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "backfill:closed-airports": "node dist/scripts/backfillClosedAirports.js",
+    "backfill:route-distance": "node dist/scripts/backfillRouteDistance.js",
     "seed:demo": "node dist/seedDemoAccount.js",
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
     "seed:dev-admin-keys": "tsx src/seedDevAdminKeys.ts",
