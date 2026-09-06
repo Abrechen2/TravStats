@@ -90,7 +90,7 @@ export default function TripHero({
           ← {t("trips:detail.backToList")}
         </Link>
         <div className="flex items-end gap-3 flex-wrap">
-          <h1 className="text-3xl font-display font-bold leading-tight">{trip.name}</h1>
+          <h1 className="t-screen-title leading-tight">{trip.name}</h1>
           <StatusPill status={trip.status} t={t} />
           {trip.icon && <span className="text-2xl">{trip.icon}</span>}
         </div>

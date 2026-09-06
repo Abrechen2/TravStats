@@ -470,7 +470,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             <Link to={`/trips/${id}`} className="text-xs text-(--text-muted) hover:underline">
               ← {t("trips:tours.backToTrip")}
             </Link>
-            <h1 className="text-xl font-semibold mt-1">{route.name}</h1>
+            <h1 className="t-screen-title mt-1">{route.name}</h1>
             <p className="text-sm text-(--text-muted)">
               {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
             </p>

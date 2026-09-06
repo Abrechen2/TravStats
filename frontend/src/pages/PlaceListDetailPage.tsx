@@ -309,7 +309,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                 </button>
               </div>
             ) : (
-              <h1 className="font-display flex items-center gap-3 text-2xl font-semibold tracking-tight">
+              <h1 className="t-screen-title flex items-center gap-3">
                 <span
                   aria-hidden
                   style={{

@@ -233,7 +233,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
         <div className="mt-3 mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display flex items-center gap-3 text-2xl font-semibold tracking-tight">
+            <h1 className="t-screen-title flex items-center gap-3">
               <span aria-hidden>{PLACE_CATEGORY_ICONS[place.category]}</span>
               {place.name}
             </h1>

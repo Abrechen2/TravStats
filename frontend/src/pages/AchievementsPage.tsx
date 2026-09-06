@@ -30,12 +30,21 @@ export function filterAchievementsByDomain(
   );
 }
 
+/**
+ * Tier colours, from the token layer.
+ *
+ * Three of the five were literals here — bronze, platinum and diamond — while
+ * silver and gold pointed at app variables. They happened to match
+ * `tierColor` in `design/tokens.json`, which is luck rather than a guarantee:
+ * nothing tied them together, so a change upstream would have moved three of
+ * the five and left two behind.
+ */
 const tierTextColorValues: Record<string, string> = {
-  bronze: "#f59e0b",
-  silver: "var(--text-muted)",
-  gold: "var(--accent)",
-  platinum: "#22d3ee",
-  diamond: "#a855f7",
+  bronze: "var(--ts-tier-bronze)",
+  silver: "var(--ts-tier-silver)",
+  gold: "var(--ts-tier-gold)",
+  platinum: "var(--ts-tier-platinum)",
+  diamond: "var(--ts-tier-diamond)",
 };
 
 export default function AchievementsPage(): JSX.Element {
@@ -173,12 +182,7 @@ export default function AchievementsPage(): JSX.Element {
                 >
                   {t("achievements:leaderboard.backToAchievements")}
                 </button>
-                <h1
-                  className="text-3xl sm:text-4xl font-bold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  🏆 {t("achievements:leaderboard.title")}
-                </h1>
+                <h1 className="t-screen-title">🏆 {t("achievements:leaderboard.title")}</h1>
               </div>
               <div
                 className="rounded-xl p-6"
@@ -271,12 +275,7 @@ export default function AchievementsPage(): JSX.Element {
         <div className="p-4 sm:p-6 pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
-              <h1
-                className="text-3xl sm:text-4xl font-bold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                🏆 {t("achievements:title")}
-              </h1>
+              <h1 className="t-screen-title">🏆 {t("achievements:title")}</h1>
             </div>
             {summary && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">

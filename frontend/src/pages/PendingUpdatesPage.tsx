@@ -198,9 +198,7 @@ export default function PendingUpdatesPage(): JSX.Element {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-            {t("dataQuality:inbox.title")}
-          </h1>
+          <h1 className="t-screen-title mb-2">{t("dataQuality:inbox.title")}</h1>
           <p style={{ color: "var(--text-muted)" }}>{t("dataQuality:inbox.description")}</p>
         </div>
 

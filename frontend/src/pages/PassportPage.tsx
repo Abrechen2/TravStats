@@ -107,7 +107,7 @@ export default function PassportPage(): JSX.Element {
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
           <NavigationBar />
           <div className="max-w-5xl mx-auto px-4 py-10">
-            <h1 className="text-2xl font-bold mb-2">{t("passport:title")}</h1>
+            <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("passport:needsFlights")}
             </p>
@@ -170,7 +170,7 @@ export default function PassportPage(): JSX.Element {
                   className="rounded-xl p-8 text-center"
                   style={{ background: "var(--bg-elevated)" }}
                 >
-                  <h1 className="text-2xl font-bold mb-2">{t("passport:title")}</h1>
+                  <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {t("passport:empty")}
                   </p>

@@ -152,7 +152,7 @@ export default function PlaceListsPage(): JSX.Element {
 
         <div className="mt-3 mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight">
+            <h1 className="t-screen-title">
               {t("places:lists.title")}
             </h1>
             <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>

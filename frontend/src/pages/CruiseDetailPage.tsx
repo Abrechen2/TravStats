@@ -171,7 +171,7 @@ export default function CruiseDetailPage(): JSX.Element {
               🚢
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-(--text-primary)">
+              <h1 className="t-screen-title">
                 {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
               </h1>
               <p className="text-sm text-(--text-muted)">

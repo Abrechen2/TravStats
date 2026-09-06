@@ -340,7 +340,7 @@ export default function CuratedChecklistPage(): JSX.Element {
 
         <div className="mt-3 mb-5 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display flex items-center gap-3 text-2xl font-semibold tracking-tight">
+            <h1 className="t-screen-title flex items-center gap-3">
               {progress.icon && <span aria-hidden>{progress.icon}</span>}
               {title}
             </h1>

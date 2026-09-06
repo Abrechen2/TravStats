@@ -229,7 +229,7 @@ export default function FlightDetailPage(): JSX.Element {
                 ✈
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+                <h1 className="t-screen-title">
                   {[flight.airline, flight.flightNumber].filter(Boolean).join(" ") ||
                     t("common:labels.unknown")}
                 </h1>

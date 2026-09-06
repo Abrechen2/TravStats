@@ -678,12 +678,7 @@ export default function AdminPage(): JSX.Element {
           }}
         >
           <div className="px-4 pb-3 mb-1" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            <h1
-              className="text-sm font-semibold uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("admin:title")}
-            </h1>
+            <h1 className="t-screen-title">{t("admin:title")}</h1>
             {/* The counterpart of the scope line in user settings. Everything on
                 this surface is instance-wide; saying so is what distinguishes
                 "Externe Dienste (Instanz)" here from "Meine externen Dienste"

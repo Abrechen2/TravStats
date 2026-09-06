@@ -160,7 +160,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
             {chainInitials(chain.name)}
           </span>
           <div>
-            <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">
+            <h1 className="t-screen-title">
               {chain.name}
             </h1>
             <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">

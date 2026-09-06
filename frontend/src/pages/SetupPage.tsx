@@ -95,7 +95,7 @@ export default function SetupPage(): JSX.Element {
         <div className="bg-(--bg-elevated) rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">✈️</div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="t-screen-title mb-2">
               {t("setup:title", { appName: t("common:app.name") })}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">{t("setup:subtitle")}</p>

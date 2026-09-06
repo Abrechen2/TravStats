@@ -55,14 +55,14 @@ export default function AircraftPage(): JSX.Element {
           {loading && <p className="text-sm text-gray-500">{t("common:loading.default")}</p>}
           {!loading && notFound && (
             <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-              <h1 className="text-2xl font-bold mb-2">{registration}</h1>
+              <h1 className="t-screen-title mb-2">{registration}</h1>
               <p className="text-sm text-gray-500">{t("aircraft:notFound")}</p>
             </div>
           )}
           {!loading && profile && (
             <>
               <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6 mb-6">
-                <h1 className="text-3xl font-bold font-mono mb-1">{profile.registration}</h1>
+                <h1 className="t-screen-title mb-1">{profile.registration}</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   {profile.aircraft || t("aircraft:unknownType")}
                   {profile.airline && <span className="text-gray-500"> · {profile.airline}</span>}

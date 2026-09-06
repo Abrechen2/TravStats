@@ -220,12 +220,7 @@ function AppContent() {
             >
               <div className="text-center">
                 <div className="text-6xl mb-4">💥</div>
-                <h1
-                  className="text-2xl font-display font-bold mb-2"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {t("errorBoundary.title")}
-                </h1>
+                <h1 className="t-screen-title mb-2">{t("errorBoundary.title")}</h1>
                 <p className="mb-6" style={{ color: "var(--text-muted)" }}>
                   {t("errorBoundary.message")}
                 </p>

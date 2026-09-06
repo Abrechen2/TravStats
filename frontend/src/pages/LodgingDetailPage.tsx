@@ -224,7 +224,7 @@ export default function LodgingDetailPage(): JSX.Element {
               {typeIcon}
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-[var(--text-primary)]">{lodging.name}</h1>
+              <h1 className="t-screen-title">{lodging.name}</h1>
               <p className="text-sm text-[var(--text-muted)]">
                 {lodging.chain ? (
                   <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />

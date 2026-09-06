@@ -162,12 +162,7 @@ export default function LoginPage(): JSX.Element {
         {/* Brand lockup */}
         <div className="flex flex-col items-center text-center mb-8 gap-3">
           <LogoLockup size={26} markSize={72} layout="stacked" />
-          <h1
-            className="mt-2 text-2xl font-display font-semibold tracking-tight"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {t("login.heading")}
-          </h1>
+          <h1 className="t-screen-title mt-2">{t("login.heading")}</h1>
         </div>
 
         {/* Card */}
