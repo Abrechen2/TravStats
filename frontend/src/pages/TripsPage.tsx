@@ -48,8 +48,8 @@ export default function TripsPage(): JSX.Element {
         <div className="px-4 py-6">
           <div className="max-w-7xl mx-auto">
             <h1 className="t-screen-title mb-1">{t("trips:tab")}</h1>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("trips:count", { count: trips.length })}
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {t("trips:count", { count: trips.length })}
             </p>
           </div>
         </div>

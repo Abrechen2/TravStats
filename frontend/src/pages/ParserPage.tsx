@@ -54,9 +54,7 @@ export default function ParserPage(): JSX.Element {
       <header className="bg-(--bg-elevated) border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="t-screen-title">
-              {t("parser:title")}
-            </h1>
+            <h1 className="t-screen-title">{t("parser:title")}</h1>
             <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
               {t("parser:beta")}
             </span>

@@ -17,9 +17,7 @@ export default function NotFoundPage(): JSX.Element {
       <NavigationBar />
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 p-6 py-24 text-center">
         <div className="text-6xl font-bold text-(--accent)">404</div>
-        <h1 className="t-screen-title">
-          {t("notFound.title")}
-        </h1>
+        <h1 className="t-screen-title">{t("notFound.title")}</h1>
         <p className="text-sm text-(--text-muted)">{t("notFound.message")}</p>
         <button
           type="button"

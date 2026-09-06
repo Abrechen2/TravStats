@@ -160,9 +160,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
             {chainInitials(chain.name)}
           </span>
           <div>
-            <h1 className="t-screen-title">
-              {chain.name}
-            </h1>
+            <h1 className="t-screen-title">{chain.name}</h1>
             <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">
               {programLabel ?? t("lodging:chainDetail.noLoyaltyProgram")}
             </p>

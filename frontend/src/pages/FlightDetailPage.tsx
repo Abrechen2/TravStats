@@ -239,9 +239,7 @@ export default function FlightDetailPage(): JSX.Element {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              {flight.specialType && (
-                <SpecialTypeBadge type={flight.specialType as SpecialType} />
-              )}
+              {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
               <FlightStatusCell flight={flight} />
               <button
                 type="button"
