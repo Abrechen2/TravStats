@@ -3,6 +3,7 @@ import type { CruiseStatsResponse } from "../../api/stats";
 import type { Cruise } from "../../../types/cruise";
 import type { DomainStats } from "./types";
 import { toYearKeyed } from "./yearKeyed";
+import { isCountableCruise } from "../../../shared/cruiseCounting";
 
 export interface CruiseAdapterInput {
   stats: CruiseStatsResponse;
@@ -36,9 +37,7 @@ const FLAG_BADGES: Array<{
 
 export function adaptCruise(input: CruiseAdapterInput): DomainStats {
   const { stats, cruises } = input;
-  const flownOrHistorical = cruises.filter(
-    (c) => c.status === "flown" || c.status === "historical"
-  );
+  const flownOrHistorical = cruises.filter((c) => isCountableCruise(c));
 
   if (stats.cruisesCount === 0 || flownOrHistorical.length === 0) {
     return { domain: "cruise", hasData: false };

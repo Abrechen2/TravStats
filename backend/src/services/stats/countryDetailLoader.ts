@@ -22,6 +22,7 @@ import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { buildCountryDetail, type CountryDetail } from "./countryDetail";
 import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./passportLoader";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
@@ -54,7 +55,7 @@ export async function loadCountryDetail(
       loadAirportCountries(passportAirportCodes(flights)),
       prisma.cruiseStop.findMany({
         where: {
-          cruise: { userId, status: { in: ["flown", "historical"] } },
+          cruise: { userId, ...countableCruiseWhere() },
           port: { isNot: null },
         },
         select: {

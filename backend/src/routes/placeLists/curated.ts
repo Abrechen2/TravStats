@@ -11,6 +11,7 @@ import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import { completePlaceAddress } from "../../services/places/addressBackfill";
 import logger from "../../utils/logger";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /**
  * Shipped checklists — the New 7 Wonders and friends.
@@ -297,7 +298,7 @@ router.get("/:key/suggestions", statsLimiter, async (req: AuthRequest, res: Resp
         },
       }),
       prisma.cruiseStop.findMany({
-        where: { cruise: { userId, status: { in: ["flown", "historical"] } }, isAtSea: false },
+        where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
         select: {
           date: true,
           arrivalTime: true,

@@ -27,6 +27,7 @@ import type { SettingsDataJson } from "../../routes/settings/types";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import { buildTzMap, withDepartureClock } from "./departureClock";
 import { buildPassport } from "./passport";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -165,7 +166,7 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
-        cruise: { userId, status: { in: ["flown", "historical"] } },
+        cruise: { userId, ...countableCruiseWhere() },
         port: { isNot: null },
       },
       select: {

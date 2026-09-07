@@ -30,9 +30,9 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { classifyStay } from "../../shared/lodgingCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { computeDaysAway, type DayWindow, type DaysAway } from "../../utils/stats/daysAway";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /** The sailed predicate — the cut `/stats/cruise` and the passport make. */
-const SAILED_CRUISE_STATUSES = ["flown", "historical"] as const;
 
 export interface DaysAwayScope {
   year?: number;
@@ -115,7 +115,7 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
     prisma.cruise.findMany({
       where: {
         userId,
-        status: { in: [...SAILED_CRUISE_STATUSES] },
+        ...countableCruiseWhere(),
         ...(spanTouches("startDate", "endDate", window) as Prisma.CruiseWhereInput),
       },
       select: { startDate: true, endDate: true },
