@@ -11,6 +11,12 @@ export interface UpcomingEntry {
   id: string;
   /** ISO instant it starts: departure, embarkation, check-in, trip start. */
   startsAt: string;
+  /**
+   * The row a click opens. Equal to `id` everywhere except lodging, where it
+   * is the LODGING's id — a stay has no page of its own (see the server's
+   * `nextStay`). Mirrors `backend/src/routes/upcoming.ts`; change both.
+   */
+  detailId: string;
   tripId: string | null;
   /** The trip's name, when the entry is part of one — shown, not just linked. */
   tripName: string | null;

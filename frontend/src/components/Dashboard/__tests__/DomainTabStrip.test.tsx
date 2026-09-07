@@ -9,6 +9,13 @@ import { useSettingsStore } from "../../../store/settingsStore";
 // behind the instance-level beta flag, which lives in this store.
 vi.unmock("../../../store/settingsStore");
 
+// The strip navigates on click; the spy is what lets a test read WHERE it went.
+const navigateSpy = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => navigateSpy };
+});
+
 // Override the global key-passthrough mock with human-readable labels for this component.
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -183,6 +190,7 @@ describe("DomainTabStrip: the next-up entry", () => {
     {
       domain: "trip",
       id: "t1",
+      detailId: "t1",
       startsAt: "2026-08-16T00:00:00.000Z",
       tripId: "t1",
       tripName: null,
@@ -192,6 +200,7 @@ describe("DomainTabStrip: the next-up entry", () => {
     {
       domain: "flight",
       id: "f1",
+      detailId: "f1",
       startsAt: "2026-08-20T08:00:00.000Z",
       tripId: "t1",
       tripName: "Tokyo · Japan",
@@ -261,6 +270,16 @@ describe("DomainTabStrip: the next-up entry", () => {
   // `isValidDomain(active)` narrows first, so a domain-less tab returns
   // `undefined` by construction rather than by the comparison silently
   // finding nothing.
+  // #314: the entry used to navigate to the TRIP when it had one and to the
+  // domain's list otherwise, so the line naming your next flight dropped you on
+  // the flight list with the flight still to find.
+  it("opens the entry's own page, not the trip it belongs to and not the list", () => {
+    navigateSpy.mockClear();
+    renderStrip("flight");
+    fireEvent.click(screen.getByTestId("next-up-entry"));
+    expect(navigateSpy).toHaveBeenCalledWith("/flights/f1");
+  });
+
   it("shows nothing on the domain-less 'tour' tab, which cannot match any upcoming entry", () => {
     renderStrip("tour");
     expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();

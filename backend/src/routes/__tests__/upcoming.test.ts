@@ -223,7 +223,7 @@ describe("GET /api/v1/upcoming", () => {
       return d;
     };
 
-    const createStay = async (checkIn: Date, checkInTime: string | null): Promise<void> => {
+    const createStay = async (checkIn: Date, checkInTime: string | null): Promise<string> => {
       const lodging = await prisma.lodging.create({
         data: { userId, name: "B&B Test Adlershof" },
       });
@@ -237,6 +237,7 @@ describe("GET /api/v1/upcoming", () => {
           status: "scheduled",
         },
       });
+      return lodging.id;
     };
 
     afterEach(async () => {
@@ -255,6 +256,21 @@ describe("GET /api/v1/upcoming", () => {
       expect(stay.startsAt).toBe(
         new Date(dayAnchor(2).getTime() + 15 * 3_600_000).toISOString(),
       );
+    });
+
+    // #314: the strip linked to the domain's LIST, so the line naming your
+    // next hotel dropped you on the hotel list. A stay has no page of its own,
+    // so its target is the LODGING — which is why `detailId` exists next to
+    // `id` rather than the client deriving a route from `id`.
+    it("points a stay at its lodging, not at the stay id", async () => {
+      await enableDomains(["lodging"]);
+      const lodgingId = await createStay(dayAnchor(2), "15:00");
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay.detailId).toBe(lodgingId);
+      expect(stay.detailId).not.toBe(stay.id);
     });
 
     it("keeps startsAt at the day anchor when no time is recorded", async () => {

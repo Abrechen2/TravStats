@@ -137,6 +137,12 @@ registry.registerPath({
                 z.object({
                   domain: z.enum(["flight", "cruise", "lodging", "place", "trip"]),
                   id: z.string(),
+                  detailId: z
+                    .string()
+                    .describe(
+                      "The row a client should open. Equal to `id` except for a stay, " +
+                        "whose page is its lodging's."
+                    ),
                   startsAt: z.string().datetime(),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),

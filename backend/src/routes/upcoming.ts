@@ -37,7 +37,16 @@ export interface UpcomingEntry {
   id: string;
   /** ISO instant this starts — departure, embarkation, check-in, trip start. */
   startsAt: string;
-  /** The trip this belongs to, when it has one. Lets the UI link to the trip instead of the item. */
+  /**
+   * The row a click should OPEN, which is not always `id`: a stay has no page
+   * of its own, so its target is the lodging whose page lists it. Always set,
+   * so the strip has one rule (`<domain route>/<detailId>`) rather than a
+   * per-domain special case — the strip used to link to the domain's LIST,
+   * which made the entry a signpost to a page the reader then had to search
+   * (#314).
+   */
+  detailId: string;
+  /** The trip this belongs to, when it has one. Named so the strip can show it. */
   tripId: string | null;
   /**
    * That trip's NAME, so the strip can say which journey the entry is part of.
@@ -98,6 +107,7 @@ async function nextFlight(userId: string): Promise<UpcomingEntry | null> {
   return {
     domain: 'flight',
     id: flight.id,
+    detailId: flight.id,
     startsAt,
     tripId: flight.tripId,
     tripName: flight.trip?.name ?? null,
@@ -127,6 +137,7 @@ async function nextCruise(userId: string): Promise<UpcomingEntry | null> {
   return {
     domain: 'cruise',
     id: cruise.id,
+    detailId: cruise.id,
     startsAt,
     tripId: cruise.tripId,
     tripName: cruise.trip?.name ?? null,
@@ -167,7 +178,7 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
       checkInTime: true,
       tripId: true,
       trip: { select: { name: true } },
-      lodging: { select: { name: true, city: true, country: true } },
+      lodging: { select: { id: true, name: true, city: true, country: true } },
     },
   });
 
@@ -183,6 +194,9 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   return {
     domain: 'lodging',
     id: stay.id,
+    // The stay's own page does not exist — `/lodging/:id` is the HOUSE, and it
+    // lists the stays. So the target is the lodging, not the stay.
+    detailId: stay.lodging.id,
     startsAt: instant.toISOString(),
     tripId: stay.tripId,
     tripName: stay.trip?.name ?? null,
@@ -203,6 +217,7 @@ async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
   return {
     domain: 'trip',
     id: trip.id,
+    detailId: trip.id,
     startsAt,
     tripId: trip.id,
     // Not repeated: on a trip entry the name IS the headline.

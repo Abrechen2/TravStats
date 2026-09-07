@@ -11,12 +11,19 @@ const DOMAIN_ICON: Record<UpcomingEntry["domain"], string> = {
   trip: "🧳",
 };
 
-/** Where a click goes: the trip when the entry belongs to one, else that domain's own list. */
-const DOMAIN_ROUTE: Record<UpcomingEntry["domain"], string> = {
+/**
+ * Where a click goes: the ITEM's own page.
+ *
+ * It used to go to the trip when there was one and to the domain's LIST
+ * otherwise — so the line that names your next hotel dropped you on the hotel
+ * list, with the hotel still to find (#314). `entry.detailId` is the id that
+ * belongs to these routes; for a stay that is its lodging, not the stay.
+ */
+const DOMAIN_DETAIL_ROUTE: Record<UpcomingEntry["domain"], string> = {
   flight: "/flights",
   cruise: "/cruises",
   lodging: "/lodging",
-  poi: "/",
+  poi: "/places",
   trip: "/trips",
 };
 
@@ -55,7 +62,7 @@ export function NextUpEntry({ entry, nowMs }: NextUpEntryProps): JSX.Element {
     <button
       type="button"
       data-testid="next-up-entry"
-      onClick={() => navigate(entry.tripId ? `/trips/${entry.tripId}` : DOMAIN_ROUTE[entry.domain])}
+      onClick={() => navigate(`${DOMAIN_DETAIL_ROUTE[entry.domain]}/${entry.detailId}`)}
       title={entry.secondary ? `${entry.primary} · ${entry.secondary}` : entry.primary}
       style={{
         marginLeft: "auto",
