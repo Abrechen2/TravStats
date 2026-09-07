@@ -57,6 +57,29 @@ describe("lodging schemas", () => {
     expect(r.success).toBe(true);
   });
 
+  // #317: the editor's left-half-of-the-first-star click emits 0.5, and the
+  // schema rejected it with "Number must be greater than or equal to 1" — so a
+  // stay rated half a star for breakfast could not be saved at all.
+  it("accepts the lowest rating the half-star picker can produce", () => {
+    const r = createStaySchema.safeParse({
+      checkIn: "2024-05-14T15:00:00.000Z",
+      checkOut: "2024-05-16T11:00:00.000Z",
+      ratingBreakfast: 0.5,
+      ratingRoom: 0.5,
+      ratingService: 0.5,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("still rejects a rating below the lowest half star", () => {
+    const r = createStaySchema.safeParse({
+      checkIn: "2024-05-14T15:00:00.000Z",
+      checkOut: "2024-05-16T11:00:00.000Z",
+      ratingBreakfast: 0.25,
+    });
+    expect(r.success).toBe(false);
+  });
+
   it("coerces query year/limit from strings", () => {
     const r = lodgingQuerySchema.safeParse({ year: "2024", limit: "50" });
     expect(r.success).toBe(true);

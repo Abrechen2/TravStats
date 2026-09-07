@@ -43,7 +43,9 @@ const isoDay = z
     { message: "must be a real calendar day" },
   );
 
-const rating = z.number().min(1).max(5).nullable().optional();
+// Same 0.5 floor as `schemas/lodging.ts` — an import must accept every rating
+// the editor can produce, or a round-trip through export/import loses one.
+const rating = z.number().min(0.5).max(5).nullable().optional();
 
 export const lodgingCandidateFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),

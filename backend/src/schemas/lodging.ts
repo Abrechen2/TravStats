@@ -39,7 +39,12 @@ const isoDateTimeRequired = z.preprocess((v) => {
 // a dedicated "not set" sentinel before this fix (chainId, lat/lon, stars)
 // were already nullable; this only adds the ones that previously had no way
 // to be cleared once set.
-const rating = z.number().min(1).max(5).nullable().optional();
+// 0.5, not 1, is the floor: `StarRatingInput` is a half-star picker, so the
+// left half of the FIRST star emits 0.5 — a rating the editor offers and the
+// schema rejected, which is why saving a half-star stay failed with
+// "Number must be greater than or equal to 1" (#317). The column is a Float,
+// so the value stores as it is drawn.
+const rating = z.number().min(0.5).max(5).nullable().optional();
 
 const baseLodgingSchema = z.object({
   type: z.enum(LODGING_TYPES).default("hotel"),
