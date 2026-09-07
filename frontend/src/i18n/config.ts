@@ -149,7 +149,8 @@ const resources = {
   },
 };
 
-// Initialize i18n synchronously with initImmediate: false
+// Initialize i18n synchronously with initAsync: false (named initImmediate
+// before i18next 24; the alias was dropped in 26)
 // This ensures resources are available immediately
 i18n.use(initReactI18next).init({
   resources,
@@ -196,7 +197,7 @@ i18n.use(initReactI18next).init({
     bindI18nStore: "added removed", // Re-render when resources change
   },
   // Critical: Initialize synchronously so resources are available immediately
-  initImmediate: false,
+  initAsync: false,
   // Ensure translations are available immediately
   load: "languageOnly",
   // Return key if translation is missing (for debugging)
