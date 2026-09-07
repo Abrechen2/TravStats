@@ -8,9 +8,11 @@
 // places list and the badges from disagreeing about whether an undated visit
 // happened.
 //
-// KPI labels are literal German, matching the flight, cruise and lodging
-// adapters. None of the four takes a translator; introducing one here would be
-// a fifth convention rather than a fix.
+// KPI labels are i18n KEYS, matching the flight, cruise and lodging adapters.
+// They used to be literal German on all four, which is how an English stats
+// page came to read "Orte besucht" and "Distanz" (#319). None of the four takes
+// a translator — the card resolves the key, which also keeps the number
+// formatting in one place instead of four hardcoded de-DE formatters.
 import type { Place } from "../../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../../types/placeList";
 import { classifyPlace, classifyVisit } from "../../../shared/placeCounting";
@@ -107,10 +109,10 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
     weekdayEvents,
     summary: {
       headlineKpis: [
-        { label: "Orte besucht", value: counted.length },
-        { label: "Länder", value: countries.size },
+        { labelKey: "overviewCard.kpi.placesVisited", value: counted.length },
+        { labelKey: "overviewCard.kpi.countries", value: countries.size },
         {
-          label: "Listen",
+          labelKey: "overviewCard.kpi.lists",
           // Subscribed checklists are lists too — the same row in the database
           // — so a user who follows two checklists and made none of their own
           // still reads "2" rather than a discouraging "0".
@@ -119,13 +121,13 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
         ...(bestChecklist
           ? [
               {
-                label: "Beste Checkliste",
+                labelKey: "overviewCard.kpi.bestChecklist",
                 value: `${bestChecklist.tickedCount}/${bestChecklist.itemCount}`,
               },
             ]
           : []),
       ],
-      topItems: { title: "Top-Kategorien", items: topCategories },
+      topItems: { titleKey: "overviewCard.topItems.categories", items: topCategories },
       detailRoute: "/places",
     },
   };

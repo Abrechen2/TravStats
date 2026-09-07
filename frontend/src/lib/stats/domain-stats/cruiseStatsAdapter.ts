@@ -9,8 +9,6 @@ export interface CruiseAdapterInput {
   cruises: Cruise[];
 }
 
-const NUMBER_FMT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
-
 const FLAG_BADGES: Array<{
   key: keyof Pick<
     CruiseStatsResponse,
@@ -23,17 +21,17 @@ const FLAG_BADGES: Array<{
     | "hasBirthdayAtSea"
     | "hasNewYearsAtSea"
   >;
-  label: string;
+  labelKey: string;
   emoji: string;
 }> = [
-  { key: "hasBalconyCabin", label: "Balkon-Kabine", emoji: "🏝️" },
-  { key: "hasSuiteCabin", label: "Suite", emoji: "👑" },
-  { key: "hasPolar", label: "Polar-Region", emoji: "🧊" },
-  { key: "hasColdWater", label: "Kaltwasser-Fahrt", emoji: "❄️" },
-  { key: "hasCanalTransit", label: "Kanal-Durchquerung", emoji: "⛴️" },
-  { key: "hasDatelineCrossing", label: "Datumsgrenze überquert", emoji: "🌐" },
-  { key: "hasBirthdayAtSea", label: "Geburtstag auf See", emoji: "🎂" },
-  { key: "hasNewYearsAtSea", label: "Silvester auf See", emoji: "🎇" },
+  { key: "hasBalconyCabin", labelKey: "overviewCard.badge.balconyCabin", emoji: "🏝️" },
+  { key: "hasSuiteCabin", labelKey: "overviewCard.badge.suiteCabin", emoji: "👑" },
+  { key: "hasPolar", labelKey: "overviewCard.badge.polar", emoji: "🧊" },
+  { key: "hasColdWater", labelKey: "overviewCard.badge.coldWater", emoji: "❄️" },
+  { key: "hasCanalTransit", labelKey: "overviewCard.badge.canalTransit", emoji: "⛴️" },
+  { key: "hasDatelineCrossing", labelKey: "overviewCard.badge.dateline", emoji: "🌐" },
+  { key: "hasBirthdayAtSea", labelKey: "overviewCard.badge.birthdayAtSea", emoji: "🎂" },
+  { key: "hasNewYearsAtSea", labelKey: "overviewCard.badge.newYearAtSea", emoji: "🎇" },
 ];
 
 export function adaptCruise(input: CruiseAdapterInput): DomainStats {
@@ -87,8 +85,8 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
   // counts. Render each with value: 1 so the UI shows them as chips.
   const topItems = stats.cruiseLines.slice(0, 5).map((label) => ({ label, value: 1 }));
 
-  const badges = FLAG_BADGES.filter((b) => stats[b.key]).map(({ label, emoji }) => ({
-    label,
+  const badges = FLAG_BADGES.filter((b) => stats[b.key]).map(({ labelKey, emoji }) => ({
+    labelKey,
     emoji,
   }));
 
@@ -114,11 +112,15 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     weekdayEvents,
     summary: {
       headlineKpis: [
-        { label: "Distanz", value: `${NUMBER_FMT.format(stats.totalDistanceKm)} km` },
-        { label: "Seetage", value: stats.seaDays },
-        { label: "Häfen", value: stats.cruisePortsUnique },
+        {
+          labelKey: "overviewCard.kpi.distance",
+          value: Math.round(stats.totalDistanceKm),
+          unit: "km",
+        },
+        { labelKey: "overviewCard.kpi.seaDays", value: stats.seaDays },
+        { labelKey: "overviewCard.kpi.ports", value: stats.cruisePortsUnique },
       ],
-      topItems: { title: "Top-Reedereien", items: topItems },
+      topItems: { titleKey: "overviewCard.topItems.cruiseLines", items: topItems },
       badges,
       detailRoute: "/stats?tab=cruise",
     },

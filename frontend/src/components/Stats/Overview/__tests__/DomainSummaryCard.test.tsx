@@ -16,20 +16,20 @@ const cruiseStats: DomainStats = {
   weekdayEvents: {},
   summary: {
     headlineKpis: [
-      { label: "Distanz", value: "28.400 km" },
-      { label: "Seetage", value: 84 },
-      { label: "Häfen", value: 47 },
+      { labelKey: "overviewCard.kpi.distance", value: 28_400, unit: "km" as const },
+      { labelKey: "overviewCard.kpi.seaDays", value: 84 },
+      { labelKey: "overviewCard.kpi.ports", value: 47 },
     ],
     topItems: {
-      title: "Top-Reedereien",
+      titleKey: "overviewCard.topItems.cruiseLines",
       items: [
         { label: "AIDA", value: 1 },
         { label: "MSC", value: 1 },
       ],
     },
     badges: [
-      { label: "Polar-Region", emoji: "🧊" },
-      { label: "Suite", emoji: "👑" },
+      { labelKey: "overviewCard.badge.polar", emoji: "🧊" },
+      { labelKey: "overviewCard.badge.suiteCabin", emoji: "👑" },
     ],
     detailRoute: "/stats?tab=cruise",
   },
@@ -73,7 +73,11 @@ describe("DomainSummaryCard", () => {
         compareEnabled={false}
       />
     );
-    expect(screen.getByText("28.400 km")).toBeInTheDocument();
+    // The suite's language is English (src/__tests__/setup.ts), so the
+    // thousands separator must be a comma. The adapters used to format with a
+    // hardcoded de-DE, which put "28.400" on an English page (#319). The unit
+    // renders as its key here because the fake `t` returns keys.
+    expect(screen.getByText("28,400 stats:overviewCard.unit.km")).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     expect(screen.getByText("47")).toBeInTheDocument();
     const detailsLink = screen.getByRole("link");
@@ -104,8 +108,11 @@ describe("DomainSummaryCard", () => {
         compareEnabled={false}
       />
     );
-    expect(screen.getByText("Polar-Region")).toBeInTheDocument();
-    expect(screen.getByText("Suite")).toBeInTheDocument();
+    // The fake `t` returns the key, so seeing the KEY is the proof the badge
+    // goes through translation at all — a literal "Polar-Region" here would be
+    // the #319 bug, an English page reading German.
+    expect(screen.getByText("stats:overviewCard.badge.polar")).toBeInTheDocument();
+    expect(screen.getByText("stats:overviewCard.badge.suiteCabin")).toBeInTheDocument();
   });
 
   it("uses year-scoped count i18n key when a year is selected", () => {

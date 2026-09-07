@@ -88,11 +88,11 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
     weekdayEvents,
     summary: {
       headlineKpis: [
-        { label: "Übernachtungen", value: stats.totalNights },
-        { label: "Unterkünfte", value: stats.lodgingsCount },
-        { label: "Ketten", value: stats.chainsUnique },
+        { labelKey: "overviewCard.kpi.nights", value: stats.totalNights },
+        { labelKey: "overviewCard.kpi.lodgings", value: stats.lodgingsCount },
+        { labelKey: "overviewCard.kpi.chains", value: stats.chainsUnique },
       ],
-      topItems: { title: "Top-Ketten", items: topChains },
+      topItems: { titleKey: "overviewCard.topItems.chains", items: topChains },
       detailRoute: "/stats?tab=lodging",
     },
   };

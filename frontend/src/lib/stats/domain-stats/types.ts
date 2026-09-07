@@ -1,13 +1,32 @@
 // Domain-stats contract — shared shape produced by every per-domain adapter.
 import type { DomainKey } from "../../../shared/domains";
 
+/**
+ * One headline figure on a per-domain card.
+ *
+ * `labelKey`, not a label: these adapters are pure functions with no `t` in
+ * reach, and writing the German word here is what shipped a German "Distanz"
+ * onto an English stats page (#319). The card translates, and formats
+ * `value` in the reader's locale — so the adapter must hand over the NUMBER,
+ * never a preformatted "12.345 km". A string value is for figures that are
+ * not one number, like a checklist's "3/7".
+ */
+export interface DomainKpi {
+  /** Key under the `stats` namespace, e.g. "overviewCard.kpi.distance". */
+  labelKey: string;
+  value: string | number;
+  /** Appended after the localised number, via `overviewCard.unit.*`. */
+  unit?: "km" | "h";
+}
+
 export interface DomainSummary {
   /** 2-3 short-form headline KPIs rendered on the per-domain card. */
-  headlineKpis: Array<{ label: string; value: string | number }>;
-  /** Optional ranked list (top airlines / cruise lines / hotel chains). */
-  topItems?: { title: string; items: Array<{ label: string; value: number }> };
+  headlineKpis: DomainKpi[];
+  /** Optional ranked list (top airlines / cruise lines / hotel chains). The
+   *  item labels are data — airline and chain names — and stay untranslated. */
+  topItems?: { titleKey: string; items: Array<{ label: string; value: number }> };
   /** Achievement-style boolean flags rendered as small pills. */
-  badges?: Array<{ label: string; emoji: string }>;
+  badges?: Array<{ labelKey: string; emoji: string }>;
   /** URL the "Details →" link on the summary card points to. */
   detailRoute: string;
 }

@@ -16,8 +16,6 @@ export interface FlightAdapterInput {
   countriesByYear?: Record<number, string[]>;
 }
 
-const NUMBER_FMT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
-
 export function adaptFlight(input: FlightAdapterInput): DomainStats {
   const { flights, countries, countriesByYear } = input;
 
@@ -89,11 +87,15 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     weekdayEvents,
     summary: {
       headlineKpis: [
-        { label: "Distanz", value: `${NUMBER_FMT.format(totalDistanceKm)} km` },
-        { label: "Flugzeit", value: `${NUMBER_FMT.format(totalDurationHours)} h` },
-        { label: "Airlines", value: airlineGroups.length },
+        { labelKey: "overviewCard.kpi.distance", value: Math.round(totalDistanceKm), unit: "km" },
+        {
+          labelKey: "overviewCard.kpi.flightTime",
+          value: Math.round(totalDurationHours),
+          unit: "h",
+        },
+        { labelKey: "overviewCard.kpi.airlines", value: airlineGroups.length },
       ],
-      topItems: { title: "Top-Airlines", items: topAirlines },
+      topItems: { titleKey: "overviewCard.topItems.airlines", items: topAirlines },
       detailRoute: "/stats?tab=flight",
     },
   };
