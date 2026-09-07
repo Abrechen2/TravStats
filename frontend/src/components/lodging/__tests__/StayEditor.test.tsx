@@ -27,8 +27,8 @@ const baseStay: LodgingStay = {
   userId: "user-1",
   tripId: null,
   bookingId: null,
-    checkInTime: null,
-    checkOutTime: null,
+  checkInTime: null,
+  checkOutTime: null,
   checkIn: "2026-07-11T00:00:00.000Z",
   checkOut: "2026-07-12T00:00:00.000Z",
   datePrecision: "DAY" as const,
@@ -109,7 +109,9 @@ describe("StayEditor", () => {
     });
     await userEvent.selectOptions(screen.getByLabelText("lodging:field.currency"), "CHF");
 
-    const readout = await screen.findByTestId("stay-editor-fx-readout", undefined, { timeout: 2000 });
+    const readout = await screen.findByTestId("stay-editor-fx-readout", undefined, {
+      timeout: 2000,
+    });
     expect(readout.textContent).toContain("→");
     expect(readout.textContent).toContain("0.9315");
     expect(readout.textContent).not.toMatch(/null|NaN|undefined/);
@@ -231,6 +233,51 @@ describe("StayEditor", () => {
     expect(payload.checkOutTime).toBeNull();
   });
 
+  // #320: a new stay used to open at a literal "EUR" whatever country the
+  // hotel stood in, so a US booking was entered in euros unless the user
+  // noticed the dropdown. The base currency in this suite is EUR (see
+  // src/__tests__/setup.ts), so a US hotel showing USD can only come from the
+  // country.
+  it("opens a new stay in the hotel country's currency", () => {
+    render(
+      <StayEditor
+        mode="create"
+        lodgingId="lodging-1"
+        lodgingCountryCode="US"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText("lodging:field.currency") as HTMLSelectElement;
+    expect(select.value).toBe("USD");
+  });
+
+  it("falls back to the account's base currency when the hotel has no country", () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    const select = screen.getByLabelText("lodging:field.currency") as HTMLSelectElement;
+    expect(select.value).toBe("EUR");
+  });
+
+  // A saved stay's currency is a recorded fact, not a suggestion — the country
+  // must not overwrite what the user already entered.
+  it("keeps an existing stay's stored currency even when the country disagrees", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        lodgingCountryCode="US"
+        stay={baseStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText("lodging:field.currency") as HTMLSelectElement;
+    expect(select.value).toBe("EUR");
+  });
+
   it("un-checking an existing award stay sends isAwardStay=false on update (not just omitted)", async () => {
     vi.mocked(updateStay).mockResolvedValue({ ...baseStay, isAwardStay: false });
 
@@ -241,7 +288,7 @@ describe("StayEditor", () => {
         stay={baseStay}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     // baseStay.isAwardStay is true — the checkbox must start checked.
@@ -274,7 +321,7 @@ describe("StayEditor", () => {
         stay={filledStay}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     fireEvent.change(screen.getByLabelText("lodging:field.room"), { target: { value: "" } });
@@ -376,7 +423,7 @@ describe("StayEditor", () => {
         stay={null}
         onClose={vi.fn()}
         onSaved={onSaved}
-      />,
+      />
     );
 
     fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
@@ -727,7 +774,7 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
         stay={stayFor(2)}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.getByTestId("companions-hint")).toBeInTheDocument();
@@ -741,7 +788,7 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
         stay={stayFor(1)}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
@@ -755,7 +802,7 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
         stay={stayFor(null)}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
@@ -769,7 +816,7 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
         stay={stayFor(2, ["Norbert"])}
         onClose={vi.fn()}
         onSaved={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();

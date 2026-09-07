@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import {
-  LODGING_DATE_PRECISIONS,
-  type LodgingDatePrecision,
-} from "../../shared/lodgingTiming";
+import { LODGING_DATE_PRECISIONS, type LodgingDatePrecision } from "../../shared/lodgingTiming";
 import { useSettingsStore } from "../../store/settingsStore";
+import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -34,6 +32,12 @@ interface StayEditorProps {
   lodgingId: string;
   /** The hotel's chain, if any — used to derive the covering loyalty card. */
   lodgingChainId?: number | null;
+  /**
+   * The hotel's country (ISO 3166-1 alpha-2) — decides which currency a NEW
+   * stay's price field starts in. Optional: a lodging that has none simply
+   * falls through to the account's base currency.
+   */
+  lodgingCountryCode?: string | null;
   stay?: LodgingStay | null;
   onClose: () => void;
   onSaved: (saved: LodgingStay) => void | Promise<void>;
@@ -90,6 +94,7 @@ export function StayEditor({
   mode,
   lodgingId,
   lodgingChainId = null,
+  lodgingCountryCode = null,
   stay,
   onClose,
   onSaved,
@@ -131,7 +136,15 @@ export function StayEditor({
   const [ratingService, setRatingService] = useState<number | null>(stay?.ratingService ?? null);
 
   const [totalPrice, setTotalPrice] = useState<string>(stay?.totalPrice?.toString() ?? "");
-  const [currency, setCurrency] = useState<LodgingCurrency>(stay?.currency ?? "EUR");
+  // A NEW stay starts in the currency the bill is most likely written in: the
+  // hotel's country first, the account's base currency when the country says
+  // nothing. It used to start at a literal "EUR" for every hotel on earth, so
+  // a US booking was entered in euros unless the user noticed the dropdown
+  // (#320). An EXISTING stay keeps what it was saved with — its currency is a
+  // recorded fact, not a suggestion.
+  const [currency, setCurrency] = useState<LodgingCurrency>(
+    stay?.currency ?? currencyForCountry(lodgingCountryCode) ?? baseCurrency ?? "EUR"
+  );
   // Text, not a number: an empty field means "no rate of my own", which is a
   // different thing from 0 and must reach the API as an explicit null.
   const [manualFxRate, setManualFxRate] = useState<string>(
@@ -283,8 +296,7 @@ export function StayEditor({
         // as whatever the form last held — a hidden date would be stored and
         // then bucketed as if the user had meant it.
         checkIn: datePrecision === "NONE" ? null : checkIn ? fromDateInput(checkIn) : null,
-        checkOut:
-          datePrecision === "DAY" && checkOut ? fromDateInput(checkOut) : null,
+        checkOut: datePrecision === "DAY" && checkOut ? fromDateInput(checkOut) : null,
         // A time is a claim about a DAY-precise date — anything else clears
         // it, matching the backend's invariant (routes/lodging.ts PATCH).
         checkInTime: datePrecision === "DAY" && checkIn && checkInTime ? checkInTime : null,
@@ -396,12 +408,20 @@ export function StayEditor({
             {datePrecision !== "NONE" && (
               <div className="grid grid-cols-2 gap-3">
                 <input
-                  type={datePrecision === "MONTH" ? "month" : datePrecision === "YEAR" ? "number" : "date"}
+                  type={
+                    datePrecision === "MONTH"
+                      ? "month"
+                      : datePrecision === "YEAR"
+                        ? "number"
+                        : "date"
+                  }
                   aria-label={t("lodging:field.checkIn")}
                   className={INPUT_CLASS}
                   style={DARK_PICKER_STYLE}
                   value={precisionInputValue}
-                  onChange={(e): void => setCheckIn(precisionToIsoDay(e.target.value, datePrecision))}
+                  onChange={(e): void =>
+                    setCheckIn(precisionToIsoDay(e.target.value, datePrecision))
+                  }
                 />
                 {datePrecision === "DAY" && (
                   <input
@@ -644,11 +664,11 @@ export function StayEditor({
           </Section>
 
           {/* Its own section. This select used to sit unlabelled at the bottom
-            * of "Loyalty programme", between membership numbers — the word
-            * "trip" existed only as an aria-label, so the sole thing on screen
-            * was the option text "Not linked to a trip". Nobody looking for
-            * how to attach a stay to a trip searches under loyalty, and they
-            * would be right not to. */}
+           * of "Loyalty programme", between membership numbers — the word
+           * "trip" existed only as an aria-label, so the sole thing on screen
+           * was the option text "Not linked to a trip". Nobody looking for
+           * how to attach a stay to a trip searches under loyalty, and they
+           * would be right not to. */}
           <Section title={t("lodging:stayEditor.tripSection")}>
             <label
               htmlFor="stay-editor-trip"
@@ -687,16 +707,11 @@ export function StayEditor({
                 prompted this covered two, and a threshold of three would have
                 left exactly that case silent. Disappears as soon as a name is
                 typed: a hint that stays after it has been acted on is nagging. */}
-            {stay?.guests != null &&
-              stay.guests > 1 &&
-              companionsInput.trim().length === 0 && (
-                <p
-                  data-testid="companions-hint"
-                  className="mb-2 text-xs text-[var(--warning)]"
-                >
-                  {t("lodging:stayEditor.companionsHint", { count: stay.guests })}
-                </p>
-              )}
+            {stay?.guests != null && stay.guests > 1 && companionsInput.trim().length === 0 && (
+              <p data-testid="companions-hint" className="mb-2 text-xs text-[var(--warning)]">
+                {t("lodging:stayEditor.companionsHint", { count: stay.guests })}
+              </p>
+            )}
             <input
               aria-label={t("lodging:field.companions")}
               className={INPUT_CLASS}

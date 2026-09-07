@@ -448,6 +448,7 @@ export default function LodgingDetailPage(): JSX.Element {
             mode={editingStay === "new" ? "create" : "edit"}
             lodgingId={lodging.id}
             lodgingChainId={lodging.chainId}
+            lodgingCountryCode={lodging.isoCountryCode}
             stay={editingStay === "new" ? null : editingStay}
             onClose={() => setEditingStay(null)}
             onSaved={async (savedStay) => {
