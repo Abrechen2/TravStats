@@ -54,6 +54,7 @@
     "noIndependentHotels": "No independent, chain-less hotels available."
   },
   "about": {
+    "title": "About",
     "buildLabel": "Build",
     "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
     "dataSources": {

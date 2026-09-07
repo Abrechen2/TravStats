@@ -54,6 +54,7 @@
     "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
   },
   "about": {
+    "title": "Über",
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
     "dataSources": {

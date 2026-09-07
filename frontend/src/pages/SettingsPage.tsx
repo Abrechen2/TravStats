@@ -148,7 +148,7 @@ export default function SettingsPage(): JSX.Element {
       // what made the settings/admin boundary feel arbitrary. Admin is reachable
       // from the top-level navigation, and the scope line below says which
       // surface owns what.
-      { id: "about", label: "About" },
+      { id: "about", label: t("settings:about.title") || "About" },
     ];
     // `features` and `autoupdate` moved here from `general` on 2026-08-23.
     // Both are flight-only and nothing else reads them: the two Funktionen
