@@ -4,6 +4,61 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.6.2] - 2026-09-07
+
+A round of tester reports from the days after 2.6.0 went out, plus the
+dependency and housekeeping work that had been waiting on the trunk since
+2.6.1. Nothing here changes how anything is stored.
+
+### Fixed
+- **A half-star rating can be saved.** The rating picker in a hotel stay
+  offers half steps, but the server refused anything below a full star, so
+  rating breakfast half a star failed the whole save with a red line at the
+  bottom of the form. Half stars are accepted now, in the editor and in an
+  import alike.
+- **The per-domain section of the statistics page speaks the reader's
+  language.** "Distance", "Nights", "Places visited" and the rest were German
+  words written into the code, so an English page showed a German block with
+  German thousands separators. They are translated now, and the numbers follow
+  the chosen language.
+- **"Next up" opens the thing it names.** Clicking the next hotel led to the
+  hotel list, not the hotel; a flight belonging to a trip led to the trip. It
+  now opens the entry's own page.
+- **A closed airport can be found by name.** Importing old bookings runs into
+  airports that no longer exist, and a 2004 confirmation says "Berlin", never
+  "TXL" — so Berlin-Tegel could not be attached at all. A search can now ask
+  for closed airports, while an everyday search still leaves them out. The
+  same search also honours the result limit it always advertised instead of
+  always returning ten.
+- **A backup archive is compressed even behind a proxy.** An instance reached
+  through a tunnel or reverse proxy served every response uncompressed,
+  because the web server skips compression for proxied requests unless told
+  otherwise. Nothing reported it; it simply cost bandwidth.
+
+### Added
+- **Every time zone, not six.** Display settings offered Berlin, Paris, UTC,
+  New York, Los Angeles and Singapore. The list now holds every zone the
+  browser knows, grouped by region.
+- **A new hotel stay starts in the right currency.** The price field always
+  opened in euros, whatever country the hotel stood in and whatever the
+  account's own base currency said. It now follows the hotel's country, and
+  falls back to the account's currency. A saved stay keeps what it was saved
+  with.
+
+### Changed
+- **Two-factor secrets survive a library upgrade.** The one-time-password
+  library moved three major versions; the new one refuses the shorter secrets
+  the old one issued, which would have locked every account that had
+  two-factor switched on. The shorter secrets are still accepted.
+- **A flight lookup that answers unexpectedly is named, not mistaken for a
+  crash.** One flight-data provider occasionally answers with something other
+  than a list; that used to be logged as a failure and cached.
+- **The image states its licence correctly** (AGPL-3.0-or-later), and the
+  route-distance backfill runs inside the container as documented.
+- Dependency updates across the frontend and backend, including the
+  translation runtime, and the rate limiter's handling of IPv6 addresses so
+  one host can no longer take a fresh bucket per request.
+
 ## [2.6.1] - 2026-09-05
 
 Two things the owner ran into on the day 2.6.0 went live, both on the edit
