@@ -43,6 +43,22 @@ router.get(
     }
 
     const searchTerm = q.toLowerCase();
+    // Opt-in, and off by default. A closed airport is findable by its exact
+    // code either way (the Munich-Riem contract below), but not by NAME — and
+    // that is what an importer of old bookings has: a 2004 confirmation says
+    // "Berlin", never "TXL", so Berlin-Tegel could not be attached at all
+    // (#287). Lifting the filter for everyone is what UAT finding C13 already
+    // rejected: "GRU" then fills the list with closed heliports whose
+    // identifiers merely contain the letters, burying the real airports.
+    const includeClosed = req.query.includeClosed === 'true';
+    // The OpenAPI spec has always documented `limit` (1..50) on this route
+    // while the handler hardcoded 10 and ignored it — the reporter of #287
+    // passed `limit=3` and got ten rows. Read it, clamp it, and the spec is
+    // true again.
+    const requestedLimit = Number.parseInt(String(req.query.limit ?? ''), 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(50, Math.max(1, requestedLimit))
+      : 10;
 
     // Exact IATA/ICAO matches first (active airport, then any closed
     // predecessor that shares the code — e.g. Munich Airport + Munich-Riem
@@ -68,7 +84,8 @@ router.get(
           // matching: "GRU" used to fill the list with closed US heliports
           // whose identifiers merely contained the letters (UAT finding
           // C13), burying the airports anyone actually searches for.
-          { isClosed: false },
+          // `includeClosed=true` is the caller saying it wants them anyway.
+          ...(includeClosed ? [] : [{ isClosed: false }]),
           {
             OR: [
               { iata: { contains: searchTerm, mode: 'insensitive' } },
@@ -79,11 +96,13 @@ router.get(
           },
         ],
       },
-      take: Math.max(0, 10 - exactMatches.length),
-      orderBy: [{ iata: 'asc' }],
+      take: Math.max(0, limit - exactMatches.length),
+      // Open before closed, so opting in never pushes a live airport down the
+      // list — the closed ones are an addition, not a reordering.
+      orderBy: [{ isClosed: 'asc' }, { iata: 'asc' }],
     });
 
-    res.json([...exactMatches, ...partialMatches]);
+    res.json([...exactMatches, ...partialMatches].slice(0, limit));
   } catch (error) {
     next(error);
   }
