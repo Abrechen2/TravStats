@@ -1,17 +1,10 @@
+import { useMemo } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DomainColorSection from "./DomainColorSection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { changeLanguage } from "../../i18n/config";
 import type { DisplaySettings } from "../../store/settingsStore";
-
-const timezoneOptions = [
-  "Europe/Berlin",
-  "Europe/Paris",
-  "UTC",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Asia/Singapore",
-];
+import { groupTimeZones } from "../../lib/timezones";
 
 interface DisplaySectionProps {
   display: DisplaySettings;
@@ -23,6 +16,10 @@ export default function DisplaySection({
   onSetDisplay,
 }: DisplaySectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  // Recomputed only when the stored zone changes: the IANA list is ~450 entries
+  // and the grouping is pure, so rebuilding it on every keystroke elsewhere in
+  // the settings form would be wasted work.
+  const timezoneGroups = useMemo(() => groupTimeZones(display.timezone), [display.timezone]);
 
   return (
     <SectionCard>
@@ -58,10 +55,14 @@ export default function DisplaySection({
             onChange={(e) => onSetDisplay({ timezone: e.target.value })}
             className="input"
           >
-            {timezoneOptions.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
+            {timezoneGroups.map((group) => (
+              <optgroup key={group.region} label={group.region}>
+                {group.zones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
