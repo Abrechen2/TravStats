@@ -31,6 +31,23 @@ function platformIcon(platform: string | null): string {
   return "📱";
 }
 
+/**
+ * Split a pairing code for reading off a screen while typing on a phone:
+ * the `clm_` prefix, then the 32 hex chars in blocks of four.
+ *
+ * The blocks are rendered as separate spans with a CSS gap and NO literal
+ * whitespace between them, so selecting the code with the mouse still yields
+ * `clm_<32 hex>` verbatim. That matters: the claim endpoint validates
+ * `/^clm_[0-9a-f]{32}$/` (`backend/src/schemas/pairing.ts`) and only trims the
+ * ends, so a code copied with spaces inside would be rejected.
+ */
+export function pairingCodeChunks(code: string): string[] {
+  const prefix = code.startsWith("clm_") ? "clm_" : "";
+  const rest = code.slice(prefix.length);
+  const blocks = rest.match(/.{1,4}/g) ?? [];
+  return prefix ? [prefix, ...blocks] : blocks;
+}
+
 function formatRemaining(totalSeconds: number): string {
   const safe = Math.max(0, totalSeconds);
   const minutes = Math.floor(safe / 60);
@@ -47,6 +64,7 @@ export default function DevicesSection(): JSX.Element {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  const [copied, setCopied] = useState(false);
 
   // Empty dep array on purpose — the project's useTranslation wrapper does
   // not guarantee a stable `t` reference, so depending on it would loop the
@@ -135,6 +153,26 @@ export default function DevicesSection(): JSX.Element {
   const handleClose = (): void => {
     setSession(null);
     setClaimedName(null);
+    setCopied(false);
+  };
+
+  /**
+   * The clipboard is a convenience, never the only way out: this panel is
+   * routinely opened on a plain-http LAN address, where `navigator.clipboard`
+   * does not exist at all. That is why the code is rendered as selectable
+   * text regardless — the button only saves a step where the browser allows
+   * it.
+   */
+  const handleCopyCode = async (): Promise<void> => {
+    if (!session) return;
+    if (!window.isSecureContext || !navigator.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(session.code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      logger.error("Failed to copy pairing code", err);
+    }
   };
 
   const handleUnpair = async (id: string): Promise<void> => {
@@ -239,11 +277,64 @@ export default function DevicesSection(): JSX.Element {
                   })}
                   size={200}
                   level="M"
+                  // Without this the SVG is an unnamed graphic: a screen
+                  // reader announces nothing at all where the code is.
+                  title={t("settings:devices.qrAlt")}
                 />
               </div>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 {t("settings:devices.qrHint")}
               </p>
+
+              {/*
+                The code as text, not only inside the QR payload.
+
+                The app's manual pairing path — type the address, type the
+                code — exists for the cases the camera cannot serve: no camera
+                permission, a QR that will not focus, a phone that cannot
+                reach the address the QR carries, or a user who does not see
+                the screen. That path had no source to read from as long as
+                the code lived only in `JSON.stringify(...)` above.
+              */}
+              <div className="w-full space-y-1">
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("settings:devices.codeLabel")}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <code
+                    data-testid="pairing-code"
+                    className="font-mono text-sm px-2 py-1 rounded-md select-all"
+                    style={{
+                      background: "var(--bg-muted)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {pairingCodeChunks(session.code).map((chunk, i) => (
+                      <span key={i} className={i === 0 ? "" : "ml-1.5"}>
+                        {chunk}
+                      </span>
+                    ))}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={(): void => {
+                      void handleCopyCode();
+                    }}
+                    className="px-3 py-1.5 text-xs rounded-md font-medium"
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {copied ? t("settings:devices.codeCopied") : t("settings:devices.codeCopy")}
+                  </button>
+                </div>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("settings:devices.codeHint")}
+                </p>
+              </div>
               <p
                 className="text-sm font-medium"
                 style={{ color: expired ? "var(--danger)" : "var(--text-secondary)" }}
