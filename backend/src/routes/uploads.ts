@@ -12,14 +12,35 @@ import logger from '../utils/logger';
 const router = Router();
 
 /**
- * Checks whether `receiptUrl` belongs to the caller through ANY domain that
- * can own a receipt. Currently that's a flight or a lodging stay — cruises
- * carry no `receiptUrl` field (schemas/cruise.ts has no receipt input), so
- * they are intentionally not checked here. Ownership stays strict: the
- * underlying record must have `userId` equal to the caller's id; this never
- * widens to "any authenticated user".
+ * Does this file belong to the caller?
+ *
+ * Asked of the FILE, not of anything pointing at it. Until 2026-09-09 the
+ * answer came from `findReceiptOwner`, which looked for a flight or a stay of
+ * the caller's carrying this `receiptUrl` — and a caller writes their own
+ * flights. Knowing another account's file URL was therefore enough to obtain
+ * it: create a flight referencing it, and the guard agreed (audit finding
+ * AUD-019). The reference proved the caller had typed the URL, nothing else.
+ *
+ * `ReceiptUpload` is written once, at upload time, from the session — no
+ * request body reaches it. Existing files were backfilled from whoever
+ * referenced them first (see the migration).
  */
-async function findReceiptOwner(
+async function ownsUpload(userId: string, filename: string): Promise<boolean> {
+  const upload = await prisma.receiptUpload.findUnique({
+    where: { filename },
+    select: { userId: true },
+  });
+  return upload?.userId === userId;
+}
+
+/**
+ * Which of the caller's records still points at this receipt.
+ *
+ * Only used to clear the reference after a delete — never to decide access.
+ * Cruises carry no `receiptUrl` (schemas/cruise.ts has no receipt input), so
+ * they are intentionally absent.
+ */
+async function findReceiptReferences(
   userId: string,
   receiptUrl: string,
 ): Promise<{ flightId: string | null; lodgingStayId: string | null }> {
@@ -68,6 +89,13 @@ router.post(
         throw new AppError(`File validation failed: ${validation.reason}`, 400);
       }
 
+      // Record who owns this file, once, from the session. This row — not any
+      // later reference in a request body — is what decides who may read or
+      // delete it (audit finding AUD-019).
+      await prisma.receiptUpload.create({
+        data: { filename: req.file.filename, userId: req.userId! },
+      });
+
       // Return the URL to access the uploaded file
       const receiptUrl = `/api/v1/uploads/receipts/${req.file.filename}`;
 
@@ -114,13 +142,8 @@ router.get('/receipts/:filename', authenticate, async (req: AuthRequest, res: Re
       throw new AppError('File not found', 404);
     }
 
-    const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
-
-    // Ensure the requesting user owns a flight OR a lodging stay
-    // referencing this receipt (finding: lodging receipts 403/404'd because
-    // only flights were ever checked).
-    const owner = await findReceiptOwner(userId, receiptUrl);
-    if (!owner.flightId && !owner.lodgingStayId) {
+    // The file's own owner decides, not a reference to it.
+    if (!(await ownsUpload(userId, sanitized))) {
       throw new AppError('File not found or access denied', 404);
     }
 
@@ -152,13 +175,16 @@ router.delete(
       // because only flights were ever checked).
       const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
 
-      const owner = await findReceiptOwner(userId, receiptUrl);
-      if (!owner.flightId && !owner.lodgingStayId) {
+      if (!(await ownsUpload(userId, sanitized))) {
         throw new AppError('File not found or access denied', 404);
       }
 
+      // References are cleared below; they never granted the right to be here.
+      const owner = await findReceiptReferences(userId, receiptUrl);
+
       // Delete file
       deleteReceiptFile(sanitized);
+      await prisma.receiptUpload.deleteMany({ where: { filename: sanitized } });
 
       // Clear the receipt reference on whichever domain record owned it.
       if (owner.flightId) {

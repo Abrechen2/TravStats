@@ -6,7 +6,7 @@ import {
   findNearestAirport,
   enrichAirportData
 } from '../services/airportLookup';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { airportSearchBurstLimiter, airportSearchLimiter } from '../middleware/rateLimit';
 import { createAirportSchema } from '../schemas/airportData';
 import { deriveTimezone } from '../services/airportLookup';
@@ -156,7 +156,7 @@ router.get('/coords/nearest', authenticate, async (req: AuthRequest, res: Respon
 
 // POST /api/v1/airports/enrich
 // Enrich airport data with missing information (requires authentication)
-router.post('/enrich', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/enrich', authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { iata, icao, lat, lon } = enrichAirportSchema.parse(req.body);
 
@@ -178,7 +178,7 @@ router.post('/enrich', authenticate, async (req: AuthRequest, res: Response, nex
 // create endpoints: authenticated (not admin-gated, same as ships/ports),
 // flagged isUserAdded so the CSV re-seed never overwrites the row, timezone
 // derived from the coordinates via geo-tz.
-router.post('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/', authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = createAirportSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);

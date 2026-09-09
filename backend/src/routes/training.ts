@@ -10,7 +10,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { uploadReceiptLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../db';
@@ -20,6 +20,11 @@ import { extractEmailFromFile } from '../services/emailExtractor';
 
 const router = Router();
 router.use(authenticate);
+// A read-scoped token may read. It may not upload training material, annotate
+// it, or change a suggested journey's state (audit finding AUD-012).
+// `requireWriteScope` lets GET/HEAD/OPTIONS through untouched, so this covers
+// every mutating route here without listing them.
+router.use(requireWriteScope);
 
 // Upload directory for training files (emails + boarding pass images)
 const TRAINING_UPLOAD_DIR = path.join(__dirname, '../../uploads/training');

@@ -61,6 +61,7 @@ model User {
   // the dev demo can't drain a real RapidAPI key by accident.
   isDemo               Boolean                  @default(false) @map("is_demo")
   flights              Flight[]
+  receiptUploads       ReceiptUpload[]
   userAchievements     UserAchievement[]
   settings             UserSettings?
   analyticsEvents      AnalyticsEvent[]
@@ -2474,4 +2475,24 @@ model PhotoJourney {
   @@index([userId, status])
   @@index([startDate])
   @@map("photo_journeys")
+}
+
+/// Who owns a file on disk, recorded when it is uploaded.
+///
+/// Before this table, "do you own this receipt" was answered by asking whether
+/// the caller owned a flight or a stay REFERENCING it — a reference the caller
+/// writes themselves. Knowing another account's file URL was therefore enough:
+/// create your own flight pointing at it, and the read guard agreed you owned
+/// the file (audit finding AUD-019). Ownership now lives with the file, is
+/// written once at upload time, and no request body can change it.
+model ReceiptUpload {
+  id        String   @id @default(uuid())
+  /// The name on disk, which is also what the URL carries.
+  filename  String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("receipt_uploads")
 }

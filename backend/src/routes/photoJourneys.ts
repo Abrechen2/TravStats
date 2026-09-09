@@ -3,12 +3,17 @@ import { z } from "zod";
 
 import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 
 const router = Router();
 router.use(authenticate);
+// A read-scoped token may read. It may not upload training material, annotate
+// it, or change a suggested journey's state (audit finding AUD-012).
+// `requireWriteScope` lets GET/HEAD/OPTIONS through untouched, so this covers
+// every mutating route here without listing them.
+router.use(requireWriteScope);
 
 /**
  * Journeys the photo library suggests and the journal never heard of.

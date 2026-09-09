@@ -103,6 +103,31 @@ describe("account security is browser-only", () => {
     expect(res.status).toBe(403);
   });
 
+  // AUD-012, the same class one floor down: a read token could add an airport to
+  // the instance-wide catalogue, upload training material and change a suggested
+  // journey. Not account security, but not "read" either.
+  it("refuses a read token on ordinary writes it was never granted", async () => {
+    const airport = await request(app)
+      .post("/api/v1/airports")
+      .set("Authorization", `Bearer ${readPat}`)
+      .send({ iata: "ZZZ", name: "Audit Field", lat: 0, lon: 0 });
+    expect(airport.status).toBe(403);
+
+    const journey = await request(app)
+      .patch("/api/v1/photo-journeys/does-not-exist")
+      .set("Authorization", `Bearer ${readPat}`)
+      .send({ state: "dismissed" });
+    // 403 for the wrong credential, not 404 for the unknown id — the refusal
+    // has to come before the handler looks anything up.
+    expect(journey.status).toBe(403);
+
+    // And reading is still reading.
+    const list = await request(app)
+      .get("/api/v1/photo-journeys")
+      .set("Authorization", `Bearer ${readPat}`);
+    expect(list.status).toBeLessThan(400);
+  });
+
   // The guard must not have made the surface unreachable for its actual owner.
   it("still lets a browser session through", async () => {
     const login = await request(app)
