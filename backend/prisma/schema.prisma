@@ -37,6 +37,11 @@ model User {
   mustChangePassword   Boolean                  @default(false) @map("must_change_password")
   changeToken          String?                  @unique @map("change_token")
   changeTokenExpiry    DateTime?                @map("change_token_expiry")
+  // Bumped by every password change and reset. A session carries the epoch it
+  // was minted under, and `authenticate` refuses anything older — see
+  // middleware/auth.ts. A counter rather than a timestamp because `iat` has
+  // second resolution, which would leave a one-second window open.
+  sessionEpoch         Int                      @default(0) @map("session_epoch")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending

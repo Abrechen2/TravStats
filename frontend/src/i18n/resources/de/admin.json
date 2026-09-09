@@ -574,9 +574,6 @@
       "scopeDatabase": "Nur Datenbank",
       "scopeFiles": "Nur Dateien",
       "createBackupBefore": "Backup vor Wiederherstellung erstellen (empfohlen)",
-      "targetDatabaseUrl": "Ziel-Datenbank-URL (optional, für Migration)",
-      "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
-      "targetDatabaseUrlHelp": "Leer lassen für aktuelle Instanz",
       "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
       "confirmText": "Wiederherstellen",
       "confirmButton": "Wiederherstellen"

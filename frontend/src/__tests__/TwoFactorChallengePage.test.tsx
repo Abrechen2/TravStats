@@ -56,6 +56,28 @@ describe("TwoFactorChallengePage", () => {
     expect(navigate).toHaveBeenCalledWith("/");
   });
 
+  // A right code is not always a session. An account that owes a password change
+  // never meets the login handler's change branch — the second factor is asked
+  // above it — so the server answers the redeemed challenge with the change flow
+  // instead, and this page has to follow it. Reading `result.user` here would
+  // have called setAuth(undefined) and dropped the user on a blank app (AUD-005).
+  it("hands over to the password change when the server asks for one", async () => {
+    verifyTwoFactor.mockResolvedValue({ requiresPasswordChange: true });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("auth:twoFactor.codeLabel"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "auth:twoFactor.submit" }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/change-password", {
+        state: { requiresChange: true },
+      })
+    );
+    expect(setAuth).not.toHaveBeenCalled();
+  });
+
   // Switching to the recovery sheet must change the FIELD, not just the label —
   // sending a recovery code in the `code` field would fail the six-digit schema.
   it("sends a recovery code under the recoveryCode key", async () => {

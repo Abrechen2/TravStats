@@ -69,11 +69,11 @@ export const authenticate = async (
       throw new AppError('No token provided', 401);
     }
 
-    const decoded = jwt.verify(cookieToken, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(cookieToken, JWT_SECRET) as { userId: string; epoch?: number };
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, sessionEpoch: true },
     });
 
     if (!user) {
@@ -92,6 +92,35 @@ export const authenticate = async (
       throw new AppError('Invalid token - user not found', 401);
     }
 
+    // A signature that is still valid does not mean the session still is.
+    //
+    // The JWT carried only a user id and an expiry, so before 2026-09-09 a
+    // password change or a reset left every cookie already in circulation
+    // working for up to seven more days: recovering an account did not remove
+    // whoever you were recovering it from (audit finding AUD-003). Every path
+    // that writes a new password now bumps `sessionEpoch`, and a token minted
+    // under an older one stops here.
+    //
+    // A token from before this claim existed carries no epoch and reads as 0,
+    // which matches a user who has never changed their password since the
+    // upgrade — nothing has been revoked for them yet, so nothing is refused.
+    {
+      const tokenEpoch = decoded.epoch ?? 0;
+      if (tokenEpoch < user.sessionEpoch) {
+        securityLogger.warn({
+          operation: 'security_event',
+          message: 'Authentication failed: Session revoked by a password change',
+          context: {
+            eventType: 'auth_failure',
+            reason: 'session_revoked',
+            userId: user.id,
+            ip: req.ip,
+            url: req.url,
+          },
+        });
+        throw new AppError('Session expired - please sign in again', 401);
+      }
+    }
     if (!user.isActive) {
       securityLogger.warn({
         operation: 'security_event',
@@ -243,6 +272,46 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
  * middleware can be safely applied at the router level via `router.use()`
  * without separately distinguishing read vs write routes.
  */
+/**
+ * Refuse a Personal Access Token on a surface that only a browser may use.
+ *
+ * Some things are not "writes" that a write-scoped token may do — they are the
+ * means of getting in at all. Minting a pairing code, managing tokens, and
+ * changing which second factor or passkey guards the account are all in that
+ * class: a token that could do them could escalate itself, or lock the owner
+ * out of every way back.
+ *
+ * Two routers wrote this check inline before it lived here (device pairing and
+ * token management), and the two that did not — two-factor and passkeys — were
+ * exactly the two that were missing it: a read-scoped PAT could switch on 2FA
+ * and delete passkeys (audit finding AUD-002). That is the argument for one
+ * home rather than three copies.
+ *
+ * 403 and not 401: the caller IS authenticated. The credential is simply the
+ * wrong KIND, and saying "unauthorized" would send them to fetch another token.
+ */
+export const requireBrowserSession = (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): void => {
+  if (!req.apiToken) {
+    next();
+    return;
+  }
+  securityLogger.warn({
+    operation: 'security_event',
+    message: 'API token denied: browser session required',
+    context: {
+      eventType: 'pat_browser_only_blocked',
+      tokenId: req.apiToken.id,
+      userId: req.userId,
+      url: req.url,
+    },
+  });
+  next(new AppError('This action requires a browser session, not an API token', 403));
+};
+
 export const requireWriteScope = (
   req: AuthRequest,
   _res: Response,

@@ -68,7 +68,6 @@ export const backupApi = {
     options: {
       scope: "full" | "database" | "files";
       createBackupBefore?: boolean;
-      targetDatabaseUrl?: string;
     }
   ): Promise<{
     success: boolean;

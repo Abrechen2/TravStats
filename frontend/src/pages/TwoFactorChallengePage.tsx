@@ -29,6 +29,13 @@ export default function TwoFactorChallengePage(): JSX.Element {
     try {
       const body = useRecovery ? { recoveryCode: value.trim() } : { code: value.trim() };
       const result = await authApi.verifyTwoFactor(body);
+      // A right code is not always a session: an account that owes a password
+      // change is handed the change flow here, because the login handler asked
+      // for the second factor before it ever reached that branch.
+      if ("requiresPasswordChange" in result) {
+        navigate("/change-password", { state: { requiresChange: true } });
+        return;
+      }
       setAuth(result.user);
       navigate("/");
     } catch {

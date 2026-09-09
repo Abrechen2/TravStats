@@ -26,18 +26,14 @@ interface Backup {
 interface RestoreModalProps {
   backup: Backup;
   onClose: () => void;
-  onConfirm: (
-    scope: "full" | "database" | "files",
-    createBackupBefore: boolean,
-    targetDatabaseUrl?: string
-  ) => void;
+  onConfirm: (scope: "full" | "database" | "files", createBackupBefore: boolean) => void;
 }
 
 function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
   const [createBackupBefore, setCreateBackupBefore] = useState(true);
-  const [targetDatabaseUrl, setTargetDatabaseUrl] = useState("");
+
   const [confirmText, setConfirmText] = useState("");
 
   const formatDate = (dateString: string | null | undefined): string => {
@@ -57,7 +53,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
     if (confirmText !== t("admin:backup.restore.confirmText")) {
       return;
     }
-    onConfirm(scope, createBackupBefore, targetDatabaseUrl || undefined);
+    onConfirm(scope, createBackupBefore);
   };
 
   return (
@@ -102,36 +98,6 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
             />
             <span>{t("admin:backup.restore.createBackupBefore")}</span>
           </label>
-
-          <div>
-            <label className="label">{t("admin:backup.restore.targetDatabaseUrl")}</label>
-            <input
-              type="text"
-              value={targetDatabaseUrl}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Validate URL format if provided
-                if (value) {
-                  try {
-                    // Use URL class for robust validation
-                    const testUrl = value.replace(/^postgresql:\/\//, "http://");
-                    new URL(testUrl);
-                    setTargetDatabaseUrl(value);
-                  } catch {
-                    // Invalid URL format - don't update
-                    return;
-                  }
-                } else {
-                  setTargetDatabaseUrl(value);
-                }
-              }}
-              placeholder={t("admin:backup.restore.targetDatabaseUrlPlaceholder")}
-              className="input"
-            />
-            <p className="text-sm text-(--text-muted) mt-1">
-              {t("admin:backup.restore.targetDatabaseUrlHelp")}
-            </p>
-          </div>
 
           <div>
             <label className="label">
@@ -278,8 +244,7 @@ export default function BackupManagement(): JSX.Element {
 
   const handleRestore = async (
     scope: "full" | "database" | "files",
-    createBackupBefore: boolean,
-    targetDatabaseUrl?: string
+    createBackupBefore: boolean
   ) => {
     if (!restoreModal) return;
 
@@ -287,7 +252,6 @@ export default function BackupManagement(): JSX.Element {
       await backupApi.restore(restoreModal.id, {
         scope,
         createBackupBefore,
-        targetDatabaseUrl,
       });
       addToast("success", t("admin:backup.toasts.restoring"));
       setRestoreModal(null);

@@ -143,6 +143,9 @@ router.post(
           resetToken: null,
           resetTokenExpiry: null,
           mustChangePassword: false,
+          // Recovering an account has to remove whoever you are recovering it
+          // from — every session older than this instant stops working.
+          sessionEpoch: { increment: 1 },
         },
       });
 
@@ -189,6 +192,7 @@ router.post(
           changeToken: null,
           changeTokenExpiry: null,
           mustChangePassword: false,
+          sessionEpoch: { increment: 1 },
         },
       });
 
