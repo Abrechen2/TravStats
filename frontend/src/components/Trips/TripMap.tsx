@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import { MapLibreOverlay } from "@deck.gl/maplibre";
 import { applyHoverCursor } from "../map/mapCursor";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
@@ -80,9 +80,9 @@ function DeckGLOverlay({
   const handleHover = (info: PickingInfo): void => {
     applyHoverCursor(map, Boolean(info.object));
   };
-  const overlay = useControl<MapboxOverlay>(
+  const overlay = useControl<MapLibreOverlay>(
     () =>
-      new MapboxOverlay({
+      new MapLibreOverlay({
         layers,
         pickingRadius: 8,
         getTooltip,

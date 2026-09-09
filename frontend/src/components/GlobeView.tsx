@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import { MapLibreOverlay } from "@deck.gl/maplibre";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
@@ -77,7 +77,7 @@ import {
 /**
  * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
  * the basemap on a sphere; deck.gl renders the data overlay (flight
- * arcs, cruise paths, airport + port dots) through MapboxOverlay so the
+ * arcs, cruise paths, airport + port dots) through MapLibreOverlay so the
  * same engine that powers the 2D map drives the globe too.
  *
  * Six tokenless basemap styles via the bottom-center picker (Standard /
@@ -151,7 +151,7 @@ function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   // overlay falls back to mercator and the layers detach into a flat
   // strip floating beside the globe whenever the camera is rotated.
   //
-  // No `position` here: MapboxOverlay isn't a corner control, it's a
+  // No `position` here: MapLibreOverlay isn't a corner control, it's a
   // render-pipeline integration. Passing a position option causes
   // react-map-gl to mount it as a corner widget, which can confuse the
   // overlay's lifecycle.
@@ -164,9 +164,9 @@ function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   //
   // Caller must gate this component until MapLibre is confirmed in
   // globe projection — see `mapReady` in GlobeView.
-  const overlay = useControl<MapboxOverlay>(
+  const overlay = useControl<MapLibreOverlay>(
     () =>
-      new MapboxOverlay({
+      new MapLibreOverlay({
         layers,
         pickingRadius: 5,
         interleaved: true,
@@ -432,7 +432,7 @@ export default function GlobeView({
   // pops. Click the active band again to clear.
   const [activeQuartile, setActiveQuartile] = useState<Quartile | null>(null);
   // Gate the deck.gl overlay until MapLibre is confirmed in globe
-  // projection. Otherwise MapboxOverlay's constructor (run inside
+  // projection. Otherwise MapLibreOverlay's constructor (run inside
   // useControl, which fires *before* onLoad) caches the initial
   // mercator projection state and never re-detects globe — the
   // visible symptom is the deck.gl arcs and dots rendering as a

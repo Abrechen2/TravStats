@@ -9,7 +9,7 @@ export interface HoverTooltipApi {
 // Leaf tooltip rendered out-of-band from GlobeView. Mouse-move events on the
 // globe fire onHover at ~60–120 Hz; if the tooltip lived in GlobeView state,
 // every move re-rendered the entire 1600-line parent (layers + effects +
-// MapboxOverlay setProps), which on lower-end GPUs reads as visible jank.
+// MapLibreOverlay setProps), which on lower-end GPUs reads as visible jank.
 //
 // Exposing show/hide via an imperative ref keeps the React tree change scoped
 // to this 30-line subtree — the parent only renders once when the ref is

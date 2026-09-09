@@ -12,7 +12,7 @@ import type { Layer } from "@deck.gl/core";
  *
  * This test mounts the REAL GlobeView (not a mock) and proves that a
  * layer passed via its new `extraLayers` prop reaches the deck.gl overlay
- * MapboxOverlay is constructed with -- i.e. the exact object the globe's
+ * MapLibreOverlay is constructed with -- i.e. the exact object the globe's
  * WebGL canvas draws from. Everything else GlobeView depends on
  * (MapLibre's own map instance, the deck.gl/mapbox interleaving, and the
  * chrome components that aren't relevant to this bug) is stubbed, since
@@ -83,8 +83,8 @@ vi.mock("react-map-gl/maplibre", () => {
   return { __esModule: true, default: MockMapGL, useControl };
 });
 
-vi.mock("@deck.gl/mapbox", () => {
-  class MockMapboxOverlay {
+vi.mock("@deck.gl/maplibre", () => {
+  class MockMapLibreOverlay {
     props: { layers: Layer[] };
     constructor(props: { layers: Layer[] }) {
       this.props = props;
@@ -95,7 +95,7 @@ vi.mock("@deck.gl/mapbox", () => {
       capturedOverlayProps.push(next);
     }
   }
-  return { MapboxOverlay: MockMapboxOverlay };
+  return { MapLibreOverlay: MockMapLibreOverlay };
 });
 
 // Chrome/UI components irrelevant to this bug -- stubbed so mounting
@@ -144,7 +144,7 @@ beforeEach(() => {
 });
 
 describe("GlobeView: extraLayers reach the deck.gl overlay", () => {
-  it("includes a passed extraLayers entry in what MapboxOverlay is given", async () => {
+  it("includes a passed extraLayers entry in what MapLibreOverlay is given", async () => {
     render(<GlobeView flights={[]} cruises={[]} extraLayers={[EXTRA_LAYER]} />);
 
     await waitFor(() => expect(capturedOverlayProps.length).toBeGreaterThan(0));

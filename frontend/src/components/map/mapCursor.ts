@@ -4,9 +4,9 @@
  * The airport dots, route arcs, cruise ports and lodging pins are all
  * `pickable` and all open something on click, but the pointer never said so.
  *
- * WHY THIS IS NOT deck.gl's `getCursor`: with `MapboxOverlay` the deck canvas
+ * WHY THIS IS NOT deck.gl's `getCursor`: with `MapLibreOverlay` the deck canvas
  * is mounted with `pointerEvents: 'none'` and the overlay merely forwards
- * synthetic moves into `deck._onPointerMove`. Nothing in `@deck.gl/mapbox`
+ * synthetic moves into `deck._onPointerMove`. Nothing in `@deck.gl/maplibre`
  * reads `getCursor`, so setting it compiles, tests green, and changes nothing
  * on screen. The cursor belongs to the MapLibre canvas underneath, which is
  * what `applyHoverCursor` writes to.

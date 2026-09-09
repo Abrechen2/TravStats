@@ -155,7 +155,7 @@ type TFn = (key: string, options?: Record<string, unknown>) => string;
  * follow the user's language without restarting the overlay.
  *
  * Designed so the same callback can be plugged into every flat-map
- * MapboxOverlay (DeckGLMap, CruiseRouteMap, TripMap). The globe owns
+ * MapLibreOverlay (DeckGLMap, CruiseRouteMap, TripMap). The globe owns
  * its own React-state tooltip via `onAirportHover` / `onPortHover` and
  * does not use this factory.
  */
