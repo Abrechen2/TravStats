@@ -4,8 +4,19 @@
  * The gate itself is a single boolean on the AdminSettings row
  * (`betaFeaturesEnabled`), flipped by an admin via
  * `PUT /api/v1/admin/instance-settings` and read back — read-only — by every
- * logged-in user from `GET /api/v1/settings`. It is ON on the RC/Beta servers
- * and OFF on production.
+ * logged-in user from `GET /api/v1/settings`. A fresh install has it OFF, which
+ * is what makes this registry worth keeping.
+ *
+ * It is ON on the RC and Beta servers AND on the owner's own production
+ * instance — measured on all three on 2026-09-09, and deliberate: the owner
+ * runs his own instance with everything switched on. This file said "OFF on
+ * production" until then, which had stopped being true on 2026-09-05 when a
+ * dump from the RC carried the flag across.
+ *
+ * The consequence is worth stating once, because it is easy to be surprised by
+ * it: putting a feature BACK behind this gate — as happened on 2026-09-05 with
+ * tours, Companion pairing and Dawarich — changes nothing on an instance whose
+ * flag is on. It protects everybody else's install, not the owner's.
  *
  * Why a registry instead of scattered `if (betaEnabled)` checks: a bare
  * boolean sprinkled across the codebase decays. Six months from now nobody
@@ -90,16 +101,20 @@ export const BETA_FEATURES = Object.freeze({
    * the flag back off does not keep rendering colours nobody can reach a
    * control for.
    *
-   * The open question it is waiting on is not technical. BRAND.md §3 names the
-   * four hexes as canonical and the backend mirrors the same table; letting a
-   * user override them turns a brand constant into a default, which affects
-   * screenshots, the wiki and the marketing site as much as the app.
+   * What it waits on is not technical, and as of 2026-09-05 it is not open
+   * either: the owner settled it (§9, no. 4 of the design-system round) and the
+   * answer was to keep this exactly as it is. BRAND.md §3 names the four hexes
+   * as canonical and the backend mirrors the same table; a user override turns
+   * that constant into a default, which reaches screenshots, the wiki and the
+   * marketing site as much as the app — so it is offered WITH a beta badge
+   * rather than as an ordinary setting, and whoever uses it breaks the legend
+   * knowingly.
    */
   domainColors: Object.freeze({
     reason: "advanced",
-    why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
+    why: "The brand question this entry used to wait on HAS been answered, and the answer was to keep the gate. Owner decision of 2026-09-05 (ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md §9, no. 4), against the recommendation to drop the feature: the override stays exactly as it is, colour picker included, over the token defaults — and the defaults are the Companion's colours, so whoever overrides them breaks the legend knowingly. That is precisely why it is offered as a beta override and not as an ordinary setting.",
     returnsWhen:
-      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
+      "The owner rules that painting your own domain colours is ordinary rather than advanced. Nothing about the brand is outstanding any more, so no measurement or piece of work will open this gate — only that decision will. (The design-system round for 2.7.0 changes the DEFAULTS this overrides, not the gate: one colour per domain, tour included, taken from the Companion token file.)",
     issue: "#270",
   }),
 
