@@ -152,10 +152,6 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
-          "domainColors": {
-            "name": "Custom domain colours",
-            "what": "Makes the per-domain colour a setting rather than a brand constant. Applies to statistics, the trip timeline, the activity rail and the import log."
-          },
           "tourRoutes": {
             "name": "Tours",
             "what": "Route sections inside a trip — the section list, its editor, a dashboard tab of its own, and the lines on the map."

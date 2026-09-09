@@ -152,10 +152,6 @@
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
           },
-          "domainColors": {
-            "name": "Eigene Bereichsfarben",
-            "what": "Die Farbe je Bereich wird einstellbar, statt fest aus der Marke zu kommen. Wirkt in Statistiken, Zeitleiste, Aktivitätsleiste und Import-Protokoll."
-          },
           "tourRoutes": {
             "name": "Touren",
             "what": "Routenabschnitte innerhalb einer Reise — Abschnittsliste, Editor, ein eigener Dashboard-Reiter und die Linien auf der Karte."

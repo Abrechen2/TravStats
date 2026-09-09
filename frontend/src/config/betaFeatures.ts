@@ -85,28 +85,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * User-chosen colour per domain, applied to every surface outside the map.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
-   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
-   * everyone gets the brand set from BRAND.md §3, so an instance that turns
-   * the flag back off does not keep rendering colours nobody can reach a
-   * control for.
-   *
-   * The open question it is waiting on is not technical. BRAND.md §3 names the
-   * four hexes as canonical and the backend mirrors the same table; letting a
-   * user override them turns a brand constant into a default, which affects
-   * screenshots, the wiki and the marketing site as much as the app.
-   */
-  domainColors: Object.freeze({
-    reason: "advanced",
-    why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
-    returnsWhen:
-      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
-    issue: "#270",
-  }),
-
-  /**
    * The "Touren" tab on the trip detail page (tour route sections: a named
    * ordered chain of stops with driven legs — the road-trip counterpart to
    * cruise itineraries), and its editor at

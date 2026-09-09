@@ -666,10 +666,13 @@ Nothing at the moment. The 800-line number was the last entry and was
 ratified on 2026-09-05. Thirteen design-system decisions from the same day
 are recorded, with the owner's answer to each, in
 `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
-that table before re-opening any of them (dashboard tabs stay; `domainColors`
-stays as the beta override; tours are ONE domain colour; the parser goes into
-the beta registry; settings become one route per group; companions and tags
-extend to all four domains).
+that table before re-opening any of them (dashboard tabs stay; tours are ONE
+domain colour; the parser goes into the beta registry; settings become one
+route per group; companions and tags extend to all four domains). One of the
+thirteen has since been reversed by the owner and the table says so: no. 4,
+`domainColors`, was ruled to stay behind the beta badge on 2026-09-05 and
+ruled out from behind it on 2026-09-09, because the goal for 2.7 is that
+nothing is left in the beta registry at all.
 
 ## Version
 
