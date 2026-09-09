@@ -41,8 +41,8 @@ vi.mock("react-map-gl/maplibre", async () => {
   };
 });
 
-vi.mock("@deck.gl/maplibre", () => ({
-  MapLibreOverlay: class {
+vi.mock("@deck.gl/mapbox", () => ({
+  MapboxOverlay: class {
     setProps(): void {}
   },
 }));

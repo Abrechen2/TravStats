@@ -64,8 +64,8 @@ vi.mock("react-map-gl/maplibre", () => {
   return { __esModule: true, default: MockMapGL, useControl, useMap: () => ({ current: null }) };
 });
 
-vi.mock("@deck.gl/maplibre", () => ({
-  MapLibreOverlay: class {
+vi.mock("@deck.gl/mapbox", () => ({
+  MapboxOverlay: class {
     setProps(): void {}
   },
 }));

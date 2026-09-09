@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import { MapLibreOverlay } from "@deck.gl/maplibre";
+import { MapboxOverlay } from "@deck.gl/mapbox";
 import { PathLayer } from "@deck.gl/layers";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -69,13 +69,13 @@ interface DeckOverlayProps {
   /** Handed the overlay so a right-click can ask deck WHAT is under the
    *  cursor. A context menu arrives as a DOM event, not a deck pick, so
    *  without this there is no way to name the leg the user aimed at. */
-  onReady?: (overlay: MapLibreOverlay) => void;
+  onReady?: (overlay: MapboxOverlay) => void;
 }
 
 function DeckGLOverlay({ layers, getTooltip, onClick, onReady }: DeckOverlayProps): null {
-  const overlay = useControl<MapLibreOverlay>(
+  const overlay = useControl<MapboxOverlay>(
     () =>
-      new MapLibreOverlay({
+      new MapboxOverlay({
         layers,
         pickingRadius: 5,
         getTooltip,
@@ -241,8 +241,8 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   /** Delete a whole selection in one step, one undo. */
   /** The map's own box, so a pointer position becomes a position IN the map. */
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
-  const deckRef = useRef<MapLibreOverlay | null>(null);
-  const keepDeck = useCallback((overlay: MapLibreOverlay): void => {
+  const deckRef = useRef<MapboxOverlay | null>(null);
+  const keepDeck = useCallback((overlay: MapboxOverlay): void => {
     deckRef.current = overlay;
   }, []);
 

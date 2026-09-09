@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapLibreOverlay } from "@deck.gl/maplibre";
+import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -14,7 +14,7 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  const overlay = useControl<MapLibreOverlay>(() => new MapLibreOverlay({ layers }), {
+  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
     position: "top-left",
   });
   overlay.setProps({ layers });

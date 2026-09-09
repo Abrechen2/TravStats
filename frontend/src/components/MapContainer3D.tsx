@@ -45,7 +45,7 @@ interface MapContainer3DProps {
   /**
    * Extra deck.gl layers appended after all internally-built layers.
    * Reaches BOTH map engines: DeckGLMap in every non-globe visMode, and
-   * GlobeView's own MapLibreOverlay when visMode is "globe" -- until this
+   * GlobeView's own MapboxOverlay when visMode is "globe" -- until this
    * was wired through, a caller's extraLayers (dashboard-wide tour
    * paths, journey-mode layers) silently vanished the moment the user
    * switched to globe, because MapContainer3D forwarded this prop to

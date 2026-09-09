@@ -10,10 +10,18 @@ import "./index.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 // Must run before any map mounts — see the file for the silent failure it prevents.
 import "./lib/maplibreWorker";
+// MapLibre 6 removed `map.transform`, which @deck.gl/mapbox reads every frame.
+// See the file for what it restores and when to delete it.
+import { installMapLibreTransformBridge } from "./lib/maplibreTransformBridge";
+
 // Import i18n config - this initializes i18n synchronously with initAsync: false
 import "./i18n/config";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n/config";
+
+// Runs before any map mounts: @deck.gl/mapbox reads `map.transform` on every
+// frame and MapLibre 6 no longer has it.
+installMapLibreTransformBridge();
 
 // TravStats is dark-only (BRAND.md §1.1). The `dark` class is hardcoded
 // here before React mounts so any CSS scoped to `html.dark` applies on
