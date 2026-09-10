@@ -301,6 +301,16 @@ const detectInitialDateFormat = (): DateFormat => {
  * the same function that defines the payload makes that class of bug impossible:
  * a slice added to the save path is watched the moment it is added here.
  */
+/**
+ * Saves run one at a time.
+ *
+ * Two PUTs in flight together can land in either order, and the loser silently
+ * overwrites the newer values with the older ones. The settings page auto-saves
+ * on a 500 ms debounce, so a second edit during a slow first request is the
+ * ordinary case, not an edge one (audit finding AUD-035).
+ */
+let saveQueue: Promise<void> = Promise.resolve();
+
 export const snapshotOf = (state: SettingsState): string =>
   JSON.stringify([
     state.profile,
@@ -486,12 +496,29 @@ export const useSettingsStore = create<SettingsState>()(
               // the first post-login fetch. A blind top-level spread would
               // wipe state.display.language back to undefined whenever the
               // remote payload's display object lacks the key.
+              // Whether the persisted profile belongs to somebody ELSE. It has
+              // to be known BEFORE the merge, because the guard used to run
+              // after it and blanked the email the server had just supplied for
+              // the account now logged in — a correct value deleted as if it
+              // were a leftover, and the next auto-save then wrote the blank
+              // back to the server (audit finding AUD-036). A stale local
+              // profile is dropped before hydration; what the server sends is
+              // never second-guessed.
+              const authUser = useAuthStore.getState().user;
+              const previousUsername = state.profile?.username ?? "";
+              const userChanged =
+                !!authUser?.username &&
+                previousUsername !== "" &&
+                previousUsername !== authUser.username;
               const mergeGroup = <K extends keyof SettingsState>(key: K) => {
                 const remoteGroup = remoteWithoutDirectFields[key as string];
+                // The profile is the one slice that is per-ACCOUNT rather than
+                // per-instance, so it is the one that starts from nothing.
+                const base = key === "profile" && userChanged ? {} : (state[key] as object);
                 if (remoteGroup && typeof remoteGroup === "object") {
-                  return { ...(state[key] as object), ...(remoteGroup as object) };
+                  return { ...base, ...(remoteGroup as object) };
                 }
-                return state[key];
+                return key === "profile" && userChanged ? (base as SettingsState[K]) : state[key];
               };
               const newState: SettingsState = {
                 ...state,
@@ -509,26 +536,17 @@ export const useSettingsStore = create<SettingsState>()(
                 // (audit finding AUD-016).
                 cruise: mergeGroup("cruise") as CruiseSettings,
               };
-              // Always mirror the auth-store username into profile.username.
-              // If the persisted username belongs to a different account
-              // (previous login still in localStorage), also drop the
-              // email + profile picture so we don't leak them across users.
-              // Also scrub the legacy "traveler@example.com" placeholder
-              // that shipped as a default in earlier builds and got
-              // autosaved into real UserSettings rows.
-              const authUser = useAuthStore.getState().user;
+              // Mirror the auth-store username into profile.username, and scrub
+              // the legacy "traveler@example.com" placeholder that shipped as a
+              // default in earlier builds and got auto-saved into real
+              // UserSettings rows. Cross-account leftovers were already dropped
+              // above, before the server's values were merged in.
               if (authUser?.username) {
-                const previousUsername = state.profile?.username ?? "";
-                const userChanged =
-                  previousUsername !== "" && previousUsername !== authUser.username;
                 const incomingEmail = newState.profile?.email ?? "";
-                const email =
-                  userChanged || incomingEmail === "traveler@example.com" ? "" : incomingEmail;
                 newState.profile = {
                   ...newState.profile,
                   username: authUser.username,
-                  email,
-                  ...(userChanged ? { profilePicture: undefined } : {}),
+                  email: incomingEmail === "traveler@example.com" ? "" : incomingEmail,
                 };
               }
               // Validate enabledDomains against the known domain keys —
@@ -582,25 +600,14 @@ export const useSettingsStore = create<SettingsState>()(
         set({ remoteSnapshot: snapshotOf(get()) });
       },
       saveRemoteSettings: async () => {
-        const {
-          profile,
-          display,
-          units,
-          defaults,
-          notifications,
-          features,
-          cruise,
-          enabledDomains,
-        } = get();
-
-        // The two writes are independent (issue #186): a 400 from the
-        // general settings PUT (e.g. a rejected profilePicture value) used
-        // to throw before the birthdate PUT ever ran, silently losing the
-        // birthdate on every save that also touched the picture. Firing
-        // both up front and collecting results with allSettled means one
-        // failing never blocks the other.
-        const results = await Promise.allSettled([
-          settingsApi.update({
+        const previous = saveQueue;
+        let release!: () => void;
+        saveQueue = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        await previous;
+        try {
+          const {
             profile,
             display,
             units,
@@ -609,27 +616,55 @@ export const useSettingsStore = create<SettingsState>()(
             features,
             cruise,
             enabledDomains,
-          }),
-          // birthdate lives on a separate endpoint (/settings/profile on the
-          // User row). Only PUT when the field was explicitly loaded or set
-          // — undefined means "not touched this session, leave backend as-is".
-          profile.birthdate !== undefined
-            ? settingsApi.updateProfile({ birthdate: profile.birthdate })
-            : Promise.resolve(undefined),
-        ]);
+          } = get();
+          // What this request is about to send. Captured BEFORE the awaits, so
+          // an edit made while it is in flight is not swept up by its response.
+          const sentSnapshot = snapshotOf(get());
 
-        const failures = results.filter(
-          (result): result is PromiseRejectedResult => result.status === "rejected"
-        );
-        if (failures.length > 0) {
-          for (const failure of failures) {
-            logger.warn("Failed to save settings remotely", failure.reason);
+          // The two writes are independent (issue #186): a 400 from the
+          // general settings PUT (e.g. a rejected profilePicture value) used
+          // to throw before the birthdate PUT ever ran, silently losing the
+          // birthdate on every save that also touched the picture. Firing
+          // both up front and collecting results with allSettled means one
+          // failing never blocks the other.
+          const results = await Promise.allSettled([
+            settingsApi.update({
+              profile,
+              display,
+              units,
+              defaults,
+              notifications,
+              features,
+              cruise,
+              enabledDomains,
+            }),
+            // birthdate lives on a separate endpoint (/settings/profile on the
+            // User row). Only PUT when the field was explicitly loaded or set
+            // — undefined means "not touched this session, leave backend as-is".
+            profile.birthdate !== undefined
+              ? settingsApi.updateProfile({ birthdate: profile.birthdate })
+              : Promise.resolve(undefined),
+          ]);
+
+          const failures = results.filter(
+            (result): result is PromiseRejectedResult => result.status === "rejected"
+          );
+          if (failures.length > 0) {
+            for (const failure of failures) {
+              logger.warn("Failed to save settings remotely", failure.reason);
+            }
+            // Surface a real failure instead of only logging a warning, so
+            // callers (e.g. saveProfileSettings) can show their error toast.
+            throw failures[0].reason;
           }
-          // Surface a real failure instead of only logging a warning, so
-          // callers (e.g. saveProfileSettings) can show their error toast.
-          throw failures[0].reason;
+          // Confirm exactly what was SENT, not what the store holds now. An edit
+          // made during the request is NOT covered by this response, and marking
+          // it saved made the next debounce skip: the value the user typed never
+          // reached the server while the page said "saved".
+          set({ remoteSnapshot: sentSnapshot });
+        } finally {
+          release();
         }
-        set({ remoteSnapshot: snapshotOf(get()) });
       },
     }),
     {

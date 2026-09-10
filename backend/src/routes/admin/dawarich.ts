@@ -23,6 +23,7 @@ import { runDawarichCountryDaySweep } from "../../jobs/dawarichCountryDaySweepSc
 import { testDawarichConnection } from "../../services/dawarich/dawarichTester";
 import { DawarichError, normalizeDawarichBaseUrl } from "../../services/dawarich/errors";
 import logger from "../../utils/logger";
+import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 const router = Router();
 
@@ -51,7 +52,7 @@ function looksMasked(value: string | null | undefined): boolean {
 
 router.get("/", async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       baseUrl: admin?.globalDawarichBaseUrl ?? null,
       apiKey: maskKey(admin?.globalDawarichApiKey),
@@ -86,19 +87,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       data.globalDawarichApiKey = null;
     }
 
-    const existing = await prisma.adminSettings.findFirst();
-    if (existing) {
-      await prisma.adminSettings.update({ where: { id: existing.id }, data });
-    } else {
-      await prisma.adminSettings.create({ data });
-    }
+    await prisma.adminSettings.update({ where: { id: await ensureAdminSettingsRow() }, data });
 
     logger.info({
       message: "dawarich_global_connection_updated",
       context: { fields: Object.keys(data) },
     });
 
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       baseUrl: admin?.globalDawarichBaseUrl ?? null,
       apiKey: maskKey(admin?.globalDawarichApiKey),
@@ -111,7 +107,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const body = dawarichTestSchema.parse(req.body);
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const baseUrl = body.baseUrl ?? admin?.globalDawarichBaseUrl ?? null;
     const apiKey =

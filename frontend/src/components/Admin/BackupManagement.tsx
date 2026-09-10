@@ -5,6 +5,9 @@ import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+// The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
+// and a panel that scrolls instead of running off a 320px screen (AUD-037).
+import Modal from "../Modal";
 
 interface Backup {
   id: string;
@@ -29,7 +32,9 @@ interface RestoreModalProps {
   onConfirm: (scope: "full" | "database" | "files", createBackupBefore: boolean) => void;
 }
 
-function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
+/** Exported for its own test — the dialog contract is worth holding on its
+ *  own, without driving the whole backup page to reach it. */
+export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
   const [createBackupBefore, setCreateBackupBefore] = useState(true);
@@ -57,65 +62,14 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
-        <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--danger)" }}>
-          ⚠️ {t("admin:backup.restore.title")}
-        </h2>
-
-        <div className="space-y-4 mb-6">
-          <div
-            className="border rounded-lg p-4"
-            style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
-          >
-            <p className="font-semibold" style={{ color: "var(--danger)" }}>
-              {t("admin:backup.restore.warning")}
-            </p>
-            <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
-              {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
-            </p>
-          </div>
-
-          <div>
-            <label className="label">{t("admin:backup.restore.scope")}</label>
-            <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value as "full" | "database" | "files")}
-              className="input"
-            >
-              <option value="full">{t("admin:backup.restore.scopeFull")}</option>
-              <option value="database">{t("admin:backup.restore.scopeDatabase")}</option>
-              <option value="files">{t("admin:backup.restore.scopeFiles")}</option>
-            </select>
-          </div>
-
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={createBackupBefore}
-              onChange={(e) => setCreateBackupBefore(e.target.checked)}
-              className="checkbox"
-            />
-            <span>{t("admin:backup.restore.createBackupBefore")}</span>
-          </label>
-
-          <div>
-            <label className="label">
-              {t("admin:backup.restore.confirmLabel", {
-                text: t("admin:backup.restore.confirmText"),
-              })}
-            </label>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              className="input"
-              placeholder={t("admin:backup.restore.confirmText")}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 justify-end">
+    <Modal
+      open
+      onClose={onClose}
+      title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
+      widthClass="max-w-2xl"
+      closeLabel={t("common:buttons.cancel")}
+      footer={
+        <>
           <button onClick={onClose} className="btn-secondary">
             {t("common:buttons.cancel")}
           </button>
@@ -126,9 +80,65 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
           >
             {t("admin:backup.restore.confirmButton")}
           </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
+        >
+          <p className="font-semibold" style={{ color: "var(--danger)" }}>
+            {t("admin:backup.restore.warning")}
+          </p>
+          <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
+            {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="restore-scope">
+            {t("admin:backup.restore.scope")}
+          </label>
+          <select
+            id="restore-scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as "full" | "database" | "files")}
+            className="input"
+          >
+            <option value="full">{t("admin:backup.restore.scopeFull")}</option>
+            <option value="database">{t("admin:backup.restore.scopeDatabase")}</option>
+            <option value="files">{t("admin:backup.restore.scopeFiles")}</option>
+          </select>
+        </div>
+
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={createBackupBefore}
+            onChange={(e) => setCreateBackupBefore(e.target.checked)}
+            className="checkbox"
+          />
+          <span>{t("admin:backup.restore.createBackupBefore")}</span>
+        </label>
+
+        <div>
+          <label className="label" htmlFor="restore-confirm">
+            {t("admin:backup.restore.confirmLabel", {
+              text: t("admin:backup.restore.confirmText"),
+            })}
+          </label>
+          <input
+            id="restore-confirm"
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="input"
+            placeholder={t("admin:backup.restore.confirmText")}
+          />
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

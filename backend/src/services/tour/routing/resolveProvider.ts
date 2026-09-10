@@ -27,6 +27,7 @@ import { ROUTING_PROVIDER_IDS, RouteProvider, RoutingProviderId } from "./types"
  */
 export async function resolveRouteProvider(userId?: string): Promise<RouteProvider | null> {
   const adminSettings = await prisma.adminSettings.findFirst({
+    orderBy: { id: "asc" },
     select: { routingProvider: true, routingCustomUrl: true },
   });
 

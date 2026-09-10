@@ -257,13 +257,43 @@ function groupByPnr(flights: FlightLite[]): Map<string, FlightLite[]> {
  * one (lowest id, deterministic) so the heuristic doesn't generate
  * 0-min "stopovers" that break continuity windowing.
  */
+/**
+ * Drop a cancelled leg when the booking also holds the flight actually taken.
+ *
+ * It did neither half of its own name. The key was departure airport plus day
+ * and the FIRST row won, so a cancelled 08:00 MUC-FRA beat the 10:00 rebooking
+ * that was flown: the proposed trip carried the flight that never left and the
+ * real one stayed unassigned. And a "duplicate" was any second departure from
+ * the same airport that day, so two genuine legs — a positioning hop and the
+ * long haul out — collapsed into one (audit finding AUD-032).
+ *
+ * The rule now: same route, same day, and at least one of them cancelled. Then
+ * the cancelled ones go and what was flown stays. Two legs neither of which is
+ * cancelled are two legs. A group where EVERY leg is cancelled keeps one — a
+ * trip that was called off is still a record, and dropping it entirely would
+ * silently shrink the proposal below the minimum and lose it.
+ */
 function dropCancelledDuplicates(flights: FlightLite[]): FlightLite[] {
-  const seen = new Map<string, FlightLite>();
+  const groups = new Map<string, FlightLite[]>();
   for (const f of flights) {
-    const key = `${f.depIata}-${f.departureTime ? toYmd(f.departureTime) : "?"}`;
-    if (!seen.has(key)) seen.set(key, f);
+    // The ROUTE, not just its start: a rebooking keeps both ends, while a
+    // second real departure that day almost always goes somewhere else.
+    const key = `${f.depIata}-${f.arrIata}-${f.departureTime ? toYmd(f.departureTime) : "?"}`;
+    const list = groups.get(key) ?? [];
+    list.push(f);
+    groups.set(key, list);
   }
-  return [...seen.values()];
+
+  const kept: FlightLite[] = [];
+  for (const group of groups.values()) {
+    const alive = group.filter((f) => f.status !== "cancelled");
+    // All cancelled: keep the first, so the leg is still represented.
+    kept.push(...(alive.length > 0 ? alive : group.slice(0, 1)));
+  }
+  // Restore the caller's order — the grouping above is an implementation
+  // detail, and the proposal's legs are read in the order the user flew them.
+  const order = new Map(flights.map((f, i) => [f.id, i]));
+  return kept.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 }
 
 function spanDays(flights: FlightLite[]): number {

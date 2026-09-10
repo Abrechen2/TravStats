@@ -153,6 +153,47 @@ describe("a trip keeps its contents", () => {
       const photos = await prisma.tripPhoto.findMany({ where: { tripId: target.id } });
       expect(photos.map((p) => p.id)).toEqual([targetPhoto.id]);
     });
+
+    it("points an inherited cover image at the trip that now holds it", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+
+      const cover = await prisma.tripPhoto.create({
+        data: {
+          tripId: source.id,
+          filename: "cover.jpg",
+          mimetype: "image/jpeg",
+          sizeBytes: 10,
+          caption: "__cover__",
+          sortIdx: -1,
+        },
+      });
+      await prisma.trip.update({
+        where: { id: source.id },
+        data: { coverImageUrl: `/api/v1/trips/${source.id}/photos/${cover.id}/file` },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const merged = await prisma.trip.findUniqueOrThrow({ where: { id: target.id } });
+      // The photo moved; the URL used to keep naming the deleted trip and 404.
+      expect(merged.coverImageUrl).toBe(`/api/v1/trips/${target.id}/photos/${cover.id}/file`);
+      expect((await prisma.tripPhoto.findUniqueOrThrow({ where: { id: cover.id } })).tripId).toBe(
+        target.id,
+      );
+    });
+
+    it("leaves a cover somebody pasted from elsewhere alone", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({
+        data: { userId, name: "Source", coverImageUrl: "https://example.com/photo.jpg" },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const merged = await prisma.trip.findUniqueOrThrow({ where: { id: target.id } });
+      expect(merged.coverImageUrl).toBe("https://example.com/photo.jpg");
+    });
   });
 
   describe("when flight detection is confirmed", () => {

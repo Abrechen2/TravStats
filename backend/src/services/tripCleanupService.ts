@@ -26,7 +26,11 @@ import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
-import { mergeImmichAlbums, mergeTripPhotos } from "./trip/mergeTripRelations";
+import {
+  mergeImmichAlbums,
+  mergeTripPhotos,
+  retargetCoverUrl,
+} from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -278,7 +282,13 @@ export async function mergeTrips(
         // stores identically (same pattern as routes/trips.ts).
         companions: resolvedCompanions.map((c) => c.displayName),
         countries: union(trips.map((t) => t.countries)),
-        coverImageUrl: target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
+        // An inherited cover URL names the trip it came from, and that trip is
+        // about to be deleted — the string has to follow its photo (AUD-030).
+        coverImageUrl: retargetCoverUrl(
+          target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
+          sourceIds,
+          targetId,
+        ),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]
             .filter((n): n is string => !!n)

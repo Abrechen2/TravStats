@@ -114,3 +114,30 @@ export async function mergeTripPhotos(
   });
   return dropped;
 }
+
+/**
+ * Point an inherited cover image at the trip that now holds it.
+ *
+ * A cover is stored as a URL, and that URL names the trip:
+ * `/api/v1/trips/<tripId>/photos/<photoId>/file`. When the target inherited a
+ * source's cover, the id in the string stayed the source's — a trip that the
+ * same transaction was about to delete — so the merged trip's cover answered
+ * 404 while its photo sat happily under the new id (audit finding AUD-030).
+ *
+ * Only our own internal shape is rewritten. A cover somebody pasted from
+ * elsewhere is their URL, not ours, and is returned untouched.
+ */
+const INTERNAL_COVER = /^\/api\/v1\/trips\/([^/]+)\/photos\/([^/]+)\/file$/;
+
+export function retargetCoverUrl(
+  url: string | null | undefined,
+  sourceIds: string[],
+  targetId: string,
+): string | null {
+  if (!url) return null;
+  const match = INTERNAL_COVER.exec(url);
+  if (!match) return url;
+  const [, tripId, photoId] = match;
+  if (!sourceIds.includes(tripId)) return url;
+  return `/api/v1/trips/${targetId}/photos/${photoId}/file`;
+}

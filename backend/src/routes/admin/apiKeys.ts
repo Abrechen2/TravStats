@@ -15,6 +15,7 @@ import {
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
 import { routingSettingsSchema } from "../../schemas/tour";
+import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
@@ -116,7 +117,7 @@ async function resolveAdminGlobalKey(
     | "globalOpenrouteserviceApiKey"
     | "globalGraphhopperApiKey"
 ): Promise<string | null> {
-  const settings = await prisma.adminSettings.findFirst();
+  const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return decryptApiKey((settings?.[column] as string | null) ?? null);
 }
 
@@ -133,7 +134,7 @@ const maskKey = (encrypted: string | null | undefined): string | undefined => {
 // Get global API keys
 router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     if (!adminSettings) {
       return res.json({
@@ -186,7 +187,7 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
   try {
     const payload = globalApiKeysSchema.parse(req.body);
 
-    let adminSettings = await prisma.adminSettings.findFirst();
+    let adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const updateData: GlobalApiKeysUpdateData = {};
 
@@ -272,22 +273,12 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       updateData.routingCustomUrl = payload.routingCustomUrl;
     }
 
-    if (adminSettings) {
-      adminSettings = await prisma.adminSettings.update({
-        where: { id: adminSettings.id },
-        data: updateData,
-      });
-    } else {
-      adminSettings = await prisma.adminSettings.create({
-        data: {
-          allowUserApiKeys: true,
-          defaultVisionParser: "auto",
-          defaultTextParser: "auto",
-          allowUserFlightApiKeys: true,
-          ...updateData,
-        },
-      });
-    }
+    // One row, created under a lock if the instance has none — the branch
+    // that used to sit here could insert a SECOND settings row.
+    adminSettings = await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: updateData,
+    });
 
     res.json({
       message: "Global API keys updated successfully",

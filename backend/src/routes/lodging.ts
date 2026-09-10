@@ -26,6 +26,11 @@ import {
 import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
 import { assertReferencesOwned } from "../utils/ownedReferences";
+import { resolveEffectiveStayDates } from "../services/lodging/stayPatchMerge";
+import {
+  collectLodgingPhotoFilenames,
+  removeLodgingPhotoFiles,
+} from "../services/lodging/deleteLodgingPhotoFiles";
 import { snapshotFx, getBaseCurrency } from "../services/fx/snapshot";
 
 // Re-exported: every existing import site names this module.
@@ -488,7 +493,12 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     if (!existing) throw new AppError("Lodging not found", 404);
     // LodgingStay.lodgingId is onDelete: Cascade (schema.prisma) — the DB
     // removes dependent stays itself, no manual cleanup needed here.
+    // The photo FILES are a different matter: the cascade takes their rows and
+    // with them the only record of their names, so they are read first and the
+    // bytes removed after the row is gone (AUD-042).
+    const photoFiles = await collectLodgingPhotoFilenames({ id: existing.id });
     await prisma.lodging.delete({ where: { id: existing.id } });
+    removeLodgingPhotoFiles(photoFiles);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -594,31 +604,20 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     // Same reason as the create path: this one is not a stay column.
     const { manualFxRate, ...input } = parsed.data;
 
-    // The schema-level date-order refine only fires when BOTH checkIn and
-    // checkOut are present in the SAME body. A partial PATCH that only sends
-    // one of the two dates must still be validated against the resulting
-    // MERGED (effective) stay — otherwise e.g. a checkIn-only update can push
-    // the stay past its existing checkOut and silently store an inverted
-    // date range (finding 3).
-    const effectiveCheckIn = input.checkIn ? new Date(input.checkIn) : stay.checkIn;
-    const effectiveCheckOut = input.checkOut ? new Date(input.checkOut) : stay.checkOut;
-    // Only orderable when both ends actually exist. A stay may legitimately
-    // carry one date or none at all since 2.7 (an undated hotel is still a
-    // hotel), and there is no order to violate then.
-    if (
-      effectiveCheckIn !== null &&
-      effectiveCheckOut !== null &&
-      effectiveCheckOut.getTime() < effectiveCheckIn.getTime()
-    ) {
-      throw new AppError("checkOut must not precede checkIn", 400);
-    }
+    // The whole merge rule, and the trap in it, live in `stayPatchMerge`.
+    const effective = resolveEffectiveStayDates(input, stay);
+    const effectiveCheckIn = effective.checkIn;
+    const effectiveCheckOut = effective.checkOut;
 
     // Times are claims about a DAY-precise date (see schemas/lodging.ts).
     // The schema can only check the body; here the MERGED stay is checked:
     // an explicit time the merged stay cannot carry is a contradiction and
     // refused, while a STORED time whose date/precision is being edited away
     // is cleared alongside — the row must never carry a time without its day.
-    const effectiveDatePrecision = input.datePrecision ?? stay.datePrecision;
+    const effectiveDatePrecision = effective.datePrecision;
+    // Feeds the price derivation below: a stay whose length is stated rather
+    // than measured still has one (AUD-040).
+    const effectiveNights = effective.nights;
     const supportsTime = (date: Date | null): boolean =>
       date !== null && effectiveDatePrecision === "DAY";
     if (input.checkInTime != null && !supportsTime(effectiveCheckIn)) {
@@ -667,6 +666,8 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
         pricePerNight: input.pricePerNight,
         checkIn: effectiveCheckIn,
         checkOut: effectiveCheckOut,
+        datePrecision: effectiveDatePrecision,
+        nights: effectiveNights,
       });
     } else {
       // Dates alone can change what a per-night-priced stay costs, but only when
@@ -678,6 +679,8 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
           pricePerNight: stay.pricePerNight,
           checkIn: effectiveCheckIn,
           checkOut: effectiveCheckOut,
+          datePrecision: effectiveDatePrecision,
+          nights: effectiveNights,
         });
     }
 
@@ -700,7 +703,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
         {
           totalPrice: effectiveTotalPrice,
           currency: input.currency ?? stay.currency,
-          checkIn: input.checkIn ?? stay.checkIn,
+          checkIn: effectiveCheckIn,
         },
         baseCurrency,
       );
@@ -716,7 +719,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
               fxOutcome,
               manualFxRate,
               effectiveTotalPrice,
-              input.checkIn ?? stay.checkIn ?? new Date(),
+              effectiveCheckIn ?? new Date(),
               baseCurrency,
             )
           : resolveFxFields(fxOutcome);

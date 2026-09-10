@@ -42,6 +42,7 @@ const USER_VERIFICATION = "required" as const;
 router.get("/availability", async (_req, res: Response, next: NextFunction) => {
   try {
     const row = await prisma.adminSettings.findFirst({
+      orderBy: { id: "asc" },
       select: { webauthnOrigins: true, publicUrl: true },
     });
     const primary = row?.webauthnOrigins?.[0] ?? row?.publicUrl ?? null;

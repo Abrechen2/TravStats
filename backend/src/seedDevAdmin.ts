@@ -62,7 +62,7 @@ void (async () => {
     const ollamaUrl = process.env.OLLAMA_URL;
     const ollamaModel = process.env.OLLAMA_MODEL;
     if (ollamaUrl && ollamaModel) {
-      const existing = await prisma.adminSettings.findFirst();
+      const existing = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
       if (existing) {
         await prisma.adminSettings.update({
           where: { id: existing.id },

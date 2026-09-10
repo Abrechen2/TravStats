@@ -10,85 +10,85 @@ datasource db {
 }
 
 model User {
-  id                   String                   @id @default(uuid())
-  username             String                   @unique
-  passwordHash         String                   @map("password_hash")
+  id                     String                   @id @default(uuid())
+  username               String                   @unique
+  passwordHash           String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
   // (#241). Columns on User rather than keys in the UserSettings JSON blob
   // where profilePicture lives: the header renders the name on every page from
   // the /auth/me payload, and reading it out of settings would make the header
   // wait for a second fetch and flash the username first. Both optional — a
   // logbook does not need your name.
-  firstName            String?                  @map("first_name")
-  lastName             String?                  @map("last_name")
-  isAdmin              Boolean                  @default(false) @map("is_admin")
-  isActive             Boolean                  @default(true) @map("is_active")
-  invitedBy            String?                  @map("invited_by")
-  createdAt            DateTime                 @default(now()) @map("created_at")
+  firstName              String?                  @map("first_name")
+  lastName               String?                  @map("last_name")
+  isAdmin                Boolean                  @default(false) @map("is_admin")
+  isActive               Boolean                  @default(true) @map("is_active")
+  invitedBy              String?                  @map("invited_by")
+  createdAt              DateTime                 @default(now()) @map("created_at")
   // Email notification preferences
-  notificationEmail    String?                  @map("notification_email")
-  notifyBefore24h      Boolean                  @default(false) @map("notify_before_24h")
-  notifyBefore2h       Boolean                  @default(false) @map("notify_before_2h")
+  notificationEmail      String?                  @map("notification_email")
+  notifyBefore24h        Boolean                  @default(false) @map("notify_before_24h")
+  notifyBefore2h         Boolean                  @default(false) @map("notify_before_2h")
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
-  birthdate            DateTime?                @map("birthdate")
-  resetToken           String?                  @unique @map("reset_token")
-  resetTokenExpiry     DateTime?                @map("reset_token_expiry")
-  mustChangePassword   Boolean                  @default(false) @map("must_change_password")
-  changeToken          String?                  @unique @map("change_token")
-  changeTokenExpiry    DateTime?                @map("change_token_expiry")
+  birthdate              DateTime?                @map("birthdate")
+  resetToken             String?                  @unique @map("reset_token")
+  resetTokenExpiry       DateTime?                @map("reset_token_expiry")
+  mustChangePassword     Boolean                  @default(false) @map("must_change_password")
+  changeToken            String?                  @unique @map("change_token")
+  changeTokenExpiry      DateTime?                @map("change_token_expiry")
   // Bumped by every password change and reset. A session carries the epoch it
   // was minted under, and `authenticate` refuses anything older — see
   // middleware/auth.ts. A counter rather than a timestamp because `iat` has
   // second resolution, which would leave a one-second window open.
-  sessionEpoch         Int                      @default(0) @map("session_epoch")
+  sessionEpoch           Int                      @default(0) @map("session_epoch")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
   // one holds a secret that has been shown as a QR code but not yet confirmed
   // by a first correct code, so an abandoned setup never locks anyone out.
-  twoFactorSecret        String?   @map("two_factor_secret")
-  twoFactorPendingSecret String?   @map("two_factor_pending_secret")
-  twoFactorEnabledAt     DateTime? @map("two_factor_enabled_at")
+  twoFactorSecret        String?                  @map("two_factor_secret")
+  twoFactorPendingSecret String?                  @map("two_factor_pending_secret")
+  twoFactorEnabledAt     DateTime?                @map("two_factor_enabled_at")
   // Short-lived login challenge, hashed like changeToken above: the password
   // was right, the second factor is still outstanding.
-  twoFactorToken         String?   @unique @map("two_factor_token")
-  twoFactorTokenExpiry   DateTime? @map("two_factor_token_expiry")
+  twoFactorToken         String?                  @unique @map("two_factor_token")
+  twoFactorTokenExpiry   DateTime?                @map("two_factor_token_expiry")
   twoFactorRecoveryCodes TwoFactorRecoveryCode[]
   webauthnCredentials    WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
-  isDemo               Boolean                  @default(false) @map("is_demo")
-  flights              Flight[]
-  receiptUploads       ReceiptUpload[]
-  userAchievements     UserAchievement[]
-  settings             UserSettings?
-  analyticsEvents      AnalyticsEvent[]
-  createdInvitations   Invitation[]             @relation("CreatedInvitations")
-  usedInvitations      Invitation[]             @relation("UsedInvitations")
-  trainingData         TrainingData[]
-  parserTemplates      ParserTemplate[]
-  pendingFlightUpdates PendingFlightUpdate[]
-  pendingUpdateStats   PendingUpdateStatistics?
-  parseLogs            ParseTrainingLog[]
-  trips                Trip[]
-  bookings             Booking[]
-  cruises              Cruise[]
-  apiTokens            ApiToken[]
-  pairingCodes         PairingCode[]
-  lodgings             Lodging[]
-  lodgingStays         LodgingStay[]
-  lodgingMemberships   LodgingMembership[]
-  places               Place[]
-  placeVisits          PlaceVisit[]
-  placeLists           PlaceList[]
-  importBatches        ImportBatch[]
-  companions           Companion[]
-  photoJourneys        PhotoJourney[]
-  dataQualityFlags     DataQualityFlag[]
-  countryDays          CountryDay[]
-  dawarichSweepState   DawarichSweepState?
+  isDemo                 Boolean                  @default(false) @map("is_demo")
+  flights                Flight[]
+  receiptUploads         ReceiptUpload[]
+  userAchievements       UserAchievement[]
+  settings               UserSettings?
+  analyticsEvents        AnalyticsEvent[]
+  createdInvitations     Invitation[]             @relation("CreatedInvitations")
+  usedInvitations        Invitation[]             @relation("UsedInvitations")
+  trainingData           TrainingData[]
+  parserTemplates        ParserTemplate[]
+  pendingFlightUpdates   PendingFlightUpdate[]
+  pendingUpdateStats     PendingUpdateStatistics?
+  parseLogs              ParseTrainingLog[]
+  trips                  Trip[]
+  bookings               Booking[]
+  cruises                Cruise[]
+  apiTokens              ApiToken[]
+  pairingCodes           PairingCode[]
+  lodgings               Lodging[]
+  lodgingStays           LodgingStay[]
+  lodgingMemberships     LodgingMembership[]
+  places                 Place[]
+  placeVisits            PlaceVisit[]
+  placeLists             PlaceList[]
+  importBatches          ImportBatch[]
+  companions             Companion[]
+  photoJourneys          PhotoJourney[]
+  dataQualityFlags       DataQualityFlag[]
+  countryDays            CountryDay[]
+  dawarichSweepState     DawarichSweepState?
 
   @@map("users")
 }
@@ -108,27 +108,27 @@ model User {
 /// constant-time secret comparison. Without this, every API request
 /// would have to bcrypt-compare against every active token.
 model ApiToken {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label       String
-  lookupHash  String    @unique @map("lookup_hash")
-  hash        String
-  scope       String    @default("read")
-  prefix      String    @default("ts_pat_")
-  lastUsedAt  DateTime? @map("last_used_at")
-  lastUsedIp  String?   @map("last_used_ip")
-  expiresAt   DateTime? @map("expires_at")
-  revokedAt   DateTime? @map("revoked_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String
+  lookupHash String    @unique @map("lookup_hash")
+  hash       String
+  scope      String    @default("read")
+  prefix     String    @default("ts_pat_")
+  lastUsedAt DateTime? @map("last_used_at")
+  lastUsedIp String?   @map("last_used_ip")
+  expiresAt  DateTime? @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   // Device-pairing metadata. Populated when a token is minted via the
   // mobile pairing flow (POST /api/v1/pairing/claim). `deviceId` lets the
   // claim path revoke a prior token for the same physical device so a
   // re-pair doesn't leave orphaned credentials behind.
-  deviceId    String?   @map("device_id")
-  platform    String?
-  appVersion  String?   @map("app_version")
+  deviceId   String? @map("device_id")
+  platform   String?
+  appVersion String? @map("app_version")
 
   @@index([userId])
   @@index([userId, deviceId])
@@ -205,22 +205,22 @@ model WebAuthnCredential {
 }
 
 model Airport {
-  id       Int     @id @default(autoincrement())
-  iata     String?
-  icao     String?
-  name     String
-  city     String?
-  country  String?
-  lat      Float
-  lon      Float
-  altitude Int?
-  timezone String?
-  shortName                   String?      @map("short_name")
-  municipalityName            String?      @map("municipality_name")
+  id               Int     @id @default(autoincrement())
+  iata             String?
+  icao             String?
+  name             String
+  city             String?
+  country          String?
+  lat              Float
+  lon              Float
+  altitude         Int?
+  timezone         String?
+  shortName        String? @map("short_name")
+  municipalityName String? @map("municipality_name")
   /// True if the airport has been permanently closed (e.g. Berlin Tegel TXL
   /// after 2020-11-08). Users can still pick closed airports for historical
   /// flights — the UI just marks them visually.
-  isClosed Boolean @default(false) @map("is_closed")
+  isClosed         Boolean @default(false) @map("is_closed")
 
   /// Manually added via the admin master-data page (#191). Same invariant as
   /// Ship/Port/Airline/Aircraft: the CSV re-seed never overwrites these rows.
@@ -268,18 +268,18 @@ model Flight {
   status               String    @default("scheduled") // scheduled, flown, cancelled, historical
   notes                String?
   // Boarding Pass Information
-  seatNumber         String?   @map("seat_number")
-  seatClass          String?   @map("seat_class") // economy, premium_economy, business, first
-  boardingGroup      String?   @map("boarding_group")
-  gate               String?
-  terminal           String?
-  bookingReference   String?   @map("booking_reference")
-  ticketNumber       String?   @map("ticket_number")
+  seatNumber           String?   @map("seat_number")
+  seatClass            String?   @map("seat_class") // economy, premium_economy, business, first
+  boardingGroup        String?   @map("boarding_group")
+  gate                 String?
+  terminal             String?
+  bookingReference     String?   @map("booking_reference")
+  ticketNumber         String?   @map("ticket_number")
   // Costs & categorization
-  price              Float?    @map("price")
-  currency           String?   @default("EUR") @map("currency")
-  taxes              Float?    @map("taxes")
-  fees               Float?    @map("fees")
+  price                Float?    @map("price")
+  currency             String?   @default("EUR") @map("currency")
+  taxes                Float?    @map("taxes")
+  fees                 Float?    @map("fees")
   /// FX snapshot (#267). `price + taxes + fees` converted into the user's base
   /// currency at the rate for the DEPARTURE day, with the rate, its day and its
   /// source kept alongside. Statistics used to sum `price` across currencies
@@ -287,25 +287,25 @@ model Flight {
   /// symbol, so 300 USD + 300 EUR was reported as "600 €". Null where no
   /// honest conversion was possible (no date, no currency, no rate) — those
   /// amounts are reported per currency instead of being folded into a total.
-  priceBase          Float?    @map("price_base")
-  fxRate             Float?    @map("fx_rate")
-  fxRateDate         DateTime? @map("fx_rate_date")
-  fxBaseCurrency     String?   @map("fx_base_currency")
-  fxSource           String?   @map("fx_source")
+  priceBase            Float?    @map("price_base")
+  fxRate               Float?    @map("fx_rate")
+  fxRateDate           DateTime? @map("fx_rate_date")
+  fxBaseCurrency       String?   @map("fx_base_currency")
+  fxSource             String?   @map("fx_source")
   // No column default: category is genuinely optional. The old
   // @default("private") silently classified every API import that omitted
   // the field, while the UI suggested "business" — two systems, two
   // opinions, neither of them the user's (dropped 2026-08-02).
-  category           String?   @map("category") // business, private, vacation
-  tags               String[]  @default([]) @map("tags")
-  companions         String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
-  receiptUrl         String?   @map("receipt_url")
-  ticketPrice        Float?    @map("ticket_price")
-  createdAt          DateTime  @default(now()) @map("created_at")
+  category             String?   @map("category") // business, private, vacation
+  tags                 String[]  @default([]) @map("tags")
+  companions           String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
+  receiptUrl           String?   @map("receipt_url")
+  ticketPrice          Float?    @map("ticket_price")
+  createdAt            DateTime  @default(now()) @map("created_at")
   // Route tracking
-  actualRoute        Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
-  overflownCountries String[]  @default([]) @map("overflown_countries")
-  routeDistance      Float?    @map("route_distance")
+  actualRoute          Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries   String[]  @default([]) @map("overflown_countries")
+  routeDistance        Float?    @map("route_distance")
   // MEASURED flight time in minutes — the clocks, never an estimate. The
   // estimate stays where it belongs, in `shared/flightDuration.ts`, which
   // labels it as a guess; this column only ever carries evidence.
@@ -348,11 +348,11 @@ model Flight {
   // `@default(dbgenerated())` is how Prisma is told "the database fills this
   // in": without it every `migrate diff` wants to DROP the generated
   // expression it cannot see.
-  durationMinutes    Float?    @default(dbgenerated()) @map("duration_minutes")
-  routeSource        String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
-  hasLiveTracking    Boolean   @default(false) @map("has_live_tracking")
+  durationMinutes      Float?    @default(dbgenerated()) @map("duration_minutes")
+  routeSource          String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking      Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource         String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
+  dataSource           String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -360,10 +360,10 @@ model Flight {
   // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
   // for rows existing at the time of the ADD COLUMN migration). New writes
   // from Prisma default to 'UTC'.
-  depTimeSemantics   String    @default("UTC") @map("dep_time_semantics")
-  arrTimeSemantics   String    @default("UTC") @map("arr_time_semantics")
-  lastModifiedBy     String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
-  enrichmentHistory  Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
+  depTimeSemantics     String    @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics     String    @default("UTC") @map("arr_time_semantics")
+  lastModifiedBy       String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory    Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
   // Phase 3: Actual Times, Delay, CO₂
   actualDeparture DateTime? @map("actual_departure")
@@ -380,13 +380,13 @@ model Flight {
   parserConfidence    Int?     @map("parser_confidence") // 0–100
 
   // AeroDataBox extended fields (v1.5 importers — additive nullable)
-  runwayDepartureTime         DateTime?    @map("runway_departure_time")
-  runwayArrivalTime           DateTime?    @map("runway_arrival_time")
-  isCargo                     Boolean?     @map("is_cargo")
-  aerodataboxLastUpdatedUtc   DateTime?    @map("aerodatabox_last_updated_utc")
-  aerodataboxQualityTags      String[]     @map("aerodatabox_quality_tags") @default([])
-  baggageBelt                 String?      @map("baggage_belt")
-  checkInDesk                 String?      @map("check_in_desk")
+  runwayDepartureTime       DateTime? @map("runway_departure_time")
+  runwayArrivalTime         DateTime? @map("runway_arrival_time")
+  isCargo                   Boolean?  @map("is_cargo")
+  aerodataboxLastUpdatedUtc DateTime? @map("aerodatabox_last_updated_utc")
+  aerodataboxQualityTags    String[]  @default([]) @map("aerodatabox_quality_tags")
+  baggageBelt               String?   @map("baggage_belt")
+  checkInDesk               String?   @map("check_in_desk")
 
   // Smart API check — scheduled time for next live-data lookup
   nextApiCheckAt DateTime? @map("next_api_check_at")
@@ -401,21 +401,21 @@ model Flight {
   // attraction (rocket pad, eclipse path) and patternLat/Lon the optional
   // hold/orbit pattern centre. specialData is a free-form JSON blob for
   // type-specific extras (e.g. eclipse magnitude, parabola count).
-  specialType    String? @map("special_type")
-  eventLat       Float?  @map("event_lat")
-  eventLon       Float?  @map("event_lon")
-  eventLabel     String? @map("event_label")
-  patternLat     Float?  @map("pattern_lat")
-  patternLon     Float?  @map("pattern_lon")
-  specialData    Json?   @map("special_data")
+  specialType String? @map("special_type")
+  eventLat    Float?  @map("event_lat")
+  eventLon    Float?  @map("event_lon")
+  eventLabel  String? @map("event_label")
+  patternLat  Float?  @map("pattern_lat")
+  patternLon  Float?  @map("pattern_lon")
+  specialData Json?   @map("special_data")
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
   /// key must identify THIS entry, never just the booking — a return leg
   /// shares its PNR with the outbound one, and a unique constraint on the
   /// booking alone would silently refuse the second half of every trip.
-  externalRef   String?  @map("external_ref")
-  importBatchId String?  @map("import_batch_id")
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
@@ -424,6 +424,7 @@ model Flight {
   pendingUpdates PendingFlightUpdate[]
   companionLinks FlightCompanion[]
 
+  @@unique([userId, externalRef])
   // Composite indexes for the two shapes that actually dominate reads.
   // Everything else below is a single-column index kept for a single,
   // named call site — see the note under each.
@@ -464,7 +465,6 @@ model Flight {
   @@index([nextApiCheckAt])
   @@index([specialType])
   @@index([importBatchId])
-  @@unique([userId, externalRef])
   @@map("flights")
 }
 
@@ -491,9 +491,9 @@ model Achievement {
 }
 
 model UserAchievement {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  achievementId String   @map("achievement_id")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  achievementId String    @map("achievement_id")
   /// When the badge was EARNED, and null while it is not held.
   ///
   /// It used to be `DateTime @default(now())`, so every row carried a date —
@@ -693,7 +693,7 @@ model AdminSettings {
   /// a Prisma enum — `RoutingProviderId` already owns the closed set in
   /// TypeScript, and Zod (`schemas/tour.ts`) validates it at the boundary; a
   /// duplicate DB-level enum would be a second place for that list to drift.
-  routingProvider   String? @map("routing_provider")
+  routingProvider  String? @map("routing_provider")
   /// Base URL of a self-hosted OSRM instance, used only when
   /// `routingProvider == "custom"`. The "custom" provider takes no API key —
   /// see UserSettings/AdminSettings `*OpenrouteserviceApiKey` /
@@ -759,8 +759,8 @@ model AdminSettings {
   // freshly paired phone knows the externally reachable origin instead of the
   // LAN address the browser happened to be on. `lanUrl` is an optional
   // secondary hint for on-network clients.
-  publicUrl         String? @map("public_url")
-  lanUrl            String? @map("lan_url")
+  publicUrl String? @map("public_url")
+  lanUrl    String? @map("lan_url")
 
   /// WebAuthn relying-party identity. Explicit rather than derived from the
   /// request Host: a credential is bound to this value forever, so guessing it
@@ -771,11 +771,11 @@ model AdminSettings {
   /// ORIGINS may share it — an rpId may be a registrable parent domain, so
   /// `example.com` covers `app.example.com` and `www.example.com`. What it can
   /// never span is unrelated names, and a bare IP is not a valid rpId at all.
-  webauthnRpId      String?  @map("webauthn_rp_id")
+  webauthnRpId    String?  @map("webauthn_rp_id")
   /// Full origins (scheme + host + port) the browser may be on. A list, because
   /// @simplewebauthn verifies against `expectedOrigin: string[]` and this
   /// instance is routinely reached under more than one name.
-  webauthnOrigins   String[] @default([]) @map("webauthn_origins")
+  webauthnOrigins String[] @default([]) @map("webauthn_origins")
 
   // Geocoder endpoints — supersedes PHOTON_URL / NOMINATIM_URL ENV variables.
   // Defaults are the public instances (photon.komoot.io, OSM Nominatim); an
@@ -1019,8 +1019,8 @@ model DataQualityFlag {
 /// After this table exists the count is a cheap read and catching up costs one
 /// window, which is the whole reason §8.4 asks for it.
 model CountryDay {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
   /// The UTC calendar day, at midnight UTC.
   ///
   /// UTC and not a local clock, deliberately, and it is a real limitation
@@ -1053,7 +1053,7 @@ model CountryDay {
   /// "estimated" would be a judgement the payload does not support, so the
   /// count is published raw and whoever displays it decides. Same discipline as
   /// the ground time in §3.4b: shown as evidence, never used as a threshold.
-  pointCount Int   @map("point_count")
+  pointCount        Int     @map("point_count")
   /// How many of that day's points lay on the grounds of an airport this
   /// account is KNOWN to have flown through — the §8.2 signal.
   ///
@@ -1076,7 +1076,7 @@ model CountryDay {
   /// zero, which claims nothing was airside and so errs towards the STRONGER
   /// tier: the safe direction, since it keeps a country in the headline rather
   /// than dropping one out of it.
-  airportPointCount Int @default(0) @map("airport_point_count")
+  airportPointCount Int     @default(0) @map("airport_point_count")
   /// The diagonal of the bounding box of that day's points inside this country,
   /// in kilometres — how far apart they were, never where they were.
   ///
@@ -1085,7 +1085,7 @@ model CountryDay {
   /// bare kilometre cut-off is exactly the dial §2 refuses — it would call a
   /// compact city a connection and a sprawling airport a visit, and there is no
   /// value of it that is right.
-  spanKm     Float @map("span_km")
+  spanKm            Float   @map("span_km")
   /// True when the window this day came out of hit the client's `MAX_PAGES`
   /// cap even after being subdivided to a single day (`dawarichClient.ts`).
   ///
@@ -1095,7 +1095,7 @@ model CountryDay {
   /// newest-first and the older part of the window was never seen. A partial
   /// window recorded as if whole is the measurement that lies, which is why
   /// this column exists rather than a log line.
-  partialWindow Boolean @default(false) @map("partial_window")
+  partialWindow     Boolean @default(false) @map("partial_window")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1134,14 +1134,14 @@ model DawarichSweepState {
   /// missed months are not silently skipped.
   sweptThroughAt      DateTime? @map("swept_through_at")
 
-  lastRunAt DateTime? @map("last_run_at")
+  lastRunAt       DateTime? @map("last_run_at")
   /// The `DawarichErrorKind` of the last failure, or null after a clean run.
   ///
   /// The KIND and never the message: a Dawarich error message can carry the
   /// base URL, and a base URL is the address of the user's home server. The
   /// kind is a closed vocabulary of five words and says everything an operator
   /// needs in order to act.
-  lastErrorKind String? @map("last_error_kind")
+  lastErrorKind   String?   @map("last_error_kind")
   /// Start of the most recent single-day window that was STILL truncated after
   /// subdivision — i.e. the one case where the sweep knowingly stored an
   /// incomplete day. Null on every healthy instance; a value here is the
@@ -1231,22 +1231,22 @@ model ParserTemplate {
 }
 
 model Trip {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id          String  @id @default(uuid())
+  userId      String  @map("user_id")
   name        String
   description String?
-  color       String   @default("#818cf8") @map("color")
+  color       String  @default("#818cf8") @map("color")
 
   // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
   // All optional / defaulted so legacy rows stay valid.
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
   status           String    @default("planned") // planned | in_progress | completed
-  category         String?   // vacation | business | weekend | family | other
+  category         String? // vacation | business | weekend | family | other
   tags             String[]  @default([])
   companions       String[]  @default([])
-  notes            String?   // markdown long-form
-  summary          String?   // optional, may be LLM-generated later
+  notes            String? // markdown long-form
+  summary          String? // optional, may be LLM-generated later
   originLabel      String?   @map("origin_label")
   destinationLabel String?   @map("destination_label")
   coverImageUrl    String?   @map("cover_image_url")
@@ -1344,35 +1344,35 @@ model ImmichImportJob {
 }
 
 model TripStop {
-  id          String    @id @default(uuid())
-  tripId      String    @map("trip_id")
-  orderIdx    Int       @default(0) @map("order_idx")
+  id            String    @id @default(uuid())
+  tripId        String    @map("trip_id")
+  orderIdx      Int       @default(0) @map("order_idx")
   // Free-form DomainKey-style label so the timeline picks the right
   // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
-  domain      String?
+  domain        String?
   // Optional id of an existing flight/cruise/etc. that this stop wraps.
-  sourceId    String?   @map("source_id")
-  title       String
-  description String?
-  startDate   DateTime? @map("start_date")
-  endDate     DateTime? @map("end_date")
-  lat         Float?
-  lon         Float?
-  notes       String?
+  sourceId      String?   @map("source_id")
+  title         String
+  description   String?
+  startDate     DateTime? @map("start_date")
+  endDate       DateTime? @map("end_date")
+  lat           Float?
+  lon           Float?
+  notes         String?
   /// Route membership. NULL means what every stop is today: a timeline
   /// point that produces no kilometres. Set means it is a vertex of that
   /// route section. Nothing derives this — see the migration note.
-  routeId       String? @map("route_id")
+  routeId       String?   @map("route_id")
   /// Position WITHIN the route, 0-based and contiguous. Written only by
   /// PUT /trips/:id/routes/:routeId/stops, never by a client.
-  routeOrderIdx Int?    @map("route_order_idx")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  routeOrderIdx Int?      @map("route_order_idx")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   trip     Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  route     TripRoute?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
-  legsFrom  TripRouteLeg[] @relation("LegFrom")
-  legsTo    TripRouteLeg[] @relation("LegTo")
+  route    TripRoute?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  legsFrom TripRouteLeg[] @relation("LegFrom")
+  legsTo   TripRouteLeg[] @relation("LegTo")
 
   @@unique([routeId, routeOrderIdx])
   @@index([tripId])
@@ -1406,7 +1406,7 @@ model TripRoute {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip   Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
   stops  TripStop[]
   legs   TripRouteLeg[]
   tracks TripRouteTrack[]
@@ -1448,7 +1448,7 @@ model TripRouteLeg {
 
   route    TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
   fromStop TripStop  @relation("LegFrom", fields: [fromStopId], references: [id], onDelete: Cascade)
-  toStop   TripStop  @relation("LegTo",   fields: [toStopId],   references: [id], onDelete: Cascade)
+  toStop   TripStop  @relation("LegTo", fields: [toStopId], references: [id], onDelete: Cascade)
 
   @@unique([routeId, fromStopId, toStopId])
   @@index([routeId])
@@ -1460,16 +1460,31 @@ model TripRouteLeg {
 /// into the leg structure on import loses data. Legs may later take their
 /// distance from an overlapping track (§7.3); the track itself stays whole.
 model TripRouteTrack {
-  id         String   @id @default(uuid())
-  routeId    String   @map("route_id")
-  source     String   // gpx | dawarich
-  name       String?
-  startedAt  DateTime @map("started_at")
-  endedAt    DateTime @map("ended_at")
+  id            String   @id @default(uuid())
+  routeId       String   @map("route_id")
+  source        String // gpx | dawarich
+  name          String?
+  startedAt     DateTime @map("started_at")
+  endedAt       DateTime @map("ended_at")
   /// GeoJSON LineString coordinates, already simplified on import.
-  geometry   Json
-  pointCount Int      @map("point_count")
-  distanceKm Float    @map("distance_km")
+  geometry      Json
+  /// Index into `geometry` where each RECORDING segment starts, always
+  /// beginning at 0. GPX separates continuous stretches of recording with
+  /// `<trkseg>`, and the gap between two of them is exactly what was NOT
+  /// recorded. Flattening them into one line made every gap a straight
+  /// stretch that the distance counted as travelled (AUD-033). Null on rows
+  /// written before the boundaries were carried — read as a single segment.
+  segmentStarts Json?    @map("segment_starts")
+  /// Running RAW distance in km at each vertex of `geometry`, from the start.
+  /// The stored line is simplified, so re-measuring it is short by however
+  /// many corners were cut — a leg adopting the whole track came out 7% under
+  /// the number shown beside it, and the raw measurement was unrecoverable
+  /// from two remaining points (AUD-034). With this, any sub-range is a
+  /// subtraction against raw data. Null on rows written before it existed;
+  /// those fall back to measuring the simplified line, as they always did.
+  cumulativeKm  Json?    @map("cumulative_km")
+  pointCount    Int      @map("point_count")
+  distanceKm    Float    @map("distance_km")
   /// True when a Dawarich pull hit `MAX_PAGES` (dawarichClient.ts) and the
   /// stored points are therefore a PARTIAL window, not the full requested
   /// span — the newest points only, per Dawarich's measured ordering. Always
@@ -1477,8 +1492,8 @@ model TripRouteTrack {
   /// instead of storing a silently-shortened one. Surfaced in the API
   /// response and in `TourTrackList` so a partial track's distance is never
   /// presented with the same confidence as a complete one.
-  truncated  Boolean  @default(false)
-  createdAt  DateTime @default(now()) @map("created_at")
+  truncated     Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
@@ -1572,12 +1587,12 @@ model Cruise {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ship          Ship?        @relation(fields: [shipId], references: [id], onDelete: SetNull)
-  departurePort Port?        @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
-  arrivalPort   Port?        @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
-  trip          Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship          Ship?            @relation(fields: [shipId], references: [id], onDelete: SetNull)
+  departurePort Port?            @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
+  arrivalPort   Port?            @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
+  trip          Trip?            @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking       Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
   legRoutes     CruiseLegRoute[]
@@ -1587,12 +1602,13 @@ model Cruise {
   /// key must identify THIS entry, never just the booking — a return leg
   /// shares its PNR with the outbound one, and a unique constraint on the
   /// booking alone would silently refuse the second half of every trip.
-  externalRef   String?  @map("external_ref")
-  importBatchId String?  @map("import_batch_id")
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
 
   companionLinks CruiseCompanion[]
-  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, externalRef])
   @@index([userId])
   @@index([startDate])
   @@index([status])
@@ -1600,7 +1616,6 @@ model Cruise {
   @@index([tripId])
   @@index([bookingId])
   @@index([importBatchId])
-  @@unique([userId, externalRef])
   @@map("cruises")
 }
 
@@ -1677,18 +1692,18 @@ model CruiseLegRoute {
 }
 
 model CruiseStop {
-  id            String    @id @default(uuid())
-  cruiseId      String    @map("cruise_id")
-  portId        Int?      @map("port_id")
-  dayNumber     Int       @map("day_number")
-  date          DateTime?
-  isAtSea       Boolean   @default(false) @map("is_at_sea")
-  arrivalTime   DateTime? @map("arrival_time")
-  departureTime DateTime? @map("departure_time")
-  excursionNote String?   @map("excursion_note")
+  id                 String    @id @default(uuid())
+  cruiseId           String    @map("cruise_id")
+  portId             Int?      @map("port_id")
+  dayNumber          Int       @map("day_number")
+  date               DateTime?
+  isAtSea            Boolean   @default(false) @map("is_at_sea")
+  arrivalTime        DateTime? @map("arrival_time")
+  departureTime      DateTime? @map("departure_time")
+  excursionNote      String?   @map("excursion_note")
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
-  unresolvedPortName String? @map("unresolved_port_name")
+  unresolvedPortName String?   @map("unresolved_port_name")
 
   cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
@@ -1741,35 +1756,35 @@ model Port {
 }
 
 model Lodging {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  type          String   @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
-  name          String
-  chainId       Int?     @map("chain_id")
-  address       String?
-  city          String?
-  country       String?
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  type           String   @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
+  name           String
+  chainId        Int?     @map("chain_id")
+  address        String?
+  city           String?
+  country        String?
   /// ISO 3166-1 alpha-2, derived from `country`. The text field keeps whatever
   /// the source wrote ("Deutschland", "Germany", "Schweiz/Suisse/Svizzera/Svizra");
   /// everything that GROUPS or COUNTS joins on this instead. Null when the text
   /// resolves to no country — a finding, not a gap ("Dubai" is a city).
   isoCountryCode String?  @map("iso_country_code")
-  lat           Float?
-  lon           Float?
-  stars         Int?     // official 1–5
-  amenities     String[] @default([])
-  notes         String?
+  lat            Float?
+  lon            Float?
+  stars          Int? // official 1–5
+  amenities      String[] @default([])
+  notes          String?
   /// Has the user actually been here, or is it only noted down? A saved-places
   /// export mixes both, and only the user knows which is which — so the import
   /// asks once instead of inferring. Defaults to true: everything created
   /// before this column existed, and everything entered by hand or parsed from
   /// a booking, describes a place the user really went to.
-  visited       Boolean  @default(true)
-  dataSource    String?  @map("data_source") // parser | manual | enriched
-  externalRef   String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
-  batchId       String?  @map("batch_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  visited        Boolean  @default(true)
+  dataSource     String?  @map("data_source") // parser | manual | enriched
+  externalRef    String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
+  batchId        String?  @map("batch_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   chain           LodgingChain?              @relation(fields: [chainId], references: [id], onDelete: SetNull)
@@ -1829,7 +1844,7 @@ model LodgingStay {
   status           String    @default("completed") // scheduled | in_progress | completed | cancelled
   roomNumber       String?   @map("room_number")
   roomCategory     String?   @map("room_category")
-  board            String?   // none | breakfast | half | full | all_inclusive
+  board            String? // none | breakfast | half | full | all_inclusive
   // How many people the booking covered, as the confirmation states it. A COUNT,
   // never a name: a confirmation names the booker, so who came along stays the
   // user's to enter in `companions`. Kept so the stay editor can point at that
@@ -1838,7 +1853,7 @@ model LodgingStay {
   pricePerNight    Float?    @map("price_per_night")
   currency         String    @default("EUR")
   totalPrice       Float?    @map("total_price")
-  totalPriceBase   Float?    @map("total_price_base")   // FX snapshot (§7.1)
+  totalPriceBase   Float?    @map("total_price_base") // FX snapshot (§7.1)
   fxRate           Float?    @map("fx_rate")
   fxRateDate       DateTime? @map("fx_rate_date")
   fxBaseCurrency   String?   @map("fx_base_currency")
@@ -1868,12 +1883,12 @@ model LodgingStay {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  lodging    Lodging             @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip       Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking    Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  membership LodgingMembership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
-  batch      ImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
   @@unique([userId, externalRef])
   @@index([lodgingId])
@@ -1988,7 +2003,7 @@ model Place {
   id     String @id @default(uuid())
   userId String @map("user_id")
 
-  name String
+  name     String
   /// Drives the pin ICON, deliberately not the pin hue: on a map any two
   /// categories can end up adjacent, and only ~3 categorical hues survive that
   /// all-pairs separation test. Mirrored in frontend/src/shared/placeCategories.ts.
@@ -2184,14 +2199,14 @@ model PlaceList {
   description String?
   /// Defaults to the POI domain colour. What `list` colour mode resolves — the
   /// reason that mode could not exist before this table did.
-  color   String  @default("#5ec2b2")
-  icon    String?
-  sortIdx Int     @default(0) @map("sort_idx")
+  color       String  @default("#5ec2b2")
+  icon        String?
+  sortIdx     Int     @default(0) @map("sort_idx")
   /// What this list's places are labelled with on the map: "name" or "icon".
   /// Only ever the list's DEFAULT -- the map's own control overrides it for the
   /// whole map, which is why this is a per-list column and not a user setting.
   /// A list with no `icon` always renders names whatever this says.
-  labelMode String @default("name") @map("label_mode")
+  labelMode   String  @default("name") @map("label_mode")
 
   /// Non-null when this list is the user's subscription to a shipped checklist
   /// (e.g. "world-wonders-new7"). A subscribed list's name and membership are
@@ -2261,9 +2276,9 @@ model CuratedList {
   /// primary copy and English is mirrored beside it. A catalog row cannot go
   /// through i18n resource files the way UI copy does, so the pair lives in
   /// the table and the client picks by locale, falling back to `name`.
-  name        String
-  nameEn      String? @map("name_en")
-  description String?
+  name          String
+  nameEn        String? @map("name_en")
+  description   String?
   descriptionEn String? @map("description_en")
 
   icon    String?
@@ -2435,7 +2450,7 @@ model PhotoJourney {
   startDate DateTime @map("start_date")
   endDate   DateTime @map("end_date")
 
-  photoCount Int @map("photo_count")
+  photoCount   Int @map("photo_count")
   /// How many of those carried a coordinate. A cluster located by two
   /// photos out of sixty deserves less trust than one located by all of
   /// them, and the UI should be able to say so.

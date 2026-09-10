@@ -70,7 +70,7 @@ export interface ResolvedCountryThreshold {
  * the normal way, never a reason to fail a stats request.
  */
 export async function getInstanceCountryThreshold(): Promise<CountryTier> {
-  const row = await prisma.adminSettings.findFirst({ select: { countryThreshold: true } });
+  const row = await prisma.adminSettings.findFirst({ select: { countryThreshold: true } , orderBy: { id: "asc" } });
   const parsed = parseCountryTier(row?.countryThreshold);
   if (row && parsed === null) {
     logger.warn({

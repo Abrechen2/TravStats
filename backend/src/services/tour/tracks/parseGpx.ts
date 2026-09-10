@@ -19,6 +19,21 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 export interface ParsedTrack {
   /** `[lon, lat]` tuples, GeoJSON order, in travel order. */
   points: Array<[number, number]>;
+  /**
+   * Where each RECORDING segment starts inside `points`. Always begins with 0.
+   *
+   * GPX separates continuous stretches of recording with `<trkseg>`, and the
+   * gap between two of them is precisely what was NOT recorded — the receiver
+   * was off, or lost its fix. Flattening every segment into one list turned
+   * each of those gaps into a straight line that the distance then counted as
+   * travelled: two 1.1 km stretches ten degrees apart measured 1113 km
+   * (audit finding AUD-033). The boundaries are carried so nothing downstream
+   * has to guess where the recording stopped.
+   *
+   * Primary source: GPX 1.1, `trksegType` —
+   * https://www.topografix.com/GPX/1/1/#type_trksegType
+   */
+  segmentStarts: number[];
   startedAt: Date | null;
   endedAt: Date | null;
   name: string | null;
@@ -94,6 +109,8 @@ function parsePoint(node: unknown): RawPoint | null {
 
 interface Collected {
   points: RawPoint[];
+  /** Start index of each recording segment within `points`. */
+  segmentStarts: number[];
   name: string | null;
 }
 
@@ -103,18 +120,25 @@ function collectFromTracks(gpx: XmlNode): Collected | null {
   if (tracks.length === 0) return null;
 
   const points: RawPoint[] = [];
+  const segmentStarts: number[] = [];
   let name: string | null = null;
   for (const track of tracks) {
     name ??= toNonEmptyString(track["name"]);
     const segments = toArray(track["trkseg"]).filter(isXmlNode);
     for (const segment of segments) {
+      const startedAtIndex = points.length;
       for (const rawPoint of toArray(segment["trkpt"])) {
         const point = parsePoint(rawPoint);
         if (point) points.push(point);
       }
+      // A segment that contributed no usable point is not a break — recording
+      // never stopped, the file just held nothing readable there.
+      if (points.length > startedAtIndex) segmentStarts.push(startedAtIndex);
     }
+    // Separate `<trk>` elements are separate recordings too, and the first
+    // segment of the next one already pushed its own start above.
   }
-  return { points, name };
+  return { points, segmentStarts, name };
 }
 
 /** Every `<rtept>` from every `<rte>`, for exporters that emit routes instead of tracks. */
@@ -123,15 +147,19 @@ function collectFromRoutes(gpx: XmlNode): Collected | null {
   if (routes.length === 0) return null;
 
   const points: RawPoint[] = [];
+  const segmentStarts: number[] = [];
   let name: string | null = null;
   for (const route of routes) {
     name ??= toNonEmptyString(route["name"]);
+    const startedAtIndex = points.length;
     for (const rawPoint of toArray(route["rtept"])) {
       const point = parsePoint(rawPoint);
       if (point) points.push(point);
     }
+    // Each `<rte>` is its own planned route — the same boundary as `<trkseg>`.
+    if (points.length > startedAtIndex) segmentStarts.push(startedAtIndex);
   }
-  return { points, name };
+  return { points, segmentStarts, name };
 }
 
 function findGpxRoot(parsed: unknown): XmlNode | null {
@@ -188,7 +216,13 @@ export function parseGpx(xml: string): ParsedTrack | null {
     const startedAt = window ? new Date(window.min) : null;
     const endedAt = window ? new Date(window.max) : null;
 
-    return { points, startedAt, endedAt, name: collected.name };
+    return {
+      points,
+      segmentStarts: collected.segmentStarts.length > 0 ? collected.segmentStarts : [0],
+      startedAt,
+      endedAt,
+      name: collected.name,
+    };
   } catch {
     return null;
   }

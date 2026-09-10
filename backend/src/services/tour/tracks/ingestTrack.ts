@@ -31,6 +31,26 @@ const MAX_SIMPLIFY_ATTEMPTS = 30;
 export interface IngestedTrack {
   /** Simplified geometry, `[lon, lat]` order, at or below `maxPoints`. */
   geometry: Array<[number, number]>;
+  /**
+   * Where each recording segment starts inside `geometry`. Always begins at 0.
+   * Carried through simplification so the gaps stay gaps — see `parseGpx`.
+   */
+  segmentStarts: number[];
+  /**
+   * Raw distance in kilometres at each vertex of `geometry`, from the start.
+   *
+   * The stored line is simplified, and every dropped vertex is a chord cutting
+   * a corner — so re-measuring it gives a shorter answer than the raw track.
+   * A leg adopting the WHOLE track came out 7% short of the number shown right
+   * beside it on the track itself, and no partial adoption could do better,
+   * because the raw measurement was gone (audit finding AUD-034). Keeping the
+   * running raw total against each retained vertex means any sub-range is a
+   * subtraction, exact against the raw points, and a full adoption returns
+   * `distanceKm` itself.
+   *
+   * A step ACROSS a segment boundary adds nothing: the gap was not travelled.
+   */
+  cumulativeKm: number[];
   /** Point count of the RAW track (before simplification). */
   pointCount: number;
   /** Distance in kilometres, measured on the RAW track (before simplification). */
@@ -95,17 +115,115 @@ export function ingestTrack(
   const toleranceDeg = resolveToleranceDeg(opts?.toleranceDeg);
   const maxPoints = opts?.maxPoints ?? DEFAULT_MAX_POINTS;
 
-  // Measure on the raw points BEFORE simplification — see module docstring.
-  const pointCount = parsed.points.length;
-  const distanceKm = polylineDistanceKm(parsed.points);
+  const bounds = segmentBounds(parsed.points.length, parsed.segmentStarts);
 
-  const geometry = simplifyWithinCap(parsed.points, toleranceDeg, maxPoints);
+  // Measure on the raw points BEFORE simplification — see module docstring —
+  // and per segment, so the un-recorded gap between two of them is not counted
+  // as distance travelled.
+  const pointCount = parsed.points.length;
+  const rawCumulative = cumulativeRawKm(parsed.points, bounds);
+  const distanceKm = rawCumulative[rawCumulative.length - 1] ?? 0;
+
+  // Each segment is simplified on its own. Simplifying the flattened list
+  // would let Douglas-Peucker drop the vertices either side of a gap, which
+  // is the one place the line must keep its shape exactly.
+  const geometry: Array<[number, number]> = [];
+  const segmentStarts: number[] = [];
+  const cumulativeKm: number[] = [];
+  const perSegmentCap = Math.max(2, Math.floor(maxPoints / bounds.length));
+
+  for (const [start, end] of bounds) {
+    const raw = parsed.points.slice(start, end);
+    const simplified = simplifyWithinCap(raw, toleranceDeg, perSegmentCap);
+    const keptIndices = indicesOf(raw, simplified);
+
+    segmentStarts.push(geometry.length);
+    for (let i = 0; i < simplified.length; i++) {
+      geometry.push(simplified[i]);
+      cumulativeKm.push(rawCumulative[start + keptIndices[i]]);
+    }
+  }
 
   return {
     geometry,
+    segmentStarts,
+    cumulativeKm,
     pointCount,
     distanceKm,
     startedAt: parsed.startedAt,
     endedAt: parsed.endedAt,
   };
+}
+
+/**
+ * `[start, end)` index pairs, one per recording segment.
+ *
+ * Tolerant of a missing or malformed list even though the type requires one:
+ * `ParsedTrack` is also built by hand in tests and could be built by a future
+ * source that has no notion of segments, and the safe reading of "no
+ * boundaries" is one continuous recording — which is what the code did before
+ * boundaries existed at all.
+ */
+function segmentBounds(total: number, starts: number[] | undefined): Array<[number, number]> {
+  const usable = Array.isArray(starts) ? starts : [];
+  const cleaned = [...new Set(usable.filter((i) => Number.isInteger(i) && i >= 0 && i < total))].sort(
+    (a, b) => a - b
+  );
+  if (cleaned.length === 0 || cleaned[0] !== 0) cleaned.unshift(0);
+
+  const bounds: Array<[number, number]> = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const end = i + 1 < cleaned.length ? cleaned[i + 1] : total;
+    // A one-point segment carries no distance but still holds its place, so it
+    // is kept rather than merged into its neighbour.
+    if (end > cleaned[i]) bounds.push([cleaned[i], end]);
+  }
+  return bounds;
+}
+
+/**
+ * Running raw distance at every point, with segment boundaries contributing 0.
+ * The last entry is the track's total.
+ */
+function cumulativeRawKm(
+  points: ReadonlyArray<[number, number]>,
+  bounds: ReadonlyArray<[number, number]>
+): number[] {
+  const cumulative = new Array<number>(points.length).fill(0);
+  let total = 0;
+  for (const [start, end] of bounds) {
+    // The first point of a segment inherits the total so far — the jump to it
+    // is the gap, and the gap was not travelled.
+    for (let i = start; i < end; i++) {
+      if (i > start) total += polylineDistanceKm([points[i - 1], points[i]]);
+      cumulative[i] = total;
+    }
+  }
+  return cumulative;
+}
+
+/**
+ * Where each simplified point sits in the raw list.
+ *
+ * Douglas-Peucker returns a SUBSEQUENCE of its input, so a single forward walk
+ * finds them all. Coordinates are compared by value rather than by reference
+ * because the simplifier is free to hand back copies.
+ */
+function indicesOf(
+  raw: ReadonlyArray<[number, number]>,
+  simplified: ReadonlyArray<[number, number]>
+): number[] {
+  const indices: number[] = [];
+  let cursor = 0;
+  for (const point of simplified) {
+    while (cursor < raw.length && (raw[cursor][0] !== point[0] || raw[cursor][1] !== point[1])) {
+      cursor++;
+    }
+    // A point the walk cannot place (a simplifier that interpolates rather
+    // than selects) falls back to the last index found, which keeps the
+    // cumulative array monotonic instead of producing a negative sub-range.
+    indices.push(cursor < raw.length ? cursor : (indices[indices.length - 1] ?? 0));
+    cursor = Math.min(cursor + 1, raw.length);
+  }
+  return indices;
 }

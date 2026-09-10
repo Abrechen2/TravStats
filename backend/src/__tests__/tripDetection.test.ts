@@ -21,6 +21,9 @@ interface TestFlight {
   depLon: number;
   arrLat: number;
   arrLon: number;
+  /** The field the duplicate rule turns on. Absent from these fixtures until
+   *  AUD-032, which is why the old test could not see the defect. */
+  status: string;
 }
 
 const f = (overrides: Partial<TestFlight> & Pick<TestFlight, "id">): TestFlight => ({
@@ -30,6 +33,7 @@ const f = (overrides: Partial<TestFlight> & Pick<TestFlight, "id">): TestFlight 
   depIata: null,
   arrIata: null,
   depLat: 0, depLon: 0, arrLat: 0, arrLon: 0,
+  status: "flown",
   ...overrides,
 });
 
@@ -76,16 +80,77 @@ describe("tripDetectionService heuristics", () => {
     });
   });
 
+  /**
+   * The rule this function is named after — which it did not implement.
+   *
+   * It keyed on departure airport plus day and kept whichever row came first,
+   * never consulting `status`. So a cancelled 08:00 MUC-FRA beat the 10:00
+   * rebooking that was actually flown, and the proposed trip carried the flight
+   * that never left while the real one stayed unassigned. The old test here
+   * used no status values at all and asserted exactly that behaviour, which is
+   * why it stayed green for as long as the defect did (audit finding AUD-032).
+   */
   describe("Cancelled-duplicate suppression", () => {
-    it("drops a second row with same (depIata, depDate)", () => {
+    const muc = { depIata: "MUC", arrIata: "FRA" };
+
+    it("keeps the flight that was taken, not the one that was cancelled", () => {
       const flights = [
-        f({ id: "a", depIata: "MUC", departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "b", depIata: "MUC", departureTime: new Date("2024-04-01T15:00:00Z") }), // rebooked
-        f({ id: "c", depIata: "FRA", departureTime: new Date("2024-04-01T10:00:00Z") }),
+        f({ id: "cancelled", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "rebooked", ...muc, status: "flown", departureTime: new Date("2024-04-01T10:00:00Z") }),
       ];
-      const dedup = dropCancelledDuplicates(flights);
-      expect(dedup.length).toBe(2);
-      expect(dedup.map((x) => x.id).sort()).toEqual(["a", "c"]);
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["rebooked"]);
+    });
+
+    it("does not depend on which row comes first", () => {
+      // The old rule was pure ordering, so the reverse order is the case that
+      // happened to look right and proved nothing.
+      const flights = [
+        f({ id: "rebooked", ...muc, status: "flown", departureTime: new Date("2024-04-01T10:00:00Z") }),
+        f({ id: "cancelled", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
+      ];
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["rebooked"]);
+    });
+
+    it("keeps two genuine departures from the same airport on one day", () => {
+      // A positioning hop and the long haul out. Neither is cancelled, so
+      // neither is a duplicate — the old key could not tell them apart.
+      const flights = [
+        f({ id: "hop", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "longhaul", depIata: "MUC", arrIata: "JFK", departureTime: new Date("2024-04-01T15:00:00Z") }),
+      ];
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["hop", "longhaul"]);
+    });
+
+    it("keeps the same route flown twice in a day", () => {
+      const flights = [
+        f({ id: "out", ...muc, departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "again", ...muc, departureTime: new Date("2024-04-01T20:00:00Z") }),
+      ];
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["out", "again"]);
+    });
+
+    it("keeps one leg when the whole route was called off", () => {
+      // Dropping both would silently shrink the proposal below the minimum and
+      // lose the trip; a cancelled leg is still a record of the booking.
+      const flights = [
+        f({ id: "x", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "y", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T10:00:00Z") }),
+      ];
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["x"]);
+    });
+
+    it("leaves unrelated routes alone", () => {
+      const flights = [
+        f({ id: "a", ...muc, departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "c", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T10:00:00Z") }),
+      ];
+
+      expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["a", "c"]);
     });
   });
 

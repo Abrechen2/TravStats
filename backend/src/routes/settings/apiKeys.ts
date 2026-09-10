@@ -91,7 +91,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     let adminSettings: Awaited<ReturnType<typeof prisma.adminSettings.findFirst>> = null;
     try {
-      adminSettings = await prisma.adminSettings.findFirst();
+      adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     } catch (error: unknown) {
       logger.warn({
         operation: 'get_api_keys_admin_settings_error',
@@ -182,7 +182,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const userId = req.userId!;
     const payload = apiKeysSchema.parse(req.body);
 
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     const allowUserFlightApiKeys = adminSettings?.allowUserFlightApiKeys ?? true;
 
     const updateData: ApiKeysUpdateData = {};
@@ -262,7 +262,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       },
     });
 
-    const adminSettingsAfter = await prisma.adminSettings.findFirst();
+    const adminSettingsAfter = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     const hasGlobalOpensky = adminSettingsAfter && adminSettingsAfter.globalOpenskyClientId;
 
     res.json({

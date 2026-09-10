@@ -56,7 +56,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
       if (user) return user;
     }
 
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     const global = buildConnection(
       admin?.globalImmichBaseUrl,
       admin?.globalImmichApiKey,

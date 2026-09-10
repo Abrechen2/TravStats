@@ -57,7 +57,7 @@ export async function getUserParserSettings(userId: string): Promise<UserParserS
  * Load admin parser settings with decrypted API keys
  */
 export async function getAdminParserSettings(): Promise<AdminParserSettings | null> {
-  const settings = await prisma.adminSettings.findFirst();
+  const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
   if (!settings) {
     return null;
@@ -111,6 +111,7 @@ export interface AdminFxSettings {
  */
 export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   const settings = await prisma.adminSettings.findFirst({
+      orderBy: { id: "asc" },
     select: { fxCdnFallbackEnabled: true },
   });
   return { cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true };

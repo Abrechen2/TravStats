@@ -15,6 +15,7 @@ import { immichConnectionSchema, immichTestSchema } from "../../schemas/immich";
 import { testImmichConnection } from "../../services/immich/immichTester";
 import { ImmichError, normalizeImmichBaseUrl } from "../../services/immich/types";
 import logger from "../../utils/logger";
+import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 const router = Router();
 
@@ -43,7 +44,7 @@ function looksMasked(value: string | null | undefined): boolean {
 
 router.get("/", async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       baseUrl: admin?.globalImmichBaseUrl ?? null,
       apiKey: maskKey(admin?.globalImmichApiKey),
@@ -78,19 +79,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       data.globalImmichApiKey = null;
     }
 
-    const existing = await prisma.adminSettings.findFirst();
-    if (existing) {
-      await prisma.adminSettings.update({ where: { id: existing.id }, data });
-    } else {
-      await prisma.adminSettings.create({ data });
-    }
+    await prisma.adminSettings.update({ where: { id: await ensureAdminSettingsRow() }, data });
 
     logger.info({
       message: "immich_global_connection_updated",
       context: { fields: Object.keys(data) },
     });
 
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       baseUrl: admin?.globalImmichBaseUrl ?? null,
       apiKey: maskKey(admin?.globalImmichApiKey),
@@ -103,7 +99,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const body = immichTestSchema.parse(req.body);
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const baseUrl = body.baseUrl ?? admin?.globalImmichBaseUrl ?? null;
     const apiKey =

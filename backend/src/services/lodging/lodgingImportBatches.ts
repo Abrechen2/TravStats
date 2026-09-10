@@ -6,6 +6,10 @@ import {
   type LodgingImportBatchSummary,
   type LodgingImportSource,
 } from "../../schemas/lodgingImport";
+import {
+  collectLodgingPhotoFilenames,
+  removeLodgingPhotoFiles,
+} from "./deleteLodgingPhotoFiles";
 
 /** The column is a plain String; narrow it back to the union on the way out. */
 function asSource(value: string): LodgingImportSource {
@@ -78,6 +82,7 @@ export async function revertLodgingImportBatch(
   userId: string,
   batchId: string,
 ): Promise<RevertResult> {
+  let orphanedPhotoFiles: string[] = [];
   const result = await prisma.$transaction(
     async (tx) => {
       const batch = await tx.importBatch.findFirst({ where: { id: batchId, userId } });
@@ -92,6 +97,11 @@ export async function revertLodgingImportBatch(
       const emptyIds = batchLodgings.filter((l) => l._count.stays === 0).map((l) => l.id);
       const occupiedIds = batchLodgings.filter((l) => l._count.stays > 0).map((l) => l.id);
 
+      // Read before the delete, removed after the transaction commits — the
+      // cascade takes the photo rows and with them the filenames (AUD-042).
+      orphanedPhotoFiles = emptyIds.length
+        ? await collectLodgingPhotoFilenames({ id: { in: emptyIds } })
+        : [];
       const lodgings = emptyIds.length
         ? await tx.lodging.deleteMany({ where: { id: { in: emptyIds } } })
         : { count: 0 };
@@ -125,5 +135,6 @@ export async function revertLodgingImportBatch(
     "Lodging import batch reverted",
   );
 
+  removeLodgingPhotoFiles(orphanedPhotoFiles);
   return result;
 }
