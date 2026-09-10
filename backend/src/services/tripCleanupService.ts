@@ -20,6 +20,7 @@
  * offered either, since dissolving it cascades that section away.
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
@@ -40,6 +41,82 @@ export interface MicroTripCandidate {
   endDate: string | null;
 }
 
+/**
+ * What "this trip holds nothing" means — the ONE definition, used both to
+ * offer a trip as a candidate and to let the delete through.
+ *
+ * It used to name six relations and two text fields, all of them from before
+ * the app had more than flights. A trip with a hotel stay, a place visit, a
+ * linked Immich album or an AI summary counted as empty, so a deliberately
+ * confirmed cleanup could remove curated non-flight trips — and the dialog
+ * pre-selects everything it is offered (audit finding AUD-031).
+ *
+ * The rule is the trip model's own relation list plus every field a person can
+ * only have filled in by hand. `bookings` is deliberately absent: a legacy
+ * one-booking auto-trip is exactly what this feature exists to clear away.
+ */
+export const EMPTY_TRIP_COUNTS = {
+  flights: true,
+  cruises: true,
+  stops: true,
+  routes: true,
+  journalEntries: true,
+  photos: true,
+  lodgingStays: true,
+  placeVisits: true,
+  immichAlbums: true,
+} as const;
+
+/** The same rule as a Prisma `where` fragment, so a DELETE re-checks it in the
+ *  database rather than trusting a list assembled a moment earlier. */
+export const EMPTY_TRIP_WHERE = {
+  cruises: { none: {} },
+  stops: { none: {} },
+  routes: { none: {} },
+  journalEntries: { none: {} },
+  photos: { none: {} },
+  lodgingStays: { none: {} },
+  placeVisits: { none: {} },
+  immichAlbums: { none: {} },
+  notes: null,
+  description: null,
+  summary: null,
+  category: null,
+  icon: null,
+  coverImageUrl: null,
+  tags: { isEmpty: true },
+  companions: { isEmpty: true },
+} satisfies Prisma.TripWhereInput;
+
+interface EmptinessProbe {
+  notes: string | null;
+  description: string | null;
+  summary: string | null;
+  category: string | null;
+  icon: string | null;
+  coverImageUrl: string | null;
+  tags: string[];
+  companions: string[];
+  _count: Record<keyof typeof EMPTY_TRIP_COUNTS, number>;
+}
+
+function isTripEmpty(t: EmptinessProbe): boolean {
+  const holdsNothing = (Object.keys(EMPTY_TRIP_COUNTS) as Array<keyof typeof EMPTY_TRIP_COUNTS>)
+    .filter((k) => k !== "flights")
+    .every((k) => t._count[k] === 0);
+  return (
+    holdsNothing &&
+    !t.notes &&
+    !t.description &&
+    !t.summary &&
+    !t.category &&
+    !t.icon &&
+    !t.coverImageUrl &&
+    t.tags.length === 0 &&
+    t.companions.length === 0
+  );
+}
+
 /** List the user's trips that qualify for dissolution. */
 export async function findMicroTripCandidates(userId: string): Promise<MicroTripCandidate[]> {
   const trips = await prisma.trip.findMany({
@@ -52,32 +129,19 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
       description: true,
       startDate: true,
       endDate: true,
-      _count: {
-        select: {
-          flights: true,
-          cruises: true,
-          stops: true,
-          routes: true,
-          journalEntries: true,
-          photos: true,
-        },
-      },
+      summary: true,
+      category: true,
+      icon: true,
+      coverImageUrl: true,
+      tags: true,
+      companions: true,
+      _count: { select: EMPTY_TRIP_COUNTS },
     },
     orderBy: { startDate: "desc" },
   });
 
   return trips
-    .filter(
-      (t) =>
-        t._count.flights <= MICRO_TRIP_MAX_FLIGHTS &&
-        t._count.cruises === 0 &&
-        t._count.stops === 0 &&
-        t._count.routes === 0 &&
-        t._count.journalEntries === 0 &&
-        t._count.photos === 0 &&
-        !t.notes &&
-        !t.description
-    )
+    .filter((t) => t._count.flights <= MICRO_TRIP_MAX_FLIGHTS && isTripEmpty(t))
     .map((t) => ({
       id: t.id,
       name: t.name,
@@ -108,8 +172,13 @@ export async function dissolveMicroTrips(
   const allowed = new Set(candidates.map((c) => c.id));
   const ids = tripIds.filter((id) => allowed.has(id));
 
+  // The emptiness rule is re-evaluated by the DELETE itself, so content added
+  // between the candidate scan and this statement keeps the trip alive rather
+  // than racing it. The flight COUNT still comes from the scan — Prisma cannot
+  // express "at most two" in a where clause — and gaining a third flight is not
+  // the loss this guards against: dissolving keeps flights either way.
   const result = await prisma.trip.deleteMany({
-    where: { id: { in: ids }, userId },
+    where: { id: { in: ids }, userId, ...EMPTY_TRIP_WHERE },
   });
 
   logger.info({
