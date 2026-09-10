@@ -25,6 +25,7 @@ import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
+import { mergeImmichAlbums, mergeTripPhotos } from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -167,6 +168,10 @@ export async function mergeTrips(
   const unionedCompanionNames = union(trips.map((t) => t.companions));
   const resolvedCompanions = await resolveCompanions(userId, unionedCompanionNames);
 
+  // Reported in the merge log — a folded duplicate is a decision, not a
+  // no-op, and the only place it is visible afterwards is this line.
+  let mergedDuplicates = { albums: 0, photos: 0 };
+
   await prisma.$transaction(async (tx) => {
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
@@ -178,9 +183,18 @@ export async function mergeTrips(
     // a route pointing at nothing.
     await tx.tripRoute.updateMany(move);
     await tx.tripJournalEntry.updateMany(move);
+    // Hotel stays and place visits are `SetNull` on the trip, so leaving them
+    // behind does not delete them — it silently unfiles them, which is the
+    // same loss to a user looking for their hotel on the merged trip.
+    await tx.lodgingStay.updateMany(move);
+    await tx.placeVisit.updateMany(move);
+    // Albums BEFORE photos: an album left on a source trip is cascade-deleted
+    // with it, and takes the photos this merge just moved with it (AUD-029).
+    const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
     // Photo files live in a flat directory keyed by filename, so moving
     // the rows does not break file paths.
-    await tx.tripPhoto.updateMany(move);
+    const duplicatePhotos = await mergeTripPhotos(tx, sourceIds, targetId);
+    mergedDuplicates = { albums: duplicateAlbums, photos: duplicatePhotos };
 
     await tx.trip.update({
       where: { id: targetId },
@@ -232,7 +246,13 @@ export async function mergeTrips(
   logger.info({
     operation: "trips_merge",
     message: `Merged ${sources.length} trips into ${targetId}`,
-    context: { userId, targetId, merged: sources.length },
+    context: {
+      userId,
+      targetId,
+      merged: sources.length,
+      duplicateAlbumsFolded: mergedDuplicates.albums,
+      duplicatePhotosDropped: mergedDuplicates.photos,
+    },
   });
 
   return { tripId: targetId, merged: sources.length };

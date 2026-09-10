@@ -605,18 +605,31 @@ async function finalizeWithCleanup(
 ): Promise<DetectionResult> {
   if (dryRun) return result;
 
-  // Atomic orphan cleanup — drop trips that have zero flights linked.
-  // Uses a single delete-where-not-in to avoid an N+1 round-trip.
+  // An orphan is a trip THIS RUN created that ended up with no flights linked
+  // — a proposal that failed halfway. It is not "any trip of this account with
+  // no flights": that query swept up the user's own rail, road, hotel and
+  // cruise trips, deleting their stops, routes, photos, album links and
+  // journal entries by cascade, and it ran even when the run created nothing
+  // at all — confirming flight detection with an empty selection was enough
+  // (audit finding AUD-028). A trip without a flight is a trip, not a leftover.
+  const candidateIds = result.created.map((c) => c.tripId);
+  if (candidateIds.length === 0) return { ...result, orphansRemoved: 0 };
+
   const orphans = await prisma.trip.findMany({
-    where: { userId, flights: { none: {} } },
+    where: { userId, id: { in: candidateIds }, flights: { none: {} } },
     select: { id: true },
   });
-  if (orphans.length > 0) {
-    await prisma.trip.deleteMany({
-      where: { id: { in: orphans.map((o) => o.id) } },
-    });
-  }
-  return { ...result, orphansRemoved: orphans.length };
+  if (orphans.length === 0) return { ...result, orphansRemoved: 0 };
+
+  const removed = new Set(orphans.map((o) => o.id));
+  await prisma.trip.deleteMany({ where: { id: { in: [...removed] } } });
+  // A trip that was deleted again was not created — reporting it as such would
+  // hand the client an id it cannot open.
+  return {
+    ...result,
+    created: result.created.filter((c) => !removed.has(c.tripId)),
+    orphansRemoved: removed.size,
+  };
 }
 
 // ─── Home history loader ──────────────────────────────────────────────
