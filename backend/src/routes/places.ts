@@ -3,6 +3,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+// A visit must never attach itself to someone else's trip by id. The rule
+// lived here first and now serves every domain that links to a trip (AUD-038).
+import { assertTripOwned } from "../utils/ownedReferences";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
@@ -341,14 +344,6 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // ---------------------------------------------------------------- visits
-
-/** Ownership of the trip is checked separately — a visit must never be able to
- *  attach itself to someone else's trip by id. */
-async function assertTripOwned(tripId: string | null | undefined, userId: string): Promise<void> {
-  if (!tripId) return;
-  const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
-  if (!trip) throw new AppError("Trip not found", 404);
-}
 
 router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

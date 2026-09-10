@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { statsLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
+import { assertReferencesOwned } from '../utils/ownedReferences';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
@@ -337,6 +338,11 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const { stops, startDate, endDate, tripId, bookingId, status, companions, importBatchId, ...rest } =
       parsed.data;
 
+    // Prisma enforces that the trip and booking EXIST, never whose they are —
+    // so without this a cruise could be filed under a stranger's trip and
+    // would show up on their timeline (AUD-038).
+    await assertReferencesOwned(userId, { tripId, bookingId });
+
     // A batch id means "this came from an import". It is client-supplied, so
     // ownership is checked here — otherwise it is a handle into someone
     // else's undo history. An unrecognised one is dropped rather than
@@ -487,6 +493,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 
     const parsed = updateCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // Re-linking is a write too — see the create path (AUD-038).
+    await assertReferencesOwned(userId, parsed.data);
 
     const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } =
       parsed.data;

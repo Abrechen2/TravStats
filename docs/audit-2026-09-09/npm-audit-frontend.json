@@ -1,0 +1,418 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@deck.gl/carto": {
+      "name": "@deck.gl/carto",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@deck.gl/geo-layers",
+        "@loaders.gl/compression"
+      ],
+      "effects": [
+        "deck.gl"
+      ],
+      "range": ">=9.1.0-beta.1",
+      "nodes": [
+        "node_modules/@deck.gl/carto"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@deck.gl/geo-layers": {
+      "name": "@deck.gl/geo-layers",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@deck.gl/mesh-layers",
+        "@loaders.gl/3d-tiles",
+        "@luma.gl/gltf"
+      ],
+      "effects": [
+        "@deck.gl/carto",
+        "deck.gl"
+      ],
+      "range": ">=8.10.0-alpha.1",
+      "nodes": [
+        "node_modules/@deck.gl/geo-layers"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@deck.gl/mesh-layers": {
+      "name": "@deck.gl/mesh-layers",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@loaders.gl/gltf",
+        "@luma.gl/gltf"
+      ],
+      "effects": [
+        "deck.gl"
+      ],
+      "range": ">=8.6.6",
+      "nodes": [
+        "node_modules/@deck.gl/mesh-layers"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@loaders.gl/3d-tiles": {
+      "name": "@loaders.gl/3d-tiles",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@loaders.gl/compression",
+        "@loaders.gl/gltf",
+        "@loaders.gl/zip"
+      ],
+      "effects": [
+        "@deck.gl/geo-layers"
+      ],
+      "range": ">=3.1.0-alpha.1",
+      "nodes": [
+        "node_modules/@loaders.gl/3d-tiles"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@loaders.gl/compression": {
+      "name": "@loaders.gl/compression",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "fflate"
+      ],
+      "effects": [
+        "@deck.gl/carto",
+        "@loaders.gl/3d-tiles",
+        "@loaders.gl/zip"
+      ],
+      "range": ">=4.0.0-alpha.1",
+      "nodes": [
+        "node_modules/@loaders.gl/compression"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@loaders.gl/gltf": {
+      "name": "@loaders.gl/gltf",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@loaders.gl/textures"
+      ],
+      "effects": [
+        "@deck.gl/mesh-layers",
+        "@loaders.gl/3d-tiles",
+        "@luma.gl/gltf"
+      ],
+      "range": ">=3.1.0-alpha.1",
+      "nodes": [
+        "node_modules/@loaders.gl/gltf"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@loaders.gl/textures": {
+      "name": "@loaders.gl/textures",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "texture-compressor"
+      ],
+      "effects": [
+        "@loaders.gl/gltf",
+        "@luma.gl/gltf"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@loaders.gl/textures"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@loaders.gl/zip": {
+      "name": "@loaders.gl/zip",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@loaders.gl/compression"
+      ],
+      "effects": [
+        "@loaders.gl/3d-tiles"
+      ],
+      "range": ">=4.0.0-alpha.1",
+      "nodes": [
+        "node_modules/@loaders.gl/zip"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@luma.gl/gltf": {
+      "name": "@luma.gl/gltf",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@loaders.gl/gltf",
+        "@loaders.gl/textures"
+      ],
+      "effects": [
+        "@deck.gl/geo-layers",
+        "@deck.gl/mesh-layers"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@luma.gl/gltf"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "deck.gl": {
+      "name": "deck.gl",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@deck.gl/carto",
+        "@deck.gl/geo-layers",
+        "@deck.gl/mesh-layers"
+      ],
+      "effects": [],
+      "range": ">=8.10.0-alpha.1",
+      "nodes": [
+        "node_modules/deck.gl"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "dompurify": {
+      "name": "dompurify",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1138538,
+          "name": "dompurify",
+          "dependency": "dompurify",
+          "title": "DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS",
+          "url": "https://github.com/advisories/GHSA-55q2-fjhq-7xh7",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-79"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<=3.4.12"
+        }
+      ],
+      "effects": [],
+      "range": "<=3.4.12",
+      "nodes": [
+        "node_modules/dompurify"
+      ],
+      "fixAvailable": true
+    },
+    "fflate": {
+      "name": "fflate",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1164783,
+          "name": "fflate",
+          "dependency": "fflate",
+          "title": "fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives",
+          "url": "https://github.com/advisories/GHSA-px8p-9vwx-vf98",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-400"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=0.7.0 <0.7.5"
+        }
+      ],
+      "effects": [
+        "@loaders.gl/compression"
+      ],
+      "range": "0.7.0 - 0.7.4",
+      "nodes": [
+        "node_modules/fflate"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "image-size": {
+      "name": "image-size",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1138808,
+          "name": "image-size",
+          "dependency": "image-size",
+          "title": "image-size: ICNS parser allows denial of service through an infinite loop",
+          "url": "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr",
+          "severity": "high",
+          "cwe": [
+            "CWE-835"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<=2.0.2"
+        },
+        {
+          "source": 1138809,
+          "name": "image-size",
+          "dependency": "image-size",
+          "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
+          "url": "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq",
+          "severity": "high",
+          "cwe": [
+            "CWE-835"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<=2.0.2"
+        }
+      ],
+      "effects": [
+        "texture-compressor"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/image-size"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "js-yaml": {
+      "name": "js-yaml",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1138115,
+          "name": "js-yaml",
+          "dependency": "js-yaml",
+          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported",
+          "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+          "severity": "high",
+          "cwe": [
+            "CWE-407"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=4.0.0 <4.3.1"
+        },
+        {
+          "source": 1193727,
+          "name": "js-yaml",
+          "dependency": "js-yaml",
+          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+          "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh",
+          "severity": "high",
+          "cwe": [
+            "CWE-400",
+            "CWE-407"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=4.0.0 <4.3.2"
+        }
+      ],
+      "effects": [],
+      "range": "4.0.0 - 4.3.1",
+      "nodes": [
+        "node_modules/js-yaml"
+      ],
+      "fixAvailable": true
+    },
+    "texture-compressor": {
+      "name": "texture-compressor",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "image-size"
+      ],
+      "effects": [
+        "@loaders.gl/textures"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/texture-compressor"
+      ],
+      "fixAvailable": {
+        "name": "deck.gl",
+        "version": "9.1.0",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 5,
+      "high": 10,
+      "critical": 0,
+      "total": 15
+    },
+    "dependencies": {
+      "prod": 640,
+      "dev": 472,
+      "optional": 99,
+      "peer": 136,
+      "peerOptional": 0,
+      "total": 1265
+    }
+  }
+}

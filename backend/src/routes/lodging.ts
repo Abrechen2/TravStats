@@ -25,6 +25,7 @@ import {
 } from "../schemas/lodging";
 import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
+import { assertReferencesOwned } from "../utils/ownedReferences";
 import { snapshotFx, getBaseCurrency } from "../services/fx/snapshot";
 
 // Re-exported: every existing import site names this module.
@@ -504,6 +505,10 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
 
     const parsed = createStaySchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // Prisma only enforces that the trip, booking and membership EXIST — not
+    // whose they are. Without this, a stay could be filed under a stranger's
+    // trip and would then show up on their timeline (AUD-038).
+    await assertReferencesOwned(userId, parsed.data);
     // totalPrice is the source of truth: the UI types it, but an importer or
     // API client may send only a per-night price — derive the total so it is
     // always stored, and the FX snapshot below converts the right amount.
@@ -584,6 +589,8 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
 
     const parsed = updateStaySchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // Re-linking is a write too — see the create path (AUD-038).
+    await assertReferencesOwned(userId, parsed.data);
     // Same reason as the create path: this one is not a stay column.
     const { manualFxRate, ...input } = parsed.data;
 
