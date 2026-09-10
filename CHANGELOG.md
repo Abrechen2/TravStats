@@ -4,6 +4,140 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.6.3] - 2026-09-10
+
+A second instance audited the tree from the outside and reported forty-two
+findings; forty are fixed here, along with a crash found separately. Nothing
+here adds a feature — it is the release where a number that was wrong becomes
+right, and where several doors that were open get shut. Three of the fixes
+change figures that are already on screen; they are named below.
+
+### Security
+- **A receipt file belongs to whoever uploaded it.** Knowing another account's
+  receipt URL was enough to obtain the file: permission was derived from "does
+  this caller own something that points at this file", and a caller writes their
+  own entries — so pointing at a stranger's receipt was enough to be allowed it.
+  The uploader is now recorded at upload time, from the session, where no
+  request can reach it. Existing receipts keep working.
+- **A stay, a cruise or a booking can only be filed under your own trip.** The
+  server checked the hotel a stay was nested under and then took the trip,
+  booking and loyalty card from the request without asking whose they were. One
+  account could file an entry against another account's trip, and it then
+  appeared on that person's own timeline.
+- **A read-only access token can no longer switch on two-factor or delete a
+  passkey.** Those decide who gets in, and a token that may write travel data has
+  no business making them.
+- **Two-factor is asked before a forced password change, on every door.** An
+  administrator's forced password change simply did not apply to an account with
+  two-factor switched on.
+- **Changing a password ends every other session.** The sign-in cookie carried
+  only an account and an expiry, so somebody already signed in stayed signed in
+  for up to a week after the account was recovered.
+- **An empty instance can only have one first administrator.** Two registrations
+  arriving together both counted zero users and both became admin.
+- **A long API key is no longer stored unprotected.** The check for "is this
+  already encrypted" guessed from length and shape, and a long hex token
+  satisfied the guess — so it was stored as typed and then read back as nothing,
+  leaving the provider looking unconfigured while the key sat in the clear.
+- **One unreadable image no longer takes the service down.** A photograph the
+  text recognition could not decode ended the whole server process; from outside
+  it looked like a flaky gateway. It answers with an error now.
+- **The map library's critical vulnerability is closed** (MapLibre 6).
+
+### Fixed
+- **Confirming flight detection no longer deletes your other trips.** It ended by
+  removing every trip with no flight on it — which is every rail trip, every
+  cruise, every hotel weekend — and their stops, routes, photographs and journal
+  entries went with them. It ran even when the run created nothing at all, so
+  confirming the dialog with nothing selected was enough.
+- **Merging two trips keeps everything on them.** Hotel stays and visited places
+  lost the trip they belonged to; a linked photo album was deleted, and it took
+  photographs the merge had just moved onto the surviving trip with it.
+- **"Tidy up" only offers trips that really are empty.** A trip carrying a hotel
+  stay, a visited place, a linked album, a summary, a cover image or tags counted
+  as empty and was offered for removal — pre-selected.
+- **A merged trip keeps its cover image.** The picture survived; the link to it
+  still named the trip that had just been merged away, so the cover came back
+  blank.
+- **Restoring a backup works, and says so honestly.** Restored uploads landed one
+  directory too deep and could not be found under the names the database had
+  kept; a restore over an existing database reported success while changing
+  nothing, because the tool logged its errors and exited zero. The restore dialog
+  also offered a field the server never read and no longer shows it, and it now
+  fits on a small screen, announces itself to a screen reader, and closes on
+  Escape.
+- **Deleting a hotel deletes its photographs.** The entries went; the image files
+  stayed on disk for ever, inside every backup, with nothing left that could name
+  them.
+- **A rejected upload does not stay on disk.** One bad request was enough to
+  leave a file behind, quietly, every time.
+- **Clearing a hotel stay's dates clears what hung off them.** The dates went,
+  but the check-in and check-out times stayed on a stay with no day to hang them
+  on, the status came out wrong, and the exchange-rate day stayed on the old
+  date.
+- **A stay's price counts the nights it actually had.** A stay recorded without
+  dates but with a night count got no total at all, and one dated only by month
+  was billed for the whole month. An explicitly free stay was billed at the
+  per-night rate instead of staying free.
+- **A flight cannot arrive before it departs, and an ordinary westward flight is
+  no longer refused.** Order was decided by comparing two wall-clock times read
+  off two different clocks, so Munich 10:00 to London 09:45 — forty-five minutes
+  in the air — was rejected, while London 10:00 to Berlin 10:30 was stored as a
+  flight that lands half an hour before take-off. *This changes stored durations
+  for flights that crossed a time zone.*
+- **A bulk import stores what a single entry stores.** Cabin class, aircraft
+  registration, Mode-S address and every special-flight field were accepted and
+  then dropped, so a flight imported as First Class carried a first-class carbon
+  figure against a blank cabin. Imported prices also had no converted amount.
+- **Cost per hour and per kilometre ignore what they could not convert.** A
+  booking in a currency with no available rate contributed its distance and its
+  hours to the average while contributing nothing to the cost, so the rates read
+  far cheaper than they were. *This raises the cost figures on the statistics
+  page.*
+- **A trip without a flight follows its own dates.** A hand-made trip stayed
+  "completed" after being moved into the future, through the edit, an explicit
+  recalculation and the nightly pass alike. Trips built from hotel stays alone
+  are now derived too. *This corrects the status of existing trips.*
+- **Trip detection keeps the flight you took, not the one that was cancelled.** A
+  cancelled leg beat its rebooking purely by being first in the list, and two
+  genuine departures from the same airport on one day were treated as a
+  duplicate.
+- **A recorded track does not invent the stretch it did not record.** A GPX file
+  marks where recording stopped and restarted; those gaps were joined into a
+  straight line and counted as distance travelled. Adopting a track for a leg
+  also re-measured the simplified line and came out short of the figure shown
+  beside it.
+- **A change made while settings are saving is not lost.** On a slow connection
+  the page marked the newer edit as saved and never sent it.
+- **Signing in as another account keeps that account's e-mail address.** The
+  guard against leftovers from the previous account ran too late and deleted the
+  address the server had just supplied — and the next save wrote the blank back.
+- **A bookmarked hotel, place, cruise or trip opens.** Opening a detail page
+  directly bounced back to the dashboard while the settings were still loading.
+- **Settings survive a round trip.** The cost and tail-number switches came back
+  to their defaults after saving, and cruise defaults reverted in a second
+  browser, taking the good values with them on the next save.
+- **Seven flight fields are stored, and a delay follows its own schedule.** They
+  were accepted and written nowhere; a corrected departure time left the old
+  delay standing beside it.
+- **The profile form can be used with a screen reader**, and the account name is
+  shown rather than offered for editing — saving it stored a second name that the
+  next load replaced.
+- **Moving a stop moves the leg that ends at it.** The distance stayed as it was;
+  a hand-drawn line now keeps its shape and is marked as needing re-anchoring
+  instead of being silently trusted.
+- **The last English word in the German settings navigation is translated**
+  (#321).
+
+### Changed
+- **An instance's own settings are one record, and are read as one.** Nothing in
+  the database said the settings row was unique, and eleven places created one if
+  they found none — so two requests arriving together on a fresh instance could
+  make two, after which a setting saved on one page was read from the other.
+- **The map keeps its colours.** The map rendering library stays on its current
+  major version behind a compatibility bridge; the newer one draws every arc
+  white.
+
 ## [2.6.2] - 2026-09-07
 
 A round of tester reports from the days after 2.6.0 went out, plus the
