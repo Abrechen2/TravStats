@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { receiptUrlValidator } from './receiptUrl';
+import { chronologyProblem, departsInFuture } from '../shared/flightChronology';
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
@@ -333,53 +334,34 @@ const requireChronologicalOrder = (
   data: {
     departureLocal?: string | null;
     arrivalLocal?: string | null;
+    depTimezone?: string | null;
+    arrTimezone?: string | null;
     depTimeSemantics?: string | null;
     arrTimeSemantics?: string | null;
   },
   ctx: z.RefinementCtx,
 ): void => {
-  if (!data.departureLocal || !data.arrivalLocal) return;
-
-  const depDate = data.departureLocal.slice(0, 10);
-  const arrDate = data.arrivalLocal.slice(0, 10);
-
-  if (depDate < arrDate) return;
-  if (depDate > arrDate) {
+  // The rule itself — including why a DATE_ONLY row is still compared by day
+  // and a precise one by instant — lives in `shared/flightChronology.ts`.
+  const problem = chronologyProblem(data);
+  if (problem) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'arrival date must not precede departure date',
-      path: ['arrivalLocal'],
-    });
-    return;
-  }
-
-  // Same-day: only reject if wall-clock arrival precedes departure AND
-  // we are certain this isn't a DATE_ONLY row (where 12:00 is a placeholder).
-  const isDateOnly =
-    data.depTimeSemantics === 'DATE_ONLY' ||
-    data.arrTimeSemantics === 'DATE_ONLY' ||
-    (data.departureLocal.endsWith('T12:00') && data.arrivalLocal.endsWith('T12:00'));
-
-  if (!isDateOnly && data.departureLocal > data.arrivalLocal) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'arrivalLocal must not precede departureLocal',
-      path: ['arrivalLocal'],
+      message: problem.message,
+      path: [problem.path],
     });
   }
 };
 
 const requireStatusTimeAxisSanity = (
-  data: { status?: string; departureLocal?: string | null },
+  data: { status?: string; departureLocal?: string | null; depTimezone?: string | null },
   ctx: z.RefinementCtx,
 ): void => {
   if (!data.departureLocal) return;
-  // departureLocal is a wall-clock string; compare against now via ISO
-  // string slicing — both are YYYY-MM-DDTHH:mm[:ss]. We accept the local
-  // string at face value (the proper IANA conversion happens in the
-  // handler). For sanity bounds this lexicographic compare is enough.
-  const nowIso = new Date().toISOString().slice(0, 19);
-  if ((data.status === 'historical' || data.status === 'flown') && data.departureLocal > nowIso) {
+  if (
+    (data.status === 'historical' || data.status === 'flown') &&
+    departsInFuture(data.departureLocal, data.depTimezone)
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `${data.status} flights cannot have a departureLocal in the future`,

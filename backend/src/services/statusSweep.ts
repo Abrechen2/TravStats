@@ -6,6 +6,7 @@ import {
   CRUISE_SLACK_HOURS,
   deriveTripStatus,
   tripDateBounds,
+  tripStatusBounds,
 } from "../shared/statusDerivation";
 
 const H = 60 * 60 * 1000;
@@ -138,13 +139,25 @@ export async function sweepStatuses(
     select: {
       id: true,
       status: true,
+      startDate: true,
+      endDate: true,
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
+      lodgingStays: { select: { checkIn: true, checkOut: true } },
     },
   });
   let tripFlips = 0;
   for (const trip of trips) {
-    const bounds = tripDateBounds(trip.flights, trip.cruises);
+    // Same rule as the edit path and the explicit recompute — see
+    // `tripStatusBounds`. The sweep loaded flights and cruises only, so a
+    // hotel-only or hand-dated trip was invisible to it (AUD-024).
+    const bounds = tripStatusBounds({
+      flights: trip.flights,
+      cruises: trip.cruises,
+      lodgingStays: trip.lodgingStays,
+      ownStartDate: trip.startDate,
+      ownEndDate: trip.endDate,
+    });
     const derived = deriveTripStatus({ ...bounds, now });
     if (derived != null && derived !== trip.status) {
       await prisma.trip.update({ where: { id: trip.id }, data: { status: derived } });

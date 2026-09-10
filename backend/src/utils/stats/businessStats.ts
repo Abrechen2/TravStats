@@ -73,6 +73,14 @@ export function calculateBusinessStats(
   let totalDistanceWithCost = 0;
 
   const seenBookingIds = new Set<string>();
+  // Bookings whose amount actually reached `totalCost`. Distinct from
+  // `seenBookingIds` on purpose: a booking priced in a currency with no usable
+  // rate is SEEN — so its siblings do not double-count it — but nothing of it
+  // was counted, so none of its kilometres belong in the denominator either.
+  // Treating "seen" as "counted" put a 500 USD booking's whole distance under a
+  // 100 EUR numerator and reported the trip at a tenth of its real cost per
+  // kilometre (audit finding AUD-023).
+  const countedBookingIds = new Set<string>();
 
   for (const f of countableFlights) {
     const hasCoordsForDistance =
@@ -91,7 +99,10 @@ export function calculateBusinessStats(
       // Use booking price — count only once per booking
       if (!seenBookingIds.has(f.bookingId)) {
         seenBookingIds.add(f.bookingId);
-        flightCost = converted ?? 0;
+        if (converted != null && converted > 0) {
+          countedBookingIds.add(f.bookingId);
+          flightCost = converted;
+        }
       }
     } else {
       // No booking — use per-flight price (legacy)
@@ -103,10 +114,12 @@ export function calculateBusinessStats(
       anyCost = true;
     }
 
-    // Count distance for all flights with any cost attribution
+    // Count distance only where a cost was actually attributed. The old test
+    // read `f.booking.price > 0` — the RAW amount, which is positive even when
+    // no rate could convert it — so an unconvertible booking added distance to
+    // a total it contributed nothing to.
     const hasCostAttribution =
-      flightCost > 0 ||
-      (f.bookingId != null && seenBookingIds.has(f.bookingId) && (f.booking?.price ?? 0) > 0);
+      flightCost > 0 || (f.bookingId != null && countedBookingIds.has(f.bookingId));
     if (hasCostAttribution && hasCoordsForDistance) {
       totalDistanceWithCost += dist;
     }
@@ -124,6 +137,8 @@ export function calculateBusinessStats(
   let totalFlightHoursWithCost = 0;
 
   const seenBookingIdsHours = new Set<string>();
+  /** Same distinction as `countedBookingIds`, for the hours denominator. */
+  const countedBookingIdsHours = new Set<string>();
 
   for (const f of flownFlights) {
     const hours = (flightDurationOf(f)?.minutes ?? 0) / 60;
@@ -133,7 +148,10 @@ export function calculateBusinessStats(
       if (f.bookingId && f.booking?.price) {
         if (!seenBookingIdsHours.has(f.bookingId)) {
           seenBookingIdsHours.add(f.bookingId);
-          flightCost = convertedHours ?? 0;
+          if (convertedHours != null && convertedHours > 0) {
+            countedBookingIdsHours.add(f.bookingId);
+            flightCost = convertedHours;
+          }
         }
       } else {
         flightCost = convertedHours ?? 0;
@@ -142,8 +160,9 @@ export function calculateBusinessStats(
       if (flightCost > 0) {
         totalCostForHours += flightCost;
         totalFlightHoursWithCost += hours;
-      } else if (f.bookingId != null && seenBookingIdsHours.has(f.bookingId) && (f.booking?.price ?? 0) > 0) {
-        // Additional flight in same booking — count its hours but no extra cost
+      } else if (f.bookingId != null && countedBookingIdsHours.has(f.bookingId)) {
+        // Another leg of a booking whose cost WAS counted — its hours belong in
+        // the denominator, its cost does not (that would double-count).
         totalFlightHoursWithCost += hours;
       }
     }

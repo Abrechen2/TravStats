@@ -26,6 +26,7 @@ import { deriveTripStatus } from "../shared/statusDerivation";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
+import { restatusIfDatesMoved } from "../services/trip/restatusAfterEdit";
 import {
   findMicroTripCandidates,
   dissolveMicroTrips,
@@ -621,15 +622,9 @@ router.patch(
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
-      // ignores it — status is derived from segment dates, never set
-      // directly. A stale client sending its own guess must not fight
-      // recomputeTripStatus()/the sweep on every save.
+      // ignores it — a stale client's guess must not fight the derivation.
       if (body.status !== undefined) {
-        logger.debug({
-          operation: "trip_status_field_ignored",
-          message: "PATCH /trips/:id ignored a client-sent status field",
-          context: { tripId: req.params.id, requestedStatus: body.status },
-        });
+        logger.debug({ operation: "trip_status_field_ignored", tripId: req.params.id });
       }
 
       // Replace rather than append — an update always carries the FULL
@@ -698,7 +693,10 @@ router.patch(
         });
       });
 
-      res.json({ trip });
+      // Moving a trip's own dates moves its status, and this handler never
+      // recomputed at all (AUD-024). After the transaction, like every other
+      // caller: the derivation reads the row it is about to judge.
+      res.json({ trip: await restatusIfDatesMoved(trip, body) });
     } catch (error) {
       next(error);
     }

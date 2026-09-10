@@ -71,7 +71,10 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
       );
     }
     const reading = await readBoardingPass({
-      imageBase64,
+      // The validated bytes when validation ran and passed — see forgejo#117.
+      // A rejected or absent image falls through unchanged; OCR is off for it
+      // anyway and the barcode reader takes the original.
+      imageBase64: validation?.valid ? (validation.base64 ?? imageBase64) : imageBase64,
       barcode,
       userId,
       allowOcr: validation === null ? false : validation.valid,

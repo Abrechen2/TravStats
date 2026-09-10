@@ -70,11 +70,16 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       });
     }
 
+    // The bytes that were VALIDATED, not the string that arrived — a data URI
+    // strips cleanly here and would otherwise reach the OCR with its prefix
+    // still in front of the image (forgejo#117).
+    const validatedImage = validation.base64 ?? imageBase64;
+
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
     // Barcode first, OCR for what no barcode carries, merged with the barcode
     // winning — shared with /boardingpass/propose, see services/boardingPassRead.
-    const reading = await readBoardingPass({ imageBase64, userId });
+    const reading = await readBoardingPass({ imageBase64: validatedImage, userId });
 
     if (isEmpty(reading)) {
       res.status(422).json({ error: 'No flight data could be extracted from the boarding pass' });

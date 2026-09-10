@@ -138,6 +138,27 @@ function citiesToCodes(
 }
 
 /**
+ * Swallow a worker failure instead of letting it end the process.
+ *
+ * `createWorker` rejects the pending promise on a failure AND then, if no
+ * `errorHandler` was supplied, does `throw Error(data)` from inside its own
+ * message callback (tesseract.js `src/createWorker.js`, the `status ===
+ * 'reject'` branch). A throw from an event callback is an uncaught exception
+ * on the main thread, and the default handler exits — so one image Tesseract
+ * could not decode took the whole backend down, and every other user saw a
+ * 502 from nginx while the container restarted (forgejo#117).
+ *
+ * A try/catch around the awaited `recognize` cannot see it; the handler has to
+ * be on the worker. The promise rejection still happens, so the caller still
+ * gets its error and can answer 422 — this only stops the second, fatal copy.
+ */
+function containWorkerErrors(context: string) {
+  return (error: unknown): void => {
+    logger.warn({ err: error, context }, '[Tesseract Parser] OCR worker reported a failure');
+  };
+}
+
+/**
  * Tesseract OCR Vision Parser
  *
  * Provides free, local OCR-based boarding pass parsing without requiring external APIs.
@@ -163,6 +184,7 @@ export class TesseractVisionParser implements IVisionParser {
           logger.debug(`[Tesseract Parser] OCR Progress: ${Math.round(m.progress * 100)}%`);
         }
       },
+      errorHandler: containWorkerErrors('boardingpass'),
     });
 
     // Set on the worker, not per call: the worker is cached and reused, and
@@ -200,7 +222,9 @@ export class TesseractVisionParser implements IVisionParser {
     if (this.docWorker) return this.docWorker;
 
     try {
-      this.docWorker = await createWorker(['eng', 'deu'], 1);
+      this.docWorker = await createWorker(['eng', 'deu'], 1, {
+        errorHandler: containWorkerErrors('document'),
+      });
       logger.info('[Tesseract Parser] Document OCR worker initialized (eng+deu)');
     } catch (error) {
       // The German pack could not be fetched — offline, or no cache. English
@@ -211,7 +235,9 @@ export class TesseractVisionParser implements IVisionParser {
         { error },
         '[Tesseract Parser] German language pack unavailable, falling back to English only'
       );
-      this.docWorker = await createWorker('eng', 1);
+      this.docWorker = await createWorker('eng', 1, {
+        errorHandler: containWorkerErrors('document-fallback'),
+      });
     }
 
     return this.docWorker;

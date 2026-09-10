@@ -92,7 +92,27 @@ router.post(
         });
       }
 
-      const { text, confidence } = await getTesseractParser().recognizeText(parsed.imageBase64);
+      // `validation.base64`, never `parsed.imageBase64`: a data URI validates
+      // fine because the validator strips its prefix, and passing the unstripped
+      // string on is what fed Tesseract rubble (forgejo#117).
+      let text: string;
+      let confidence: number;
+      try {
+        ({ text, confidence } = await getTesseractParser().recognizeText(
+          validation.base64 ?? parsed.imageBase64,
+        ));
+      } catch (error) {
+        // A payload the OCR cannot decode is a CLIENT error. It used to end the
+        // process, so the caller saw a 502 from nginx and everyone else lost
+        // the service; even contained, a 500 would blame the server for a file
+        // the user chose.
+        logger.warn({ userId, err: error }, '[Image Parse] OCR could not read the image');
+        return res.status(422).json({
+          error: 'Unreadable image',
+          message:
+            'This file could not be read as an image. A JPEG or PNG photograph of the whole page usually works.',
+        });
+      }
       // One measure of "how much was read", used for BOTH the gate below and
       // the number reported back. They were the trimmed and untrimmed lengths
       // respectively, so a mostly-blank scan reported a figure far above the

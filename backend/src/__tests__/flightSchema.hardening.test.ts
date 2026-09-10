@@ -17,6 +17,17 @@ const baseValid = {
   status: "flown" as const,
 };
 
+/**
+ * What the schema says when a flight arrives before it departs.
+ *
+ * Two wordings, because there are now two rules. A DATE_ONLY row is still
+ * compared by day and keeps the old sentence; a row with real times is compared
+ * as INSTANTS in their own zones and says so plainly (AUD-018). The old wording
+ * described a string comparison — which is exactly the thing that was wrong.
+ */
+const CHRONOLOGY_REJECTION =
+  /arrival(Local)? (date )?must not precede (departure(Local)?|departure date)|cannot arrive before it departs/;
+
 describe("createFlightSchema — chronological order applies to historicals (G1)", () => {
   it("rejects historical with arrivalLocal before departureLocal", () => {
     const r = createFlightSchema.safeParse({
@@ -29,7 +40,7 @@ describe("createFlightSchema — chronological order applies to historicals (G1)
     if (!r.success) {
       expect(
         r.error.issues.some((i) =>
-          /arrival(Local)? (date )?must not precede (departure(Local)?|departure date)/.test(i.message)
+          CHRONOLOGY_REJECTION.test(i.message)
         )
       ).toBe(true);
     }
@@ -123,7 +134,7 @@ describe("updateFlightSchema — chronological refine now applies (G5)", () => {
     if (!r.success) {
       expect(
         r.error.issues.some((i) =>
-          /arrival(Local)? (date )?must not precede (departure(Local)?|departure date)/.test(i.message)
+          CHRONOLOGY_REJECTION.test(i.message)
         )
       ).toBe(true);
     }

@@ -16,6 +16,15 @@ import { deriveFlightStatus, FLIGHT_PASSTHROUGH, tripDateBounds } from "../share
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
+import { normalizeAircraft } from "../utils/aircraftNormalize";
+import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
+import {
+  fxColumnsFor,
+  flightOwnAmount,
+  getBaseCurrency,
+  CLEARED_FX_COLUMNS,
+  type FxColumns,
+} from "../services/fx/snapshot";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -155,12 +164,44 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       })
     );
 
+    // FX snapshots for every flight, resolved OUTSIDE the transaction: the
+    // rate lookup goes to the network, and the batch write must not sit open
+    // waiting for it. Keyed by the external ref, which is unique per row.
+    const baseCurrency = await getBaseCurrency(userId);
+    const fxByRef = new Map<string | null | undefined, FxColumns>();
+    await Promise.all(
+      enrichedDataList.map(async ({ data, externalRef }) => {
+        fxByRef.set(
+          externalRef,
+          await fxColumnsFor(
+            {
+              amount: flightOwnAmount(data),
+              currency: data.currency,
+              date: toUtcDate(data.departureLocal, data.depTimezone),
+            },
+            baseCurrency,
+          ),
+        );
+      }),
+    );
+
     // Step 2: All DB writes inside a single transaction — if any step fails, all are rolled back
     // Trip ids auto-created below for shared-PNR groups — status derivation
     // (spec 2026-07-17-status-from-dates) needs to read the flights it just
     // linked, so recomputeTripStatus() runs AFTER the transaction commits
     // (reading inside an open tx would see the pre-link, tripId=null rows).
     const createdTripIds: string[] = [];
+    // Bookings the PNR grouping creates below. Their FX snapshot cannot be
+    // taken inside the transaction — the rate lookup goes to the network — and
+    // their amount is not known before it, because the grouping decides it. So
+    // they are snapshotted right after the commit, the same way trip status is
+    // (AUD-022: an auto-created booking had no snapshot at all).
+    const bookingsToSnapshot: Array<{
+      id: string;
+      amount: number | null;
+      currency: string | null;
+      date: Date | null;
+    }> = [];
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
@@ -204,7 +245,9 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             isCodeshare: data.isCodeshare,
             flightNumber: data.flightNumber,
             callsign: data.callsign,
-            aircraft: data.aircraft,
+            // Normalised, like the single-create route — an unnormalised
+            // model string makes the same aircraft read as two.
+            aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
             depIcao: enriched.departure.icao,
             depIata: enriched.departure.iata,
             depName: enriched.departure.name,
@@ -263,6 +306,15 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             frequentFlyerNumber: data.frequentFlyerNumber,
             bookingClassLetter: data.bookingClassLetter,
             coPassengers: data.coPassengers ?? [],
+            // The columns both create paths must write. Ten of them were
+            // missing here, so a bulk import answered 201 and stored nulls for
+            // the cabin, the registration, the Mode-S address and every
+            // special-flight field (AUD-022).
+            ...sharedFlightCreateFields(data),
+            // The same FX snapshot the single-create route takes. Resolved
+            // BEFORE the transaction (it goes to the network), so a slow rate
+            // lookup cannot hold a write transaction open.
+            ...(fxByRef.get(externalRef) ?? CLEARED_FX_COLUMNS),
             // Default to 'email_import' for backward compat (this route was
             // originally only called from the email/PDF parsers). AI-agent
             // and xlsx imports can override with 'bulk_import'.
@@ -363,6 +415,17 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
           },
         });
 
+        if (identicalTotal) {
+          bookingsToSnapshot.push({
+            id: booking.id,
+            amount: firstPrice,
+            currency: firstCurrency,
+            // A booking carries no day of its own; its earliest segment is the
+            // honest rate day, and it is the day the money was committed.
+            date: bounds.earliestStart,
+          });
+        }
+
         const flightIds = groupFlights.map((f) => f.id);
         await tx.flight.updateMany({
           where: { id: { in: flightIds } },
@@ -391,6 +454,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
 
     // Now that the transaction has committed, derive each auto-created
     // trip's status from its just-linked flights (spec 2026-07-17).
+    for (const booking of bookingsToSnapshot) {
+      const columns = await fxColumnsFor(
+        { amount: booking.amount, currency: booking.currency, date: booking.date },
+        baseCurrency,
+      );
+      await prisma.booking.update({ where: { id: booking.id }, data: columns });
+    }
+
     for (const tripId of createdTripIds) {
       await recomputeTripStatus(tripId);
     }

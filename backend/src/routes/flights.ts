@@ -37,6 +37,8 @@ import {
   resolveAirportCoordinate,
 } from '../services/airportCoordinates';
 import { fromZonedTime } from 'date-fns-tz';
+import { assertMergedChronology, toUtcDate } from '../services/flights/mergedChronology';
+import { sharedFlightCreateFields } from '../services/flights/flightCreateFields';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
@@ -123,14 +125,6 @@ interface FlightUpdateData extends ExtendedFlightInput {
   bookingClassLetter?: string | null;
   coPassengers?: string[];
   dataSource?: string;
-}
-
-// Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
-// instant. Returns null when either side is missing — schema validation has
-// already enforced that a present local string requires a timezone.
-function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
-  if (!local || !tz) return null;
-  return fromZonedTime(local, tz);
 }
 
 // All routes require authentication.
@@ -496,8 +490,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           flightNumber: data.flightNumber,
           callsign: data.callsign,
           aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-          aircraftRegistration: data.aircraftRegistration,
-          aircraftModeS: data.aircraftModeS,
           // Use enriched departure data (fills in missing IATA/ICAO/names)
           depIcao: enriched.departure.icao,
           depIata: enriched.departure.iata,
@@ -549,12 +541,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           // this amount in its own currency rather than folding it into a sum.
           ...fxColumns,
           category: data.category,
-          // Persist the cabin, do not merely price its CO2. This column was
-          // missing here while `toSeatClass(data.seatClass)` fed calculateCo2Kg
-          // above, so a flight created as First Class stored a first-class CO2
-          // figure against a blank seat class. The update path always wrote it,
-          // which is why every round-trip test stayed green.
-          seatClass: data.seatClass,
           tags: data.tags ?? [],
           // Dual write: resolved display names keep this legacy array in
           // agreement with `companionLinks` below (trimmed, blanks dropped,
@@ -572,7 +558,10 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           frequentFlyerNumber: data.frequentFlyerNumber,
           bookingClassLetter: data.bookingClassLetter,
           coPassengers: data.coPassengers ?? [],
-          ...extendedFlightCreateFields(data),
+          // The columns both create paths must write — see the module. The
+          // cabin is one of them: it was missing from the batch while its own
+          // CO2 was priced from it (AUD-022).
+          ...sharedFlightCreateFields(data),
           // Data source tracking
           dataSource: data.dataSource ?? 'manual',
           lastModifiedBy: 'user',
@@ -582,18 +571,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             effectiveStatus,
             data.flightNumber,
           ),
-          // Special flights (Sonder-Flüge) — non-null specialType marks
-          // this flight as a sub-type. See schemas/flight.ts for the union.
-          specialType: data.specialType ?? null,
-          eventLat: data.eventLat ?? null,
-          eventLon: data.eventLon ?? null,
-          eventLabel: data.eventLabel ?? null,
-          patternLat: data.patternLat ?? null,
-          patternLon: data.patternLon ?? null,
-          specialData:
-            data.specialData === null || data.specialData === undefined
-              ? Prisma.JsonNull
-              : (data.specialData as unknown as Prisma.InputJsonValue),
         },
       });
 
@@ -1099,6 +1076,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!existingFlight) {
       throw new AppError('Flight not found', 404);
     }
+
+    // The schema can only see the BODY. A PUT that moves only the departure
+    // has to be checked against the arrival that stays behind — sending a
+    // departure a day later used to answer 200 and leave the arrival in the
+    // past (AUD-018). So the merged end state is checked here, on the real
+    // instants, which is what the row actually stores.
+    assertMergedChronology(data, existingFlight);
 
     // Enrich airport data if departure or arrival is being updated.
     // Use immutable references — never mutate the Zod-parsed `data` object.
