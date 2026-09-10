@@ -501,6 +501,13 @@ export const useSettingsStore = create<SettingsState>()(
                 defaults: mergeGroup("defaults") as DefaultsSettings,
                 notifications: mergeGroup("notifications") as NotificationSettings,
                 features: mergeGroup("features") as FeaturesSettings,
+                // The cruise slice round-trips like every other group. It was
+                // the one that did not: the server stored and returned it, and
+                // this merge skipped it, so a second browser saw empty defaults
+                // and the cruise arcs switched back on — and the next unrelated
+                // save wrote those defaults over the good server values
+                // (audit finding AUD-016).
+                cruise: mergeGroup("cruise") as CruiseSettings,
               };
               // Always mirror the auth-store username into profile.username.
               // If the persisted username belongs to a different account

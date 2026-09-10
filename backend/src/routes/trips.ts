@@ -31,7 +31,7 @@ import {
   dissolveMicroTrips,
   mergeTrips,
 } from "../services/tripCleanupService";
-import { recomputeLegs } from "../services/tour/legRecompute";
+import { updateStopAndLegs, recomputeLegs } from "../services/tour/legRecompute";
 import {
   summariseTrip,
   checkOllamaAvailable,
@@ -863,23 +863,7 @@ router.patch(
           400,
         );
       }
-      const stop = await prisma.tripStop.update({
-        where: { id: req.params.stopId },
-        data: {
-          ...(body.title !== undefined && { title: body.title }),
-          ...(body.domain !== undefined && { domain: body.domain }),
-          ...(body.sourceId !== undefined && { sourceId: body.sourceId }),
-          ...(body.description !== undefined && {
-            description: body.description,
-          }),
-          ...(body.startDate !== undefined && { startDate: body.startDate }),
-          ...(body.endDate !== undefined && { endDate: body.endDate }),
-          ...(body.lat !== undefined && { lat: body.lat }),
-          ...(body.lon !== undefined && { lon: body.lon }),
-          ...(body.notes !== undefined && { notes: body.notes }),
-          ...(body.orderIdx !== undefined && { orderIdx: body.orderIdx }),
-        },
-      });
+      const stop = await updateStopAndLegs(prisma, req.params.stopId, body, existing);
       res.json({ stop });
     } catch (error) {
       next(error);

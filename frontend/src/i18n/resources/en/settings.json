@@ -71,6 +71,7 @@
     "firstName": "First name",
     "lastName": "Last name",
     "username": "Username",
+    "usernameHint": "The sign-in name cannot be changed here.",
     "email": "Email Address",
     "birthdate": "Birthday",
     "birthdateHint": "Optional. Only used for the \"Birthday Flight\" achievement — day and month are compared against a flight's departure date.",

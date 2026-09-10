@@ -117,6 +117,11 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
 router.post(
   '/parse-email-file',
   authenticate,
+  // Before multer, deliberately: a refused request must not write its bytes
+  // first. /parse-email has carried this limiter since it was written; the file
+  // variant, which costs disk as well as parsing, had only the general API
+  // limiter — which is skipped for LAN addresses (audit finding AUD-013).
+  emailParseLimiter,
   uploadEmailFile.single('email'),
   async (req: AuthRequest, res: Response) => {
     const file = req.file;
@@ -129,6 +134,17 @@ router.post(
           message: 'Email file is required',
         });
       }
+
+      // The path is resolved HERE, before any validation can reject the
+      // request. It used to be assigned after the domain check, so that check's
+      // own cleanup branch unlinked `undefined` and the rejected upload stayed
+      // on disk for good (audit finding AUD-013).
+      //
+      // Rebuilt from the trusted upload dir + basename of multer's generated
+      // filename, never the raw file.path: multer generates the name
+      // server-side, so this is defence in depth and it clears the CodeQL
+      // js/path-injection taint on the unlink calls below.
+      filePath = path.join(getEmailUploadDir(), path.basename(file.filename));
 
       // Domain discriminator (optional, defaults to 'flight').
       // Multipart form-data: rawDomain comes as string from form field.
@@ -147,11 +163,6 @@ router.post(
       const domainValue = domainParse.data;
 
       const userId = req.userId;
-      // Rebuild from the trusted upload dir + basename of multer's generated
-      // filename, never the raw file.path. multer already generates the
-      // filename server-side, so this is defense-in-depth and it clears the
-      // CodeQL js/path-injection taint on the fs.unlinkSync cleanups below.
-      filePath = path.join(getEmailUploadDir(), path.basename(file.filename));
 
       // Validate file using magic numbers
       const ext = path.extname(file.originalname).toLowerCase();

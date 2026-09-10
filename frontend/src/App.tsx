@@ -11,7 +11,6 @@ import AirportSeedingModal from "./components/AirportSeedingModal";
 import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
-import { useEnabledDomains } from "./hooks/useEnabledDomains";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -80,7 +79,6 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
-  const { isEnabled } = useEnabledDomains();
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
   // every authenticated effect below is gated on `sessionChecked`, not just
@@ -293,10 +291,12 @@ function AppContent() {
               <Route
                 path="/flights/:id"
                 element={
-                  isAuthenticated && isEnabled("flight") ? (
-                    <FlightDetailPage />
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="flight">
+                      <FlightDetailPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
@@ -318,10 +318,12 @@ function AppContent() {
               <Route
                 path="/cruises/:id"
                 element={
-                  isAuthenticated && isEnabled("cruise") ? (
-                    <CruiseDetailPage />
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="cruise">
+                      <CruiseDetailPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
@@ -413,20 +415,24 @@ function AppContent() {
               <Route
                 path="/lodging/:id"
                 element={
-                  isAuthenticated && isEnabled("lodging") ? (
-                    <LodgingDetailPage />
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="lodging">
+                      <LodgingDetailPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
               <Route
                 path="/lodging/chains/:id"
                 element={
-                  isAuthenticated && isEnabled("lodging") ? (
-                    <LodgingChainDetailPage />
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="lodging">
+                      <LodgingChainDetailPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />

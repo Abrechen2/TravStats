@@ -6,6 +6,7 @@ import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../sc
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
+import { applyDepartureTimesAndDelay, applyExtendedFlightFields, extendedFlightCreateFields, type ExtendedFlightInput } from '../services/flights/extendedFlightFields';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
@@ -49,7 +50,7 @@ import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from '../services/fx/s
 const router = Router();
 
 // Interface for flight update data
-interface FlightUpdateData {
+interface FlightUpdateData extends ExtendedFlightInput {
   // FX snapshot columns (#267) — written together by `fxColumnsFor`, never
   // individually, so a rate can never end up belonging to a different amount.
   priceBase?: number | null;
@@ -571,6 +572,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           frequentFlyerNumber: data.frequentFlyerNumber,
           bookingClassLetter: data.bookingClassLetter,
           coPassengers: data.coPassengers ?? [],
+          ...extendedFlightCreateFields(data),
           // Data source tracking
           dataSource: data.dataSource ?? 'manual',
           lastModifiedBy: 'user',
@@ -1152,7 +1154,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         updateData.airlineIcao = null;
       }
     }
-    
+
     // Resolve airline codes if name provided but IATA/ICAO missing
     let airlineIata = data.airlineIata;
     let airlineIcao = data.airlineIcao;
@@ -1238,6 +1240,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.frequentFlyerNumber !== undefined) updateData.frequentFlyerNumber = data.frequentFlyerNumber;
     if (data.bookingClassLetter !== undefined) updateData.bookingClassLetter = data.bookingClassLetter;
     if (data.coPassengers !== undefined) updateData.coPassengers = data.coPassengers;
+    applyExtendedFlightFields(data, updateData);
     if (data.dataSource !== undefined) updateData.dataSource = data.dataSource;
     // Direct override for time semantics. The localTime branch below sets
     // 'UTC' implicitly when a localTime is supplied; this lets bulk-import
@@ -1313,14 +1316,9 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       });
     }
 
-    // Actual times and delay
-    if (data.actualDepartureLocal !== undefined) {
-      updateData.actualDeparture = incomingActualDepUtc;
-      const scheduledDep: Date | null = incomingDepUtc ?? existingFlight.departureTime;
-      updateData.delayMinutes = incomingActualDepUtc && scheduledDep
-        ? Math.round((incomingActualDepUtc.getTime() - scheduledDep.getTime()) / 60000)
-        : null;
-    }
+    // Actual times and delay — one call, because either time changes the delay (AUD-021).
+    const sentTimes = { actualDepartureSent: data.actualDepartureLocal !== undefined, scheduledSent: data.departureLocal !== undefined };
+    applyDepartureTimesAndDelay(sentTimes, { incomingActualDep: incomingActualDepUtc, incomingScheduledDep: incomingDepUtc, existing: existingFlight }, updateData);
     if (data.actualArrivalLocal !== undefined) {
       updateData.actualArrival = incomingActualArrUtc;
     }

@@ -71,6 +71,7 @@
     "firstName": "Vorname",
     "lastName": "Nachname",
     "username": "Benutzername",
+    "usernameHint": "Der Anmeldename lässt sich hier nicht ändern.",
     "email": "E-Mail-Adresse",
     "birthdate": "Geburtstag",
     "birthdateHint": "Optional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.",
