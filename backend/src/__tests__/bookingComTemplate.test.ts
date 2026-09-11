@@ -195,6 +195,25 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r?.currency).toBe("EUR");
   });
 
+  // AUD-052: every dot was stripped as a grouping mark, so a decimal POINT
+  // multiplied the price by a hundred — and the row read as a clean hit.
+  it("reads a decimal point as a decimal point, not a thousands mark (AUD-052)", () => {
+    const withPoint = synthetic.replace("€ 1.234,50", "US$ 135.87");
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", withPoint);
+    expect(r?.totalPrice).toBeCloseTo(135.87, 2);
+    expect(r?.currency).toBe("USD");
+    expect(r?.missing).toEqual([]);
+
+    const grouped = synthetic.replace("€ 1.234,50", "EUR 1,234.50");
+    expect(parseBookingComEmail("x bestätigt: M", grouped)?.totalPrice).toBeCloseTo(1234.5, 2);
+
+    // The German forms the template was written for are unchanged.
+    const comma = synthetic.replace("€ 1.234,50", "US$ 135,87");
+    expect(parseBookingComEmail("x bestätigt: M", comma)?.totalPrice).toBeCloseTo(135.87, 2);
+    const whole = synthetic.replace("€ 1.234,50", "NOK 3.380");
+    expect(parseBookingComEmail("x bestätigt: M", whole)?.totalPrice).toBe(3380);
+  });
+
   const stacked = [
     "<https://booking.com> \t Bestätigungsnummer: 1234567890",
     "Buchungsinformationen",

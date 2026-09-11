@@ -1,6 +1,5 @@
-import http from "http";
-import https from "https";
 import logger from "../../utils/logger";
+import { requestTextWithDeadline } from "./boundedHttp";
 import {
   splitPostcodeFromCity,
   cleanText,
@@ -8,7 +7,7 @@ import {
   normalizeGuestCount,
 } from "./lodgingFieldNormalization";
 import { cleanEmailBody } from "../parsers/shared/utils";
-import { reconcileTotalPrice } from "./documentTotal";
+import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./documentTotal";
 import { getAdminParserSettings } from "../parserSettings";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
@@ -93,62 +92,32 @@ A BOOKING object has these fields:
 EXAMPLE OUTPUT:
 {"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983","type":"hotel","chainName":null}]}`;
 
+// A generate answer is one JSON document of a few kilobytes; anything near
+// this is a server misbehaving, not a long confirmation.
+const MAX_RESPONSE_BYTES = 2_000_000;
+
+// Both go through the deadline-bound client (AUD-058): the previous
+// `req.setTimeout` was an inactivity timer that a trickling server reset on
+// every byte, and a response cut off mid-body never settled the promise at
+// all — so the "never a dead end" promise below was not being kept.
 function postJson(url: string, body: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: string) => {
-          data += chunk;
-        });
-        res.on("end", () => resolve(data));
-      },
-    );
-    const timeoutMs = getOllamaTimeoutMs();
-    req.setTimeout(timeoutMs, () =>
-      req.destroy(new Error(`Ollama request timeout after ${timeoutMs}ms`)),
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "POST",
+    body,
+    timeoutMs: getOllamaTimeoutMs(),
+    maxResponseBytes: MAX_RESPONSE_BYTES,
+    label: "Ollama request",
   });
 }
 
 function getText(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "GET",
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: string) => {
-          data += chunk;
-        });
-        res.on("end", () => resolve(data));
-      },
-    );
-    req.setTimeout(AVAILABILITY_TIMEOUT_MS, () =>
-      req.destroy(new Error("Ollama availability check timeout")),
-    );
-    req.on("error", reject);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "GET",
+    timeoutMs: AVAILABILITY_TIMEOUT_MS,
+    maxResponseBytes: MAX_RESPONSE_BYTES,
+    label: "Ollama availability check",
   });
 }
 
@@ -183,17 +152,18 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+/**
+ * A number the model wrote, or null. The model emits absence as text often
+ * enough — "null", "n/a", "" — and stripping the non-digits from those left
+ * `Number("")`, which is 0: a booking with no price came back as a free one,
+ * with nothing in `missing` to say so (AUD-051). No digit, no number. The
+ * digits themselves go through the shared money reader, which knows both
+ * grouping conventions; the old German-only replace read "1,234.50" as 1.23.
+ */
 function asNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const cleaned = value
-      .replace(/[^\d.,-]/g, "")
-      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
-      .replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
+  if (typeof value !== "string" || !/\d/.test(value)) return null;
+  return parseAmount(value);
 }
 
 function asCurrency(value: unknown): LodgingCurrency | null {
@@ -280,9 +250,13 @@ function normalizeBooking(
   // the owner's Armani confirmation returned the tax-inclusive total and the
   // bare room rate. A labelled total in the source is provable, so it wins.
   // Only when a currency survived the guard above: an amount without a unit is
-  // not a price, whoever proposed it.
+  // not a price, whoever proposed it. The currency goes along so a labelled
+  // total in ANOTHER unit — the EUR conversion a Dubai hotel prints under its
+  // AED fee — cannot overrule the model's figure (AUD-050).
   const reconciled =
-    currency === null ? { value: null, source: "none" as const } : reconcileTotalPrice(modelPrice, documentText);
+    currency === null
+      ? { value: null, source: "none" as const }
+      : reconcileTotalPrice(modelPrice, documentText, currency);
   const totalPrice = reconciled.value;
   if (reconciled.source === "document" && modelPrice !== null) {
     logger.info(
@@ -397,8 +371,22 @@ async function parseWithOllama(
     .trim();
 
   const parsed: unknown = JSON.parse(cleaned);
-  return unwrapBookings(parsed)
-    .map((entry) => normalizeBooking((entry ?? {}) as Record<string, unknown>, snippet))
+  const entries = unwrapBookings(parsed).map((entry) => (entry ?? {}) as Record<string, unknown>);
+  // Each booking is reconciled against ITS OWN part of the document. Handing
+  // every booking the whole text let the document-wide winner overrule each
+  // one: two hotels at 100 and 500 both came back as 500 (AUD-050).
+  const names = entries.map((entry) => asString(entry.hotelName));
+  return entries
+    .map((entry, i) =>
+      normalizeBooking(
+        entry,
+        documentSectionFor(
+          snippet,
+          names[i],
+          names.filter((n, j): n is string => j !== i && n !== null),
+        ),
+      ),
+    )
     .filter((b): b is ParsedLodgingBooking => b !== null);
 }
 
