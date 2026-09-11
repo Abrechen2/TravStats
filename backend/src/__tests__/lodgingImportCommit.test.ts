@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
-import type { CommitRowInput } from "../schemas/lodgingImport";
+import {
+  lodgingImportCommitRequestSchema,
+  lodgingImportPreviewRequestSchema,
+  type CommitRowInput,
+} from "../schemas/lodgingImport";
 
 // FX reaches out over the network — stub the provider CHAIN so the suite is
 // offline and deterministic. A missing price must still be a normal outcome.
@@ -386,6 +390,155 @@ describe("commitLodgingImport", () => {
     expect(result.createdStays).toBe(1);
   });
 
+  // AUD-055: the preview resolves a stays-only row's name against EVERY
+  // candidate; the commit resolved it only against rows already written, so
+  // the stay row coming first lost its stay with `missing_lodging_reference`.
+  it("resolves a stays-only row that comes BEFORE the row creating its hotel (AUD-055)", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: null,
+        lodgingName: "Order Independent Hotel",
+        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02" },
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "Order Independent Hotel" },
+        stay: null,
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "reversed.csv", rows);
+    expect(result.failed).toEqual([]);
+    expect(result.createdLodgings).toBe(1);
+    expect(result.createdStays).toBe(1);
+  });
+
+  // AUD-044: the name alone was the whole identity inside one run.
+  it("keeps two same-named hotels in different cities with different refs apart (AUD-044)", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel Central AUD044", city: "Berlin", externalRef: "google:aud044-berlin" },
+        stay: { checkIn: "2026-12-01", checkOut: "2026-12-02" },
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "Hotel Central AUD044", city: "Paris", externalRef: "google:aud044-paris" },
+        stay: { checkIn: "2026-12-05", checkOut: "2026-12-06" },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "two-cities.csv", rows);
+    expect(result.failed).toEqual([]);
+    expect(result.createdLodgings).toBe(2);
+    expect(result.createdStays).toBe(2);
+
+    const houses = await prisma.lodging.findMany({
+      where: { batchId: result.batchId },
+      orderBy: { city: "asc" },
+      select: { city: true, externalRef: true, _count: { select: { stays: true } } },
+    });
+    expect(houses).toEqual([
+      { city: "Berlin", externalRef: "google:aud044-berlin", _count: { stays: 1 } },
+      { city: "Paris", externalRef: "google:aud044-paris", _count: { stays: 1 } },
+    ]);
+  });
+
+  it("still folds a same-named row WITHOUT a city into the house created before it", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel Fold AUD044", city: "Wien" },
+        stay: null,
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "Hotel Fold AUD044" },
+        stay: { checkIn: "2026-12-10", checkOut: "2026-12-11" },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "fold.csv", rows);
+    expect(result.createdLodgings).toBe(1);
+    expect(result.createdStays).toBe(1);
+  });
+
+  // AUD-048: the guard read the total only, so a per-night rate with no
+  // currency was stored against the column's EUR default.
+  it("drops a per-night rate whose currency the sheet never carried (AUD-048)", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel Nightly No Currency" },
+        stay: { checkIn: "2026-05-01", checkOut: "2026-05-04", pricePerNight: 50 },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "nightly.csv", rows);
+    expect(result.failed).toEqual([]);
+    const stay = await prisma.lodgingStay.findFirstOrThrow({ where: { batchId: result.batchId } });
+    expect(stay.pricePerNight).toBeNull();
+    expect(stay.totalPrice).toBeNull();
+  });
+
+  it("keeps a per-night rate that DOES carry its currency", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel Nightly With Currency" },
+        stay: { checkIn: "2026-05-01", checkOut: "2026-05-04", pricePerNight: 50, currency: "EUR" },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "nightly-eur.csv", rows);
+    const stay = await prisma.lodgingStay.findFirstOrThrow({ where: { batchId: result.batchId } });
+    expect(stay.pricePerNight).toBe(50);
+    expect(stay.currency).toBe("EUR");
+  });
+
+  // AUD-043: the (currency, day) cache held the first row's CONVERTED AMOUNT,
+  // and every later row of the same pair stored it as its own base amount.
+  it("converts each row's OWN price through the shared rate (AUD-043)", async () => {
+    fxMock.convertToBase.mockImplementationOnce(async (amount: number) => ({
+      baseAmount: amount * 0.5,
+      rate: 0.5,
+      rateDate: "2026-07-01",
+      source: "ecb" as const,
+    }));
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel FX Row One" },
+        stay: { checkIn: "2026-07-01", checkOut: "2026-07-02", totalPrice: 100, currency: "USD" },
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "Hotel FX Row Two" },
+        stay: { checkIn: "2026-07-01", checkOut: "2026-07-03", totalPrice: 500, currency: "USD" },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "fx-rows.csv", rows);
+    expect(result.failed).toEqual([]);
+    // One lookup for the pair, as before — the sharing is the point.
+    expect(fxMock.convertToBase).toHaveBeenCalledTimes(1);
+
+    const stays = await prisma.lodgingStay.findMany({
+      where: { batchId: result.batchId },
+      orderBy: { totalPrice: "asc" },
+      select: { totalPrice: true, totalPriceBase: true, fxRate: true },
+    });
+    expect(stays).toEqual([
+      { totalPrice: 100, totalPriceBase: 50, fxRate: 0.5 },
+      { totalPrice: 500, totalPriceBase: 250, fxRate: 0.5 },
+    ]);
+  });
+
   // ---- Finding 2: FX fan-out (POST /commit was fanning out up to
   // MAX_LODGING_IMPORT_ROWS sequential outbound FX calls inside the request) ----
 
@@ -710,6 +863,45 @@ describe("commitLodgingImport", () => {
         checkOut: "2026-06-09",
       });
       expect(row.ratingOverall).toBeNull();
+    });
+  });
+
+  // AUD-045: the preview flagged an inverted range, but the commit payload is
+  // the client's to edit and the commit schema let it through.
+  describe("commit boundary rejects what the stay editor rejects", () => {
+    const inverted = {
+      sourceRowIndex: 0,
+      lodging: { name: "Hotel Backwards" },
+      stay: { checkIn: "2020-05-10", checkOut: "2020-05-01" },
+    };
+
+    it("refuses a check-out before the check-in at commit (AUD-045)", () => {
+      const parsed = lodgingImportCommitRequestSchema.safeParse({
+        source: "csv",
+        fileName: null,
+        rows: [{ ...inverted, action: "create" }],
+      });
+      expect(parsed.success).toBe(false);
+    });
+
+    it("still lets the preview see the row, so it can be flagged", () => {
+      const parsed = lodgingImportPreviewRequestSchema.safeParse({ candidates: [inverted] });
+      expect(parsed.success).toBe(true);
+    });
+
+    it("accepts a same-day stay", () => {
+      const parsed = lodgingImportCommitRequestSchema.safeParse({
+        source: "csv",
+        fileName: null,
+        rows: [
+          {
+            ...inverted,
+            action: "create",
+            stay: { checkIn: "2020-05-10", checkOut: "2020-05-10" },
+          },
+        ],
+      });
+      expect(parsed.success).toBe(true);
     });
   });
 });

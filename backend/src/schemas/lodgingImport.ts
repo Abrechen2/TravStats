@@ -116,6 +116,19 @@ export const stayCandidateFieldsSchema = z.object({
 });
 export type StayCandidateFields = z.infer<typeof stayCandidateFieldsSchema>;
 
+/**
+ * The same rule `schemas/lodging.ts` holds for a hand-entered stay. The
+ * preview flags an inverted range (`invalid_date_range`), but the commit
+ * payload is the client's to edit, and a check-out before the check-in
+ * committed cleanly and stored a stay with negative nights (AUD-045). Applied
+ * to the COMMIT row only — the preview must still accept the row so it can
+ * flag it, rather than reject the whole request over one line.
+ */
+const stayCommitFieldsSchema = stayCandidateFieldsSchema.refine(
+  (s) => s.checkOut >= s.checkIn,
+  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+);
+
 export const lodgingImportCandidateSchema = z
   .object({
     sourceRowIndex: z.number().int().nonnegative(),
@@ -207,7 +220,7 @@ export const commitRowSchema = z.object({
   // entry; if it resolves nothing the row fails `missing_lodging_reference`
   // exactly as before this field existed.
   lodgingName: z.string().trim().max(200).nullable().optional(),
-  stay: stayCandidateFieldsSchema.nullable(),
+  stay: stayCommitFieldsSchema.nullable(),
 });
 export type CommitRowInput = z.infer<typeof commitRowSchema>;
 

@@ -122,4 +122,34 @@ describe("single create and batch import agree", () => {
     expect(stored.fxRate).toBe(1);
     expect(stored.fxBaseCurrency).toBe("EUR");
   });
+
+  // AUD-049: the snapshots were keyed by `externalRef`, which is null for
+  // every manual flight — so two hand-typed rows shared one slot and both
+  // stored the last-resolved amount (100 + 500 became 500 + 500).
+  it("snapshots each manual flight's OWN amount, not the last one resolved (AUD-049)", async () => {
+    const manual = (flightNumber: string, price: number) => ({
+      ...payload(flightNumber),
+      dataSource: "manual",
+      price,
+    });
+    const batch = await request(app)
+      .post("/api/v1/flights/batch")
+      .set("Cookie", cookie)
+      .send([manual("LH1004", 100), manual("LH1005", 500)]);
+    expect(batch.status).toBe(201);
+    expect(batch.body.flights.map((f: { externalRef: string | null }) => f.externalRef)).toEqual([
+      null,
+      null,
+    ]);
+
+    const stored = await prisma.flight.findMany({
+      where: { userId, flightNumber: { in: ["LH1004", "LH1005"] } },
+      orderBy: { flightNumber: "asc" },
+      select: { price: true, priceBase: true },
+    });
+    expect(stored).toEqual([
+      { price: 100, priceBase: 100 },
+      { price: 500, priceBase: 500 },
+    ]);
+  });
 });

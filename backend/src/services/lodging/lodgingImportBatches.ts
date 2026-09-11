@@ -21,8 +21,12 @@ function asSource(value: string): LodgingImportSource {
 export async function listLodgingImportBatches(
   userId: string,
 ): Promise<LodgingImportBatchSummary[]> {
+  // This is the LODGING log. Filtering on the user alone listed the flight
+  // and cruise imports here too, and the revert below then deleted a flight
+  // batch it knew nothing about — leaving the flights orphaned of their undo
+  // record (AUD-046).
   const batches = await prisma.importBatch.findMany({
-    where: { userId },
+    where: { userId, domain: "lodging" },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { lodgings: true, stays: true } } },
   });
@@ -55,7 +59,8 @@ export interface RevertResult {
  * only deleted if NO stays remain attached to it once this batch's own stays
  * are gone; if any stay survives (another batch's, or hand-made), the lodging
  * survives too and is merely detached (`batchId = null`) — none of its other
- * fields are touched.
+ * fields are touched. The same holds for photos and memberships the user
+ * added to the house after the import (AUD-047).
  *
  * Runs as one interactive transaction (`$transaction(async (tx) => ...)`, not
  * the array form) because "which lodgings still have stays" must be queried
@@ -85,17 +90,32 @@ export async function revertLodgingImportBatch(
   let orphanedPhotoFiles: string[] = [];
   const result = await prisma.$transaction(
     async (tx) => {
-      const batch = await tx.importBatch.findFirst({ where: { id: batchId, userId } });
+      // Scoped to the domain as well as the user: a flight batch reverted
+      // through this path lost its log row while its flights stayed (AUD-046).
+      const batch = await tx.importBatch.findFirst({
+        where: { id: batchId, userId, domain: "lodging" },
+      });
       if (!batch) throw new AppError("Import batch not found", 404);
 
       const stays = await tx.lodgingStay.deleteMany({ where: { userId, batchId } });
 
+      // A house is "empty" only when NOTHING the user added afterwards hangs
+      // from it. Stays were the only thing counted, so a hotel the import
+      // created and the user then photographed was deleted with its photos —
+      // "deletes only what this batch created" held for the stay and not for
+      // the picture (AUD-047). Photos and loyalty memberships are the two
+      // things a user curates on a house itself; either one keeps it.
       const batchLodgings = await tx.lodging.findMany({
         where: { userId, batchId },
-        select: { id: true, _count: { select: { stays: true } } },
+        select: {
+          id: true,
+          _count: { select: { stays: true, photos: true, membershipLinks: true } },
+        },
       });
-      const emptyIds = batchLodgings.filter((l) => l._count.stays === 0).map((l) => l.id);
-      const occupiedIds = batchLodgings.filter((l) => l._count.stays > 0).map((l) => l.id);
+      const isEmpty = (l: (typeof batchLodgings)[number]): boolean =>
+        l._count.stays === 0 && l._count.photos === 0 && l._count.membershipLinks === 0;
+      const emptyIds = batchLodgings.filter(isEmpty).map((l) => l.id);
+      const occupiedIds = batchLodgings.filter((l) => !isEmpty(l)).map((l) => l.id);
 
       // Read before the delete, removed after the transaction commits — the
       // cascade takes the photo rows and with them the filenames (AUD-042).

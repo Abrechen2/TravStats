@@ -222,6 +222,76 @@ describe("lodging import batches", () => {
     await prisma.user.delete({ where: { id: other.id } });
   });
 
+  // AUD-047: "deletes only what this batch created" held for stays and not
+  // for the photo the user added to the house afterwards.
+  it("keeps a lodging the user photographed after the import, detached (AUD-047)", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Photographed Later Hotel" },
+        stay: { checkIn: "2026-03-10", checkOut: "2026-03-11" },
+      },
+    ];
+    const { batchId } = await commitLodgingImport(userId, "csv", "photo.csv", rows);
+    const lodging = await prisma.lodging.findFirstOrThrow({
+      where: { userId, name: "Photographed Later Hotel" },
+    });
+    const photo = await prisma.lodgingPhoto.create({
+      data: {
+        lodgingId: lodging.id,
+        filename: "aud047-never-written.png",
+        mimetype: "image/png",
+        sizeBytes: 1,
+      },
+    });
+
+    const result = await revertLodgingImportBatch(userId, batchId);
+    expect(result.deletedStays).toBe(1);
+    expect(result.deletedLodgings).toBe(0);
+    expect(result.detachedLodgings).toBe(1);
+
+    const survivor = await prisma.lodging.findUnique({ where: { id: lodging.id } });
+    expect(survivor?.batchId).toBeNull();
+    expect(await prisma.lodgingPhoto.findUnique({ where: { id: photo.id } })).not.toBeNull();
+
+    await prisma.lodgingPhoto.delete({ where: { id: photo.id } });
+    await prisma.lodging.delete({ where: { id: lodging.id } });
+  });
+
+  // AUD-046: the list and the revert filtered on the user only, so a FLIGHT
+  // batch appeared in the lodging log and could be deleted through it —
+  // taking the flights' undo record with it.
+  it("neither lists nor reverts another domain's batch (AUD-046)", async () => {
+    const flightBatch = await prisma.importBatch.create({
+      data: { userId, domain: "flight", source: "csv", fileName: "flights.csv" },
+    });
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        importBatchId: flightBatch.id,
+        flightNumber: "LH046",
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 40.6413,
+        arrLon: -73.7781,
+      },
+    });
+
+    const listed = await listLodgingImportBatches(userId);
+    expect(listed.find((b) => b.id === flightBatch.id)).toBeUndefined();
+
+    await expect(revertLodgingImportBatch(userId, flightBatch.id)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(await prisma.importBatch.findUnique({ where: { id: flightBatch.id } })).not.toBeNull();
+    const stillLinked = await prisma.flight.findUniqueOrThrow({ where: { id: flight.id } });
+    expect(stillLinked.importBatchId).toBe(flightBatch.id);
+
+    await prisma.flight.delete({ where: { id: flight.id } });
+    await prisma.importBatch.delete({ where: { id: flightBatch.id } });
+  });
+
   it("does not list another user's batches", async () => {
     const other = await prisma.user.create({
       data: { username: "lodging-import-batches-list-other", passwordHash: "x" },

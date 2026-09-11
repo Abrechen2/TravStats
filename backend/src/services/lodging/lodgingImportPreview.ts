@@ -11,11 +11,20 @@ import type {
   LodgingImportSummary,
 } from "../../schemas/lodgingImport";
 
-/** Case/punctuation-insensitive key for name matching. */
+/**
+ * Case/punctuation-insensitive key for name matching.
+ *
+ * Letters of EVERY script count. The old `[^a-z0-9]` stripped everything
+ * non-Latin, so "桜旅館" and "海の宿" both normalised to "" — and a stays-only
+ * row naming the second was silently attached to the first, because one hit
+ * on the empty key looked like one identity (AUD-054). NFKC first, so a
+ * full-width digit or a ligature compares equal to its plain form.
+ */
 export function normalizeLodgingName(name: string): string {
   return name
+    .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
 
@@ -106,8 +115,10 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     }
   }
 
-  if (!matchedLodgingId && lodging) {
-    const nameKey = normalizeLodgingName(lodging.name);
+  // A name that normalises to nothing identifies nothing. Matching on it
+  // would make every such house "the same one" (AUD-054).
+  const nameKey = lodging ? normalizeLodgingName(lodging.name) : "";
+  if (!matchedLodgingId && lodging && nameKey) {
     const cityKey = normalizeCity(lodging.city);
     // A row that carries a city is matched on name AND city — two "Hotel Post"
     // in different towns are different houses. A row that carries NO city can
@@ -177,12 +188,13 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   }
 
   if (!lodging && joinName) {
-    const hits = idx.byName.get(normalizeLodgingName(joinName)) ?? [];
+    const joinKey = normalizeLodgingName(joinName);
+    const hits = joinKey ? (idx.byName.get(joinKey) ?? []) : [];
     if (hits.length === 1) {
       matchedLodgingId = hits[0].id;
     } else if (hits.length > 1) {
       flags = [...flags, "ambiguous_lodging_name"];
-    } else if (!idx.payloadNames.has(normalizeLodgingName(joinName))) {
+    } else if (!joinKey || !idx.payloadNames.has(joinKey)) {
       // Neither in the DB nor created by an earlier row of this same import.
       flags = [...flags, "unresolvable_lodging_name"];
     }
