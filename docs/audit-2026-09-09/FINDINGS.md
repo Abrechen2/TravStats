@@ -1,8 +1,161 @@
 # Befunde
 
+## AUD-060 – CSV-Import verwirft gültige Halb-Stern-Bewertungen ohne Warnung
+
+- Priorität: P2. Kategorie: Import/Vertragsparität/Datenverlust einzelner Felder. Status: tatsächlicher CSV-Candidatebuilder und Previewschema am Fix-Stand `c824ea3b` reproduziert.
+- Fundstellen: `frontend/src/lib/importers/lodgingCsv.ts:305`, `:309`; Gegenvertrag `backend/src/schemas/lodging.ts:47` und `schemas/lodgingImport.ts:44`.
+- Beleg: CSV-Zellen mit `0.5` in Zimmer-, Frühstücks-, Service- und Gesamtbewertung werden sämtlich zu null, `rowErrors:[]`. Kontrollwerte 1 und 4.5 bleiben erhalten. Das Backend-Kandidatenschema akzeptiert dieselben vier Felder ausdrücklich mit 0.5, ebenso das normale Unterkunftsschema.
+- Ursache: CSV-Helfer verwendet die alte Untergrenze 1 statt 0,5 und stuft außerhalb liegende, aber numerisch lesbare Werte nicht als Fehler ein. Die Vorschau bietet für diese Felder keine Korrektureingabe. Sehr schlechte Bewertungen verschwinden damit als „unbewertet“.
+- Verbesserung: eine gemeinsame Ratinggrenze/Validierung für Editor, API und Import; gültige 0,5 erhalten und ungültige Werte explizit melden. Tests für alle vier Bewertungsspalten, 0,5, 1, 5 und außerhalb liegende Werte.
+
+## AUD-057 – In der Importvorschau nachgetragener Preis geht ohne auswählbare Währung verloren
+
+- Priorität: P2. Kategorie: UI/API-Vertrag/stiller Eingabeverlust. Status: echte React-Komponente in Headless-Chromium; **deren tatsächliches Commitpayload** anschließend gegen echtes Schema und Commitservice am Fix-Stand `c824ea3b` ausgeführt.
+- Fundstellen: `frontend/src/components/lodging/LodgingImportPreviewModal.tsx:269`, `:434`; `backend/src/services/lodging/lodgingImportCommit.ts:268`, `:302`.
+- Beleg: Importzeile mit vollständigen Aufenthaltsdaten, aber unbekanntem Preis und `currency:null`. Nutzer tippt 100 ins Preisfeld und bestätigt. Payload enthält `totalPrice:100,currency:null`; die Oberfläche besitzt kein Währungsfeld und zeigt auch eine vorhandene Einheit nicht neben dem Preis. Service meldet 1 Hotel/1 Aufenthalt, `failed:[]`; DB enthält danach **totalPrice:null**, EUR-Default und keinen Basisbetrag.
+- Ursache: Backend verwirft zu Recht Beträge mit unbekannter Einheit, aber die zur Nachbearbeitung vorgesehene Vorschau bietet keine Möglichkeit, diese Einheit anzugeben, keine passende Validierung und keinen Hinweis auf das verworfene Feld. Betrag-only-Editor und Importvertrag passen nicht zusammen.
+- Verbesserung: Einheit anzeigen und editierbar machen; bei vorhandenen Geldbeträgen ohne Währung die Bestätigung blockieren bzw. eine explizite Entscheidung verlangen. Feldverluste im Ergebnis nicht als vollständigen Erfolg ausgeben. Nicht durch pauschale Erfindung von EUR lösen (vgl. AUD-048).
+- Prüfgrenze: isolierte echte Komponente, keine vollständige Seiten-/CSS-Prüfung. Kein HTTP-Commit/Geocodingjob; derselbe vom Browser erzeugte Payload wurde direkt mit dem echten Service persistiert.
+
+## AUD-058 – Buchungsparser hält seine Timeoutgrenze nicht ein und bleibt nach Antwortabbruch hängen
+
+- Priorität: P2. Kategorie: Netzwerkrobustheit/Fallback. Status: öffentlicher Parser mit lokalem synthetischem HTTP-Server am Fix-Stand `c824ea3b` reproduziert.
+- Fundstellen: `backend/src/services/lodging/lodgingBookingParser.ts:96` (`postJson`), `:127` (`getText`), `:436`, `:466`.
+- Beleg 1: Testbudget `LODGING_OLLAMA_TIMEOUT_MS=80`; Server sendet alle 25 ms ein Leerzeichen und erst nach zwölf Intervallen eine vollständige gültige Antwort. Parser akzeptiert diese nach gemessenen 412 ms. Der Timer begrenzt Socket-Inaktivität, nicht die gesamte Laufzeit.
+- Beleg 2: Nach erfolgreicher `/api/tags`-Abfrage sendet der Generate-Endpunkt nur einen JSON-Anfang und bricht dann die Antwortverbindung ab. Nach 355 ms ist der Parser-Promise bei 80-ms-Konfiguration noch immer unerledigt; der versprochene manuelle Fallback wurde nicht erreicht. Probe durch eigenen äußeren Watchdog beendet, keine unbegrenzt laufende Testanfrage hinterlassen.
+- Ursache: Es fehlt eine unabhängige Gesamtlaufzeitgrenze sowie vollständige Behandlung von Response-`error`/`aborted`/vorzeitigem `close`. `req.on('error')` und `res.on('end')` decken den abgebrochenen Antwortstream nicht ab. Der benachbarte Mappingparser besitzt bereits eine echte Deadline und Antwortgrößenbegrenzung; der Bookingparser nicht.
+- Verbesserung: einheitlicher begrenzter HTTP-Client mit Gesamtdeadline, begrenzten Antwortbytes, Statusprüfung und garantierter Auflösung/Ablehnung bei allen Streamenden. Tests für tröpfelnde und abgeschnittene Antworten ergänzen. Der Zeitmaßstab der Probe ist verkleinert; kein realer externer Ollama-Ausfall behauptet.
+
+## AUD-059 – CSV-Zahlenheuristik liest Koordinaten mit drei Nachkommastellen als Tausenderzahlen
+
+- Priorität: P2. Kategorie: CSV/Geodaten/fehlerhafte Zahlennormalisierung. Status: tatsächlicher Frontend-Candidatebuilder und Backend-Previewschema am Fix-Stand `c824ea3b` reproduziert.
+- Fundstellen: `frontend/src/lib/importers/lodgingCsv.ts:274`, `:289`, `:457`, `:460`; `backend/src/schemas/lodgingImport.ts:65`.
+- Beleg: Gültige Koordinatenstrings `52.520` / `13.405` ergeben **52520 / 13405**, ohne `rowErrors`. Der daraus erzeugte Previewrequest wird wegen zu großer Koordinaten abgelehnt. Dieselben Koordinaten als `52.5200` / `13.4050` oder mit sechs Nachkommastellen werden korrekt gelesen und akzeptiert. Ein fehlerhafter Kandidat kann so die Vorschau des gesamten Requests verhindern.
+- Ursache: Derselbe generische Geld-/Zahlenhelfer wird für Koordinaten verwendet; exakt drei Ziffern hinter einem Trennzeichen gelten immer als Tausendergruppierung. Geografische Dezimalpräzision darf diese Annahme nicht übernehmen.
+- Weiterer belegter Anwendungsfall dieser Heuristik: Preis `1.234` mit expliziter `KWD`-Währung wird als 1234 ausgegeben. Die im Projekt unterstützte dreistellige Währungspräzision wird nicht zur Unterscheidung benutzt; für einen als 1,234 gemeinten Betrag ist dies Faktor 1000. Mehrdeutige Geldschreibweisen müssen geprüft werden, nicht als eindeutig behauptet werden.
+- Verbesserung: feldspezifische Parser für Koordinaten, Geldbeträge und Bewertungen; erlaubten Wertebereich und Währungspräzision berücksichtigen. Fehler bereits pro Quellzelle verständlich melden. Tests mit variierender, numerisch gleichwertiger Nachkommastellenzahl.
+
+## AUD-056 – Falscher Hotel-Match kann in der Importvorschau nicht abgelehnt und als neues Hotel importiert werden
+
+- Priorität: P2. Kategorie: UI/fehlende Entscheidungsoption/Fehlzuordnung. Status: echte React-Komponente in Headless-Chromium plus separate echte Preview-/Commit-/DB-Gegenprobe am Fix-Stand `c824ea3b`.
+- Fundstellen: `frontend/src/components/lodging/LodgingImportPreviewModal.tsx:180`, `:333`, `:344`, `:381`, `:488`; `backend/src/services/lodging/lodgingImportCommit.ts:375`, `:397`.
+- Beleg: Bestand `Synthetic Annex One`, Import `Synthetic Other Building` mit anderer externer Kennung. Vorschau bietet einen heuristischen Namensmatch als `needs_input` an und setzt `matchedLodgingId`. Im real gerenderten Dialog sind Name/Stadt DIVs statt Eingabefelder; Auswahl nur leer/`create`/`skip`. Es gibt keinen „anderes/neues Hotel“-Weg. Klick auf `create` überträgt **unverändert die vorgeschlagene Bestands-ID**. Der echte Commit legt entsprechend 0 Hotels und 1 Aufenthalt am bestehenden Hotel an.
+- Auswirkung: „Rückfrage statt automatischer Zusammenlegung“ ist unvollständig umgesetzt: Der Nutzer kann nur den Vorschlag übernehmen oder den gesamten Datensatz überspringen/Import abbrechen, aber den Match nicht zurückweisen und die richtige neue Unterkunft anlegen. Angezeigt wird dabei der **Importname**, nicht der Name des verknüpften Bestandshotels, was die Entscheidung zusätzlich erschwert.
+- Verbesserung: explizite getrennte Aktionen „bestehendem Hotel zuordnen“, „neues Hotel erstellen“, „überspringen“; Vergleich mit Name/Ort/Identität des vorgeschlagenen Bestandsobjekts. Beim Ablehnen die Match-ID löschen und Eingaben wieder freigeben. Tests für falschen Namens-/Nähevorschlag und tatsächlich übermitteltes Commitpayload.
+- Prüfgrenze: isolierte echte Komponente mit ersetzter Übersetzungs-/Logginganbindung und gesperrtem Browsernetzwerk; kein vollständiger Seiten-/CSS- oder Screenshotnachweis behauptet. Der nachgelagerte DB-Nachweis nutzte dieselbe ID/Entscheidung auf rein synthetischen Daten.
+
+## AUD-052 – Booking-Template vervielfacht Dezimalpunktpreise stillschweigend
+
+- Priorität: P1. Kategorie: deterministischer Parser/falsche Geldbeträge. Status: echter `parseBookingComEmail` am Fix-Stand `c824ea3b` mit synthetischer gültiger deutsch beschrifteter Bestätigung reproduziert.
+- Fundstelle: `backend/src/services/lodging/bookingComTemplate.ts:276`, besonders `:285`.
+- Beleg: Alle übrigen Felder gleich und vollständig: `Gesamtpreis` gefolgt von `US$ 135.87` ergibt **13587 USD**; Kontrollfall `US$ 135,87` ergibt korrekt 135,87 USD. `EUR 1,234.50` ergibt **1,2345 EUR** statt 1234,50 EUR. Die fehlerhaften Ergebnisse haben `missing:[]` und werden als erfolgreicher Templatehit übernommen; kein LLM-Fallback.
+- Ursache: Jeder Punkt wird als Tausendertrenner entfernt und danach nur das erste Komma als Dezimalzeichen behandelt. Ein erkanntes Währungsformat belegt jedoch nicht die verwendete Zahlenschreibweise.
+- Grenze: Nachgewiesen für vom Template akzeptierte deutsch beschriftete Dokumente mit solchen Betragsformaten; keine Häufigkeit in echten Buchungsmails behauptet. Die erste Probe hatte durch die PowerShell-Pipe beschädigte Umlaute und keinen Templatehit; oben stehen die mit Unicode-Escapes korrekt wiederholten Ergebnisse.
+- Verbesserung: Zahl und Währung gemeinsam, locale-/präzisionsbewusst normalisieren; mehrdeutige Schreibweisen nicht still umdeuten. Geldnormalisierung nicht in mehreren auseinanderlaufenden Parserhelfern duplizieren. Tests mit Dezimalkomma/-punkt und beiden Gruppierungsformen.
+
+## AUD-053 – „Frühstück nicht enthalten“ wird als gebuchtes Frühstück normalisiert
+
+- Priorität: P2. Kategorie: Parser/Verpflegungslogik. Status: tatsächlicher Normalisierungshelfer am Fix-Stand `c824ea3b` reproduziert; Aufruf aus `normalizeBooking` bestätigt.
+- Fundstellen: `backend/src/services/lodging/lodgingFieldNormalization.ts:82`, `:86`, `:98`; `backend/src/services/lodging/lodgingBookingParser.ts:319`.
+- Beleg: `No breakfast included`, `Breakfast not included` und `Ohne Frühstück` liefern jeweils `breakfast`. Kontrollfälle `Room only` → `none`, `breakfast` → `breakfast`. Der Parserprompt fordert die Verpflegung als gedruckten Text; solche verneinten Werte sind daher keine entgegen dem Vertrag erfundenen Enumwerte.
+- Auswirkung: Ausschluss von Frühstück wird in sein Gegenteil umgewandelt; Aufenthaltsdaten und nach Verpflegungsart gruppierte Kosten werden falsch. Eine bloße Erwähnung ist kein Nachweis einer eingeschlossenen Leistung.
+- Verbesserung: Verneinung/Ausschluss vor positiven Schlagwörtern auswerten; bei mehrdeutigem Text null/Prüfhinweis statt positiver Buchungsbehauptung. Tests mit „nicht enthalten“, „gegen Aufpreis“, „optional“ und positiven Formulierungen.
+
+## AUD-054 – Unterschiedliche nichtlateinische Hotelnamen werden automatisch demselben Hotel zugeordnet
+
+- Priorität: P2. Kategorie: Internationalisierung/Identitätsverlust. Status: echtes Preview-Schema, Previewservice, Commitschema und Prisma-Commit am Fix-Stand `c824ea3b` reproduziert.
+- Fundstellen: `backend/src/services/lodging/lodgingImportPreview.ts:15`, `:177`, `:281`; derselbe Normalisierer wird auch vom Commit verwendet.
+- Beleg: Bestehendes Hotel `桜旅館`; neuer stays-only-Kandidat nennt `海の宿`. Beide Normalisierungsschlüssel sind der leere String. Vorschau: `action:'create'`, `flags:[]`, `dedupeHint:'none'`, bereits die ID von `桜旅館` gesetzt. Commit erfolgreich: 0 neue Hotels, 1 Aufenthalt am falschen bestehenden Hotel.
+- Ursache: `[^a-z0-9]` entfernt sämtliche nichtlateinischen Buchstaben. Der stays-only-Zweig hält einen einzigen Treffer auf dem leeren Schlüssel für eine eindeutige Identität und verlangt keine Bestätigung. Mit mehreren solchen Bestandsnamen entsteht stattdessen Mehrdeutigkeit, nicht dieselbe stille Einzelzuordnung.
+- Verbesserung: Unicodefähige Normalisierung; niemals leere/zu informationsarme Schlüssel als Identität akzeptieren. Tests mit japanischen, chinesischen, kyrillischen und arabischen Namen sowie getrennten Städten. Von AUD-044 unterscheiden: hier sind schon die **Originalnamen verschieden**, nicht nur deren Städte.
+
+## AUD-055 – Als importierbar freigegebene Aufenthaltszeile scheitert allein an der Zeilenreihenfolge
+
+- Priorität: P2. Kategorie: Preview→Commit-Vertrag/Teilimport. Status: echte Schemas, Preview und Commit auf getrennten synthetischen Konten am Fix-Stand `c824ea3b` reproduziert; UI-Payloadkette vollständig gelesen.
+- Fundstellen: `backend/src/services/lodging/lodgingImportPreview.ts:299`, `:320`; `backend/src/services/lodging/lodgingImportCommit.ts:368`, `:425`; `frontend/src/components/lodging/LodgingImportPreviewModal.tsx:174`.
+- Beleg: Kandidat 0 enthält nur Aufenthalt plus Hotelname, Kandidat 1 legt genau dieses Hotel an. Vorschau gibt beide als `create` aus. Commit in dieser Vorschau-Reihenfolge erstellt das Hotel, aber **keinen Aufenthalt**, Fehler Zeile 0 `missing_lodging_reference`. Dieselben Zeilen auf einem frischen Konto mit umgekehrter Commit-Reihenfolge: 1 Hotel, 1 Aufenthalt, keine Fehler.
+- Ursache: Preview prüft Namen gegen **alle** Kandidaten, Commit dagegen nur gegen bereits verarbeitete Zeilen. Das UI behält die Vorschau-Reihenfolge bei, bietet keine Umsortierung und sendet den joinenden Datensatz absichtlich ohne eigenes Hotelobjekt. Die zusätzliche Sortierung „needs_input zuerst“ kann ebenfalls Abhängigkeiten umdrehen.
+- Verbesserung: echte Abhängigkeitsauflösung, zweiphasige Hotel-/Aufenthaltsanlage oder stabile Referenzen auf andere Kandidaten. Preview und Commit müssen für dieselben Entscheidungen übereinstimmen. Nicht lediglich den Nutzer auffordern, die Eingabedatei zufällig passend zu sortieren.
+- Reichweite: Reproduziert mit den im öffentlichen Kandidatenvertrag erlaubten gemischten Formen. Der aktuelle CSV-Builder wählt pro Datei eine Form; nicht behauptet, dass jede normale CSV diesen konkreten gemischten Payload erzeugt. Die UI-Komponente und öffentliche API unterstützen ihn jedoch ausdrücklich.
+
+## AUD-050 – Dokument-Gesamtpreis überschreibt andere Buchungen und verliert seine Währung
+
+- Priorität: P1. Kategorie: Parser/Kostenverfälschung. Status: öffentlicher Parser am Fix-Stand `c824ea3b` mit lokalem synthetischem Ollama-HTTP-Stub reproduziert; kein echtes Dokument und kein externer KI-Dienst verwendet.
+- Fundstellen: `backend/src/services/lodging/lodgingBookingParser.ts:284`, `:400`; `backend/src/services/lodging/documentTotal.ts:112`, `:170`.
+- Beleg 1: Dokument mit Hotel Alpha / `Total price: EUR 100.00` und Hotel Beta / `Total price: EUR 500.00`; Modellantwort enthält die richtigen getrennten Preise 100 und 500. Der echte Parser liefert **500 und 500**, ohne fehlenden Preis zu melden. Jede Buchung wird gegen denselben kompletten Dokumentausschnitt abgeglichen; dessen globaler Gewinner überschreibt den buchungsbezogenen Wert.
+- Beleg 2: Eine Buchung mit lokaler Gebühr 400 AED und angezeigter Umrechnung `Total price: EUR 100.00`; richtige Modellantwort 400 AED. Ergebnis **100 AED**. Die Dokumenterkennung verwendet Währungszeichen zur Erkennung, verwirft die Einheit aber und belässt die andere Modellwährung unverändert.
+- Auswirkung: Bereits vor Import/FX entstehen falsche Ausgangspreise. Dies ist unabhängig von den separaten Snapshot-Cachefehlern AUD-043/049.
+- Verbesserung: Preisbeleg als Betrag **plus Währung und zugehörigen Buchungsabschnitt** behandeln. Keine globale Übersteuerung mehrerer Buchungen; bei unklarer Zuordnung oder unterschiedlichen Einheiten eine prüfbare Unsicherheit anzeigen. Tests mit zwei Buchungen, Original-/Anzeigewährung und widersprüchlichen Summen ergänzen.
+
+## AUD-051 – Numerische Leerwerte des Buchungsmodells werden als kostenlose Übernachtung ausgegeben
+
+- Priorität: P2. Kategorie: Parser/Null-Semantik. Status: öffentlicher Parser mit lokalem HTTP-Stub am Fix-Stand `c824ea3b` reproduziert.
+- Fundstellen: `backend/src/services/lodging/lodgingBookingParser.ts:186` (`asNumber`), `:275`, `:297`, `:302`.
+- Beleg: Synthetisches Dokument ohne Preis, ansonsten vollständige Modellantwort mit gültiger EUR-Währung, `totalPrice:'null'` und `pricePerNight:'n/a'`. Ergebnis: beide Beträge **0**, `missing:[]`. Nach Entfernen aller Nicht-Zahlzeichen wird `Number('')` zu 0; textuelle Nullwerte werden anders als bei `cleanText` nicht verworfen.
+- Zusätzliche belegte Formatlücke desselben Helfers: `totalPrice:'1,234.50'` wird ohne erkannten Dokument-Gesamtpreis zu null statt 1234,50. Der deutsche Separatorersatz kann englische Gruppierung nicht lesen.
+- Verbesserung: zuerst explizite Leer-/Nullmarker und fehlende Ziffern ablehnen; echte numerische 0 erhalten. Einheitliche geprüfte Zahlennormalisierung für unterstützte Gruppierungskonventionen verwenden. Tests für JSON-null, String-null, n/a, leere Werte, echte 0 und beide Dezimalformate.
+
+**Aktueller Fixstatus:** siehe `FIX_REVIEW.md`. AUD-046–060 wurden erstmals am Fix-Stand `c824ea3beff13121a387e0e55f1584f8c6dfdb28` (2.6.3) tatsächlich reproduziert. AUD-043–045 sind dort ebenfalls weiterhin reproduzierbar. Die übrigen historischen Bestätigungen dürfen nicht pauschal als heute noch offen gelesen werden.
+
+## AUD-049 – Neuer Flugbatch-FX-Cache überschreibt Beträge bei fehlender Importreferenz
+
+- Priorität: P1. Kategorie: Regression/falsche gespeicherte Geldbeträge. Status: echte Batch-API und Prisma am Fix-Stand `c824ea3b` bestätigt; neu durch FX-Ergänzung aus der AUD-022-Fix-Runde.
+- Fundstellen: `backend/src/routes/flightsBatch.ts:96`, `:170`, `:173`, `:316`; `backend/src/services/importProvenance.ts:39`, `:73`.
+- Beleg: Zwei gültige Flugzeilen mit unterschiedlichen Flugnummern, `dataSource:'manual'`, gleichem Datum, EUR-Preisen 100 und 500. Batch liefert 201; beide `externalRef` sind wie vorgesehen null. DB speichert `price:100 / priceBase:500` und `price:500 / priceBase:500`, jeweils Kurs 1. Damit stehen 1.000 EUR Basisbetrag gegen 600 EUR tatsächlich eingegebene Preise. Kein externer Wechselkursdienst nötig (EUR→EUR).
+- Ursache: Der neue `fxByRef` ist nach `externalRef` indiziert, die der Kommentar als pro Zeile eindeutig bezeichnet. Für manuelle/API-Flüge und unzureichend identifizierbare Importzeilen ist sie jedoch absichtlich null. Mehrere asynchrone Berechnungen überschreiben denselben Map-Eintrag; jede dieser Zeilen erhält später den zuletzt dort abgelegten vollständigen Snapshot. Die neuen Paritätstests verwenden jeweils nur einen identifizierbaren Importflug und decken diese Kollision nicht ab.
+- Verbesserung: Snapshot unmittelbar bei der angereicherten Zeile halten oder nach stabiler Batch-Zeilenidentität indizieren, nicht nach optionaler Provenienz. Tests mit mehreren null-Referenzen, verschiedenen Beträgen/Währungen/Stichtagen und einer preislosen Zeile. Kurscache und betragsabhängigen Snapshot strikt trennen.
+- Prüfhinweis: Erster eigener Versuch stoppte vor der Flugerstellung mit 409, weil der leere Auditkatalog denselben Flughafen parallel nachladen/anlegen wollte. Nach Bereitstellung beider Katalogeinträge oben genannten Fehler sauber reproduziert. Der erste 409 ist nicht der FX-Beleg und wird hier nicht als weitere neue Regression behauptet.
+
+## AUD-046 – Unterkunfts-Importprotokoll übernimmt und löscht auch Flugimport-Batches
+
+- Priorität: P2. Kategorie: Domänentrennung/Undo-Verlust. Status: tatsächlicher GET und DELETE am Fix-Stand `c824ea3b` bestätigt.
+- Fundstellen: `backend/src/services/lodging/lodgingImportBatches.ts:23`, `:88`, `:115`; `backend/src/routes/lodgingImport.ts:124`, `:133`.
+- Beleg: Synthetischer Batch mit `domain:'flight'` und einem real gespeicherten Flug (`importBatchId` gesetzt). `GET /api/v1/lodging-import/batches` führt ihn als Unterkunftsimport auf. DELETE über denselben Unterkunftsrouter liefert 200 mit allen Löschzählern 0. Der Batch ist anschließend gelöscht, der Flug existiert weiterhin, aber mit `importBatchId:null`.
+- Ursache/Auswirkung: Liste und Eigentümerlookup filtern nur nach `userId`, nicht nach `domain:'lodging'`; die Rücknahme kennt nur Unterkünfte/Aufenthalte und löscht dennoch den generischen Batch. Damit geht der Flugimport-Eintrag samt späterer batchbezogener Rücknahmemöglichkeit verloren. Kein kontoübergreifender Zugriff und keine Löschung des Fluges behauptet.
+- Verbesserung: Unterkunftsliste und Rücknahme auf die eigene Domäne begrenzen; generische Rücknahme zentral nach Domäne dispatchen. Regression mit Flug-/Schiff-/POI-Batch im Unterkunftsrouter: nicht auflisten, DELETE 404, Batch und Referenzen unverändert.
+
+## AUD-047 – Import-Rücknahme löscht nachträglich hinzugefügte Hotelfotos
+
+- Priorität: P1. Kategorie: Datenverlust/zu weit reichende Rücknahme. Status: echter Foto-Upload und Rücknahme am Fix-Stand `c824ea3b` bestätigt.
+- Fundstellen: `backend/src/services/lodging/lodgingImportBatches.ts:47`, `:93`, `:97`, `:102`, `:138`; `backend/src/services/lodging/deleteLodgingPhotoFiles.ts:27`.
+- Beleg: Hotel und Aufenthalt durch synthetischen CSV-Batch angelegt. **Danach** über den normalen Fotoendpunkt eigenes PNG hochgeladen (201), Fotozeile und physische Datei als vorhanden geprüft. Rücknahme des ursprünglichen Batches liefert 200 (`deletedStays:1`, `deletedLodgings:1`, `detachedLodgings:0`); anschließend sind auch die nachträgliche Fotozeile und die Datei gelöscht.
+- Ursache: Der dokumentierte Vertrag „Deletes ONLY what this batch created“ schützt zwar nachträgliche Aufenthalte, bewertet ein Hotel aber ausschließlich anhand verbleibender Aufenthalte als leer. Fotos werden nicht als nachträglich kuratierter Inhalt berücksichtigt. Der Foto-Dateicleanup aus AUD-042 beseitigt nun zusätzlich die zuvor verwaisten Bytes; er behebt nicht den zu weiten Löschumfang der Rücknahme.
+- Verbesserung: Hotel bei nachträglichen Fotos/weiteren kuratierten Inhalten erhalten und vom Batch lösen oder die abweichende Löschwirkung mit einer konkreten Inhaltsvorschau ausdrücklich bestätigen lassen. Undo-Tests müssen nachträgliche Inhalte einschließen, nicht nur Aufenthalte.
+
+## AUD-048 – Nachtpreis ohne Währung wird beim Import als EUR gespeichert
+
+- Priorität: P2. Kategorie: erfundene Preiseinheit/Importvalidierung. Status: echtes Commit-Schema und unveränderter Commit-Service mit Prisma am Fix-Stand `c824ea3b` bestätigt; kein HTTP-Commit, um keine Geocodingjobs zu starten.
+- Fundstellen: `backend/src/services/lodging/lodgingImportCommit.ts:268`, `:302`, `:307`; `backend/src/schemas/lodgingImport.ts:98`, `:99`.
+- Beleg: Gültige Importzeile mit 01.–04.05.2026, `pricePerNight:50`, **ohne** Gesamtpreis und **ohne** Währung. Commit erfolgreich, gespeichert: `pricePerNight:50`, `currency:'EUR'`, `totalPrice:null`, `totalPriceBase:null`. Vergleichszeile mit ausdrücklich angegebenem EUR ist in diesen Feldern identisch.
+- Ursache: Der Schutz gegen unbekannte Währungen prüft ausschließlich `totalPrice != null && !currency`. Ein alleiniger Nachtpreis umgeht ihn; das DB-Default gibt ihm EUR als scheinbar bekannte Einheit. Damit widerspricht der Code dem direkt daneben erklärten Schutz, keinen Geldbetrag mit erfundener Währung zu versehen.
+- Verbesserung: Gesamt- **und** Nachtpreis auf bekannte Währung prüfen; unbekannte Einheit nicht durch ein DB-Default zur Geldangabe machen. Preisableitung/FX der Import- und CRUD-Pfade gemeinsam prüfen; ein Nachtpreis mit bekannter Einheit darf dabei nicht versehentlich verworfen werden.
+
 Laufende Befundsammlung. Hinweise aus vorhandener Dokumentation werden erst nach Gegenprüfung übernommen. Keine Korrekturen implementiert.
 
 Alle Fundstellen beziehen sich auf Auditbasis `ef62a8f8ba1817a2df03c96451eb806d95aa4102`. Claude korrigiert parallel im Hauptarbeitsverzeichnis. Die nachstehende Bestätigung bezeichnet den Nachweis am Ausgangsstand und ist keine Aussage darüber, ob seine laufenden Änderungen den Fehler bereits beheben.
+
+## AUD-043 – Import-FX-Cache übernimmt den Geldbetrag der ersten Zeile für andere Aufenthalte
+
+- Priorität: P1. Kategorie: Import/Kostenverfälschung. Status: echte Commit-Schemas und tatsächlicher Importservice mit Prisma reproduziert; kein HTTP-Geocoding-Backfill gestartet.
+- Fundstellen: `backend/src/services/lodging/lodgingImportCommit.ts:165`, `:183`, `:237`, `:298`.
+- Beleg: Zwei unterschiedliche Hotels mit demselben Check-in-Tag und Preisen 100 EUR bzw. 500 EUR importiert. Beide Zeilen erfolgreich, keine Fehler. Die gespeicherten Rohpreise sind korrekt 100/500, aber beide `totalPriceBase` sind **100** bei `fxRate=1`, `fxBaseCurrency=EUR`. Der zweite Aufenthalt verliert also 400 EUR im aggregierten Basisbetrag.
+- Ursache: Der Cache ist nur nach Währung und Tag indiziert, enthält aber das komplette `FxSnapshotOutcome` einschließlich bereits umgerechneten **Betrags** der ersten Zeile. Folgezeilen übernehmen dieses Ergebnis unverändert, statt ihren eigenen Preis mit dem gecachten Kurs zu multiplizieren.
+- Verbesserung: nur den Kurs samt Herkunft/Stichtag cachen; jeden Betrag je Zeile separat berechnen/runden. Alternativ muss ein Cache vollständiger Konvertierungsergebnisse auch den Betrag berücksichtigen. Bestehende importierte Snapshots dieser Konstellation nachprüfen; Tests mit gleicher Währung/Tag, unterschiedlichen Preisen und mehreren Basiswährungen.
+
+## AUD-044 – Import legt gleichnamige Hotels verschiedener Städte unbemerkt zusammen
+
+- Priorität: P2. Kategorie: Import/Identitätsabgleich. Status: tatsächlicher Commitservice mit validierten Zeilen und Datenbank reproduziert.
+- Fundstelle: `backend/src/services/lodging/lodgingImportCommit.ts:393` (`createdByName`).
+- Beleg: Zwei neue Hotels namens `Synthetic Hotel Central`, eines in Berlin und eines in Paris, mit ausdrücklich verschiedenen `externalRef` und jeweils einem Aufenthalt importiert. Ergebnis: ein Hotel, zwei Aufenthalte, kein Fehler/kein Skip. Gespeichert wird nur Berlin und dessen externe Kennung; der Pariser Aufenthalt hängt ebenfalls daran.
+- Ursache: Innerhalb eines Imports reicht der normalisierte Name allein als Identität, noch bevor die zweite externe Kennung oder Stadt geprüft wird. Damit ist diese Zusammenlegung gröber als die äußere Vorschau-/Bestands-Deduplizierung.
+- Verbesserung: stabile externe Kennung bevorzugen, sonst Namen mit Ort/Koordinaten und Mehrdeutigkeitsprüfung verwenden. Explizit verschiedene Quellidentitäten nicht allein wegen Namensgleichheit zusammenführen; Vorschau und Commit müssen identische Regeln haben.
+
+## AUD-045 – Import-Commit akzeptiert Check-out vor Check-in
+
+- Priorität: P2. Kategorie: API-Validierung/Importdatenqualität. Status: tatsächliches HTTP-Eingabeschema plus echter Commitservice reproduziert.
+- Fundstellen: `backend/src/schemas/lodgingImport.ts:85`, `:198`; `backend/src/services/lodging/lodgingImportCommit.ts:272`.
+- Beleg: Commitpayload mit Check-in 10.05.2020 und Check-out 01.05.2020 besteht `lodgingImportCommitRequestSchema`; Service erstellt Hotel und Aufenthalt ohne Fehler und speichert die vertauschte Reihenfolge. Die normale Aufenthaltsanlage verbietet diese Kombination. Vorschauwarnungen reichen nicht, da der Commitpayload clientseitig veränderbar ist.
+- Verbesserung: fachliche Datumsvalidierung auch an der Commitgrenze anwenden; Vorschau nicht als Sicherheits-/Konsistenzgarantie ansehen. Preis/Nächte und Status dürfen nicht aus einem unmöglichen Zeitraum entstehen.
 
 ## AUD-042 – Löschen eines Hotels lässt dessen hochgeladene Bilddateien zurück
 
