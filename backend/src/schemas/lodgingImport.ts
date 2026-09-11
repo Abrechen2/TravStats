@@ -174,6 +174,12 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
   matchedLodgingId: string | null;
+  /**
+   * The stored name behind `matchedLodgingId`. A guessed match is a question
+   * put to the user, and the preview showed only the IMPORT's name — so the
+   * user was asked "the same house?" without being told which one (AUD-056).
+   */
+  matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
 }

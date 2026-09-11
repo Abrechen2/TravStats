@@ -66,6 +66,7 @@ interface RowVerdict {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
   matchedLodgingId: string | null;
+  matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
 }
@@ -258,7 +259,14 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     action = "create";
   }
 
-  return { flags, dedupeHint, matchedLodgingId, matchedStayId, action };
+  // The name of the house a match points at, so the user can judge the
+  // guess against something (AUD-056). Looked up rather than carried along
+  // from each branch above: a stay-ref hit knows only the lodging's id.
+  const matchedLodgingName = matchedLodgingId
+    ? (idx.allLodgings.find((l) => l.id === matchedLodgingId)?.name ?? null)
+    : null;
+
+  return { flags, dedupeHint, matchedLodgingId, matchedLodgingName, matchedStayId, action };
 }
 
 const ACTION_RANK: Record<LodgingImportAction, number> = {

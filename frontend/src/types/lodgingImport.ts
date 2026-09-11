@@ -49,6 +49,8 @@ export interface StayCandidateFields {
   roomCategory?: string | null;
   board?: BoardType | null;
   totalPrice?: number | null;
+  /** The printed per-night rate, kept beside the total — not derived from it. */
+  pricePerNight?: number | null;
   currency?: LodgingCurrency | null;
   ratingRoom?: number | null;
   ratingBreakfast?: number | null;
@@ -80,7 +82,13 @@ export type LodgingImportFlag =
   | "unknown_chain";
 
 export type LodgingDedupeHint =
-  "none" | "lodging_exact_ref" | "lodging_name_city" | "stay_exact_ref" | "stay_same_dates";
+  | "none"
+  | "lodging_exact_ref"
+  | "lodging_name_city"
+  | "lodging_name_similar"
+  | "lodging_nearby"
+  | "stay_exact_ref"
+  | "stay_same_dates";
 
 export type LodgingImportAction = "create" | "skip" | "needs_input";
 
@@ -88,6 +96,8 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
   matchedLodgingId: string | null;
+  /** The stored name behind `matchedLodgingId` — what a guessed match is judged against. */
+  matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
 }

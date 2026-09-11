@@ -28,6 +28,7 @@ describe("useLodgingImportAdapter", () => {
           flags: [],
           dedupeHint: "none",
           matchedLodgingId: null,
+          matchedLodgingName: null,
           matchedStayId: null,
           action: "create",
         },
