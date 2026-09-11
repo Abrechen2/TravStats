@@ -154,6 +154,48 @@ describe("a trip keeps its contents", () => {
       expect(photos.map((p) => p.id)).toEqual([targetPhoto.id]);
     });
 
+    // AUD-029, the residual case: the dedupe only looked at the TARGET's
+    // assets, so two sources holding the same one both moved and the unique
+    // index threw — the merge rolled back.
+    it("keeps one row when two SOURCES hold the same asset and the target none", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const sourceA = await prisma.trip.create({ data: { userId, name: "Source A" } });
+      const sourceB = await prisma.trip.create({ data: { userId, name: "Source B" } });
+      const shared = { filename: "shared.jpg", mimetype: "image/jpeg", sizeBytes: 10, immichAssetId: "asset-shared" };
+      const first = await prisma.tripPhoto.create({ data: { tripId: sourceA.id, ...shared, sortIdx: 0 } });
+      await prisma.tripPhoto.create({ data: { tripId: sourceB.id, ...shared, sortIdx: 1 } });
+
+      await mergeTrips(userId, {
+        tripIds: [target.id, sourceA.id, sourceB.id],
+        targetId: target.id,
+      });
+
+      const photos = await prisma.tripPhoto.findMany({ where: { tripId: target.id } });
+      expect(photos.map((p) => p.id)).toEqual([first.id]);
+      expect(await prisma.trip.count({ where: { userId } })).toBe(1);
+    });
+
+    // AUD-030, the residual case: the cover named the SOURCE's copy of an
+    // asset the target already held. The copy was dropped as a duplicate and
+    // the rewritten URL kept its id — a 404 on the merged trip.
+    it("points a cover at the surviving copy of a deduplicated photo", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const dup = { filename: "dup.jpg", mimetype: "image/jpeg", sizeBytes: 10, immichAssetId: "asset-cover" };
+      const kept = await prisma.tripPhoto.create({ data: { tripId: target.id, ...dup } });
+      const dropped = await prisma.tripPhoto.create({ data: { tripId: source.id, ...dup } });
+      await prisma.trip.update({
+        where: { id: source.id },
+        data: { coverImageUrl: `/api/v1/trips/${source.id}/photos/${dropped.id}/file` },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const merged = await prisma.trip.findUniqueOrThrow({ where: { id: target.id } });
+      expect(merged.coverImageUrl).toBe(`/api/v1/trips/${target.id}/photos/${kept.id}/file`);
+      expect(await prisma.tripPhoto.findUnique({ where: { id: dropped.id } })).toBeNull();
+    });
+
     it("points an inherited cover image at the trip that now holds it", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });

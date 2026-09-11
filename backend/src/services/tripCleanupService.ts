@@ -266,8 +266,8 @@ export async function mergeTrips(
     const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
     // Photo files live in a flat directory keyed by filename, so moving
     // the rows does not break file paths.
-    const duplicatePhotos = await mergeTripPhotos(tx, sourceIds, targetId);
-    mergedDuplicates = { albums: duplicateAlbums, photos: duplicatePhotos };
+    const mergedPhotos = await mergeTripPhotos(tx, sourceIds, targetId);
+    mergedDuplicates = { albums: duplicateAlbums, photos: mergedPhotos.dropped };
 
     await tx.trip.update({
       where: { id: targetId },
@@ -288,6 +288,7 @@ export async function mergeTrips(
           target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
           sourceIds,
           targetId,
+          mergedPhotos.survivorFor,
         ),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]

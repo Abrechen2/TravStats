@@ -90,6 +90,41 @@ describe("Modal", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  // AUD-037: `aria-modal` said the page behind was inert; six Tab presses
+  // walked out of the dialog anyway.
+  it("keeps Tab inside the dialog, wrapping at both ends", async () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <button>Draußen</button>
+        <Modal
+          open
+          onClose={onClose}
+          title="Wirklich?"
+          footer={
+            <>
+              <button>Abbrechen</button>
+              <button>Bestätigen</button>
+            </>
+          }
+        >
+          <input aria-label="Feld" />
+        </Modal>
+      </>
+    );
+    const dialog = screen.getByRole("dialog");
+
+    for (let i = 0; i < 6; i += 1) {
+      await userEvent.tab();
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    }
+    // ×, Feld, Abbrechen, Bestätigen, then back to × — never "Draußen".
+    await userEvent.tab({ shift: true });
+    await userEvent.tab({ shift: true });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(screen.getByText("Draußen")).not.toHaveFocus();
+  });
+
   it("renders nothing at all when closed", () => {
     render(
       <Modal open={false} onClose={vi.fn()} title="Wirklich?">
