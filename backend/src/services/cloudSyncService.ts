@@ -131,6 +131,9 @@ export async function syncToCloud(backupId: string): Promise<void> {
       data: {
         syncedToCloud: true,
         cloudSyncAt: new Date(),
+        // A success clears the previous reason. Leaving it would show the
+        // admin a red explanation next to a green tick.
+        cloudSyncError: null,
       },
     });
 
@@ -148,6 +151,86 @@ export async function syncToCloud(backupId: string): Promise<void> {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
     throw asUpstreamError(error);
+  }
+}
+
+/** Longest failure reason kept on the row. A share that answers with an HTML
+ *  error page would otherwise put a whole document in a column the UI shows. */
+const MAX_SYNC_ERROR_LENGTH = 500;
+
+/**
+ * Upload a freshly completed backup, if the operator asked for that.
+ *
+ * This is the caller `syncToCloud` never had. Until 2026-09-12 the only way to
+ * reach it was `POST /backup/:id/sync`, and nothing called that route either —
+ * no button in the admin UI, no step after `createBackup`, no step in the
+ * scheduler. So no backup this application has ever taken reached a WebDAV
+ * share, while the settings copy said "after each successful backup the
+ * archive is uploaded" and the backup table showed a "Cloud" column that could
+ * only ever read "-". Reported by a beta tester whose connection test was
+ * green and whose Nextcloud stayed empty, which is exactly how it would look.
+ *
+ * Three properties this wrapper has and `syncToCloud` deliberately does not:
+ *
+ * 1. **It never throws.** A backup that is on local disk is a real backup. An
+ *    upload that fails afterwards must not turn it into a failed one, and must
+ *    not fail the import that took it as a safety copy.
+ * 2. **A disabled feature is silent.** `syncToCloud` answers 409 for "not
+ *    enabled", which is the right answer to an explicit request and the wrong
+ *    thing to write to the error log every night on the majority of instances
+ *    that never configured WebDAV.
+ * 3. **A failure is recorded where the admin looks.** `enabled` but incomplete
+ *    settings are NOT filtered out here on purpose: someone who ticked the box
+ *    and left the URL empty meant to sync, and "WebDAV is not configured"
+ *    beside their backup is the sentence that tells them why it did not.
+ */
+export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
+  try {
+    const { enabled } = await getWebDAVSettings();
+    if (!enabled) {
+      logger.debug({
+        operation: 'webdav_autosync_skip',
+        message: 'WebDAV sync is not enabled, backup stays local',
+        backupId,
+      });
+      return;
+    }
+  } catch (error) {
+    // Reading the settings is not the backup's problem to solve, but it does
+    // mean we cannot tell whether an upload was wanted — so say so rather than
+    // silently deciding it was not.
+    logger.error({
+      operation: 'webdav_autosync_settings_error',
+      message: 'Could not read WebDAV settings, skipping automatic upload',
+      backupId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return;
+  }
+
+  try {
+    await syncToCloud(backupId);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({
+      operation: 'webdav_autosync_error',
+      message: 'Automatic upload of a completed backup failed',
+      backupId,
+      error: reason,
+    });
+    await prisma.backup
+      .update({
+        where: { id: backupId },
+        data: { cloudSyncError: reason.slice(0, MAX_SYNC_ERROR_LENGTH) },
+      })
+      .catch((updateError: unknown) => {
+        logger.error({
+          operation: 'webdav_autosync_error_persist_failed',
+          message: 'Could not record why the automatic upload failed',
+          backupId,
+          error: updateError instanceof Error ? updateError.message : 'Unknown error',
+        });
+      });
   }
 }
 

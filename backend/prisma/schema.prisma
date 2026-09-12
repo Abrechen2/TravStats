@@ -902,6 +902,7 @@ model Backup {
   metadata        Json? // JSON: userCount, flightCount, etc.
   syncedToCloud   Boolean   @default(false) @map("synced_to_cloud")
   cloudSyncAt     DateTime? @map("cloud_sync_at")
+  cloudSyncError  String?   @map("cloud_sync_error") // Why the last upload attempt failed; null once one succeeds
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

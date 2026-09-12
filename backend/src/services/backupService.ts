@@ -13,6 +13,7 @@ import {
 import { createDatabaseDump } from './backup/backupDatabase';
 import { archiveUploads, getMetadata } from './backup/backupFiles';
 import { restoreBackup as restoreBackupImpl } from './backup/backupRestore';
+import { syncToCloudIfEnabled } from './cloudSyncService';
 import { AppError } from '../middleware/errorHandler';
 
 // Re-export types for backward compatibility
@@ -229,8 +230,6 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       backupId: backup.id,
       size: totalSize,
     });
-
-    return backup.id;
   } catch (error) {
     // Update backup record with error
     await prisma.backup.update({
@@ -264,6 +263,33 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
 
     throw error;
   }
+
+  // Hand the finished archive to the cloud target, if one is configured.
+  //
+  // WHY OUTSIDE THE try/catch ABOVE, which would have been the obvious place:
+  // that catch marks the backup `failed` AND `rmSync`s the backup directory.
+  // An upload that threw from inside it would therefore DELETE a perfectly
+  // good archive because a remote share was full. `syncToCloudIfEnabled` is
+  // written not to throw, but "the archive survives" must not rest on the
+  // discipline of a function in another file.
+  //
+  // Why here at all, rather than at the three call sites: this is the only
+  // place that knows a backup succeeded, and the promise the admin reads —
+  // "after each successful backup the archive is uploaded" — is about backups,
+  // not about who asked for one. So all three producers get it: the manual
+  // button, the nightly scheduler, and the safety copy a destructive
+  // spreadsheet import takes first. That last one is the copy most worth
+  // having off-site.
+  //
+  // Awaited rather than fire-and-forget: the caller already waits for the
+  // whole backup, and a promise left running past the end of a scheduled job
+  // has nothing left to report its failure to.
+  //
+  // Reaching this line means the backup succeeded: every path through the
+  // catch above rethrows.
+  await syncToCloudIfEnabled(backup.id);
+
+  return backup.id;
 }
 
 /**

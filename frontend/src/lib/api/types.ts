@@ -296,6 +296,7 @@ export interface BackupEntry {
   metadata: BackupMetadata | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
+  cloudSyncError: string | null;
   createdAt: string;
   updatedAt: string;
   fileExists?: boolean;

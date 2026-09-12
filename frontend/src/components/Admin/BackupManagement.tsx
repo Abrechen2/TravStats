@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { backupApi } from "../../lib/api";
+import { backupApi, adminApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
+import { extractApiErrorMessage } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -22,6 +23,7 @@ interface Backup {
   metadata: Record<string, unknown> | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
+  cloudSyncError: string | null;
   createdAt: string;
   fileExists?: boolean;
 }
@@ -149,6 +151,8 @@ export default function BackupManagement(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [webdavEnabled, setWebdavEnabled] = useState(false);
   const [status, setStatus] = useState<{
     running: boolean;
     currentBackup: { id: string; status: string; startedAt: string | null } | null;
@@ -201,6 +205,17 @@ export default function BackupManagement(): JSX.Element {
       .getBackupSettings()
       .then(setBackupSettings)
       .catch((err: unknown) => logger.error("Failed to load backup settings", err));
+  }, []);
+
+  // Whether an upload is even possible here. Without this the retry button
+  // would sit on every row of every instance that never configured WebDAV —
+  // most of them — and answer 409 to each click. An action that can only fail
+  // is not an action.
+  useEffect(() => {
+    adminApi
+      .getWebDAVSettings()
+      .then(({ settings }) => setWebdavEnabled(settings.enabled))
+      .catch((err: unknown) => logger.error("Failed to load WebDAV settings", err));
   }, []);
 
   const handleCreateBackup = async () => {
@@ -272,6 +287,31 @@ export default function BackupManagement(): JSX.Element {
     } catch (error) {
       logger.error("Failed to restore backup:", error);
       addToast("error", t("admin:backup.toasts.restoreFailed"));
+    }
+  };
+
+  /**
+   * Retry the upload for one backup.
+   *
+   * The failure toast carries the SHARE'S OWN WORDS rather than a generic
+   * "upload failed": the two states an admin has to tell apart here —
+   * "507 Insufficient Storage" and "401 Unauthorized" — are the same sentence
+   * otherwise, and this button exists because a tester could not find out why
+   * a green connection test produced an empty Nextcloud.
+   */
+  const handleSync = async (backup: Backup) => {
+    setSyncingId(backup.id);
+    try {
+      await backupApi.syncToCloud(backup.id);
+      addToast("success", t("admin:backup.toasts.synced"));
+      loadBackups();
+    } catch (error) {
+      logger.error("Failed to sync backup to cloud:", error);
+      addToast("error", extractApiErrorMessage(error, t("admin:backup.toasts.syncFailed")));
+      // The row now carries a reason from the server — show it.
+      loadBackups();
+    } finally {
+      setSyncingId(null);
     }
   };
 
@@ -524,7 +564,20 @@ export default function BackupManagement(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.syncedToCloud ? (
-                      <span style={{ color: "var(--success)" }}>✓</span>
+                      <span
+                        style={{ color: "var(--success)" }}
+                        title={t("admin:backup.cloud.syncedAt", {
+                          date: formatDate(backup.cloudSyncAt),
+                        })}
+                      >
+                        ✓
+                      </span>
+                    ) : backup.cloudSyncError ? (
+                      // A failed upload says why. The plain "-" next to a green
+                      // connection test is what made this bug unfindable.
+                      <span style={{ color: "var(--danger)" }} title={backup.cloudSyncError}>
+                        ⚠ {t("admin:backup.cloud.failed")}
+                      </span>
                     ) : (
                       <span className="text-(--text-muted)">-</span>
                     )}
@@ -547,6 +600,18 @@ export default function BackupManagement(): JSX.Element {
                           >
                             {t("admin:backup.actions.restore")}
                           </button>
+                          {webdavEnabled && !backup.syncedToCloud && (
+                            <button
+                              onClick={() => handleSync(backup)}
+                              disabled={syncingId === backup.id}
+                              className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                              style={{ color: "var(--accent)" }}
+                            >
+                              {syncingId === backup.id
+                                ? t("admin:backup.actions.uploading")
+                                : t("admin:backup.actions.upload")}
+                            </button>
+                          )}
                         </>
                       )}
                       {backup.status !== "running" && (

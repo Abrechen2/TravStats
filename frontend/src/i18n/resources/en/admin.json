@@ -563,7 +563,13 @@
     },
     "actions": {
       "download": "Download",
-      "restore": "Restore"
+      "restore": "Restore",
+      "upload": "Upload",
+      "uploading": "Uploading..."
+    },
+    "cloud": {
+      "syncedAt": "Uploaded on {{date}}",
+      "failed": "Failed"
     },
     "restore": {
       "title": "Restore Backup",
@@ -596,7 +602,9 @@
       "restoring": "Backup is being restored",
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
-      "deleteFailed": "Failed to delete backup"
+      "deleteFailed": "Failed to delete backup",
+      "synced": "Backup uploaded",
+      "syncFailed": "Failed to upload backup"
     }
   },
   "feedback": {
