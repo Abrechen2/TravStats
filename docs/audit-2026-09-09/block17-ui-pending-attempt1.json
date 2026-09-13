@@ -1,0 +1,91 @@
+{
+  "commit": "9678e6cd",
+  "timezone": "Europe/Berlin",
+  "results": [
+    {
+      "name": "editor accessibility",
+      "role": null,
+      "dialogs": 0,
+      "inputs": [
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "text",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "datetime-local",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        },
+        {
+          "type": "datetime-local",
+          "labels": 0,
+          "ariaLabel": null,
+          "ariaLabelledby": null
+        }
+      ],
+      "focusedInside": false,
+      "escapeClosed": false
+    },
+    {
+      "name": "timezone editing",
+      "originalUtc": "2025-06-01T10:00:00Z",
+      "displayBefore": "2025-06-01T10:00",
+      "enteredWallValue": "2025-06-01T10:30",
+      "displayAfter": "2025-06-01T08:30"
+    },
+    {
+      "name": "mobile editor",
+      "width": 320,
+      "scrollWidth": 423,
+      "overlay": {
+        "top": 0,
+        "bottom": 568
+      },
+      "panel": {
+        "left": 16,
+        "right": 304,
+        "top": 28.40625,
+        "bottom": 539.59375
+      }
+    },
+    {
+      "name": "save edited time",
+      "http": 200,
+      "departureSent": "2025-06-01T08:30:00.000Z"
+    }
+  ],
+  "error": "locator.selectOption: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('select').first()\u001b[22m\n\u001b[2m    - locator resolved to <select class=\"input w-full\" id=\"data-quality-status\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+}

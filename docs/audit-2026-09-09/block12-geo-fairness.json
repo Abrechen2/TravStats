@@ -1,0 +1,32 @@
+{
+  "commit": "9678e6cd",
+  "mode": "fairness",
+  "results": [
+    {
+      "name": "500 unresolved oldest rows starve row 501",
+      "providerBoundary": "deterministic stubs; actual selection and Prisma writes",
+      "passes": [
+        {
+          "attempted": 500,
+          "filled": 0
+        },
+        {
+          "attempted": 500,
+          "filled": 0
+        },
+        {
+          "attempted": 500,
+          "filled": 0
+        }
+      ],
+      "unscopedTargetRequests": 0,
+      "totalUnscopedRequests": 1500,
+      "tailBefore": null,
+      "scopedControl": {
+        "attempted": 1,
+        "filled": 1
+      },
+      "tailAfter": 52
+    }
+  ]
+}

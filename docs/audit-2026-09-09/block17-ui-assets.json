@@ -1,0 +1,490 @@
+{
+  "commit": "9678e6cd",
+  "requests": [
+    {
+      "host": "unpkg.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.googleapis.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "unpkg.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.googleapis.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-c.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-a.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-a.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-c.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-c.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-d.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-d.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-a.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-b.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-b.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-d.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-b.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "unpkg.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.googleapis.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-d.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-c.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-a.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-d.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-c.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles-b.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "tiles.basemaps.cartocdn.com",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "host": "fonts.googleapis.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "unpkg.com",
+      "status": 200,
+      "type": "stylesheet"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "fonts.gstatic.com",
+      "status": 200,
+      "type": "font"
+    },
+    {
+      "host": "flagcdn.com",
+      "status": 200,
+      "type": "image"
+    },
+    {
+      "host": "flagcdn.com",
+      "status": 200,
+      "type": "image"
+    },
+    {
+      "host": "flagcdn.com",
+      "status": 200,
+      "type": "image"
+    }
+  ],
+  "failures": [
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "host": "127.0.0.1",
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "pageErrors": [],
+  "views": [
+    {
+      "route": "/dashboard",
+      "width": 1440,
+      "image": "block17-assets-dashboard-1440.png",
+      "canvases": 2,
+      "body": "ℹ\n\nDer Flug-Import ist jetzt hier — unter Einstellungen → Import.\n\nTS\nTRAV\nSTATS\nDashboard\nLogbuch\n▼\nReisen\nStatistiken\nErfolge\nBug\nSupport\n▼\nSystem\n▼\nA\naudit-ui-17\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre | © CARTO, © OpenStreetMap contributors\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾"
+    },
+    {
+      "route": "/dashboard",
+      "width": 390,
+      "image": "block17-assets-dashboard-390.png",
+      "canvases": 2,
+      "body": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre | © CARTO, © OpenStreetMap contributors\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾"
+    },
+    {
+      "route": "/flights",
+      "width": 390,
+      "image": "block17-assets-flights-390.png",
+      "canvases": 0,
+      "body": "TS\nTRAV\nSTATS\nBug\nA\n▾\nAlle Status\nGeflogen\nGeplant\nStorniert\nHistorisch\nDupliziert\nAlle Jahre\n2027\n2025\nFilter\n3 angezeigt\nFlüge\nSpalten ▾\n+\nFlug hinzufügen\n3\nFLÜGE\n1\nAIRLINES\n3\nFLUGHÄFEN\n\nEin ganzes Logbuch auf einmal? Importieren\n\nAIRLINE\n▲\n\tFLUGNUMMER\tROUTE\t\nZEIT\n▼\n\t\nSTATUS\n▲\n\t\nFLUGZEIT (H)\n▲\n\tFLUGZEUG\tPREIS\tREISEN\tAKTIONEN\nLufthansa\tLH702\t\nFRA\n✈\nJFK\nFrankfurt Airport → John F Kennedy International Airport\n\t\nab\nSo 03.01.27\n11:00\nan\nSo 03.01.27\n17:00\n\t\nGeplant\n\t12h\tAirbus A350\t500 €\t—\t\n\nLufthansa\tLH701\t\nSIN\n✈\nFRA\nSingapore Changi Airport → Frankfurt Airport\n\t\nab\nDi 10.06.25\n20:00\nan\nMi 11.06.25\n02:00\n+1\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\n\nLufthansa\tLH700\t\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\n\t\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\nSortiert nach Abflug (absteigend)"
+    }
+  ]
+}

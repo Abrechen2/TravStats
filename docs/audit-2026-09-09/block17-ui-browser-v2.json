@@ -1,0 +1,8 @@
+{
+  "commit": "9678e6cd",
+  "views": [],
+  "errors": [],
+  "blockedExternalHosts": [],
+  "pending": [],
+  "error": "page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/dashboard\" until \"load\"\n============================================================"
+}

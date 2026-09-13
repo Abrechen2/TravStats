@@ -1,0 +1,164 @@
+{
+  "commit": "9678e6cd",
+  "stats": {
+    "startTime": "2026-09-13T10:12:17.066Z",
+    "duration": 488895.452,
+    "expected": 69,
+    "skipped": 0,
+    "unexpected": 33,
+    "flaky": 0
+  },
+  "errors": [],
+  "passedLegacyScaffoldCases": 42,
+  "failures": [
+    {
+      "name": "auth.spec.ts:47 links to the registration page",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('a[href=\"/register\"]')\u001b[22m\n\u001b[2m    - locator resolved to <a href=\"/register\" data-discover=\"true\" class=\"font-medium hover:underline\">Registrieren</a>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n\n  48 |     await page.goto(\"/login\");\n  49 |     // href-based, so the assertion holds in either locale.\n> 50 |     await page.locator('a[href=\"/register\"]').click();\n     |                                               ^\n  51 |     await expect(page).toHaveURL(/.*register/);\n  52 |   });\n  53 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\auth.spec.ts:50:47",
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('a[href=\"/register\"]')\u001b[22m\n\n\n  48 |     await page.goto(\"/login\");\n  49 |     // href-based, so the assertion holds in either locale.\n> 50 |     await page.locator('a[href=\"/register\"]').click();\n     |                                               ^\n  51 |     await expect(page).toHaveURL(/.*register/);\n  52 |   });\n  53 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\auth.spec.ts:50:47",
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('a[href=\"/register\"]')\u001b[22m\n\n\n  48 |     await page.goto(\"/login\");\n  49 |     // href-based, so the assertion holds in either locale.\n> 50 |     await page.locator('a[href=\"/register\"]').click();\n     |                                               ^\n  51 |     await expect(page).toHaveURL(/.*register/);\n  52 |   });\n  53 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\auth.spec.ts:50:47"
+      ]
+    },
+    {
+      "name": "dashboard-multi-domain.spec.ts:28 default lands on All tab with overview mode",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  40 |     // Default mode for \"all\" is \"overview\" — mode button shows \"Modus: Übersicht\".\n  41 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 42 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  43 |     await expect(modeBtn).toContainText(/übersicht/i);\n  44 |   });\n  45 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:42:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  40 |     // Default mode for \"all\" is \"overview\" — mode button shows \"Modus: Übersicht\".\n  41 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 42 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  43 |     await expect(modeBtn).toContainText(/übersicht/i);\n  44 |   });\n  45 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:42:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  40 |     // Default mode for \"all\" is \"overview\" — mode button shows \"Modus: Übersicht\".\n  41 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 42 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  43 |     await expect(modeBtn).toContainText(/übersicht/i);\n  44 |   });\n  45 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:42:27"
+      ]
+    },
+    {
+      "name": "dashboard-multi-domain.spec.ts:62 deep link to /dashboard/cruise?mode=itinerary shows itinerary mode label",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  70 |     // Mode button should reflect the active mode.\n  71 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 72 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  73 |     await expect(modeBtn).toContainText(/itinerar/i);\n  74 |   });\n  75 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:72:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  70 |     // Mode button should reflect the active mode.\n  71 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 72 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  73 |     await expect(modeBtn).toContainText(/itinerar/i);\n  74 |   });\n  75 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:72:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  70 |     // Mode button should reflect the active mode.\n  71 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 72 |     await expect(modeBtn).toBeVisible();\n     |                           ^\n  73 |     await expect(modeBtn).toContainText(/itinerar/i);\n  74 |   });\n  75 |\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:72:27"
+      ]
+    },
+    {
+      "name": "dashboard-multi-domain.spec.ts:79 mode change updates URL and persists across reload",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  82 |     // Open the mode dropdown (DashboardControlsBar).\n  83 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 84 |     await modeBtn.click();\n     |                   ^\n  85 |\n  86 |     // Pick \"Heatmap\" from the menu (dashboard:modes.heatmap = \"Heatmap\").\n  87 |     const heatmapItem = page.getByRole(\"menuitem\", { name: /heatmap/i });\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:84:19",
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  82 |     // Open the mode dropdown (DashboardControlsBar).\n  83 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 84 |     await modeBtn.click();\n     |                   ^\n  85 |\n  86 |     // Pick \"Heatmap\" from the menu (dashboard:modes.heatmap = \"Heatmap\").\n  87 |     const heatmapItem = page.getByRole(\"menuitem\", { name: /heatmap/i });\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:84:19",
+        "\u001b[31mTest timeout of 20000ms exceeded.\u001b[39m",
+        "Error: locator.click: Test timeout of 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  82 |     // Open the mode dropdown (DashboardControlsBar).\n  83 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 84 |     await modeBtn.click();\n     |                   ^\n  85 |\n  86 |     // Pick \"Heatmap\" from the menu (dashboard:modes.heatmap = \"Heatmap\").\n  87 |     const heatmapItem = page.getByRole(\"menuitem\", { name: /heatmap/i });\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:84:19"
+      ]
+    },
+    {
+      "name": "dashboard-multi-domain.spec.ts:104 tab switch restores last-used flight mode from localStorage",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected pattern: \u001b[32m/heatmap/i\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  118 |     // The mode button should show heatmap (restored from localStorage).\n  119 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 120 |     await expect(modeBtn).toContainText(/heatmap/i);\n      |                           ^\n  121 |   });\n  122 |\n  123 |   // -------------------------------------------------------------------------\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:120:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected pattern: \u001b[32m/heatmap/i\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  118 |     // The mode button should show heatmap (restored from localStorage).\n  119 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 120 |     await expect(modeBtn).toContainText(/heatmap/i);\n      |                           ^\n  121 |   });\n  122 |\n  123 |   // -------------------------------------------------------------------------\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:120:27",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /modus/i })\nExpected pattern: \u001b[32m/heatmap/i\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /modus/i })\u001b[22m\n\n\n  118 |     // The mode button should show heatmap (restored from localStorage).\n  119 |     const modeBtn = page.getByRole(\"button\", { name: /modus/i });\n> 120 |     await expect(modeBtn).toContainText(/heatmap/i);\n      |                           ^\n  121 |   });\n  122 |\n  123 |   // -------------------------------------------------------------------------\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\dashboard-multi-domain.spec.ts:120:27"
+      ]
+    },
+    {
+      "name": "flights.spec.ts:10 should display flights table",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\u001b[22m\n\n\n  14 |     // Check if table or flight list is visible\n  15 |     const flightsList = page.locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]');\n> 16 |     await expect(flightsList).toBeVisible({ timeout: 10000 });\n     |                               ^\n  17 |   });\n  18 |\n  19 |   test('should open flight creation form', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\flights.spec.ts:16:31",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\u001b[22m\n\n\n  14 |     // Check if table or flight list is visible\n  15 |     const flightsList = page.locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]');\n> 16 |     await expect(flightsList).toBeVisible({ timeout: 10000 });\n     |                               ^\n  17 |   });\n  18 |\n  19 |   test('should open flight creation form', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\flights.spec.ts:16:31",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]')\u001b[22m\n\n\n  14 |     // Check if table or flight list is visible\n  15 |     const flightsList = page.locator('[data-testid=\"flights-table\"], table, [class*=\"flight\"]');\n> 16 |     await expect(flightsList).toBeVisible({ timeout: 10000 });\n     |                               ^\n  17 |   });\n  18 |\n  19 |   test('should open flight creation form', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\flights.spec.ts:16:31"
+      ]
+    },
+    {
+      "name": "import.fr24.spec.ts:50 happy path — upload golden sample, preview, commit",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:52:5",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:52:5",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:52:5"
+      ]
+    },
+    {
+      "name": "import.fr24.spec.ts:73 re-upload dedup — same file twice flags duplicates in summary",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:75:5",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:75:5",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From Flightradar24')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From Flightradar24')\u001b[22m\n\n\n  44 |   await page.click('button:has-text(\"Import\")');\n  45 |   // Wait for at least the FR24 tile heading to confirm we're in the right section\n> 46 |   await expect(page.getByText(\"From Flightradar24\")).toBeVisible();\n     |                                                      ^\n  47 | }\n  48 |\n  49 | test.describe(\"FR24 importer (Settings → Import)\", () => {\n    at gotoImportSection (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:46:54)\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.fr24.spec.ts:75:5"
+      ]
+    },
+    {
+      "name": "import.generic-csv.spec.ts:58 Generic-CSV importer — wizard maps custom columns",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From any logbook (CSV)')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From any logbook (CSV)')\u001b[22m\n\n\n  61 |   await page.click('button:has-text(\"Import\")');\n  62 |   // Confirm Import section is shown\n> 63 |   await expect(page.getByText(\"From any logbook (CSV)\")).toBeVisible();\n     |                                                          ^\n  64 |\n  65 |   // Upload synthetic CSV — Generic CSV tile label says \"Choose CSV file\"\n  66 |   await page.setInputFiles('label:has-text(\"Choose CSV file\") input[type=\"file\"]', tmpCsvPath);\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.generic-csv.spec.ts:63:58",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From any logbook (CSV)')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From any logbook (CSV)')\u001b[22m\n\n\n  61 |   await page.click('button:has-text(\"Import\")');\n  62 |   // Confirm Import section is shown\n> 63 |   await expect(page.getByText(\"From any logbook (CSV)\")).toBeVisible();\n     |                                                          ^\n  64 |\n  65 |   // Upload synthetic CSV — Generic CSV tile label says \"Choose CSV file\"\n  66 |   await page.setInputFiles('label:has-text(\"Choose CSV file\") input[type=\"file\"]', tmpCsvPath);\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.generic-csv.spec.ts:63:58",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('From any logbook (CSV)')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('From any logbook (CSV)')\u001b[22m\n\n\n  61 |   await page.click('button:has-text(\"Import\")');\n  62 |   // Confirm Import section is shown\n> 63 |   await expect(page.getByText(\"From any logbook (CSV)\")).toBeVisible();\n     |                                                          ^\n  64 |\n  65 |   // Upload synthetic CSV — Generic CSV tile label says \"Choose CSV file\"\n  66 |   await page.setInputFiles('label:has-text(\"Choose CSV file\") input[type=\"file\"]', tmpCsvPath);\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\import.generic-csv.spec.ts:63:58"
+      ]
+    },
+    {
+      "name": "pendingUpdates.spec.ts:12 should display pending updates page",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=/pending updates|ausstehende updates/i')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=/pending updates|ausstehende updates/i')\u001b[22m\n\n\n  17 |     await expect(\n  18 |       page.locator('text=/pending updates|ausstehende updates/i')\n> 19 |     ).toBeVisible({ timeout: 10000 });\n     |       ^\n  20 |   });\n  21 |\n  22 |   test('should show pending updates list', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:19:7",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=/pending updates|ausstehende updates/i')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=/pending updates|ausstehende updates/i')\u001b[22m\n\n\n  17 |     await expect(\n  18 |       page.locator('text=/pending updates|ausstehende updates/i')\n> 19 |     ).toBeVisible({ timeout: 10000 });\n     |       ^\n  20 |   });\n  21 |\n  22 |   test('should show pending updates list', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:19:7",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=/pending updates|ausstehende updates/i')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=/pending updates|ausstehende updates/i')\u001b[22m\n\n\n  17 |     await expect(\n  18 |       page.locator('text=/pending updates|ausstehende updates/i')\n> 19 |     ).toBeVisible({ timeout: 10000 });\n     |       ^\n  20 |   });\n  21 |\n  22 |   test('should show pending updates list', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:19:7"
+      ]
+    },
+    {
+      "name": "pendingUpdates.spec.ts:22 should show pending updates list",
+      "engines": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ],
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  36 |     const hasEmptyState = await emptyState.isVisible().catch(() => false);\n  37 |\n> 38 |     expect(hasList || hasEmptyState).toBe(true);\n     |                                      ^\n  39 |   });\n  40 |\n  41 |   test('should display pending update card with changes', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:38:38",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  36 |     const hasEmptyState = await emptyState.isVisible().catch(() => false);\n  37 |\n> 38 |     expect(hasList || hasEmptyState).toBe(true);\n     |                                      ^\n  39 |   });\n  40 |\n  41 |   test('should display pending update card with changes', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:38:38",
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  36 |     const hasEmptyState = await emptyState.isVisible().catch(() => false);\n  37 |\n> 38 |     expect(hasList || hasEmptyState).toBe(true);\n     |                                      ^\n  39 |   });\n  40 |\n  41 |   test('should display pending update card with changes', async ({ page }) => {\n    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\e2e\\pendingUpdates.spec.ts:38:38"
+      ]
+    }
+  ]
+}

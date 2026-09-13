@@ -1,0 +1,16 @@
+{
+  "commit": "9678e6cd",
+  "concurrent": [
+    {
+      "status": "rejected",
+      "errorCode": "P2002"
+    },
+    {
+      "status": "fulfilled",
+      "hasAirport": true
+    }
+  ],
+  "providerStubCalls": 2,
+  "storedRows": 1,
+  "laterLookupSucceeds": true
+}

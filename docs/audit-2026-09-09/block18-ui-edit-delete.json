@@ -1,0 +1,10 @@
+{
+  "commit": "9678e6cd",
+  "flightId": "3ab1f818-2fb3-4be3-a4b1-7aadf6b066be",
+  "errors": [],
+  "editStatus": 200,
+  "gateAfterReload": "AUD18",
+  "deleteStatus": 204,
+  "getAfterDelete": 404,
+  "passed": true
+}

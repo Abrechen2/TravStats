@@ -10,6 +10,41 @@
 
 ## Ergebnisübersicht dieses Prüfblocks
 
+### Ergänzung: 39715ec5, 13.09.2026
+
+**Abschließende Ergänzung:** Inzwischen auch vollständiger Backend-Gesamtlauf dieses festen Commits grün: **4.274 Pass/0 Fail/11 Skip**, 492 bestandene/2 übersprungene Dateien, nativer Exit 0. Frontend unverändert **3.710 Pass/433 Dateien**. Beide Typechecks, Projektlints und Produktionsfrontend-Build bestanden, Dateigrößengate grün. Die nachstehende frühere Aussage „keine komplette Backendwiederholung“ ist damit überholt. Neue Befunde AUD-099–103 sind Analyseergebnisse, keine eigenen Korrekturen. Detailberichte siehe AUDIT_REPORT.
+
+Vier nachfolgende Commits getrennt geprüft: WebDAV-Testbeschriftung, Flughafenanzeige, striktes Frontend-Testnetzwerk, Hotelcheck-in nach Ortszeit. Separate feste Quellkopie; **433 Frontenddateien/3.710 Tests grün**, **7 Backenddateien/64 Tests grün**, beide Typechecks grün, jeweils nativer Exit 0. Berichte `block17-current-frontend-full.json`, `block17-current-backend.json`, `block18-current-*-typecheck.log`. Keine komplette Backendwiederholung dieses Commits behauptet. Echter zusätzlicher Upcoming-Grenzfall an der UTC-Tagesgrenze bestätigt **AUD-099**, trotz grüner gezielter Tests. Die vorherige Prüfbasis 9678e6cd bleibt für ältere Befunde/Läufe ausdrücklich erhalten.
+
+### Vorheriger Nachprüfstand: 9678e6cd, 13.09.2026
+
+Neue eigene feste Quellkopie. Backend-Fixregressionen: 9 Dateien, **150 unterschiedliche Tests bestanden / 9 private Sample-Skips** über Erstlauf und gezielten Nachlauf. Erstlauf 149/1/9; einzige Abweichung war der fehlende Hotelkettenkatalog in unserer frischen Datenbank. Nach Anwendung des echten Katalogseeders bestand die gesamte betroffene Datei (29/29), einschließlich der zuvor fehlgeschlagenen Testidentität. Frontend: **4 Dateien / 74 Tests bestanden**. Backend-Build/Typecheck bestanden. Kein neuer Gesamtlauf dieses Commits behauptet.
+
+| Befunde | Unabhängige Nachprüfung am 13.09. |
+| --- | --- |
+| AUD-006/007 | Echter Full-Restore unter Linux: vorherige DB-Daten und Dateien aus allen sieben Upload-Verzeichnissen korrekt zurückgespielt. Separater ungültiger SQL-Dump wird abgelehnt; vorangehende SQL-Änderung atomar zurückgerollt. Neue Folgeblockade siehe AUD-069. |
+| AUD-029/030 | Eigene reale DB-Gegenproben: Mehrquellen-Duplikatmerge gelingt; Titelbild folgt nach Deduplikation der überlebenden Fotozeile. Ursprüngliche Restfälle geschlossen. Keine neue Bilddatei/HTTP-Auslieferung in dieser speziellen Mergeprobe behauptet. |
+| AUD-037 | Acht echte Browser-Tabschritte mit normalen sichtbaren Controls bleiben im Dialog. Ursprünglicher Fokus-Ausbruch korrigiert; keine Vollabdeckung aller verschachtelten Dialoge. |
+| AUD-043–049/054/055 | Vier bereits in Block 11 geprüfte Regressionstestdateien erneut am neuesten Commit ausgeführt; grün nach Katalogseed. Keine pauschale Wiederholung jeder historischen eigenen Probe. |
+| AUD-050 | **Teilweise.** Ursprüngliche Fälle korrigiert. Zwei Buchungen desselben Hotels im selben Dokument bleiben falsch: 100/500 → 100/100 EUR. Eigene echte Parser-/HTTP-Probe. |
+| AUD-051/052/053/058 | Eigene Gegenproben korrigiert: String-null bleibt fehlend; Template 135.87 USD bleibt 135.87; verneintes Frühstück/optionale Mahlzeit korrekt; tröpfelnder HTTP-Body endet nach 126 ms bei 120-ms-Budget, abgebrochener Body nach 42 ms mit nutzbarem Fallback. |
+| AUD-056 | **Teilweise.** Einfacher Name-/Stadtmatch ablehnbar. Heuristische Zuordnung mit `stay_same_dates` oder stays-only-Namensjoin (`none`) weiterhin nicht ablehnbar; echte Preview → Browserpayload, bei Namensjoin zusätzlich DB-Commit. |
+| AUD-057 | **Teilweise.** Fehlende Währung sperrt Commit, EUR ergänzbar und im Payload erhalten. AED/KWD bei leerem Ausgangswert im Dropdown nicht wählbar. |
+| AUD-059/060 | Eigene kombinierte Browser-CSV-Gegenprobe bewahrt 52.520/13.405 und Bewertung 0.5 ohne Zeilenwarnung; erweiterte Projektregressionen grün. |
+| AUD-069–071 | Neue separat dokumentierte Befunde: Restore-Jobzustand blockiert weitere Backups (P1), Geocoder-Fairness ab 501 Einträgen (P2), ungültige Providerkoordinaten gespeichert (bedingter P3). |
+
+Artefakte: `block12-parser-probes.*`, `block12-data-probes.*`, `block12-ui-probes.*`, `block12-restore.*`, `block12-geo-*`, `block12-backend-regressions.json`, `block12-backend-seeded-rerun.json`, `block12-frontend-regressions.json`. Browserprüfungen betreffen echte Komponenteninteraktion mit ersetzter Übersetzung/Logger, keine vollständige Seite/CSS-Abnahme. Linux-Lauf nutzt vorhandenes Runtimeimage ausschließlich als Werkzeugumgebung mit aktuellem kompiliertem Auditcode; normaler App-Entrypoint wurde nicht gestartet.
+
+Zusätzliche Analyse am selben aktuellen Fixstand `9678e6cd` in Blöcken 13/14: neue AUD-072–080 in FINDINGS; POI **68**, Listen **61** und Statistik **48** weitere Projektprüfungen bestanden. Das sind neue Analysebereiche, keine zusätzlichen Fixfreigaben. POI-Webimport ist noch deaktiviert; API- und UI-Reichweite stehen jeweils beim Befund. Quellprobe und JSON-Ergebnisse vollständig im Auditverzeichnis.
+
+### Historische Bewertung des Fixstands c824ea3b
+
+Fortsetzung 11.09.2026: Acht neue Befunde AUD-061–068 separat auf der eingefrorenen 2.6.3-Kopie bestätigt (Geocoding/FX/Koordinatenvalidierung); siehe FINDINGS und Block-11-Artefakte. AUD-067 ist P3 und setzt eine fehlerhafte Providerantwort voraus. Der vollständige Backendlauf für c824ea3b ist inzwischen erfolgt: 4.216 unterschiedliche Tests bestanden nach gezielter Wiederholung zweier eigener Umleitungsfehler, 11 Skips; siehe COVERAGE. Die nachfolgende Tabelle bleibt ausdrücklich die Bewertung dieses Fixstands.
+
+**Zusätzliche Nachprüfung des neueren Import-Fix-Commits `4956235f`:** AUD-043–049/054/055 werden dort adressiert. Eigene separate Commitkopie; alle sechs produktiven Diffs gelesen; vier geänderte Regressionsdateien mit **59 Tests bestanden**, außerdem **Backend-Typecheck bestanden**. Ergebnis `block11-import-fixes-4956235f.json`; 29 Importcommit-, 18 Preview-, 9 Undo-/Batch- und 3 Flugbatchtests. Dies bestätigt die dort geprüften Regressionsfälle, ersetzt aber weder eine vollständige Wiederholung aller früheren eigenen Proben noch einen neuen Gesamtlauf. Keine Freigabe noch uncommitteter Parserkorrekturen. Anfangs vom eigenen Dependency-Link verursachter TS2742 nach physischer Trennung verschwunden; keine Produktregression.
+
+Endkontrolle 11.09.: Haupt-HEAD inzwischen `7ef4ef11` (Parser AUD-050–053/058), noch nicht nachgeprüft; nächster Einstieg laut STATUS.
+
 | Befunde | Unabhängiger Status am Fix-Stand c824ea3b |
 | --- | --- |
 | AUD-001 | Teilweise abgesichert; lokale Dev-DBs weiter ohne Opt-in zugelassen. Guard-Gegenprobe bestätigt. |

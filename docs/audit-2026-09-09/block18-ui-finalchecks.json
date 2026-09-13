@@ -1,0 +1,36 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "Password dialog semantics and escape",
+      "passed": true,
+      "dialogs": 0,
+      "fieldsAfterEscape": 3,
+      "cancelWorks": true
+    },
+    {
+      "name": "Flight cancel reachability at 320px",
+      "passed": true,
+      "geometry": {
+        "left": -69.015625,
+        "right": 42.375,
+        "top": 401.40625,
+        "bottom": 515.40625,
+        "width": 111.390625,
+        "scrollLeft": 0,
+        "scrollWidth": 307,
+        "clientWidth": 288,
+        "viewport": 320
+      },
+      "clickable": true,
+      "stillOpen": 0,
+      "afterEscape": 0
+    },
+    {
+      "name": "Hotel CSV explicit new match decision and reload",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n201 !== 200\n"
+    }
+  ],
+  "errors": []
+}

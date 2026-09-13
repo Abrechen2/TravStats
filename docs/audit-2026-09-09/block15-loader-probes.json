@@ -1,0 +1,101 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "MONTH placeholder span",
+      "httpCreate": 201,
+      "storedPrecision": "MONTH",
+      "storedNights": 3,
+      "timing": {
+        "walkable": false,
+        "nights": 3
+      },
+      "daysAwayAll": 32,
+      "daysAwayYear": 32,
+      "passportDaysPresent": 32,
+      "passportNights": 3
+    },
+    {
+      "name": "DAY exact control",
+      "httpCreate": 201,
+      "storedPrecision": "DAY",
+      "storedNights": 3,
+      "timing": {
+        "walkable": true,
+        "nights": 3
+      },
+      "daysAwayAll": 4,
+      "daysAwayYear": 4,
+      "passportDaysPresent": 4,
+      "passportNights": 3
+    },
+    {
+      "name": "checkout only",
+      "httpCreate": 201,
+      "storedPrecision": "DAY",
+      "storedNights": null,
+      "timing": {
+        "walkable": false,
+        "nights": 0
+      },
+      "daysAwayAll": 1,
+      "daysAwayYear": 0,
+      "passportDaysPresent": 1,
+      "passportNights": null
+    },
+    {
+      "name": "future visit as past country evidence",
+      "before": {
+        "firstYear": null,
+        "daysPresent": 0,
+        "hasUndatedEvidence": true
+      },
+      "after": {
+        "firstYear": 2099,
+        "daysPresent": 1,
+        "hasUndatedEvidence": false
+      },
+      "detailDates": [
+        "2099-01-02"
+      ],
+      "placeCounts": {
+        "visitCount": 0,
+        "plannedVisitCount": 1
+      }
+    },
+    {
+      "name": "track-only multi-year span",
+      "passport": {
+        "firstYear": 2020,
+        "lastYear": 2020,
+        "daysPresent": 2,
+        "kinds": [
+          "track"
+        ]
+      },
+      "detail": {
+        "firstYear": 2020,
+        "lastYear": 2025,
+        "trackDays": 2
+      }
+    },
+    {
+      "name": "track span with middle-year place",
+      "passport": {
+        "firstYear": 2023,
+        "lastYear": 2023,
+        "daysPresent": 3,
+        "kinds": [
+          "place",
+          "track"
+        ]
+      },
+      "detail": {
+        "firstYear": 2020,
+        "lastYear": 2025,
+        "trackDays": 2
+      }
+    }
+  ],
+  "externalFetchAttempts": 0
+}

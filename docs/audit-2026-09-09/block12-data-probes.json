@@ -1,0 +1,74 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "AUD-029 multiple sources with duplicate photo asset",
+      "mergeSucceeded": true,
+      "survivingPhotos": 1
+    },
+    {
+      "name": "AUD-030 cover follows surviving photo",
+      "pointsToExistingRow": true
+    },
+    {
+      "name": "name-only guessed join follows original hotel when create selected",
+      "createdLodgings": 0,
+      "createdStays": 1
+    }
+  ],
+  "previewRows": {
+    "heuristicControl": {
+      "sourceRowIndex": 0,
+      "lodging": {
+        "name": "Audit Hotel",
+        "city": "Berlin"
+      },
+      "stay": {
+        "checkIn": "2026-04-01",
+        "checkOut": "2026-04-03"
+      },
+      "flags": [
+        "missing_coordinates"
+      ],
+      "dedupeHint": "lodging_name_city",
+      "matchedLodgingId": "0f2f3bff-3a31-46a0-a0c5-31ea7edc99fb",
+      "matchedLodgingName": "Audit Hotel",
+      "matchedStayId": null,
+      "action": "needs_input"
+    },
+    "sameDateHeuristic": {
+      "sourceRowIndex": 0,
+      "lodging": {
+        "name": "Audit Hotel",
+        "city": "Berlin"
+      },
+      "stay": {
+        "checkIn": "2026-04-01",
+        "checkOut": "2026-04-03"
+      },
+      "flags": [
+        "missing_coordinates"
+      ],
+      "dedupeHint": "stay_same_dates",
+      "matchedLodgingId": "0f2f3bff-3a31-46a0-a0c5-31ea7edc99fb",
+      "matchedLodgingName": "Audit Hotel",
+      "matchedStayId": "9de4164d-178a-4559-8ac7-72f1e803825c",
+      "action": "needs_input"
+    },
+    "nameJoin": {
+      "sourceRowIndex": 0,
+      "lodging": null,
+      "lodgingName": "Audit Hotel",
+      "stay": {
+        "checkIn": "2026-05-01",
+        "checkOut": "2026-05-03"
+      },
+      "flags": [],
+      "dedupeHint": "none",
+      "matchedLodgingId": "0f2f3bff-3a31-46a0-a0c5-31ea7edc99fb",
+      "matchedLodgingName": "Audit Hotel",
+      "matchedStayId": null,
+      "action": "create"
+    }
+  }
+}

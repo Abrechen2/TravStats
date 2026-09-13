@@ -1,0 +1,34 @@
+{
+  "commit": "9678e6cd",
+  "mode": "invalid",
+  "results": [
+    {
+      "variant": "photon-range",
+      "result": {
+        "attempted": 1,
+        "filled": 1
+      },
+      "lat": 99,
+      "lon": 222
+    },
+    {
+      "variant": "nominatim-null",
+      "result": {
+        "attempted": 1,
+        "filled": 1
+      },
+      "lat": 0,
+      "lon": 0
+    },
+    {
+      "variant": "nominatim-range",
+      "result": {
+        "attempted": 1,
+        "filled": 1
+      },
+      "lat": -99,
+      "lon": 222
+    }
+  ],
+  "fetchCalls": 5
+}

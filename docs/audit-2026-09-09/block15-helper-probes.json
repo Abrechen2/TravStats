@@ -1,0 +1,39 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "on-time boundary",
+      "delayMinutes": 14,
+      "onTimeRate": 1,
+      "label": "Pünktlich (< 15 Min)"
+    },
+    {
+      "name": "on-time boundary",
+      "delayMinutes": 15,
+      "onTimeRate": 1,
+      "label": "Pünktlich (< 15 Min)"
+    },
+    {
+      "name": "on-time boundary",
+      "delayMinutes": 16,
+      "onTimeRate": 0,
+      "label": "Pünktlich (< 15 Min)"
+    },
+    {
+      "name": "high latitude grid",
+      "shift": 0,
+      "distanceKm": 39.44139022352571,
+      "targetLon": 18.99,
+      "anchorLon": 20.01,
+      "suggestions": 0
+    },
+    {
+      "name": "high latitude grid",
+      "shift": -0.1,
+      "distanceKm": 39.44139022352571,
+      "targetLon": 18.889999999999997,
+      "anchorLon": 19.91,
+      "suggestions": 1
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "commit": "39715ec5",
+  "results": [
+    {
+      "name": "AirLabs user context dropped",
+      "directResults": 1,
+      "wrapperResult": null,
+      "airlabsResolverHasUserId": false
+    },
+    {
+      "name": "OpenSky basic field contract",
+      "configuredFields": [
+        "username",
+        "password"
+      ],
+      "result": null,
+      "openSkyRequests": 0
+    },
+    {
+      "name": "OpenSky OAuth cache shared between users",
+      "tokenRequests": 1,
+      "apiRequests": 2,
+      "secondUserReusesFirstToken": true
+    }
+  ],
+  "externalCalls": 0
+}

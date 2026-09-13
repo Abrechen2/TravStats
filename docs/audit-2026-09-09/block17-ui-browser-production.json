@@ -1,0 +1,1675 @@
+{
+  "commit": "9678e6cd",
+  "views": [
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Schließen",
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-00.png"
+    },
+    {
+      "path": "/dashboard/flight",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Flüge",
+        "+ Flug hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nDashboard\nLogbuch\n▼\nReisen\nStatistiken\nErfolge\nBug\nSupport\n▼\nSystem\n▼\n1\nA\naudit-ui-17\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Flüge\n+ Flug hinzufügen",
+      "image": "1440-01.png"
+    },
+    {
+      "path": "/dashboard/cruise",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Kreuzfahrten",
+        "+ Kreuzfahrt hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nDashboard\nLogbuch\n▼\nReisen\nStatistiken\nErfolge\nBug\nSupport\n▼\nSystem\n▼\n1\nA\naudit-ui-17\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Kreuzfahrten\n+ Kreuzfahrt hinzufügen",
+      "image": "1440-02.png"
+    },
+    {
+      "path": "/dashboard/lodging",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Unterkünfte",
+        "Schließen",
+        "Details",
+        "+ Hotel hinzufügen"
+      ],
+      "bodyText": "\nSTATS\nDashboard\nLogbuch\n▼\nReisen\nStatistiken\nErfolge\nBug\nSupport\n▼\nSystem\n▼\n1\nA\naudit-ui-17\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Unterkünfte\nUnterkünfte\n×\n🏨\nAudit Hotel Singapore\n02.06.2025\n→\nSingapore\n8 Übernachtungen\n+ Hotel hinzufügen",
+      "image": "1440-03.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-04.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-05.png"
+    },
+    {
+      "path": "/flights",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Flüge"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Flug hinzufügen",
+        "Nach Airline sortieren",
+        "Nach Zeit sortieren",
+        "Nach Status sortieren",
+        "Nach Flugzeit (h) sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\n\nLufthansa\tLH700\t\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\n\t\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\nSortiert nach Abflug (absteigend)",
+      "image": "1440-06.png"
+    },
+    {
+      "path": "/flights/f84e346d-b45e-407e-872a-763d8ccf22c0",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Lufthansa LH700"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "← Flugliste",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "iste\n✈\nLufthansa LH700\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\nGeflogen\nBearbeiten\nLöschen\nZeiten\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\nFlugzeit (h)\n12h\nBuchung & Sitz\nGate\nA1\nKosten\nPreis\n500 €\nFlugzeug\nFlugzeug\nAirbus A350\nReisen\nAudit: Singapur und Europa",
+      "image": "1440-07.png"
+    },
+    {
+      "path": "/cruises",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Kreuzfahrten"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Kreuzfahrt hinzufügen",
+        "Nach Schiff sortieren",
+        "Nach Reederei sortieren",
+        "Nach Termine sortieren",
+        "Nach Häfen sortieren",
+        "Nach Status sortieren",
+        "Nach Preis sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "ZFAHRTEN\n0\nHAFENANLÄUFE\n0\nSEETAGE\n0\nREEDEREIEN\n\nEine ganze Liste auf einmal? Importieren\n\nSCHIFF\n▲\n\t\nREEDEREI\n▲\n\t\nTERMINE\n▼\n\t\nHÄFEN\n▲\n\t\nSTATUS\n▲\n\tKABINE\t\nPREIS\n▲\n\tREISE\tAKTIONEN\nAudit Schiff\t—\t2025-08-01 – 2025-08-08\t0\tstatus.completed\t—\t900 €\t—\t\nsortiert nach Termine, absteigend",
+      "image": "1440-08.png"
+    },
+    {
+      "path": "/cruises/1b12c464-426a-420a-9ef9-78fef9e4e908",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Audit Schiff",
+        "Route"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "← Kreuzfahrten",
+        "Bearbeiten",
+        "Löschen",
+        "Route bearbeiten"
+      ],
+      "bodyText": "ttelmeerreise\n\n01.08.2025 – 08.08.2025\n0 Häfen\n0 Seetage\nstatus.completed\nBearbeiten\nLöschen\nRoute\nNoch keine Stopps erfasst — füge sie über „Bearbeiten“ hinzu.\n\nROUTE\n\nRoute bearbeiten\nMapLibre\nKabine\nKabine\n—\nKategorie\n—\nDeck\n—\nKosten\nBuchungsnummer\n—\nPreis\n900 €\nNotizen & Tags",
+      "image": "1440-09.png"
+    },
+    {
+      "path": "/lodging",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Unterkünfte"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Hotel hinzufügen",
+        "Sortieren nach Name",
+        "Sortieren nach Kette",
+        "Sortieren nach Ort",
+        "Sortieren nach Status",
+        "Sortieren nach Letzter Aufenthalt",
+        "Sortieren nach Aufenthalte",
+        "Sortieren nach Übernachtungen",
+        "Sortieren nach Bewertung",
+        "Sortieren nach Ausgaben",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "TE\n▲\n\t\nORT\n▲\n\t\nSTATUS\n▲\n\t\nLETZTER AUFENTHALT\n▼\n\t\nAUFENTHALTE\n▲\n\t\nÜBERNACHTUNGEN\n▲\n\t\nBEWERTUNG\n▲\n\t\nAUSGABEN\n▲\n\tAKTIONEN\n🏨Audit Hotel Singapore\tUnabhängig\t\nSingapore\n\t\nAbgeschlossen\n🏷\nKeine Adresse\n\t02.06.2025\t1\t8\t—\t\n800 €\nkein Kurs\n\t\nSortiert nach Letzter Aufenthalt (absteigend)",
+      "image": "1440-10.png"
+    },
+    {
+      "path": "/lodging/2c92b8a3-4404-4a45-b3e0-8b7ec18e8c80",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Audit Hotel Singapore",
+        "Fotos",
+        "Aufenthalte"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "← Unterkünfte",
+        "Bearbeiten",
+        "Löschen",
+        "Aufenthalt hinzufügen",
+        "Bearbeiten"
+      ],
+      "bodyText": "5 – 10.06.2025\n8 Übernachtungen\nAbgeschlossen\n🧳 Reise: Audit: Singapur und Europa\n—\nBearbeiten\nFrühstück: —\nService: —\nZimmer: —\n800 €\nkein Kurs\nMapLibre\nAusgaben\nIn Basiswährung\n0 €\nPro Übernachtung\n0 €\n\n1 Aufenthalt nicht umgerechnet\n\nØ Bewertung\nZimmer\n—\nFrühstück\n—\nService\n—",
+      "image": "1440-11.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-12.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-13.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-14.png"
+    },
+    {
+      "path": "/trips",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Reisen"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Längste Reise20.560 kmAudit: Singapur und Europa",
+        "Teuerste Reise1.800 €Audit: Singapur und Europa",
+        "Meiste Länder2Audit: Singapur und Europa",
+        "＋ Reise hinzufügen",
+        "→ Öffnen",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "＋Neue Reise erstellenFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt"
+      ],
+      "bodyText": "a\n\n1 REISE\n\n＋ Reise hinzufügen\nABGESCHLOSSEN\nAudit: Singapur und Europa\n\n01. Juni – 20. Juni 2025 · 19 Nächte\n\nFRA\n→\nSIN\n→\nFRA\n2\nFLÜGE\n20.6k\nKM\n2\nLÄNDER\n1.800 €\nGESAMTKOSTEN\n→ Öffnen\n✏\n✕\n＋\nNeue Reise erstellen\nFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt",
+      "image": "1440-15.png"
+    },
+    {
+      "path": "/trips/48c27628-7473-4efa-aec0-5226844d98fc",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Audit: Singapur und Europa"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "📋Übersicht",
+        "📅Timeline",
+        "🗺Karte",
+        "📷Galerie",
+        "🧾Logistik"
+      ],
+      "bodyText": "\n← Zurück zu Reisen\nAudit: Singapur und Europa\nABGESCHLOSSEN\n01. Juni – 20. Juni 2025\n· 19 Nächte\n📋Übersicht\n📅Timeline\n🗺Karte\n📷Galerie\n🧾Logistik\n2\nFLÜGE\n0\nKREUZFAHRTEN\n1\nAUFENTHALTE\n2\nLÄNDER\n0\nREISENDE\n1.800 €\nGESAMTKOSTEN\n0\nTAGS\nLängere Notizen über die Reise …\nLÄNDER\nDE\nSG",
+      "image": "1440-16.png"
+    },
+    {
+      "path": "/stats",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Wo du geschlafen hast"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Gesamt",
+        "✈Flüge",
+        "🚢Kreuzfahrten",
+        "🏨Unterkünfte",
+        "Alle Jahre",
+        "2025",
+        "✈Flüge",
+        "🚢Kreuzfahrten· keine Daten",
+        "🏨Unterkünfte",
+        "Erlebnisse",
+        "Reisetage"
+      ],
+      "bodyText": "nlose Reisen\n\n0 / 1\n\nReisen, bei denen für jeden Reisetag festgehalten ist, wo du warst\n\nTage ohne Nachweis\n\n10\n\nReisetage, an denen weder Unterkunft noch Schiff noch Nachtflug erfasst ist\n\nØ Reisedauer\n\n19\n\nLängste Reise: 19 Tage\n\nTagebucheinträge\n\n0\n\nNoch keine Stimmung erfasst",
+      "image": "1440-17.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "1440-18.png"
+    },
+    {
+      "path": "/achievements",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "🏆 Errungenschaften",
+        "Sammler",
+        "Distanz",
+        "Elite",
+        "Entdecker",
+        "Kurios",
+        "Planer",
+        "Spezial",
+        "Überlebenskünstler"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "BestenlisteAnsehen",
+        "Auf neue Errungenschaften prüfen",
+        "Alle",
+        "✈ Flug",
+        "🚢 Kreuzfahrt",
+        "🏨 Unterkunft",
+        "📍 Orte",
+        "Übergreifend"
+      ],
+      "bodyText": "R\nTight Connector\n\nUmsteigen mit weniger als 45 Min zwischen zwei Flügen — und pünktlich dran\n\nFortschritt\n0 / 1\n🐌\nSILBER\nVerspätungs-Magnet\n\n5 Flüge mit mehr als 60 Min Verspätung\n\nFortschritt\n0 / 5\n⛈️\nSILBER\nTurbulenz-Veteran\n\n5 annullierte Flüge überstanden\n\nFortschritt\n0 / 5",
+      "image": "1440-19.png"
+    },
+    {
+      "path": "/pending-updates",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Posteingang",
+        "Zu prüfen",
+        "Flug-Updates",
+        "Update-Statistiken"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Erneut prüfen",
+        "↓",
+        "Bearbeiten",
+        "Anwenden",
+        "Ablehnen",
+        "+"
+      ],
+      "bodyText": "earbeitet\n0\nAbgelaufen\n0\nStatus\nAlle\nAusstehend (1)\nBearbeitet (0)\nAngewendet\nAbgelehnt\nAbgelaufen\nSortieren nach\nErstellungsdatum\nAblaufdatum\n↓\nAusstehend\nAviationstack API\nLäuft ab in 26407 Tage\nLufthansa LH700\n\nFRA → SIN\n\nÄnderungen\ngate: A1 → B2\nBearbeiten\nAnwenden\nAblehnen\n+",
+      "image": "1440-20.png"
+    },
+    {
+      "path": "/settings",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Einstellungen",
+        "Benutzer-Profil"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "🏨Unterkünfte",
+        "Benutzer-Profil",
+        "Anzeige & Sprache",
+        "Bereiche",
+        "Einheiten & Formate",
+        "Benachrichtigungen",
+        "Meine Daten & Sync",
+        "Listen importieren",
+        "Meine externen Dienste",
+        "API-Tokens",
+        "Sicherheit",
+        "Über",
+        "Passwort ändern",
+        "Hilfe anzeigen",
+        "Profil speichern"
+      ],
+      "bodyText": "n\nDatei auswählen\nBenutzername\n\nDer Anmeldename lässt sich hier nicht ändern.\n\nVorname\nNachname\nE-Mail-Adresse\nGeburtstag\n\nOptional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.\n\nProfil speichern",
+      "image": "1440-21.png"
+    },
+    {
+      "path": "/admin",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "headings": [
+        "Admin",
+        "Konfiguration",
+        "Datenverwaltung"
+      ],
+      "buttons": [
+        "Logbuch▼",
+        "Fehler melden",
+        "Support▼",
+        "System▼1",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "System-Info",
+        "Instanz",
+        "Benutzer3",
+        "Einladungen",
+        "Externe Dienste (Instanz)",
+        "Parser",
+        "Logging",
+        "Instanz-Backups",
+        "E-Mail / SMTP",
+        "Vollständiges Backup herunterladen (JSON)",
+        "Logos aktualisieren"
+      ],
+      "bodyText": "\n❌ Deaktiviert\nVersion\n2.6.3\nDatenverwaltung\nVollständiges Backup herunterladen (JSON)\n\nExportiert alle Benutzerdaten als JSON — für Sicherungen und zur Auswertung.\n\nLogos aktualisieren\n\nGespeicherte Logos gegen die Quellen prüfen und veraltete erneuern. Läuft ohnehin jede Nacht.",
+      "image": "1440-22.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-00.png"
+    },
+    {
+      "path": "/dashboard/flight",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Flüge",
+        "+ Flug hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Flüge\n+ Flug hinzufügen",
+      "image": "390-01.png"
+    },
+    {
+      "path": "/dashboard/cruise",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Kreuzfahrten",
+        "+ Kreuzfahrt hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Kreuzfahrten\n+ Kreuzfahrt hinzufügen",
+      "image": "390-02.png"
+    },
+    {
+      "path": "/dashboard/lodging",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Unterkünfte",
+        "Schließen",
+        "Details",
+        "+ Hotel hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Unterkünfte\nUnterkünfte\n×\n🏨\nAudit Hotel Singapore\n02.06.2025\n→\nSingapore\n8 Übernachtungen\n+ Hotel hinzufügen",
+      "image": "390-03.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-04.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-05.png"
+    },
+    {
+      "path": "/flights",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Flüge"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Flug hinzufügen",
+        "Nach Airline sortieren",
+        "Nach Zeit sortieren",
+        "Nach Status sortieren",
+        "Nach Flugzeit (h) sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\n\nLufthansa\tLH700\t\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\n\t\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\nSortiert nach Abflug (absteigend)",
+      "image": "390-06.png"
+    },
+    {
+      "path": "/flights/f84e346d-b45e-407e-872a-763d8ccf22c0",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Lufthansa LH700"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Flugliste",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "iste\n✈\nLufthansa LH700\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\nGeflogen\nBearbeiten\nLöschen\nZeiten\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\nFlugzeit (h)\n12h\nBuchung & Sitz\nGate\nA1\nKosten\nPreis\n500 €\nFlugzeug\nFlugzeug\nAirbus A350\nReisen\nAudit: Singapur und Europa",
+      "image": "390-07.png"
+    },
+    {
+      "path": "/cruises",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Kreuzfahrten"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Kreuzfahrt hinzufügen",
+        "Nach Schiff sortieren",
+        "Nach Reederei sortieren",
+        "Nach Termine sortieren",
+        "Nach Häfen sortieren",
+        "Nach Status sortieren",
+        "Nach Preis sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "ZFAHRTEN\n0\nHAFENANLÄUFE\n0\nSEETAGE\n0\nREEDEREIEN\n\nEine ganze Liste auf einmal? Importieren\n\nSCHIFF\n▲\n\t\nREEDEREI\n▲\n\t\nTERMINE\n▼\n\t\nHÄFEN\n▲\n\t\nSTATUS\n▲\n\tKABINE\t\nPREIS\n▲\n\tREISE\tAKTIONEN\nAudit Schiff\t—\t2025-08-01 – 2025-08-08\t0\tstatus.completed\t—\t900 €\t—\t\nsortiert nach Termine, absteigend",
+      "image": "390-08.png"
+    },
+    {
+      "path": "/cruises/1b12c464-426a-420a-9ef9-78fef9e4e908",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Audit Schiff",
+        "Route"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Kreuzfahrten",
+        "Bearbeiten",
+        "Löschen",
+        "Route bearbeiten"
+      ],
+      "bodyText": "ttelmeerreise\n\n01.08.2025 – 08.08.2025\n0 Häfen\n0 Seetage\nstatus.completed\nBearbeiten\nLöschen\nRoute\nNoch keine Stopps erfasst — füge sie über „Bearbeiten“ hinzu.\n\nROUTE\n\nRoute bearbeiten\nMapLibre\nKabine\nKabine\n—\nKategorie\n—\nDeck\n—\nKosten\nBuchungsnummer\n—\nPreis\n900 €\nNotizen & Tags",
+      "image": "390-09.png"
+    },
+    {
+      "path": "/lodging",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Unterkünfte"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Hotel hinzufügen",
+        "Sortieren nach Name",
+        "Sortieren nach Kette",
+        "Sortieren nach Ort",
+        "Sortieren nach Status",
+        "Sortieren nach Letzter Aufenthalt",
+        "Sortieren nach Aufenthalte",
+        "Sortieren nach Übernachtungen",
+        "Sortieren nach Bewertung",
+        "Sortieren nach Ausgaben",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "TE\n▲\n\t\nORT\n▲\n\t\nSTATUS\n▲\n\t\nLETZTER AUFENTHALT\n▼\n\t\nAUFENTHALTE\n▲\n\t\nÜBERNACHTUNGEN\n▲\n\t\nBEWERTUNG\n▲\n\t\nAUSGABEN\n▲\n\tAKTIONEN\n🏨Audit Hotel Singapore\tUnabhängig\t\nSingapore\n\t\nAbgeschlossen\n🏷\nKeine Adresse\n\t02.06.2025\t1\t8\t—\t\n800 €\nkein Kurs\n\t\nSortiert nach Letzter Aufenthalt (absteigend)",
+      "image": "390-10.png"
+    },
+    {
+      "path": "/lodging/2c92b8a3-4404-4a45-b3e0-8b7ec18e8c80",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Audit Hotel Singapore",
+        "Fotos",
+        "Aufenthalte"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Unterkünfte",
+        "Bearbeiten",
+        "Löschen",
+        "Aufenthalt hinzufügen",
+        "Bearbeiten"
+      ],
+      "bodyText": "5 – 10.06.2025\n8 Übernachtungen\nAbgeschlossen\n🧳 Reise: Audit: Singapur und Europa\n—\nBearbeiten\nFrühstück: —\nService: —\nZimmer: —\n800 €\nkein Kurs\nMapLibre\nAusgaben\nIn Basiswährung\n0 €\nPro Übernachtung\n0 €\n\n1 Aufenthalt nicht umgerechnet\n\nØ Bewertung\nZimmer\n—\nFrühstück\n—\nService\n—",
+      "image": "390-11.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-12.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-13.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-14.png"
+    },
+    {
+      "path": "/trips",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Reisen"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Längste Reise20.560 kmAudit: Singapur und Europa",
+        "Teuerste Reise1.800 €Audit: Singapur und Europa",
+        "Meiste Länder2Audit: Singapur und Europa",
+        "＋ Reise hinzufügen",
+        "→ Öffnen",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "＋Neue Reise erstellenFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt"
+      ],
+      "bodyText": "a\n\n1 REISE\n\n＋ Reise hinzufügen\nABGESCHLOSSEN\nAudit: Singapur und Europa\n\n01. Juni – 20. Juni 2025 · 19 Nächte\n\nFRA\n→\nSIN\n→\nFRA\n2\nFLÜGE\n20.6k\nKM\n2\nLÄNDER\n1.800 €\nGESAMTKOSTEN\n→ Öffnen\n✏\n✕\n＋\nNeue Reise erstellen\nFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt",
+      "image": "390-15.png"
+    },
+    {
+      "path": "/trips/48c27628-7473-4efa-aec0-5226844d98fc",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Audit: Singapur und Europa"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "📋Übersicht",
+        "📅Timeline",
+        "🗺Karte",
+        "📷Galerie",
+        "🧾Logistik"
+      ],
+      "bodyText": "\n← Zurück zu Reisen\nAudit: Singapur und Europa\nABGESCHLOSSEN\n01. Juni – 20. Juni 2025\n· 19 Nächte\n📋Übersicht\n📅Timeline\n🗺Karte\n📷Galerie\n🧾Logistik\n2\nFLÜGE\n0\nKREUZFAHRTEN\n1\nAUFENTHALTE\n2\nLÄNDER\n0\nREISENDE\n1.800 €\nGESAMTKOSTEN\n0\nTAGS\nLängere Notizen über die Reise …\nLÄNDER\nDE\nSG",
+      "image": "390-16.png"
+    },
+    {
+      "path": "/stats",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Wo du geschlafen hast"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Gesamt",
+        "✈Flüge",
+        "🚢Kreuzfahrten",
+        "🏨Unterkünfte",
+        "Alle Jahre",
+        "2025",
+        "✈Flüge",
+        "🚢Kreuzfahrten· keine Daten",
+        "🏨Unterkünfte",
+        "Erlebnisse",
+        "Reisetage"
+      ],
+      "bodyText": "nlose Reisen\n\n0 / 1\n\nReisen, bei denen für jeden Reisetag festgehalten ist, wo du warst\n\nTage ohne Nachweis\n\n10\n\nReisetage, an denen weder Unterkunft noch Schiff noch Nachtflug erfasst ist\n\nØ Reisedauer\n\n19\n\nLängste Reise: 19 Tage\n\nTagebucheinträge\n\n0\n\nNoch keine Stimmung erfasst",
+      "image": "390-17.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "390-18.png"
+    },
+    {
+      "path": "/achievements",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "🏆 Errungenschaften",
+        "Sammler",
+        "Distanz",
+        "Elite",
+        "Entdecker",
+        "Kurios",
+        "Planer",
+        "Spezial",
+        "Überlebenskünstler"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "BestenlisteAnsehen",
+        "Auf neue Errungenschaften prüfen",
+        "Alle",
+        "✈ Flug",
+        "🚢 Kreuzfahrt",
+        "🏨 Unterkunft",
+        "📍 Orte",
+        "Übergreifend"
+      ],
+      "bodyText": "R\nTight Connector\n\nUmsteigen mit weniger als 45 Min zwischen zwei Flügen — und pünktlich dran\n\nFortschritt\n0 / 1\n🐌\nSILBER\nVerspätungs-Magnet\n\n5 Flüge mit mehr als 60 Min Verspätung\n\nFortschritt\n0 / 5\n⛈️\nSILBER\nTurbulenz-Veteran\n\n5 annullierte Flüge überstanden\n\nFortschritt\n0 / 5",
+      "image": "390-19.png"
+    },
+    {
+      "path": "/pending-updates",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Posteingang",
+        "Zu prüfen",
+        "Flug-Updates",
+        "Update-Statistiken"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Erneut prüfen",
+        "↓"
+      ],
+      "bodyText": "usstehend (0)\nBearbeitet (0)\nAngewendet\nAbgelehnt\nAbgelaufen\nSortieren nach\nErstellungsdatum\nAblaufdatum\n↓\nKeine ausstehenden Updates\n\nEs gibt derzeit keine ausstehenden Flug-Updates. Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind.",
+      "image": "390-20.png"
+    },
+    {
+      "path": "/settings",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Einstellungen",
+        "Benutzer-Profil"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "🏨Unterkünfte",
+        "Passwort ändern",
+        "Hilfe anzeigen",
+        "Profil speichern"
+      ],
+      "bodyText": "n\nDatei auswählen\nBenutzername\n\nDer Anmeldename lässt sich hier nicht ändern.\n\nVorname\nNachname\nE-Mail-Adresse\nGeburtstag\n\nOptional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.\n\nProfil speichern",
+      "image": "390-21.png"
+    },
+    {
+      "path": "/admin",
+      "width": 390,
+      "scrollWidth": 390,
+      "headings": [
+        "Konfiguration",
+        "Datenverwaltung"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "Vollständiges Backup herunterladen (JSON)",
+        "Logos aktualisieren"
+      ],
+      "bodyText": "\n❌ Deaktiviert\nVersion\n2.6.3\nDatenverwaltung\nVollständiges Backup herunterladen (JSON)\n\nExportiert alle Benutzerdaten als JSON — für Sicherungen und zur Auswertung.\n\nLogos aktualisieren\n\nGespeicherte Logos gegen die Quellen prüfen und veraltete erneuern. Läuft ohnehin jede Nacht.",
+      "image": "390-22.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-00.png"
+    },
+    {
+      "path": "/dashboard/flight",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Flüge",
+        "+ Flug hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Flüge\n+ Flug hinzufügen",
+      "image": "320-01.png"
+    },
+    {
+      "path": "/dashboard/cruise",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Kreuzfahrten",
+        "+ Kreuzfahrt hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Kreuzfahrten\n+ Kreuzfahrt hinzufügen",
+      "image": "320-02.png"
+    },
+    {
+      "path": "/dashboard/lodging",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "🗺️Karte",
+        "☰ Unterkünfte",
+        "Schließen",
+        "Details",
+        "+ Hotel hinzufügen"
+      ],
+      "bodyText": "TS\nTRAV\nSTATS\nBug\nA\n▾\n◎Alle\n✈Flüge3(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\nMapLibre\n🗺️\nKarte\n☰ Unterkünfte\nUnterkünfte\n×\n🏨\nAudit Hotel Singapore\n02.06.2025\n→\nSingapore\n8 Übernachtungen\n+ Hotel hinzufügen",
+      "image": "320-03.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-04.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-05.png"
+    },
+    {
+      "path": "/flights",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Flüge"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Flug hinzufügen",
+        "Nach Airline sortieren",
+        "Nach Zeit sortieren",
+        "Nach Status sortieren",
+        "Nach Flugzeit (h) sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\n\nLufthansa\tLH700\t\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\n\t\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\n\t\nGeflogen\n\t12h\tAirbus A350\t500 €\t\nAudit: Singapur und Europa\t\nSortiert nach Abflug (absteigend)",
+      "image": "320-06.png"
+    },
+    {
+      "path": "/flights/f84e346d-b45e-407e-872a-763d8ccf22c0",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Lufthansa LH700"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Flugliste",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "iste\n✈\nLufthansa LH700\nFRA\n✈\nSIN\nFrankfurt Airport → Singapore Changi Airport\nGeflogen\nBearbeiten\nLöschen\nZeiten\nab\nSo 01.06.25\n12:00\nan\nMo 02.06.25\n06:00\n+1\nFlugzeit (h)\n12h\nBuchung & Sitz\nGate\nA1\nKosten\nPreis\n500 €\nFlugzeug\nFlugzeug\nAirbus A350\nReisen\nAudit: Singapur und Europa",
+      "image": "320-07.png"
+    },
+    {
+      "path": "/cruises",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Kreuzfahrten"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Kreuzfahrt hinzufügen",
+        "Nach Schiff sortieren",
+        "Nach Reederei sortieren",
+        "Nach Termine sortieren",
+        "Nach Häfen sortieren",
+        "Nach Status sortieren",
+        "Nach Preis sortieren",
+        "Bearbeiten",
+        "Duplizieren",
+        "Löschen"
+      ],
+      "bodyText": "ZFAHRTEN\n0\nHAFENANLÄUFE\n0\nSEETAGE\n0\nREEDEREIEN\n\nEine ganze Liste auf einmal? Importieren\n\nSCHIFF\n▲\n\t\nREEDEREI\n▲\n\t\nTERMINE\n▼\n\t\nHÄFEN\n▲\n\t\nSTATUS\n▲\n\tKABINE\t\nPREIS\n▲\n\tREISE\tAKTIONEN\nAudit Schiff\t—\t2025-08-01 – 2025-08-08\t0\tstatus.completed\t—\t900 €\t—\t\nsortiert nach Termine, absteigend",
+      "image": "320-08.png"
+    },
+    {
+      "path": "/cruises/1b12c464-426a-420a-9ef9-78fef9e4e908",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Audit Schiff",
+        "Route"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Kreuzfahrten",
+        "Bearbeiten",
+        "Löschen",
+        "Route bearbeiten"
+      ],
+      "bodyText": "ttelmeerreise\n\n01.08.2025 – 08.08.2025\n0 Häfen\n0 Seetage\nstatus.completed\nBearbeiten\nLöschen\nRoute\nNoch keine Stopps erfasst — füge sie über „Bearbeiten“ hinzu.\n\nROUTE\n\nRoute bearbeiten\nMapLibre\nKabine\nKabine\n—\nKategorie\n—\nDeck\n—\nKosten\nBuchungsnummer\n—\nPreis\n900 €\nNotizen & Tags",
+      "image": "320-09.png"
+    },
+    {
+      "path": "/lodging",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Unterkünfte"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Filter",
+        "Spalten ▾",
+        "+Hotel hinzufügen",
+        "Sortieren nach Name",
+        "Sortieren nach Kette",
+        "Sortieren nach Ort",
+        "Sortieren nach Status",
+        "Sortieren nach Letzter Aufenthalt",
+        "Sortieren nach Aufenthalte",
+        "Sortieren nach Übernachtungen",
+        "Sortieren nach Bewertung",
+        "Sortieren nach Ausgaben",
+        "Bearbeiten",
+        "Löschen"
+      ],
+      "bodyText": "TE\n▲\n\t\nORT\n▲\n\t\nSTATUS\n▲\n\t\nLETZTER AUFENTHALT\n▼\n\t\nAUFENTHALTE\n▲\n\t\nÜBERNACHTUNGEN\n▲\n\t\nBEWERTUNG\n▲\n\t\nAUSGABEN\n▲\n\tAKTIONEN\n🏨Audit Hotel Singapore\tUnabhängig\t\nSingapore\n\t\nAbgeschlossen\n🏷\nKeine Adresse\n\t02.06.2025\t1\t8\t—\t\n800 €\nkein Kurs\n\t\nSortiert nach Letzter Aufenthalt (absteigend)",
+      "image": "320-10.png"
+    },
+    {
+      "path": "/lodging/2c92b8a3-4404-4a45-b3e0-8b7ec18e8c80",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Audit Hotel Singapore",
+        "Fotos",
+        "Aufenthalte"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "← Unterkünfte",
+        "Bearbeiten",
+        "Löschen",
+        "Aufenthalt hinzufügen",
+        "Bearbeiten"
+      ],
+      "bodyText": "5 – 10.06.2025\n8 Übernachtungen\nAbgeschlossen\n🧳 Reise: Audit: Singapur und Europa\n—\nBearbeiten\nFrühstück: —\nService: —\nZimmer: —\n800 €\nkein Kurs\nMapLibre\nAusgaben\nIn Basiswährung\n0 €\nPro Übernachtung\n0 €\n\n1 Aufenthalt nicht umgerechnet\n\nØ Bewertung\nZimmer\n—\nFrühstück\n—\nService\n—",
+      "image": "320-11.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-12.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-13.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-14.png"
+    },
+    {
+      "path": "/trips",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Reisen"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Längste Reise20.560 kmAudit: Singapur und Europa",
+        "Teuerste Reise1.800 €Audit: Singapur und Europa",
+        "Meiste Länder2Audit: Singapur und Europa",
+        "＋ Reise hinzufügen",
+        "→ Öffnen",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "＋Neue Reise erstellenFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt"
+      ],
+      "bodyText": "a\n\n1 REISE\n\n＋ Reise hinzufügen\nABGESCHLOSSEN\nAudit: Singapur und Europa\n\n01. Juni – 20. Juni 2025 · 19 Nächte\n\nFRA\n→\nSIN\n→\nFRA\n2\nFLÜGE\n20.6k\nKM\n2\nLÄNDER\n1.800 €\nGESAMTKOSTEN\n→ Öffnen\n✏\n✕\n＋\nNeue Reise erstellen\nFlüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt",
+      "image": "320-15.png"
+    },
+    {
+      "path": "/trips/48c27628-7473-4efa-aec0-5226844d98fc",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Audit: Singapur und Europa"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Reise bearbeiten",
+        "Reise löschen",
+        "📋Übersicht",
+        "📅Timeline",
+        "🗺Karte",
+        "📷Galerie",
+        "🧾Logistik"
+      ],
+      "bodyText": "\n← Zurück zu Reisen\nAudit: Singapur und Europa\nABGESCHLOSSEN\n01. Juni – 20. Juni 2025\n· 19 Nächte\n📋Übersicht\n📅Timeline\n🗺Karte\n📷Galerie\n🧾Logistik\n2\nFLÜGE\n0\nKREUZFAHRTEN\n1\nAUFENTHALTE\n2\nLÄNDER\n0\nREISENDE\n1.800 €\nGESAMTKOSTEN\n0\nTAGS\nLängere Notizen über die Reise …\nLÄNDER\nDE\nSG",
+      "image": "320-16.png"
+    },
+    {
+      "path": "/stats",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Wo du geschlafen hast"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Gesamt",
+        "✈Flüge",
+        "🚢Kreuzfahrten",
+        "🏨Unterkünfte",
+        "Alle Jahre",
+        "2025",
+        "✈Flüge",
+        "🚢Kreuzfahrten· keine Daten",
+        "🏨Unterkünfte",
+        "Erlebnisse",
+        "Reisetage"
+      ],
+      "bodyText": "nlose Reisen\n\n0 / 1\n\nReisen, bei denen für jeden Reisetag festgehalten ist, wo du warst\n\nTage ohne Nachweis\n\n10\n\nReisetage, an denen weder Unterkunft noch Schiff noch Nachtflug erfasst ist\n\nØ Reisedauer\n\n19\n\nLängste Reise: 19 Tage\n\nTagebucheinträge\n\n0\n\nNoch keine Stimmung erfasst",
+      "image": "320-17.png"
+    },
+    {
+      "path": "/dashboard",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "◎Alle",
+        "✈Flüge3(1 geplant)",
+        "⚓Kreuzfahrten1",
+        "🏨Unterkünfte1",
+        "✈Als Nächstes · in 111 TagenFrankfurt am Main → New YorkLufthansa LH702",
+        "🗺️Karte",
+        "☰ Aktivität",
+        "Legende▾",
+        "+ Hinzufügen ▾"
+      ],
+      "bodyText": "(1 geplant)\n⚓Kreuzfahrten1\n🏨Unterkünfte1\n✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702\nMapLibre\n🗺️\nKarte\n☰ Aktivität\nLegende\n▾\nFlüge (geflogen)\nFlüge (geplant)\nKreuzfahrten (gefahren)\nKreuzfahrten (geplant)\nUnterkünfte\nFlughäfen\nHäfen\n+ Hinzufügen ▾",
+      "image": "320-18.png"
+    },
+    {
+      "path": "/achievements",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "🏆 Errungenschaften",
+        "Sammler",
+        "Distanz",
+        "Elite",
+        "Entdecker",
+        "Kurios",
+        "Planer",
+        "Spezial",
+        "Überlebenskünstler"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "BestenlisteAnsehen",
+        "Auf neue Errungenschaften prüfen",
+        "Alle",
+        "✈ Flug",
+        "🚢 Kreuzfahrt",
+        "🏨 Unterkunft",
+        "📍 Orte",
+        "Übergreifend"
+      ],
+      "bodyText": "R\nTight Connector\n\nUmsteigen mit weniger als 45 Min zwischen zwei Flügen — und pünktlich dran\n\nFortschritt\n0 / 1\n🐌\nSILBER\nVerspätungs-Magnet\n\n5 Flüge mit mehr als 60 Min Verspätung\n\nFortschritt\n0 / 5\n⛈️\nSILBER\nTurbulenz-Veteran\n\n5 annullierte Flüge überstanden\n\nFortschritt\n0 / 5",
+      "image": "320-19.png"
+    },
+    {
+      "path": "/pending-updates",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Posteingang",
+        "Zu prüfen",
+        "Flug-Updates",
+        "Update-Statistiken"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Erneut prüfen",
+        "↓"
+      ],
+      "bodyText": "usstehend (0)\nBearbeitet (0)\nAngewendet\nAbgelehnt\nAbgelaufen\nSortieren nach\nErstellungsdatum\nAblaufdatum\n↓\nKeine ausstehenden Updates\n\nEs gibt derzeit keine ausstehenden Flug-Updates. Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind.",
+      "image": "320-20.png"
+    },
+    {
+      "path": "/settings",
+      "width": 320,
+      "scrollWidth": 360,
+      "headings": [
+        "Einstellungen",
+        "Benutzer-Profil"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "🏨Unterkünfte",
+        "Passwort ändern",
+        "Hilfe anzeigen",
+        "Profil speichern"
+      ],
+      "bodyText": "n\nDatei auswählen\nBenutzername\n\nDer Anmeldename lässt sich hier nicht ändern.\n\nVorname\nNachname\nE-Mail-Adresse\nGeburtstag\n\nOptional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.\n\nProfil speichern",
+      "image": "320-21.png"
+    },
+    {
+      "path": "/admin",
+      "width": 320,
+      "scrollWidth": 329,
+      "headings": [
+        "Konfiguration",
+        "Datenverwaltung"
+      ],
+      "buttons": [
+        "Menü umschalten",
+        "Fehler melden",
+        "Konto-Menü",
+        "Allgemein",
+        "✈Flug",
+        "🚢Kreuzfahrt",
+        "Vollständiges Backup herunterladen (JSON)",
+        "Logos aktualisieren"
+      ],
+      "bodyText": "\n❌ Deaktiviert\nVersion\n2.6.3\nDatenverwaltung\nVollständiges Backup herunterladen (JSON)\n\nExportiert alle Benutzerdaten als JSON — für Sicherungen und zur Auswertung.\n\nLogos aktualisieren\n\nGespeicherte Logos gegen die Quellen prüfen und veraltete erneuern. Läuft ohnehin jede Nacht.",
+      "image": "320-22.png"
+    }
+  ],
+  "errors": [],
+  "blockedExternalHosts": [
+    "fonts.googleapis.com",
+    "unpkg.com",
+    "basemaps.cartocdn.com",
+    "flagcdn.com"
+  ],
+  "pending": []
+}
