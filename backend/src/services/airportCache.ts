@@ -3,10 +3,10 @@
  * Reduces database queries for frequently accessed airports
  */
 
-import NodeCache from 'node-cache';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import type { AirportData } from './airportLookup';
+import NodeCache from "node-cache";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import type { AirportData } from "./airportLookup";
 
 // Cache configuration: 1 hour TTL, check for expired entries every 5 minutes
 const cache = new NodeCache({
@@ -39,7 +39,7 @@ function isPlaceholderIcao(icao: string | null): boolean {
  */
 export function compareAirportAuthority(
   a: { isClosed?: boolean | null; icao: string | null },
-  b: { isClosed?: boolean | null; icao: string | null },
+  b: { isClosed?: boolean | null; icao: string | null }
 ): number {
   const closed = (a.isClosed ? 1 : 0) - (b.isClosed ? 1 : 0);
   if (closed !== 0) return closed;
@@ -59,7 +59,7 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
   const cached = cache.get<AirportData>(cacheKey);
   if (cached) {
     logger.debug({
-      operation: 'airport_cache_hit',
+      operation: "airport_cache_hit",
       message: `Airport ${code} found in cache`,
       context: { code },
     });
@@ -68,17 +68,14 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
 
   // Cache miss - query database
   logger.debug({
-    operation: 'airport_cache_miss',
+    operation: "airport_cache_miss",
     message: `Airport ${code} not in cache, querying database`,
     context: { code },
   });
 
   const matches = await prisma.airport.findMany({
     where: {
-      OR: [
-        { iata: upperCode },
-        { icao: upperCode },
-      ],
+      OR: [{ iata: upperCode }, { icao: upperCode }],
     },
   });
   // Prefer the authoritative airport when a code collides (real ICAO over a
@@ -101,6 +98,7 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
     lon: airport.lon,
     altitude: airport.altitude,
     timezone: airport.timezone || null,
+    municipalityName: airport.municipalityName,
   };
 
   // Store in cache
@@ -133,17 +131,14 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
   // Batch fetch missing airports from database
   if (codesToFetch.length > 0) {
     logger.debug({
-      operation: 'airport_cache_batch_fetch',
+      operation: "airport_cache_batch_fetch",
       message: `Batch fetching ${codesToFetch.length} airports from database`,
       context: { count: codesToFetch.length },
     });
 
     const airports = await prisma.airport.findMany({
       where: {
-        OR: [
-          { iata: { in: codesToFetch } },
-          { icao: { in: codesToFetch } },
-        ],
+        OR: [{ iata: { in: codesToFetch } }, { icao: { in: codesToFetch } }],
       },
     });
 
@@ -163,6 +158,7 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
         lon: airport.lon,
         altitude: airport.altitude,
         timezone: airport.timezone || null,
+        municipalityName: airport.municipalityName,
       };
 
       // Cache by both IATA and ICAO if available; a code already claimed by a
@@ -181,7 +177,7 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
 
     // Cache null results for codes not found
     const foundCodes = new Set<string>();
-    airports.forEach(a => {
+    airports.forEach((a) => {
       if (a.iata) foundCodes.add(a.iata);
       if (a.icao) foundCodes.add(a.icao);
     });
@@ -206,7 +202,7 @@ export function invalidateAirportCache(code: string): void {
   const cacheKey = getCacheKey(upperCode);
   cache.del(cacheKey);
   logger.debug({
-    operation: 'airport_cache_invalidate',
+    operation: "airport_cache_invalidate",
     message: `Invalidated cache for airport ${code}`,
     context: { code },
   });
@@ -216,10 +212,10 @@ export function invalidateAirportCache(code: string): void {
  * Clear all airport cache
  */
 export function clearAirportCache(): void {
-  const keys = cache.keys().filter(key => key.startsWith('airport:'));
+  const keys = cache.keys().filter((key) => key.startsWith("airport:"));
   cache.del(keys);
   logger.info({
-    operation: 'airport_cache_clear',
+    operation: "airport_cache_clear",
     message: `Cleared ${keys.length} airport cache entries`,
     context: { count: keys.length },
   });
@@ -230,34 +226,10 @@ export function clearAirportCache(): void {
  */
 export function getCacheStats(): { hits: number; misses: number; keys: number } {
   const stats = cache.getStats();
-  const airportKeys = cache.keys().filter(key => key.startsWith('airport:')).length;
+  const airportKeys = cache.keys().filter((key) => key.startsWith("airport:")).length;
   return {
     hits: stats.hits,
     misses: stats.misses,
     keys: airportKeys,
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
