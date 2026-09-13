@@ -21,6 +21,15 @@ vi.mock("../../lib/api", () => ({
   companionsApi: { list: mocks.companionsList },
 }));
 
+// TripSelectField fetches the trip list on mount from `lib/api/trips` — a
+// different module than the `lib/api` barrel, so a barrel mock never covered it
+// and the request escaped to the network (forgejo#110). An empty list is what a
+// failed request already produced, so the assertions below are unchanged.
+vi.mock("@/lib/api/trips", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/trips")>();
+  return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
+});
+
 const mockFlight: Flight = {
   id: "1",
   userId: "u1",

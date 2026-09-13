@@ -72,6 +72,28 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
   }),
 }));
 
+// The settings page previews the bulk historical refresh and reads the API-key
+// quota as soon as it mounts; both escaped to the network (forgejo#110).
+vi.mock("@/lib/api/flights", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/flights")>();
+  return {
+    ...actual,
+    flightsApi: {
+      ...actual.flightsApi,
+      bulkRefreshPreview: vi
+        .fn()
+        .mockResolvedValue({ hasHistoricalProvider: false, aerodataboxQuota: null, count: 0 }),
+    },
+  };
+});
+vi.mock("@/lib/api/settings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/settings")>();
+  return {
+    ...actual,
+    settingsApi: { ...actual.settingsApi, getApiKeyQuotas: vi.fn().mockResolvedValue({}) },
+  };
+});
+
 // `t` echoes the key, so the Devices nav entry reads "settings:devices.title".
 const DEVICES_LABEL = "settings:devices.title";
 
