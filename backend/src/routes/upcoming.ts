@@ -155,12 +155,25 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   // `checkIn >= now` filter dropped a stay checking in TODAY the moment
   // midnight passed — the exact stay the banner is most useful for. The JS
   // filter below then applies the time-refined instant.
-  const startOfToday = new Date();
-  startOfToday.setUTCHours(0, 0, 0, 0);
+  //
+  // And one day EARLIER than that, because the stored `checkIn` is a day in the
+  // hotel's calendar while this filter counts in UTC, and the conversion only
+  // happens below (AUD-099). A Los Angeles hotel with a check-in stored on the
+  // 1st at 22:30 local begins at 05:30 UTC on the 2nd — so at 02:00 UTC on the
+  // 2nd it is still three and a half hours away, and a filter starting at that
+  // day's UTC midnight had already dropped it. One day covers every zone: the
+  // extremes are UTC-12 and UTC+14, and the eastern side needs no margin
+  // because a later stored day sorts in anyway.
+  const windowStart = new Date();
+  windowStart.setUTCHours(0, 0, 0, 0);
+  windowStart.setUTCDate(windowStart.getUTCDate() - 1);
   const stays = await prisma.lodgingStay.findMany({
-    where: { userId, status: { not: "cancelled" }, checkIn: { gte: startOfToday } },
+    where: { userId, status: { not: "cancelled" }, checkIn: { gte: windowStart } },
     orderBy: [{ checkIn: "asc" }, { id: "asc" }],
-    take: 5,
+    // The bound is on CANDIDATES, and the instant filter below discards some of
+    // them, so it has to be wider than the one row this function returns —
+    // a day of already-started stays must not crowd out the next real one.
+    take: 20,
     select: {
       id: true,
       checkIn: true,

@@ -381,6 +381,38 @@ describe("GET /api/v1/upcoming", () => {
       expect(stay.startsAt).not.toBe(new Date(anchor.getTime() + 22.5 * 3_600_000).toISOString());
     });
 
+    // AUD-099: the database filter counts in UTC while `checkIn` is a day in the
+    // HOTEL's calendar, and the conversion happens after it. West of Greenwich
+    // those disagree: a Honolulu check-in stored on the 1st at 22:30 local is
+    // 08:30 UTC on the 2nd, so at 02:00 UTC on the 2nd it is still six hours
+    // away — and the filter had already dropped it with the previous day.
+    //
+    // The clock has to be frozen, because the case only exists while the UTC
+    // day is younger than the offset. Only Date is faked; the timers stay real,
+    // or the awaited database calls never resolve.
+    it("still shows a stay whose stored day is yesterday in UTC but is hours away locally", async () => {
+      await enableDomains(["lodging"]);
+      jest.useFakeTimers({
+        doNotFake: ["setTimeout", "setInterval", "setImmediate", "nextTick", "queueMicrotask"],
+      });
+      try {
+        jest.setSystemTime(new Date("2026-06-02T02:00:00.000Z"));
+        // Honolulu is UTC-10 all year — no daylight saving to date the test.
+        await createStay(new Date("2026-06-01T00:00:00.000Z"), "22:30", {
+          lat: 21.3099,
+          lon: -157.8581,
+        });
+
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+        const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+        expect(stay).toBeDefined();
+        expect(stay.startsAt).toBe("2026-06-02T08:30:00.000Z");
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     // #314: the strip linked to the domain's LIST, so the line naming your
     // next hotel dropped you on the hotel list. A stay has no page of its own,
     // so its target is the LODGING — which is why `detailId` exists next to
