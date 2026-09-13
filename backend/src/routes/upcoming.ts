@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { getCachedAirports } from "../services/airportCache";
 import { airportDisplayName } from "../utils/airportDisplay";
+import { stayStartsAt } from "../utils/stayInstant";
 import type { DomainKey } from "../shared/domains";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
@@ -149,21 +150,6 @@ async function nextCruise(userId: string): Promise<UpcomingEntry | null> {
   };
 }
 
-/**
- * A stay's `checkIn` is a UTC-pinned midnight day anchor; the optional
- * `checkInTime` ("HH:mm") refines WHEN on that day the stay actually
- * starts. Combining them here keeps every other reader on the pure day
- * (FX, nights, status) while the countdown stops claiming a 15:00 check-in
- * happens at midnight (#dev-talk 2026-08-18). The combined instant follows
- * the same convention as the anchor itself (wall clock read as UTC) — a
- * lodging has no timezone field, so this is as honest as the data gets.
- */
-function stayStartsAt(checkIn: Date, checkInTime: string | null): Date {
-  if (!checkInTime) return checkIn;
-  const [h, m] = checkInTime.split(":").map(Number);
-  return new Date(checkIn.getTime() + (h * 60 + m) * 60_000);
-}
-
 async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   // Query from the START of the current UTC day, not from `now`: the old
   // `checkIn >= now` filter dropped a stay checking in TODAY the moment
@@ -181,14 +167,24 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
       checkInTime: true,
       tripId: true,
       trip: { select: { name: true } },
-      lodging: { select: { id: true, name: true, city: true, country: true } },
+      lodging: {
+        select: { id: true, name: true, city: true, country: true, lat: true, lon: true },
+      },
     },
   });
 
   const now = Date.now();
   const upcoming = stays
     .filter((s): s is (typeof stays)[number] & { checkIn: Date } => s.checkIn !== null)
-    .map((s) => ({ stay: s, instant: stayStartsAt(s.checkIn, s.checkInTime) }))
+    .map((s) => ({
+      stay: s,
+      instant: stayStartsAt({
+        checkIn: s.checkIn,
+        checkInTime: s.checkInTime,
+        lat: s.lodging.lat,
+        lon: s.lodging.lon,
+      }),
+    }))
     .filter((s) => s.instant.getTime() >= now)
     .sort((a, b) => a.instant.getTime() - b.instant.getTime())[0];
   if (!upcoming) return null;

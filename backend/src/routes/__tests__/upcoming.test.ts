@@ -324,9 +324,13 @@ describe("GET /api/v1/upcoming", () => {
       return d;
     };
 
-    const createStay = async (checkIn: Date, checkInTime: string | null): Promise<string> => {
+    const createStay = async (
+      checkIn: Date,
+      checkInTime: string | null,
+      where: { lat: number; lon: number } | null = null
+    ): Promise<string> => {
       const lodging = await prisma.lodging.create({
-        data: { userId, name: "B&B Test Adlershof" },
+        data: { userId, name: "B&B Test Adlershof", ...(where ?? {}) },
       });
       await prisma.lodgingStay.create({
         data: {
@@ -355,6 +359,26 @@ describe("GET /api/v1/upcoming", () => {
       const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
       expect(stay).toBeDefined();
       expect(stay.startsAt).toBe(new Date(dayAnchor(2).getTime() + 15 * 3_600_000).toISOString());
+    });
+
+    // #331: the combined instant read the wall clock AS UTC, so a 22:30
+    // check-in was counted down to 22:30Z. In Berlin that is 00:30 the next
+    // morning and the banner said "in 1 hour" for a stay beginning in three.
+    // Tokyo is used here because it holds UTC+9 all year, which makes the
+    // expectation a constant rather than something this test has to re-derive
+    // with the same helper it is checking.
+    it("reads the check-in time on the hotel's own clock, not as UTC", async () => {
+      await enableDomains(["lodging"]);
+      const anchor = dayAnchor(2);
+      await createStay(anchor, "22:30", { lat: 35.6762, lon: 139.6503 });
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay).toBeDefined();
+      // 22:30 in Tokyo is 13:30 UTC on the same day.
+      expect(stay.startsAt).toBe(new Date(anchor.getTime() + 13.5 * 3_600_000).toISOString());
+      expect(stay.startsAt).not.toBe(new Date(anchor.getTime() + 22.5 * 3_600_000).toISOString());
     });
 
     // #314: the strip linked to the domain's LIST, so the line naming your
