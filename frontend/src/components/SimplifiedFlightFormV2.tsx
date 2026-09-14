@@ -197,7 +197,15 @@ export default function SimplifiedFlightFormV2({
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t">
+          {/*
+            `flex-wrap` is load-bearing, not decoration. Three buttons with
+            German labels in one unwrapping row are wider than a 320px screen:
+            measured at that width, "Abbrechen" ran from x = -69 to x = 42, so
+            half its label sat outside the dialog and the scroll container
+            refused to reach it (AUD-103). Wrapping is the shared Modal's own
+            answer to the same problem — see its footer.
+          */}
+          <div className="flex flex-wrap gap-3 justify-end pt-4 border-t">
             <button
               type="button"
               onClick={onCancel}
