@@ -47,8 +47,10 @@ const updatePendingUpdateSchema = z.object({
     depIcao: z.string().optional(),
     arrIata: z.string().optional(),
     arrIcao: z.string().optional(),
-    departureTime: z.string().optional(),
-    arrivalTime: z.string().optional(),
+    // Real timestamps, not "any string". These are applied straight onto the
+    // flight, so an unparseable value became a stored `Invalid Date` (AUD-093).
+    departureTime: z.string().datetime({ offset: true }).optional(),
+    arrivalTime: z.string().datetime({ offset: true }).optional(),
   }).optional(),
 });
 

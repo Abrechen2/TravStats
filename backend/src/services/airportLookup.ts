@@ -1,4 +1,5 @@
 import { find as findTimezone } from "geo-tz";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getCachedAirport, invalidateAirportCache, compareAirportAuthority } from "./airportCache";
@@ -93,6 +94,23 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 /**
+ * The stored airport for a code, or null.
+ *
+ * Prefers the active airport when a closed predecessor shares the same
+ * IATA/ICAO (Munich Airport vs. Munich-Riem, both EDDM/MUC), and a real ICAO
+ * over a synthetic US-#### placeholder — see `compareAirportAuthority`.
+ *
+ * A function rather than inline code because the create path has to repeat
+ * this read after losing a race, and the two must pick the same row.
+ */
+async function readStoredAirport(upperCode: string): Promise<AirportData | null> {
+  const candidates = await prisma.airport.findMany({
+    where: { OR: [{ iata: upperCode }, { icao: upperCode }] },
+  });
+  return [...candidates].sort(compareAirportAuthority)[0] ?? null;
+}
+
+/**
  * Sucht einen Flughafen in der lokalen DB oder lädt ihn von externen Quellen
  */
 export async function findOrCreateAirport(code: string): Promise<AirportData | null> {
@@ -106,17 +124,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
 
   // 2. If not in cache, check database (cache will be populated by getCachedAirport if found)
   // This handles the case where cache returned null but airport might exist
-  // Prefer the active airport when a closed predecessor shares the same
-  // IATA/ICAO (e.g. Munich Airport vs. Munich-Riem, both EDDM/MUC).
-  const candidates = await prisma.airport.findMany({
-    where: {
-      OR: [{ iata: upperCode }, { icao: upperCode }],
-    },
-  });
-  // Prefer the authoritative airport on a code collision: active over closed,
-  // and a real ICAO over a synthetic US-#### placeholder (see
-  // compareAirportAuthority).
-  const existingAirport = [...candidates].sort(compareAirportAuthority)[0] ?? null;
+  const existingAirport = await readStoredAirport(upperCode);
 
   if (existingAirport) {
     return existingAirport;
@@ -145,19 +153,41 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
     context: { code, airportName: externalData.name, timezone: derivedTimezone },
   });
 
-  const newAirport = await prisma.airport.create({
-    data: {
-      iata: externalData.iata || null,
-      icao: externalData.icao || null,
-      name: externalData.name,
-      city: externalData.city || null,
-      country: externalData.country || null,
-      lat: externalData.lat,
-      lon: externalData.lon,
-      altitude: externalData.altitude || null,
-      timezone: derivedTimezone,
-    },
-  });
+  // The check above and this create are not atomic, and an import resolves its
+  // airports concurrently — so two requests for the SAME unseen code both find
+  // nothing and both insert. `(iata, isClosed)` and `(icao, isClosed)` are
+  // unique, so the loser used to get P2002 and fail a perfectly valid import
+  // (AUD-091). A lost race is not an error: the row it wanted now exists, so
+  // it is read and returned. Read through the same helper as the first check,
+  // or the two could disagree about which row wins a code collision.
+  let newAirport: AirportData;
+  try {
+    newAirport = await prisma.airport.create({
+      data: {
+        iata: externalData.iata || null,
+        icao: externalData.icao || null,
+        name: externalData.name,
+        city: externalData.city || null,
+        country: externalData.country || null,
+        lat: externalData.lat,
+        lon: externalData.lon,
+        altitude: externalData.altitude || null,
+        timezone: derivedTimezone,
+      },
+    });
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      throw error;
+    }
+    const raced = await readStoredAirport(upperCode);
+    if (!raced) throw error;
+    logger.info({
+      operation: "airport_lookup_race_resolved",
+      message: `Another request stored ${upperCode} first; using that row`,
+      context: { code: upperCode, airportName: raced.name },
+    });
+    return raced;
+  }
 
   // Invalidate cache so new airport is cached on next lookup
   if (newAirport.iata) {
