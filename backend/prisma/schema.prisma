@@ -1772,6 +1772,11 @@ model Lodging {
   isoCountryCode String?  @map("iso_country_code")
   lat            Float?
   lon            Float?
+  /// When the coordinate backfill last TRIED this row, successful or not.
+  /// Ordering the batch by it gives every row a turn: ordering by `createdAt`
+  /// handed the same oldest 500 unresolvable rows to the geocoder on every
+  /// run, so a hotel added afterwards was never reached at all (AUD-070).
+  geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
   stars          Int? // official 1–5
   amenities      String[] @default([])
   notes          String?
