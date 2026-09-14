@@ -42,10 +42,14 @@ Two consequences worth writing down, because they are easy to lose:
 | | |
 |---|---|
 | Findings AUD-061–103 | 43 |
-| Already fixed | 2 — AUD-099 (`4ce79654`), AUD-097 (`26411c06`) |
-| **Open** | **41** — 2×P1, 34×P2, 5×P3 |
+| Fixed | 4 — AUD-099 `4ce79654`, AUD-097 `26411c06`, AUD-087 `2c218f45`, AUD-069 `910266c1` |
+| **Open** | **39** — 0×P1, 34×P2, 5×P3 |
 | Partially fixed, from the earlier round | AUD-050, AUD-056, AUD-057 |
 | Deliberately deferred by the owner | AUD-009, AUD-010 |
+
+**Every P1 is closed.** What remains is P2 and P3 — wrong numbers, lost data on
+an edge, accessibility, and tests that assert less than they claim. None of it
+is an availability or credential risk any more.
 
 ## Work blocks
 
@@ -54,9 +58,9 @@ not by number.
 
 | # | Block | Findings | State |
 |---|---|---|---|
-| A | Dependencies + supply chain | AUD-097 | **multer done**; majors open (see below) |
-| B | Backup / restore | AUD-069 (P1) | open |
-| C | Integration credentials | AUD-087 (P1), 100, 101, 102 | open — AUD-087 analysed, fix designed |
+| A | Dependencies + supply chain | AUD-097 | **done** on `chore/deps-2026-09-14`; majors open (see below) |
+| B | Backup / restore | AUD-069 (P1) | **done** `910266c1` |
+| C | Integration credentials | AUD-087 (P1), 100, 101, 102 | AUD-087 + CAMP-01 **done** `2c218f45`; 100/101/102 open |
 | D | Geocoding and place resolution | AUD-061–064, 068, 070, 071 | open |
 | E | Currency and FX | AUD-065, 066, 067 | open |
 | F | POI | AUD-072–076 | open |
