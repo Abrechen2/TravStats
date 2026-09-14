@@ -160,6 +160,8 @@ brand-smoke-shots/
 # Playwright test artifacts (never commit)
 /playwright-report/
 /test-results/
+# The signed-in session the E2E setup project writes.
+/e2e/.auth/
 
 # Private memory archive + backups (owner-local, never committed)
 memory-archive/

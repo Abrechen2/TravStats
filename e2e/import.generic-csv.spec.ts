@@ -47,12 +47,18 @@ test.afterAll(() => {
   }
 });
 
+/**
+ * The session now comes from the `setup` project (AUD-098), so this no longer
+ * signs in — it CONFIRMS that a session exists before the spec relies on one.
+ *
+ * It used to log in itself, which broke the moment the suite gained a shared
+ * session: `/login` redirects away for an authenticated visitor, so the helper
+ * waited thirty seconds for a username field that was never going to render.
+ * Two sign-ins were always one too many; the shared one is the real thing.
+ */
 async function loginAsAdmin(page: import("@playwright/test").Page): Promise<void> {
-  await page.goto("/login");
-  await page.fill("input#username", "admin");
-  await page.fill("input#password", "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(?:dashboard)?$/);
+  await page.goto("/");
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => {
@@ -60,14 +66,24 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   await page.goto("/settings");
   await page.click('button:has-text("Import")');
   // Confirm Import section is shown
-  await expect(page.getByText("From any logbook (CSV)")).toBeVisible();
+  // Both locales — see the note in import.fr24.spec.ts.
+  await expect(
+    page.getByText(/Aus beliebigem Logbuch \(CSV\)|From any logbook \(CSV\)/),
+  ).toBeVisible();
 
   // Upload synthetic CSV — Generic CSV tile label says "Choose CSV file"
-  await page.setInputFiles('label:has-text("Choose CSV file") input[type="file"]', tmpCsvPath);
+  await page.setInputFiles(
+    'label:has-text("CSV-Datei auswählen") input[type="file"], label:has-text("Choose CSV file") input[type="file"]',
+    tmpCsvPath,
+  );
 
   // Column Mapping Wizard must appear
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByText(/Map your CSV columns to TravStats fields/i)).toBeVisible();
+  await expect(
+    page.getByText(
+      /CSV-Spalten auf TravStats-Felder zuordnen|Map your CSV columns to TravStats fields/i,
+    ),
+  ).toBeVisible();
 
   // The wizard renders required fields first: date (nth=0), fromIata (nth=1), toIata (nth=2)
   // Each <select> starts with the "— skip —" option (value="")
@@ -81,14 +97,14 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   await selects.nth(5).selectOption("Kfn");     // flightNumber
 
   // Advance to preview
-  await page.click('button:has-text("Continue")');
+  await page.click('button:has-text("Weiter"), button:has-text("Continue")');
 
   // PreviewModal must appear and show 1 ready row
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByText(/1 ready/)).toBeVisible();
+  await expect(page.getByText(/1 bereit|1 ready/)).toBeVisible();
 
   // Commit
-  await page.click('button:has-text("Import 1 row")');
+  await page.click('button:has-text("1 Zeile importieren"), button:has-text("Import 1 row")');
 
   // Verify the flight is now visible on the dashboard
   await page.goto("/dashboard");

@@ -29,12 +29,18 @@ const FR24_FIXTURE = path.resolve(__dirname, "fixtures/fr24-sample.csv");
 // ---------------------------------------------------------------------------
 // Shared login helper — inlined to keep specs self-contained
 // ---------------------------------------------------------------------------
+/**
+ * The session now comes from the `setup` project (AUD-098), so this no longer
+ * signs in — it CONFIRMS that a session exists before the spec relies on one.
+ *
+ * It used to log in itself, which broke the moment the suite gained a shared
+ * session: `/login` redirects away for an authenticated visitor, so the helper
+ * waited thirty seconds for a username field that was never going to render.
+ * Two sign-ins were always one too many; the shared one is the real thing.
+ */
 async function loginAsAdmin(page: import("@playwright/test").Page): Promise<void> {
-  await page.goto("/login");
-  await page.fill("input#username", "admin");
-  await page.fill("input#password", "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(?:dashboard)?$/);
+  await page.goto("/");
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 // Navigate to Settings → Import section via sidebar button
@@ -43,7 +49,10 @@ async function gotoImportSection(page: import("@playwright/test").Page): Promise
   // The sidebar renders a <button> for each section; "Import" is the EN label
   await page.click('button:has-text("Import")');
   // Wait for at least the FR24 tile heading to confirm we're in the right section
-  await expect(page.getByText("From Flightradar24")).toBeVisible();
+  // Both locales. The config runs de-DE, so an English-only matcher never
+  // found this tile and the case failed on the UI's language rather than on
+  // the importer (AUD-098, "Importtests englische Beschriftungen").
+  await expect(page.getByText(/Von Flightradar24|From Flightradar24/)).toBeVisible();
 }
 
 test.describe("FR24 importer (Settings → Import)", () => {
@@ -53,17 +62,17 @@ test.describe("FR24 importer (Settings → Import)", () => {
 
     // Upload the golden-master CSV fixture via the file input inside the FR24 tile label
     await page.setInputFiles(
-      'label:has-text("Choose FR24 CSV") input[type="file"]',
+      'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
       FR24_FIXTURE,
     );
 
     // Preview modal must appear (role=dialog with aria-labelledby="preview-modal-title")
     await expect(page.getByRole("dialog")).toBeVisible();
     // Golden fixture has 8 data rows → all should be "ready" (no flagged rows)
-    await expect(page.getByText(/8 ready/)).toBeVisible();
+    await expect(page.getByText(/8 bereit|8 ready/)).toBeVisible();
 
     // Commit
-    await page.click('button:has-text("Import 8 rows")');
+    await page.click('button:has-text("8 Zeilen importieren"), button:has-text("Import 8 rows")');
 
     // Navigate to dashboard and verify first flight from fixture is visible
     await page.goto("/dashboard");
@@ -76,21 +85,21 @@ test.describe("FR24 importer (Settings → Import)", () => {
 
     // First upload + commit
     await page.setInputFiles(
-      'label:has-text("Choose FR24 CSV") input[type="file"]',
+      'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
       FR24_FIXTURE,
     );
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.click('button:has-text("Import 8 rows")');
+    await page.click('button:has-text("8 Zeilen importieren"), button:has-text("Import 8 rows")');
 
     // Second upload — same file
     await gotoImportSection(page);
     await page.setInputFiles(
-      'label:has-text("Choose FR24 CSV") input[type="file"]',
+      'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
       FR24_FIXTURE,
     );
     // The preview summary must mention duplicates (exact count may vary depending
     // on prior test state in the DB — just assert the word "duplicates" appears)
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByText(/duplicates/i)).toBeVisible();
+    await expect(page.getByText(/Duplikate|duplicates/i)).toBeVisible();
   });
 });

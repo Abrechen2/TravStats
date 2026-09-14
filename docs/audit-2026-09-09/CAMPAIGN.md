@@ -113,6 +113,25 @@ Same UTC offset, so nothing measured here changed, but it is the wrong zone and
 would diverge the moment either country changed its rules. Catalogue data, not
 application logic.
 
+**CAMP-04 — the import E2E specs only pass on a clean database.**
+Found while closing AUD-098. `import.fr24.spec.ts` uploads a fixed fixture and
+asserts "8 bereit"; on a second run those eight rows are already in the
+database, so they come back as duplicates and the case fails. Its sibling, the
+dedup case, depends on the first one having run. Neither has a cleanup that
+removes what it imported.
+
+The fix is a fixture generated per run — `import.generic-csv.spec.ts` already
+writes a temporary CSV, so the pattern exists next door — or an explicit
+teardown. Not done here: it is a different defect from the one AUD-098 names,
+and merging it into that work would have hidden it.
+
+**Remaining E2E failures after the AUD-098 rewrite**, measured 2026-09-14
+against a live dev stack, 103 cases over three engines: 54 passed, 24 skipped
+with a stated reason, 25 failed — 18 in `dashboard-multi-domain.spec.ts`
+(looking for the retired "Modus" button, which Codex lists separately in the
+same finding), 4 in `import.fr24.spec.ts` and 3 in `import.generic-csv.spec.ts`
+(CAMP-04). The three files the finding is actually about have no failures.
+
 ### Block A detail — dependency majors
 
 Done: multer 2.3.0 → the process-killing upload (AUD-097), plus `npm update`
