@@ -42,8 +42,8 @@ Two consequences worth writing down, because they are easy to lose:
 | | |
 |---|---|
 | Findings AUD-061–103 | 43 |
-| Fixed | 4 — AUD-099 `4ce79654`, AUD-097 `26411c06`, AUD-087 `2c218f45`, AUD-069 `910266c1` |
-| **Open** | **39** — 0×P1, 34×P2, 5×P3 |
+| Fixed | **17** — 069, 077–087, 097, 099, 100–102 |
+| **Open** | **26** — 0×P1, 23×P2, 3×P3 |
 | Partially fixed, from the earlier round | AUD-050, AUD-056, AUD-057 |
 | Deliberately deferred by the owner | AUD-009, AUD-010 |
 
@@ -60,11 +60,11 @@ not by number.
 |---|---|---|---|
 | A | Dependencies + supply chain | AUD-097 | **done** on `chore/deps-2026-09-14`; majors open (see below) |
 | B | Backup / restore | AUD-069 (P1) | **done** `910266c1` |
-| C | Integration credentials | AUD-087 (P1), 100, 101, 102 | AUD-087 + CAMP-01 **done** `2c218f45`; 100/101/102 open |
+| C | Integration credentials | AUD-087 (P1), 100, 101, 102 | **done** — `2c218f45`, `367fb102` |
 | D | Geocoding and place resolution | AUD-061–064, 068, 070, 071 | open |
 | E | Currency and FX | AUD-065, 066, 067 | open |
 | F | POI | AUD-072–076 | open |
-| G | Statistics and time | AUD-077–086 | open |
+| G | Statistics and time | AUD-077–086 | **done** — `e5e07fb0`, `a7ceaa5a`, `f1cbba11`, `2d73d996`, `2ded2aa8` |
 | H | Cruise | AUD-088, 089, 090 | open |
 | I | Import and flight suggestions | AUD-091–096 | open |
 | J | Test truthfulness and mobile UI | AUD-098, 103 | open |
