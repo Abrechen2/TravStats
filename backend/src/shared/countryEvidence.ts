@@ -99,6 +99,7 @@
 
 import { resolveCountryCode } from "./geo/countryCode";
 import { classifyStay, type CountableStay } from "./lodgingCounting";
+import { stayNamesExactDays } from "./lodgingTiming";
 import { isoCountryCode } from "../utils/continents";
 
 /**
@@ -551,10 +552,24 @@ export interface LodgingEvidence {
 
 /** The days a completed stay covers. A stay with no check-in names only the day
  *  it ended: that is what the record says, and stretching it back would invent
- *  nights nobody recorded. */
+ *  nights nobody recorded.
+ *
+ *  A stay whose dates are a MONTH or YEAR placeholder names no days at all.
+ *  Its stored ends span the whole period, so walking them turned a three-night
+ *  stay into 32 days of attested presence in a country (AUD-083). The nights
+ *  are known; which days they fell on is not, and this function's product is
+ *  days. */
 function stayDays(stay: CountableStay, now: Date): string[] {
   const out = isoDay(stay.checkOut);
   if (out === null || (stay.checkOut as Date).getTime() > now.getTime()) return [];
+  if (!stayNamesExactDays({
+    checkIn: stay.checkIn,
+    checkOut: stay.checkOut,
+    datePrecision: stay.datePrecision ?? "DAY",
+    nights: stay.nights ?? null,
+  })) {
+    return [];
+  }
   return daysBetween(isoDay(stay.checkIn) ?? out, out);
 }
 

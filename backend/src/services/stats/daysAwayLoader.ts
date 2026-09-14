@@ -28,6 +28,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { classifyStay } from "../../shared/lodgingCounting";
+import { stayNamesExactDays } from "../../shared/lodgingTiming";
 import { classifyVisit } from "../../shared/placeCounting";
 import { computeDaysAway, type DayWindow, type DaysAway } from "../../utils/stats/daysAway";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
@@ -82,7 +83,16 @@ function spanTouches<TStart extends string, TEnd extends string>(
 ): Record<string, unknown> {
   const { from, to } = windowInstants(window);
   const clauses: Record<string, unknown>[] = [];
-  if (to !== null) clauses.push({ [startCol]: { lt: to } });
+  if (to !== null) {
+    // Mirrors the lower bound below: a span with one end missing is placed by
+    // the end it HAS. Testing the start column alone dropped a stay with a
+    // known check-out and no check-in, because null fails `lt` — so the
+    // unscoped summary counted its day and the same summary for its own year
+    // counted none (AUD-084).
+    clauses.push({
+      OR: [{ [startCol]: { lt: to } }, { [startCol]: null, [endCol]: { lt: to } }],
+    });
+  }
   if (from !== null) {
     clauses.push({
       OR: [{ [endCol]: { gte: from } }, { [endCol]: null, [startCol]: { gte: from } }],
@@ -126,7 +136,9 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
         lodging: { visited: true },
         ...(spanTouches("checkIn", "checkOut", window) as Prisma.LodgingStayWhereInput),
       },
-      select: { checkIn: true, checkOut: true, status: true },
+      // `datePrecision` decides whether this stay can name days at all — a
+      // MONTH placeholder spans a whole month while attesting a few nights.
+      select: { checkIn: true, checkOut: true, status: true, datePrecision: true, nights: true },
     }),
     prisma.placeVisit.findMany({
       where: {
@@ -146,6 +158,11 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
     // is planned and contributes nothing yet.
     lodging: stays
       .filter((s) => classifyStay(s, now) === "visited")
+      // A stay whose dates are a month or year placeholder attests nights but
+      // names no days. Walking it invented 32 exact days of presence from a
+      // three-night stay (AUD-083). Abstention is the result here: the days
+      // are not known, and zero invented ones beats 32 wrong ones.
+      .filter(stayNamesExactDays)
       .map((s) => ({ from: s.checkIn, to: s.checkOut })),
     places: visits
       .filter((v) => classifyVisit(v, now) === "visited")
