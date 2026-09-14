@@ -151,20 +151,80 @@ interface SummaryStats {
   byCategory: Record<string, number>;
 }
 
-function buildWhere(
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The ids of the flights that DEPARTED in `year`, read on the departure
+ * airport's clock.
+ *
+ * A year filter used to compare the stored instant against UTC boundaries,
+ * which is a different question from the one the user asked and a different
+ * one from the answer `/stats/timeseries` gives. Measured both ways
+ * (AUD-077): a Bangkok departure at 01:30 local on 1 January is stored as
+ * 18:30Z on 31 December, so the summary and the year in review reported zero
+ * for that year while the time series correctly reported one; a Los Angeles
+ * departure at 20:30 local on 31 December is stored as 04:30Z on 1 January and
+ * was counted in the wrong year the other way round. `departureClock.ts`
+ * states the rule the rest of the stats already follow: every "when did I fly"
+ * figure is read on the departure airport's clock.
+ *
+ * The window is widened by a day at each edge for the same reason
+ * `fetchFlightDatedRows` widens it — the query can only filter the stored
+ * instant, and the two disagree by up to fourteen hours. The margin rows are
+ * dropped again once their local day is known.
+ *
+ * Returning ids keeps the caller's shape: `computeSummary` runs several
+ * `count` and `groupBy` aggregates off one `where`, and those cannot be
+ * post-filtered in JS without giving up the aggregation.
+ */
+async function flightIdsDepartingInLocalYear(userId: string, year: number): Promise<string[]> {
+  const from = new Date(Date.UTC(year, 0, 1));
+  const to = new Date(Date.UTC(year + 1, 0, 1));
+
+  const rows = await prisma.flight.findMany({
+    where: {
+      userId,
+      departureTime: {
+        gte: new Date(from.getTime() - DAY_MS),
+        lt: new Date(to.getTime() + DAY_MS),
+      },
+    },
+    select: {
+      id: true,
+      depIata: true,
+      depIcao: true,
+      arrIata: true,
+      arrIcao: true,
+      departureTime: true,
+      depTimeSemantics: true,
+    },
+  });
+
+  const withClock = await withDepartureClock(rows);
+  return withClock
+    .filter(
+      (f) =>
+        f.departureTime !== null &&
+        localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year === year,
+    )
+    .map((f) => f.id);
+}
+
+async function buildWhere(
   userId: string,
   fromDate: string | undefined,
   toDate: string | undefined,
   filterYear?: number,
-): Prisma.FlightWhereInput {
+): Promise<Prisma.FlightWhereInput> {
   const where: Prisma.FlightWhereInput = { userId };
 
   if (filterYear !== undefined) {
-    where.departureTime = {
-      gte: new Date(Date.UTC(filterYear, 0, 1)),
-      lt: new Date(Date.UTC(filterYear + 1, 0, 1)),
-    };
+    where.id = { in: await flightIdsDepartingInLocalYear(userId, filterYear) };
   } else if (fromDate || toDate) {
+    // NOTE: an explicit from/to range still compares the stored instant, so it
+    // carries the same edge as the year filter did. Not changed here because
+    // it was not the reported case and the range is user-supplied rather than
+    // a calendar year — worth settling deliberately rather than in passing.
     where.departureTime = {};
     if (fromDate) {
       (where.departureTime as Prisma.DateTimeFilter).gte = new Date(fromDate);
@@ -391,7 +451,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
     const summarize = async (scopeYear: number | undefined) => ({
-      ...(await computeSummary(buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
+      ...(await computeSummary(await buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
       daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
     });
     if (year !== undefined && compareYear !== undefined) {
@@ -432,7 +492,7 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     const baseCurrency = await getBaseCurrency(userId);
 
     const [summary, passport, flights] = await Promise.all([
-      computeSummary(buildWhere(userId, undefined, undefined), baseCurrency),
+      buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
       loadPassport(userId),
       prisma.flight.findMany({
         where: flightsWhere,
@@ -1244,12 +1304,15 @@ router.get(
           where: { userId, ...countableFlightWhere() },
           select: {
             depIata: true,
+            depIcao: true,
             depLat: true,
             depLon: true,
             arrIata: true,
+            arrIcao: true,
             arrLat: true,
             arrLon: true,
             departureTime: true,
+            depTimeSemantics: true,
             airline: true,
             flightNumber: true,
             status: true,
@@ -1264,12 +1327,23 @@ router.get(
         loadPassport(userId),
       ]);
 
+      // Which YEAR a flight belongs to is read on the departure airport's
+      // clock, not on the stored instant — the rule `departureClock.ts` states
+      // and `/stats/timeseries` already follows. Resolved here, at the load,
+      // so `buildWrapped` stays a pure function over rows that carry their own
+      // answer rather than resolving timezones itself (AUD-077).
+      const flightsWithClock = await withDepartureClock(flights);
+
       const wrapped = buildWrapped(
         // Great-circle from the coordinates, the same measure
         // `/stats/timeseries` buckets — so the year's distance agrees with the
         // year's bar on the trend chart.
-        flights.map((f) => ({
+        flightsWithClock.map((f) => ({
           ...f,
+          departureYear:
+            f.departureTime === null
+              ? null
+              : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
           distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
         })),
         cruises,
