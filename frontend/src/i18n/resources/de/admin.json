@@ -565,7 +565,13 @@
     },
     "actions": {
       "download": "Download",
-      "restore": "Wiederherstellen"
+      "restore": "Wiederherstellen",
+      "upload": "Hochladen",
+      "uploading": "Lädt hoch..."
+    },
+    "cloud": {
+      "syncedAt": "Hochgeladen am {{date}}",
+      "failed": "Fehlgeschlagen"
     },
     "restore": {
       "title": "Backup wiederherstellen",
@@ -598,7 +604,9 @@
       "restoring": "Backup wird wiederhergestellt",
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
-      "deleteFailed": "Fehler beim Löschen des Backups"
+      "deleteFailed": "Fehler beim Löschen des Backups",
+      "synced": "Backup hochgeladen",
+      "syncFailed": "Hochladen des Backups fehlgeschlagen"
     }
   },
   "feedback": {

@@ -260,6 +260,126 @@ describe("cloudSyncService", () => {
       await expect(syncToCloud("backup-1")).rejects.toThrow(/Insufficient Storage/);
       expect(mockBackupUpdate).not.toHaveBeenCalled();
     });
+
+    it("clears a previous failure reason once an upload succeeds", async () => {
+      const { syncToCloud } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue({
+        ...MOCK_BACKUP,
+        cloudSyncError: "507 Insufficient Storage",
+      });
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(Buffer.from("data"));
+      mockClient.createDirectory.mockResolvedValue(undefined);
+      mockClient.putFileContents.mockResolvedValue(true);
+      mockBackupUpdate.mockResolvedValue(undefined);
+
+      await syncToCloud("backup-1");
+
+      // A red explanation next to a green tick is worse than no explanation.
+      expect(mockBackupUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ syncedToCloud: true, cloudSyncError: null }),
+        }),
+      );
+    });
+  });
+
+  // The wrapper `createBackup` calls. Its whole job is to be safe to call
+  // unconditionally: silent when nobody asked for WebDAV, loud in the row when
+  // somebody did and it did not work, and never fatal to the backup itself.
+  describe("syncToCloudIfEnabled", () => {
+    it("does nothing at all when WebDAV sync is switched off", async () => {
+      const { syncToCloudIfEnabled } = await loadModule(false);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+
+      await expect(syncToCloudIfEnabled("backup-1")).resolves.toBeUndefined();
+
+      // Not an upload, and — the point — not an error written to the row
+      // either. Most instances never configure WebDAV; for them this is not
+      // a failure, it is a feature they did not switch on.
+      expect(mockCreateClient).not.toHaveBeenCalled();
+      expect(mockBackupUpdate).not.toHaveBeenCalled();
+    });
+
+    it("uploads when it is switched on", async () => {
+      const { syncToCloudIfEnabled } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(Buffer.from("data"));
+      mockClient.createDirectory.mockResolvedValue(undefined);
+      mockClient.putFileContents.mockResolvedValue(true);
+      mockBackupUpdate.mockResolvedValue(undefined);
+
+      await syncToCloudIfEnabled("backup-1");
+
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+    });
+
+    it("records why a failed upload failed, and does not throw", async () => {
+      const { syncToCloudIfEnabled } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(Buffer.from("data"));
+      mockClient.createDirectory.mockResolvedValue(undefined);
+      mockClient.putFileContents.mockRejectedValue(new Error("507 Insufficient Storage"));
+      mockBackupUpdate.mockResolvedValue(undefined);
+
+      // Not throwing is the contract: the archive is on local disk and is a
+      // real backup. An upload that fails afterwards must not turn a good
+      // backup into a failed one.
+      await expect(syncToCloudIfEnabled("backup-1")).resolves.toBeUndefined();
+
+      expect(mockBackupUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "backup-1" },
+          data: expect.objectContaining({
+            cloudSyncError: expect.stringContaining("Insufficient Storage"),
+          }),
+        }),
+      );
+      // The status is untouched — no `status: 'failed'` anywhere in that call.
+      const [{ data }] = mockBackupUpdate.mock.calls[0] as [{ data: Record<string, unknown> }];
+      expect(data).not.toHaveProperty("status");
+    });
+
+    it("records 'not configured' when the box is ticked but a field is empty", async () => {
+      // Deliberately NOT treated as "switched off": someone who enabled sync
+      // and left the URL blank meant to sync, and this sentence beside their
+      // backup is what tells them why it did not happen.
+      const { syncToCloudIfEnabled } = await loadModule(false);
+      process.env.WEBDAV_SYNC_ENABLED = "true";
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockBackupUpdate.mockResolvedValue(undefined);
+
+      await expect(syncToCloudIfEnabled("backup-1")).resolves.toBeUndefined();
+
+      expect(mockBackupUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            cloudSyncError: expect.stringMatching(/not configured/i),
+          }),
+        }),
+      );
+    });
+
+    it("truncates a share that answers with a whole document", async () => {
+      const { syncToCloudIfEnabled } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(Buffer.from("data"));
+      mockClient.createDirectory.mockResolvedValue(undefined);
+      mockClient.putFileContents.mockRejectedValue(new Error("x".repeat(5000)));
+      mockBackupUpdate.mockResolvedValue(undefined);
+
+      await syncToCloudIfEnabled("backup-1");
+
+      const [{ data }] = mockBackupUpdate.mock.calls[0] as [
+        { data: { cloudSyncError: string } },
+      ];
+      expect(data.cloudSyncError.length).toBeLessThanOrEqual(500);
+    });
   });
 
   describe("listCloudBackups", () => {
