@@ -95,6 +95,24 @@ instead of "The server URL is not valid" — which is exactly the distinction
 send the user debugging their server version". Fixed together with AUD-087,
 since it is the same contract in the same handler.
 
+**CAMP-02 — the backend typecheck does not cover tests.**
+`backend/tsconfig.json` has `"exclude": ["node_modules", "dist", "**/*.test.ts"]`,
+so `npx tsc --noEmit` — the first line of the Build Checks gate in `CLAUDE.md`
+— never type-checks a test file. Measured 2026-09-14: adding two required
+fields to `AccountFlight` left every existing fixture in
+`travelAccount.test.ts` missing them, and both the typecheck and the suite
+stayed green. A test can therefore pass while asserting against a shape the
+product no longer has.
+
+Not fixed here: turning it on will surface an unknown number of existing
+errors, and that is a ratchet-sized job rather than a line in a bug-fix commit.
+It belongs on the "Practised, not enforced" list until then.
+
+**CAMP-03 — BKK carries the timezone `Asia/Jakarta` in the airport catalogue.**
+Same UTC offset, so nothing measured here changed, but it is the wrong zone and
+would diverge the moment either country changed its rules. Catalogue data, not
+application logic.
+
 ### Block A detail — dependency majors
 
 Done: multer 2.3.0 → the process-killing upload (AUD-097), plus `npm update`
