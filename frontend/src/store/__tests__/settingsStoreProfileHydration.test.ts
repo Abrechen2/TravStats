@@ -29,6 +29,14 @@ function signedInAs(username: string) {
 describe("settingsStore.loadRemoteSettings — profile across accounts", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // `loadRemoteSettings` fetches the birthdate first, and that call was left
+    // unmocked: it went out as a real request, came back 401, and the axios
+    // interceptor logged the user out. `useAuthStore.getState().user` was
+    // therefore null by the time the merge ran, so `userChanged` was false in
+    // every case here — the very condition these tests exist to exercise. The
+    // two positive cases passed on that, and the negative one failed as soon
+    // as a case before it had left a profile behind.
+    vi.spyOn(settingsApi, "getProfile").mockResolvedValue({ birthdate: null } as never);
   });
 
   it("keeps the e-mail the server sent for the account now logged in", async () => {
