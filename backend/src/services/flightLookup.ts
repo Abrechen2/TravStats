@@ -12,10 +12,11 @@
  * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
+import { createHash } from 'crypto';
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
-import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import { getApiKey, getOpenSkyCredentials, OpenSkyCredentials } from './apiKeyResolver';
 import { lookupFlightAerodatabox } from './aerodataboxLookup';
 import {
   convertAviationstackTimeToUtc,
@@ -136,8 +137,25 @@ const RECENT_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes for recent/future flight
 const MAX_CACHE_KEYS = 500;
 const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACHE_KEYS, checkperiod: 600 });
 
-// OpenSky token cache
-let openSkyTokenCache: { token: string; expiresAt: number } | null = null;
+/**
+ * OpenSky OAuth tokens, keyed by the credential that minted them.
+ *
+ * This used to be a single process-wide slot. A token is bound to ONE OpenSky
+ * account, so the first caller's token was then handed to every other user:
+ * their lookups ran against a stranger's account and burned that account's
+ * quota, and a credential change was ignored until the old token expired
+ * (AUD-102).
+ *
+ * The key is a hash, not the credential — a cache key ends up in heap dumps and
+ * debugger views, and a client secret has no business in either. The secret is
+ * part of the hash so that rotating it invalidates the entry rather than
+ * silently reusing a token minted with the old one.
+ */
+const openSkyTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+function openSkyTokenKey(clientId: string, clientSecret: string): string {
+  return createHash("sha256").update(`${clientId.length}:${clientId}:${clientSecret}`).digest("hex");
+}
 
 /**
  * Tag an AirLabs `*_utc` value as UTC.
@@ -369,17 +387,16 @@ export interface FlightLookupResult {
 /**
  * Resolve OpenSky auth headers (prefers OAuth2 client credentials, falls back to basic)
  */
-async function getOpenSkyAuthHeaders(opts: {
-  clientId?: string;
-  clientSecret?: string;
-  user?: string;
-  pass?: string;
-}): Promise<Record<string, string> | null> {
+async function getOpenSkyAuthHeaders(
+  opts: OpenSkyCredentials,
+): Promise<Record<string, string> | null> {
   // OAuth2 client credentials
   if (opts.clientId && opts.clientSecret) {
     const now = Date.now();
-    if (openSkyTokenCache && openSkyTokenCache.expiresAt > now + 30_000) {
-      return { Authorization: `Bearer ${openSkyTokenCache.token}` };
+    const cacheKey = openSkyTokenKey(opts.clientId, opts.clientSecret);
+    const cached = openSkyTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > now + 30_000) {
+      return { Authorization: `Bearer ${cached.token}` };
     }
 
     try {
@@ -402,7 +419,7 @@ async function getOpenSkyAuthHeaders(opts: {
       const expiresIn = response.data?.expires_in as number | undefined;
       if (token) {
         const ttl = expiresIn ? expiresIn * 1000 : 30 * 60 * 1000; // default 30min
-        openSkyTokenCache = { token, expiresAt: Date.now() + ttl };
+        openSkyTokenCache.set(cacheKey, { token, expiresAt: Date.now() + ttl });
         return { Authorization: `Bearer ${token}` };
       }
     } catch (err) {
@@ -411,9 +428,14 @@ async function getOpenSkyAuthHeaders(opts: {
     }
   }
 
-  // Basic auth fallback
-  if (opts.user && opts.pass) {
-    const pair = `${opts.user}:${opts.pass}`;
+  // Basic auth fallback. The field names are `username`/`password` because that
+  // is what `getOpenSkyCredentials` returns; this used to read `user`/`pass`,
+  // which are never set, so a fully configured basic credential produced no
+  // header and the lookup returned null without ever calling OpenSky
+  // (AUD-101). Typing the parameter as `OpenSkyCredentials` is the actual fix:
+  // an all-optional inline literal let the mismatch compile.
+  if (opts.username && opts.password) {
+    const pair = `${opts.username}:${opts.password}`;
     const b64 = Buffer.from(pair).toString('base64');
     return { Authorization: `Basic ${b64}` };
   }
@@ -709,7 +731,11 @@ export async function lookupFlightDetails(
   logger.info({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
     `Falling back to AirLabs for ${trimmedNumber}`);
   const fallbackDate = date ? new Date(date) : undefined;
-  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate);
+  // `userId` is not optional decoration here: `lookupFlightByNumber` resolves
+  // its own key with `getApiKey('airlabs', userId)`, so dropping it silently
+  // demotes a user's personal key to the global one — or, where only a personal
+  // key exists, to no key at all and a null result (AUD-100).
+  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId);
 
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
