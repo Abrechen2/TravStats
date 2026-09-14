@@ -2149,8 +2149,16 @@ router.get(
         res.status(400).json({ error: 'Invalid registration' });
         return;
       }
+      // The ranking that leads here already counts with the shared filter
+      // (`countableFlightWhere` a few hundred lines up). This query did not, so
+      // walking from the list into the detail grew the flight count and the
+      // distance without a single further flight actually having been flown —
+      // a cancelled leg and a 2099 booking were being added to "already flown"
+      // figures, and the page has no status column to reveal it (AUD-078).
+      // Parity with the ranking is the whole point: same population, same
+      // numbers.
       const flights = await prisma.flight.findMany({
-        where: { userId, aircraftRegistration: registration },
+        where: { userId, ...countableFlightWhere(), aircraftRegistration: registration },
         orderBy: { departureTime: 'desc' },
       });
 

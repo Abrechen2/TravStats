@@ -38,6 +38,19 @@ describe("computePunctuality (#2)", () => {
     expect(r.onTimeRate).toBeCloseTo(0.67, 2);
   });
 
+  // AUD-081. The grace band is a boundary, and the existing case above sits
+  // five minutes clear of it — so the one value where the rule could be read
+  // two ways was the one never asserted. The label says "< 15 min"; exactly 15
+  // is late.
+  it.each([
+    [ON_TIME_GRACE_MINUTES - 1, 1],
+    [ON_TIME_GRACE_MINUTES, 0],
+    [ON_TIME_GRACE_MINUTES + 1, 0],
+  ])("treats a %i-minute delay as on-time rate %i", (delayMinutes, expected) => {
+    const r = computePunctuality([f({ delayMinutes })]);
+    expect(r.onTimeRate).toBe(expected);
+  });
+
   it("ranks best and worst airline, ignoring groups under the sample floor", () => {
     const rows = [
       ...Array.from({ length: MIN_GROUP_SAMPLE }, () => f({ airlineIata: "LH", delayMinutes: 5 })),
