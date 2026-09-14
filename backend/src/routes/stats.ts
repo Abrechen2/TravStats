@@ -31,7 +31,7 @@ import {
   emptyDurationTotals,
 } from '../shared/flightDuration';
 import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
-import { withDepartureClock } from '../services/stats/departureClock';
+import { airportCalendarDay, buildTzMap, withDepartureClock } from '../services/stats/departureClock';
 import { loadPassport } from '../services/stats/passportLoader';
 import { loadDaysAway } from '../services/stats/daysAwayLoader';
 import { loadCountryDetail } from '../services/stats/countryDetailLoader';
@@ -2371,7 +2371,19 @@ router.get(
         }),
         prisma.flight.findMany({
           where: { userId },
-          select: { status: true, departureTime: true, arrivalTime: true },
+          select: {
+            status: true,
+            departureTime: true,
+            arrivalTime: true,
+            // Needed to decide whether a flight took a NIGHT, which is a
+            // question about the clocks at either end rather than about UTC.
+            depIata: true,
+            depIcao: true,
+            arrIata: true,
+            arrIcao: true,
+            depTimeSemantics: true,
+            arrTimeSemantics: true,
+          },
         }),
         prisma.trip.findMany({
           where: { userId },
@@ -2412,8 +2424,24 @@ router.get(
                 status: true,
                 departureTime: true,
                 arrivalTime: true,
+                // The full cost shape `flightCostShare` needs: a flight's own
+                // cost is price PLUS taxes and fees, and a booking shared by
+                // several segments is counted once (AUD-080).
                 price: true,
+                taxes: true,
+                fees: true,
                 currency: true,
+                priceBase: true,
+                fxBaseCurrency: true,
+                bookingId: true,
+                booking: {
+                  select: {
+                    price: true,
+                    currency: true,
+                    priceBase: true,
+                    fxBaseCurrency: true,
+                  },
+                },
               },
             },
           },
@@ -2421,7 +2449,27 @@ router.get(
       ]);
 
       const now = new Date();
-      const account = buildTravelAccount({ stays, cruises, flights, now });
+
+      // Resolve both ends' calendar days here, at the load, so the account
+      // stays a pure function over rows that carry their own answer (AUD-079).
+      const tzMap = await buildTzMap(flights);
+      const flightsWithLocalDays = flights.map((f) => {
+        const depTz = (f.depIata ? tzMap.get(f.depIata) : undefined) ?? (f.depIcao ? tzMap.get(f.depIcao) : undefined) ?? null;
+        const arrTz = (f.arrIata ? tzMap.get(f.arrIata) : undefined) ?? (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ?? null;
+        return {
+          ...f,
+          depLocalDay:
+            f.departureTime && depTz
+              ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
+              : null,
+          arrLocalDay:
+            f.arrivalTime && arrTz
+              ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
+              : null,
+        };
+      });
+
+      const account = buildTravelAccount({ stays, cruises, flights: flightsWithLocalDays, now });
       const tripAccount = buildTripAccount(
         trips.map((t) => ({
           id: t.id,

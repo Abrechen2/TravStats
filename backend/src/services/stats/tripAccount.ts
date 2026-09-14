@@ -12,6 +12,7 @@
  * get the same snapshot treatment, "1.240 EUR + 320 CHF" is the honest answer
  * and one number would be a fabricated one.
  */
+import { flightCostShare, type CostFlight } from "../../utils/stats/dedupedCost";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -38,13 +39,17 @@ export interface TripAccountInput {
     fxBaseCurrency: string | null;
   }[];
   cruises: { status: string; startDate: Date | null; endDate: Date | null; price: number | null; currency: string | null }[];
-  flights: {
+  /**
+   * Costs follow `flightCostShare`: price PLUS taxes and fees, and a booking
+   * shared by several segments counted once. This used to read `price` alone,
+   * so two segments on one 300 EUR booking contributed nothing at all and a
+   * 100 + 20 + 10 flight was reported as 100 (AUD-080).
+   */
+  flights: (CostFlight & {
     status: string;
     departureTime: Date | null;
     arrivalTime: Date | null;
-    price: number | null;
-    currency: string | null;
-  }[];
+  })[];
 }
 
 export interface TripAccountRow {
@@ -86,8 +91,15 @@ function dayKey(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-function addAmount(into: Record<string, number>, currency: string | null, amount: number | null): void {
-  if (currency === null || amount === null) return;
+function addAmount(
+  into: Record<string, number>,
+  currency: string | null | undefined,
+  amount: number | null | undefined,
+): void {
+  // Nullish, not just null: a row that simply does not carry the field yields
+  // `undefined`, which slipped past a `=== null` check and produced a bucket
+  // literally keyed "undefined" holding NaN.
+  if (currency == null || amount == null) return;
   into[currency] = Math.round(((into[currency] ?? 0) + amount) * 100) / 100;
 }
 
@@ -128,9 +140,14 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       if (cruise.startDate === null || cruise.endDate === null) continue;
       for (let c = dayKey(cruise.startDate); c < dayKey(cruise.endDate); c += DAY_MS) covered.add(c);
     }
+    // Per trip, not per run: a booking shared across two trips is a real
+    // shared cost for both, and hiding it from the second would understate it.
+    const countedBookingIds = new Set<string>();
     for (const flight of trip.flights) {
       if (flight.status === "cancelled") continue;
-      addAmount(spendByCurrency, flight.currency, flight.price);
+      const share = flightCostShare(flight, countedBookingIds);
+      addAmount(spendByCurrency, share.currency, share.amount);
+      addAmount(spendBaseByCurrency, share.snapshotCurrency, share.amountBase);
       if (flight.departureTime === null || flight.arrivalTime === null) continue;
       const dep = dayKey(flight.departureTime);
       const arr = dayKey(flight.arrivalTime);
