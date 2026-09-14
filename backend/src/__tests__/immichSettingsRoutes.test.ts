@@ -219,6 +219,95 @@ describe("POST /settings/immich/test", () => {
 
     expect(testImmichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
   });
+
+  /**
+   * AUD-087. A shared key — admin-global or ENV — is one the caller has never
+   * seen. Before this binding, naming your own server and omitting the key had
+   * the instance-wide credential delivered to it, with no admin right and no
+   * knowledge of the key needed.
+   */
+  describe("a shared key stays bound to the target it was configured for", () => {
+    const shared = { baseUrl: "https://immich.lan", apiKey: "instance-wide-secret", source: "global" };
+
+    it("refuses to spend an admin-global key on a target the caller chose", async () => {
+      getImmichConnection.mockResolvedValue(shared);
+
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "https://attacker.example" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("keyRequired");
+      // The point of the finding: the key must not leave the instance at all,
+      // so the outbound call is never made — a non-200 alone would not prove it.
+      expect(testImmichConnection).not.toHaveBeenCalled();
+    });
+
+    it("refuses an ENV-provided key just the same", async () => {
+      getImmichConnection.mockResolvedValue({ ...shared, source: "env" });
+
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "https://attacker.example" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("keyRequired");
+      expect(testImmichConnection).not.toHaveBeenCalled();
+    });
+
+    it("still tests the shared connection at its OWN address", async () => {
+      getImmichConnection.mockResolvedValue(shared);
+      testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+      // Trailing slash: the comparison normalizes both sides, so a cosmetic
+      // difference must not read as a different target.
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "https://immich.lan/" });
+
+      expect(res.status).toBe(200);
+      expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "instance-wide-secret");
+    });
+
+    it("allows a different target once the caller supplies their own key", async () => {
+      getImmichConnection.mockResolvedValue(shared);
+      testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "https://mine.example", apiKey: "my-own-key" });
+
+      expect(res.status).toBe(200);
+      expect(testImmichConnection).toHaveBeenCalledWith("https://mine.example", "my-own-key");
+    });
+
+    it("does not restrict the caller's OWN stored key", async () => {
+      // They configured it, so they already know it; sending it to an address
+      // of their choosing reveals nothing. Restricting this would break the
+      // ordinary "I am moving my server" flow for no gain.
+      getImmichConnection.mockResolvedValue({ ...shared, source: "user" });
+      testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "https://my-new-box.lan" });
+
+      expect(res.status).toBe(200);
+      expect(testImmichConnection).toHaveBeenCalledWith("https://my-new-box.lan", "instance-wide-secret");
+    });
+
+    it("rejects a malformed target with invalidUrl rather than keyRequired", async () => {
+      getImmichConnection.mockResolvedValue(shared);
+
+      const res = await request(makeApp(immichSettingsRouter))
+        .post("/immich/test")
+        .send({ baseUrl: "not-a-url" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("invalidUrl");
+      expect(testImmichConnection).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("GET /admin/immich", () => {

@@ -24,6 +24,24 @@ interface ImmichUserUpdateData {
   immichDefaultMode?: string;
 }
 
+/**
+ * Normalize a base URL the caller supplied, failing with the machine-readable
+ * KIND rather than the prose message.
+ *
+ * `ImmichError` carries both, and the two are not interchangeable here: the
+ * frontend's `immichFailureKind()` parses `{error}` against a fixed
+ * vocabulary, so prose silently degrades to the generic toast — which is
+ * exactly the outcome `invalidUrl` exists to prevent, per CLAUDE.md ("so a URL
+ * typo does not send the user debugging their server version").
+ */
+function normalizeRequestedBaseUrl(raw: string): string {
+  try {
+    return normalizeImmichBaseUrl(raw);
+  } catch (error) {
+    throw new AppError(error instanceof ImmichError ? error.kind : "invalidUrl", 400);
+  }
+}
+
 async function readStatus(userId: string): Promise<Record<string, unknown>> {
   const settings = await prisma.userSettings.findUnique({
     where: { userId },
@@ -60,14 +78,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       if (payload.baseUrl === null) {
         update.immichBaseUrl = null;
       } else {
-        try {
-          update.immichBaseUrl = normalizeImmichBaseUrl(payload.baseUrl);
-        } catch (error) {
-          throw new AppError(
-            error instanceof ImmichError ? error.message : "Invalid Immich URL",
-            400,
-          );
-        }
+        update.immichBaseUrl = normalizeRequestedBaseUrl(payload.baseUrl);
       }
     }
     if (payload.apiKey !== undefined) {
@@ -106,6 +117,24 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
       const stored = await getImmichConnection(req.userId!);
       // Machine-readable failure kind, consistent with the gallery routes.
       if (!stored) throw new AppError("notConfigured", 400);
+
+      // A URL and the key that reaches it are ONE connection, not two fields.
+      // A stored key the caller never saw — admin-global or ENV — may only be
+      // spent on the target it was configured for. Without that binding, any
+      // signed-in user could name their own server, omit the key, and have the
+      // instance-wide credential delivered to them (AUD-087). The caller's OWN
+      // key carries no such restriction: they supplied it, so sending it back
+      // to a target of their choosing reveals nothing they did not already
+      // have.
+      if (!apiKey && baseUrl && stored.source !== "user") {
+        // Both sides normalized, so a trailing slash is not mistaken for a
+        // different target — and the normalized form is what gets tested, the
+        // same shape the PUT handler stores.
+        const requested = normalizeRequestedBaseUrl(baseUrl);
+        if (requested !== stored.baseUrl) throw new AppError("keyRequired", 400);
+        baseUrl = requested;
+      }
+
       baseUrl = baseUrl ?? stored.baseUrl;
       apiKey = apiKey ?? stored.apiKey;
     }

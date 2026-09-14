@@ -376,7 +376,8 @@
           "auth": "Dawarich rejected the key",
           "notFound": "The Dawarich address was not found",
           "protocol": "Unexpected response from Dawarich",
-          "invalidUrl": "The Dawarich address is invalid"
+          "invalidUrl": "The Dawarich address is invalid",
+          "keyRequired": "A different Dawarich address needs your own key"
         }
       }
     },

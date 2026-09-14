@@ -74,10 +74,9 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         try {
           data.globalDawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl);
         } catch (error) {
-          throw new AppError(
-            error instanceof DawarichError ? error.message : "Invalid Dawarich URL",
-            400,
-          );
+          // The machine-readable KIND, not the prose message — same reason the
+          // user-facing settings route already does this.
+          throw new AppError(error instanceof DawarichError ? error.kind : "invalidUrl", 400);
         }
       }
     }

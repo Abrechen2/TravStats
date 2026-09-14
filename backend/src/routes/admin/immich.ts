@@ -66,10 +66,10 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         try {
           data.globalImmichBaseUrl = normalizeImmichBaseUrl(payload.baseUrl);
         } catch (error) {
-          throw new AppError(
-            error instanceof ImmichError ? error.message : "Invalid Immich URL",
-            400,
-          );
+          // The machine-readable KIND, not the prose message: the admin card
+          // renders through the same `immichFailureKind()` vocabulary as the
+          // user card, and prose degrades to the generic toast.
+          throw new AppError(error instanceof ImmichError ? error.kind : "invalidUrl", 400);
         }
       }
     }
