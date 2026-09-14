@@ -1,3 +1,4 @@
+import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
 import { prisma } from "../../db";
 import type { Prisma } from "@prisma/client";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
@@ -214,14 +215,41 @@ export async function backfillMissingCoordinates(
       try {
         const coords = await resolveCoordinates(row);
         if (!coords) continue;
-        await prisma.lodging.update({
-          where: { id: row.id },
+        // A provider answer is not a position until it is inside the world.
+        // `Number(null)` is 0, and 0/0 is a real point in the Atlantic, so an
+        // unusable answer used to be stored as a successful geocode (AUD-071).
+        if (!isPlausibleCoordinate(coords.lat, coords.lon)) {
+          logger.warn(
+            {
+              operation: "lodging_geocode_backfill_implausible",
+              lodgingId: row.id,
+              source: coords.source,
+            },
+            "geocoder returned coordinates outside the world — treated as no result",
+          );
+          continue;
+        }
+        // CONDITIONAL on the row still lacking a position. A geocode takes
+        // seconds; in that window the user may have dropped a pin themselves,
+        // and writing over it would lose a deliberate choice to a lookup that
+        // started before it (AUD-062). `updateMany` matches nothing when the
+        // row has moved on, which is exactly the wanted outcome.
+        const written = await prisma.lodging.updateMany({
+          where: { id: row.id, lat: null, lon: null },
           data: {
             lat: coords.lat,
             lon: coords.lon,
             // Only ever FILLS gaps: a value the user typed is never overwritten
             // by a lookup, and only Google reports a kind at all.
-            ...(coords.type && coords.type !== row.type ? { type: coords.type } : {}),
+            //
+            // `type` is `String @default("hotel")` and therefore never null, so
+            // "the user chose nothing" and "the user chose hotel" are the same
+            // value in this schema. The default is treated as unset, which errs
+            // toward not overwriting a deliberate choice; distinguishing the two
+            // properly needs a column that records where the value came from.
+            ...(coords.type && coords.type !== row.type && row.type === "hotel"
+              ? { type: coords.type }
+              : {}),
             ...(coords.city && !row.city ? { city: coords.city } : {}),
             ...(coords.country && !row.country ? { country: coords.country } : {}),
             ...(coords.address && !row.address ? { address: coords.address } : {}),
@@ -232,6 +260,13 @@ export async function backfillMissingCoordinates(
               : {}),
           },
         });
+        if (written.count === 0) {
+          logger.info(
+            { operation: "lodging_geocode_backfill_superseded", lodgingId: row.id },
+            "row gained a position while the geocoder was working — left alone",
+          );
+          continue;
+        }
         filled++;
       } catch (err) {
         logger.warn(
