@@ -68,7 +68,7 @@
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "node-html-parser": "^9.0.1",
-    "nodemailer": "^9.0.6",
+    "nodemailer": "^9.1.1",
     "openai": "^7.8.0",
     "otplib": "^13.5.0",
     "pdf-parse": "^2.4.5",
