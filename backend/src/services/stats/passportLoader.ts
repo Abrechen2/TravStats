@@ -28,6 +28,7 @@ import { countryThresholdFor } from "../countryThresholdResolver";
 import { buildTzMap, withDepartureClock } from "./departureClock";
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
+import { classifyVisit } from "../../shared/placeCounting";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -96,6 +97,10 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
  * account with a cruise — which is precisely the drift #42 is about.
  */
 export async function loadPassport(userId: string): Promise<ReturnType<typeof buildPassport>> {
+  // One clock for the whole load, so two evidence sources cannot disagree
+  // about whether a visit has happened yet.
+  const now = new Date();
+
   const flights = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
     select: {
@@ -259,13 +264,23 @@ export async function loadPassport(userId: string): Promise<ReturnType<typeof bu
       // with no departure time stays `visited`, which is what it can prove.
       until: stop.departureTime,
     })),
-    // A place's visits, flattened: each dated visit is its own evidence, and a
-    // place with none still proves the country through `visited`.
-    placeVisits.flatMap((place) =>
-      place.visits.length > 0
-        ? place.visits.map((v) => ({ isoCountryCode: place.isoCountryCode, at: v.visitedAt }))
-        : [{ isoCountryCode: place.isoCountryCode, at: null }]
-    ),
+    // A place's visits, flattened: each visit that HAS HAPPENED is its own
+    // evidence, and a place with none still proves the country through
+    // `visited`.
+    //
+    // The filter is the point. Every visit used to be passed through, so
+    // booking a visit for 2099 at a place already marked visited-but-undated
+    // moved the country's first year to 2099, counted a day of presence in it
+    // and cleared `hasUndatedEvidence` — while the place's own endpoint
+    // correctly reported zero actual visits and one planned (AUD-085). A
+    // place whose visits are ALL still ahead falls back to the undated branch,
+    // because that is exactly what it was before the booking.
+    placeVisits.flatMap((place) => {
+      const happened = place.visits.filter((v) => classifyVisit(v, now) === "visited");
+      return happened.length > 0
+        ? happened.map((v) => ({ isoCountryCode: place.isoCountryCode, at: v.visitedAt }))
+        : [{ isoCountryCode: place.isoCountryCode, at: null }];
+    }),
     lodgings,
     threshold,
     // The stored `date` is midnight UTC — the one clock a GPS fix carries — so

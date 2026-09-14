@@ -23,6 +23,7 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { buildCountryDetail, type CountryDetail } from "./countryDetail";
 import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./passportLoader";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
+import { classifyVisit } from "../../shared/placeCounting";
 
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
@@ -32,6 +33,10 @@ export async function loadCountryDetail(
   userId: string,
   code: string
 ): Promise<CountryDetail | null> {
+  // One clock for the whole load, so two evidence sources cannot disagree
+  // about whether a visit has happened yet.
+  const now = new Date();
+
   const flights = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
     select: {
@@ -116,9 +121,15 @@ export async function loadCountryDetail(
       country: stop.port?.country ?? null,
       at: stop.arrivalTime ?? stop.date,
     })),
-    places.flatMap((place) =>
-      place.visits.length > 0
-        ? place.visits.map((v) => ({
+    // Only visits that have HAPPENED. A booking for 2099 is not evidence of
+    // ever having been in a country, and passing it made the detail page agree
+    // with a passport that had already gone wrong the same way (AUD-085). A
+    // place whose visits are all still ahead falls back to undated evidence,
+    // which is what `visited: true` on its own proves.
+    places.flatMap((place) => {
+      const happened = place.visits.filter((v) => classifyVisit(v, now) === "visited");
+      return happened.length > 0
+        ? happened.map((v) => ({
             placeId: place.id,
             name: place.name,
             isoCountryCode: place.isoCountryCode,
@@ -131,8 +142,8 @@ export async function loadCountryDetail(
               isoCountryCode: place.isoCountryCode,
               at: null,
             },
-          ]
-    ),
+          ];
+    }),
     lodgings.map((lodging) => ({
       lodgingId: lodging.id,
       name: lodging.name,

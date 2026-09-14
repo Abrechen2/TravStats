@@ -459,6 +459,21 @@ export function foldCountryEvidence(inputs: readonly EvidenceInput[]): CountryEv
 
     const acc = measured.get(entry.code);
     entry.daysPresent = acc?.days.size ?? 0;
+
+    // The span comes from the DAYS the evidence attests, not from `at` alone.
+    // `at` is one representative instant — a track hands over its first day
+    // there while its whole day set travels in `days`, so a country visited in
+    // 2020 and again in 2025 folded to firstDate = lastDate = 2020 and the
+    // passport reported a single year (AUD-086). Every kind with a span
+    // benefits; a place visit, whose day set is its one day, is unchanged.
+    if (acc && acc.days.size > 0) {
+      const ordered = [...acc.days].sort();
+      const earliest = ordered[0]!;
+      const latest = ordered[ordered.length - 1]!;
+      entry.firstDate =
+        entry.firstDate === null || earliest < entry.firstDate ? earliest : entry.firstDate;
+      entry.lastDate = entry.lastDate === null || latest > entry.lastDate ? latest : entry.lastDate;
+    }
     /**
      * The three states of §3.4b, decided here and nowhere else.
      *

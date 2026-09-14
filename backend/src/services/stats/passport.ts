@@ -633,6 +633,21 @@ export function buildPassport(
       );
     if (!acc) continue;
 
+    // Both ends of the evidence widen the country's span. Only `firstDate` was
+    // ever read, and only when the row CREATED the accumulator — so a country
+    // that already had a row got no year update at all from its evidence. Two
+    // track days in Germany, 2020 and 2025, read 2020-2020 in the passport
+    // while the country detail correctly read 2020-2025; add a place visit in
+    // 2023 and the passport collapsed to 2023-2023 (AUD-086). `countryDetail`
+    // has always extended by both ends, which is the contract being matched.
+    for (const iso of [row.firstDate, row.lastDate]) {
+      if (!iso) continue;
+      const year = Number(iso.slice(0, 4));
+      if (!Number.isFinite(year)) continue;
+      acc.firstYear = acc.firstYear === null ? year : Math.min(acc.firstYear, year);
+      acc.lastYear = acc.lastYear === null ? year : Math.max(acc.lastYear, year);
+    }
+
     acc.tier = row.tier;
     acc.kinds = row.kinds;
     acc.hasUndatedEvidence = row.hasUndatedEvidence;
