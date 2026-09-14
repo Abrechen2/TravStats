@@ -132,6 +132,54 @@ with a stated reason, 25 failed — 18 in `dashboard-multi-domain.spec.ts`
 same finding), 4 in `import.fr24.spec.ts` and 3 in `import.generic-csv.spec.ts`
 (CAMP-04). The three files the finding is actually about have no failures.
 
+**CAMP-05 — a restored dashboard mode does not reach the URL.**
+`CLAUDE.md` says the dashboard URL carries tab and mode
+(`/dashboard/<tab>?mode=<mode>`) and that `localStorage` remembers the last
+mode per domain. Measured 2026-09-14: switching away from a tab and back
+restores the remembered mode in the interface and leaves the address bar
+without a mode. So the screen shows Heatmap while the link says default, and
+copying it hands someone else a different view.
+
+Either the URL should be rewritten when a mode is restored, or the URL is
+deliberately an override and the documentation overstates it. That is a product
+decision, not a test's to make — the E2E case asserts only the restoration and
+says in place why it stops there.
+
+**CAMP-07 — the E2E suite shared one account and ran fully parallel.**
+Every spec signs in as the same user, several of them WRITE, and the config had
+`fullyParallel: true`. Measured 2026-09-14: the cruise deep-link case passes
+alone and fails in a full run, in all three engines, because an importer's
+commits and cleanups land underneath specs reading the same account. A suite
+that answers differently depending on what else is running cannot be trusted
+about anything.
+
+Serialised for now (`workers: 1`), which costs about three minutes. Per-spec
+accounts would restore the parallelism and are the better answer.
+
+**CAMP-06 — the two import E2E specs were stale in layers.**
+Closing AUD-098 made the importer reachable for the first time, and what it
+found was a file whose every assumption had aged: the login it performed
+itself, English labels against a de-DE config, a bare `locator('select')` that
+matched the settings section picker, a flight list that moved off the
+dashboard, and a fixture with no teardown. Each was fixed; each revealed the
+next.
+
+One remains, marked `test.fail()` so the expectation stays written down and
+turns red the day it works: the FR24 golden fixture previews as
+"5 bereit · 0 Duplikate · 3 Probleme" where all eight rows should be ready. All
+fourteen airports it names are in the catalogue, so it is not a lookup miss;
+what flags the three is unknown.
+
+The generic-CSV case was fixed rather than marked, and its cause is worth
+keeping: the test clicked commit and navigated away immediately, aborting the
+POST. Firefox and WebKit happened to be slow enough that the write landed
+anyway; Chromium was not. The same test therefore wrote a flight in two engines
+and silently wrote nothing in the third, then failed looking for it. It waits
+for the success state now.
+
+None of this was visible before AUD-098: the old suite failed at a login it
+never performed.
+
 ### Block A detail — dependency majors
 
 Done: multer 2.3.0 → the process-killing upload (AUD-097), plus `npm update`

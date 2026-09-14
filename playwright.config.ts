@@ -3,10 +3,22 @@ import { STORAGE_STATE } from './e2e/storageState';
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  // ONE worker, and not because the suite is slow.
+  //
+  // Every spec signs in as the same account, and several of them WRITE: the
+  // importers commit flights and clean up after themselves. Run in parallel,
+  // those writes land underneath specs that are reading the same account —
+  // measured 2026-09-14, the cruise deep-link case passes alone and fails in a
+  // full run, in all three engines. A suite that answers differently depending
+  // on what else is running cannot be trusted about anything (CAMPAIGN.md,
+  // CAMP-07).
+  //
+  // Per-spec accounts would restore the parallelism and are the better answer;
+  // this is the honest one until then, and it costs about a minute.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: 'html',
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
