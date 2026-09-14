@@ -4,11 +4,11 @@ import { z } from "zod";
  *  actually read and let the library reject the cryptographic details. */
 export const registerVerifySchema = z.object({
   name: z.string().min(1).max(60),
-  response: z.record(z.unknown()),
+  response: z.record(z.string(), z.unknown()),
 });
 
 export const loginVerifySchema = z.object({
-  response: z.record(z.unknown()),
+  response: z.record(z.string(), z.unknown()),
 });
 
 /** Renaming is the only mutable thing about a stored credential. */

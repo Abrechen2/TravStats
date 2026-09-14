@@ -87,4 +87,15 @@ describe("updateFlightSchema — partial canonical-UTC contract", () => {
   it("rejects empty updates", () => {
     expect(() => updateFlightSchema.parse({})).toThrow(/At least one field/);
   });
+
+  it("a one-field update carries ONLY that field — no default is invented for the rest", () => {
+    // The empty-body case above is the visible half. This is the half that
+    // would have gone unnoticed: `.partial()` stopped suppressing `.default()`
+    // in zod 4, so `{ notes }` parsed to `{ notes, status: "scheduled",
+    // companions: [], aerodataboxQualityTags: [] }` and the route wrote all
+    // four — resetting a flown flight to scheduled and dropping its companions,
+    // with every value individually legitimate. See `schemas/partialUpdate.ts`.
+    const parsed = updateFlightSchema.parse({ notes: "only this" });
+    expect(Object.keys(parsed)).toEqual(["notes"]);
+  });
 });

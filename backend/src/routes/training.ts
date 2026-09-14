@@ -57,8 +57,8 @@ const trainingUpload = multer({
 });
 
 const annotateSchema = z.object({
-  annotations: z.record(z.unknown()),
-  extractedData: z.array(z.record(z.unknown())),
+  annotations: z.record(z.string(), z.unknown()),
+  extractedData: z.array(z.record(z.string(), z.unknown())),
   tags: z.array(z.string()).optional(),
 });
 

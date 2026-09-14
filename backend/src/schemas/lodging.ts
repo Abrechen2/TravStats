@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
+import { partialForUpdate } from "./partialUpdate";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 export const BOARD_TYPES = [
@@ -65,8 +66,7 @@ const baseLodgingSchema = z.object({
 });
 
 export const createLodgingSchema = baseLodgingSchema;
-export const updateLodgingSchema = baseLodgingSchema
-  .partial()
+export const updateLodgingSchema = partialForUpdate(baseLodgingSchema)
   .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field must be provided for update",
   });
@@ -194,8 +194,7 @@ export const createStaySchema = baseStaySchema
     (d) => d.checkOutTime == null || (d.checkOut != null && (d.datePrecision ?? "DAY") === "DAY"),
     { message: "checkOutTime requires a DAY-precision check-out date", path: ["checkOutTime"] },
   );
-export const updateStaySchema = baseStaySchema
-  .partial()
+export const updateStaySchema = partialForUpdate(baseStaySchema)
   .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field must be provided for update",
   })

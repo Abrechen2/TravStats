@@ -41,7 +41,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            flags: z.record(z.string().describe("SVG markup")),
+            flags: z.record(z.string(), z.string().describe("SVG markup")),
             missing: z.array(z.string().length(2)),
           }),
         },

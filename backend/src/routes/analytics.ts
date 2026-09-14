@@ -14,7 +14,7 @@ const ALLOWED_EVENT_TYPES = ['parser_feedback', 'pattern_suggestion'] as const;
 
 const eventSchema = z.object({
   type: z.enum(ALLOWED_EVENT_TYPES),
-  payload: z.record(z.unknown()).optional().refine((val) => {
+  payload: z.record(z.string(), z.unknown()).optional().refine((val) => {
     const size = JSON.stringify(val || {}).length;
     return size <= 10000; // 10KB limit
   }, { message: 'Payload too large (max 10KB)' }),

@@ -41,7 +41,7 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
     z.boolean(),
     z.null(),
     z.array(jsonValueSchema),
-    z.record(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
   ])
 );
 
@@ -50,7 +50,7 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
  * rejected so the stored shape is predictable for the client.
  */
 const prefsObjectSchema = z
-  .record(jsonValueSchema)
+  .record(z.string(), jsonValueSchema)
   .refine(
     (value) => Buffer.byteLength(JSON.stringify(value), "utf8") <= APP_PREFS_MAX_BYTES,
     { message: `prefs exceeds ${APP_PREFS_MAX_BYTES} bytes` }
