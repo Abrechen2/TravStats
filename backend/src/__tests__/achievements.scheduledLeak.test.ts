@@ -163,7 +163,25 @@ describe("Achievements — scheduled-flight leak regression", () => {
     await prisma.userAchievement.deleteMany({ where: { userId } });
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
-    // Test seeds remain — they're idempotent and harmless for other tests
+
+    // The seeds used to be left behind, with the comment "idempotent and
+    // harmless for other tests". Idempotent they are; harmless is a claim
+    // nobody checked. They are eleven extra rows in the SHARED achievement
+    // catalogue, and every later suite whose user flies once or visits one
+    // country unlocks them too — `ensureAchievements` was logging "Found 286
+    // existing achievements" against an expected 275 for exactly this reason.
+    //
+    // Whether that explains the achievement integration suites that fail in a
+    // full run and pass alone is NOT established; it is one candidate, and
+    // removing it is cheap enough not to need proof. A test that adds rows to
+    // a table every other test reads should take them away again regardless.
+    // By prefix, not by the `seeds` array: that lives inside beforeAll, and a
+    // prefix also catches a seed a future edit adds and forgets to list.
+    await prisma.userAchievement.deleteMany({
+      where: { achievement: { code: { startsWith: "TEST_LEAK_" } } },
+    });
+    await prisma.achievement.deleteMany({ where: { code: { startsWith: "TEST_LEAK_" } } });
+
     await prisma.$disconnect();
   });
 
