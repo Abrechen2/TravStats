@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
@@ -97,9 +97,9 @@ export type PullDawarichTrackInput = z.infer<typeof pullDawarichTrackSchema>;
  * a member by matching `source` against each member's OWN literal values
  * BEFORE handing the rest of the body to that member's schema. `track`
  * matches the OTHER member (`trackLegSource`, not this enum), so a
- * `track` request never reaches this errorMap at all — same as it never
+ * `track` request never reaches this error map at all — same as it never
  * reaches the two `.refine()` calls below. `ROUTED_REDIRECT_MESSAGE` is
- * shared with the union-level errorMap for exactly the opposite reason:
+ * shared with the union-level error map for exactly the opposite reason:
  * `routed` matches NEITHER member, so the union itself has to produce
  * this message — this enum's own copy only fires if something calls
  * `manualLegSource` directly, outside the union.
@@ -110,12 +110,10 @@ const ROUTED_REDIRECT_MESSAGE =
   ".../legs/{fromStopId}/{toStopId}/route or POST .../route-all, not this one.";
 
 const manualLegSource = z.enum(MANUAL_LEG_SOURCES, {
-  errorMap: (issue, ctx) => {
-    if (issue.code === z.ZodIssueCode.invalid_enum_value && issue.received === "routed") {
-      return { message: ROUTED_REDIRECT_MESSAGE };
-    }
-    return { message: ctx.defaultError };
-  },
+  // `error` returning undefined means "use zod's own message" — the zod 4
+  // replacement for zod 3's `errorMap` + `ctx.defaultError`. The rejected
+  // value is `issue.input`; there is no `issue.received` any more.
+  error: (issue) => (issue.input === "routed" ? ROUTED_REDIRECT_MESSAGE : undefined),
 });
 
 /** The `source: "track"` half of `legOverrideSchema`'s discriminated union. */
@@ -201,24 +199,25 @@ const trackLegShape = z.object({
 export const legOverrideSchema = z
   .discriminatedUnion("source", [manualLegShape, trackLegShape], {
     /**
-     * `invalid_union_discriminator` fires when `source` matches NEITHER
-     * member's literal set (`straight` | `drawn` | `track`) — `routed` is
-     * the case that matters here, see `ROUTED_REDIRECT_MESSAGE`'s comment
-     * above. `ctx.data` is the whole request body (this errorMap runs
-     * before either member is chosen, so there is no narrower object to
-     * inspect), which is the only way to tell "routed" apart from any
-     * other unknown value at this point.
+     * Fires when `source` matches NEITHER member's literal set (`straight` |
+     * `drawn` | `track`) — `routed` is the case that matters here, see
+     * `ROUTED_REDIRECT_MESSAGE`'s comment above. `issue.input` is the whole
+     * request body (this map runs before either member is chosen, so there is
+     * no narrower object to inspect), which is the only way to tell "routed"
+     * apart from any other unknown value at this point. Under zod 3 the same
+     * value arrived as `ctx.data`, and the issue carried the narrower code
+     * `invalid_union_discriminator`, which zod 4 folded into `invalid_union`.
      */
-    errorMap: (issue, ctx) => {
+    error: (issue) => {
+      const body = issue.input;
       if (
-        issue.code === z.ZodIssueCode.invalid_union_discriminator &&
-        ctx.data &&
-        typeof ctx.data === "object" &&
-        (ctx.data as Record<string, unknown>).source === "routed"
+        body &&
+        typeof body === "object" &&
+        (body as Record<string, unknown>).source === "routed"
       ) {
-        return { message: ROUTED_REDIRECT_MESSAGE };
+        return ROUTED_REDIRECT_MESSAGE;
       }
-      return { message: ctx.defaultError };
+      return undefined;
     },
   })
   .refine((v) => v.source !== "drawn" || (v.waypoints !== undefined && v.waypoints.length >= 2), {

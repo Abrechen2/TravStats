@@ -1,4 +1,4 @@
-import { Map as MapLibre, NavigationControl } from "maplibre-gl";
+import { Map as MapLibre, NavigationControl, type IControl } from "maplibre-gl";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
@@ -69,7 +69,9 @@ map.addControl(new NavigationControl(), "top-right");
 
 const overlay = new MapboxOverlay({ layers: [], pickingRadius: 6 });
 map.once("load", () => {
-  map.addControl(overlay as unknown as maplibregl.IControl);
+  // MapLibre 6 dropped the global `maplibregl` namespace, so the type is
+  // imported rather than reached for through a global that no longer exists.
+  map.addControl(overlay as unknown as IControl);
   render();
   void runAllMethods();
 });

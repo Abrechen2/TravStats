@@ -61,8 +61,8 @@ const apiKeyTestResult = registry.register(
           "openskyInvalid",
         ])
         .optional(),
-      messageParams: z.record(z.union([z.string(), z.number()])).optional(),
-      details: z.record(z.unknown()).optional(),
+      messageParams: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+      details: z.record(z.string(), z.unknown()).optional(),
     })
     .openapi("ApiKeyTestResult", {
       example: { success: true, message: "API key is valid", messageKey: "valid" },

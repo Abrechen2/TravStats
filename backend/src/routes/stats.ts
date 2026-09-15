@@ -443,7 +443,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     const parsed = SummaryQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate, year, compareYear } = parsed.data;
@@ -571,7 +571,7 @@ router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunc
     const userId = req.userId!;
     const parsed = TimeseriesQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
@@ -618,7 +618,7 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
 
     const parsed = RoutesQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const limit = parsed.data.limit ?? 10;
@@ -790,7 +790,7 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -885,7 +885,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -988,7 +988,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -1102,7 +1102,7 @@ router.get(
 
       const parsed = DateRangeQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
         return;
       }
       const { fromDate, toDate } = parsed.data;
@@ -1258,7 +1258,7 @@ router.get(
       const userId = req.userId!;
       const parsed = CountryCodeParamSchema.safeParse(req.params);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid country', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid country', details: parsed.error.issues });
         return;
       }
 
@@ -1295,7 +1295,7 @@ router.get(
       const userId = req.userId!;
       const parsed = WrappedQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
         return;
       }
 
@@ -1386,7 +1386,7 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -2303,7 +2303,7 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
     const userId = req.userId!;
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;

@@ -1,12 +1,11 @@
 /**
- * One-time Zod extension. Imported by registry.ts before any schema is
- * registered, so `.openapi(...)` is available on every Zod node.
+ * Side-effect-only module kept as the registry's explicit statement that the
+ * Zod OpenAPI extension must be in place before anything registers a schema.
  *
- * Side-effect-only module — keeps the extension call out of the
- * registry boot path so it can be loaded by tests in isolation.
+ * The extension itself lives in `schemas/zod` — see the comment there for why
+ * it has to be anchored to the module that hands out `z` rather than applied
+ * from here. Importing this file is still correct; it is simply no longer the
+ * thing that makes the order come out right.
  */
 
-import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
-import { z } from "zod";
-
-extendZodWithOpenApi(z);
+import "../../schemas/zod";

@@ -86,10 +86,10 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.warn({ errors: error.errors }, '[Email Parse] Validation error');
+      logger.warn({ errors: error.issues }, '[Email Parse] Validation error');
       return res.status(400).json({
         error: 'Validation failed',
-        details: error.errors,
+        details: error.issues,
       });
     }
 
@@ -157,7 +157,7 @@ router.post(
         }
         return res.status(400).json({
           error: 'Validation failed',
-          details: domainParse.error.errors,
+          details: domainParse.error.issues,
         });
       }
       const domainValue = domainParse.data;

@@ -111,7 +111,7 @@ registry.registerPath({
     200: {
       description: "Geometry per route id",
       content: {
-        "application/json": { schema: z.object({ data: z.record(tourRouteGeometry) }) },
+        "application/json": { schema: z.object({ data: z.record(z.string(), tourRouteGeometry) }) },
       },
     },
     400: { description: "Validation failed", content: errorContent },

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * Zod schemas for the device-pairing routes (`/api/v1/pairing`).

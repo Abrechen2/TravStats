@@ -1,5 +1,6 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { partialForUpdate } from "./partialUpdate";
 
 // Accept partial datetimes and coerce to full ISO 8601, mirroring
 // schemas/cruise.ts and schemas/lodging.ts.
@@ -61,7 +62,7 @@ export const createPlaceSchema = basePlaceSchema;
  * PATCH is partial, but `lat`/`lon` stay non-nullable when present: a place
  * may be MOVED, never stripped of its position.
  */
-export const updatePlaceSchema = basePlaceSchema.partial().extend({
+export const updatePlaceSchema = partialForUpdate(basePlaceSchema).extend({
   lat: latField.optional(),
   lon: lonField.optional(),
 });

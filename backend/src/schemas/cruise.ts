@@ -1,5 +1,6 @@
-import { z } from 'zod';
+import { z } from './zod';
 import { currencyField } from './lodging';
+import { partialForUpdate } from "./partialUpdate";
 
 const CABIN_TYPES = ['inside', 'oceanview', 'balcony', 'suite'] as const;
 const STATUSES = ['scheduled', 'flown', 'cancelled', 'historical'] as const;
@@ -140,8 +141,7 @@ export const createCruiseSchema = baseCruiseSchema.refine(
   { message: 'endDate must not precede startDate', path: ['endDate'] },
 );
 
-export const updateCruiseSchema = baseCruiseSchema
-  .partial()
+export const updateCruiseSchema = partialForUpdate(baseCruiseSchema)
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
   });

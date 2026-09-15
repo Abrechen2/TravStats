@@ -90,7 +90,14 @@ describe("backfillMissingCoordinates", () => {
     expect(
       (await prisma.lodging.findUnique({ where: { id: nameOnly.id } }))?.lat,
     ).toBeCloseTo(52.5, 3);
-  });
+    // Ten round-trips against a containerised Postgres: three creates, the
+    // service's own reads and updates, then three verifying reads. Measured at
+    // 6.0 s on a Windows/Docker dev database, i.e. just over the 5 s default,
+    // so this test failed the gate on timing alone while asserting correctly.
+    // The neighbours in this file swing ~40% with machine load; raising only
+    // the heaviest one keeps that pressure visible instead of hiding it behind
+    // a file-wide default.
+  }, 15000);
 
   it("leaves a row pin-less when the geocoder finds nothing — and never throws", async () => {
     geocodeAddress.mockResolvedValue(null);

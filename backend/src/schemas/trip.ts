@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 export const TRIP_COLORS = [
   "#818cf8", "#38bdf8", "#34d399", "#fb923c", "#f472b6",

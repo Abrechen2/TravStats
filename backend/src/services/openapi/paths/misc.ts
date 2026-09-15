@@ -45,7 +45,7 @@ registry.registerPath({
               totalAchievements: z.number().int(),
               unlockedAchievements: z.number().int(),
               totalPoints: z.number().int(),
-              categories: z.record(z.number().int()),
+              categories: z.record(z.string(), z.number().int()),
               rank: z.string().describe("Stable slug, not display copy"),
               nextRankPoints: z.number().int().nullable(),
             }),

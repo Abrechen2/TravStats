@@ -166,7 +166,7 @@ router.post(
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Validation failed', details: error.errors });
+        return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
       logger.error({ error }, '[Image Parse] Parsing failed');
       const described = describeParserError(error);

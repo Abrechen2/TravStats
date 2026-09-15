@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { BOARD_TYPES, currencyField, LODGING_TYPES } from "./lodging";
 
 /**

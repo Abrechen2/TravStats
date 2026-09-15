@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 
 export const EXPIRES_IN_DAYS = z.union([z.literal(1), z.literal(7), z.literal(30)]);
 

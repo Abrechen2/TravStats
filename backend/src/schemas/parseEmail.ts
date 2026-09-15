@@ -9,7 +9,7 @@
  * dated 2026 (#285).
  */
 
-import { z } from 'zod';
+import { z } from './zod';
 
 import { REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
 

@@ -141,10 +141,10 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.warn({ errors: error.errors }, '[Boarding Pass Parse] Validation error');
+      logger.warn({ errors: error.issues }, '[Boarding Pass Parse] Validation error');
       return res.status(400).json({
         error: 'Validation failed',
-        details: error.errors,
+        details: error.issues,
       });
     }
 

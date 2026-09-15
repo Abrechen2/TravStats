@@ -29,10 +29,18 @@ function signedInAs(username: string) {
 describe("settingsStore.loadRemoteSettings — profile across accounts", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // `loadRemoteSettings` also fetches the birthdate on a parallel request whose
-    // failure it deliberately swallows (settingsStore.ts:469). Unmocked, that one
-    // reached the real network from every case in this file and the test quietly
-    // exercised the failure path instead of the merge (forgejo#110).
+    // `loadRemoteSettings` also fetches the birthdate, on a parallel request
+    // whose failure it deliberately swallows (settingsStore.ts:469). Left
+    // unmocked it went out as a REAL request from every case in this file, came
+    // back 401, and the axios interceptor logged the user out.
+    //
+    // So `useAuthStore.getState().user` was null by the time the merge ran, and
+    // `userChanged` was false in every case — the very condition these tests
+    // exist to exercise. The two positive cases passed on that, and the negative
+    // one failed as soon as a case before it had left a profile behind. Found
+    // twice independently: from the escaped request (forgejo#110) and from the
+    // zustand 5 upgrade, which was briefly blamed for it and was not
+    // responsible.
     vi.spyOn(settingsApi, "getProfile").mockResolvedValue({ birthdate: null } as never);
   });
 

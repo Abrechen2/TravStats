@@ -1,6 +1,7 @@
-import { z } from 'zod';
+import { z } from './zod';
 import { receiptUrlValidator } from './receiptUrl';
 import { chronologyProblem, departsInFuture } from '../shared/flightChronology';
+import { partialForUpdate } from "./partialUpdate";
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
@@ -274,7 +275,7 @@ const baseFlightSchema = z.object({
   eventLabel: z.string().max(120).nullable().optional(),
   patternLat: z.number().min(-90).max(90).nullable().optional(),
   patternLon: z.number().min(-180).max(180).nullable().optional(),
-  specialData: z.record(z.unknown()).nullable().optional(),
+  specialData: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 type LocalTzPair =
@@ -388,8 +389,7 @@ export const createFlightSchema = baseFlightSchema
     }
   );
 
-export const updateFlightSchema = baseFlightSchema
-  .partial()
+export const updateFlightSchema = partialForUpdate(baseFlightSchema)
   .superRefine(requirePairedTimezone)
   .superRefine(requireChronologicalOrder)
   .superRefine(requireStatusTimeAxisSanity)

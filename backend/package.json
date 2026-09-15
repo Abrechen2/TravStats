@@ -45,7 +45,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
-    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
     "@simplewebauthn/server": "^13.3.3",
@@ -64,11 +64,11 @@
     "geo-tz": "^8.1.8",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1",
+    "multer": "^2.3.0",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "node-html-parser": "^9.0.1",
-    "nodemailer": "^9.0.6",
+    "nodemailer": "^9.1.1",
     "openai": "^7.8.0",
     "otplib": "^13.5.0",
     "pdf-parse": "^2.4.5",
@@ -78,7 +78,7 @@
     "tesseract.js": "^6.0.1",
     "uuid": "^14.0.2",
     "webdav": "^5.9.0",
-    "zod": "^3.22.4",
+    "zod": "^4.6.5",
     "zxing-wasm": "^3.1.3"
   },
   "devDependencies": {

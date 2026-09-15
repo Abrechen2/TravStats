@@ -161,7 +161,7 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: error.errors });
+      return res.status(400).json({ error: "Validation failed", details: error.issues });
     }
     logger.error({ error }, "[BoardingPassPropose] failed");
     res.status(500).json({
