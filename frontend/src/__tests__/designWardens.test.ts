@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import baseline from "./designWardens.baseline.json";
 
@@ -36,7 +36,15 @@ function sourceFiles(exts: string[], dir = SRC, acc: string[] = []): string[] {
   return acc;
 }
 
-const rel = (file: string): string => file.replace(`${SRC}/`, "");
+/**
+ * Baseline names are POSIX-relative, because the baseline is one file read on
+ * every machine. This used to be `file.replace("<SRC>/", "")`, which never
+ * matched on Windows — `join` builds backslash paths there, so every offender
+ * kept its absolute name, missed the baseline, and the ratchet fired in BOTH
+ * directions. The warden was green only on Linux, and "fixing" it by rewriting
+ * the baseline on Windows would have broken it everywhere else.
+ */
+const rel = (file: string): string => relative(SRC, file).split(sep).join("/");
 
 /** Compares an offender list against its frozen baseline, in both directions. */
 function expectRatchet(offenders: string[], frozen: readonly string[], what: string): void {
