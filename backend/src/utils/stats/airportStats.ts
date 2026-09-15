@@ -8,44 +8,11 @@ import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
 import { isCountableFlight } from '../../shared/flightCounting';
 import { CONTINENTS, getContinent } from '../continents';
 
-export interface AirportStats {
-  /** Distinct airports the user has ever used (as departure or arrival). */
-  airportCount: number;
-  /** Distinct countries visited (based on dep+arr countries). */
-  countryCount: number;
-  /** Distinct continents covered. */
-  continentCount: number;
-  /**
-   * The denominator for `continentCount` — how many continents the shared
-   * table knows (seven, Antarctica included). Sent rather than hard-coded on
-   * the client: the tile printed "/ 6" for months while its own caption said
-   * "of the 7" and the passport said 6/7 (forgejo#87). One source, one number.
-   */
-  continentTotal: number;
-  /** Top airports by visit count (departure + arrival combined). */
-  topAirports: Array<{ code: string; name: string | null; country: string | null; visits: number }>;
-  /** Airports visited only once. Capped to keep payload small. */
-  rarestAirports: Array<{ code: string; name: string | null; country: string | null }>;
-  /** First-time airports in the current calendar year. */
-  newThisYear: Array<{ code: string; name: string | null; country: string | null; firstVisitDate: string }>;
-  /** The farthest airport from home (where "home" = home airport active at the flight's date). */
-  farthestFromHome: {
-    code: string;
-    name: string | null;
-    country: string | null;
-    distanceKm: number;
-    homeCode: string;
-  } | null;
-  /** Top visited countries by flight count. */
-  topCountries: Array<{ country: string; count: number }>;
-  /**
-   * Flights per continent, keyed by the continent's name from
-   * `utils/continents.ts` ("Europe", "Antarctica", …). "Other" holds the
-   * flights whose airport resolved to no continent at all — the absence of
-   * one, never a further one.
-   */
-  continentDistribution: Record<string, number>;
-}
+// Published by /stats/airports, so the shape is described once in
+// `schemas/statsFlights.ts` and read here (forgejo#52). The prose that used to
+// sit on these fields moved with them, where a consumer of the spec can see it.
+import type { AirportStats } from "../../schemas/statsFlights";
+export type { AirportStats };
 
 /**
  * The continent an airport lies on, through the one shared resolver.

@@ -4,6 +4,10 @@
 
 import { z } from "zod";
 import {
+  routeRankingResponseSchema,
+  businessStatsSchema,
+  uniqueStatsSchema,
+  airportStatsSchema,
   punctualityStatsSchema,
   seatStatsSchema,
   airlineRankingResponseSchema,
@@ -189,11 +193,7 @@ function readOnlyStat(path: string, summary: string, description?: string): void
 }
 
 readOnlyStat("/stats/timeseries", "Flights and distance over time", "Grouped by the departure airport's calendar day.");
-readOnlyStat("/stats/routes", "Most-flown routes");
-readOnlyStat("/stats/airports", "Airports, by visits and by role as origin or destination");
-readOnlyStat("/stats/business", "Business travel");
 readOnlyStat("/stats/fun", "The playful figures", "Time-of-day buckets, weekend warrior, fastest day, most countries in one day and the rest. All of them read the clock at the airport.");
-readOnlyStat("/stats/unique", "Firsts and unique counts");
 readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
 readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
@@ -389,6 +389,72 @@ registry.registerPath({
   responses: {
     200: { description: "The year in review" },
     404: { description: "No countable activity in any year" },
+  },
+});
+
+const routeRanking = registry.register(
+  "RouteRanking",
+  routeRankingResponseSchema.openapi("RouteRanking")
+);
+const businessStats = registry.register(
+  "BusinessStats",
+  businessStatsSchema.openapi("BusinessStats")
+);
+const uniqueStats = registry.register("UniqueStats", uniqueStatsSchema.openapi("UniqueStats"));
+const airportStats = registry.register("AirportStats", airportStatsSchema.openapi("AirportStats"));
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/routes",
+  summary: "Most-flown routes",
+  description:
+    "A pair of airports is ONE route whichever way it was flown, so the two " +
+    "ends are simply the ends and the distance is the same either way.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Routes, most-flown first",
+      content: { "application/json": { schema: routeRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/airports",
+  summary: "Airports, by visits and by role as origin or destination",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Airport, country and continent aggregates",
+      content: { "application/json": { schema: airportStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/business",
+  summary: "Business travel",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Cost and category aggregates",
+      content: { "application/json": { schema: businessStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/unique",
+  summary: "Firsts and unique counts",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The one-off figures",
+      content: { "application/json": { schema: uniqueStats } },
+    },
   },
 });
 
