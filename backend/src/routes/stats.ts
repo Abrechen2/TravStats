@@ -151,6 +151,42 @@ interface SummaryStats {
   byCategory: Record<string, number>;
 }
 
+/**
+ * The calendar year as a half-open UTC window, for the domains whose events
+ * are dated by when they BEGIN.
+ *
+ * That rule is not a choice made here — `Overview/aggregate.ts` already states
+ * it for the cross-domain overview: "count the event once, in the year it
+ * started. A cruise that spans 2023-12-30 → 2024-01-02 contributes 1 to year
+ * 2023 only." The domain tabs have to answer the same question the same way,
+ * or the overview and the tab it links to disagree about the same cruise.
+ *
+ * Half-open (`gte` / `lt`) rather than a 31 December end: an inclusive upper
+ * bound built from a date literal silently drops everything after midnight on
+ * the last day.
+ */
+/**
+ * `?year=` for the domain rollups.
+ *
+ * Deliberately NOT `SummaryQuerySchema`: that one also carries `fromDate`,
+ * `toDate` and `compareYear`, and a schema is a promise. These two endpoints
+ * honour a year and nothing else, so advertising the rest would be a contract
+ * they do not keep.
+ *
+ * Comparison is two requests rather than a `{ current, compare }` body. The
+ * flights summary answers both years at once because it already had that
+ * shape; giving these two a second shape would put a router that speaks the
+ * enveloped family into two answers for one route, which
+ * `docs/adr/0001-api-response-shape.md` is there to prevent.
+ */
+const YearQuerySchema = z.object({
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+});
+
+function yearWindow(year: number): { gte: Date; lt: Date } {
+  return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+}
+
 function buildWhere(
   userId: string,
   fromDate: string | undefined,
@@ -1684,10 +1720,24 @@ router.get(
         return;
       }
 
+      const parsed = YearQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        return;
+      }
+      const { year } = parsed.data;
+
       const [user, cruises] = await Promise.all([
         prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
         prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere() },
+          // A cruise with no start date cannot be placed in a year at all, so
+          // a year request drops it rather than guessing. The lifetime view
+          // (no `year`) still counts it.
+          where: {
+            userId,
+            ...countableFlightWhere(),
+            ...(year === undefined ? {} : { startDate: yearWindow(year) }),
+          },
           include: {
             stops: { include: { port: true } },
             legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
@@ -1843,9 +1893,24 @@ router.get(
         return;
       }
 
+      const parsed = YearQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        return;
+      }
+      const { year } = parsed.data;
+
       const [stays, lodgings, settings, memberships] = await Promise.all([
         prisma.lodgingStay.findMany({
-          where: { userId },
+          // Dated by CHECK-IN, the night the stay began — the same rule the
+          // cross-domain overview applies to every domain, so a stay over New
+          // Year belongs to the year it started in both places. A stay with no
+          // check-in cannot be placed in a year and drops out of a year
+          // request; the lifetime view still counts it.
+          where: {
+            userId,
+            ...(year === undefined ? {} : { checkIn: yearWindow(year) }),
+          },
           // The chain is joined for its NAME: the price and rating rankings
           // are read by a human, and a chain id is not a label.
           include: { lodging: { include: { chain: true } } },
@@ -1902,7 +1967,27 @@ router.get(
       const countryKey = (l: { country: string | null; isoCountryCode: string | null }): string | null =>
         l.isoCountryCode ?? toCountryCode(l.country) ?? l.country;
 
-      const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
+      /**
+       * Under a year filter the house list follows the stays.
+       *
+       * A house has no date — only a stay does. Left unfiltered, a year
+       * request would answer "3 nights in 2024" beside "4 houses, 2 of them
+       * merely bookmarked", and the second half would be a lifetime figure
+       * wearing a year's label. That mixed answer is the very thing the
+       * overview and the tabs were caught disagreeing about.
+       *
+       * A bookmarked house (`visited: false`, never slept in) therefore
+       * belongs to the lifetime view and to no year at all.
+       */
+      const scopedLodgings =
+        year === undefined
+          ? lodgings
+          : (() => {
+              const stayedAt = new Set(stays.map((stay) => stay.lodgingId));
+              return lodgings.filter((l) => stayedAt.has(l.id));
+            })();
+
+      const lodgingRecords: LodgingRecord[] = scopedLodgings.map((l) => ({
         id: l.id,
         chainId: l.chainId,
         type: l.type,
