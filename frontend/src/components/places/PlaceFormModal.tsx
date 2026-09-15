@@ -205,7 +205,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
       open
       onClose={onClose}
       busy={saving}
-      widthClass="max-w-2xl"
+      maxWidth={672}
       closeLabel={t("common:buttons.close")}
       title={isEdit ? t("places:form.editTitle") : t("places:form.createTitle")}
       footer={

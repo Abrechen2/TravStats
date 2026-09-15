@@ -1,6 +1,7 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
+import { useDialogChrome } from "./useDialogChrome";
 
 interface DialogProps {
   open: boolean;
@@ -19,9 +20,6 @@ interface DialogProps {
   maxWidth?: number;
 }
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 /**
  * One shell for every overlay.
  *
@@ -34,6 +32,12 @@ const FOCUSABLE =
  * Centred on a desktop and docked to the bottom edge below 640px — same shell,
  * different placement, which is the whole of the difference between the web's
  * dialog and the Companion's sheet.
+ *
+ * This is the SIMPLE cut: a question, a short body, at most one action.
+ * `components/Modal.tsx` is the same shell with a frame layout, for the
+ * dialogs whose body scrolls under a fixed header and footer. Both take their
+ * keyboard behaviour from `useDialogChrome`, which is what makes them one
+ * shell rather than two.
  */
 export default function Dialog({
   open,
@@ -46,47 +50,7 @@ export default function Dialog({
   maxWidth = 440,
 }: DialogProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
-  const restoreTo = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    restoreTo.current = document.activeElement as HTMLElement | null;
-
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      // The trap. Without it, Tab walks straight out of the dialog and into
-      // the page behind the scrim, where every control is visually disabled
-      // and none of them actually is.
-      const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    // Focus the panel itself rather than its first control: landing on a
-    // destructive button is how a stray Enter deletes something.
-    panelRef.current?.focus();
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      restoreTo.current?.focus?.();
-    };
-  }, [open, onClose]);
+  useDialogChrome({ open, onClose, panelRef });
 
   if (!open) return null;
 

@@ -1,5 +1,7 @@
-import { useEffect, useRef } from "react";
-import type { JSX, ReactNode } from "react";
+import { useRef } from "react";
+import { createPortal } from "react-dom";
+import type { CSSProperties, JSX, ReactNode } from "react";
+import { useDialogChrome } from "./ui/useDialogChrome";
 
 /**
  * The frame every blocking dialog sits in.
@@ -12,6 +14,14 @@ import type { JSX, ReactNode } from "react";
  *
  * `ConfirmModal` is a specific dialog (a question with two answers), not a
  * frame, so it could never absorb the others. This is the frame.
+ *
+ * Since 2026-09-15 it is the SAME shell as `components/ui/Dialog` — same
+ * scrim, radius, shadow, entry animation and bottom docking below 640px, and
+ * the same keyboard contract from `useDialogChrome`. The difference is the
+ * layout and nothing else: `Dialog` is a question with a short body, this is
+ * the frame whose body scrolls under a header and a footer that stay put.
+ * Two frames that merely looked alike were the drift this round was sent to
+ * remove.
  *
  * **Not every overlay belongs in here.** Menus, popovers and the achievement
  * toast are overlays without being dialogs — Escape and a focus trap are wrong
@@ -42,8 +52,13 @@ interface ModalProps {
   footer?: ReactNode;
   /** Blocks Escape and the backdrop while an action is in flight. */
   busy?: boolean;
-  /** Tailwind width class for the panel. */
-  widthClass?: string;
+  /**
+   * The panel's maximum width in pixels, like `Dialog`'s. It was a Tailwind
+   * class until 2026-09-15; once the panel moved onto the shared shell that
+   * class and the shell's own `max-width` were two rules of equal specificity
+   * fighting over source order, which is a coin flip, not a layout.
+   */
+  maxWidth?: number;
   /** The × in the header. On by default: Escape and a click beside it both
    *  close the dialog, but neither is discoverable by looking at it. */
   showClose?: boolean;
@@ -61,109 +76,90 @@ export default function Modal({
   children,
   footer,
   busy = false,
-  widthClass = "max-w-lg",
+  maxWidth = 560,
   showClose = true,
   closeLabel = "Close",
   testId,
 }: ModalProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
-  const openerRef = useRef<Element | null>(null);
   const titleIdRef = useRef<string>("");
   if (titleIdRef.current === "") {
     idCounter += 1;
     titleIdRef.current = `modal-title-${idCounter}`;
   }
 
-  useEffect(() => {
-    if (!open) return;
-    openerRef.current = document.activeElement;
-    // Focus the panel itself rather than guessing at a first control: a
-    // dialog that opens with the destructive button focused is a trap.
-    panelRef.current?.focus();
-
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape" && !busy) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-
-    // The page behind must not scroll away under the dialog.
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
-      const opener = openerRef.current;
-      if (opener instanceof HTMLElement) opener.focus();
-    };
-  }, [open, busy, onClose]);
+  useDialogChrome({ open, onClose, panelRef, busy });
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid={testId}>
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          data-testid="modal-backdrop"
-          className="fixed inset-0 bg-black/70 transition-opacity"
-          onClick={() => {
-            if (!busy) onClose();
-          }}
-        />
-
-        <div
-          ref={panelRef}
-          tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleIdRef.current}
-          className={`relative z-10 flex max-h-[90vh] w-full ${widthClass} flex-col overflow-hidden rounded-lg shadow-xl outline-none`}
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          {/* Header and footer stay put; only the body scrolls. A tall form —
+  return createPortal(
+    <div
+      className="ts-dialog-scrim"
+      data-testid={testId}
+      onClick={() => {
+        if (!busy) onClose();
+      }}
+    >
+      <div
+        data-testid="modal-backdrop"
+        aria-hidden="true"
+        style={{ position: "absolute", inset: 0 }}
+      />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleIdRef.current}
+        onClick={(event) => event.stopPropagation()}
+        className="ts-dialog-panel relative z-10 flex w-full flex-col"
+        data-layout="frame"
+        style={{ "--ts-dialog-max": `${maxWidth}px` } as CSSProperties}
+      >
+        {/* Header and footer stay put; only the body scrolls. A tall form —
               the lodging one grows the moment its map picker opens — used to
               push its own save button off the screen with nothing to scroll. */}
-          <div className="flex shrink-0 items-start justify-between gap-3 px-5 pt-5">
-            <h2
-              id={titleIdRef.current}
-              className="text-lg font-semibold"
-              style={{ color: "var(--text-primary)" }}
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pt-5">
+          <h2
+            id={titleIdRef.current}
+            className="text-lg font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {title}
+          </h2>
+          {showClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              aria-label={closeLabel}
+              className="-mr-1 shrink-0 rounded-sm p-1 disabled:opacity-50"
+              style={{ color: "var(--text-muted)" }}
             >
-              {title}
-            </h2>
-            {showClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={busy}
-                aria-label={closeLabel}
-                className="-mr-1 shrink-0 rounded-sm p-1 disabled:opacity-50"
-                style={{ color: "var(--text-muted)" }}
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
-          {footer && (
-            <div
-              className="flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3"
-              style={{ background: "var(--bg-base)", borderTop: "1px solid var(--color-border)" }}
-            >
-              {footer}
-            </div>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
+        {footer && (
+          <div
+            className="flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3"
+            style={{ background: "var(--ts-surface)", borderTop: "1px solid var(--ts-border)" }}
+          >
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -280,6 +280,20 @@
 }
 
 /*
+ * The frame cut: same scrim, radius, shadow, animation and bottom docking,
+ * but the panel owns no padding and no gap because its own header, body and
+ * footer do — the header and footer stay put while only the body scrolls. A
+ * tall form (the lodging one grows the moment its map picker opens) used to
+ * push its own save button off the screen with nothing to scroll.
+ */
+.ts-dialog-panel[data-layout="frame"] {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+/*
  * The one placement difference between the web's dialog and the Companion's
  * sheet. Below 640px it docks to the bottom edge and animates in from below —
  * the shell, radius, scrim, shadow and one-action rule are unchanged.

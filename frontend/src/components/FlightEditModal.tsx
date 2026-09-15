@@ -437,7 +437,7 @@ export default function FlightEditModal({
       open={isOpen}
       onClose={onClose}
       busy={loading}
-      widthClass="max-w-2xl"
+      maxWidth={672}
       closeLabel={t("common:buttons.close")}
       title={
         <span className="flex flex-col">
