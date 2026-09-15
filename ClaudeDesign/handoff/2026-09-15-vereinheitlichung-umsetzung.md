@@ -365,3 +365,47 @@ Frontend-Arbeit. Die Reihenfolge ist damit vorgegeben:
 3. **Abschnitte ausblenden** für alle Reiter — der Haken
    `useSectionVisibility(filter)` ist bereits bereichsweise, nur das Menü ist
    auf Flüge beschränkt.
+
+### Umsetzung: erster Schritt getan, zweiter genau beschrieben
+
+**Backend fertig** (`23b2736e`): `/stats/cruise` und `/stats/lodging` nehmen
+`?year=`. Fenster halboffen, Kreuzfahrten nach `startDate`, Aufenthalte nach
+`checkIn`, Häuserliste folgt unter einem Jahr den Aufenthalten. Eigenes
+`YearQuerySchema` statt `SummaryQuerySchema`, weil ein Schema ein Versprechen
+ist. Vergleich = zwei Aufrufe aus dem Client, damit die Antwortform der
+Umschlag-Familie nicht zwei Gestalten bekommt (ADR 0001). Wächter:
+`stats.domainYear.test.ts`, per Mutation geprüft.
+
+**Frontend angefangen:** `components/Stats/useStatsPeriod.ts` hebt den
+Jahres- und Vergleichszustand aus `Overview/OverviewTab.tsx` heraus — die
+Logik ist **verschoben, nicht neu geschrieben**, weil jedes Stück davon
+bezahlt ist: einmaliges Vorwählen des jüngsten Jahres, gemerkte
+Vergleichs-Einstellung (#188), Auflösung eines veralteten Vergleichsjahres,
+und die Bedingung, dass die Veraltet-Prüfung **nicht** vor dem Laden laufen
+darf (sonst wirkt jede gemerkte Wahl veraltet und wird gelöscht).
+
+> **Der Haken ist noch nirgends eingehängt.** Er übersetzt und die Suite ist
+> grün, aber `OverviewTab` hält weiterhin seinen eigenen Zustand. Ein Commit
+> mit ungenutztem Code ist bewusst in Kauf genommen, damit der Schritt nicht
+> verlorengeht; der nächste Anlauf hängt ihn ein.
+
+**Was noch fehlt, in Reihenfolge:**
+
+1. `OverviewTab` auf den Haken umstellen (eigenen `useState` und die zwei
+   Effekte entfernen, Werte als Eigenschaften entgegennehmen).
+2. **Eine** Zeitraumleiste auf Seitenebene für alle fünf Reiter. Heute gibt es
+   zwei Bauformen für einen Regler: `<select>` in `StatsYearFilter`
+   (Zeilen 37–130) und Pillen in `Overview/CrossDomainYearFilter`. Die Pillen
+   sind die neuere Form — sie wird die gemeinsame. `StatsYearFilter` behält
+   nur seine Flug-Kennzahlenkarten und sollte dann auch so heißen; ein
+   Bauteil namens „YearFilter", das nicht mehr filtert, ist eine Lüge.
+3. Die Jahresliste der gemeinsamen Leiste ist die **Vereinigung** über alle
+   Domänen (`collectYears` über alle `stats`), nicht die Flugjahre.
+4. Jahr und Vergleich in `CruiseStatsSection`, `LodgingStatsSection` und
+   `PoiStatsSection` durchreichen. Die ersten beiden rufen ihren Endpunkt
+   dann zweimal auf, wenn verglichen wird; POI rechnet im Client und filtert
+   dort.
+5. `SectionVisibilityMenu` für alle Reiter statt nur für Flüge
+   (`AdvancedStatsPage.tsx:681`). Der Haken `useSectionVisibility(filter)` ist
+   bereits bereichsweise — es fehlt je Domäne eine Abschnittsliste wie
+   `FLIGHT_SECTIONS`.
