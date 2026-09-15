@@ -156,17 +156,45 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d po
 ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d postgres -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\""
 ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER -d $DB_NAME --no-owner $DUMP"
 
-# Re-apply RC-specific settings the prod clone wiped. The prod dump carries
-# prod's admin_settings, so the mobile-app pairing URL (public_url) now points
-# at prod, not the RC — the app's QR would encode an address it can't reach.
-# Set RC_PUBLIC_URL to the RC's own address, however it is reached.
+# Re-apply the RC's own identity, which the prod clone just overwrote. The dump
+# carries prod's admin_settings, so all three URL fields now describe PROD — and
+# every one of them is an address the RC then hands to somebody:
 #
-# Guarded with an IF EXISTS: older release lines (e.g. 2.2.x) predate the
-# public_url column, and a bare UPDATE would error out and abort the whole
-# staging run mid-way. Wrapping it in a DO block makes staging schema-agnostic.
-if [ -n "${RC_PUBLIC_URL:-}" ]; then
-  echo "==> Re-set RC public_url = $RC_PUBLIC_URL (if the column exists)"
-  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"DO \\\$\\\$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_settings' AND column_name='public_url') THEN UPDATE admin_settings SET public_url='$RC_PUBLIC_URL'; ELSE RAISE NOTICE 'public_url column absent (pre-pairing schema) — skipped'; END IF; END \\\$\\\$;\""
+#   public_url    the pairing QR the mobile app scans      (routes/pairing.ts)
+#   frontend_url  invitation and password-reset links      (admin/invitations.ts,
+#                                                           passwordReset.ts)
+#   lan_url       the local address shown in the admin UI
+#
+# Only public_url was re-set here until 2026-09-08, and the other two were the
+# bug (forgejo#115) read backwards: prod had been rebuilt from an RC dump and
+# carried the RC's identity, so prod's own pairing QR sent the phone to the RC,
+# where the code is unknown — 400, and the app says "expired or wrong". The same
+# clone in this direction leaves the RC pointing at prod. One field re-set out of
+# three is not a fix, it is the same defect with a different sign.
+#
+# Guarded with an IF EXISTS per column: older release lines (e.g. 2.2.x) predate
+# these columns, and a bare UPDATE would error out and abort the staging run
+# mid-way. One statement per column, so a schema missing ONE of them still gets
+# the others — a single wide UPDATE would lose all three to the oldest column.
+#
+# RC_PUBLIC_URL is the RC's own address, however it is reached. Since 2026-09-08
+# that is NOT trav.abrechen2.de — that name serves prod now.
+RC_FRONTEND_URL="${RC_FRONTEND_URL:-${RC_PUBLIC_URL:-}}"
+
+set_rc_url() {  # $1 = column, $2 = value
+  local col="$1" val="$2"
+  [ -n "$val" ] || return 0
+  echo "==> Re-set RC $col = $val (if the column exists)"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"DO \\$\\$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_settings' AND column_name='$col') THEN UPDATE admin_settings SET $col='$val'; ELSE RAISE NOTICE '$col column absent (pre-pairing schema) — skipped'; END IF; END \\$\\$;\""
+}
+
+set_rc_url public_url   "${RC_PUBLIC_URL:-}"
+set_rc_url frontend_url "$RC_FRONTEND_URL"
+set_rc_url lan_url      "${RC_LAN_URL:-}"
+
+if [ -z "${RC_PUBLIC_URL:-}" ]; then
+  echo "    NOTE: RC_PUBLIC_URL unset — the RC keeps PROD's identity from the dump."
+  echo "          Its pairing QR and its invitation mails then point at prod."
 fi
 
 echo "==> [5/6] Restart RC-Server app (entrypoint runs prisma migrate deploy)"
