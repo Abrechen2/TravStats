@@ -57,6 +57,25 @@ export async function generatePairingCode(userId: string): Promise<GeneratedPair
 }
 
 /**
+ * Why a claim failed.
+ *
+ * `unknown` is the one that earns this type. It used to be folded into the
+ * same answer as `expired`, and a phone told "invalid or expired" when the
+ * real cause was that it had been sent to a DIFFERENT INSTANCE — which is
+ * exactly what happened on 2026-09-08, when prod handed out QR codes carrying
+ * the RC server's address and every claim landed on a server that had never
+ * minted them (forgejo#115). The message sent people to check their code and
+ * wait for a new one, which could never work. A code this instance has never
+ * seen is a different problem from one it issued and let lapse, and saying so
+ * is the difference between a two-minute fix and an afternoon.
+ */
+export type PairingClaimFailure = "unknown" | "expired" | "alreadyClaimed";
+
+export type PairingClaimResult =
+  | { outcome: "ok"; userId: string }
+  | { outcome: PairingClaimFailure };
+
+/**
  * Atomically verify and consume a pairing code.
  *
  * Finds an unconsumed, unexpired row by SHA-256 and conditionally stamps
@@ -65,10 +84,10 @@ export async function generatePairingCode(userId: string): Promise<GeneratedPair
  * row lock, and the loser re-evaluates the WHERE against the now-consumed row
  * and matches zero rows. Only the winner sees `count === 1`.
  *
- * @returns the owning userId on success, or `null` when the code is unknown,
- *          expired, or already consumed.
+ * On a miss the row is read back inside the same transaction to say WHICH miss
+ * it was — see {@link PairingClaimFailure}.
  */
-export async function verifyAndConsume(code: string): Promise<string | null> {
+export async function verifyAndConsume(code: string): Promise<PairingClaimResult> {
   const codeHash = tokenLookupHash(code);
   const now = new Date();
 
@@ -77,13 +96,21 @@ export async function verifyAndConsume(code: string): Promise<string | null> {
       where: { codeHash, consumedAt: null, expiresAt: { gt: now } },
       data: { consumedAt: now },
     });
-    if (consumed.count !== 1) return null;
 
     const row = await tx.pairingCode.findUnique({
       where: { codeHash },
-      select: { userId: true },
+      select: { userId: true, consumedAt: true, expiresAt: true },
     });
-    return row?.userId ?? null;
+
+    if (consumed.count === 1) {
+      return row ? { outcome: "ok" as const, userId: row.userId } : { outcome: "unknown" as const };
+    }
+
+    if (!row) return { outcome: "unknown" as const };
+    if (row.expiresAt <= now) return { outcome: "expired" as const };
+    // The row is here and not lapsed, so either it was already spent or a
+    // concurrent claim just won the race. Both are "someone already used it".
+    return { outcome: "alreadyClaimed" as const };
   });
 }
 

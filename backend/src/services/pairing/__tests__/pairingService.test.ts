@@ -59,7 +59,7 @@ describe("pairingService", () => {
     it("happy path: consumes a fresh code and returns the userId", async () => {
       const { code } = await generatePairingCode(userId);
       const result = await verifyAndConsume(code);
-      expect(result).toBe(userId);
+      expect(result).toEqual({ outcome: "ok", userId });
 
       const row = await prisma.pairingCode.findUnique({
         where: { codeHash: tokenLookupHash(code) },
@@ -67,7 +67,7 @@ describe("pairingService", () => {
       expect(row?.consumedAt).not.toBeNull();
     });
 
-    it("returns null for an expired code", async () => {
+    it("says `expired` for a code this instance issued and let lapse", async () => {
       const code = `${PAIRING_CODE_PREFIX}${"a".repeat(32)}`;
       await prisma.pairingCode.create({
         data: {
@@ -76,25 +76,31 @@ describe("pairingService", () => {
           expiresAt: new Date(Date.now() - 1_000),
         },
       });
-      expect(await verifyAndConsume(code)).toBeNull();
+      expect(await verifyAndConsume(code)).toEqual({ outcome: "expired" });
     });
 
-    it("returns null for an already-consumed code", async () => {
+    it("says `alreadyClaimed` for a code that was already spent", async () => {
       const { code } = await generatePairingCode(userId);
-      expect(await verifyAndConsume(code)).toBe(userId);
+      expect(await verifyAndConsume(code)).toEqual({ outcome: "ok", userId });
       // Second claim must fail.
-      expect(await verifyAndConsume(code)).toBeNull();
+      expect(await verifyAndConsume(code)).toEqual({ outcome: "alreadyClaimed" });
     });
 
-    it("returns null for an unknown code", async () => {
-      expect(await verifyAndConsume(`${PAIRING_CODE_PREFIX}${"f".repeat(32)}`)).toBeNull();
+    it("says `unknown` — not `expired` — for a code this instance never minted", async () => {
+      // The case that earns the distinction: prod handed out QR codes carrying
+      // the RC server's address, so every claim reached a server that had
+      // never seen the code. Reported as "expired", it sent people to wait for
+      // a new one, which failed identically (forgejo#115).
+      expect(await verifyAndConsume(`${PAIRING_CODE_PREFIX}${"f".repeat(32)}`)).toEqual({
+        outcome: "unknown",
+      });
     });
 
     it("concurrent double-claim: exactly one wins", async () => {
       const { code } = await generatePairingCode(userId);
       const [a, b] = await Promise.all([verifyAndConsume(code), verifyAndConsume(code)]);
-      const winners = [a, b].filter((r) => r === userId);
-      const losers = [a, b].filter((r) => r === null);
+      const winners = [a, b].filter((r) => r.outcome === "ok");
+      const losers = [a, b].filter((r) => r.outcome === "alreadyClaimed");
       expect(winners).toHaveLength(1);
       expect(losers).toHaveLength(1);
     });

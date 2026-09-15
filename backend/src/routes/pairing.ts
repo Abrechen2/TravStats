@@ -9,6 +9,7 @@ import {
   generatePairingCode,
   getPairingStatus,
   verifyAndConsume,
+  type PairingClaimFailure,
 } from "../services/pairing/pairingService";
 import { getPublicBaseUrl } from "../services/instanceSettingsService";
 import { generateApiToken } from "../utils/apiTokens";
@@ -33,6 +34,21 @@ import { securityLogger } from "../utils/logger";
  *   - /claim           → public + rate-limited (the app has no creds yet).
  *   - /unpair          → Bearer-only (acts on the calling token).
  */
+
+/**
+ * What the phone is told, per kind of miss.
+ *
+ * These are read by a person standing in front of a failing pairing screen, so
+ * each names the next thing to try. `unknown` deliberately does not say
+ * "invalid": the code is usually perfectly valid, just minted by a different
+ * instance than the one the app is calling (forgejo#115).
+ */
+const PAIRING_CLAIM_MESSAGES: Record<PairingClaimFailure, string> = {
+  unknown:
+    "This server has no such pairing code. It was most likely issued by a different TravStats instance — check the server address the app is using.",
+  expired: "This pairing code has expired. Generate a new one and try again.",
+  alreadyClaimed: "This pairing code has already been used. Generate a new one.",
+};
 
 const router = Router();
 
@@ -112,15 +128,26 @@ router.post(
       }
       const { code, deviceName, deviceId, platform, appVersion } = parsed.data;
 
-      const userId = await verifyAndConsume(code);
-      if (!userId) {
+      const claim = await verifyAndConsume(code);
+      if (claim.outcome !== "ok") {
         securityLogger.warn({
           operation: "security_event",
-          message: "Pairing claim rejected: invalid or expired code",
-          context: { eventType: "pairing_claim_rejected", ip: req.ip, url: req.url },
+          message: `Pairing claim rejected: ${claim.outcome}`,
+          context: {
+            eventType: "pairing_claim_rejected",
+            reason: claim.outcome,
+            ip: req.ip,
+            url: req.url,
+          },
         });
-        throw new AppError("Invalid or expired pairing code", 400);
+        // A code this instance never minted almost always means the phone is
+        // talking to the wrong server — the QR carries the address, and a
+        // restored database can hand out someone else's (forgejo#115). Saying
+        // "expired" there sends the user to wait for a new code that will fail
+        // exactly the same way.
+        throw new AppError(PAIRING_CLAIM_MESSAGES[claim.outcome], 400);
       }
+      const userId = claim.userId;
 
       // Re-pairing the same physical device revokes its prior token so we don't
       // leave orphaned credentials behind.
