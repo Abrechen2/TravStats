@@ -149,14 +149,16 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 DATABASE_URL="postgresql://…" npm run check
 ```
 
-This list is the real gate. CI (`ci.yml`, since 2026-08-30) runs the first
-two lines of it on every push and PR — typecheck and lint in both trees, and
-Vitest — plus Prettier on changed frontend files. The backend Jest job is
-there too but **advisory** (`continue-on-error`, for three named reasons in
-the workflow's comment block), and nothing in CI runs `npm run check`. So a
-green badge covers the frontend and the static half of the backend; the
-backend suite and the repo-level checks are still yours to run. See
-**Rules** below for what is machine-enforced and what is not.
+This list is the real gate, and since 2026-09-15 CI runs almost all of it.
+`ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on changed
+frontend files, the **file-size ratchet** and the **schema-drift check** — the
+last two wired on 2026-09-15 (forgejo#60), having been runnable and unwired
+since 2026-09-01. The backend Jest job is there too but **advisory**
+(`continue-on-error`, for three named reasons in the workflow's comment
+block).
+
+So what a green badge still does NOT cover is the backend suite. That one is
+yours to run. See **Rules** below for what is machine-enforced and what is not.
 
 ## Docker & Deployment
 
@@ -538,11 +540,20 @@ workflow-defined CodeQL job is refused by it — "CodeQL analyses from
 advanced configurations cannot be processed when the default setup is
 enabled" — which kept the Security badge red for a week for no finding at
 all. The job was removed on 2026-09-06; its comment block says what to
-switch off first if it ever comes back. None of the four ratchets, `check:size` or `check:drift` run
-in CI (forgejo#60); the drift script has said so since 2026-09-01, and the
-two plan docs that called it "CI-guarded" were corrected on 2026-09-04. This
-paragraph itself claimed "only Prettier" for a week after `ci.yml` landed —
-corrected 2026-09-06.
+switch off first if it ever comes back.
+
+`check:size` and `check:drift` DO run in CI since 2026-09-15 (forgejo#60) —
+size in the `static` job, drift in a `schema-drift` job of its own, because it
+is the only static check that needs a database. The four Jest/Vitest ratchets
+ride along with whichever suite owns them, which means the OpenAPI pair is
+still only as binding as the advisory backend job.
+
+The delay cost exactly what the ratchet exists to prevent: on 2026-09-15 a
+branch landed on main with four files grown past their frozen size, and nobody
+saw it, because nothing asked. This paragraph has a history of being wrong in
+the other direction too — it claimed "only Prettier" for a week after `ci.yml`
+landed (corrected 2026-09-06), and the two plan docs that called drift
+"CI-guarded" before it was were corrected on 2026-09-04.
 
 **One drift script, since 2026-09-01.** There were two, and they disagreed:
 `scripts/check-schema-drift.mjs` at the root replayed the migrations into a
