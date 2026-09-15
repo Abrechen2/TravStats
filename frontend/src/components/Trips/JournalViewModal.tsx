@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
@@ -33,7 +34,7 @@ export default function JournalViewModal({
   onClose,
   onEdit,
 }: JournalViewModalProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "common"]);
   const locale = useLocale();
 
   const dateLabel = useMemo(() => {
@@ -51,53 +52,44 @@ export default function JournalViewModal({
   const meta = [entry.weather, entry.mood].filter(Boolean).join(" · ");
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-2xl rounded-xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="p-5 border-b" style={{ borderColor: "var(--color-border)" }}>
-          <div className="flex items-start gap-2">
-            <span aria-hidden className="text-lg leading-none mt-0.5">
-              📝
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold wrap-break-word">{heading}</h2>
-              {entry.title?.trim() && dateLabel && (
-                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  {dateLabel}
-                </p>
-              )}
-              {meta && (
-                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  {meta}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-5 overflow-y-auto trip-markdown">
-          <ReactMarkdown components={MARKDOWN_COMPONENTS}>{entry.body}</ReactMarkdown>
-        </div>
-
-        <div
-          className="flex justify-end gap-2 p-4 border-t"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+    <Modal
+      open
+      onClose={onClose}
+      title={
+        <span className="flex items-start gap-2">
+          <span aria-hidden className="mt-0.5 text-lg leading-none">
+            📝
+          </span>
+          <span className="min-w-0">
+            <span className="block wrap-break-word">{heading}</span>
+            {entry.title?.trim() && dateLabel && (
+              <span
+                className="mt-0.5 block text-xs font-normal"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {dateLabel}
+              </span>
+            )}
+            {meta && (
+              <span
+                className="mt-0.5 block text-xs font-normal"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {meta}
+              </span>
+            )}
+          </span>
+        </span>
+      }
+      maxWidth={672}
+      closeLabel={t("common:buttons.close")}
+      footer={
+        <>
           {onEdit && (
             <button
               type="button"
               onClick={onEdit}
-              className="px-4 py-2 rounded-lg text-sm"
+              className="rounded-lg px-4 py-2 text-sm"
               style={{ color: "var(--text-muted)" }}
             >
               {t("trips:journalView.edit")}
@@ -106,12 +98,16 @@ export default function JournalViewModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base)"
+            className="rounded-lg bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
           >
             {t("trips:journalView.close")}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="trip-markdown">
+        <ReactMarkdown components={MARKDOWN_COMPONENTS}>{entry.body}</ReactMarkdown>
       </div>
-    </div>
+    </Modal>
   );
 }

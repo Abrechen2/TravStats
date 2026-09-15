@@ -62,7 +62,14 @@ interface ModalProps {
   /** The × in the header. On by default: Escape and a click beside it both
    *  close the dialog, but neither is discoverable by looking at it. */
   showClose?: boolean;
-  /** Accessible name for the ×. */
+  /**
+   * Accessible name for the ×.
+   *
+   * It must NOT repeat a footer button's label. Two controls with one
+   * accessible name is ambiguous to a screen reader, and it broke three tests
+   * on 2026-09-15 that could suddenly no longer say which "Abbrechen" they
+   * meant. The × is "close"; the footer carries the actions.
+   */
   closeLabel?: string;
   testId?: string;
 }
