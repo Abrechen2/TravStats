@@ -182,6 +182,70 @@ jobs:
           category: trivy-fs
 
   # ---------------------------------------------------------------------
+  # Trivy, against the IMAGE this time (forgejo#28).
+  #
+  # The filesystem scan above reads this repository. It cannot see the base
+  # image, the OS packages in it, or anything `npm ci` resolved at build
+  # time — and those are what a user actually runs. TravStats publishes to
+  # GHCR and Docker Hub, so an unscanned image is the one artifact that
+  # reaches other people's servers.
+  #
+  # Scheduled and manual only, deliberately. The image is built locally and
+  # pushed by `/deploy`, not by CI, so there is nothing new to scan on a
+  # push — running it there would report last week's image as if the commit
+  # had produced it.
+  #
+  # `:latest` is the tag a user gets by default, which is the one worth
+  # watching. It can be absent on a fresh registry; the job says so and
+  # stops rather than failing, because "no image published yet" is not a
+  # security finding.
+  # ---------------------------------------------------------------------
+  trivy-image:
+    name: Trivy image scan (published :latest)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - name: Check the tag exists before scanning it
+        id: probe
+        run: |
+          if docker manifest inspect ghcr.io/abrechen2/travstats:latest >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No :latest on GHCR yet — nothing to scan." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run Trivy
+        if: steps.probe.outputs.found == 'true'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/abrechen2/travstats:latest
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          # Same two details as the filesystem job: the tag carries a
+          # leading `v`, and without `limit-severities-for-sarif` the
+          # `severity` filter does not reach the report.
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          # Reporting job: the alerts are the output, not the exit status.
+          exit-code: "0"
+
+      - name: Upload SARIF
+        if: steps.probe.outputs.found == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          # A category of its own, so an image finding and a source finding
+          # do not overwrite each other in the Security tab.
+          category: trivy-image
+
+  # ---------------------------------------------------------------------
   # CodeQL — deliberately NOT here.
   #
   # The repository has GitHub's default code-scanning setup switched on
