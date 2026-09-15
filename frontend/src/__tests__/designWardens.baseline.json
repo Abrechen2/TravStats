@@ -146,8 +146,6 @@
     "components/lodging/StayEditor.tsx",
     "components/places/PlaceImportPreviewModal.tsx",
     "pages/AircraftPage.tsx",
-    "pages/CruiseDetailPage.tsx",
-    "pages/FlightDetailPage.tsx",
     "pages/ForceChangePasswordPage.tsx",
     "pages/LodgingDetailPage.tsx",
     "pages/LoginPage.tsx",

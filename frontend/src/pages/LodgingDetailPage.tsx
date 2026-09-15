@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
+import AppShell from "../components/ui/AppShell";
+import DetailHeader from "../components/ui/DetailHeader";
+import Button from "../components/ui/Button";
+import { StayStatusPill } from "../components/lodging/StayStatusPill";
+import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
@@ -148,25 +152,20 @@ export default function LodgingDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="p-6 text-[var(--text-muted)]">{t("lodging:detail.loading")}</div>
-      </div>
+      <AppShell width="list">
+        <p className="text-[var(--text-muted)]">{t("lodging:detail.loading")}</p>
+      </AppShell>
     );
   }
 
   if (failure !== null || !lodging) {
     const isLoadError = failure === "loadError";
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl p-6">
-          <button
-            onClick={() => navigate(backTo)}
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
+      <AppShell width="reading">
+        <div>
+          <Link to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {backLabel}
-          </button>
+          </Link>
           <div
             role="alert"
             className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
@@ -174,20 +173,22 @@ export default function LodgingDetailPage(): JSX.Element {
             {isLoadError ? t("lodging:detail.loadError") : t("lodging:detail.notFound")}
           </div>
           {isLoadError && (
-            <button
-              type="button"
-              onClick={() => setReloadKey((k) => k + 1)}
-              className="mt-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            >
-              {t("common:buttons.retry")}
-            </button>
+            <div className="mt-3">
+              <Button onClick={() => setReloadKey((k) => k + 1)}>
+                {t("common:buttons.retry")}
+              </Button>
+            </div>
           )}
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   const typeIcon = lodgingTypeIcon(lodging.type);
+  // The list has shown this pill since block A; the detail page had no status
+  // at all, which is one of the four differences D-08 names. Same helper, so
+  // the two cannot say different things about the same house.
+  const lifecycle = lodgingLifecycleStatus(lodging.stays);
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
   // The stays `totalSpendBase` is summed over — never all of them, or a
   // priced stay still ahead makes the card print the empty sum as "0 €"
@@ -200,304 +201,278 @@ export default function LodgingDetailPage(): JSX.Element {
   const categoryRatings = averageRatingsByCategory(lodging.stays);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <button
-          onClick={() => navigate(backTo)}
-          className="mb-3 text-sm text-[var(--accent)] hover:underline"
-        >
-          ← {backLabel}
-        </button>
-
-        {/* Hotel-header strip */}
-        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex items-start gap-3">
-            <div
-              aria-hidden
-              className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-              style={{
-                backgroundColor: "var(--domain-lodging-soft, rgba(212,119,143,.12))",
-                color: "var(--domain-lodging, #d4778f)",
-              }}
-            >
-              {typeIcon}
-            </div>
-            <div>
-              <h1 className="t-screen-title">{lodging.name}</h1>
-              <p className="text-sm text-[var(--text-muted)]">
-                {lodging.chain ? (
-                  <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
-                ) : (
-                  t("lodging:field.independent")
-                )}
-                {lodging.stars !== null ? ` · ${"★".repeat(lodging.stars)} ${lodging.stars}` : ""}
-              </p>
-              {addressLine.length > 0 && (
-                <p className="text-sm font-medium text-[var(--text-primary)]">{addressLine}</p>
+    <AppShell width="list">
+      <DetailHeader
+        backTo={backTo}
+        backLabel={backLabel}
+        domain="lodging"
+        icon={typeIcon}
+        title={lodging.name}
+        subtitle={
+          <>
+            <span>
+              {lodging.chain ? (
+                <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
+              ) : (
+                t("lodging:field.independent")
               )}
-              <p className="text-xs text-[var(--text-muted)]">
-                {t("lodging:detail.avgRating")} <b>{formatRatingText(lodging.overallRating)}</b> ·{" "}
-                {t("lodging:field.staysCount", { count: lodging.stayCount })}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-            >
-              {t("common:buttons.edit")}
-            </button>
-            <button
-              type="button"
-              data-testid="lodging-delete-button"
-              onClick={() => setConfirmingDelete(true)}
-              className="rounded-md border border-[var(--danger)]/50 px-3 py-1 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
-            >
+              {lodging.stars !== null ? ` · ${"★".repeat(lodging.stars)} ${lodging.stars}` : ""}
+            </span>
+            {addressLine.length > 0 && (
+              <span style={{ color: "var(--ts-text)" }}>{addressLine}</span>
+            )}
+          </>
+        }
+        facts={[
+          <>
+            {t("lodging:detail.avgRating")} <b>{formatRatingText(lodging.overallRating)}</b>
+          </>,
+          t("lodging:field.staysCount", { count: lodging.stayCount }),
+        ]}
+        status={
+          lifecycle ? <StayStatusPill status={lifecycle} testId="lodging-detail-lifecycle" /> : null
+        }
+        actions={
+          <>
+            <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
+            <Button data-testid="lodging-delete-button" onClick={() => setConfirmingDelete(true)}>
               {t("common:buttons.delete")}
-            </button>
-          </div>
+            </Button>
+          </>
+        }
+      />
+
+      {lodging.amenities.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-1">
+          {lodging.amenities.map((a) => (
+            <span
+              key={a}
+              className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+            >
+              {a}
+            </span>
+          ))}
         </div>
+      )}
 
-        {lodging.amenities.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-1">
-            {lodging.amenities.map((a) => (
-              <span
-                key={a}
-                className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
-              >
-                {a}
-              </span>
-            ))}
-          </div>
-        )}
+      {id && <LodgingPhotoSection lodgingId={id} />}
 
-        {id && <LodgingPhotoSection lodgingId={id} />}
-
-        {/* The notes, under the same name the form gives them.
+      {/* The notes, under the same name the form gives them.
             They were stored and never shown, so anything typed there
             disappeared on save. Rendered only when there are some: an empty
             heading over blank space is its own small untruth. */}
-        {lodging.notes !== null && lodging.notes.trim().length > 0 && (
-          <section className="mb-4">
-            <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
-              {t("lodging:field.notes")}
-            </h2>
-            <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">
-              {lodging.notes}
-            </p>
-          </section>
-        )}
+      {lodging.notes !== null && lodging.notes.trim().length > 0 && (
+        <section className="mb-4">
+          <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
+            {t("lodging:field.notes")}
+          </h2>
+          <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">{lodging.notes}</p>
+        </section>
+      )}
 
-        {/* Two-column body */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div className="md:col-span-3">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--text-muted)]">
-                {t("lodging:detail.stays")}
-              </h2>
-              <button
-                type="button"
-                data-testid="lodging-add-stay-button"
-                onClick={() => setEditingStay("new")}
-                className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-              >
-                {t("lodging:stayEditor.addStay")}
-              </button>
+      {/* Two-column body */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="md:col-span-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[var(--text-muted)]">
+              {t("lodging:detail.stays")}
+            </h2>
+            <button
+              type="button"
+              data-testid="lodging-add-stay-button"
+              onClick={() => setEditingStay("new")}
+              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
+            >
+              {t("lodging:stayEditor.addStay")}
+            </button>
+          </div>
+          {lodging.stays.length > 0 ? (
+            // A scroll box of its own rather than the page: a house with
+            // dozens of stays pushed the map and the spend card off screen
+            // (owner, 2026-09-05). Bounded only from md up, where the
+            // sidebar sits beside it — a nested scroll area inside a
+            // single-column page is a scroll trap on a phone.
+            <div
+              data-testid="lodging-stays-scroll"
+              className="flex flex-col gap-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1"
+            >
+              {lodging.stays.map((stay) => {
+                // The SAME function the server resolves with
+                // (shared/membershipDerivation.ts) and the stay editor
+                // already uses — so the list gives the same answer as the
+                // editor for the same stay, instead of two different ones.
+                const resolvedMembership = deriveStayMembership({
+                  overrideId: stay.membershipId,
+                  optOut: stay.membershipOptOut,
+                  lodgingId: lodging.id,
+                  lodgingChainId: lodging.chainId,
+                  memberships: memberships.map((m) => ({
+                    id: m.id,
+                    createdAt: m.createdAt,
+                    chainIds: m.chainIds,
+                    lodgingIds: m.lodgingIds,
+                  })),
+                });
+                const membershipName =
+                  resolvedMembership.membershipId !== null
+                    ? memberships.find((m) => m.id === resolvedMembership.membershipId)?.programName
+                    : undefined;
+                return (
+                  <LodgingStayCard
+                    key={stay.id}
+                    stay={stay}
+                    onEdit={setEditingStay}
+                    tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
+                    membershipName={membershipName}
+                    membershipSource={resolvedMembership.source}
+                  />
+                );
+              })}
             </div>
-            {lodging.stays.length > 0 ? (
-              // A scroll box of its own rather than the page: a house with
-              // dozens of stays pushed the map and the spend card off screen
-              // (owner, 2026-09-05). Bounded only from md up, where the
-              // sidebar sits beside it — a nested scroll area inside a
-              // single-column page is a scroll trap on a phone.
-              <div
-                data-testid="lodging-stays-scroll"
-                className="flex flex-col gap-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1"
+          ) : (
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
+              {t("lodging:detail.staysEmpty")}
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-3 md:col-span-2">
+          <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+
+          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {t("lodging:detail.spend")}
+            </h3>
+            <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+              {originalSpend && (
+                <div className="flex justify-between">
+                  <dt>{t("lodging:detail.spendOriginal")}</dt>
+                  <dd className="text-[var(--text-primary)]">
+                    {formatCurrency(originalSpend.amount, originalSpend.currency)}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt>{t("lodging:detail.spendBase")}</dt>
+                <dd style={originalSpend ? { color: "var(--fx, #6ab7d8)" } : undefined}>
+                  {priced ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>{t("lodging:detail.spendPerNight")}</dt>
+                <dd>
+                  {priced && avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}
+                </dd>
+              </div>
+            </dl>
+            <PlannedSpendNote stays={lodging.stays} />
+            {/* A total that left rows out must say so. Silence here reads as
+                  "this is everything", which is exactly the lie the marker on
+                  each stay exists to prevent. */}
+            {unconvertedCount > 0 && (
+              <p
+                data-testid="lodging-omitted-from-total"
+                className="mt-1 text-xs text-[var(--text-muted)]"
               >
-                {lodging.stays.map((stay) => {
-                  // The SAME function the server resolves with
-                  // (shared/membershipDerivation.ts) and the stay editor
-                  // already uses — so the list gives the same answer as the
-                  // editor for the same stay, instead of two different ones.
-                  const resolvedMembership = deriveStayMembership({
-                    overrideId: stay.membershipId,
-                    optOut: stay.membershipOptOut,
-                    lodgingId: lodging.id,
-                    lodgingChainId: lodging.chainId,
-                    memberships: memberships.map((m) => ({
-                      id: m.id,
-                      createdAt: m.createdAt,
-                      chainIds: m.chainIds,
-                      lodgingIds: m.lodgingIds,
-                    })),
-                  });
-                  const membershipName =
-                    resolvedMembership.membershipId !== null
-                      ? memberships.find((m) => m.id === resolvedMembership.membershipId)
-                          ?.programName
-                      : undefined;
-                  return (
-                    <LodgingStayCard
-                      key={stay.id}
-                      stay={stay}
-                      onEdit={setEditingStay}
-                      tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
-                      membershipName={membershipName}
-                      membershipSource={resolvedMembership.source}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-                {t("lodging:detail.staysEmpty")}
-              </div>
+                {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
+              </p>
             )}
           </div>
 
-          <aside className="space-y-3 md:col-span-2">
-            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {t("lodging:detail.avgRating")}
+            </h3>
+            <dl className="mt-2 space-y-1.5 text-xs text-[var(--text-muted)]">
+              <div className="flex items-center justify-between">
+                <dt>{t("lodging:field.ratingRoom")}</dt>
+                <dd>
+                  <StarRating value={categoryRatings.room} />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt>{t("lodging:field.ratingBreakfast")}</dt>
+                <dd>
+                  <StarRating value={categoryRatings.breakfast} />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt>{t("lodging:field.ratingService")}</dt>
+                <dd>
+                  <StarRating value={categoryRatings.service} />
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      </div>
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.spend")}
-              </h3>
-              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
-                {originalSpend && (
-                  <div className="flex justify-between">
-                    <dt>{t("lodging:detail.spendOriginal")}</dt>
-                    <dd className="text-[var(--text-primary)]">
-                      {formatCurrency(originalSpend.amount, originalSpend.currency)}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt>{t("lodging:detail.spendBase")}</dt>
-                  <dd style={originalSpend ? { color: "var(--fx, #6ab7d8)" } : undefined}>
-                    {priced ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—"}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t("lodging:detail.spendPerNight")}</dt>
-                  <dd>
-                    {priced && avgPerNight !== null
-                      ? formatCurrency(avgPerNight, baseCurrency)
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
-              <PlannedSpendNote stays={lodging.stays} />
-              {/* A total that left rows out must say so. Silence here reads as
-                  "this is everything", which is exactly the lie the marker on
-                  each stay exists to prevent. */}
-              {unconvertedCount > 0 && (
-                <p
-                  data-testid="lodging-omitted-from-total"
-                  className="mt-1 text-xs text-[var(--text-muted)]"
-                >
-                  {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
-                </p>
-              )}
-            </div>
+      {editing && (
+        <LodgingFormModal
+          mode="edit"
+          lodging={lodging}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setLodging(updated);
+            setEditing(false);
+          }}
+        />
+      )}
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.avgRating")}
-              </h3>
-              <dl className="mt-2 space-y-1.5 text-xs text-[var(--text-muted)]">
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingRoom")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.room} />
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingBreakfast")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.breakfast} />
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingService")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.service} />
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </aside>
-        </div>
+      {editingStay !== null && (
+        <StayEditor
+          mode={editingStay === "new" ? "create" : "edit"}
+          lodgingId={lodging.id}
+          lodgingChainId={lodging.chainId}
+          stay={editingStay === "new" ? null : editingStay}
+          onClose={() => setEditingStay(null)}
+          onSaved={async (savedStay) => {
+            setEditingStay(null);
+            // A stay write doesn't return the parent lodging's recomputed
+            // aggregates (nights/stayCount/overallRating/totalSpendBase) —
+            // those are only ever attached server-side via
+            // `computeAggregates` on a lodging fetch, so a full reload is
+            // the only way to keep this page's header stats correct.
+            try {
+              const fresh = await getLodging(lodging.id);
+              setLodging(fresh);
+            } catch (err: unknown) {
+              logger.error("LodgingDetailPage: reload after stay save failed", err);
+              // Fall back to a client-side merge so the new/edited stay is
+              // still visible even if the reload itself failed.
+              setLodging((prev) => {
+                if (!prev) return prev;
+                const stays = prev.stays.some((s) => s.id === savedStay.id)
+                  ? prev.stays.map((s) => (s.id === savedStay.id ? savedStay : s))
+                  : [...prev.stays, savedStay];
+                return { ...prev, stays };
+              });
+            }
+          }}
+        />
+      )}
 
-        {editing && (
-          <LodgingFormModal
-            mode="edit"
-            lodging={lodging}
-            onClose={() => setEditing(false)}
-            onSaved={(updated) => {
-              setLodging(updated);
-              setEditing(false);
-            }}
-          />
-        )}
-
-        {editingStay !== null && (
-          <StayEditor
-            mode={editingStay === "new" ? "create" : "edit"}
-            lodgingId={lodging.id}
-            lodgingChainId={lodging.chainId}
-            stay={editingStay === "new" ? null : editingStay}
-            onClose={() => setEditingStay(null)}
-            onSaved={async (savedStay) => {
-              setEditingStay(null);
-              // A stay write doesn't return the parent lodging's recomputed
-              // aggregates (nights/stayCount/overallRating/totalSpendBase) —
-              // those are only ever attached server-side via
-              // `computeAggregates` on a lodging fetch, so a full reload is
-              // the only way to keep this page's header stats correct.
-              try {
-                const fresh = await getLodging(lodging.id);
-                setLodging(fresh);
-              } catch (err: unknown) {
-                logger.error("LodgingDetailPage: reload after stay save failed", err);
-                // Fall back to a client-side merge so the new/edited stay is
-                // still visible even if the reload itself failed.
-                setLodging((prev) => {
-                  if (!prev) return prev;
-                  const stays = prev.stays.some((s) => s.id === savedStay.id)
-                    ? prev.stays.map((s) => (s.id === savedStay.id ? savedStay : s))
-                    : [...prev.stays, savedStay];
-                  return { ...prev, stays };
-                });
-              }
-            }}
-          />
-        )}
-
-        {/* Same component and same keys as the lodging LIST — this was the
+      {/* Same component and same keys as the lodging LIST — this was the
             clearest case of the six: deleting a house looked different
             depending on whether you did it from the list or from here. */}
-        <ConfirmModal
-          isOpen={confirmingDelete}
-          onClose={() => setConfirmingDelete(false)}
-          onConfirm={() => void handleDelete()}
-          isLoading={deleting}
-          title={t("lodging:detail.deleteConfirmTitle")}
-          message={countedDeleteMessage(
-            t,
-            {
-              counted: "lodging:detail.deleteConfirmMessage",
-              empty: "lodging:detail.deleteConfirmMessageNoStays",
-            },
-            lodging.name,
-            lodging.stayCount
-          )}
-          confirmText={t("common:buttons.delete")}
-          confirmButtonClass={DELETE_BUTTON_CLASS}
-        />
-      </div>
-    </div>
+      <ConfirmModal
+        isOpen={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => void handleDelete()}
+        isLoading={deleting}
+        title={t("lodging:detail.deleteConfirmTitle")}
+        message={countedDeleteMessage(
+          t,
+          {
+            counted: "lodging:detail.deleteConfirmMessage",
+            empty: "lodging:detail.deleteConfirmMessageNoStays",
+          },
+          lodging.name,
+          lodging.stayCount
+        )}
+        confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
+    </AppShell>
   );
 }

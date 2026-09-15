@@ -8,6 +8,7 @@
  */
 export { default as AppShell, type ShellWidth } from "./AppShell";
 export { default as PageHeader } from "./PageHeader";
+export { default as DetailHeader } from "./DetailHeader";
 export { default as Button, type ButtonVariant } from "./Button";
 export { default as IconButton } from "./IconButton";
 export { Card, Tile, HeroCard, SparseCard } from "./Card";

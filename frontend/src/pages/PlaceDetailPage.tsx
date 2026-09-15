@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
+import AppShell from "../components/ui/AppShell";
+import DetailHeader from "../components/ui/DetailHeader";
+import Button from "../components/ui/Button";
+import { statusPillStyle } from "../components/table/statusPillStyle";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
@@ -172,275 +174,198 @@ export default function PlaceDetailPage(): JSX.Element {
 
   if (access === "denied") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
-        </div>
-      </PageTransition>
+        </p>
+      </AppShell>
     );
   }
 
   if (loading) {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
-          {t("common:loading.default")}
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
+      </AppShell>
     );
   }
 
   if (failure !== null || !place) {
     const isLoadError = failure === "loadError";
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+      <AppShell width="reading">
+        <div className="py-16 text-center">
           <p role="alert" style={{ color: "var(--danger)" }}>
             {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
           </p>
           {isLoadError && (
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="mt-3 block w-full text-sm underline"
-              style={{ color: "var(--accent)" }}
-            >
-              {t("common:buttons.retry")}
-            </button>
+            <div className="mt-3 flex justify-center">
+              <Button onClick={() => void load()}>{t("common:buttons.retry")}</Button>
+            </div>
           )}
-          <Link
-            to="/places"
-            className="mt-3 inline-block text-sm underline"
-            style={{ color: "var(--accent)" }}
-          >
-            {t("places:detail.backToList")}
+          <Link to="/places" className="ts-back-link mt-3 inline-block text-sm">
+            ← {t("places:detail.backToList")}
           </Link>
         </div>
-      </PageTransition>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <NavigationBar />
-      <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
-        <Link to="/places" className="text-sm" style={{ color: "var(--text-muted)" }}>
-          ← {t("places:detail.backToList")}
-        </Link>
-
-        <div className="mt-3 mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="t-screen-title flex items-center gap-3">
-              <span aria-hidden>{PLACE_CATEGORY_ICONS[place.category]}</span>
-              {place.name}
-            </h1>
-            <div
-              className="mt-1 flex items-center gap-2 text-sm"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {[place.city, placeCountryLabel(place, i18n.language)].filter(Boolean).join(", ") ||
-                "—"}
-              {placeCountryCode(place) && <FlagImg country={placeCountryCode(place)} />}
-              <span>·</span>
-              <span>{t(`places:categories.${place.category}`)}</span>
-              <span
-                className="rounded px-2 py-0.5 text-xs"
-                style={
-                  place.visited
-                    ? {
-                        color: "var(--success)",
-                        background: "rgba(63,185,80,0.08)",
-                        border: "1px solid rgba(63,185,80,0.35)",
-                      }
-                    : { color: "var(--text-muted)", border: "1px dashed var(--color-border)" }
-                }
-              >
-                {place.visited ? t("places:list.status.visited") : t("places:list.status.wishlist")}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-lg px-4 py-2 text-sm"
-              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
-            >
-              {t("common:buttons.edit")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAddingVisit((v) => !v)}
-              className="rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "var(--domain-poi)", color: "#08221e" }}
-            >
+    <AppShell width="list">
+      <DetailHeader
+        backTo="/places"
+        backLabel={t("places:detail.backToList")}
+        domain="poi"
+        icon={PLACE_CATEGORY_ICONS[place.category]}
+        title={place.name}
+        subtitle={
+          <span className="flex items-center gap-2">
+            {[place.city, placeCountryLabel(place, i18n.language)].filter(Boolean).join(", ") ||
+              "—"}
+            {placeCountryCode(place) && <FlagImg country={placeCountryCode(place)} />}
+            <span>·</span>
+            <span>{t(`places:categories.${place.category}`)}</span>
+          </span>
+        }
+        status={
+          <span
+            className="ts-status-pill"
+            style={statusPillStyle(place.visited ? "flown" : "historical")}
+          >
+            {place.visited ? t("places:list.status.visited") : t("places:list.status.wishlist")}
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
+            <Button variant="primary" onClick={() => setAddingVisit((v) => !v)}>
               + {t("places:detail.addVisit")}
-            </button>
-          </div>
-        </div>
+            </Button>
+          </>
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="space-y-4">
-            {addingVisit && (
-              <section className="rounded-lg p-4" style={PANEL}>
-                <h2
-                  className="mb-3 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {t("places:detail.addVisit")}
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("places:detail.date")}
-                    </span>
-                    <input
-                      type="date"
-                      className={INPUT}
-                      value={visitDate}
-                      onChange={(e) => setVisitDate(e.target.value)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("places:detail.time")}
-                    </span>
-                    <input
-                      type="time"
-                      className={INPUT}
-                      value={visitTime}
-                      onChange={(e) => setVisitTime(e.target.value)}
-                    />
-                  </label>
-                </div>
-                <label className="mt-3 flex flex-col gap-1">
-                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {t("places:detail.visitNotes")}
-                  </span>
-                  <input
-                    className={INPUT}
-                    value={visitNotes}
-                    onChange={(e) => setVisitNotes(e.target.value)}
-                  />
-                </label>
-                <label className="mt-3 flex flex-col gap-1">
-                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {t("places:detail.visitTrip")}
-                  </span>
-                  <select
-                    className={INPUT}
-                    value={visitTripId}
-                    onChange={(e) => setVisitTripId(e.target.value)}
-                  >
-                    <option value="">{t("places:detail.visitNoTrip")}</option>
-                    {trips.map((trip) => (
-                      <option key={trip.id} value={trip.id}>
-                        {trip.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {/* Both halves of the rule, said plainly, because both surprise
-                    people: a date is optional, and a future one does not count. */}
-                <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                  {t("places:detail.dateHint")}
-                </p>
-                <div className="mt-3 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAddingVisit(false)}
-                    className="rounded-lg px-3 py-1.5 text-sm"
-                    style={{
-                      border: "1px solid var(--color-border)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {t("common:buttons.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void submitVisit()}
-                    className="rounded-lg px-3 py-1.5 text-sm font-semibold"
-                    style={{ background: "var(--domain-poi)", color: "#08221e" }}
-                  >
-                    {t("common:buttons.save")}
-                  </button>
-                </div>
-              </section>
-            )}
-
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-4">
+          {addingVisit && (
             <section className="rounded-lg p-4" style={PANEL}>
               <h2
                 className="mb-3 text-xs font-semibold uppercase tracking-wider"
                 style={{ color: "var(--text-muted)" }}
               >
-                {t("places:detail.visits")} · {completed.length}
+                {t("places:detail.addVisit")}
               </h2>
-              {completed.length === 0 && planned.length === 0 ? (
-                /* A place ticked off a curated checklist carries `visited` and
-                 * no visit row — that is deliberate, since a checklist tick
-                 * says "I have been here" without claiming a date. But "no
-                 * visit recorded" sitting under a "Visited" badge reads as a
-                 * contradiction, and it hides that photo proof hangs off a
-                 * visit. Say which of the two states this actually is. */
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {place.visited
-                    ? t("places:detail.visitedWithoutVisit")
-                    : t("places:detail.noVisits")}
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {completed.map((v) => (
-                    <li key={v.id} className="rounded-md px-3 py-2" style={ROW}>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-mono text-sm">{formatVisit(v)}</span>
-                        <span
-                          className="flex-1 truncate text-xs"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {v.notes ?? ""}
-                        </span>
-                        <RowActions>
-                          <RowActionButton
-                            icon="delete"
-                            label={t("common:buttons.delete")}
-                            onClick={() => void removeVisit(v.id)}
-                          />
-                        </RowActions>
-                      </div>
-                      {/* Proof hangs off the VISIT, not the place: "I was here
-                          in 2019" and "I was here last week" are two different
-                          sets of pictures. */}
-                      <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />
-                    </li>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {t("places:detail.date")}
+                  </span>
+                  <input
+                    type="date"
+                    className={INPUT}
+                    value={visitDate}
+                    onChange={(e) => setVisitDate(e.target.value)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {t("places:detail.time")}
+                  </span>
+                  <input
+                    type="time"
+                    className={INPUT}
+                    value={visitTime}
+                    onChange={(e) => setVisitTime(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="mt-3 flex flex-col gap-1">
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("places:detail.visitNotes")}
+                </span>
+                <input
+                  className={INPUT}
+                  value={visitNotes}
+                  onChange={(e) => setVisitNotes(e.target.value)}
+                />
+              </label>
+              <label className="mt-3 flex flex-col gap-1">
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("places:detail.visitTrip")}
+                </span>
+                <select
+                  className={INPUT}
+                  value={visitTripId}
+                  onChange={(e) => setVisitTripId(e.target.value)}
+                >
+                  <option value="">{t("places:detail.visitNoTrip")}</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </option>
                   ))}
-                  {planned.map((v) => (
-                    <li
-                      key={v.id}
-                      className="flex items-center justify-between gap-3 rounded-md px-3 py-2"
-                      style={ROW}
-                    >
-                      <span className="font-mono text-sm" style={{ color: "var(--warning)" }}>
-                        {formatVisit(v)}
-                      </span>
+                </select>
+              </label>
+              {/* Both halves of the rule, said plainly, because both surprise
+                    people: a date is optional, and a future one does not count. */}
+              <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("places:detail.dateHint")}
+              </p>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAddingVisit(false)}
+                  className="rounded-lg px-3 py-1.5 text-sm"
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {t("common:buttons.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submitVisit()}
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold"
+                  style={{ background: "var(--domain-poi)", color: "#08221e" }}
+                >
+                  {t("common:buttons.save")}
+                </button>
+              </div>
+            </section>
+          )}
+
+          <section className="rounded-lg p-4" style={PANEL}>
+            <h2
+              className="mb-3 text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {t("places:detail.visits")} · {completed.length}
+            </h2>
+            {completed.length === 0 && planned.length === 0 ? (
+              /* A place ticked off a curated checklist carries `visited` and
+               * no visit row — that is deliberate, since a checklist tick
+               * says "I have been here" without claiming a date. But "no
+               * visit recorded" sitting under a "Visited" badge reads as a
+               * contradiction, and it hides that photo proof hangs off a
+               * visit. Say which of the two states this actually is. */
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {place.visited
+                  ? t("places:detail.visitedWithoutVisit")
+                  : t("places:detail.noVisits")}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {completed.map((v) => (
+                  <li key={v.id} className="rounded-md px-3 py-2" style={ROW}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-sm">{formatVisit(v)}</span>
                       <span
                         className="flex-1 truncate text-xs"
                         style={{ color: "var(--text-muted)" }}
                       >
                         {v.notes ?? ""}
-                      </span>
-                      <span
-                        className="rounded px-2 py-1 font-mono text-[10px]"
-                        style={{
-                          color: "var(--warning)",
-                          border: "1px solid rgba(210,153,34,0.35)",
-                          background: "rgba(210,153,34,0.08)",
-                        }}
-                      >
-                        {t("places:detail.notCountedYet")}
                       </span>
                       <RowActions>
                         <RowActionButton
@@ -449,86 +374,121 @@ export default function PlaceDetailPage(): JSX.Element {
                           onClick={() => void removeVisit(v.id)}
                         />
                       </RowActions>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {place.notes && (
-              <section className="rounded-lg p-4" style={PANEL}>
-                <h2
-                  className="mb-2 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {t("places:detail.notes")}
-                </h2>
-                <p
-                  className="whitespace-pre-wrap text-sm"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {place.notes}
-                </p>
-              </section>
+                    </div>
+                    {/* Proof hangs off the VISIT, not the place: "I was here
+                          in 2019" and "I was here last week" are two different
+                          sets of pictures. */}
+                    <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />
+                  </li>
+                ))}
+                {planned.map((v) => (
+                  <li
+                    key={v.id}
+                    className="flex items-center justify-between gap-3 rounded-md px-3 py-2"
+                    style={ROW}
+                  >
+                    <span className="font-mono text-sm" style={{ color: "var(--warning)" }}>
+                      {formatVisit(v)}
+                    </span>
+                    <span
+                      className="flex-1 truncate text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {v.notes ?? ""}
+                    </span>
+                    <span
+                      className="rounded px-2 py-1 font-mono text-[10px]"
+                      style={{
+                        color: "var(--warning)",
+                        border: "1px solid rgba(210,153,34,0.35)",
+                        background: "rgba(210,153,34,0.08)",
+                      }}
+                    >
+                      {t("places:detail.notCountedYet")}
+                    </span>
+                    <RowActions>
+                      <RowActionButton
+                        icon="delete"
+                        label={t("common:buttons.delete")}
+                        onClick={() => void removeVisit(v.id)}
+                      />
+                    </RowActions>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
+          </section>
 
-          <div className="space-y-4">
-            <section className="overflow-hidden rounded-lg" style={PANEL}>
-              {/* Read-only: the place is edited through the form, which has the
+          {place.notes && (
+            <section className="rounded-lg p-4" style={PANEL}>
+              <h2
+                className="mb-2 text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("places:detail.notes")}
+              </h2>
+              <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--text-secondary)" }}>
+                {place.notes}
+              </p>
+            </section>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <section className="overflow-hidden rounded-lg" style={PANEL}>
+            {/* Read-only: the place is edited through the form, which has the
                   full picker. Omitting the handlers is what makes it read-only —
                   no-ops used to stand here, and they left the pin draggable, so
                   it could be nudged and stay nudged while the coordinates below
                   went on showing the stored value. */}
-              <LocationMiniMap
-                value={{ lat: place.lat, lon: place.lon }}
-                initialViewState={{ longitude: place.lon, latitude: place.lat, zoom: 12 }}
-                focusNonce={0}
-                compact
-                ariaLabel={t("places:detail.mapLabel", { name: place.name })}
-                attributionLabel=""
-              />
-            </section>
+            <LocationMiniMap
+              value={{ lat: place.lat, lon: place.lon }}
+              initialViewState={{ longitude: place.lon, latitude: place.lat, zoom: 12 }}
+              focusNonce={0}
+              compact
+              ariaLabel={t("places:detail.mapLabel", { name: place.name })}
+              attributionLabel=""
+            />
+          </section>
 
-            <section className="rounded-lg p-4" style={PANEL}>
-              <h2
-                className="mb-3 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {t("places:detail.masterData")}
-              </h2>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                <dt style={{ color: "var(--text-muted)" }}>{t("places:form.address")}</dt>
-                <dd>{place.address ?? "—"}</dd>
-                <dt style={{ color: "var(--text-muted)" }}>{t("places:form.country")}</dt>
-                <dd>
-                  {placeCountryLabel(place, i18n.language) || "—"}
-                  {place.isoCountryCode && (
-                    <code className="ml-2 text-xs">{place.isoCountryCode}</code>
-                  )}
-                </dd>
-                <dt style={{ color: "var(--text-muted)" }}>{t("places:detail.position")}</dt>
-                <dd className="font-mono text-xs">
-                  {place.lat.toFixed(4)}, {place.lon.toFixed(4)}
-                </dd>
-                {place.externalRef && (
-                  <>
-                    <dt style={{ color: "var(--text-muted)" }}>{t("places:detail.source")}</dt>
-                    <dd className="font-mono text-xs">{place.externalRef}</dd>
-                  </>
-                )}
-              </dl>
-            </section>
-
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="w-full rounded-lg px-4 py-2 text-sm"
-              style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
+          <section className="rounded-lg p-4" style={PANEL}>
+            <h2
+              className="mb-3 text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "var(--text-muted)" }}
             >
-              {t("places:detail.deletePlace")}
-            </button>
-          </div>
+              {t("places:detail.masterData")}
+            </h2>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              <dt style={{ color: "var(--text-muted)" }}>{t("places:form.address")}</dt>
+              <dd>{place.address ?? "—"}</dd>
+              <dt style={{ color: "var(--text-muted)" }}>{t("places:form.country")}</dt>
+              <dd>
+                {placeCountryLabel(place, i18n.language) || "—"}
+                {place.isoCountryCode && (
+                  <code className="ml-2 text-xs">{place.isoCountryCode}</code>
+                )}
+              </dd>
+              <dt style={{ color: "var(--text-muted)" }}>{t("places:detail.position")}</dt>
+              <dd className="font-mono text-xs">
+                {place.lat.toFixed(4)}, {place.lon.toFixed(4)}
+              </dd>
+              {place.externalRef && (
+                <>
+                  <dt style={{ color: "var(--text-muted)" }}>{t("places:detail.source")}</dt>
+                  <dd className="font-mono text-xs">{place.externalRef}</dd>
+                </>
+              )}
+            </dl>
+          </section>
+
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="w-full rounded-lg px-4 py-2 text-sm"
+            style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
+          >
+            {t("places:detail.deletePlace")}
+          </button>
         </div>
       </div>
 
@@ -554,7 +514,7 @@ export default function PlaceDetailPage(): JSX.Element {
           onClose={() => setConfirmDelete(false)}
         />
       )}
-    </PageTransition>
+    </AppShell>
   );
 }
 

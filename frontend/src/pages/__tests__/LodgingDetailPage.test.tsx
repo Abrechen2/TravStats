@@ -477,8 +477,15 @@ describe("LodgingDetailPage", () => {
       </MemoryRouter>
     );
 
+    // By destination and name, not by the rendered string: the arrow is its
+    // own aria-hidden element in the shared detail header, so a screen reader
+    // is not read "left arrow" — and a test that matched "← Kempinski" as one
+    // text node was really asserting that it is NOT.
     await waitFor(() => {
-      expect(screen.getByText("← Kempinski")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Kempinski" })).toHaveAttribute(
+        "href",
+        "/lodging/chains/7"
+      );
     });
   });
 
@@ -487,7 +494,10 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await waitFor(() => {
-      expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "lodging:list.title" })).toHaveAttribute(
+        "href",
+        "/lodging"
+      );
     });
   });
 

@@ -156,6 +156,12 @@
   white-space: nowrap;
 }
 
+/* ─── Detail header ────────────────────────────────────────────────────── */
+.ts-back-link:hover {
+  color: var(--ts-text);
+  text-decoration: underline;
+}
+
 /* ─── Rows ──────────────────────────────────────────────────────────────── */
 .ts-row:hover,
 .ts-table-row[data-clickable="yes"]:hover {
