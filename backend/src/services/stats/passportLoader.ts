@@ -14,6 +14,7 @@
  * (`visited: false` is a bookmark, not a visit) is named where it is made.
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
@@ -96,29 +97,60 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
  * from the flight list would make the story disagree with the passport on an
  * account with a cruise — which is precisely the drift #42 is about.
  */
-export async function loadPassport(userId: string): Promise<ReturnType<typeof buildPassport>> {
+/**
+ * The flight columns the passport reads.
+ *
+ * Exported so a caller that is ALREADY loading flights can select at least
+ * these and hand them over, instead of making this function scan the table a
+ * second time inside the same request — see the `prefetchedFlights` parameter
+ * (forgejo#49).
+ */
+export const PASSPORT_FLIGHT_SELECT = {
+  depIata: true,
+  depIcao: true,
+  depLat: true,
+  depLon: true,
+  arrIata: true,
+  arrIcao: true,
+  arrLat: true,
+  arrLon: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimeSemantics: true,
+  arrTimeSemantics: true,
+  status: true,
+} as const;
+
+/**
+ * What the passport needs of a flight, DERIVED from the select above rather
+ * than written out again — a hand-copied shape is a second description that
+ * drifts the first time a column changes.
+ */
+export type PassportLoaderFlight = Prisma.FlightGetPayload<{
+  select: typeof PASSPORT_FLIGHT_SELECT;
+}>;
+
+/**
+ * @param prefetchedFlights rows the caller has already read for its own
+ *   purposes, with the same `where` this would use — every countable flight of
+ *   that user. Passing them saves a whole table scan; passing a NARROWER set
+ *   would silently shrink the passport, so the contract is the full countable
+ *   list or nothing.
+ */
+export async function loadPassport(
+  userId: string,
+  prefetchedFlights?: PassportLoaderFlight[],
+): Promise<ReturnType<typeof buildPassport>> {
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
 
-  const flights = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
-    select: {
-      depIata: true,
-      depIcao: true,
-      depLat: true,
-      depLon: true,
-      arrIata: true,
-      arrIcao: true,
-      arrLat: true,
-      arrLon: true,
-      departureTime: true,
-      arrivalTime: true,
-      depTimeSemantics: true,
-      arrTimeSemantics: true,
-      status: true,
-    },
-  });
+  const flights =
+    prefetchedFlights ??
+    (await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere() },
+      select: PASSPORT_FLIGHT_SELECT,
+    }));
 
   /**
    * The calendar day each flight belongs to, at the DEPARTURE airport's clock.
