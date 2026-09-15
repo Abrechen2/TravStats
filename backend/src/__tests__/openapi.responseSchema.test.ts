@@ -9,9 +9,17 @@
  * spec looks complete while it is not.
  *
  * So: if an operation answers 200, that response must carry a real schema
- * under `content["application/json"]`. Other status codes are out of scope
- * on purpose — 204 has no body by definition, and 4xx bodies all share the
- * one error shape.
+ * under its declared media type. Other status codes are out of scope on
+ * purpose — 204 has no body by definition, and 4xx bodies all share the one
+ * error shape.
+ *
+ * "Its declared media type", not `application/json` specifically. This check
+ * used to demand JSON, which marked the two Immich proxy routes as shapeless
+ * although they document exactly what they return — image bytes. That is not a
+ * missing contract, it is a contract in another medium, and listing it as debt
+ * told the reader the opposite of the truth. Corrected 2026-09-15; the album
+ * proxy left the baseline in the same change, which is the direction this list
+ * is allowed to move.
  *
  * `openapi.responseSchema.baseline.json` lists the operations that fail
  * this today. It is a ratchet, not a config file: entries may be REMOVED
@@ -30,12 +38,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 /**
- * True when the 200 response of an operation carries a JSON schema.
- * The generator emits either an inline object or a `$ref`; both are
- * objects, and anything else (missing, null, a bare string) is not a
- * contract.
+ * True when the 200 response of an operation carries a schema under ANY media
+ * type it declares.
+ *
+ * The generator emits either an inline object or a `$ref`; both are objects,
+ * and anything else (missing, null, a bare string) is not a contract. A
+ * response that declares no content at all is not one either — that is the
+ * `{ 200: { description } }` case this file exists to catch.
  */
-const hasJsonResponseSchema = (operation: unknown): boolean => {
+const hasResponseSchema = (operation: unknown): boolean => {
   if (!isRecord(operation)) return false;
   const responses = operation.responses;
   if (!isRecord(responses)) return false;
@@ -43,9 +54,7 @@ const hasJsonResponseSchema = (operation: unknown): boolean => {
   if (!isRecord(ok)) return false;
   const content = ok.content;
   if (!isRecord(content)) return false;
-  const json = content["application/json"];
-  if (!isRecord(json)) return false;
-  return isRecord(json.schema);
+  return Object.values(content).some((media) => isRecord(media) && isRecord(media.schema));
 };
 
 const respondsWith200 = (operation: unknown): boolean =>
@@ -64,7 +73,7 @@ const classifyOperations = (): { withSchema: Set<string>; withoutSchema: Set<str
     for (const [method, operation] of Object.entries(operations)) {
       if (!respondsWith200(operation)) continue;
       const entry = label(method, path);
-      if (hasJsonResponseSchema(operation)) {
+      if (hasResponseSchema(operation)) {
         withSchema.add(entry);
       } else {
         withoutSchema.add(entry);

@@ -15,6 +15,7 @@
  * with 304 without ever touching Immich.
  */
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import { pipeline } from "node:stream/promises";
 import { prisma } from "../../db";
 import { authenticate, AuthRequest } from "../../middleware/auth";
@@ -31,6 +32,15 @@ import logger from "../../utils/logger";
 const router = Router();
 
 const CACHE_CONTROL = "private, max-age=86400, immutable";
+
+/**
+ * A position in the stored preview strip.
+ *
+ * Bounded rather than open: the strip is capped when written, and an
+ * unbounded integer here would let a caller probe the array's length one
+ * request at a time.
+ */
+const previewIndexSchema = z.coerce.number().int().min(0).max(63);
 
 /** 1x1 transparent PNG — painted instead of a broken-image icon on failure. */
 const PLACEHOLDER_PNG = Buffer.from(
@@ -62,6 +72,57 @@ function isClientAbort(error: unknown): boolean {
     "code" in error &&
     (error as { code?: unknown }).code === "ERR_STREAM_PREMATURE_CLOSE"
   );
+}
+
+/**
+ * Stream one asset to the response, once the caller's right to it is settled.
+ *
+ * Shared by both grants below. What differs between them is WHY the caller may
+ * see the asset; everything after that decision — headers, the pipeline, what a
+ * client abort means, what an upstream failure paints — must not differ at all.
+ */
+async function streamAsset(
+  res: Response,
+  client: ReturnType<typeof createImmichClient>,
+  assetId: string,
+  size: "thumbnail" | "preview" | "original",
+  etag: string,
+): Promise<void> {
+  const upstream = await client.fetchAssetStream(assetId, size);
+
+  res.setHeader("Content-Type", upstream.contentType);
+  res.setHeader("Cache-Control", CACHE_CONTROL);
+  res.setHeader("ETag", etag);
+  if (upstream.contentLength !== null) {
+    res.setHeader("Content-Length", String(upstream.contentLength));
+  }
+
+  // `pipeline()` (over a bare `.pipe()`) propagates destruction in both
+  // directions: if the client disconnects mid-download, `res` closes and
+  // `upstream.stream` is destroyed with it, instead of holding the connection
+  // to the user's Immich server open indefinitely (axios does not itself bound
+  // the body transfer once streaming starts — see `fetchAssetStream`'s doc
+  // comment). It also gives one place to distinguish a routine client abort
+  // from a genuine upstream failure.
+  try {
+    await pipeline(upstream.stream, res);
+  } catch (pipeError) {
+    if (isClientAbort(pipeError)) return;
+
+    logger.error({
+      message: "immich_proxy_stream_error",
+      error: pipeError,
+      context: { assetId },
+    });
+
+    // Bytes may already be on the wire — writing a fresh status/body would
+    // throw ERR_HTTP_HEADERS_SENT. Tear the connection down instead.
+    if (res.headersSent) {
+      res.destroy();
+    } else {
+      sendPlaceholder(res, 502);
+    }
+  }
 }
 
 router.get(
@@ -108,41 +169,75 @@ router.get(
         throw new AppError("notFound", 404);
       }
 
-      const upstream = await client.fetchAssetStream(assetId.data, size.data);
+      await streamAsset(res, client, assetId.data, size.data, etag);
+    } catch (error) {
+      if (error instanceof ImmichError) {
+        logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
+        sendPlaceholder(res, error.kind === "notFound" ? 404 : 502);
+        return;
+      }
+      next(error);
+    }
+  },
+);
 
-      res.setHeader("Content-Type", upstream.contentType);
-      res.setHeader("Cache-Control", CACHE_CONTROL);
-      res.setHeader("ETag", etag);
-      if (upstream.contentLength !== null) {
-        res.setHeader("Content-Length", String(upstream.contentLength));
+/**
+ * Stream one photograph of a suggested journey's preview strip.
+ *
+ * A `PhotoJourney` row keeps `previewAssetIds` — "ids rather than images: the
+ * proxy already streams thumbnails". It did not, for these: the album route
+ * above serves only an asset that is a MEMBER of a linked album, and a journey
+ * has no album. Every id stored on those rows was therefore unreachable, and
+ * any client drawing the strip got a 404 (forgejo#94).
+ *
+ * **The row is the grant.** The caller owns the journey; the asset id comes
+ * from the stored array at the requested INDEX and never from the request. A
+ * client cannot name an id, so owning one journey cannot be turned into
+ * reading the library — which is the same property the album route buys with
+ * its membership check, obtained here without an album to check against.
+ *
+ * Everything after that decision is the album route's: same limiter, same
+ * private immutable caching, same placeholder on an upstream failure.
+ */
+router.get(
+  "/photo-journeys/:id/preview/:index/file",
+  authenticate,
+  immichProxyLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const index = previewIndexSchema.safeParse(req.params.index);
+      if (!index.success) throw new AppError("Invalid preview index", 400);
+
+      const size = assetSizeSchema.safeParse(req.query.size);
+      if (!size.success) throw new AppError("Invalid size", 400);
+
+      // Scoped by userId in the same query, not checked afterwards: a journey
+      // that belongs to someone else must be indistinguishable from one that
+      // does not exist.
+      const journey = await prisma.photoJourney.findFirst({
+        where: { id: req.params.id, userId },
+        select: { previewAssetIds: true },
+      });
+      if (!journey) throw new AppError("notFound", 404);
+
+      const assetId = journey.previewAssetIds[index.data];
+      if (assetId === undefined) throw new AppError("notFound", 404);
+
+      const etag = `"${assetId}-${size.data}"`;
+      if (req.headers["if-none-match"] === etag) {
+        res.status(304).end();
+        return;
       }
 
-      // `pipeline()` (over a bare `.pipe()`) propagates destruction in both
-      // directions: if the client disconnects mid-download, `res` closes and
-      // `upstream.stream` is destroyed with it, instead of holding the
-      // connection to the user's Immich server open indefinitely (axios does
-      // not itself bound the body transfer once streaming starts — see
-      // `fetchAssetStream`'s doc comment). It also gives one place to
-      // distinguish a routine client abort from a genuine upstream failure.
-      try {
-        await pipeline(upstream.stream, res);
-      } catch (pipeError) {
-        if (isClientAbort(pipeError)) return;
-
-        logger.error({
-          message: "immich_proxy_stream_error",
-          error: pipeError,
-          context: { assetId: assetId.data },
-        });
-
-        // Bytes may already be on the wire — writing a fresh status/body
-        // would throw ERR_HTTP_HEADERS_SENT. Tear the connection down instead.
-        if (res.headersSent) {
-          res.destroy();
-        } else {
-          sendPlaceholder(res, 502);
-        }
+      const conn = await getImmichConnection(userId);
+      if (!conn) {
+        res.status(409).json({ error: "notConfigured" });
+        return;
       }
+
+      await streamAsset(res, createImmichClient(conn), assetId, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });

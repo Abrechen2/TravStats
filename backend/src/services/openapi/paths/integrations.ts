@@ -269,6 +269,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/photo-journeys/{id}/preview/{index}/file",
+  summary: "Stream one photograph of a suggested journey's preview strip",
+  description:
+    "The row is the grant: the caller owns the journey, and the asset id comes from " +
+    "the stored `previewAssetIds` at the given INDEX — never from the request. That is " +
+    "what keeps owning one journey from becoming a reader for the whole library, which " +
+    "the album route buys with a membership check it has no album for. Same private " +
+    "immutable caching and the same 1x1 placeholder on an upstream failure.",
+  tags: immichTag,
+  request: {
+    params: z.object({ id: uuid, index: z.coerce.number().int().min(0).max(63) }),
+    query: z.object({ size: z.enum(["thumbnail", "preview", "original"]).optional() }),
+  },
+  responses: {
+    200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
+    404: notFound,
+    409: { description: "No Immich connection configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/trips/{id}/immich/albums/{linkId}/import-job",
   summary: "How an album import is going",
   tags: immichTag,
