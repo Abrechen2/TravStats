@@ -1,0 +1,504 @@
+{
+  "source": "Design setup choices needed.zip",
+  "sourceSha256": "cd29680d6fa9a0e533f7f4f33ed991aff02a310862604c135c5547591a930d92",
+  "sourceBytes": 7931346,
+  "sourceEntries": 113,
+  "scope": "Root screens, docs, runtime, assets, pages and design tokens. Original uploads and thumbnail retained only in private source archive.",
+  "redactions": [
+    {
+      "file": "Admin v2.dc.html",
+      "kind": "private IPv4 address replaced by documentation address",
+      "count": 1
+    }
+  ],
+  "files": [
+    {
+      "path": "Admin v2.dc.html",
+      "sourceSha256": "bb12335ef3fe0fae9082e5cec6ad1a4e8ff15070a788c501b3f014529e4d171c",
+      "publishedSha256": "c2965a24a880ee7b1cb88cffc1e4cd03e55ad989bfc2393527ea90db8563730c",
+      "bytes": 82030
+    },
+    {
+      "path": "Admin.dc.html",
+      "sourceSha256": "b56927a94366daf10d4428ef2f14f8a449d07ecc92e61090b2a9dd3c4deb2f67",
+      "publishedSha256": "b56927a94366daf10d4428ef2f14f8a449d07ecc92e61090b2a9dd3c4deb2f67",
+      "bytes": 24871
+    },
+    {
+      "path": "Anmelden.dc.html",
+      "sourceSha256": "dbf5efd6735deec3162dcda48d98f6d43a5718934fbe3afaa430001b6f46a266",
+      "publishedSha256": "4dc5e1de0f8af70819b88a3b5b3dbf59657e3572e4108d95d129265a015627cc",
+      "bytes": 14862
+    },
+    {
+      "path": "Bestenliste.dc.html",
+      "sourceSha256": "34ee2bc9f32f147b7d06f84b730a759eb5ae5e7ad6a6c25e28e3c51c04ff55f4",
+      "publishedSha256": "34ee2bc9f32f147b7d06f84b730a759eb5ae5e7ad6a6c25e28e3c51c04ff55f4",
+      "bytes": 13267
+    },
+    {
+      "path": "Checkliste.dc.html",
+      "sourceSha256": "b0be8aac92fc60e9501e20cd681108d9cfb1274c864c4fbd78d72a40af7e7457",
+      "publishedSha256": "b0be8aac92fc60e9501e20cd681108d9cfb1274c864c4fbd78d72a40af7e7457",
+      "bytes": 20556
+    },
+    {
+      "path": "Dashboard.dc.html",
+      "sourceSha256": "634a6cf789e221b436544c6161d06adf63c9f9b546d41e7c11a2337431a54200",
+      "publishedSha256": "425e76810ea8723afa06a2ff834952390b4a4ad4c8b28f4302b9c15677407968",
+      "bytes": 84268
+    },
+    {
+      "path": "Design Primitives.dc.html",
+      "sourceSha256": "d57886a1844e15ab9cdf79a5270de9ea6d80ce52c7098fc5509e4c426f0a03a1",
+      "publishedSha256": "d57886a1844e15ab9cdf79a5270de9ea6d80ce52c7098fc5509e4c426f0a03a1",
+      "bytes": 64655
+    },
+    {
+      "path": "Dialoge.dc.html",
+      "sourceSha256": "44fc854ba581b586ee86f5d950b8ca6fae2a68d19228de0b8fb4adb847c082e6",
+      "publishedSha256": "62109d610a24dce0f2fdfeea6624bac95780b827ef7b050f5c629140b2e768d1",
+      "bytes": 68874
+    },
+    {
+      "path": "Druckansicht.dc.html",
+      "sourceSha256": "756aa43f03afbb6af0835b26d46db0214b4e8c62ad118ecd9ee9bd636fcb9457",
+      "publishedSha256": "756aa43f03afbb6af0835b26d46db0214b4e8c62ad118ecd9ee9bd636fcb9457",
+      "bytes": 24077
+    },
+    {
+      "path": "EN Logbook Flights.dc.html",
+      "sourceSha256": "378bde08f07636e2454508c5d5d7c728201b77be496e90a17ec9775a0dfeaf16",
+      "publishedSha256": "09a54317843d2524119f7b0c26828a7ea313cf83a6e47faccf28e71b60a57436",
+      "bytes": 39509
+    },
+    {
+      "path": "EN Passport.dc.html",
+      "sourceSha256": "ddc80fc05e7679abb139ac968230e411b13d864b7f836f6d5b31b34f67cea44a",
+      "publishedSha256": "ddc80fc05e7679abb139ac968230e411b13d864b7f836f6d5b31b34f67cea44a",
+      "bytes": 37707
+    },
+    {
+      "path": "EN Settings.dc.html",
+      "sourceSha256": "3cd3f53dff146023ebac6f4635331224847c5e08cd8404987546d3ab71ba2b49",
+      "publishedSha256": "ab03a318c1a95d8c83bd094193173502aabf22922ba55f2ba5594e7b8e7689e4",
+      "bytes": 116352
+    },
+    {
+      "path": "Einrichtung.dc.html",
+      "sourceSha256": "7b5718f9d527c3d1ea87a8a983d1c5741d24e1d580c65f44fa95eee2a431d173",
+      "publishedSha256": "7b5718f9d527c3d1ea87a8a983d1c5741d24e1d580c65f44fa95eee2a431d173",
+      "bytes": 16481
+    },
+    {
+      "path": "Einstellungen v2.dc.html",
+      "sourceSha256": "16167567647472b95ad1b861517667b7b5988a643922726c29e9a7266eed0957",
+      "publishedSha256": "96a256e76dde28a08542e6ab81c44856821e1d76f6a8e02c10bf2307f91c6f37",
+      "bytes": 59141
+    },
+    {
+      "path": "Einstellungen v3.dc.html",
+      "sourceSha256": "88f212821495105341944cd91da78273b01e0ea8bf89c10bf9ce20beaa5d24c1",
+      "publishedSha256": "9a055ed53cdd35c9291cceb0a3da8929d2ccceb6fa70ff46fab36c008cd49b24",
+      "bytes": 116774
+    },
+    {
+      "path": "Einstellungen.dc.html",
+      "sourceSha256": "36e172266b05ae88d125349e56a1f458b63b9207f59f8871b2e2bf33a6a0ae3e",
+      "publishedSha256": "36e172266b05ae88d125349e56a1f458b63b9207f59f8871b2e2bf33a6a0ae3e",
+      "bytes": 27729
+    },
+    {
+      "path": "Erfolg Detail.dc.html",
+      "sourceSha256": "28ac1dbe0a057181f18fdede447a4e005dd5bd397e9f02c7e830e0e99416105e",
+      "publishedSha256": "28ac1dbe0a057181f18fdede447a4e005dd5bd397e9f02c7e830e0e99416105e",
+      "bytes": 24586
+    },
+    {
+      "path": "Erfolge.dc.html",
+      "sourceSha256": "14e741c87038cced2a100095a536e0a337844645a16d9c12b3cb076141ed5cff",
+      "publishedSha256": "14e741c87038cced2a100095a536e0a337844645a16d9c12b3cb076141ed5cff",
+      "bytes": 20527
+    },
+    {
+      "path": "Flug Detail.dc.html",
+      "sourceSha256": "fe82e61f44906f719837972a83e0546dc9366ce4a3623afd3acfe3a3b760baaa",
+      "publishedSha256": "fb901e64096c40afa7b30c8811202bde950ddb92dc9fbb1a7ad130e2c5d4f441",
+      "bytes": 45056
+    },
+    {
+      "path": "Flugzeug.dc.html",
+      "sourceSha256": "4d5b2f18e71b3d17e9c3af930c79dc76486858e6027bc5d4b8862ac3c566e013",
+      "publishedSha256": "4d5b2f18e71b3d17e9c3af930c79dc76486858e6027bc5d4b8862ac3c566e013",
+      "bytes": 21114
+    },
+    {
+      "path": "Globus.dc.html",
+      "sourceSha256": "715e7bc40a93743d6866b3c13a96a9358cbd00403d79c90f8cdac86d420ed8af",
+      "publishedSha256": "715e7bc40a93743d6866b3c13a96a9358cbd00403d79c90f8cdac86d420ed8af",
+      "bytes": 22672
+    },
+    {
+      "path": "Hinzufuegen.dc.html",
+      "sourceSha256": "bdd473ec06615de910f857713761abcd6fe367c6e4c171c9ab3f3222651533ee",
+      "publishedSha256": "bdd473ec06615de910f857713761abcd6fe367c6e4c171c9ab3f3222651533ee",
+      "bytes": 49852
+    },
+    {
+      "path": "Import-Logbuch.dc.html",
+      "sourceSha256": "b5e40a320c28c80012391bcc32ac91bd8b62850c86ee63b49636ef86163f5e32",
+      "publishedSha256": "b5e40a320c28c80012391bcc32ac91bd8b62850c86ee63b49636ef86163f5e32",
+      "bytes": 21254
+    },
+    {
+      "path": "Index.dc.html",
+      "sourceSha256": "def7aa05edb7da74d6c07bec11fb535a8c382687fca460e9f2ec1d4293a89fbb",
+      "publishedSha256": "def7aa05edb7da74d6c07bec11fb535a8c382687fca460e9f2ec1d4293a89fbb",
+      "bytes": 29450
+    },
+    {
+      "path": "Jahresrueckblick.dc.html",
+      "sourceSha256": "f0a70b508b4a401f41cc96c27074cdcb9e4a0b47178d3ab776d392a27b1a4a2d",
+      "publishedSha256": "f0a70b508b4a401f41cc96c27074cdcb9e4a0b47178d3ab776d392a27b1a4a2d",
+      "bytes": 25863
+    },
+    {
+      "path": "Kartenfarben.dc.html",
+      "sourceSha256": "2256c5f74b3c026415744723111314c41ba5345bbb6cb72214dded578abe2424",
+      "publishedSha256": "d4412b9a3f091759c1e3d6df514164313c5da06bcdc12fcf13b1984f85b793a7",
+      "bytes": 23478
+    },
+    {
+      "path": "Kette Detail.dc.html",
+      "sourceSha256": "b43cd1c237204e184bee642d42f0491e61612ff18fc02ab6516179469a9c1b4f",
+      "publishedSha256": "b43cd1c237204e184bee642d42f0491e61612ff18fc02ab6516179469a9c1b4f",
+      "bytes": 17037
+    },
+    {
+      "path": "Komponenten.dc.html",
+      "sourceSha256": "e7f8e0c3e08b295fd85fa98cce287401e5ed9c7122e8553fef69f5759ac405c1",
+      "publishedSha256": "e7f8e0c3e08b295fd85fa98cce287401e5ed9c7122e8553fef69f5759ac405c1",
+      "bytes": 29259
+    },
+    {
+      "path": "Kreuzfahrt Detail.dc.html",
+      "sourceSha256": "e5cf5ae5e6a9b5e7095d2815bcc82c2a22e466d13837fdd0a475b2a32f2a902a",
+      "publishedSha256": "e5cf5ae5e6a9b5e7095d2815bcc82c2a22e466d13837fdd0a475b2a32f2a902a",
+      "bytes": 32947
+    },
+    {
+      "path": "Liste Detail.dc.html",
+      "sourceSha256": "45ccab452374c3cc8a06cb578009c0e9ab0cdef36e0cf85a13caf1c09b239879",
+      "publishedSha256": "45ccab452374c3cc8a06cb578009c0e9ab0cdef36e0cf85a13caf1c09b239879",
+      "bytes": 25424
+    },
+    {
+      "path": "Logbuch Domaenen.dc.html",
+      "sourceSha256": "b4d2375e6498215e99f312faa165584e17378ca619812be8d5a5aac63a8405df",
+      "publishedSha256": "8ad66626b624746518f6b3cc5828b29e62556e812d829bf9d0fed6703acfe1ec",
+      "bytes": 29122
+    },
+    {
+      "path": "Logbuch Fluege.dc.html",
+      "sourceSha256": "31762afe6372ee393e3b11b68a7fd23f03c2f5c70b97beed61a42f47e001857b",
+      "publishedSha256": "5bff46cb9a2fe5ff3adaeec3da955613e28f6f74e85810876bac353dc9aa8b2f",
+      "bytes": 43602
+    },
+    {
+      "path": "MOTION.md",
+      "sourceSha256": "59afea5831dc6396f8b74da66c20e0bdb3d4dea43aa6a9d246728969aff172df",
+      "publishedSha256": "59afea5831dc6396f8b74da66c20e0bdb3d4dea43aa6a9d246728969aff172df",
+      "bytes": 986
+    },
+    {
+      "path": "Matrix.dc.html",
+      "sourceSha256": "96449a1536b3ce6b6b70358bbf6642b957a79ad29a1b40e5b31cbf1d09e4c261",
+      "publishedSha256": "96449a1536b3ce6b6b70358bbf6642b957a79ad29a1b40e5b31cbf1d09e4c261",
+      "bytes": 28195
+    },
+    {
+      "path": "Mitreisende.dc.html",
+      "sourceSha256": "f659b0a40f5e03a5108c8c3ff9b9fa301dff17e6de8a220809767bfdf78b9b5f",
+      "publishedSha256": "f659b0a40f5e03a5108c8c3ff9b9fa301dff17e6de8a220809767bfdf78b9b5f",
+      "bytes": 20600
+    },
+    {
+      "path": "Nicht gefunden.dc.html",
+      "sourceSha256": "bcfea42aef4414893c50633a4269b0fc534e4fd4e1a50e2c18664e677d1dfc42",
+      "publishedSha256": "bcfea42aef4414893c50633a4269b0fc534e4fd4e1a50e2c18664e677d1dfc42",
+      "bytes": 14024
+    },
+    {
+      "path": "Ort Detail.dc.html",
+      "sourceSha256": "dd98053cd8d6ef880e6ae73e46565ea40aed8af6a188157026755442559eb2d5",
+      "publishedSha256": "dd98053cd8d6ef880e6ae73e46565ea40aed8af6a188157026755442559eb2d5",
+      "bytes": 35179
+    },
+    {
+      "path": "Ortslisten.dc.html",
+      "sourceSha256": "8a24e6163c950893b9fd9772b0aa982d37d988d0be80770a19a9538f7d2d075d",
+      "publishedSha256": "8a24e6163c950893b9fd9772b0aa982d37d988d0be80770a19a9538f7d2d075d",
+      "bytes": 27099
+    },
+    {
+      "path": "Parser.dc.html",
+      "sourceSha256": "cc3018e07b6ad2d9aab9adb548b795ead32d16735024b7a72859d68b4135a7a2",
+      "publishedSha256": "cc3018e07b6ad2d9aab9adb548b795ead32d16735024b7a72859d68b4135a7a2",
+      "bytes": 31242
+    },
+    {
+      "path": "Passwort.dc.html",
+      "sourceSha256": "d67133755b0e86010cc54dc73b3e8ff660dbfca9a81e264925ae62698e51e3e7",
+      "publishedSha256": "d67133755b0e86010cc54dc73b3e8ff660dbfca9a81e264925ae62698e51e3e7",
+      "bytes": 9932
+    },
+    {
+      "path": "Posteingang.dc.html",
+      "sourceSha256": "f60aa664ed5211c66edb38a08d94218f0c623ae1480c1316ad0b4d4f70a27d6c",
+      "publishedSha256": "f60aa664ed5211c66edb38a08d94218f0c623ae1480c1316ad0b4d4f70a27d6c",
+      "bytes": 30177
+    },
+    {
+      "path": "README.md",
+      "sourceSha256": "b73cb1718db0503cf2cff97b8882f609d1a0cad54dd3c4b9035cbbbc6105e386",
+      "publishedSha256": "b73cb1718db0503cf2cff97b8882f609d1a0cad54dd3c4b9035cbbbc6105e386",
+      "bytes": 9465
+    },
+    {
+      "path": "ROUTENMATRIX.csv",
+      "sourceSha256": "7ce5b7e1d642905fa8c7d5f511f51cd7e03317f10a4ff164750a7f74741c0ca2",
+      "publishedSha256": "7ce5b7e1d642905fa8c7d5f511f51cd7e03317f10a4ff164750a7f74741c0ca2",
+      "bytes": 8842
+    },
+    {
+      "path": "Registrieren.dc.html",
+      "sourceSha256": "2faa3bd171c4c519aaa561c162c8959240852f481c5038d9a1a250a8f9523581",
+      "publishedSha256": "2faa3bd171c4c519aaa561c162c8959240852f481c5038d9a1a250a8f9523581",
+      "bytes": 8540
+    },
+    {
+      "path": "Reise Detail.dc.html",
+      "sourceSha256": "b3336b55b8e7064ffaa357dcb5a6f30c15311c016aa04a489fe527860d4db442",
+      "publishedSha256": "6cbc9cfdd4b9df25f4b9cafefed0f6249e5c331fffb7f6aacce335722767b5a9",
+      "bytes": 59697
+    },
+    {
+      "path": "Reisen.dc.html",
+      "sourceSha256": "35b5b880a014f60c0fcd77ff44e82dafceaa74e9bfba50f1579e00e444b301f8",
+      "publishedSha256": "35b5b880a014f60c0fcd77ff44e82dafceaa74e9bfba50f1579e00e444b301f8",
+      "bytes": 29290
+    },
+    {
+      "path": "Reisepass v2.dc.html",
+      "sourceSha256": "73458ee0a5fe8d49b8f7e89587aebb3f730cde454669d637d282ca03e4a4d629",
+      "publishedSha256": "73458ee0a5fe8d49b8f7e89587aebb3f730cde454669d637d282ca03e4a4d629",
+      "bytes": 43344
+    },
+    {
+      "path": "Reisepass.dc.html",
+      "sourceSha256": "749488218df3a31af6451d71bd96388de5554a626320d4f51100afe970fe410d",
+      "publishedSha256": "749488218df3a31af6451d71bd96388de5554a626320d4f51100afe970fe410d",
+      "bytes": 20715
+    },
+    {
+      "path": "Routeneditor.dc.html",
+      "sourceSha256": "4f42f5958ddea90037b4cf5918c18972ab16adde79769f1854fca5f6b281a0ab",
+      "publishedSha256": "4f42f5958ddea90037b4cf5918c18972ab16adde79769f1854fca5f6b281a0ab",
+      "bytes": 19936
+    },
+    {
+      "path": "Statistik.dc.html",
+      "sourceSha256": "bb0200472d69f46c383d06e9876d7b4300ae185351c774741c62e57e52141b45",
+      "publishedSha256": "8e0416d1eb8ffe90f91bf22ad24ce9c4ef6e89f5eb4eb680a2824606e5c7fdb6",
+      "bytes": 116296
+    },
+    {
+      "path": "Suche.dc.html",
+      "sourceSha256": "c5a2bbeea9be8e8a23427e0edfe723c06b2c366c901e6218e7e213a2d6b7e744",
+      "publishedSha256": "c5a2bbeea9be8e8a23427e0edfe723c06b2c366c901e6218e7e213a2d6b7e744",
+      "bytes": 17939
+    },
+    {
+      "path": "Tags.dc.html",
+      "sourceSha256": "a6033b15ee2287ac3aafbca45c52aeed2cf9339bf0deb40e16f8ad09200148ef",
+      "publishedSha256": "a6033b15ee2287ac3aafbca45c52aeed2cf9339bf0deb40e16f8ad09200148ef",
+      "bytes": 18971
+    },
+    {
+      "path": "Touren-Editor.dc.html",
+      "sourceSha256": "7453890a9e6fe29c9d22f801c8c7098c86f7d79527e2c23c9c73c507087c31b7",
+      "publishedSha256": "7453890a9e6fe29c9d22f801c8c7098c86f7d79527e2c23c9c73c507087c31b7",
+      "bytes": 24953
+    },
+    {
+      "path": "Unterkunft Detail.dc.html",
+      "sourceSha256": "a0fa6f4fb780076ff535250ef11406a173dd14674be346843b4d4cf4ec4d4dff",
+      "publishedSha256": "a0fa6f4fb780076ff535250ef11406a173dd14674be346843b4d4cf4ec4d4dff",
+      "bytes": 31821
+    },
+    {
+      "path": "Vergleich.dc.html",
+      "sourceSha256": "74062041d20a6beb96e6411b5908334e2d0bb4bde6963a2a56d1f65b0ee0956d",
+      "publishedSha256": "74062041d20a6beb96e6411b5908334e2d0bb4bde6963a2a56d1f65b0ee0956d",
+      "bytes": 42833
+    },
+    {
+      "path": "antwort-runde-2.md",
+      "sourceSha256": "11d4940ca64656374d511348eaee6e880de252ad6ce0b13724fc2cf12daa1298",
+      "publishedSha256": "11d4940ca64656374d511348eaee6e880de252ad6ce0b13724fc2cf12daa1298",
+      "bytes": 11438
+    },
+    {
+      "path": "antwort-runde-3.md",
+      "sourceSha256": "1f46d80d769e986538bf5344e8ad388dcf210c9717cff8027af35953eb6754f0",
+      "publishedSha256": "1f46d80d769e986538bf5344e8ad388dcf210c9717cff8027af35953eb6754f0",
+      "bytes": 13294
+    },
+    {
+      "path": "antwort-runde-4.md",
+      "sourceSha256": "d0ed3efaaaf6b5dad4325eb617d784f27cf970b5ae8e0f96e17738ec25fcdad7",
+      "publishedSha256": "d0ed3efaaaf6b5dad4325eb617d784f27cf970b5ae8e0f96e17738ec25fcdad7",
+      "bytes": 24995
+    },
+    {
+      "path": "antwort.md",
+      "sourceSha256": "25e2487ea5ef735d8e6b01eca2251b754247aaf1cf8889809f4c3b412122244c",
+      "publishedSha256": "25e2487ea5ef735d8e6b01eca2251b754247aaf1cf8889809f4c3b412122244c",
+      "bytes": 6082
+    },
+    {
+      "path": "assets/favicon.svg",
+      "sourceSha256": "e752eb15edf0fe1f5a7fc504101c6bb02e33e8746056071d2a4d843daecabd24",
+      "publishedSha256": "f2a701b4605055aeef8db49cf979a2c73b85f470fd579e0251557862ca0d1ae0",
+      "bytes": 8318
+    },
+    {
+      "path": "assets/logo.png",
+      "sourceSha256": "ea6c8d31f40150fd3fb4f4c52328864753bad2081d8c5fb7daea5a8a26b0bd22",
+      "publishedSha256": "ea6c8d31f40150fd3fb4f4c52328864753bad2081d8c5fb7daea5a8a26b0bd22",
+      "bytes": 20851
+    },
+    {
+      "path": "assets/logo.svg",
+      "sourceSha256": "f1ad975ea709ce0aea2ed2197c4c44b7fd8891f22454faa1f965ae65a77ba8bd",
+      "publishedSha256": "ee61fe00da27ea8e0dafcb862a703180d78479c9ec8f3bb2fdbadbdfcd0bf700",
+      "bytes": 8616
+    },
+    {
+      "path": "design/tokens.json",
+      "sourceSha256": "398d4f260ee36a9ea94b74469e1a5c63e8c9a9cac5583bbd400b0eba8d45672e",
+      "publishedSha256": "398d4f260ee36a9ea94b74469e1a5c63e8c9a9cac5583bbd400b0eba8d45672e",
+      "bytes": 15486
+    },
+    {
+      "path": "pages/logbuch.body.html",
+      "sourceSha256": "2bf16a0adef2fcfddb9a26935b199eeeb1e1d5a9bab2da0b99cf77316231bf9d",
+      "publishedSha256": "2bf16a0adef2fcfddb9a26935b199eeeb1e1d5a9bab2da0b99cf77316231bf9d",
+      "bytes": 13226
+    },
+    {
+      "path": "pages/logbuch.logic.js",
+      "sourceSha256": "8e5d543acddc97d9f6eb89e10623a731abd8a76effe30063da9b911c4f2a59ec",
+      "publishedSha256": "8e5d543acddc97d9f6eb89e10623a731abd8a76effe30063da9b911c4f2a59ec",
+      "bytes": 4371
+    },
+    {
+      "path": "pages/reise.body.html",
+      "sourceSha256": "1cdadaa912a3c9e8c1187e8b7d86777f25e17601643844473c2c450f80a6a961",
+      "publishedSha256": "1cdadaa912a3c9e8c1187e8b7d86777f25e17601643844473c2c450f80a6a961",
+      "bytes": 15062
+    },
+    {
+      "path": "pages/reise.logic.js",
+      "sourceSha256": "6ee0c7007255eb58da487fedee5ba2c31e59cb0090fd52b070b40c78d81f569c",
+      "publishedSha256": "6ee0c7007255eb58da487fedee5ba2c31e59cb0090fd52b070b40c78d81f569c",
+      "bytes": 2504
+    },
+    {
+      "path": "pages/statistik.body.html",
+      "sourceSha256": "60941f98990cbf782bf9392df14f09d549aba4feabf3ad31cf7e1a53e9f9af29",
+      "publishedSha256": "60941f98990cbf782bf9392df14f09d549aba4feabf3ad31cf7e1a53e9f9af29",
+      "bytes": 10801
+    },
+    {
+      "path": "pages/statistik.logic.js",
+      "sourceSha256": "20621f3f64407654ac29a2b73486ac2b03db7a820732800fd83f3321e13046b7",
+      "publishedSha256": "20621f3f64407654ac29a2b73486ac2b03db7a820732800fd83f3321e13046b7",
+      "bytes": 4429
+    },
+    {
+      "path": "support.js",
+      "sourceSha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+      "publishedSha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+      "bytes": 69150
+    },
+    {
+      "path": "ts-shared.js",
+      "sourceSha256": "b241d95788ec883aa953579aa251d82ab8de6a1bd208d1dde538462a29385bb7",
+      "publishedSha256": "b241d95788ec883aa953579aa251d82ab8de6a1bd208d1dde538462a29385bb7",
+      "bytes": 24369
+    }
+  ],
+  "normalizations": [
+    {
+      "file": "Anmelden.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Dashboard.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Dialoge.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "EN Logbook Flights.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "EN Settings.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Einstellungen v2.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Einstellungen v3.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Flug Detail.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Kartenfarben.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Logbuch Domaenen.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Logbuch Fluege.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Reise Detail.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "Statistik.dc.html",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "assets/favicon.svg",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    },
+    {
+      "file": "assets/logo.svg",
+      "kind": "repository pre-commit whitespace/end-of-file normalization"
+    }
+  ]
+}

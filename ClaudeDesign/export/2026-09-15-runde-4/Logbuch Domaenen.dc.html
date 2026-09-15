@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <!-- Logbuch domain tabs (second level) -->
+  <div data-screen-label="09 Logbuch Domänen" style="border-bottom:1px solid rgba(231,227,220,0.12)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;gap:2px;overflow:auto">
+      <sc-for list="{{ domainTabs }}" as="d" hint-placeholder-count="4">
+        <a href="{{ d.href }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;color:{{ d.color }};font-weight:{{ d.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ d.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:{{ d.iconColor }}"><use href="{{ d.iconHref }}"></use></svg>{{ d.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ d.count }}</span></a>
+      </sc-for>
+    </div>
+  </div>
+
+
+  <main style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">{{ title }}</h1>
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);letter-spacing:0.02em">{{ subtitle }}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button title="Importieren" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;cursor:pointer" style-hover="background:#14181d;color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg></button>
+        <button onClick="{{ toggleView }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:44px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ viewIcon }}"></use></svg>{{ viewLabel }}</button>
+        <a href="{{ addHref }}" style="height:46px;padding:0 18px 0 14px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>{{ addLabel }}</a>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex:1;min-width:0;overflow:auto;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:28px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.onClick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px;white-space:nowrap" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ c.metaColor }}">{{ c.meta }}</span></button>
+        </sc-for>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:rgba(231,227,220,0.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><input onInput="{{ onSearch }}" value="{{ q }}" placeholder="{{ searchPh }}" style="background:transparent;border:none;color:#e7e3dc;font-size:14px;outline:none;width:180px"></label>
+    </div>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+        <span style="width:56px;height:56px;border-radius:18px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ domColor }}"><use href="{{ domIcon }}"></use></svg></span>
+        <span style="font-size:18px;font-weight:800;color:#f4ece0">{{ emptyTitle }}</span>
+        <span style="font-size:13px;color:rgba(231,227,220,0.6);max-width:400px;text-wrap:pretty">{{ emptyText }}</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:6px"><a href="{{ addHref }}" style="height:46px;padding:0 18px 0 14px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>{{ addLabel }}</a><a href="Posteingang.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-inbox"></use></svg>Aus Posteingang</a></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:auto">
+        <div style="min-width:760px">
+          <div style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;height:40px;padding:0 20px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(231,227,220,0.6)">
+            <sc-for list="{{ headers }}" as="h" hint-placeholder-count="6"><span style="text-align:{{ h.align }};white-space:nowrap">{{ h.label }}</span></sc-for>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <a href="{{ rowHref }}" style="display:grid;grid-template-columns:{{ gridCols }};gap:14px;align-items:center;padding:0 20px;height:64px;border-bottom:1px solid rgba(231,227,220,0.12);color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.02);text-decoration:none;color:#f4ece0">
+              <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ domColor }}"><use href="{{ domIcon }}"></use></svg></span>
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.sub }}</span></span>
+              <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap">{{ r.date }}</span>
+              <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.a }}</span>
+              <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:{{ r.bColor }}">{{ r.b }}</span>
+              <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }};white-space:nowrap">{{ r.pill.label }}</span></span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCards }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+          <a href="{{ rowHref }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;color:inherit;text-decoration:none;transition:transform 120ms ease,border-color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3);text-decoration:none;color:#f4ece0;transform:translateY(-1px)">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ domColor }}"><use href="{{ domIcon }}"></use></svg></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ r.pill.color }};background:{{ r.pill.bg }};border:1px {{ r.pill.dash }} {{ r.pill.border }};white-space:nowrap">{{ r.pill.label }}</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:700;color:#f4ece0">{{ r.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);padding-top:10px;border-top:1px solid rgba(231,227,220,0.12)"><span>{{ r.date }}</span><span style="color:#e7e3dc">{{ r.a }} · {{ r.b }}</span></div>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">{{ footer }}</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, dom: 'cruise', view: 'list', chip: 'Alle', q: '' };
+  componentDidMount() {
+    import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); });
+    const read = () => { const d = (location.hash || '').replace('#', ''); if (['cruise','hotel','poi'].includes(d)) this.setState({ dom: d, chip: 'Alle', q: '' }); };
+    this._h = read; window.addEventListener('hashchange', read); read();
+  }
+  componentWillUnmount() { window.removeEventListener('hashchange', this._h); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const D = S.DOMAINS.find(d => d.key === st.dom);
+    const counts = { flight: String(S.COUNTS.flight), cruise: String(S.COUNTS.cruise), hotel: String(S.COUNTS.hotel), poi: String(S.COUNTS.poi) };
+    const CFG = {
+      cruise: { title: 'Kreuzfahrten', subtitle: '22 Kreuzfahrten · 6 Reedereien · 41 Häfen · 148 Nächte', add: 'Kreuzfahrt anlegen', ph: 'Schiff, Reederei, Hafen', headers: ['','Schiff & Route','Einschiffung','Nächte','Häfen','Status'], cols: '44px minmax(240px,1.6fr) 150px 80px 80px 110px 24px',
+        chips: [['Alle','22'],['Geplant','1'],['Abgeschlossen','21'],['Mittelmeer','9'],['Nordland','5'],['Karibik','4']],
+        rows: [['AIDAnova · Westliches Mittelmeer','AIDA · Barcelona → Barcelona','2026-10-10','7','5','scheduled'],['Mein Schiff 4 · Norwegens Fjorde','TUI Cruises · Kiel → Kiel','2025-07-19','7','4','done'],['MSC Euribia · Nordeuropa','MSC · Kiel → Kiel','2024-10-21','7','5','done'],['AIDAprima · Metropolen','AIDA · Hamburg → Hamburg','2023-04-08','7','4','done'],['Costa Smeralda · Östliches Mittelmeer','Costa · Savona → Savona','2022-09-03','8','6','done'],['Mein Schiff 2 · Karibik','TUI Cruises · Bridgetown → Bridgetown','2019-12-20','14','8','done']] },
+      hotel: { title: 'Unterkünfte', subtitle: '12 Unterkünfte · 31 Aufenthalte · 74 Nächte · 6 Länder', add: 'Unterkunft anlegen', ph: 'Name oder Ort', headers: ['','Unterkunft','Letzter Aufenthalt','Nächte','Ø Bew.','Typ'], cols: '44px minmax(240px,1.6fr) 150px 80px 80px 120px 24px', chips: [['Alle','12'],['Hotel','8'],['Apartment','2'],['Hostel','1'],['Campingplatz','1'],['2026','4']], rows: [['Motel One München-Deutsches Museum','München · DE · Motel One','2026-09-18','8','4,3','Hotel'],['25hours Hotel HafenCity','Hamburg · DE · 25hours','2026-08-28','2','4,7','Hotel'],['Hotel Captain Cook','Anchorage · US · unabhängig','2025-07-12','2','3,8','Hotel'],['Casa Vista Alegre','Lissabon · PT · unabhängig','2025-11-03','5','4,9','Apartment'],['Generator Hostel','Kopenhagen · DK · Generator','2024-06-14','3','3,5','Hostel'],['Camping Zaton','Zadar · HR · unabhängig','2022-09-04','6','4,1','Campingplatz']] },
+      poi: { title: 'Orte', subtitle: '118 Orte · 23 Länder · 6 Ortslisten', add: 'Ort anlegen', ph: 'Name, Stadt, Land', headers: ['','Ort','Besuch','Besuche','Listen','Art'], cols: '44px minmax(240px,1.6fr) 150px 80px 80px 130px 24px',
+        chips: [['Alle','118'],['Sehenswürdigkeit','61'],['Restaurant','27'],['Stadion','9'],['Natur','21'],['2026','14']],
+        rows: [['Kölner Dom','Köln · Deutschland','2019-05-11','2','1','Sehenswürdigkeit'],['Alhambra','Granada · Spanien','2016-08-02','1','1','Sehenswürdigkeit'],['The Table','Hamburg · Deutschland','2024-12-14','1','1','Restaurant'],['Volksparkstadion','Hamburg · Deutschland','2015-03-07','31','1','Stadion'],['Plitvicer Seen','Kroatien','2022-09-05','1','1','Natur'],['Westerheversand','Eiderstedt · Deutschland','2021-07-18','2','1','Natur'],['Akropolis','Athen · Griechenland','2017-06-06','1','1','Sehenswürdigkeit'],['Signal Iduna Park','Dortmund · Deutschland','2018-11-10','3','1','Stadion']] },
+    };
+    const C = CFG[st.dom];
+    const chip = (label, meta) => ({ label, meta, onClick: () => set({ chip: label }), bg: st.chip === label ? T.accent : 'transparent', color: st.chip === label ? T.bg : T.text, border: st.chip === label ? T.accent : 'rgba(231,227,220,0.18)', metaColor: st.chip === label ? 'rgba(11,13,16,0.7)' : T.muted });
+    const kindPill = k => ({ 'Sehenswürdigkeit': S.pill('Sehenswert', T.chart[1]), 'Restaurant': S.pill('Restaurant', T.chart[4]), 'Stadion': S.pill('Stadion', T.accent), 'Natur': S.pill('Natur', T.good), 'Hotel': S.pill('Hotel', T.domain.hotel), 'Apartment': S.pill('Apartment', T.chart[3]), 'Hostel': S.pill('Hostel', T.info), 'Campingplatz': S.pill('Camping', T.good) })[k] || S.statusPill(k);
+    let rows = C.rows.map(([title, sub, date, a, b, s]) => ({ title, sub, date, a, b, bColor: T.text, pill: st.dom === 'cruise' ? S.statusPill(s) : kindPill(s), kind: s }));
+    if (st.chip !== 'Alle') rows = rows.filter(r => r.kind === st.chip || (st.chip === 'Geplant' && r.kind === 'scheduled') || (st.chip === 'Abgeschlossen' && r.kind === 'done') || r.date.startsWith(st.chip) || r.sub.includes(st.chip) || r.title.includes(st.chip));
+    if (st.q) rows = rows.filter(r => (r.title + r.sub).toLowerCase().includes(st.q.toLowerCase()));
+    const empty = C.rows.length === 0;
+    return { ...S.navModel('logbook', st, set), stop: e => e.stopPropagation(),
+      domainTabs: S.DOMAINS.map(d => { const a = d.key === st.dom; return { label: d.label, href: d.href, count: counts[d.key], iconHref: S.I(d.icon), iconColor: d.color, color: a ? T.textBright : T.muted, weight: a ? 700 : 500, bar: a ? T.accent : 'transparent' }; }),
+      title: C.title, subtitle: C.subtitle, addLabel: C.add, addHref: 'Hinzufuegen.dc.html#' + st.dom, rowHref: st.dom === 'cruise' ? 'Kreuzfahrt Detail.dc.html' : st.dom === 'poi' ? 'Ort Detail.dc.html' : 'Unterkunft Detail.dc.html', searchPh: C.ph, domIcon: S.I(D.icon), domColor: D.color,
+      toggleView: () => set({ view: st.view === 'list' ? 'cards' : 'list' }), viewLabel: st.view === 'list' ? 'Karten' : 'Tabelle', viewIcon: st.view === 'list' ? '#i-layers' : '#i-list',
+      chips: C.chips.map(([l, m]) => chip(l, m)), q: st.q, onSearch: e => set({ q: e.target.value }),
+      isEmpty: empty, isList: !empty && st.view === 'list', isCards: !empty && st.view === 'cards',
+      emptyTitle: 'Noch keine ' + C.title, emptyText: 'Hotelbuchungen erkennt der Parser aus Bestätigungsmails; Nächte zählen dann als Reisetage in der Statistik.',
+      headers: C.headers.map((label, i) => ({ label, align: i === 3 || i === 4 ? 'right' : 'left' })).concat([{ label: '', align: 'left' }]), gridCols: C.cols, rows,
+      footer: empty ? 'Domäne aktiv · in Einstellungen › Domänen ausblendbar' : rows.length + ' von ' + C.rows.length + ' Einträgen · Sortierung: Datum absteigend' };
+  }
+}
+</script>
+</body>
+</html>

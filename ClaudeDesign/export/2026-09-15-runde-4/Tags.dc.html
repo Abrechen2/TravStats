@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="3">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="34 Tags" style="max-width:1100px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Tags</h1></div><div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Freier Text an Flügen, Reisen und Kreuzfahrten — ohne Vokabular. Regel: Chip mit Hairline, klein, ohne Farbe (Farbe trägt Bedeutung, Tags tragen keine), klickbar als Filter, Vorschlag aus vorhandenen beim Tippen.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a href="Statistik.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-bar-chart-3"></use></svg>Statistik</a></div></div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Alle Tags · {{ tagCount }}</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Größe = Häufigkeit; Klick filtert unten</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><sc-for list="{{ cloud }}" as="t" hint-placeholder-count="14"><button onClick="{{ t.onClick }}" style="height:{{ t.h }};padding:0 {{ t.px }};border-radius:999px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:{{ t.fs }};font-weight:500;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:background 120ms ease,border-color 120ms ease">#{{ t.name }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;opacity:0.6">{{ t.n }}</span></button></sc-for></div>
+    </div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Vorschlag beim Tippen</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px;padding:6px 10px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16)"><span style="display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);font-size:12px;color:#e7e3dc;white-space:nowrap">#alaska</span><span style="display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);font-size:12px;color:#e7e3dc;white-space:nowrap">#gletscher</span><span style="position:relative;display:flex;align-items:center"><input onInput="{{ onQ }}" value="{{ q }}" placeholder="Tag hinzufügen …" style="height:32px;background:transparent;border:none;color:#e7e3dc;font-size:13px;outline:none;min-width:160px"><sc-if value="{{ suggest.length }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;top:38px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;min-width:200px;box-shadow:0 14px 30px rgba(0,0,0,0.5);animation:ts-menu 200ms ease-out"><sc-for list="{{ suggest }}" as="s" hint-placeholder-count="3"><button style="height:36px;padding:0 10px;border-radius:8px;border:none;background:transparent;color:#e7e3dc;font-size:13px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;gap:10px" style-hover="background:rgba(231,227,220,0.06)"><span>#{{ s.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ s.n }}×</span></button></sc-for></div></sc-if></span></div>
+      <div style="font-size:12px;color:rgba(231,227,220,0.6)">Enter oder Komma legt an; Kleinschreibung, Leerzeichen → Bindestrich. Kein Vokabular, keine Farbe.</div>
+    </div>
+    <section style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Einträge {{ filterLabel }}</div><sc-if value="{{ hasFilter }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clear }}" style="background:transparent;border:none;color:#f0a947;font-size:12px;font-weight:600;cursor:pointer;height:32px">Filter zurücksetzen</button></sc-if></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ entries }}" as="e" hint-placeholder-count="6"><a href="{{ e.href }}" style="display:grid;grid-template-columns:34px minmax(0,1fr) auto 18px;gap:12px;align-items:center;min-height:56px;padding:8px 0;border-bottom:1px solid {{ e.divider }};color:inherit;text-decoration:none" style-hover="color:#f4ece0;text-decoration:none"><span style="width:34px;height:34px;border-radius:12px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ e.color }}"><use href="{{ e.icon }}"></use></svg></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ e.sub }}</span></span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><sc-for list="{{ e.tags }}" as="t" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;border:1px solid rgba(231,227,220,0.18);font-size:11px;color:{{ t.color }};white-space:nowrap">#{{ t.name }}</span></sc-for></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg></a></sc-for></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic { state = { S: null, menu: null, filter: null, q: '' };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() { const S = this.state.S; if (!S) return {}; const T = S.T; const st = this.state; const set = p => this.setState(p);
+    const E = [['plane', T.domain.flight, 'LH 8462 · FRA → ANC', '12.07.2025', ['alaska', 'langstrecke', 'familie'], 'Flug Detail.dc.html'], ['ship', T.domain.cruise, 'Norwegian Bliss · Alaska', '14.–21.07.2025', ['alaska', 'gletscher', 'familie'], 'Kreuzfahrt Detail.dc.html'], ['route', T.info, 'Alaska & Kanada', '12.–27.07.2025', ['alaska', 'nationalpark', 'familie'], 'Reise Detail.dc.html'], ['plane', T.domain.flight, 'AY 183 · DUS → WAW', '01.04.2026', ['geschäftlich', 'kurzstrecke'], 'Flug Detail.dc.html'], ['ship', T.domain.cruise, 'Mein Schiff 4 · Norwegens Fjorde', '19.–26.07.2025', ['fjorde', 'gletscher'], 'Kreuzfahrt Detail.dc.html'], ['route', T.info, 'Brasilien', '12.–26.02.2026', ['neues-land', 'langstrecke', 'strand'], 'Reise Detail.dc.html'], ['plane', T.domain.flight, 'LH 2058 · HAM → MUC', '18.09.2026', ['geschäftlich', 'kurzstrecke', 'oktoberfest'], 'Flug Detail.dc.html'], ['route', T.info, 'Kapstadt', '03.–14.03.2025', ['neues-land', 'wein', 'nationalpark'], 'Reise Detail.dc.html']];
+    const counts = {}; E.forEach(e => e[4].forEach(t => counts[t] = (counts[t] || 0) + 1));
+    const cloud = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, n]) => { const a = st.filter === name; const s = n >= 4 ? 3 : n >= 2 ? 2 : 1; return { name, n, onClick: () => set({ filter: a ? null : name }), h: [28, 32, 38][s - 1] + 'px', px: [10, 12, 14][s - 1] + 'px', fs: [12, 13, 15][s - 1] + 'px', bg: a ? T.accent : 'transparent', color: a ? T.bg : T.text, border: a ? T.accent : 'rgba(231,227,220,0.18)' }; });
+    const entries = E.filter(e => !st.filter || e[4].includes(st.filter)).map(([icon, color, title, sub, tags, href], i, a) => ({ icon: S.I(icon), color, title, sub, href, tags: tags.map(name => ({ name, color: name === st.filter ? T.accent : T.text })), divider: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)' }));
+    const q = st.q.trim().toLowerCase().replace(/\s+/g, '-');
+    return { ...S.navModel('stats', st, set), stop: e => e.stopPropagation(), tagCount: cloud.length, cloud, entries, hasFilter: !!st.filter, filterLabel: st.filter ? 'mit #' + st.filter + ' · ' + entries.length : '· alle ' + E.length, clear: () => set({ filter: null }), q: st.q, onQ: e => set({ q: e.target.value }), suggest: q ? Object.entries(counts).filter(([n]) => n.includes(q) && !['alaska', 'gletscher'].includes(n)).slice(0, 4).map(([name, n]) => ({ name, n })) : [] }; } }
+</script>
+</body>
+</html>

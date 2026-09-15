@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="V Kartenfarben" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Kartenfarben · Empfehlung</h1><div style="font-size:13px;color:rgba(231,227,220,0.75);text-wrap:pretty;max-width:820px">Offene Entscheidung (Handoff §4): Zeigt die Karte den <em>Status</em> oder die <em>Domäne</em> als Farbe? Zwei Ausschnitte mit identischen Daten — zwei geflogene, zwei geplante Bögen (Flug + Kreuzfahrt). Gestrichelte Bögen für „Geplant“ sind seit der Owner-Entscheidung Teil der Umsetzung (Renderer-Anforderung); sie stünden als technische Anforderung in der Umsetzungsliste.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+      <sc-for list="{{ variants }}" as="v" hint-placeholder-count="2">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;border-color:{{ v.border }}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="display:flex;align-items:center;gap:10px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:600;color:#f0a947">{{ v.id }}</span><span style="font-size:16px;font-weight:700;color:#f4ece0">{{ v.title }}</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:{{ v.pill.color }};background:{{ v.pill.bg }};border:1px {{ v.pill.dash }} {{ v.pill.border }};white-space:nowrap">{{ v.pill.label }}</span></div>
+          <sc-if value="{{ v.isA }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 420 240" style="width:100%;height:auto;display:block;background:radial-gradient(circle at 50% 50%,#1a1f26 0%,#0b0d10 80%);border-radius:12px">
+  <g fill="#1a1f26" stroke="rgba(231,227,220,0.06)"><ellipse cx="110" cy="120" rx="70" ry="52"/><ellipse cx="300" cy="100" rx="90" ry="46"/><ellipse cx="260" cy="190" rx="60" ry="30"/></g>
+
+  <path d="M 80 140 Q 190 40 320 90" fill="none" stroke="#f0a947" stroke-width="2.2"><title>Flug · geflogen</title></path>
+  <path d="M 100 160 Q 220 90 340 120" fill="none" stroke="#6fa0d6" stroke-width="2.2"><title>Flug · geplant (Statusfarbe info)</title></path>
+  <path d="M 330 100 C 350 130, 320 170, 280 190" fill="none" stroke="#4aa6b0" stroke-width="2.6"><title>Kreuzfahrt · gefahren</title></path>
+  <path d="M 120 165 C 160 200, 220 210, 270 195" fill="none" stroke="#6fa0d6" stroke-width="2.6"><title>Kreuzfahrt · geplant (Statusfarbe info)</title></path>
+  <g><circle cx="80" cy="140" r="4" fill="#f0a947"/><circle cx="320" cy="90" r="4" fill="#f0a947"/><circle cx="340" cy="120" r="4" fill="#6fa0d6"/><circle cx="100" cy="160" r="4" fill="#6fa0d6"/></g>
+  <g transform="translate(336,116)"><circle r="8" fill="#101317" stroke="#6fa0d6" stroke-width="1.5"/><path d="M-3.5 0 L3.5 0 M0 -3.5 L3.5 0 L0 3.5" fill="none" stroke="#6fa0d6" stroke-width="1.4"/></g>
+  <g transform="translate(128,168)"><circle r="8" fill="#101317" stroke="#6fa0d6" stroke-width="1.5"/><path d="M-4 2 Q0 -3 4 2" fill="none" stroke="#6fa0d6" stroke-width="1.4"/></g>
+
+</svg></sc-if><sc-if value="{{ v.isB }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 420 240" style="width:100%;height:auto;display:block;background:radial-gradient(circle at 50% 50%,#1a1f26 0%,#0b0d10 80%);border-radius:12px">
+  <g fill="#1a1f26" stroke="rgba(231,227,220,0.06)"><ellipse cx="110" cy="120" rx="70" ry="52"/><ellipse cx="300" cy="100" rx="90" ry="46"/><ellipse cx="260" cy="190" rx="60" ry="30"/></g>
+
+  <path d="M 80 140 Q 190 40 320 90" fill="none" stroke="#f0a947" stroke-width="2.2"><title>Flug · geflogen</title></path>
+  <path d="M 100 160 Q 220 90 340 120" fill="none" stroke="#f0a947" stroke-width="2.2" stroke-opacity="0.55"><title>Flug · geplant (Domänenfarbe, 55 %)</title></path>
+  <path d="M 330 100 C 350 130, 320 170, 280 190" fill="none" stroke="#4aa6b0" stroke-width="2.6"><title>Kreuzfahrt · gefahren</title></path>
+  <path d="M 120 165 C 160 200, 220 210, 270 195" fill="none" stroke="#4aa6b0" stroke-width="2.6" stroke-opacity="0.55"><title>Kreuzfahrt · geplant (Domänenfarbe, 55 %)</title></path>
+  <g><circle cx="80" cy="140" r="4" fill="#f0a947"/><circle cx="320" cy="90" r="4" fill="#f0a947"/><circle cx="340" cy="120" r="4" fill="#101317" stroke="#f0a947" stroke-width="1.6"/><circle cx="100" cy="160" r="4" fill="#101317" stroke="#f0a947" stroke-width="1.6"/></g>
+  <g transform="translate(220,118)"><rect x="-22" y="-8" width="44" height="16" rx="8" fill="#101317" stroke="rgba(240,169,71,0.45)"/><text x="0" y="3.5" text-anchor="middle" font-size="8" font-family="IBM Plex Mono" fill="#f0a947">GEPLANT</text></g>
+
+</svg></sc-if>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:#101317;border-radius:12px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Legende</span><sc-for list="{{ v.legend }}" as="l" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:22px;height:3px;border-radius:2px;background:{{ l.color }};opacity:{{ l.op }}"></span><span style="flex:1">{{ l.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.75)">{{ l.meta }}</span></span></sc-for></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Dafür</span><sc-for list="{{ v.pro }}" as="p" hint-placeholder-count="3"><span style="display:flex;gap:6px;font-size:12px;color:rgba(231,227,220,0.85)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#5ec2b2"><use href="#i-check"></use></svg><span style="text-wrap:pretty">{{ p }}</span></span></sc-for></div><div style="display:flex;flex-direction:column;gap:4px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Dagegen</span><sc-for list="{{ v.con }}" as="p" hint-placeholder-count="3"><span style="display:flex;gap:6px;font-size:12px;color:rgba(231,227,220,0.85)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#e65a4f"><use href="#i-x"></use></svg><span style="text-wrap:pretty">{{ p }}</span></span></sc-for></div></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:rgba(240,169,71,0.45);padding:20px;display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">Entscheidung</span>
+      <span style="font-size:16px;font-weight:700;color:#f4ece0;text-wrap:pretty">Variante B — Domänenfarbe behalten, Planungsstatus als Zweitmerkmal (Deckkraft 55 % + hohler Endpunkt + Pille bei Auswahl).</span>
+      <span style="font-size:13px;color:rgba(231,227,220,0.85);text-wrap:pretty">Begründung: Die Domänenfarbe ist im gesamten Produkt die Bedeutungsachse (Tabs, Kacheln, Statistik, Legende). Wenn die Karte Status als Farbe zeigt, bricht sie diese Regel als einzige Fläche — geplante Flüge und Kreuzfahrten werden ununterscheidbar blau, und die Legende braucht sechs Einträge statt vier. Deckkraft und hohle Endpunkte sind im Renderer als Layer-Paint vorhanden; Symbole an Bögen (Variante A) müssten neu gebaut werden. Ein gespeicherter Nutzer-Override färbt weiterhin die ganze Domäne, nie einen einzelnen Bogen.</span>
+      <span style="font-size:12px;color:rgba(231,227,220,0.75)"><span style="color:#5ec2b2;font-weight:700">Entschieden 15.09.2026 (Owner): Variante B ist Standard.</span> Geplante Bögen werden zusätzlich gestrichelt — das ist eine Renderer-Anforderung für 2.7 (Umsetzungsliste), damit die Unterscheidung auch ohne Deckkraft zuverlässig funktioniert.</span>
+    </div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:6px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 32px">
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Geflogen / gefahren</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">Domänenfarbe · 100 % · 2,2 / 2,6 px</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Geplant</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">Domänenfarbe · 55 % · gestrichelt 6/6 · Endpunkt hohl</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Vorläufig</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">wie Geplant + Pille „Vorläufig“ gestrichelt bei Auswahl</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Storniert</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">nicht auf der Karte (Filter „Storniert zeigen“ → faint, 35 %)</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Ausgewählt</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">accentHover 3 px + Glow · unabhängig von Domäne</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Nutzer-Override</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">ersetzt Domänenfarbe komplett · Deckkraft-Regel bleibt</span></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="color:rgba(231,227,220,0.75)">Neu für Renderer</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc;text-align:right">stroke-opacity pro Feature (vorhanden) · hohle Endpunkte (vorhanden) · gestrichelt (NICHT vorhanden)</span></div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic { state = { S: null, menu: null }; componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() { const S = this.state.S; if (!S) return {}; const T = S.T; const st = this.state; const set = p => this.setState(p);
+    return { ...S.navModel('dashboard', st, set), stop: e => e.stopPropagation(),
+      variants: [{ id: 'A', title: 'Statusfarbe behalten', isA: true, isB: false, border: 'rgba(231,227,220,0.12)', pill: S.pill('Verworfen', 'rgba(231,227,220,0.62)'), legend: [['Flug geflogen', T.domain.flight, 1, 'domain.flight'], ['Kreuzfahrt gefahren', T.domain.cruise, 1, 'domain.cruise'], ['Geplant (beide)', T.info, 1, 'info + Symbol'], ['Auswahl', T.accentHover, 1, 'accentHover']].map(([label, color, op, meta]) => ({ label, color, op, meta })), pro: ['Entspricht dem aktuellen Renderer ohne Änderung', 'Geplant fällt auf einen Blick auf', 'Symbol am Bogen unterscheidet Domäne trotz gleicher Farbe'], con: ['Bricht die Domänenfarbe als Bedeutungsachse — nur hier', 'Geplante Flüge und Kreuzfahrten teilen eine Farbe', 'Symbole an Bögen sind neu zu bauen und kollidieren bei Zoom'] }, { id: 'B', title: 'Domänenfarbe behalten', isA: false, isB: true, border: 'rgba(240,169,71,0.45)', pill: S.pill('Empfehlung', T.accent), legend: [['Flug', T.domain.flight, 1, 'domain.flight'], ['Kreuzfahrt', T.domain.cruise, 1, 'domain.cruise'], ['Geplant', T.domain.flight, .55, '55 % · hohler Punkt'], ['Auswahl', T.accentHover, 1, 'accentHover']].map(([label, color, op, meta]) => ({ label, color, op, meta })), pro: ['Eine Farblogik im ganzen Produkt', 'Legende bleibt bei vier Einträgen', 'Deckkraft und hohle Punkte kann der Renderer heute'], con: ['Geplant ist dezenter — braucht Pille bei Auswahl', 'Gespeicherte Overrides müssen Deckkraft mitnehmen', 'Bei sehr dichten Karten unterscheidet sich 55 % schwerer'] }] }; } }
+</script>
+</body>
+</html>

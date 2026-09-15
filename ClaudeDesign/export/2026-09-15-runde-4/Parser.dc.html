@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="26 Parser" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Parser </h1><div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">E-Mail- und Boarding-Pass-Templates verwalten. Hinweis zur Provider-Reife steht in den Parser-Einstellungen.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a href="Hinzufuegen.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg>Buchung einlesen</a></div></div>
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:10px;height:10px;border-radius:999px;background:{{ llm.dot }}"></span><span style="font-weight:600">Text-Parser:</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">{{ llm.text }}</span></span>
+      <span style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:10px;height:10px;border-radius:999px;background:#5ec2b2"></span><span style="font-weight:600">Vision-Parser:</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">Tesseract OCR</span></span>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:rgba(231,227,220,0.6)">Provider setzt der Admin · <a href="Admin v2.dc.html#parsers">Parser-Einstellungen</a></span>
+    </div>
+    <div style="border-bottom:1px solid rgba(231,227,220,0.12);display:flex;gap:2px;overflow:auto"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;background:transparent;border:none;color:{{ t.color }};font-weight:{{ t.weight }};font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ t.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="color:#f4ece0">{{ t.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ t.count }}</span></button></sc-for></div>
+
+    <sc-if value="{{ isAnnotate }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:{{ cols }};gap:24px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:6px"><span style="font-size:16px;font-weight:700;color:#f4ece0">Datei annotieren</span><span style="font-size:13px;color:rgba(231,227,220,0.6);text-wrap:pretty">Lade eine E-Mail oder einen Boarding Pass hoch und markiere die Felder. TravStats leitet automatisch ein Regex-Template ab.</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+            <button style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-style:dashed;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;color:#e7e3dc;cursor:pointer;text-align:center" style-hover="border-color:#f0a947;color:#f4ece0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-mail"></use></svg><span style="font-size:14px;font-weight:700">E-Mail hochladen</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">.eml, .msg, .txt</span></button>
+            <button style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-style:dashed;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;color:#e7e3dc;cursor:pointer;text-align:center" style-hover="border-color:#f0a947;color:#f4ece0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#bc8cff"><use href="#i-image"></use></svg><span style="font-size:14px;font-weight:700">Boarding Pass hochladen</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">.png, .jpg, .jpeg</span></button>
+          </div>
+        </div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:14px;font-weight:600">Letzte Annotation · lufthansa-2026-08-30.eml</span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ lastPill.color }};background:{{ lastPill.bg }};border:1px {{ lastPill.dash }} {{ lastPill.border }};white-space:nowrap">{{ lastPill.label }}</span></div>
+          <div style="background:#101317;border-radius:12px;padding:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;line-height:1.7;color:rgba(231,227,220,0.75);white-space:pre-wrap;overflow:auto">Buchungscode: <mark style="background:rgba(240,169,71,0.25);color:#f4ece0;border-radius:4px;padding:0 3px">K7Q2ZR</mark>
+<mark style="background:rgba(111,160,214,0.25);color:#f4ece0;border-radius:4px;padding:0 3px">LH 2042</mark>  <mark style="background:rgba(94,194,178,0.25);color:#f4ece0;border-radius:4px;padding:0 3px">HAM</mark> 06:55 → <mark style="background:rgba(94,194,178,0.25);color:#f4ece0;border-radius:4px;padding:0 3px">MUC</mark> 08:10
+<mark style="background:rgba(188,140,255,0.25);color:#f4ece0;border-radius:4px;padding:0 3px">30.08.2026</mark> · Economy Light · Sitz 14A</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ tags }}" as="g" hint-placeholder-count="5"><span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:#1a1f26;font-size:12px"><span style="width:8px;height:8px;border-radius:999px;background:{{ g.color }}"></span>{{ g.label }}</span></sc-for></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding-top:12px;border-top:1px solid rgba(231,227,220,0.12)"><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Weiter annotieren</button><button style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:#f6bd66"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>Template ableiten</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMine }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:auto"><div style="min-width:720px">
+        <div style="display:grid;grid-template-columns:minmax(220px,1.6fr) 110px 90px 100px 110px 120px 44px;gap:12px;align-items:center;height:40px;padding:0 20px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(231,227,220,0.6)"><span>Template</span><span>Typ</span><span style="text-align:right">Treffer</span><span style="text-align:right">Erfolgsrate</span><span>Erstellt</span><span>Status</span><span></span></div>
+        <sc-for list="{{ mine }}" as="m" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(220px,1.6fr) 110px 90px 100px 110px 120px 44px;gap:12px;align-items:center;min-height:56px;padding:6px 20px;border-bottom:1px solid rgba(231,227,220,0.12)">
+            <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ m.sender }}</span></span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.6)"><use href="{{ m.typeIcon }}"></use></svg>{{ m.type }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right">{{ m.matches }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;text-align:right;color:{{ m.rateColor }}">{{ m.rate }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ m.created }}</span>
+            <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ m.pill.color }};background:{{ m.pill.bg }};border:1px {{ m.pill.dash }} {{ m.pill.border }};white-space:nowrap">{{ m.pill.label }}</span></span>
+            <button onClick="{{ m.toggle }}" title="{{ m.action }}" style="width:34px;height:34px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:rgba(231,227,220,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ m.actionIcon }}"></use></svg></button>
+          </div>
+        </sc-for>
+      </div></div>
+    </sc-if>
+
+    <sc-if value="{{ isCommunity }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6fa0d6"><use href="#i-layers"></use></svg></span>
+        <span style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Airline-E-Mail-Templates</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">47 Templates geladen · tägliches Auto-Update aus GitHub · zuletzt heute 04:00</span></span>
+        <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-activity"></use></svg>Jetzt aktualisieren</button>
+        <a href="#" style="font-size:13px;font-weight:600">Template hinzufügen →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+        <sc-for list="{{ community }}" as="c" hint-placeholder-count="12"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:10px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600">{{ c.code }}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1"><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ c.meta }}</span></span></div></sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLogs }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+        <sc-for list="{{ logStats }}" as="k" hint-placeholder-count="4"><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:22px;font-weight:600;color:{{ k.color }};font-variant-numeric:tabular-nums;line-height:1">{{ k.v }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ k.l }}</span></div></sc-for>
+      </div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;overflow:auto"><div style="min-width:760px">
+        <div style="display:grid;grid-template-columns:140px minmax(220px,1.6fr) 100px 110px 90px 100px 24px;gap:12px;align-items:center;height:40px;padding:0 20px;border-bottom:1px solid rgba(231,227,220,0.12);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(231,227,220,0.6)"><span>Zeit</span><span>Eingabe</span><span>Domäne</span><span>Provider</span><span style="text-align:right">Dauer</span><span>Ergebnis</span><span></span></div>
+        <sc-for list="{{ logs }}" as="l" hint-placeholder-count="6">
+          <a href="#" style="display:grid;grid-template-columns:140px minmax(220px,1.6fr) 100px 110px 90px 100px 24px;gap:12px;align-items:center;min-height:52px;padding:6px 20px;border-bottom:1px solid rgba(231,227,220,0.12);color:inherit;text-decoration:none" style-hover="background:rgba(231,227,220,0.02);text-decoration:none;color:#f4ece0">
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ l.when }}</span>
+            <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.input }}</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ l.domColor }}"><use href="{{ l.domIcon }}"></use></svg>{{ l.dom }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px">{{ l.provider }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;text-align:right;color:rgba(231,227,220,0.6)">{{ l.ms }}</span>
+            <span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:{{ l.pill.color }};background:{{ l.pill.bg }};border:1px {{ l.pill.dash }} {{ l.pill.border }};white-space:nowrap">{{ l.pill.label }}</span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </sc-for>
+      </div></div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, tab: 'annotate', tstate: {}, narrow: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._r = () => this.setState({ narrow: window.innerWidth < 900 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const dom = k => { const d = S.DOMAINS.find(x => x.key === k); return { domIcon: S.I(d.icon), domColor: d.color, dom: d.one }; };
+    const MINE = [['Lufthansa Bestätigung', 'noreply@lufthansa.com', 'E-Mail', 'mail', 41, 98, '2026-03-02'], ['Eurowings Buchung', 'service@eurowings.com', 'E-Mail', 'mail', 23, 91, '2026-04-18'], ['LH Boarding Pass (App)', 'Screenshot', 'Boarding Pass', 'image', 12, 83, '2026-06-11'], ['AIDA Reisebestätigung', 'buchung@aida.de', 'E-Mail', 'mail', 6, 74, '2026-08-01']];
+    const ts = i => st.tstate[i] || (i === 3 ? 'pending' : 'active');
+    return { ...S.navModel('parser', st, set), stop: e => e.stopPropagation(), cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1fr) minmax(0,1.2fr)',
+      llm: { dot: T.good, text: 'Ollama · qwen2.5:7b (Regex-Fallback aktiv)' },
+      tabs: [['annotate', 'Annotieren', ''], ['mine', 'Meine Templates', '4'], ['community', 'Community Templates', '47'], ['logs', 'Parse-Logs', '212']].map(([k, label, count]) => { const a = st.tab === k; return { label, count, onClick: () => set({ tab: k }), color: a ? T.textBright : T.muted, weight: a ? 700 : 500, bar: a ? T.accent : 'transparent' }; }),
+      isAnnotate: st.tab === 'annotate', isMine: st.tab === 'mine', isCommunity: st.tab === 'community', isLogs: st.tab === 'logs',
+      lastPill: S.pill('Vorlage abgeleitet', T.good), tags: [['Buchungscode', T.accent], ['Flugnummer', T.info], ['Flughafen', T.good], ['Datum', T.chart[3]], ['Kabine · offen', T.faint]].map(([label, color]) => ({ label, color })),
+      mine: MINE.map(([name, sender, type, icon, matches, rate, created], i) => { const s = ts(i); return { name, sender, type, typeIcon: S.I(icon), matches, rate: rate + ' %', rateColor: rate >= 90 ? T.good : rate >= 75 ? T.text : T.warn, created, pill: s === 'active' ? S.pill('aktiv', T.good) : s === 'pending' ? S.pill('ausstehend', T.info, true) : S.pill('deaktiviert', 'rgba(231,227,220,0.62)'), action: s === 'active' ? 'Deaktivieren' : 'Aktivieren', actionIcon: s === 'active' ? '#i-eye-off' : '#i-eye', toggle: () => set(x => ({ tstate: { ...x.tstate, [i]: s === 'active' ? 'disabled' : 'active' } })) }; }),
+      community: [['LH', 'Lufthansa', 'v12 · 3 Sprachen'], ['EW', 'Eurowings', 'v8'], ['FR', 'Ryanair', 'v15 · EN'], ['U2', 'easyJet', 'v9'], ['BA', 'British Airways', 'v6 · EN'], ['AF', 'Air France', 'v7 · FR/EN'], ['KL', 'KLM', 'v7'], ['LX', 'SWISS', 'v5'], ['OS', 'Austrian', 'v5'], ['TK', 'Turkish Airlines', 'v4 · EN/TR'], ['AY', 'Finnair', 'v3'], ['DL', 'Delta', 'v4 · EN']].map(([code, name, meta]) => ({ code, name, meta })),
+      logStats: [{ v: '212', l: 'Parses · 30 Tage', color: T.text }, { v: '91 %', l: 'ohne Korrektur übernommen', color: T.good }, { v: '14', l: 'Regex-Fallback', color: T.warn }, { v: '2,3 s', l: 'Ø Dauer (LLM)', color: T.text }],
+      logs: [['heute 08:14', 'lufthansa-2026-09-18.eml', 'flight', 'ollama', '2 140 ms', 'ok'], ['heute 08:12', 'Text eingefügt · Eurowings', 'flight', 'ollama', '1 980 ms', 'ok'], ['gestern 17:02', 'AIDA_Reisebestaetigung.pdf', 'cruise', 'ollama', '4 410 ms', 'review'], ['gestern 16:50', 'motel-one-4471.eml', 'hotel', 'regex', '45 ms', 'ok'], ['gestern 09:31', 'IMG_2231.jpg · Boarding Pass', 'flight', 'tesseract', '3 120 ms', 'review'], ['03.09. 21:04', 'ryanair-ABC123.txt', 'flight', 'regex', '38 ms', 'failed']].map(([when, input, d, provider, ms, r]) => ({ when, input, provider, ms, ...dom(d), pill: r === 'ok' ? S.pill('Übernommen', T.good) : r === 'review' ? S.pill('Korrigiert', T.warn) : S.pill('Fehlgeschlagen', T.bad) })) };
+  }
+}
+</script>
+</body>
+</html>
