@@ -315,7 +315,9 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
                 </span>
                 <span
                   className="text-xs text-center px-4"
-                  style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                  // No second dimming on top of --text-muted: the token is
+                  // already ~6:1, and the extra 0.6 measured 2.70:1 (forgejo#114).
+                  style={{ color: "var(--text-muted)" }}
                 >
                   {t("trips:newTripDesc")}
                 </span>

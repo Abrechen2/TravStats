@@ -46,10 +46,12 @@ export default function DomainSummaryCard({
     return (
       <div
         className="rounded-lg p-5 flex flex-col gap-3"
+        // The dashed border is what says "nothing here yet". Dimming the whole
+        // card said it a second time and took the caption to 2.82:1
+        // (forgejo#114) — opacity belongs on decoration, not on text.
         style={{
           background: "var(--bg-surface)",
           border: "1px dashed var(--color-border)",
-          opacity: 0.6,
         }}
       >
         <div className="flex items-center gap-2.5">
@@ -57,6 +59,7 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              opacity: 0.6,
             }}
             aria-hidden
           >

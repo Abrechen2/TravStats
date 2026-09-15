@@ -409,7 +409,11 @@ export default function AchievementsPage(): JSX.Element {
                       style={{
                         background:
                           selectedDomain === chip.id ? "var(--accent)" : "var(--bg-elevated)",
-                        color: selectedDomain === chip.id ? "#fff" : "var(--text-muted)",
+                        // Not #fff: white on the amber accent measures 2.00:1,
+                        // which is below AA on a control whose whole job is to
+                        // show which filter is active (forgejo#114). The dark
+                        // base is the pairing Filters.tsx already uses.
+                        color: selectedDomain === chip.id ? "var(--bg-base)" : "var(--text-muted)",
                         borderColor:
                           selectedDomain === chip.id ? "var(--accent)" : "var(--color-border)",
                       }}
