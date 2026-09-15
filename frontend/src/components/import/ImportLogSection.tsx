@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -290,42 +291,40 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         </ul>
       )}
 
-      {confirmingBatch && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-              {t("lodging:import.batches.confirmTitle")}
-            </h3>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">
-              {t("lodging:import.batches.confirmMessage")}
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                data-testid="batch-revert-cancel"
-                onClick={() => setConfirmingId(null)}
-                disabled={reverting}
-                className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-              >
-                {t("common:buttons.cancel")}
-              </button>
-              <button
-                type="button"
-                data-testid="batch-revert-confirm"
-                onClick={() => void handleRevert(confirmingBatch.id)}
-                disabled={reverting}
-                className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {t("lodging:import.batches.revert")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={confirmingBatch !== undefined && confirmingBatch !== null}
+        onClose={() => setConfirmingId(null)}
+        busy={reverting}
+        title={t("lodging:import.batches.confirmTitle")}
+        maxWidth={448}
+        closeLabel={t("common:buttons.close")}
+        footer={
+          <>
+            <button
+              type="button"
+              data-testid="batch-revert-cancel"
+              onClick={() => setConfirmingId(null)}
+              disabled={reverting}
+              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+            >
+              {t("common:buttons.cancel")}
+            </button>
+            <button
+              type="button"
+              data-testid="batch-revert-confirm"
+              onClick={() => confirmingBatch && void handleRevert(confirmingBatch.id)}
+              disabled={reverting}
+              className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {t("lodging:import.batches.revert")}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("lodging:import.batches.confirmMessage")}
+        </p>
+      </Modal>
     </div>
   );
 }

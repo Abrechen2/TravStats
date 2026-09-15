@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 /**
  * Personal Access Token (PAT) management UI.
  *
@@ -254,70 +255,61 @@ export default function ApiTokensSection(): JSX.Element {
       </div>
 
       {/* Just-created modal — plaintext shown ONCE */}
-      {justCreated && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="rounded-xl p-6 max-w-lg w-full space-y-4"
+      {/* Just-created dialog — plaintext shown ONCE */}
+      <Modal
+        open={justCreated !== null}
+        onClose={dismissJustCreated}
+        title={t("settings:apiTokens.justCreatedTitle")}
+        maxWidth={512}
+        closeLabel={t("settings:apiTokens.dismiss")}
+        footer={
+          <button
+            type="button"
+            onClick={dismissJustCreated}
+            className="rounded-md px-4 py-2 text-sm"
             style={{
-              background: "var(--bg-elevated)",
+              background: "transparent",
               border: "1px solid var(--color-border)",
+              color: "var(--text-primary)",
             }}
           >
-            <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              {t("settings:apiTokens.justCreatedTitle")}
-            </h3>
-            <div
-              className="text-sm rounded-md p-3"
+            {t("settings:apiTokens.dismiss")}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div
+            className="rounded-md p-3 text-sm"
+            style={{
+              background: "color-mix(in srgb, var(--ts-warn) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--ts-warn) 30%, transparent)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {t("settings:apiTokens.justCreatedWarning")}
+          </div>
+          <div className="space-y-2">
+            <code
+              className="block rounded-md p-3 font-mono text-xs break-all"
               style={{
-                background: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                background: "var(--bg-muted)",
+                border: "1px solid var(--color-border)",
                 color: "var(--text-primary)",
               }}
             >
-              {t("settings:apiTokens.justCreatedWarning")}
-            </div>
-            <div className="space-y-2">
-              <code
-                className="block break-all rounded-md p-3 text-xs font-mono"
-                style={{
-                  background: "var(--bg-muted)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {justCreated.plaintext}
-              </code>
-              <button
-                type="button"
-                onClick={copyPlaintext}
-                className="px-3 py-1.5 text-sm rounded-md"
-                style={{ background: "var(--accent)", color: "white" }}
-              >
-                {copyOk ? t("settings:apiTokens.copied") : t("settings:apiTokens.copy")}
-              </button>
-            </div>
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={dismissJustCreated}
-                className="px-4 py-2 text-sm rounded-md"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {t("settings:apiTokens.dismiss")}
-              </button>
-            </div>
+              {justCreated?.plaintext}
+            </code>
+            <button
+              type="button"
+              onClick={copyPlaintext}
+              className="rounded-md px-3 py-1.5 text-sm"
+              style={{ background: "var(--accent)", color: "var(--ts-accent-text)" }}
+            >
+              {copyOk ? t("settings:apiTokens.copied") : t("settings:apiTokens.copy")}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </SectionCard>
   );
 }
