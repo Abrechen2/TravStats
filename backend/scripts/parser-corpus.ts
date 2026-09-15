@@ -92,6 +92,7 @@ interface FileResult {
   candidateCount: number;
   flights?: FlightRow[];
   lodgings?: LodgingRow[];
+  cruises?: CruiseRow[];
   /** What a reader should look at. Empty means nothing stood out. */
   flags: string[];
   ms: number;
@@ -102,12 +103,25 @@ type Expectation = {
   candidates?: number;
   flights?: Array<{ flightNumber?: string; from?: string; to?: string; date?: string }>;
   lodgings?: Array<{ name?: string; checkIn?: string; checkOut?: string }>;
+  cruises?: Array<{ ship?: string; start?: string; end?: string; stops?: number }>;
 };
 
+/**
+ * Keys are normalised to NFC, and so is every filename looked up against them.
+ *
+ * Windows hands back "Bestätigung" DECOMPOSED (a + combining diaeresis) while
+ * anything that writes JSON by hand composes it. The two strings look
+ * identical and are not equal, so every German filename missed its entry — and
+ * the summary below then reported "4 checked, 0 failed" over four files it had
+ * never checked at all. A ratchet that cannot be reached is worse than none.
+ */
 function readExpectations(dir: string): Record<string, Expectation> {
   const file = path.join(dir, "expectations.json");
   if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, Expectation>;
+  const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, Expectation>;
+  return Object.fromEntries(
+    Object.entries(raw).map(([key, value]) => [key.normalize("NFC"), value])
+  );
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -127,6 +141,31 @@ function flightRows(flights: unknown[]): FlightRow[] {
       ? f.missing.filter((m): m is string => typeof m === "string")
       : [],
   }));
+}
+
+/** What a cruise expectation can pin. Ship and span identify the voyage; the
+ *  stop count is what catches an itinerary that silently lost a leg. */
+interface CruiseRow {
+  ship: string | null;
+  start: string | null;
+  end: string | null;
+  stops: number;
+}
+
+function cruiseRows(cruises: unknown[]): CruiseRow[] {
+  // `hydrateResolvedCruises` returns the PARSED cruise under `input` and hangs
+  // the resolved catalogue rows (ship, ports) beside it. Reading the top level
+  // gave four rows of nulls that no expectation could ever match.
+  return cruises.filter(isRecord).map((c) => {
+    const parsed = isRecord(c.input) ? c.input : c;
+    const ship = isRecord(c.ship) ? str(c.ship.name) : null;
+    return {
+      ship: ship ?? str(parsed.shipName),
+      start: str(parsed.startDate),
+      end: str(parsed.endDate),
+      stops: Array.isArray(parsed.stops) ? parsed.stops.length : 0,
+    };
+  });
 }
 
 function lodgingRows(candidates: unknown[]): LodgingRow[] {
@@ -178,6 +217,16 @@ function checkExpectation(result: FileResult, expected: Expectation | undefined)
     );
     if (!hit) misses.push(`expected flight ${JSON.stringify(e)} not found`);
   }
+  for (const e of expected.cruises ?? []) {
+    const hit = (result.cruises ?? []).some(
+      (c) =>
+        (e.ship === undefined || c.ship === e.ship) &&
+        (e.start === undefined || c.start === e.start) &&
+        (e.end === undefined || c.end === e.end) &&
+        (e.stops === undefined || c.stops === e.stops)
+    );
+    if (!hit) misses.push(`expected cruise ${JSON.stringify(e)} not found`);
+  }
   for (const e of expected.lodgings ?? []) {
     const hit = (result.lodgings ?? []).some(
       (l) =>
@@ -217,6 +266,9 @@ async function main(): Promise<void> {
 
   const results: FileResult[] = [];
   const failures: Array<{ file: string; misses: string[] }> = [];
+  /** Which expectation keys actually met a file — read by the
+   *  unreachable-key check after the loop. */
+  const matchedExpectations = new Set<string>();
 
   for (const file of selected) {
     const full = path.join(args.dir, file);
@@ -269,9 +321,12 @@ async function main(): Promise<void> {
         result.candidateCount = result.lodgings.length;
         result.flags = flagLodgings(result.lodgings);
       } else if (outcome.domain === "cruise" && Array.isArray(body.cruises)) {
-        result.candidateCount = body.cruises.length;
+        result.cruises = cruiseRows(body.cruises);
+        result.candidateCount = result.cruises.length;
       }
-      const misses = checkExpectation(result, expectations[file]);
+      const expectation = expectations[file.normalize("NFC")];
+      if (expectation) matchedExpectations.add(file.normalize("NFC"));
+      const misses = checkExpectation(result, expectation);
       if (misses.length > 0) failures.push({ file, misses });
       results.push(result);
 
@@ -283,6 +338,9 @@ async function main(): Promise<void> {
           .join(" | ") ??
         result.lodgings
           ?.map((l) => `${l.name ?? "?"} ${l.checkIn ?? "?"}→${l.checkOut ?? "?"}`)
+          .join(" | ") ??
+        result.cruises
+          ?.map((c) => `${c.ship ?? "?"} ${c.start ?? "?"}→${c.end ?? "?"} ${c.stops} stops`)
           .join(" | ") ??
         "";
       const mark = misses.length > 0 ? "✗" : result.flags.length > 0 ? "!" : " ";
@@ -341,14 +399,22 @@ async function main(): Promise<void> {
   const out = path.join(resultsDir, `corpus-${args.domain}-${args.tag}-${stamp}.json`);
   fs.writeFileSync(out, JSON.stringify(report, null, 2));
 
+  // A key that met no file is the failure mode this script had itself: four
+  // entries were reported as "checked" while the lookup missed every one of
+  // them. An expectation nobody can reach measures nothing, so it fails.
+  const unreachable = Object.keys(expectations).filter((key) => !matchedExpectations.has(key));
+
   process.stdout.write(
     `\n${results.length} files · parsers ${JSON.stringify(byParser)} · ${zero} with 0 candidates · ${flagged} flagged · ${Math.round(totalMs / 1000)} s\n` +
+      (unreachable.length > 0
+        ? `UNREACHABLE expectations (no such file): ${unreachable.join(", ")}\n`
+        : "") +
       (Object.keys(expectations).length > 0
-        ? `expectations: ${Object.keys(expectations).length} checked, ${failures.length} failed\n`
+        ? `expectations: ${matchedExpectations.size} of ${Object.keys(expectations).length} matched a file, ${failures.length} failed\n`
         : "no expectations.json in this directory — measurement only\n") +
       `→ ${out}\n`
   );
-  process.exit(failures.length > 0 ? 1 : 0);
+  process.exit(failures.length > 0 || unreachable.length > 0 ? 1 : 0);
 }
 
 main().catch((err) => {
