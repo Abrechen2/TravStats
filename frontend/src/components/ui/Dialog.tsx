@@ -1,7 +1,7 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
-import { useDialogChrome } from "./useDialogChrome";
+import { DialogDepthContext, useDialogChrome, useDialogDepth } from "./useDialogChrome";
 
 interface DialogProps {
   open: boolean;
@@ -50,7 +50,8 @@ export default function Dialog({
   maxWidth = 440,
 }: DialogProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogChrome({ open, onClose, panelRef });
+  const depth = useDialogDepth();
+  useDialogChrome({ open, onClose, panelRef, depth });
 
   if (!open) return null;
 
@@ -98,7 +99,7 @@ export default function Dialog({
         </div>
 
         <div className="t-body" style={{ textWrap: "pretty" }}>
-          {children}
+          <DialogDepthContext.Provider value={depth}>{children}</DialogDepthContext.Provider>
         </div>
 
         {(action || dismissLabel) && (

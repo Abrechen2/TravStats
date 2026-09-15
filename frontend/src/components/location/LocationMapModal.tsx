@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 /**
  * LocationMapModal — the ONE map way to pick a point (owner decision
  * 2026-08-21: the modal replaces the old inline mini-map).
@@ -147,8 +148,7 @@ export function LocationMapModal({
   );
 
   const handleMarkerDragEnd = useCallback(
-    (e: { lngLat: { lng: number; lat: number } }): void =>
-      placeFromMap(e.lngLat.lat, e.lngLat.lng),
+    (e: { lngLat: { lng: number; lat: number } }): void => placeFromMap(e.lngLat.lat, e.lngLat.lng),
     [placeFromMap]
   );
 
@@ -211,138 +211,14 @@ export function LocationMapModal({
       : null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("location:mapModal.title")}
-    >
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-5 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-            {t("location:mapModal.title")}
-          </h3>
-          <button
-            type="button"
-            aria-label={t("location:mapModal.cancel")}
-            onClick={onClose}
-            className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="relative mt-3">
-          <input
-            id={`${idPrefix}-search`}
-            role="combobox"
-            aria-expanded={dropdownOpen}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            aria-activedescendant={
-              activeIndex >= 0 ? `${idPrefix}-option-${activeIndex}` : undefined
-            }
-            type="text"
-            autoComplete="off"
-            className="input"
-            placeholder={t("location:mapModal.searchPlaceholder")}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setActiveIndex(-1);
-            }}
-            onKeyDown={(e) => {
-              if (!dropdownOpen || results.length === 0) return;
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setActiveIndex((i) => (i + 1) % results.length);
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setActiveIndex((i) => (i <= 0 ? results.length - 1 : i - 1));
-              } else if (e.key === "Enter") {
-                if (activeIndex >= 0 && activeIndex < results.length) {
-                  e.preventDefault();
-                  handleSelectResult(results[activeIndex]);
-                }
-              }
-            }}
-          />
-          {dropdownOpen && (
-            <LocationSuggestions
-              listboxId={listboxId}
-              idPrefix={idPrefix}
-              isSearching={isSearching}
-              searchError={searchError}
-              results={results}
-              activeIndex={activeIndex}
-              onSelect={handleSelectResult}
-              searchingLabel={t("location:searching")}
-              errorLabel={t("location:searchError")}
-              noResultsLabel={t("location:noResults")}
-            />
-          )}
-        </div>
-
-        <div className="mt-3">
-          <LocationMiniMap
-            value={draft}
-            // Seeded from the PROP, not from `draft`. The map reads this once,
-            // when it mounts — which is the render that opens the modal, and in
-            // that render `draft` can still hold the previous session's value:
-            // the re-seeding effect below only runs after the commit. Reading
-            // `draft` therefore opened the picker on the world view whenever
-            // the position arrived while the modal was shut (a stay loaded, an
-            // address geocoded), leaving the pin off screen.
-            initialViewState={
-              value
-                ? { longitude: value.lon, latitude: value.lat, zoom: PICKED_ZOOM }
-                : DEFAULT_VIEW
-            }
-            focusNonce={focusNonce}
-            compact={false}
-            height={420}
-            ariaLabel={t("location:mapAriaLabel")}
-            attributionLabel={t("location:attribution")}
-            onMapClick={handleMapClick}
-            onMarkerDragEnd={handleMarkerDragEnd}
-          />
-        </div>
-
-        {pois.length > 0 && (
-          <div className="mt-3" data-testid="map-modal-poi-list">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t("location:mapModal.nearby")}
-            </p>
-            <ul className="max-h-40 divide-y divide-[var(--color-border)] overflow-y-auto rounded-lg border border-[var(--color-border)]">
-              {pois.map((poi, i) => {
-                const selected =
-                  hit !== null && hit.lat === poi.lat && hit.lon === poi.lon && hit.name === poi.name;
-                return (
-                  <li key={`${poi.name}-${i}`}>
-                    <button
-                      type="button"
-                      onClick={() => handlePickPoi(poi)}
-                      className={
-                        "flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-inset)]" +
-                        (selected ? " bg-[var(--bg-inset)]" : "")
-                      }
-                    >
-                      <span className="truncate text-[var(--text-primary)]">
-                        {selected ? "✓ " : ""}
-                        {poi.name}
-                      </span>
-                      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                        {[poi.city, poi.country].filter(Boolean).join(", ")}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        <div className="mt-3 flex items-center justify-between gap-4">
+    <Modal
+      open
+      onClose={onClose}
+      title={t("location:mapModal.title")}
+      maxWidth={672}
+      closeLabel={t("location:mapModal.cancel")}
+      footer={
+        <div className="flex w-full items-center justify-between gap-4">
           <div className="min-w-0 text-xs text-[var(--text-muted)]">
             {draft && (
               <p className="truncate">
@@ -371,8 +247,114 @@ export function LocationMapModal({
             </button>
           </div>
         </div>
+      }
+    >
+      <div className="relative mt-3">
+        <input
+          id={`${idPrefix}-search`}
+          role="combobox"
+          aria-expanded={dropdownOpen}
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? `${idPrefix}-option-${activeIndex}` : undefined}
+          type="text"
+          autoComplete="off"
+          className="input"
+          placeholder={t("location:mapModal.searchPlaceholder")}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActiveIndex(-1);
+          }}
+          onKeyDown={(e) => {
+            if (!dropdownOpen || results.length === 0) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActiveIndex((i) => (i + 1) % results.length);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActiveIndex((i) => (i <= 0 ? results.length - 1 : i - 1));
+            } else if (e.key === "Enter") {
+              if (activeIndex >= 0 && activeIndex < results.length) {
+                e.preventDefault();
+                handleSelectResult(results[activeIndex]);
+              }
+            }
+          }}
+        />
+        {dropdownOpen && (
+          <LocationSuggestions
+            listboxId={listboxId}
+            idPrefix={idPrefix}
+            isSearching={isSearching}
+            searchError={searchError}
+            results={results}
+            activeIndex={activeIndex}
+            onSelect={handleSelectResult}
+            searchingLabel={t("location:searching")}
+            errorLabel={t("location:searchError")}
+            noResultsLabel={t("location:noResults")}
+          />
+        )}
       </div>
-    </div>
+
+      <div className="mt-3">
+        <LocationMiniMap
+          value={draft}
+          // Seeded from the PROP, not from `draft`. The map reads this once,
+          // when it mounts — which is the render that opens the modal, and in
+          // that render `draft` can still hold the previous session's value:
+          // the re-seeding effect below only runs after the commit. Reading
+          // `draft` therefore opened the picker on the world view whenever
+          // the position arrived while the modal was shut (a stay loaded, an
+          // address geocoded), leaving the pin off screen.
+          initialViewState={
+            value ? { longitude: value.lon, latitude: value.lat, zoom: PICKED_ZOOM } : DEFAULT_VIEW
+          }
+          focusNonce={focusNonce}
+          compact={false}
+          height={420}
+          ariaLabel={t("location:mapAriaLabel")}
+          attributionLabel={t("location:attribution")}
+          onMapClick={handleMapClick}
+          onMarkerDragEnd={handleMarkerDragEnd}
+        />
+      </div>
+
+      {pois.length > 0 && (
+        <div className="mt-3" data-testid="map-modal-poi-list">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            {t("location:mapModal.nearby")}
+          </p>
+          <ul className="max-h-40 divide-y divide-[var(--color-border)] overflow-y-auto rounded-lg border border-[var(--color-border)]">
+            {pois.map((poi, i) => {
+              const selected =
+                hit !== null && hit.lat === poi.lat && hit.lon === poi.lon && hit.name === poi.name;
+              return (
+                <li key={`${poi.name}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => handlePickPoi(poi)}
+                    className={
+                      "flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-inset)]" +
+                      (selected ? " bg-[var(--bg-inset)]" : "")
+                    }
+                  >
+                    <span className="truncate text-[var(--text-primary)]">
+                      {selected ? "✓ " : ""}
+                      {poi.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                      {[poi.city, poi.country].filter(Boolean).join(", ")}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </Modal>
   );
 }
 

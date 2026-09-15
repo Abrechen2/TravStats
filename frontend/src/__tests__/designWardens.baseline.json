@@ -165,7 +165,6 @@
     "components/import/ColumnMappingWizard.tsx",
     "components/import/DomainImportPanel.tsx",
     "components/import/PreviewModal.tsx",
-    "components/location/LocationMapModal.tsx",
     "components/lodging/LodgingImportPreviewModal.tsx",
     "components/lodging/StayEditor.tsx",
     "components/places/PlaceImportPreviewModal.tsx",

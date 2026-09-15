@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, JSX, ReactNode } from "react";
-import { useDialogChrome } from "./ui/useDialogChrome";
+import { DialogDepthContext, useDialogChrome, useDialogDepth } from "./ui/useDialogChrome";
 
 /**
  * The frame every blocking dialog sits in.
@@ -95,7 +95,8 @@ export default function Modal({
     titleIdRef.current = `modal-title-${idCounter}`;
   }
 
-  useDialogChrome({ open, onClose, panelRef, busy });
+  const depth = useDialogDepth();
+  useDialogChrome({ open, onClose, panelRef, busy, depth });
 
   if (!open) return null;
 
@@ -156,7 +157,11 @@ export default function Modal({
             </button>
           )}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
+        {/* Anything the body opens is one level deeper, and that is how the
+            keyboard knows which dialog Escape belongs to. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">
+          <DialogDepthContext.Provider value={depth}>{children}</DialogDepthContext.Provider>
+        </div>
         {footer && (
           <div
             className="flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3"
