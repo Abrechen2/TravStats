@@ -89,6 +89,69 @@ jobs:
       - name: Lint frontend
         run: cd frontend && npm run lint
 
+      # forgejo#60. Plain node against the working tree — no database, no
+      # dependencies of its own, so it belongs in the cheapest job there is.
+      #
+      # It was runnable but unwired from 2026-09-01 until today, and on
+      # 2026-09-15 that cost exactly what it was built to prevent: a branch
+      # landed on main with four files grown past their frozen size, and
+      # nobody saw it because nothing ran the check. The ratchet only holds
+      # while something asks it.
+      - name: File-size ratchet
+        run: npm run check:size
+
+  # ---------------------------------------------------------------------
+  # forgejo#60. Answers one question: does schema.prisma agree with what the
+  # migrations actually build? `--from-migrations` replays them into a shadow
+  # database, so the answer does not depend on which branch any developer's
+  # database last saw — which is the whole reason a local run could disagree
+  # with a colleague's.
+  #
+  # Its own job because it is the only static check that needs a database.
+  # Folding it into `static` would put a postgres service in front of the
+  # typecheck, which runs on every push and does not need one.
+  # ---------------------------------------------------------------------
+  schema-drift:
+    name: Prisma schema drift
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # CI-local throwaways, unrelated to any developer or deployment
+        # credentials. The user owns the container, so it may CREATE DATABASE
+        # for the shadow — a restricted role would need SHADOW_DATABASE_URL
+        # set explicitly instead.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_ci
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Schema drift
+        run: npm run check:drift
+
   # ---------------------------------------------------------------------
   # SAFE TO REQUIRE. Measured green on main @ 80ca3061 (2026-08-30):
   # 371 files, 3254 tests, all passing, exit 0.
