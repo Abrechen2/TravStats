@@ -393,3 +393,16 @@ export const requireAdmin = async (
     next(error);
   }
 };
+
+/**
+ * The caller's id, or a 401.
+ *
+ * `AuthRequest.userId` is optional because the type describes a request that
+ * may or may not have passed `authenticate`. Every handler behind it then
+ * wrote its own `if (!req.userId) throw` or, worse, a `!`. This is that check
+ * once, next to the type whose optionality causes it.
+ */
+export const requireUser = (req: AuthRequest): string => {
+  if (!req.userId) throw new AppError("Not authenticated", 401);
+  return req.userId;
+};

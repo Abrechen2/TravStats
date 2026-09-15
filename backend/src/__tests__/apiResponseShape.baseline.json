@@ -83,6 +83,8 @@
     "importBatches.ts",
     "lodging.ts",
     "lodging/photos.ts",
+    "lodging/propose.ts",
+    "lodging/stays.ts",
     "lodgingChains.ts",
     "lodgingImport.ts",
     "lodgingMemberships.ts",

@@ -4,36 +4,48 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
-import { fxPreviewLimiter, portGeocodeLimiter } from "../middleware/rateLimit";
+import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
-import { proposeLodgingMatch } from "../services/lodging/proposeMatch";
-import { recheckAchievements } from "../utils/achievements";
-import { deriveLodgingStatus } from "../shared/statusDerivation";
-import { classifyStay } from "../shared/lodgingCounting";
-import { resolveStayTiming } from "../shared/lodgingTiming";
-import { deriveStayOverallRating } from "../shared/ratingDerivation";
-import { deriveStayTotalPrice } from "../shared/stayPricing";
+import proposeRouter from "./lodging/propose";
+import {
+  computeAggregates,
+  sortLodgings,
+  buildLodgingWhere,
+  type LodgingListItem,
+} from "../services/lodging/listView";
+import { requireUser } from "../middleware/auth";
+import {
+  applyFxSnapshot,
+  applyManualRate,
+  resolveFxFields,
+  type FxSnapshotOutcome,
+} from "../services/fx/stayFx";
+
+// Re-exported: `services/lodging/lodgingImportCommit.ts`, `lodgingChains.ts`
+// and two test files name THIS module for them, and the split that moved them
+// out is not a reason to rewrite their imports.
+export { applyFxSnapshot, applyManualRate, resolveFxFields, type FxSnapshotOutcome };
+export {
+  computeAggregates,
+  deriveOverallRating,
+  type LodgingAggregates,
+  type LodgingListItem,
+} from "../services/lodging/listView";
+import staysRouter from "./lodging/stays";
 import {
   createLodgingSchema,
   updateLodgingSchema,
-  createStaySchema,
-  updateStaySchema,
   lodgingQuerySchema,
-  proposeLodgingSchema,
   currencyField,
-  type LodgingQueryInput,
 } from "../schemas/lodging";
-import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
-import { assertReferencesOwned } from "../utils/ownedReferences";
-import { resolveEffectiveStayDates } from "../services/lodging/stayPatchMerge";
 import {
   collectLodgingPhotoFilenames,
   removeLodgingPhotoFiles,
 } from "../services/lodging/deleteLodgingPhotoFiles";
-import { snapshotFx, getBaseCurrency } from "../services/fx/snapshot";
+import { getBaseCurrency } from "../services/fx/snapshot";
 
 // Re-exported: every existing import site names this module.
 export { getBaseCurrency };
@@ -44,273 +56,12 @@ router.use(authenticate);
 // cannot POST/PATCH/DELETE — consistent with routes/cruises.ts.
 router.use(requireWriteScope);
 
-const requireUser = (req: AuthRequest): string => {
-  if (!req.userId) throw new AppError("Not authenticated", 401);
-  return req.userId;
-};
 
 // Exported so routes/lodgingChains.ts's chain-detail endpoint can reuse the
 // SAME include shape + aggregate derivation as the lodging list, instead of
 // re-deriving stayCount/nights/overallRating/totalSpendBase a second time.
 export const LODGING_INCLUDE = { stays: true, chain: true } satisfies Prisma.LodgingInclude;
 export type LodgingListRow = Prisma.LodgingGetPayload<{ include: typeof LODGING_INCLUDE }>;
-
-interface FxSnapshotFields {
-  totalPriceBase: number | null;
-  fxRate: number | null;
-  fxRateDate: Date | null;
-  fxBaseCurrency: string | null;
-  /** Which provider produced the snapshot — never inferred from the rate. */
-  fxSource: fx.RateSource | null;
-}
-
-const CLEARED_FX: FxSnapshotFields = {
-  totalPriceBase: null,
-  fxRate: null,
-  fxRateDate: null,
-  fxBaseCurrency: null,
-  fxSource: null,
-};
-
-interface RatedStay {
-  ratingOverall: number | null;
-}
-
-interface AggregateStayFx {
-  totalPriceBase: number | null;
-  fxBaseCurrency: string | null;
-}
-
-/**
- * Sums `totalPriceBase` grouped by the currency it was snapshotted into
- * (`fxBaseCurrency`) — never across currencies. A stay snapshotted before
- * the user switched their base currency keeps its OLD `fxBaseCurrency` key
- * here forever (the snapshot itself never gets recalculated), so summing
- * everything under the CURRENT base currency's label would silently add
- * amounts that were never actually converted into it (finding 2).
- */
-function sumSpendBaseByCurrency<T extends AggregateStayFx>(stays: T[]): Record<string, number> {
-  const byCurrency: Record<string, number> = {};
-  for (const s of stays) {
-    if (s.totalPriceBase === null || s.fxBaseCurrency === null) continue;
-    byCurrency[s.fxBaseCurrency] = (byCurrency[s.fxBaseCurrency] ?? 0) + s.totalPriceBase;
-  }
-  return byCurrency;
-}
-
-/** Average of a lodging's stays' ratingOverall (nulls ignored). null when none rated. */
-export function deriveOverallRating(stays: RatedStay[]): number | null {
-  const rated = stays.map((s) => s.ratingOverall).filter((v): v is number => v !== null);
-  if (rated.length === 0) return null;
-  return Math.round((rated.reduce((sum, v) => sum + v, 0) / rated.length) * 10) / 10;
-}
-
-interface AggregateStay extends RatedStay, AggregateStayFx {
-  checkIn: Date | null;
-  checkOut: Date | null;
-  datePrecision: string;
-  nights: number | null;
-  status: string;
-}
-
-export interface LodgingAggregates {
-  overallRating: number | null;
-  stayCount: number;
-  nights: number;
-  /** Sum of totalPriceBase for stays whose FX snapshot matches `currentBaseCurrency` — see sumSpendBaseByCurrency. */
-  totalSpendBase: number;
-  /** Full per-fxBaseCurrency breakdown (finding 2) — lets the UI show spend snapshotted under a currency the user has since moved away from, instead of silently folding it into totalSpendBase. */
-  totalSpendBaseByCurrency: Record<string, number>;
-}
-
-export function computeAggregates(
-  stays: AggregateStay[],
-  currentBaseCurrency: string,
-): LodgingAggregates {
-  // The check-out rule (shared/lodgingCounting): a stay counts once it is
-  // over. Future and cancelled bookings contribute nothing to any figure —
-  // the same verdict the stats path (calculateLodgingStats) already applies.
-  const visited = stays.filter((s) => classifyStay(s) === "visited");
-  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(visited);
-  return {
-    overallRating: deriveOverallRating(visited),
-    stayCount: visited.length,
-    // Nights come from `resolveStayTiming`, not from a local date subtraction:
-    // an undated stay can still carry an explicit night count, and a
-    // month-precision one must not have its placeholder dates differenced.
-    nights: visited.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
-    totalSpendBase: totalSpendBaseByCurrency[currentBaseCurrency] ?? 0,
-    totalSpendBaseByCurrency,
-  };
-}
-
-export type LodgingListItem = LodgingListRow & LodgingAggregates;
-
-function sortLodgings(
-  items: LodgingListItem[],
-  sort: LodgingQueryInput["sort"],
-): LodgingListItem[] {
-  switch (sort) {
-    case "name":
-      return [...items].sort((a, b) => a.name.localeCompare(b.name));
-    case "nights":
-      return [...items].sort((a, b) => b.nights - a.nights);
-    case "rating":
-      return [...items].sort((a, b) => (b.overallRating ?? -1) - (a.overallRating ?? -1));
-    case "spend":
-      return [...items].sort((a, b) => b.totalSpendBase - a.totalSpendBase);
-    case "checkIn": {
-      const latestCheckIn = (l: LodgingListItem) =>
-        // An undated stay has no position on this axis. It sorts as if it were
-        // the oldest thing in the list rather than jumping to the top on a NaN.
-        l.stays.reduce((max, s) => Math.max(max, s.checkIn?.getTime() ?? 0), 0);
-      return [...items].sort((a, b) => latestCheckIn(b) - latestCheckIn(a));
-    }
-    default:
-      return items; // already ordered by createdAt desc from the DB query
-  }
-}
-
-function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.LodgingWhereInput {
-  const where: Prisma.LodgingWhereInput = { userId };
-  if (q.type) where.type = q.type;
-  if (q.chainId) where.chainId = q.chainId;
-  // The filter sends an ISO code now ("DE"), so one option covers "Deutschland"
-  // AND "Germany". A non-code value is still accepted verbatim: an older client
-  // — and any house whose text resolves to no country at all — must keep working.
-  if (q.country) {
-    if (/^[A-Za-z]{2}$/.test(q.country)) where.isoCountryCode = q.country.toUpperCase();
-    else where.country = q.country;
-  }
-
-  const stayFilter: Prisma.LodgingStayWhereInput = {};
-  if (q.tripId) stayFilter.tripId = q.tripId;
-  if (q.year) {
-    stayFilter.checkIn = {
-      gte: new Date(`${q.year}-01-01T00:00:00.000Z`),
-      lt: new Date(`${q.year + 1}-01-01T00:00:00.000Z`),
-    };
-  }
-  if (Object.keys(stayFilter).length > 0) where.stays = { some: stayFilter };
-
-  return where;
-}
-
-/**
- * Snapshot the FX conversion for a stay write (spec §7.1). A stay is billed
- * in the hotel's local currency, but the user wants cross-stay totals in one
- * base currency — every write snapshots the ECB rate for the check-in day.
- *
- * `input.checkIn` is always a full ISO-8601 UTC instant by the time it
- * reaches here: on create it's the Zod-validated string from
- * `schemas/lodging.ts` (`isoDateTimeRequired` normalizes any partial input to
- * `.toISOString()`); on a selective-refresh update it's a Prisma `DateTime`
- * read back from the DB, which is likewise stored as a real UTC instant.
- * `new Date(input.checkIn)` therefore reproduces that exact instant without
- * any local-timezone reinterpretation, so `convertToBase`'s internal
- * `date.toISOString().slice(0, 10)` reads the intended check-in calendar day
- * — never shifted by ±1 day the way it would be if we built the Date from a
- * bare "YYYY-MM-DD" string via local-midnight parsing.
- *
- * Never throws — a failed FX lookup clears the snapshot instead of failing
- * the request, so the user always keeps their stay record.
- *
- * Returns a discriminated result rather than collapsing every non-value
- * outcome into the same all-null `FxSnapshotFields` object (finding 1): a
- * caller that already has an EXISTING snapshot on file (a PATCH) needs to
- * tell "the price was explicitly removed — clear it" apart from "the ECB
- * lookup merely failed for this attempt" for logging/observability, even
- * though both still resolve to a null snapshot once the inputs themselves
- * have genuinely changed (see `resolveFxFields` at each call site).
- */
-export type FxSnapshotOutcome =
-  | { status: "priceRemoved" }
-  | { status: "missingCurrency" }
-  | { status: "lookupFailed" }
-  | { status: "snapshotted"; fields: FxSnapshotFields };
-
-export async function applyFxSnapshot(
-  input: { totalPrice?: number | null; currency?: string | null; checkIn?: string | Date | null },
-  baseCurrency: string,
-): Promise<FxSnapshotOutcome> {
-  // Thin adapter over the domain-neutral core in `services/fx/snapshot.ts`
-  // (#267): the rule is shared with flights and bookings, the COLUMN NAMES are
-  // this domain's. `missingDate` maps onto the same `lookupFailed` the callers
-  // already handle — an undated stay has always been treated as "no rate to be
-  // had", and splitting that here would change behaviour this move must not.
-  const outcome = await snapshotFx(
-    { amount: input.totalPrice, currency: input.currency, date: input.checkIn },
-    baseCurrency,
-  );
-  switch (outcome.status) {
-    case "amountRemoved":
-      return { status: "priceRemoved" };
-    case "missingDate":
-      return { status: "lookupFailed" };
-    case "missingCurrency":
-      return { status: "missingCurrency" };
-    case "lookupFailed":
-      return { status: "lookupFailed" };
-    case "snapshotted":
-      return {
-        status: "snapshotted",
-        fields: {
-          totalPriceBase: outcome.snapshot.baseAmount,
-          fxRate: outcome.snapshot.rate,
-          fxRateDate: outcome.snapshot.rateDate,
-          fxBaseCurrency: outcome.snapshot.baseCurrency,
-          fxSource: outcome.snapshot.source,
-        },
-      };
-  }
-}
-
-/**
- * Resolves an `FxSnapshotOutcome` to the fields a write should apply.
- * `priceRemoved`/`missingCurrency`/`lookupFailed` all collapse to `CLEARED_FX`
- * here — they differ for the CALLER (only `missingCurrency` says the amount
- * itself is unusable), but none of them yields a snapshot. They collapse because
- * both call sites only ever invoke `applyFxSnapshot` once the FX-relevant
- * inputs have ALREADY been confirmed to differ from what's stored (see
- * `fxInputsChanged` in the PATCH handler) — at that point a stale snapshot
- * would misrepresent the NEW price/currency/date, so null is the only
- * honest value, matching a genuine price removal.
- */
-export function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
-  return outcome.status === "snapshotted" ? outcome.fields : CLEARED_FX;
-}
-
-/**
- * Apply a rate the user typed in.
- *
- * The contract is narrow on purpose. A manual rate is for the GAP — a currency
- * and day no provider covers — not for disagreeing with the ECB, so supplying
- * one where an automatic rate exists is a mistake worth naming rather than
- * silently preferring or silently dropping. And whatever it produces is marked
- * `manual`, because the UI must never present an estimate as an official rate.
- */
-export function applyManualRate(
-  auto: FxSnapshotOutcome,
-  manualFxRate: number,
-  totalPrice: number | null,
-  checkIn: string | Date,
-  baseCurrency: string,
-): FxSnapshotFields {
-  if (auto.status === "snapshotted") {
-    throw new AppError("A rate is already available for this currency and date", 400);
-  }
-  // No price means nothing to convert — the rate is moot rather than wrong, so
-  // the stay simply keeps no snapshot instead of the request failing.
-  if (totalPrice == null) return CLEARED_FX;
-  const factor = 10 ** minorUnits(baseCurrency);
-  return {
-    totalPriceBase: Math.round(totalPrice * manualFxRate * factor) / factor,
-    fxRate: manualFxRate,
-    fxRateDate: new Date(checkIn),
-    fxBaseCurrency: baseCurrency,
-    fxSource: "manual",
-  };
-}
 
 // Query shape for GET /fx-preview — a live, read-only rate lookup for the
 // stay editor's FX readout. Kept local to this file (like lodgingChains.ts's
@@ -402,87 +153,9 @@ router.get("/fx-preview", fxPreviewLimiter, async (req: AuthRequest, res: Respon
   }
 });
 
-/**
- * POST /propose — is this scanned house one the user already has?
- *
- * The lodging counterpart of /boardingpass/propose, and it writes nothing.
- * Before it existed the Companion decided this alone, by demanding the name
- * AND the city match exactly after lowercasing. A hotel invoice photographed
- * on 2026-09-10 came back with "Oplikon" for Opfikon at OCR confidence 67, and
- * one letter was enough to create a second DORMERO (forgejo#118).
- *
- * The server can answer better for one reason above all: it geocodes the
- * incoming address — which the parse does not — and can then compare
- * positions. A name can be misread; a building cannot move.
- *
- * Declared BEFORE `/:id` so "propose" is never read as an id.
- *
- * Rate-limited on the geocoder's bucket, not a new one: what needs bounding is
- * outbound lookups per caller, and this route spends them exactly as the port
- * typeahead does.
- */
-router.post(
-  "/propose",
-  portGeocodeLimiter,
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const input = proposeLodgingSchema.parse(req.body);
-      const userId = req.userId!;
-
-      // The same resolver the create path uses, so a scan is judged against
-      // the coordinates it WOULD be saved with rather than the ones it
-      // arrived with. It never throws: a flaky geocoder degrades this to a
-      // name comparison instead of failing the request.
-      const location = await resolveLocation({
-        name: input.name,
-        address: input.address ?? undefined,
-        city: input.city ?? undefined,
-        country: input.country ?? undefined,
-        lat: input.lat ?? undefined,
-        lon: input.lon ?? undefined,
-      });
-
-      const stored = await prisma.lodging.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          name: true,
-          address: true,
-          city: true,
-          country: true,
-          lat: true,
-          lon: true,
-          _count: { select: { stays: true } },
-        },
-      });
-
-      const proposal = proposeLodgingMatch(
-        stored.map((row) => ({
-          id: row.id,
-          name: row.name,
-          address: row.address,
-          city: row.city,
-          country: row.country,
-          lat: row.lat,
-          lon: row.lon,
-          stayCount: row._count.stays,
-        })),
-        {
-          name: input.name,
-          address: input.address,
-          city: input.city,
-          country: input.country,
-          lat: location.lat ?? input.lat,
-          lon: location.lon ?? input.lon,
-        },
-      );
-
-      res.json({ success: true, data: proposal });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+// "Is this that house?" lives in `lodging/propose` — mounted HERE so the
+// literal path is matched before `/:id` could read "propose" as an id.
+router.use(proposeRouter);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -589,291 +262,8 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
   }
 });
 
-// ---- Stay CRUD (nested under a lodging) ----
-
-router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
-    if (!lodging) throw new AppError("Lodging not found", 404);
-
-    const parsed = createStaySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    // Prisma only enforces that the trip, booking and membership EXIST — not
-    // whose they are. Without this, a stay could be filed under a stranger's
-    // trip and would then show up on their timeline (AUD-038).
-    await assertReferencesOwned(userId, parsed.data);
-    // totalPrice is the source of truth: the UI types it, but an importer or
-    // API client may send only a per-night price — derive the total so it is
-    // always stored, and the FX snapshot below converts the right amount.
-    // `manualFxRate` is a request field, not a stay column — it must not reach
-    // the spread below, where Prisma would reject it as an unknown argument.
-    const { manualFxRate, ...body } = parsed.data;
-    const input = { ...body, totalPrice: deriveStayTotalPrice(body) };
-
-    const baseCurrency = await getBaseCurrency(userId);
-    const fxOutcome = await applyFxSnapshot(input, baseCurrency);
-    if (fxOutcome.status === "lookupFailed") {
-      logger.warn({ operation: "lodging_fx_lookup_failed", lodgingId: lodging.id, userId });
-    }
-    const fxFields =
-      manualFxRate != null
-        ? applyManualRate(
-            fxOutcome,
-            manualFxRate,
-            input.totalPrice,
-            // A manual rate still needs a day to be stamped with. An undated
-            // stay cannot have one, and applyFxSnapshot has already refused
-            // the conversion above — this argument is then never read.
-            input.checkIn ?? new Date(),
-            baseCurrency,
-          )
-        : resolveFxFields(fxOutcome);
-
-    const stay = await prisma.lodgingStay.create({
-      data: {
-        ...input,
-        ...fxFields,
-        // Status follows the dates (see deriveLodgingStatus). Whatever the
-        // client sent is only consulted for the one value derivation honours,
-        // "cancelled" — so an old client, an importer or a stale form can no
-        // longer store a status the dates contradict.
-        // With no dates there is nothing to derive from and the deriver
-        // returns `current` — which is correct: an undated stay is recorded
-        // after the fact, so what the client says is a statement, not a cache.
-        status: deriveLodgingStatus({
-          checkIn: input.checkIn ? new Date(input.checkIn) : null,
-          checkOut: input.checkOut ? new Date(input.checkOut) : null,
-          current: input.status,
-        }),
-        // Likewise derived, not accepted: the overall score follows the three
-        // components wherever a stay is written — form, CSV, e-mail/PDF — so
-        // an importer cannot leave it null and a client cannot store one that
-        // contradicts them. `current` only carries a source-supplied overall
-        // through for a stay that has no component rating at all.
-        ratingOverall: deriveStayOverallRating({
-          room: input.ratingRoom ?? null,
-          breakfast: input.ratingBreakfast ?? null,
-          service: input.ratingService ?? null,
-          current: input.ratingOverall ?? null,
-        }),
-        lodgingId: lodging.id,
-        userId,
-      },
-    });
-
-    await recheckAchievements(userId, "lodging");
-    logger.info({ operation: "lodging_stay_create", stayId: stay.id, lodgingId: lodging.id, userId });
-    res.status(201).json({ success: true, data: stay });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
-    if (!lodging) throw new AppError("Lodging not found", 404);
-
-    const stay = await prisma.lodgingStay.findFirst({
-      where: { id: req.params.stayId, lodgingId: lodging.id, userId },
-    });
-    if (!stay) throw new AppError("Stay not found", 404);
-
-    const parsed = updateStaySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    // Re-linking is a write too — see the create path (AUD-038).
-    await assertReferencesOwned(userId, parsed.data);
-    // Same reason as the create path: this one is not a stay column.
-    const { manualFxRate, ...input } = parsed.data;
-
-    // The whole merge rule, and the trap in it, live in `stayPatchMerge`.
-    const effective = resolveEffectiveStayDates(input, stay);
-    const effectiveCheckIn = effective.checkIn;
-    const effectiveCheckOut = effective.checkOut;
-
-    // Times are claims about a DAY-precise date (see schemas/lodging.ts).
-    // The schema can only check the body; here the MERGED stay is checked:
-    // an explicit time the merged stay cannot carry is a contradiction and
-    // refused, while a STORED time whose date/precision is being edited away
-    // is cleared alongside — the row must never carry a time without its day.
-    const effectiveDatePrecision = effective.datePrecision;
-    // Feeds the price derivation below: a stay whose length is stated rather
-    // than measured still has one (AUD-040).
-    const effectiveNights = effective.nights;
-    const supportsTime = (date: Date | null): boolean =>
-      date !== null && effectiveDatePrecision === "DAY";
-    if (input.checkInTime != null && !supportsTime(effectiveCheckIn)) {
-      throw new AppError("checkInTime requires a DAY-precision check-in date", 400);
-    }
-    if (input.checkOutTime != null && !supportsTime(effectiveCheckOut)) {
-      throw new AppError("checkOutTime requires a DAY-precision check-out date", 400);
-    }
-    const timeClears = {
-      ...(input.checkInTime === undefined && stay.checkInTime !== null && !supportsTime(effectiveCheckIn)
-        ? { checkInTime: null }
-        : {}),
-      ...(input.checkOutTime === undefined &&
-      stay.checkOutTime !== null &&
-      !supportsTime(effectiveCheckOut)
-        ? { checkOutTime: null }
-        : {}),
-    };
-
-    // Only re-run the FX snapshot when a field that feeds the conversion
-    // ACTUALLY CHANGED VALUE — an unrelated edit (e.g. notes) must not touch
-    // a previously-good snapshot, and must never fail the request either way.
-    //
-    // This MUST be a value comparison, not a key-presence check ("totalPrice"
-    // in input): the real StayEditor UI always sends checkIn/checkOut/
-    // status/currency/board/isAwardStay unconditionally, re-sending the
-    // stay's EXISTING totalPrice/currency/checkIn on every edit (e.g. a
-    // notes-only edit). A key-presence check would treat every such edit as
-    // "FX inputs changed" and — if the ECB lookup happens to be down at that
-    // moment — silently clear a perfectly good historical snapshot (finding
-    // 1, CRITICAL). Comparing against the CURRENT stored values means a
-    // resend of the same value is correctly seen as "nothing changed".
-    // totalPrice is authoritative, and what the client EXPLICITLY sends drives
-    // the result — a stored total must not override a field the user just
-    // changed:
-    //   - an explicit totalPrice (incl. null = clear) wins outright;
-    //   - else an explicit pricePerNight re-derives total = per-night × nights;
-    //   - else nothing pricing-relevant was sent, so the stored total stands.
-    // `undefined` means "not sent"; an explicit `null` is a clear and survives.
-    let effectiveTotalPrice: number | null;
-    if (input.totalPrice !== undefined) {
-      effectiveTotalPrice = input.totalPrice;
-    } else if (input.pricePerNight !== undefined) {
-      effectiveTotalPrice = deriveStayTotalPrice({
-        totalPrice: null,
-        pricePerNight: input.pricePerNight,
-        checkIn: effectiveCheckIn,
-        checkOut: effectiveCheckOut,
-        datePrecision: effectiveDatePrecision,
-        nights: effectiveNights,
-      });
-    } else {
-      // Dates alone can change what a per-night-priced stay costs, but only when
-      // the total was itself derived from per-night (no explicit total on file).
-      effectiveTotalPrice =
-        stay.totalPrice ??
-        deriveStayTotalPrice({
-          totalPrice: null,
-          pricePerNight: stay.pricePerNight,
-          checkIn: effectiveCheckIn,
-          checkOut: effectiveCheckOut,
-          datePrecision: effectiveDatePrecision,
-          nights: effectiveNights,
-        });
-    }
-
-    // A manual rate sent on its own changes NOTHING about price, currency or
-    // date — it is the ordinary way a user fills the gap after saving a stay
-    // they were told had no rate. Without this the recompute below would skip,
-    // and the rate they just typed would be dropped without a word.
-    const fxInputsChanged =
-      manualFxRate !== undefined ||
-      effectiveTotalPrice !== stay.totalPrice ||
-      (input.currency !== undefined && input.currency !== stay.currency) ||
-      (input.checkIn !== undefined &&
-        (input.checkIn === null
-          ? stay.checkIn !== null
-          : new Date(input.checkIn).getTime() !== (stay.checkIn?.getTime() ?? NaN)));
-    let fxFields: Partial<FxSnapshotFields> = {};
-    if (fxInputsChanged) {
-      const baseCurrency = await getBaseCurrency(userId);
-      const fxOutcome = await applyFxSnapshot(
-        {
-          totalPrice: effectiveTotalPrice,
-          currency: input.currency ?? stay.currency,
-          checkIn: effectiveCheckIn,
-        },
-        baseCurrency,
-      );
-      if (fxOutcome.status === "lookupFailed") {
-        logger.warn({ operation: "lodging_fx_lookup_failed", stayId: stay.id, userId });
-      }
-      // An explicit null is the user TAKING THE RATE BACK: fall through to the
-      // automatic answer, which for a gap currency is "no rate" — the honest
-      // state, not the old estimate left standing.
-      fxFields =
-        manualFxRate != null
-          ? applyManualRate(
-              fxOutcome,
-              manualFxRate,
-              effectiveTotalPrice,
-              effectiveCheckIn ?? new Date(),
-              baseCurrency,
-            )
-          : resolveFxFields(fxOutcome);
-    }
-
-    // Same merge rule as the dates above, and the same explicit-null trap as
-    // the FX block: `undefined` means "not sent" and falls back to the stored
-    // value, while an explicit `null` is the user CLEARING that rating and
-    // must survive into the derivation. `??` would collapse the two and make
-    // a cleared component silently keep its old score.
-    const effectiveRating = (
-      sent: number | null | undefined,
-      stored: number | null,
-    ): number | null => (sent !== undefined ? sent : stored);
-
-    const updated = await prisma.lodgingStay.update({
-      where: { id: stay.id },
-      data: {
-        ...input,
-        ...timeClears,
-        // totalPrice is authoritative and derived above from the merged view,
-        // so it overrides whatever `...input` carried (which may be a stale
-        // re-send or absent while only the per-night price changed).
-        totalPrice: effectiveTotalPrice,
-        ...fxFields,
-        // Derived from the EFFECTIVE (merged) dates, not from `input`, so a
-        // PATCH that moves only one date still re-derives against the range
-        // that will actually be stored. `current` is likewise the effective
-        // status — a body omitting `status` must not lose an existing
-        // cancellation, which is the one value derivation passes through.
-        status: deriveLodgingStatus({
-          checkIn: effectiveCheckIn,
-          checkOut: effectiveCheckOut,
-          current: input.status ?? stay.status,
-        }),
-        // Derived from the EFFECTIVE (merged) ratings for the same reason: a
-        // PATCH sending one component must score the row that will actually
-        // be stored, not the partial body.
-        ratingOverall: deriveStayOverallRating({
-          room: effectiveRating(input.ratingRoom, stay.ratingRoom),
-          breakfast: effectiveRating(input.ratingBreakfast, stay.ratingBreakfast),
-          service: effectiveRating(input.ratingService, stay.ratingService),
-          current: effectiveRating(input.ratingOverall, stay.ratingOverall),
-        }),
-      },
-    });
-
-    await recheckAchievements(userId, "lodging");
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.delete("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
-    if (!lodging) throw new AppError("Lodging not found", 404);
-
-    const stay = await prisma.lodgingStay.findFirst({
-      where: { id: req.params.stayId, lodgingId: lodging.id, userId },
-    });
-    if (!stay) throw new AppError("Stay not found", 404);
-
-    await prisma.lodgingStay.delete({ where: { id: stay.id } });
-    res.status(204).send();
-  } catch (err) {
-    next(err);
-  }
-});
+// Stay CRUD lives in `lodging/stays` — the same paths, mounted here so the
+// order Express matches in is unchanged.
+router.use(staysRouter);
 
 export default router;
