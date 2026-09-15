@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import type { TripJournalEntry } from "../../types";
 import { tripsApi } from "../../lib/api";
@@ -32,7 +33,7 @@ export default function JournalEntryModal({
   onClose,
   onSaved,
 }: JournalEntryModalProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
   const [date, setDate] = useState(
@@ -89,78 +90,15 @@ export default function JournalEntryModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-xl rounded-xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="p-5 border-b" style={{ borderColor: "var(--color-border)" }}>
-          <h2 className="text-lg font-semibold">
-            {entry ? t("trips:journalModal.editTitle") : t("trips:journalModal.createTitle")}
-          </h2>
-        </div>
-        <div className="p-5 space-y-4 overflow-y-auto">
-          <Field label={t("trips:journalModal.dateLabel")}>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-          <Field label={t("trips:journalModal.titleLabel")}>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("trips:journalModal.titlePlaceholder")}
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-          <Field label={t("trips:journalModal.bodyLabel")}>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={t("trips:journalModal.bodyPlaceholder")}
-              rows={8}
-              className="w-full rounded-lg px-3 py-2 text-sm resize-vertical"
-              style={inputStyle}
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("trips:journalModal.moodLabel")}>
-              <input
-                value={mood}
-                onChange={(e) => setMood(e.target.value)}
-                placeholder="🙂 / 🌟 / 😴"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-            <Field label={t("trips:journalModal.weatherLabel")}>
-              <input
-                value={weather}
-                onChange={(e) => setWeather(e.target.value)}
-                placeholder="☀ 24°C"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-          </div>
-        </div>
-        <div
-          className="flex justify-end gap-2 p-4 border-t"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+    <Modal
+      open
+      onClose={onClose}
+      busy={saving}
+      title={entry ? t("trips:journalModal.editTitle") : t("trips:journalModal.createTitle")}
+      maxWidth={576}
+      closeLabel={t("common:buttons.close")}
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
@@ -177,9 +115,60 @@ export default function JournalEntryModal({
           >
             {saving ? "…" : t("trips:journalModal.save")}
           </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <Field label={t("trips:journalModal.dateLabel")}>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm"
+            style={inputStyle}
+          />
+        </Field>
+        <Field label={t("trips:journalModal.titleLabel")}>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t("trips:journalModal.titlePlaceholder")}
+            className="w-full rounded-lg px-3 py-2 text-sm"
+            style={inputStyle}
+          />
+        </Field>
+        <Field label={t("trips:journalModal.bodyLabel")}>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={t("trips:journalModal.bodyPlaceholder")}
+            rows={8}
+            className="w-full rounded-lg px-3 py-2 text-sm resize-vertical"
+            style={inputStyle}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("trips:journalModal.moodLabel")}>
+            <input
+              value={mood}
+              onChange={(e) => setMood(e.target.value)}
+              placeholder="🙂 / 🌟 / 😴"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={t("trips:journalModal.weatherLabel")}>
+            <input
+              value={weather}
+              onChange={(e) => setWeather(e.target.value)}
+              placeholder="☀ 24°C"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={inputStyle}
+            />
+          </Field>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
