@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";

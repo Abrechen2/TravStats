@@ -1,45 +1,52 @@
-# zod 3 → 4 — state of the migration (paused 2026-09-14)
+# zod 3 → 4 — state of the migration
 
-Branch: `chore/deps-2026-09-14`. **Not green. Do not merge as it stands.**
+Branch: `chore/deps-2026-09-14`.
 
-## Where it is
+## The blocker, and what it actually was
 
-Backend `npx tsc --noEmit` is clean and `npm test` reports **0 failing tests**,
-but **141 of 494 suites fail to LOAD**, so that zero means very little. The
-frontend is genuinely green (typecheck, lint, 3691 tests) — though only one
-frontend file imports zod at all, so that says little too.
-
-Installed: `zod@4.6.5` in both trees, `@asteasolutions/zod-to-openapi@9.1.0`
-in the backend (v9 is the first release whose peer range is `zod@^4`, so the
-two majors have to move together).
-
-## The open blocker
-
-141 suites die at import with:
+141 of 494 backend suites died at import with
 
     TypeError: flight_1.createFlightSchema.openapi is not a function
 
-`services/openapi/setup.ts` calls `extendZodWithOpenApi(z)`, and v9 does patch
-`z.ZodType.prototype`, so creation order should not matter. Measured so far:
+The suspicion recorded on 2026-09-14 was an initialisation cycle. It was not.
+Measured on 2026-09-15:
 
-* Outside Jest (`tsx`), the patch lands: `typeof z.ZodType.prototype.openapi`
-  goes from `undefined` to `function`.
-* Inside Jest, a minimal test that requires `setup` and then `schemas/flight`
-  ALSO works — `createFlightSchema.openapi` is a function, and `require("zod")`
-  is the same instance as the imported `z`. There is exactly one copy of zod in
-  `node_modules`, and no `moduleNameMapper` entry for it.
-* Yet `apiNoStore.test.ts`, which reaches the same code through
-  `src/index.ts → routes/mounts → routes/openapi → openapi/paths/index →
-  openapi/paths/shared`, fails at `shared.ts:34`. Jest cache cleared; not a
-  cache effect.
+| | `typeof schema.openapi` |
+|---|---|
+| `z.ZodType.prototype` after `extendZodWithOpenApi` | `function` |
+| instance constructed BEFORE that call | `undefined` |
+| instance constructed AFTER that call | `function` |
+| does the instance inherit from `ZodType.prototype`? | **no** |
 
-So the next step is to find what differs about that import graph — the
-suspicion is an initialisation cycle that reaches `paths/shared` while
-`services/openapi/registry` (whose first statement is `import "./setup"`) is
-still half-evaluated, which would leave the prototype unpatched at exactly
-that moment and at no other.
+zod 4's `$constructor` copies the prototype's methods onto each instance **at
+construction time** and the instance does not sit on that prototype chain
+afterwards. `extendZodWithOpenApi` patches `ZodType.prototype`, so under zod 4
+the patch reaches only schemas built after it ran. Under zod 3 it reached every
+schema, past and future — which is why import order had never mattered and why
+the assumption "creation order should not matter" read as obviously true.
 
-## What is already done and worth keeping
+So the failing graph was simply the one that reached `schemas/flight` before it
+reached `services/openapi/registry` (whose first statement is `import
+"./setup"`). The minimal Jest repro loaded `setup` first, which is exactly why
+it worked and proved nothing.
+
+## The fix
+
+`backend/src/schemas/zod.ts` applies the extension and hands out `z`. All 25
+modules in `src/schemas/` import `z` from there instead of from `"zod"`. The
+extension is now anchored to the module that hands out `z`, so the order is
+unobservable rather than merely correct today.
+`services/openapi/setup.ts` stays as the registry's statement of intent and
+delegates to it.
+
+Guarded by `backend/src/schemas/__tests__/openapiExtension.test.ts`: each schema
+module is loaded inside `jest.isolateModules`, where `zod` itself is re-required
+fresh and therefore unpatched — so the only way a schema can come out carrying
+`.openapi` is if its own import chain applied the extension. Verified RED first
+(24 of 25 modules failed); a count assertion keeps it from going vacuous if the
+detection ever stops recognising schemas.
+
+## What the migration touched
 
 * `z.record(v)` → `z.record(z.string(), v)` at 18 call sites (v4 requires the
   key type).
@@ -55,6 +62,10 @@ that moment and at no other.
   `invalid_union`. The existing test asserted only `/route/i`, which zod's
   default message could have satisfied; it now asserts the engineered text and
   was verified RED with the error map removed.
+
+Installed: `zod@4.6.5` in both trees, `@asteasolutions/zod-to-openapi@9.1.0`
+in the backend (v9 is the first release whose peer range is `zod@^4`, so the
+two majors have to move together).
 
 ## The real defect this turned up
 
@@ -94,4 +105,5 @@ no-op, so it can be landed separately.
 
 ## Still untouched
 
-prisma 5 → 7, `@types/node` 22 → 26.
+prisma 5 → 7, `@types/node` 22 → 26, typescript 5 → 7, express 4 → 5,
+jest 29 → 30 and the rest of the major backlog.

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /** The browser hands back an opaque credential object; we validate the shape we
  *  actually read and let the library reject the cryptographic details. */

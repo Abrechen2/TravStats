@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 import { currencyField } from './lodging';
 import { partialForUpdate } from "./partialUpdate";
 

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 import { receiptUrlValidator } from './receiptUrl';
 import { chronologyProblem, departsInFuture } from '../shared/flightChronology';
 import { partialForUpdate } from "./partialUpdate";

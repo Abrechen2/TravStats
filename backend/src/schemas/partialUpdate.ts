@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * Build the PATCH counterpart of a create schema: every field optional, and no

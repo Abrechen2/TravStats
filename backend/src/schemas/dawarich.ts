@@ -4,7 +4,7 @@
  * Dawarich has no album-link or asset-proxy surface, so nothing else here
  * has an Immich counterpart.
  */
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * The settings card always SENDS `baseUrl` (it never omits the field), so an

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { PLACE_CATEGORIES } from "../shared/placeCategories";
 import { partialForUpdate } from "./partialUpdate";
 

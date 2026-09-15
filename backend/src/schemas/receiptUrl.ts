@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 // Whitelist of allowed receipt URL domains (common cloud storage and document services).
 const ALLOWED_RECEIPT_DOMAINS = [
