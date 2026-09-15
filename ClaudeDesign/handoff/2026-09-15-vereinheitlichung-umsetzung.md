@@ -111,9 +111,9 @@ nichts aus dem Auftrag.
 | # | Block | Bindender Punkt | Zustand |
 |---|---|---|---|
 | A | Mobile Zeile für alle vier Logbücher | D-02, Abnahmefrage 1, Owner-Wiederholung | **fertig** (`eb5723db`) |
-| B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | **fertig** (`6acbb1cd`), Browserblick offen |
-| C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | **fertig** (`0263b509`), Browserblick offen |
-| D | Eine Dialog-Shell für die 44 eigenen Overlays | E11, §6 Zustände | offen |
+| B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | **fertig + abgenommen** (`6acbb1cd`) |
+| C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | **fertig + abgenommen** (`0263b509`) |
+| D | Eine Dialog-Shell für die 44 eigenen Overlays | E11, §6 Zustände | **19 offen, 5 begründet ausgenommen**, Shell abgenommen |
 | E | Status- und Datumsvokabular über alle Domänen | D-07 | offen |
 | F | Kartensteuerung und Sheet-Höhen | D-03 | offen |
 | G | Reisepass mobil, Nachweisstufen | D-04 | offen |
@@ -258,3 +258,49 @@ B und C gemeinsam aus, aus dem Grund, der oben unter Block B steht.
 | eigene `fixed inset-0`-Overlays | 44 | 44 |
 | Tests | 3715 | 3737 |
 | Datei-Größen-Baseline | 20 | 19 |
+
+## Browserblick nachgeholt — A bis D abgenommen (15.09.2026, abends)
+
+Der Owner hat `taskkill` ausdrücklich freigegeben; die acht verwaisten
+Dev-Server wurden beendet (jede Kommandozeile vorher gegen
+`worktrees\design-system` geprüft, damit keine fremde Suite und kein
+MCP-Server getroffen wird). Danach **ein** Stack: Backend 8000 gegen die
+isolierte Datenbank auf 5434, Vite 3000 mit `--force`, `CORS_ORIGIN` als
+Liste. Beim ersten Versuch hätte das alles vermieden.
+
+### Was gemessen wurde
+
+| Prüfung | Ergebnis |
+|---|---|
+| Flugliste 390 px, Seitenüberlauf | **0** — die 14 px aus Block A sind weg |
+| Flugliste 390 px, Tischüberlauf | 0, 123 Zeilen |
+| Zeile mobil | Marke · `MUC ✈ CPH` · `GEPLANT` · `Mi 13.01.27 · LH2462 · 1h 30min` |
+| Flugliste 1440 px | 10 Spalten, sortierbare Köpfe, **schmale Zusammenfassung ausgeblendet** |
+| Flug-, Kreuzfahrt-, Unterkunfts-, Ort-Detail bei 390 px | je Überlauf 0, ein `h1` als `.t-screen-title`, Zurück als echtes `<a>` mit Ziel, eine Statuspille |
+| Unterkunft-Detail | zeigt jetzt „Abgeschlossen" — die Pille, die diese Seite nie hatte |
+
+### Der Dialog-Vertrag, im Browser
+
+Am Flug-Bearbeiten-Dialog geprüft: Portal an `document.body`,
+`role="dialog"`, `aria-modal="true"`, Radius 26 px, Verdunkelung
+`rgba(7,9,12,.6)` aus `--ts-scrim`, Fokus im Panel, `body` auf
+`overflow: hidden`. Escape schließt, die Sperre löst sich, und der Fokus
+kehrt zum **Bearbeiten**-Knopf zurück, nicht zu `<body>`.
+
+**Und die eine Prüfung, von der die Testdatei selbst sagt, dass nur ein
+Browser sie leisten kann:** `document.elementFromPoint` auf der Mitte des
+ersten Knopfes liefert den Dialog — nicht die Verdunkelung. Das ist der
+Stapelfehler, der monatelang unsichtbar ausgeliefert wurde.
+
+### Eine Messung, die ich verworfen habe
+
+Der erste Durchgang über die vier Details lief per `history.pushState` +
+`popstate`. React Router hat darauf nicht neu gerendert, also stand in allen
+vier Zeilen dasselbe Ergebnis („Wonder of the Seas"). Das sah aus wie eine
+Messung und war keine. Jede Seite wurde danach einzeln angesteuert.
+
+### Was dabei aufgefallen ist, aber nicht hierher gehört
+
+D-07 ist innerhalb **einer** Domäne sichtbar: die Kreuzfahrtliste schreibt
+`2026-11-27`, das Kreuzfahrtdetail `10.11.2026 – 17.11.2026`. Gleiche Daten,
+gleiche Sitzung, zwei Formate. Block E.
