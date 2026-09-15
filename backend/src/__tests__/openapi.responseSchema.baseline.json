@@ -46,8 +46,6 @@
   "GET /settings/notifications",
   "GET /settings/parser",
   "GET /settings/profile",
-  "GET /stats/countries/{code}",
-  "GET /stats/cruise",
   "GET /stats/lodging",
   "GET /stats/wrapped",
   "GET /template-status",

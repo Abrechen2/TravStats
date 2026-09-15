@@ -3,6 +3,8 @@
  */
 
 import { z } from "zod";
+import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
+import { cruiseStatsResponseSchema } from "../../../schemas/statsCruise";
 import {
   travelRecordsResponseSchema,
   travelAccountResponseSchema,
@@ -198,7 +200,6 @@ function readOnlyStat(path: string, summary: string, description?: string): void
   });
 }
 
-readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
 const continentSchema = z.enum([
   "Africa",
@@ -333,6 +334,34 @@ registry.registerPath({
     "when no house proves the country.",
 });
 
+const countryDetail = registry.register(
+  "CountryDetail",
+  countryDetailSchema.openapi("CountryDetail")
+);
+const cruiseStats = registry.register(
+  "CruiseStats",
+  cruiseStatsResponseSchema.openapi("CruiseStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/cruise",
+  summary: "Cruise statistics",
+  description:
+    "Distance comes from the computed sea legs; a cruise the router never ran " +
+    "for contributes 0 rather than a straight-line guess. Two country " +
+    "vocabularies in one answer: `countries` is English names for display, " +
+    "`countriesIso` is alpha-2 for counting, and a port whose name does not " +
+    "resolve is dropped from the count rather than counted under its raw name.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Cruise aggregates",
+      content: { "application/json": { schema: cruiseStats } },
+    },
+  },
+});
+
 const travelRecords = registry.register(
   "TravelRecords",
   travelRecordsResponseSchema.openapi("TravelRecords")
@@ -383,7 +412,10 @@ registry.registerPath({
   tags: statsTag,
   request: { params: z.object({ code: z.string() }) },
   responses: {
-    200: { description: "Country detail" },
+    200: {
+      description: "Country detail",
+      content: { "application/json": { schema: countryDetail } },
+    },
     404: { description: "Nothing evidences that country" },
   },
 });
