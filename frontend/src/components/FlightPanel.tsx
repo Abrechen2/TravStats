@@ -1,3 +1,5 @@
+import ConfirmModal from "./Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useMemo, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Flight, Trip } from "../types";
@@ -404,10 +406,7 @@ export function FlightPanel({
 
             {/* Footer */}
             {tab === "flights" && (
-              <div
-                className="p-3 shrink-0"
-                style={{ borderTop: "1px solid var(--color-border)" }}
-              >
+              <div className="p-3 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
                 <button type="button" onClick={onAddFlight} className="btn-primary w-full text-sm">
                   + {t("dashboard:addFlight")}
                 </button>
@@ -424,41 +423,22 @@ export function FlightPanel({
               }}
             />
           )}
-          {deleteTripTarget !== null && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setDeleteTripTarget(null);
-              }}
-            >
-              <div
-                className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
-                role="dialog"
-                aria-modal="true"
-                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-                  {t("trips:deleteTripConfirm", { name: deleteTripTarget.name })}
-                </h2>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setDeleteTripTarget(null)}
-                    className="px-4 py-2 rounded-lg text-sm"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {t("trips:modal.cancel")}
-                  </button>
-                  <button
-                    onClick={() => void handleConfirmDeleteTrip()}
-                    className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ background: "var(--color-error, #f87171)", color: "#fff" }}
-                  >
-                    {t("trips:deleteTrip")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* The same delete question the trips list asks, asked the same
+              way. This one drew its own scrim and painted the confirm button
+              `var(--color-error, #f87171)` — one of the twelve names that
+              were referenced before anything defined them (index.css), so the
+              hardcoded fallback beside it was a second palette waiting to be
+              used. The alias landed first; the fallback never rendered. */}
+          <ConfirmModal
+            isOpen={deleteTripTarget !== null}
+            onClose={() => setDeleteTripTarget(null)}
+            onConfirm={() => void handleConfirmDeleteTrip()}
+            title={t("trips:deleteTripConfirmTitle")}
+            message={t("trips:deleteTripConfirm", { name: deleteTripTarget?.name ?? "" })}
+            confirmText={t("trips:deleteTrip")}
+            cancelText={t("trips:modal.cancel")}
+            confirmButtonClass={DELETE_BUTTON_CLASS}
+          />
         </>
       )}
     </AnimatePresence>

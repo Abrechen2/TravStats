@@ -153,17 +153,13 @@
   ],
   "darkVariants": [],
   "overlays": [
-    "components/AchievementPopup.tsx",
     "components/Admin/AdminPasswordResetModal.tsx",
     "components/Admin/BackupManagement.tsx",
     "components/BoardingPassScanner.tsx",
     "components/Cruise/CruiseImportPreviewModal.tsx",
-    "components/Cruise/CruiseRouteMap.tsx",
     "components/DiagnosticExportModal.tsx",
     "components/FlightForm/FlightLookupStep.tsx",
-    "components/FlightPanel.tsx",
     "components/FlightReviewModal.tsx",
-    "components/NavigationBar.tsx",
     "components/PendingUpdateEditor.tsx",
     "components/Settings/ApiTokensSection.tsx",
     "components/Settings/BulkRefreshCard.tsx",
@@ -172,10 +168,8 @@
     "components/Trips/DetectReviewModal.tsx",
     "components/Trips/ImmichAlbumPicker.tsx",
     "components/Trips/JournalEntryModal.tsx",
-    "components/Trips/PhotoLightbox.tsx",
     "components/Trips/StopModal.tsx",
     "components/Trips/TripModal.tsx",
-    "components/Trips/TripsTab.tsx",
     "components/import/ColumnMappingWizard.tsx",
     "components/import/DomainImportPanel.tsx",
     "components/import/ImportLogSection.tsx",
@@ -186,5 +180,11 @@
     "components/places/PlaceImportPreviewModal.tsx",
     "pages/LoginPage.tsx",
     "pages/PendingUpdatesPage.tsx"
-  ]
+  ],
+  "overlaysNotDialogs": {
+    "components/AchievementPopup.tsx": "A celebration, not a request. It interrupts without being asked, so the dialog contract is wrong for it: a focus trap would take the keyboard away from whatever the reader was doing, and Escape-to-dismiss implies a decision there is none. Named as not-a-dialog in Modal.tsx since 2026-08-23.",
+    "components/NavigationBar.tsx": "The scrim behind the mobile menu. A menu is an overlay without being a dialog — it is dismissed by choosing or by leaving, not by confirming, and trapping focus inside a navigation list is how a keyboard user gets stuck in the menu.",
+    "components/Cruise/CruiseRouteMap.tsx": "The map's own full-screen edit mode, and it MUST stay in place: rendering the map a second time inside a modal is unmount + mount, maplibre throws its WebGL context away, and the fresh deck.gl layer meets a dead one — every layer dies with 'deck.gl: assertion failed'. Measured on 2026-08-26; it reached the RC server.",
+    "components/Trips/PhotoLightbox.tsx": "An image viewer: full-bleed black, no title, no footer, and the picture is the content rather than something inside a panel. It is the one case that wants a bleed cut of the shell, which does not exist yet — so this entry is a gap to close, not a permanent exception."
+  }
 }

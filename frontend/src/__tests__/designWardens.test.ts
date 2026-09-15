@@ -122,12 +122,40 @@ describe("warden: an overlay lives in the Dialog primitive", () => {
     .map(rel)
     .sort();
 
+  /**
+   * Two lists, because "44 overlays" was never 44 things to do.
+   *
+   * `overlays` is the work list: dialogs that still draw their own scrim and
+   * will move onto `components/Modal` or `components/ui/Dialog`. It ratchets.
+   *
+   * `overlaysNotDialogs` is the rest — overlays that are not dialogs, where
+   * Escape, a focus trap and a confirm contract would be wrong. Each carries
+   * its reason, and the test refuses a short one, exactly as the beta-feature
+   * registry refuses a gate with no `why`. Without the split the counter
+   * reports work that does not exist, and a number nobody can drive to zero
+   * is a number people stop reading.
+   */
+  const exempt = baseline.overlaysNotDialogs as Record<string, string>;
+  const exemptFiles = Object.keys(exempt).sort();
+
   it("gains no new hand-rolled overlay", () => {
-    // Every one of these is a scrim someone built again: its own radius, its
-    // own backdrop, and — the part that matters — its own answer to whether
-    // Escape closes it and whether focus can leave it. `components/ui/Dialog`
-    // is the shell they migrate onto.
-    expectRatchet(offenders, baseline.overlays, "hand-rolled overlays");
+    expectRatchet(
+      offenders.filter((name) => !exemptFiles.includes(name)),
+      baseline.overlays,
+      "hand-rolled overlays"
+    );
+  });
+
+  it("keeps every not-a-dialog entry real, and every one of them explained", () => {
+    const stale = exemptFiles.filter((name) => !offenders.includes(name));
+    expect(stale, "these files no longer carry an overlay; drop them").toEqual([]);
+
+    for (const [name, reason] of Object.entries(exempt)) {
+      // A reason is what stops this list from becoming the place a dialog goes
+      // to avoid the shell. "not a dialog" is not a reason; why it is not one
+      // is.
+      expect(reason.length, `${name} needs a reason, not a label`).toBeGreaterThan(80);
+    }
   });
 });
 
