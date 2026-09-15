@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="20 Reisepass" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Reisepass</h1>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">Ein Stempel pro Land · Erstbesuch, Besuche und Domäne aus dem Logbuch abgeleitet.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onClick="{{ toggleView }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ viewIcon }}"></use></svg>{{ viewLabel }}</button>
+        <a href="#" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-printer"></use></svg>Drucken</a>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:28px;font-weight:600;color:#f4ece0;font-variant-numeric:tabular-nums;line-height:1">{{ k.value }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ k.label }}</span></div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <sc-for list="{{ continents }}" as="c" hint-placeholder-count="7">
+        <button onClick="{{ c.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px" style-hover="border-color:rgba(231,227,220,0.3)">{{ c.label }}<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;opacity:0.7">{{ c.count }}</span></button>
+      </sc-for>
+      <span style="flex:1"></span>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(231,227,220,0.6)"><input type="checkbox" onChange="{{ toggleMissing }}" checked="{{ showMissing }}" style="width:18px;height:18px;accent-color:#f0a947">Fehlende Länder zeigen</label>
+    </div>
+
+    <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+        <sc-for list="{{ stamps }}" as="s" hint-placeholder-count="12">
+          <a href="#" title="{{ s.title }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;aspect-ratio:1;padding:14px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:inherit;opacity:{{ s.opacity }};position:relative;overflow:hidden" style-hover="border-color:rgba(231,227,220,0.3);text-decoration:none;color:#f4ece0;transform:translateY(-1px)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.08em;color:{{ s.codeColor }}">{{ s.code }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ s.domainColor }}"><use href="{{ s.iconHref }}"></use></svg></div>
+            <div style="width:74px;height:74px;border-radius:999px;border:2px {{ s.ringStyle }} {{ s.ring }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;align-self:center;transform:rotate({{ s.rot }})"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:{{ s.ring }}">{{ s.stampWord }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:600;color:{{ s.ring }}">{{ s.first }}</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ s.sub }}</span></div>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <sc-for list="{{ stamps }}" as="s" hint-placeholder-count="8">
+          <a href="#" style="display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;align-items:center;gap:14px;min-height:56px;padding:8px 0;border-bottom:1px solid rgba(231,227,220,0.12);color:inherit;text-decoration:none;opacity:{{ s.opacity }}" style-hover="color:#f4ece0;text-decoration:none">
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:600;color:{{ s.codeColor }}">{{ s.code }}</span>
+            <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600">{{ s.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ s.continent }}</span></span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);font-variant-numeric:tabular-nums">{{ s.sub }}</span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ s.ring }};font-variant-numeric:tabular-nums">{{ s.first }}</span>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">{{ footer }}</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, view: 'grid', continent: 'Alle', showMissing: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const data = [
+      ['DE','Deutschland','Europa',2015,'flight',31],['FR','Frankreich','Europa',2016,'flight',6],['ES','Spanien','Europa',2016,'flight',9],['IT','Italien','Europa',2017,'cruise',5],['GR','Griechenland','Europa',2017,'cruise',3],['PT','Portugal','Europa',2018,'flight',4],['NO','Norwegen','Europa',2019,'cruise',2],['GB','Vereinigtes Königreich','Europa',2015,'flight',7],['NL','Niederlande','Europa',2018,'flight',3],['HR','Kroatien','Europa',2022,'cruise',1],
+      ['US','Vereinigte Staaten','Nordamerika',2017,'flight',5],['CA','Kanada','Nordamerika',2019,'flight',1],['MX','Mexiko','Nordamerika',2023,'cruise',1],
+      ['JP','Japan','Asien',2018,'flight',2],['TH','Thailand','Asien',2019,'flight',2],['SG','Singapur','Asien',2019,'flight',1],['AE','Vereinigte Arabische Emirate','Asien',2021,'flight',3],['TR','Türkei','Asien',2016,'flight',2],
+      ['MA','Marokko','Afrika',2022,'flight',1],['ZA','Südafrika','Afrika',2025,'flight',1],['EG','Ägypten','Afrika',2024,'cruise',1],
+      ['AU','Australien','Ozeanien',2025,'flight',1],['BR','Brasilien','Südamerika',2026,'flight',1],
+    ];
+    const missing = [['SE','Schweden','Europa'],['PL','Polen','Europa'],['AR','Argentinien','Südamerika'],['NZ','Neuseeland','Ozeanien'],['KE','Kenia','Afrika'],['IN','Indien','Asien']];
+    const conts = ['Europa','Nordamerika','Südamerika','Asien','Afrika','Ozeanien'];
+    const filt = c => st.continent === 'Alle' || c === st.continent;
+    const stamps = data.filter(d => filt(d[2])).map(([code,name,continent,first,dom,visits]) => { const d = S.DOMAINS.find(x => x.key === dom); const h = [...code].reduce((a,ch)=>a+ch.charCodeAt(0),0);
+      return { code, name, continent, first: String(first), sub: visits + (visits === 1 ? ' Besuch' : ' Besuche'), title: name + ' · erster Besuch ' + first, iconHref: S.I(d.icon), domainColor: d.color, ring: d.color, ringStyle: 'solid', stampWord: 'Einreise', rot: ((h % 17) - 8) + 'deg', opacity: 1, codeColor: T.muted }; });
+    const miss = st.showMissing ? missing.filter(m => filt(m[2])).map(([code,name,continent]) => ({ code, name, continent, first: '—', sub: 'noch nicht besucht', title: name + ' · offen', iconHref: S.I('map-pin'), domainColor: T.faint, ring: 'rgba(231,227,220,0.3)', ringStyle: 'dashed', stampWord: 'Offen', rot: '0deg', opacity: 0.55, codeColor: T.faint })) : [];
+    const chip = (label, count, active) => ({ label, count, onClick: () => set({ continent: label }), bg: active ? T.accent : 'transparent', color: active ? T.bg : T.text, border: active ? T.accent : 'rgba(231,227,220,0.18)' });
+    const grid = st.view === 'grid';
+    return { ...S.navModel('passport', st, set), stop: e => e.stopPropagation(),
+      isGrid: grid, isList: !grid, toggleView: () => set({ view: grid ? 'list' : 'grid' }), viewLabel: grid ? 'Als Liste' : 'Als Stempel', viewIcon: grid ? '#i-list' : '#i-columns-3',
+      kpis: [{ value: '23', label: 'Länder · 11,8 % der Welt' }, { value: '6', label: 'Kontinente von 7' }, { value: '2015', label: 'Erster Stempel · Deutschland' }, { value: '3', label: 'Neue Länder 2026' }],
+      continents: [chip('Alle', data.length, st.continent === 'Alle'), ...conts.map(c => chip(c, data.filter(d => d[2] === c).length, st.continent === c))],
+      showMissing: st.showMissing, toggleMissing: () => set({ showMissing: !st.showMissing }),
+      stamps: [...stamps, ...miss], footer: stamps.length + ' Stempel' + (miss.length ? ' · ' + miss.length + ' offen' : '') + ' · Quelle: Logbuch, Kreuzfahrt-Häfen, Orte' };
+  }
+}
+</script>
+</body>
+</html>

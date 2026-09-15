@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <div data-screen-label="23 Einstellungen v2" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:grid;grid-template-columns:{{ cols }};gap:32px;align-items:start">
+    <aside style="position:sticky;top:80px;display:{{ asideDisplay }};flex-direction:column;gap:2px">
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px;padding:0 12px 8px">Einstellungen</div>
+      <sc-for list="{{ index }}" as="i" hint-placeholder-count="12">
+        <a href="{{ i.href }}" style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:12px;color:rgba(231,227,220,0.6);font-size:14px;font-weight:500;text-decoration:none;white-space:nowrap" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ i.icon }}"></use></svg>{{ i.label }}<sc-if value="{{ i.meta }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">{{ i.meta }}</span></sc-if></a>
+      </sc-for>
+      <div style="padding:14px 12px 0;font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Kontextuelle Optionen (Kartenlayer, Spalten, Dichte) sitzen direkt an der jeweiligen Ansicht.</div>
+    </aside>
+
+    <main style="min-width:0;display:flex;flex-direction:column;gap:32px">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Einstellungen</h1>
+          <div style="font-size:12px;color:rgba(231,227,220,0.6)">jonas@example.de · <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">2.7.0-dev</span> · Konto seit 2021</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select onChange="{{ jump }}" style="display:{{ selectDisplay }};height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px"><sc-for list="{{ index }}" as="i" hint-placeholder-count="12"><option value="{{ i.href }}">{{ i.label }}</option></sc-for></select>
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#f0a947;background:rgba(240,169,71,0.12);border:1px solid rgba(240,169,71,0.45)">Pro</span>
+        </div>
+      </div>
+
+
+    <section id="profil" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Profil</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="width:52px;height:52px;border-radius:16px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#f4ece0;flex-shrink:0">JK</div>
+          <div style="flex:1;min-width:160px"><div style="font-size:16px;font-weight:700">Jonas Kessler</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Mitglied seit 2021 · 47 Flüge · 6 Kreuzfahrten</div></div>
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-image"></use></svg>Bild ändern</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Anzeigename</span><input value="Jonas Kessler" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">E-Mail</span><input value="jonas@example.de" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Heimatflughafen</span><input value="HAM" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Zeitzone</span><input value="Europe/Berlin" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500" style-hover="border-color:rgba(231,227,220,0.3)"></label>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="anzeige" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Anzeige</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Layer, Spalten & Dichte: an der Ansicht</span></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ displayRows }}" as="r" hint-placeholder-count="3"><button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+  <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+</button></sc-for></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Sprache</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Oberfläche und Datumsformate</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ langs }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ u.border }};background:{{ u.bg }};color:{{ u.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ u.label }}</button></sc-for></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Einheiten</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Distanzen und Geschwindigkeit</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ units }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ u.border }};background:{{ u.bg }};color:{{ u.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ u.label }}</button></sc-for></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Startseite</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Wohin TravStats nach dem Login springt</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ starts }}" as="u" hint-placeholder-count="3"><button onClick="{{ u.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ u.border }};background:{{ u.bg }};color:{{ u.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ u.label }}</button></sc-for></div></div>
+      </div>
+    </section>
+
+
+    <section id="domaenen" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Domänen</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column">
+        <sc-for list="{{ domainRows }}" as="r" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 0;border-bottom:1px solid {{ r.divider }}">
+            <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ r.color }}"><use href="{{ r.icon }}"></use></svg></span>
+            <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ r.sub }}</span></span>
+            <span style="width:14px;height:14px;border-radius:999px;background:{{ r.color }};flex-shrink:0" title="Token-Farbe"></span>
+            <button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;cursor:pointer;padding:0"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></button>
+          </div>
+        </sc-for>
+        <div style="padding:12px 0 14px;font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Deaktivierte Domänen verschwinden aus Navigation, Statistik und Karte; Daten bleiben erhalten. Farben stammen aus den Tokens und sind nicht überschreibbar.</div>
+      </div>
+    </section>
+
+
+    <section id="flugstandards" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Flug-Standards</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">auch als Schalter im Logbuch</span></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Standard-Kabine</span><input value="Economy" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Standard-Sitz</span><input value="Fenster" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Vielflieger-Programm</span><input value="Miles & More" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Standard-Grund</span><input value="Privat" style="height:44px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px" style-hover="border-color:rgba(231,227,220,0.3)"></label></div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Vorbelegung für neue Einträge und Parser-Übernahmen. Im Logbuch pro Eintrag änderbar.</div>
+      </div>
+    </section>
+
+
+    <section id="erfolge" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Erfolge</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ achievementRows }}" as="r" hint-placeholder-count="3"><button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+  <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+</button></sc-for></div>
+    </section>
+
+
+    <section id="benachrichtigungen" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Benachrichtigungen</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ notifyRows }}" as="r" hint-placeholder-count="4"><button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+  <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+</button></sc-for></div>
+    </section>
+
+
+    <section id="import" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Import &amp; Parser</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">kein Postfach-Abruf · du gibst die Mail</span></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">So kommen Buchungen rein</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">E-Mail (.eml, .msg, .txt), PDF oder eingefügter Text unter „Hinzufügen“; Boarding-Pass-Fotos über die Kamera. TravStats verbindet sich nicht mit deinem Postfach.</span></span><a href="Hinzufuegen.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-upload"></use></svg>Buchung einlesen</a></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Text-Parser</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Ollama · qwen2.5:7b, Regex-Fallback · vom Admin gesetzt</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Verfügbar</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Boarding-Pass-Strategie</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Wie OCR und Flug-API kombiniert werden</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ bpStrategies }}" as="u" hint-placeholder-count="4"><button onClick="{{ u.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ u.border }};background:{{ u.bg }};color:{{ u.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ u.label }}</button></sc-for></div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><a href="Parser.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-mail"></use></svg>Templates &amp; Parse-Logs</a><a href="Posteingang.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-inbox"></use></svg>Posteingang</a></div>
+      </div>
+    </section>
+
+    <section id="sync" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Synchronisation</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ syncRows }}" as="r" hint-placeholder-count="2">
+  <a href="{{ r.href }}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 0;border-bottom:1px solid {{ r.divider }};color:inherit;text-decoration:none" style-hover="color:#f4ece0;text-decoration:none">
+    <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.6);flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ r.icon }}"></use></svg></span>
+    <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+    <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ r.metaColor }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.meta }}</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+  </a></sc-for></div><div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ syncToggles }}" as="r" hint-placeholder-count="2"><button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+  <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+</button></sc-for></div>
+    </section>
+
+
+    <section id="daten" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Daten</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ dataRows }}" as="r" hint-placeholder-count="3">
+  <a href="{{ r.href }}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 0;border-bottom:1px solid {{ r.divider }};color:inherit;text-decoration:none" style-hover="color:#f4ece0;text-decoration:none">
+    <span style="width:34px;height:34px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.6);flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ r.icon }}"></use></svg></span>
+    <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+    <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ r.metaColor }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.meta }}</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-chevron-right"></use></svg>
+  </a></sc-for></div>
+    </section>
+
+
+    <section id="konto" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Konto & Sicherheit</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Zwei-Faktor-Anmeldung</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Aktiv seit 2024-03-11 · Authenticator-App</span></span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Aktiv</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Passwort</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Zuletzt geändert vor 5 Monaten</span></span><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-key-round"></use></svg>Ändern</button></div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <span style="font-size:14px;font-weight:600">Aktive Sitzungen</span>
+          <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;min-height:44px"><span style="color:rgba(231,227,220,0.6);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ s.icon }}"></use></svg></span><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:{{ s.color }}">{{ s.when }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-log-out"></use></svg>Überall abmelden</button>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="abo" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Abo & Rechnungen</div></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">TravStats Pro · jährlich</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Verlängert sich am 2027-02-01 · 39 € / Jahr</span></span><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0">Plan verwalten</button></div>
+        <div style="display:flex;flex-direction:column;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)">
+          <sc-for list="{{ invoices }}" as="v" hint-placeholder-count="3">
+            <a href="#" style="display:flex;align-items:center;gap:12px;min-height:44px;color:inherit;text-decoration:none" style-hover="color:#f4ece0;text-decoration:none"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6)">{{ v.date }}</span><span style="flex:1;font-size:13px">{{ v.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;font-variant-numeric:tabular-nums">{{ v.amount }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(231,227,220,0.45)"><use href="#i-download"></use></svg></a>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="beta" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Beta & Labs</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Owner-Entscheidungen offen</span></div>
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ betaRows }}" as="r" hint-placeholder-count="3"><button role="switch" aria-checked="{{ r.on }}" onClick="{{ r.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:12px 0;background:transparent;border:none;border-bottom:1px solid {{ r.divider }};color:#e7e3dc;cursor:pointer;text-align:left;width:100%">
+  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{{ r.label }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ r.sub }}</span></span>
+  <span style="width:44px;height:26px;border-radius:999px;background:{{ r.track }};border:1px solid {{ r.trackBorder }};position:relative;flex-shrink:0;transition:background 120ms ease,border-color 120ms ease"><span style="position:absolute;top:3px;left:{{ r.knobLeft }};width:18px;height:18px;border-radius:999px;background:{{ r.knob }};transition:left 120ms ease"></span></span>
+</button></sc-for></div>
+    </section>
+
+
+    <section id="gefahrenzone" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:80px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Gefahrenzone</div></div>
+      <div style="background:#14181d;border:1px solid rgba(230,90,79,0.35);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Alle Einträge löschen</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Logbuch, Kreuzfahrten, Unterkünfte, Orte · Konto bleibt</span></span><button onClick="{{ openWipe }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px;border-color:rgba(230,90,79,0.45);color:#e65a4f" style-hover="background:rgba(230,90,79,0.12)">Löschen …</button></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(231,227,220,0.12)"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">Konto löschen</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">14 Tage Frist, danach endgültig</span></span><button onClick="{{ openDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px;border-color:rgba(230,90,79,0.45);color:#e65a4f" style-hover="background:rgba(230,90,79,0.12)">Konto löschen …</button></div>
+      </div>
+    </section>
+
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">12 Bereiche · tokens.json v0.7.0 · <a href="Design Primitives.dc.html">/design</a> · <a href="Einstellungen.dc.html">Block 1</a></div>
+    </main>
+  </div>
+
+  <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:{{ dialogAlign }};justify-content:center;padding:{{ dialogPad }}">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:440px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:{{ dialogRadius }};box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div style="font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">{{ dialogTitle }}</div>
+          <button onClick="{{ closeDialog }}" title="Schließen" style="width:44px;height:44px;border-radius:14px;background:#14181d;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:-8px -8px 0 0" style-hover="color:#f4ece0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-x"></use></svg></button>
+        </div>
+        <div style="font-size:14px;text-wrap:pretty">{{ dialogText }}</div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Zur Bestätigung <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">LÖSCHEN</span> eingeben</span><input onInput="{{ onConfirm }}" value="{{ confirm }}" style="height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace"></label>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button onClick="{{ closeDialog }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04)">Behalten</button>
+          <button onClick="{{ closeDialog }}" disabled="{{ confirmDisabled }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border-color:rgba(230,90,79,0.45);background:rgba(230,90,79,0.12);color:#e65a4f;opacity:{{ confirmOpacity }}" style-hover="background:rgba(230,90,79,0.2)">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, dialog: null, confirm: '', narrow: false, lang: 'Deutsch', unit: 'km', start: 'Dashboard', bp: 'Auto',
+    s: { compact: false, hist: true, reduce: false, flight: true, cruise: true, hotel: true, poi: true, achToast: true, achPublic: false, achRetro: true, nInbox: true, nAch: true, nWeekly: false, nMail: false, sheetAuto: true, sheetHist: false, autoUpdate: true, domainColors: false, labs3d: false, aiParser: true } };
+  componentDidMount() {
+    import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); });
+    this._k = e => { if (e.key === 'Escape') this.setState({ dialog: null }); };
+    this._r = () => this.setState({ narrow: window.innerWidth < 900 });
+    window.addEventListener('keydown', this._k); window.addEventListener('resize', this._r); this._r();
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state; const n = st.narrow;
+    const sw = (key, label, sub, last) => { const on = st.s[key]; return { label, sub, on, toggle: () => set(x => ({ s: { ...x.s, [key]: !x.s[key] } })), divider: last ? 'transparent' : 'rgba(231,227,220,0.12)', track: on ? T.accent : T.surface2, trackBorder: on ? T.accent : 'rgba(231,227,220,0.18)', knob: on ? T.bg : T.muted, knobLeft: on ? '21px' : '3px' }; };
+    const chip = (key, v) => ({ label: v, onClick: () => set({ [key]: v }), bg: st[key] === v ? T.accent : 'transparent', color: st[key] === v ? T.bg : T.text, border: st[key] === v ? T.accent : 'rgba(231,227,220,0.18)' });
+    const link = (icon, label, sub, meta, href, last, warn) => ({ icon: S.I(icon), label, sub, meta, href: href || '#', metaColor: warn ? T.warn : T.muted, divider: last ? 'transparent' : 'rgba(231,227,220,0.12)' });
+    const index = [['profil','Profil','user'],['anzeige','Anzeige','sliders-horizontal'],['domaenen','Domänen','layers','4'],['flugstandards','Flug-Standards','plane'],['erfolge','Erfolge','trophy'],['benachrichtigungen','Benachrichtigungen','bell'],['import','Import & Parser','mail'],['sync','Synchronisation','link-2'],['daten','Daten','database'],['konto','Konto & Sicherheit','shield'],['abo','Abo & Rechnungen','sparkles','Pro'],['beta','Beta & Labs','activity'],['gefahrenzone','Gefahrenzone','triangle-alert']].map(([id,label,icon,meta]) => ({ href: '#' + id, label, icon: S.I(icon), meta: meta || false }));
+    const wipe = st.dialog === 'wipe';
+    return { ...S.navModel('settings', st, set), stop: e => e.stopPropagation(),
+      cols: n ? 'minmax(0,1fr)' : '220px minmax(0,1fr)', asideDisplay: n ? 'none' : 'flex', selectDisplay: n ? 'block' : 'none', index,
+      jump: e => { const el = document.querySelector(e.target.value); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }); },
+      displayRows: [sw('compact','Dichte Tabellen','Zeilen 36px sichtbar, Klickziel bleibt 44px'), sw('hist','Historische Einträge zeigen','Flüge vor dem Kontostart, gedämpft als Pille'), sw('reduce','Weniger Bewegung','Folgt sonst der Systemeinstellung', true)],
+      langs: ['Deutsch','English'].map(v => chip('lang', v)), units: ['km','mi'].map(v => chip('unit', v)), starts: ['Dashboard','Logbuch','Reisen'].map(v => chip('start', v)), bpStrategies: ['Auto','Nur Parser','Parser + API','Nur API'].map(v => chip('bp', v)),
+      domainRows: S.DOMAINS.map((d, i) => ({ ...sw(d.key, d.label, i === 0 ? '47 Einträge · Logbuch, Karte, Statistik' : i === 1 ? '6 Einträge · Häfen zählen für den Reisepass' : i === 2 ? '12 Einträge · Nächte als Reisetage' : '118 Einträge · Ortslisten', i === 3), icon: S.I(d.icon), color: d.color })),
+      achievementRows: [sw('achToast','Erfolge sofort feiern','Einblendung nach dem Speichern eines Eintrags'), sw('achRetro','Rückwirkend vergeben','Historische Einträge zählen für Erfolge'), sw('achPublic','Öffentliches Profil','Erfolge und Reisepass über einen Link teilen', true)],
+      notifyRows: [sw('nInbox','Neue Frage im Posteingang','Push, wenn der nächtliche Durchlauf etwas Unplausibles findet oder ein Flug-Update vorliegt'), sw('nAch','Erfolg freigeschaltet','Push'), sw('nWeekly','Wochenrückblick','E-Mail, sonntags'), sw('nMail','Produkt-News','E-Mail, selten', true)],
+      syncRows: [link('table-2','Google Sheets','Tabellenexport aller Domänen','vor 12 min','#'), link('calendar','Kalender-Abo','ICS-Feed für geplante Reisen','aktiv','#', true)],
+
+      syncToggles: [sw('autoUpdate','Automatische Flug-Updates','Vorschläge aus Flug-APIs landen im Posteingang › Flug-Updates'), sw('sheetAuto','Sheets stündlich synchronisieren','Sonst nur manuell'), sw('sheetHist','Historische Einträge mitschreiben','Standard: nur Einträge seit Kontostart', true)],
+      dataRows: [link('download','Export & Backup','CSV, GPX, JSON · alle Domänen','2026-08-30','#'), link('upload','Import','CSV, Flighty, App in the Air, Tripit','', '#'), link('database','Speicher','Fotos & Anhänge','1,2 GB von 5 GB','#', true)],
+      sessions: [['smartphone','iPhone · Hamburg · diese Sitzung','jetzt', T.good],['globe','Safari · macOS · Hamburg','vor 2 h', T.muted],['globe','Chrome · Windows · München','vor 9 Tagen', T.warn]].map(([icon,label,when,color]) => ({ icon: S.I(icon), label, when, color })),
+      invoices: [['2026-02-01','TravStats Pro · Jahr','39,00 €'],['2025-02-01','TravStats Pro · Jahr','39,00 €'],['2024-02-01','TravStats Pro · Jahr','35,00 €']].map(([date,label,amount]) => ({ date, label, amount })),
+      betaRows: [sw('aiParser','Developer Mode · Training','LoRA-Training lokaler Ollama-Modelle mit eigenen annotierten Mails'), sw('labs3d','3D-Globus','WebGL, höherer Akkuverbrauch'), sw('domainColors','Nutzerfarben für Domänen','Override über den Token-Defaults · Owner-Frage 4: behalten oder streichen', true)],
+      dialogOpen: !!st.dialog, openDialog: () => set({ dialog: 'account', confirm: '' }), openWipe: () => set({ dialog: 'wipe', confirm: '' }), closeDialog: () => set({ dialog: null }),
+      dialogTitle: wipe ? 'Alle Einträge löschen?' : 'Konto löschen?',
+      dialogText: wipe ? '47 Flüge, 6 Kreuzfahrten, 12 Unterkünfte und 118 Orte werden gelöscht. Dein Konto, Abo und Einstellungen bleiben. Ein Backup wird vorher als JSON heruntergeladen.' : 'Dein Konto mit 47 Flügen, 6 Kreuzfahrten und 118 Orten. Alles wird nach 14 Tagen endgültig gelöscht; bis dahin kannst du dich wieder anmelden.',
+      confirm: st.confirm, onConfirm: e => set({ confirm: e.target.value }), confirmDisabled: st.confirm !== 'LÖSCHEN', confirmOpacity: st.confirm === 'LÖSCHEN' ? 1 : 0.5,
+      dialogAlign: n ? 'flex-end' : 'center', dialogPad: n ? '0' : '24px', dialogRadius: n ? '26px 26px 0 0' : '26px' };
+  }
+}
+</script>
+</body>
+</html>

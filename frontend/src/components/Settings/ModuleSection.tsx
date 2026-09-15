@@ -3,7 +3,6 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useDomainColors } from "../../hooks/useDomainColors";
 
 export default function ModuleSection(): JSX.Element {
@@ -11,13 +10,11 @@ export default function ModuleSection(): JSX.Element {
   const { colorOf } = useDomainColors();
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
-  const { isFeatureVisible } = useBetaFeatures();
 
-  // The FLAG alone, not usePlacesVisible: this list is where the user turns
-  // the domain on, so gating it on "already enabled" would make it
-  // permanently unreachable. Offering a switch that turns on something the
-  // instance then refuses to render is the confusing half-state this avoids.
-  const visibleKeys = DOMAIN_KEYS.filter((key) => key !== "poi" || isFeatureVisible("poiDomain"));
+  // Every domain, since 2026-09-05. Places sat behind the instance beta flag
+  // here (never behind "already enabled" — this list is where the user turns
+  // a domain on) until its gate's own condition was met.
+  const visibleKeys = DOMAIN_KEYS;
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;

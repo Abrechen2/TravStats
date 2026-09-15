@@ -19,13 +19,21 @@ import type { Trip } from "../../types";
  * The gate is cosmetic. `POST /trips/:id/summarize` stays reachable for any
  * authenticated user; this component simply stops offering it.
  */
+/** The two languages the server can write; anything else falls back to German. */
+export function summaryLanguageOf(uiLanguage: string): "de" | "en" {
+  return uiLanguage.toLowerCase().startsWith("en") ? "en" : "de";
+}
+
 export function TripSummaryPanel({
   trip,
   t,
+  language,
   onChanged,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  /** The reader's UI language (`i18n.language`); the summary is written in it. */
+  language: string;
   onChanged: () => void;
 }): JSX.Element | null {
   const addToast = useToastStore((s) => s.addToast);
@@ -37,7 +45,7 @@ export function TripSummaryPanel({
   const generate = async (): Promise<void> => {
     setGenerating(true);
     try {
-      await tripsApi.summarize(trip.id);
+      await tripsApi.summarize(trip.id, summaryLanguageOf(language));
       addToast("success", t("trips:summary.generated"));
       onChanged();
     } catch (err: unknown) {

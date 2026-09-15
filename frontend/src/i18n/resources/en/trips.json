@@ -276,13 +276,13 @@
   },
   "summary": {
     "title": "AI summary",
-    "cta": "Have the AI write a short, personal recap of this journey — based on stops, journal entries and linked flights / cruises.",
+    "cta": "Have the AI write a short, personal recap of this trip — from flights, cruises, stays, places, stops and journal, in your language.",
     "generateButton": "Generate summary",
     "regenerate": "Regenerate",
-    "generating": "Writing…",
+    "generating": "Writing… this can take a few minutes",
     "generated": "Summary created",
     "error": "Summary failed",
-    "unavailable": "AI unreachable — start Ollama and pull the model."
+    "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser."
   },
   "gallery": {
     "title": "Gallery",

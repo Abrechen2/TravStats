@@ -1,9 +1,19 @@
 {
   "airline": "Lufthansa",
   "iata": "LH",
-  "version": "2025-04",
-  "from": ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
-  "subject": ["Buchungsbestätigung", "Booking Confirmation", "Ihre Buchung", "München nach", "Flugbuchung"],
+  "version": "2025-09",
+  "from": [
+    "@lufthansa.com",
+    "@miles-and-more.com",
+    "@lufthansa.de"
+  ],
+  "subject": [
+    "Buchungsbestätigung",
+    "Booking Confirmation",
+    "Ihre Buchung",
+    "München nach",
+    "Flugbuchung"
+  ],
   "selectors": {
     "flightNumber": "td.flightno, .flight-number, [data-flight-number]",
     "pnr": ".booking-code, .pnr, [data-pnr]",
@@ -18,21 +28,29 @@
   "textPatterns": {
     "flightNumber": [
       "Flugnummer:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
-      "Flight\\s*(?:number)?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
+      "Flight\\s*(?:number)?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
+      "^Flugnummer\\s+([A-Z]{2}\\s?\\d{1,4})\\b",
+      "^([A-Z]{2}\\d{1,4})$"
     ],
     "pnr": [
       "Buchungsreferenz:\\s*([A-Z0-9]{5,8})\\b",
       "Booking\\s*Reference:\\s*([A-Z0-9]{5,8})\\b",
-      "PNR:\\s*([A-Z0-9]{5,8})\\b"
+      "PNR:\\s*([A-Z0-9]{5,8})\\b",
+      "Buchungscode:\\s*([A-Z0-9]{5,8})\\b"
     ],
     "departureCode": [
-      "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)"
+      "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)",
+      "IATA-Code des Abflughafens\\s+([A-Z]{3})\\b",
+      "^([A-Z]{3}) [A-Z]{3}$"
     ],
     "arrivalCode": [
-      "(?:In|Nach|To):[^(\\n]*\\(([A-Z]{3})\\)"
+      "(?:In|Nach|To):[^(\\n]*\\(([A-Z]{3})\\)",
+      "IATA-Code des Ankunftsflughafens\\s+([A-Z]{3})\\b",
+      "^[A-Z]{3} ([A-Z]{3})$"
     ],
     "departureTime": [
-      "Abflug\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})"
+      "Abflug\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})",
+      "^(\\d{2}\\.\\d{2}\\.\\d{4}) - (\\d{2}:\\d{2})$"
     ],
     "arrivalTime": [
       "Ankunft\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})"
@@ -48,6 +66,11 @@
       "Ticketnummer:\\s*([0-9]{10,14})",
       "\\b(220[0-9]{10})\\b"
     ]
+  },
+  "segments": {
+    "splitPattern": "^\\d{2}\\.\\d{2}\\.\\d{4} - \\d{2}:\\d{2}$",
+    "startAfter": "^Buchungs(?:ü|ue)bersicht$|^Booking overview$",
+    "endBefore": "^Buchung verwalten$|^Manage booking$"
   },
   "transforms": {
     "flightNumber": "removeSpaces",

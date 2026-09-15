@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div data-screen-label="00 Anmelden" style="min-height:100vh;background:#0b0d10;display:grid;grid-template-columns:{{ cols }}">
+  <div style="display:{{ sideDisplay }};flex-direction:column;justify-content:space-between;padding:40px;background:radial-gradient(circle at 30% 20%,#1a1f26 0%,#0b0d10 60%);border-right:1px solid rgba(231,227,220,0.12)">
+    <div style="display:flex;align-items:center;gap:12px"><img src="assets/logo.png" alt="" width="32" height="37" style="display:block;width:32px;height:37px"><span style="font-weight:800;font-size:22px;letter-spacing:-0.3px;color:#f4ece0">TravStats</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);align-self:flex-end;padding-bottom:3px">Kessler Travel</span></div>
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:420px">
+      <div style="font-size:34px;font-weight:800;color:#f4ece0;line-height:1.1;text-wrap:pretty">Dein Reise-Logbuch — auf deinem eigenen Server.</div>
+      <div style="font-size:14px;color:rgba(231,227,220,0.6);text-wrap:pretty">Flüge, Kreuzfahrten, Unterkünfte und Orte. Alle Daten bleiben hier; nichts geht an externe Dienste, wenn du es nicht einrichtest.</div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;padding-top:6px"><sc-for list="{{ stats }}" as="k" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:20px;font-weight:600;color:#f4ece0">{{ k.v }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ k.l }}</span></span></sc-for></div>
+    </div>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">v1.3.0 · 6 Konten · selbst gehostet</div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:center;padding:32px 24px">
+    <div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:{{ topLogoDisplay }}"><div style="display:flex;align-items:center;gap:12px"><img src="assets/logo.png" alt="" width="32" height="37" style="display:block;width:32px;height:37px"><span style="font-weight:800;font-size:22px;letter-spacing:-0.3px;color:#f4ece0">TravStats</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6);align-self:flex-end;padding-bottom:3px">Kessler Travel</span></div></div>
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Willkommen zurück</h1><div style="font-size:13px;color:rgba(231,227,220,0.6)">Anmelden bei Kessler Travel</div></div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Benutzername</span><input type="text" placeholder="jonas" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"></label>
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font-size:12px;color:rgba(231,227,220,0.6)"><span>Passwort</span><button onClick="{{ openForgot }}" style="background:transparent;border:none;color:#f0a947;font-size:12px;font-weight:600;cursor:pointer;padding:0">Passwort vergessen?</button></span><span style="position:relative;display:flex"><input type="{{ pwType }}" placeholder="••••••••" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none;padding-right:48px" style-focus="border-color:#f0a947"><button onClick="{{ togglePw }}" title="{{ pwTitle }}" style="position:absolute;right:2px;top:2px;width:42px;height:42px;border-radius:10px;background:transparent;border:none;color:rgba(231,227,220,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ pwIcon }}"></use></svg></button></span></label>
+          <button onClick="{{ submit }}" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%" style-hover="background:#f6bd66" style-active="background:#d8952f">{{ submitLabel }}</button>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(231,227,220,0.6)"><span style="flex:1;height:1px;background:rgba(231,227,220,0.12)"></span>oder<span style="flex:1;height:1px;background:rgba(231,227,220,0.12)"></span></div>
+          <button style="height:48px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-key-round"></use></svg>Mit Passkey anmelden</button>
+        </div>
+        <div style="font-size:13px;color:rgba(231,227,220,0.6);text-align:center">Noch kein Konto? <a href="Registrieren.dc.html">Registrieren</a> <span style="color:rgba(231,227,220,0.45)">· nur per Einladung</span></div>
+      </sc-if>
+
+      <sc-if value="{{ isTwoFactor }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Bestätigung in zwei Schritten</h1><div style="font-size:13px;color:rgba(231,227,220,0.6);text-wrap:pretty">Gib den sechsstelligen Code aus deiner Authenticator-App ein.</div></div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px"><sc-for list="{{ digits }}" as="d" hint-placeholder-count="6"><input value="{{ d }}" maxlength="1" inputmode="numeric" style="height:56px;text-align:center;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#f4ece0;font-size:22px;font-weight:600;font-family:'IBM Plex Mono',ui-monospace,monospace;outline:none;width:100%" style-focus="border-color:#f0a947"></sc-for></div>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(231,227,220,0.6)"><input type="checkbox" style="width:18px;height:18px;accent-color:#f0a947">Dieses Gerät 30 Tage merken</label>
+          <a href="Dashboard.dc.html" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10">Anmelden</a>
+          <button onClick="{{ back }}" style="background:transparent;border:none;color:rgba(231,227,220,0.6);font-size:13px;cursor:pointer;height:36px" style-hover="color:#f4ece0">Zurück · Wiederherstellungscode verwenden</button>
+        </div>
+      </sc-if>
+
+
+    </div>
+  </div>
+
+  <sc-if value="{{ forgotOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeForgot }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,8,0.6);animation:ts-fade 200ms ease-out;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div role="dialog" aria-modal="true" onClick="{{ stop }}" style="animation:ts-enter 260ms ease-out;width:100%;max-width:420px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:28px;display:flex;flex-direction:column;gap:18px">
+        <div style="font-size:24px;font-weight:800;color:#f4ece0;line-height:1.15">Passwort zurücksetzen</div>
+        <sc-if value="{{ smtp }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:rgba(231,227,220,0.6)">Benutzername</span><input type="text" placeholder="Benutzername" style="height:46px;padding:0 14px;border-radius:12px;background:#101317;border:1px solid rgba(231,227,220,0.16);color:#e7e3dc;font-size:15px;width:100%;outline:none" style-hover="border-color:rgba(231,227,220,0.3)" style-focus="border-color:#f0a947"></label><div style="display:flex;gap:10px;justify-content:flex-end"><button onClick="{{ closeForgot }}" style="height:48px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;width:auto" style-hover="background:rgba(231,227,220,0.04)">Schließen</button><button onClick="{{ closeForgot }}" style="height:48px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;width:auto" style-hover="background:#f6bd66">Reset-Link senden</button></div></sc-if>
+        <sc-if value="{{ noSmtp }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;text-wrap:pretty">E-Mail-Versand nicht eingerichtet. Bitte kontaktiere einen Administrator.</div><div style="font-size:13px;color:rgba(231,227,220,0.6)">Du erreichst die Administration unter: <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e7e3dc">admin@kessler.example</span></div><div style="display:flex;justify-content:flex-end"><button onClick="{{ closeForgot }}" style="height:48px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;width:auto" style-hover="background:rgba(231,227,220,0.04)">Schließen</button></div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, step: 'login', pw: false, forgot: false, busy: false, narrow: false };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._r = () => this.setState({ narrow: window.innerWidth < 900 }); window.addEventListener('resize', this._r); this._r(); this._k = e => { if (e.key === 'Escape') this.setState({ forgot: false }); }; window.addEventListener('keydown', this._k); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); window.removeEventListener('keydown', this._k); clearTimeout(this._t); }
+  renderVals() {
+    const st = this.state; const set = p => this.setState(p); const S = st.S;
+    return { cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1.1fr) minmax(0,1fr)', sideDisplay: st.narrow ? 'none' : 'flex', topLogoDisplay: st.narrow ? 'block' : 'none',
+      stats: [{ v: '781', l: 'Einträge' }, { v: '33', l: 'Länder' }, { v: '41 Tage', l: 'Uptime' }],
+      isLogin: st.step === 'login', isTwoFactor: st.step === '2fa', pwType: st.pw ? 'text' : 'password', pwIcon: S ? S.I(st.pw ? 'eye-off' : 'eye') : '', pwTitle: st.pw ? 'Passwort verbergen' : 'Passwort anzeigen', togglePw: () => set({ pw: !st.pw }),
+      submitLabel: st.busy ? 'Wird angemeldet...' : 'Anmelden', submit: () => { set({ busy: true }); clearTimeout(this._t); this._t = setTimeout(() => set({ busy: false, step: '2fa' }), 700); }, back: () => set({ step: 'login' }),
+      digits: ['4', '8', '1', '', '', ''],
+      forgotOpen: st.forgot, openForgot: () => set({ forgot: true }), closeForgot: () => set({ forgot: false }), stop: e => e.stopPropagation(), smtp: false, noSmtp: true };
+  }
+}
+</script>
+</body>
+</html>

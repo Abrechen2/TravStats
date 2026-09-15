@@ -24,13 +24,9 @@ import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
  */
 export default function DomainColorSection(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
-  const { colors, customisable } = useDomainColors();
+  const { colors } = useDomainColors();
   const setColor = useDomainColorStore((s) => s.setColor);
   const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
-
-  // The gate covers the value as well as this panel, so with it closed there is
-  // nothing here to show and nothing that could have been changed.
-  if (!customisable) return null;
 
   return (
     <div className="mt-8">

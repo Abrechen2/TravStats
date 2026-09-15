@@ -83,8 +83,9 @@ describe("useNavItems — System group", () => {
     expect((system as NavGroup).badge).toBe(3);
   });
 
-  it("adds Admin and Parser (beta) for admins only", () => {
+  it("adds Admin and Parser (beta) for admins while the instance beta switch is on", () => {
     authState.user = { isAdmin: true };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const { system } = run(0);
     const g = system as NavGroup;
     expect(g.kind).toBe("group");
@@ -95,6 +96,37 @@ describe("useNavItems — System group", () => {
       "/parser",
     ]);
     expect(g.children.find((c) => c.path === "/parser")?.betaBadge).toBe(true);
+  });
+
+  // Owner decision 2026-09-05 (design-system decisions, no. 10): the badge
+  // gets a gate behind it. Before, an admin on a production instance saw a
+  // "Beta" label on a page the switch had no say over.
+  it("keeps the Parser off the menu for admins while the instance beta switch is off", () => {
+    authState.user = { isAdmin: true };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+    const { system } = run(0);
+    const g = system as NavGroup;
+    expect(g.children.map((c) => c.path)).toEqual(["/settings", "/pending-updates", "/admin"]);
+  });
+});
+
+describe("useNavItems — Reisepass", () => {
+  beforeEach(() => {
+    authState.user = { isAdmin: false };
+  });
+
+  // The passport's own un-gating condition ("or 2.7.0 opens") came true on
+  // 2026-09-05; the entry now depends on the flights domain alone.
+  it("offers the passport whenever flights are on, whatever the beta switch says", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+    const { center } = run(0);
+    expect(center.some((n) => n.kind === "leaf" && n.path === "/passport")).toBe(true);
+  });
+
+  it("omits the passport when flights are off — it is built from flights alone", () => {
+    useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: true });
+    const { center } = run(0);
+    expect(center.some((n) => n.kind === "leaf" && n.path === "/passport")).toBe(false);
   });
 });
 

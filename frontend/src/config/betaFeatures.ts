@@ -55,8 +55,9 @@ export const BETA_FEATURES = Object.freeze({
   /** The LLM trip-summary card on the trip detail page. */
   tripAiSummary: Object.freeze({
     reason: "beta",
-    why: "The generated summaries are buggy, and the whole Trips area is still unfinished — offering an AI summary sets an expectation the feature can't meet yet.",
-    returnsWhen: "The Trips feature is complete.",
+    why: "Until 2026-09-05 the summary ignored the admin's Ollama, wrote German for every reader, knew nothing about stays and places, and had no test — the 'buggy summaries' this gate named. Those are fixed on dev/v2.7; what remains is whether the text is GOOD, which only a reader can say.",
+    returnsWhen:
+      "The owner has read three summaries generated on the RC account — one German, one English, one for a trip with stays and place visits — and accepted them.",
   }),
 
   /**
@@ -77,75 +78,21 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The passport page — /passport, its nav entry, and GET /stats/passport.
+   * The Parser page — /parser and its admin-only nav entry: annotating a mail
+   * to derive a template, the user's own templates, the community templates
+   * and the parse log.
    *
-   * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
-   * flag is off, as every gate here does (see the file header). That matters
-   * more than usual: the Companion app is expected to READ this endpoint and
-   * drop its own client-side derivation, and it must not have to care what an
-   * instance's beta flag says.
+   * READ THIS BEFORE REMOVING THE GATE: this gates the TEMPLATE WORKSHOP, not
+   * the parsing. "Buchungs-E-Mail oder PDF" in the add dialog keeps reading
+   * bookings whatever the flag says — that path is the product, this page is
+   * the tooling behind it. The endpoints under /api/v1/templates stay open like
+   * every other gated endpoint (see the file header).
    */
-  passport: Object.freeze({
+  parserTemplates: Object.freeze({
     reason: "beta",
-    why: "The page is complete and the numbers agree with the statistics page, but it ships in the middle of a release candidate. Hiding it keeps 2.6.0's released surface unchanged while the RC still gets it in front of testers.",
+    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. Only the LLM parser (Ollama) is fully tested; the template and regex parsers this page manages are experimental.",
     returnsWhen:
-      "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
-  }),
-
-  /**
-   * User-chosen colour per domain, applied to every surface outside the map.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
-   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
-   * everyone gets the brand set from BRAND.md §3, so an instance that turns
-   * the flag back off does not keep rendering colours nobody can reach a
-   * control for.
-   *
-   * What it waits on is not technical, and as of 2026-09-05 it is not open
-   * either: the owner settled it (§9, no. 4 of the design-system round) and the
-   * answer was to keep this exactly as it is. BRAND.md §3 names the four hexes
-   * as canonical and the backend mirrors the same table; a user override turns
-   * that constant into a default, which reaches screenshots, the wiki and the
-   * marketing site as much as the app — so it is offered WITH a beta badge
-   * rather than as an ordinary setting, and whoever uses it breaks the legend
-   * knowingly.
-   */
-  domainColors: Object.freeze({
-    reason: "advanced",
-    why: "The brand question this entry used to wait on HAS been answered, and the answer was to keep the gate. Owner decision of 2026-09-05 (ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md §9, no. 4), against the recommendation to drop the feature: the override stays exactly as it is, colour picker included, over the token defaults — and the defaults are the Companion's colours, so whoever overrides them breaks the legend knowingly. That is precisely why it is offered as a beta override and not as an ordinary setting.",
-    returnsWhen:
-      "The owner rules that painting your own domain colours is ordinary rather than advanced. Nothing about the brand is outstanding any more, so no measurement or piece of work will open this gate — only that decision will. (The design-system round for 2.7.0 changes the DEFAULTS this overrides, not the gate: one colour per domain, tour included, taken from the Companion token file.)",
-    issue: "#270",
-  }),
-
-  /**
-   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
-   * the module toggle, and place visits on the trip timeline.
-   *
-   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
-   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
-   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
-   *
-   * The three gaps this entry used to name are CLOSED (checked 2026-08-30):
-   * the appearance panel has `map/PlaceAppearanceSection.tsx`, the All tab
-   * loads places and place lists, and both custom lists (phase B) and the
-   * curated checklists (phase C) ship. The `why` below was rewritten because a
-   * gate whose stated reason has expired is worse than an unexplained one —
-   * nobody re-reads a reason they have already accepted.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
-   * data. A user who created places on a beta instance and then upgrades to a
-   * build with the flag off still owns those rows; they simply stop being
-   * shown. Nothing here deletes or migrates anything, and the backend
-   * endpoints stay reachable (this is a visibility gate — see the file header),
-   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
-   * intact the moment the flag comes back on.
-   */
-  poiDomain: Object.freeze({
-    reason: "beta",
-    why: "Places can still only be added one at a time, by hand — but the reason has moved, and this entry said the wrong one until 2026-09-03. The import EXISTS now: `POST /place-import/preview` and `/commit` (backend/src/routes/placeImport.ts) take CSV rows, dedupe them and write them behind an ImportBatch that can be undone. Nothing in the frontend calls either route, and `frontend/src/lib/importers/placeCsv.ts` is referenced only by its own test. Settings → Import therefore still renders the POI group empty, because `poiAdapter.tsx` reads POI_IMPORT_READY = false and hides both tiles. What this gate holds back is no longer a missing capability; it is a built capability with no way in.",
-    returnsWhen:
-      "The CSV import gets its surface: an import tile, a client for the two routes, and a preview dialog for the rows that need a decision — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md §5, which rules that an unplaceable row is an OFFER, not a drop, and so cannot ship without somewhere to make the offer. The other two conditions this gate used to wait for are MET: the picker mints an identity (`externalRef: osmRef(props)`, backend/src/services/geo/photon.ts), so the @@unique([userId, externalRef]) index now fires and the duplicate argument is gone; custom lists (phase B) shipped earlier.",
+      "The template and regex parsers are tested against the sample set under test-samples/ and the owner accepts the page for release.",
   }),
 
   /**

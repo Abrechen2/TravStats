@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
@@ -12,7 +12,6 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useDismissedNotice } from "../hooks/useDismissedNotice";
 import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup } from "../types/passport";
 
@@ -50,17 +49,16 @@ export default function PassportPage(): JSX.Element {
   const userId = useAuthStore((s) => s.user?.id ?? "anonymous");
   const countingNotice = useDismissedNotice(`passport-counting-2026-09.${userId}`);
   const { isEnabled } = useEnabledDomains();
-  const gate = useBetaFeatureAccess("passport");
   const [passport, setPassport] = useState<Passport | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
 
-  // Only once the gate says yes. While it is still unknown there is nothing to
-  // show the answer in yet, and a refused user should not be sending the
-  // request at all — the endpoint being open is a deliberate property of the
-  // gate, not an invitation to call it from a page that will not render it.
+  // The page left the beta gate on 2026-09-05 (its own condition, "or 2.7.0
+  // opens", had come true). The one remaining precondition is the flights
+  // domain: the passport is built from flights, so a reader with flights off
+  // gets the explanation below, not a request for a number that cannot exist.
   useEffect(() => {
-    if (gate !== "allowed" || !isEnabled("flight")) return;
+    if (!isEnabled("flight")) return;
     setLoading(true);
     setFailure(null);
     statsApi
@@ -71,7 +69,7 @@ export default function PassportPage(): JSX.Element {
         logger.error("Failed to load passport:", err);
       })
       .finally(() => setLoading(false));
-  }, [gate, isEnabled]);
+  }, [isEnabled]);
 
   const quotaByGroup = useMemo(() => {
     if (!passport) return [];
@@ -102,35 +100,6 @@ export default function PassportPage(): JSX.Element {
   );
 
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
-
-  // While the instance flag is still unknown, wait rather than redirect: the
-  // flag is not persisted, so a cold load on this URL — a bookmark, a refresh,
-  // a link in a new tab — would otherwise bounce off a page the user asked for.
-  if (gate === "pending") {
-    return (
-      <PageTransition>
-        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-          <NavigationBar />
-          <div
-            className="mx-auto max-w-5xl px-4 py-16 text-center text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {t("common:loading.default")}
-          </div>
-        </div>
-      </PageTransition>
-    );
-  }
-
-  // The nav entry is hidden behind the same gate; this closes the URL too, so
-  // the gate is not merely cosmetic. The ENDPOINT stays open on purpose — the
-  // Companion app is meant to read it whatever an instance's flag says.
-  // A closed gate goes home like /places does. Until 2026-09-05 it fell into
-  // the "enable the flights domain" text below, which told a reader with
-  // flights switched on to switch them on.
-  if (gate === "denied") {
-    return <Navigate to="/" replace />;
-  }
 
   if (!isEnabled("flight")) {
     return (

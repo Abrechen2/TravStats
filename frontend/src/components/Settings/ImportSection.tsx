@@ -9,6 +9,8 @@ import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
+import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { ImportLogSection } from "../import/ImportLogSection";
 import { useDomainColors } from "../../hooks/useDomainColors";
 
@@ -30,6 +32,10 @@ export default function ImportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const { colorOf } = useDomainColors();
   const { isEnabled } = useEnabledDomains();
+  // Places need BOTH the user's domain choice and the instance beta flag —
+  // the same two conditions the nav and the dashboard tab apply, kept in one
+  // hook so this page cannot drift from them (see hooks/usePlacesVisible.ts).
+  const placesVisible = usePlacesVisible();
   const autoCreateTrips = useSettingsStore((s) => s.autoCreateTrips);
   const setAutoCreateTrips = useSettingsStore((s) => s.setAutoCreateTrips);
 
@@ -50,13 +56,19 @@ export default function ImportSection(): JSX.Element {
         <MapsExportImportTile key="lodging-maps" onImported={handleImported} />,
         <LodgingCsvImportTile key="lodging-csv" onImported={handleImported} />,
       ],
+      // POI Phase D §5: the CSV path with coordinates. Until 2026-09-05 this
+      // group rendered empty although both backend routes existed — the
+      // `poiDomain` gate named exactly this missing tile as its condition.
+      poi: [<PlaceCsvImportTile key="poi-csv" onImported={handleImported} />],
     }),
     [handleImported]
   );
 
   const [logOpen, setLogOpen] = useState(false);
 
-  const groups = AVAILABLE_DOMAINS.filter((key) => isEnabled(key));
+  const groups = AVAILABLE_DOMAINS.filter((key) =>
+    key === "poi" ? placesVisible : isEnabled(key)
+  );
 
   return (
     <SectionCard>

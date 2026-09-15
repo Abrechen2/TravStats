@@ -301,14 +301,39 @@ registry.registerPath({
   path: "/trips/{id}/summarize",
   summary: "Write a summary of the trip with a language model",
   description:
-    "Requires a configured model. Returns text for the user to keep or discard; " +
-    "this call stores nothing.",
+    "Asks the instance's Ollama (Admin → Parser, or OLLAMA_URL) for a three-paragraph " +
+    "summary built from the trip's flights, cruises, stays, place visits, stops and " +
+    "journal, in the requested language, and STORES it on the trip — the next read of " +
+    "the trip carries it. Rate-limited like the parsers; a run can take minutes.",
   tags: ["Trips"],
-  request: { params: tripId },
+  request: {
+    params: tripId,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            language: z
+              .enum(["de", "en"])
+              .optional()
+              .describe("Language of the summary. Absent means German."),
+          }),
+        },
+      },
+    },
+  },
   responses: {
     200: {
       description: "Summary",
-      content: { "application/json": { schema: z.object({ summary: z.string() }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            summary: z.string(),
+            model: z.string(),
+            language: z.enum(["de", "en"]),
+            durationMs: z.number().int(),
+          }),
+        },
+      },
     },
     404: notFound,
     503: { description: "No model configured", content: errorContent },

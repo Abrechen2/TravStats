@@ -2,11 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "@prisma/client";
-import {
-  authenticate,
-  requireWriteScope,
-  AuthRequest,
-} from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import {
   createTripSchema,
@@ -36,6 +32,7 @@ import { updateStopAndLegs, recomputeLegs } from "../services/tour/legRecompute"
 import {
   summariseTrip,
   checkOllamaAvailable,
+  resolveOllamaTarget,
 } from "../services/tripSummaryService";
 import { emailParseLimiter, uploadReceiptLimiter } from "../middleware/rateLimit";
 import {
@@ -81,16 +78,10 @@ router.post(
   "/trips/detect",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { dryRun, selectedProposals } = detectTripsSchema.parse(
-        req.body ?? {},
-      );
+      const { dryRun, selectedProposals } = detectTripsSchema.parse(req.body ?? {});
       const result = await detectTrips({ userId, dryRun, selectedProposals });
       logger.info({
         operation: "trips_detect",
@@ -107,18 +98,14 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** GET /trips — list all trips for the current user */
 router.get(
   "/trips",
   authenticate,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const trips = await prisma.trip.findMany({
@@ -216,7 +203,7 @@ router.get(
           : Promise.resolve([]),
       ]);
       const distanceByCruise = new Map(
-        legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0]),
+        legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0])
       );
       res.json({
         trips: trips.map((t) => ({
@@ -230,14 +217,14 @@ router.get(
             t.flights,
             facts,
             cruiseCountries.get(t.id) ?? [],
-            lodgingCountries.get(t.id) ?? [],
+            lodgingCountries.get(t.id) ?? []
           ),
         })),
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** POST /trips/bookings — create a booking (must come before /trips/:id) */
@@ -245,11 +232,7 @@ router.post(
   "/trips/bookings",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const body = createBookingSchema.parse(req.body);
@@ -268,7 +251,7 @@ router.post(
       const bookingCurrency = body.currency ?? "EUR";
       const bookingFx = await fxColumnsFor(
         { amount: body.price ?? null, currency: bookingCurrency, date: new Date() },
-        await getBaseCurrency(userId),
+        await getBaseCurrency(userId)
       );
 
       const booking = await prisma.booking.create({
@@ -299,7 +282,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/bookings/:id — edit pnr/price/currency. Never touches the
@@ -308,11 +291,7 @@ router.patch(
   "/trips/bookings/:id",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const body = updateBookingSchema.parse(req.body);
@@ -337,8 +316,8 @@ router.patch(
               currency: body.currency !== undefined ? body.currency : existing.currency,
               date: existing.createdAt,
             },
-            await getBaseCurrency(userId),
-          ),
+            await getBaseCurrency(userId)
+          )
         );
       }
 
@@ -350,7 +329,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 const dissolveTripsSchema = z.object({
@@ -373,18 +352,14 @@ const mergeTripsSchema = z.object({
 router.get(
   "/trips/cleanup/micro",
   authenticate,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const candidates = await findMicroTripCandidates(req.userId!);
       res.json({ candidates });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -396,11 +371,7 @@ router.post(
   "/trips/cleanup/dissolve",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { tripIds } = dissolveTripsSchema.parse(req.body);
       const result = await dissolveMicroTrips(req.userId!, tripIds);
@@ -408,7 +379,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -420,11 +391,7 @@ router.post(
   "/trips/merge",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = mergeTripsSchema.parse(req.body);
       const result = await mergeTrips(req.userId!, body);
@@ -432,18 +399,14 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** GET /trips/:id */
 router.get(
   "/trips/:id",
   authenticate,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const trip = await prisma.trip.findFirst({
@@ -474,9 +437,7 @@ router.get(
       if (!trip) throw new AppError("Trip not found", 404);
       // Map raw photo rows to DTOs (drops internal "__cover__" sentinel
       // photos so the gallery never shows the cover twice).
-      const photos = trip.photos
-        .filter((p) => p.caption !== "__cover__")
-        .map(toPhotoDto);
+      const photos = trip.photos.filter((p) => p.caption !== "__cover__").map(toPhotoDto);
       // One airport lookup serves two gaps the beta UAT found: the timeline
       // rendered each end in the VIEWER's clock (a JFK arrival read six hours
       // off), and the countries tile stayed at 0 because `trips.countries` is a
@@ -497,13 +458,13 @@ router.get(
         trip.flights,
         facts,
         cruiseCountries.get(trip.id) ?? [],
-        lodgingCountries.get(trip.id) ?? [],
+        lodgingCountries.get(trip.id) ?? []
       );
       res.json({ trip: { ...trip, photos, flights, countries } });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** POST /trips */
@@ -511,11 +472,7 @@ router.post(
   "/trips",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const body = createTripSchema.parse(req.body);
@@ -532,10 +489,7 @@ router.post(
       // inside a transaction so a failure never leaves the legacy `companions`
       // array and the `companionLinks` table disagreeing.
       const companionNames = body.companions ?? [];
-      const resolvedCompanions = await resolveCompanions(
-        userId,
-        companionNames,
-      );
+      const resolvedCompanions = await resolveCompanions(userId, companionNames);
 
       const trip = await prisma.$transaction(async (tx) => {
         const created = await tx.trip.create({
@@ -580,12 +534,10 @@ router.post(
 
         if (resolvedCompanions.length > 0) {
           await tx.tripCompanion.createMany({
-            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map(
-              (row) => ({
-                ...row,
-                tripId: created.id,
-              }),
-            ),
+            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+              ...row,
+              tripId: created.id,
+            })),
             skipDuplicates: true,
           });
         }
@@ -598,7 +550,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/:id */
@@ -606,11 +558,7 @@ router.patch(
   "/trips/:id",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const existing = await prisma.trip.findFirst({
@@ -636,13 +584,9 @@ router.patch(
       // so a failure between the two never leaves the legacy array and
       // `companionLinks` disagreeing (undefined here means "untouched": the
       // companions field was not part of this update at all).
-      let resolvedCompanionsForUpdate:
-        { id: string; displayName: string }[] | undefined;
+      let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
       if (body.companions !== undefined) {
-        resolvedCompanionsForUpdate = await resolveCompanions(
-          userId,
-          body.companions,
-        );
+        resolvedCompanionsForUpdate = await resolveCompanions(userId, body.companions);
       }
 
       const trip = await prisma.$transaction(async (tx) => {
@@ -650,9 +594,7 @@ router.patch(
           await tx.tripCompanion.deleteMany({ where: { tripId: existing.id } });
           if (resolvedCompanionsForUpdate.length > 0) {
             await tx.tripCompanion.createMany({
-              data: linkRowsFor(
-                resolvedCompanionsForUpdate.map((c) => c.id),
-              ).map((row) => ({
+              data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
                 ...row,
                 tripId: existing.id,
               })),
@@ -700,7 +642,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** DELETE /trips/:id */
@@ -708,11 +650,7 @@ router.delete(
   "/trips/:id",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const existing = await prisma.trip.findFirst({
@@ -726,7 +664,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** POST /trips/:id/flights — assign/unassign flights */
@@ -734,11 +672,7 @@ router.post(
   "/trips/:id/flights",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const trip = await prisma.trip.findFirst({
@@ -776,17 +710,14 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /* ─────────── Stops ─────────── */
 
 /** Resolve and authorise a trip by id from the URL — used for every
  *  stop / journal sub-route. Throws 404 if the user doesn't own it. */
-export async function resolveTrip(
-  userId: string,
-  tripId: string,
-): Promise<{ id: string }> {
+export async function resolveTrip(userId: string, tripId: string): Promise<{ id: string }> {
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
     select: { id: true },
@@ -800,11 +731,7 @@ router.post(
   "/trips/:id/stops",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
@@ -828,7 +755,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/:id/stops/:stopId */
@@ -836,11 +763,7 @@ router.patch(
   "/trips/:id/stops/:stopId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -858,7 +781,7 @@ router.patch(
       if (existing.routeId !== null && (body.lat === null || body.lon === null)) {
         throw new AppError(
           "This stop is part of a route section — remove it from the route before clearing its coordinates",
-          400,
+          400
         );
       }
       const stop = await updateStopAndLegs(prisma, req.params.stopId, body, existing);
@@ -866,7 +789,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -885,11 +808,7 @@ router.delete(
   "/trips/:id/stops/:stopId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -931,7 +850,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /* ─────────── Journal entries ─────────── */
@@ -941,11 +860,7 @@ router.post(
   "/trips/:id/journal",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
@@ -964,7 +879,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/:id/journal/:entryId */
@@ -972,11 +887,7 @@ router.patch(
   "/trips/:id/journal/:entryId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -999,7 +910,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** DELETE /trips/:id/journal/:entryId */
@@ -1007,11 +918,7 @@ router.delete(
   "/trips/:id/journal/:entryId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -1026,10 +933,20 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /* ─────────── LLM summary (iter 9) ─────────── */
+
+/**
+ * The reader's language travels with the request: the server keeps no
+ * per-user language (the frontend detects it and stores it client-side), and
+ * a German instance with an English reader must not get a German summary.
+ * Absent means German, the app's primary language.
+ */
+const summarizeBodySchema = z.object({
+  language: z.enum(["de", "en"]).optional(),
+});
 
 /** POST /trips/:id/summarize — generate + persist a 3-paragraph summary */
 router.post(
@@ -1037,29 +954,32 @@ router.post(
   authenticate,
   requireWriteScope,
   emailParseLimiter,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
 
-      const ollamaUp = await checkOllamaAvailable();
+      const parsed = summarizeBodySchema.safeParse(req.body ?? {});
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const language = parsed.data.language ?? "de";
+
+      // The admin's Ollama (parser settings), then the environment — the same
+      // resolution the parsers use, so one configured Ollama serves both.
+      const target = await resolveOllamaTarget();
+      const ollamaUp = await checkOllamaAvailable(target);
       if (!ollamaUp) {
         throw new AppError(
-          "LLM service unavailable. Set OLLAMA_URL and ensure the model is pulled.",
-          503,
+          "LLM service unavailable. Configure Ollama under Admin → Parser and ensure the model is pulled.",
+          503
         );
       }
 
-      const result = await summariseTrip(req.params.id, userId);
+      const result = await summariseTrip(req.params.id, userId, { language, target });
       res.json(result);
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /* ─────────── Photos (iter 7) ─────────── */
@@ -1084,13 +1004,8 @@ router.post(
   requireWriteScope,
   uploadReceiptLimiter,
   uploadTripPhotos.array("photos", 20),
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    const uploaded: Express.Multer.File[] =
-      (req.files as Express.Multer.File[] | undefined) ?? [];
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    const uploaded: Express.Multer.File[] = (req.files as Express.Multer.File[] | undefined) ?? [];
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -1113,8 +1028,8 @@ router.post(
               sizeBytes: f.size,
               sortIdx: nextIdx++,
             },
-          }),
-        ),
+          })
+        )
       );
       res.status(201).json({ photos: created.map(toPhotoDto) });
     } catch (error) {
@@ -1124,10 +1039,7 @@ router.post(
           // Rebuild from the trusted dir + basename of multer's generated
           // filename, not the raw f.path — defense-in-depth + clears the
           // CodeQL js/path-injection taint.
-          const safePath = path.join(
-            getTripPhotoDir(),
-            path.basename(f.filename),
-          );
+          const safePath = path.join(getTripPhotoDir(), path.basename(f.filename));
           fs.existsSync(safePath) && fs.unlinkSync(safePath);
         } catch (_e) {
           logger.warn({
@@ -1139,18 +1051,14 @@ router.post(
       }
       next(error);
     }
-  },
+  }
 );
 
 /** GET /trips/:id/photos/:photoId/file — serve image bytes */
 router.get(
   "/trips/:id/photos/:photoId/file",
   authenticate,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -1158,17 +1066,14 @@ router.get(
         where: { id: req.params.photoId, tripId: req.params.id },
       });
       if (!photo) throw new AppError("Photo not found", 404);
-      const filePath = path.join(
-        getTripPhotoDir(),
-        path.basename(photo.filename),
-      );
+      const filePath = path.join(getTripPhotoDir(), path.basename(photo.filename));
       if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
       res.type(photo.mimetype);
       res.sendFile(filePath);
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/:id/photos/:photoId — update caption / sortIdx / takenAt */
@@ -1176,11 +1081,7 @@ router.patch(
   "/trips/:id/photos/:photoId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -1203,7 +1104,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** DELETE /trips/:id/photos/:photoId */
@@ -1211,11 +1112,7 @@ router.delete(
   "/trips/:id/photos/:photoId",
   authenticate,
   requireWriteScope,
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
@@ -1229,7 +1126,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** POST /trips/:id/cover — upload single image and set as coverImageUrl */
@@ -1238,11 +1135,7 @@ router.post(
   authenticate,
   requireWriteScope,
   uploadTripCover.single("cover"),
-  async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const uploaded = req.file;
     try {
       const userId = req.userId!;
@@ -1273,10 +1166,7 @@ router.post(
           // Rebuild from the trusted dir + basename of multer's generated
           // filename, not the raw uploaded.path — defense-in-depth + clears
           // the CodeQL js/path-injection taint.
-          const safePath = path.join(
-            getTripPhotoDir(),
-            path.basename(uploaded.filename),
-          );
+          const safePath = path.join(getTripPhotoDir(), path.basename(uploaded.filename));
           fs.existsSync(safePath) && fs.unlinkSync(safePath);
         } catch (_e) {
           logger.warn({
@@ -1288,7 +1178,7 @@ router.post(
       }
       next(error);
     }
-  },
+  }
 );
 
 interface PhotoDto {

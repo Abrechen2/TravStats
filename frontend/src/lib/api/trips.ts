@@ -230,17 +230,23 @@ export const tripsApi = {
 
   /* ─────────── LLM summary ─────────── */
 
+  /**
+   * `language` is the reader's UI language: the server keeps no per-user
+   * language and until 2026-09-05 wrote German for everyone.
+   */
   summarize: async (
-    tripId: string
-  ): Promise<{ summary: string; model: string; durationMs: number }> => {
+    tripId: string,
+    language: "de" | "en"
+  ): Promise<{ summary: string; model: string; language: "de" | "en"; durationMs: number }> => {
     // Ollama generation routinely takes >10s, so use the long PARSER timeout —
     // the 10s DEFAULT aborts the request while the backend is still generating,
     // surfacing an error toast even though the summary succeeds server-side.
-    const { data } = await api.post<{ summary: string; model: string; durationMs: number }>(
-      `/trips/${tripId}/summarize`,
-      undefined,
-      { timeout: API_TIMEOUTS.PARSER }
-    );
+    const { data } = await api.post<{
+      summary: string;
+      model: string;
+      language: "de" | "en";
+      durationMs: number;
+    }>(`/trips/${tripId}/summarize`, { language }, { timeout: API_TIMEOUTS.PARSER });
     return data;
   },
 };

@@ -110,7 +110,10 @@ export function applyTemplate(
     if (el.length > 0) {
       const rawText = el.first().text().trim();
       if (rawText) {
-        result.coPassengers = rawText.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+        result.coPassengers = rawText
+          .split(/[,;]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
         matchedFields++;
       }
     }
@@ -123,4 +126,98 @@ export function applyTemplate(
   }
 
   return result;
+}
+
+/**
+ * Cut a multi-leg mail into its leg blocks.
+ *
+ * Returns `{ header, blocks }`, or null when the template declares no
+ * segments or the text holds fewer than two — a single leg is the plain
+ * `applyTemplate` case and must stay byte-identical to what it was.
+ */
+export function splitSegments(
+  template: AirlineTemplate,
+  plainText: string
+): { header: string; blocks: string[] } | null {
+  const segments = template.segments;
+  if (!segments?.splitPattern || !plainText) return null;
+  let re: RegExp;
+  let fence: { start: number; end: number };
+  try {
+    re = new RegExp(segments.splitPattern, "gim");
+    fence = fenceOf(plainText, segments.startAfter, segments.endBefore);
+  } catch {
+    return null;
+  }
+  const region = plainText.slice(fence.start, fence.end);
+  const starts = [...region.matchAll(re)].map((m) => (m.index ?? 0) + fence.start);
+  if (starts.length < 2) return null;
+  const header = plainText.slice(0, starts[0]);
+  const blocks = starts.map((start, i) =>
+    plainText.slice(start, i + 1 < starts.length ? starts[i + 1] : fence.end)
+  );
+  return { header, blocks };
+}
+
+/**
+ * Where in the text legs may be looked for. A missing marker means "from the
+ * start" / "to the end"; a marker that does not occur is treated the same way
+ * rather than yielding an empty region — a fence is a hint about a layout,
+ * and a mail that lacks the heading is not thereby leg-less.
+ */
+function fenceOf(
+  text: string,
+  startAfter: string | undefined,
+  endBefore: string | undefined
+): { start: number; end: number } {
+  let start = 0;
+  if (startAfter) {
+    const m = new RegExp(startAfter, "im").exec(text);
+    if (m) start = m.index + m[0].length;
+  }
+  let end = text.length;
+  if (endBefore) {
+    const m = new RegExp(endBefore, "im").exec(text.slice(start));
+    if (m) end = start + m.index;
+  }
+  return { start, end };
+}
+
+/**
+ * "13:40 Uhr +1" — the arrival lands the next day. The date+time join in
+ * `applyTextPatterns` carries the block's heading date, so a red-eye's arrival
+ * would otherwise be stamped on the departure day and last minus ten hours.
+ */
+const DAY_OFFSET_AFTER_TIME = /(\d{1,2}:\d{2})\s+Uhr\s+\+(\d)\b/g;
+
+export function applyArrivalDayOffset(booking: ParsedBooking, block: string): ParsedBooking {
+  const arrival = booking.arrivalTime;
+  if (!arrival || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(arrival)) return booking;
+  const arrivalClock = arrival.slice(11);
+  for (const m of block.matchAll(DAY_OFFSET_AFTER_TIME)) {
+    if (m[1].padStart(5, "0") !== arrivalClock) continue;
+    const shifted = new Date(`${arrival}:00Z`);
+    shifted.setUTCDate(shifted.getUTCDate() + Number(m[2]));
+    return { ...booking, arrivalTime: shifted.toISOString().slice(0, 16) };
+  }
+  return booking;
+}
+
+/**
+ * Every leg a template can read from one mail.
+ *
+ * One booking per segment where the template declares segments and the mail
+ * has them; the single-leg path otherwise. HTML selectors are single-leg by
+ * nature (the first element wins), so a segmented mail is read from its text.
+ */
+export function applyTemplateAll(
+  template: AirlineTemplate,
+  plainText: string,
+  htmlContent: string
+): ParsedBooking[] {
+  const split = splitSegments(template, plainText);
+  if (!split) return [applyTemplate(template, plainText, htmlContent)];
+  return split.blocks.map((block) =>
+    applyArrivalDayOffset(applyTemplate(template, `${split.header}\n${block}`, ""), block)
+  );
 }

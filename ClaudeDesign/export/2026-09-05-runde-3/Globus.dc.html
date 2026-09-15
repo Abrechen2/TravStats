@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="01b Globus" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Globus · Signaturmoment</h1><div style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">Der erste Bildschirm nach dem Anmelden. Festgelegt: Kugel, Ozean, Landmasse, Atmosphäre, Routen, Auswahl, Hover, Zeitleiste — alles aus Tokens, nichts hart codiert.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a href="Dashboard.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-globe"></use></svg>Im Dashboard</a></div></div>
+    <div style="display:grid;grid-template-columns:{{ cols }};gap:24px;align-items:start">
+      <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;background:#07090c;padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div style="position:relative;aspect-ratio:1;max-width:560px;width:100%;margin:0 auto">
+          <svg viewBox="0 0 400 400" style="width:100%;height:100%;display:block;overflow:visible">
+            <defs>
+              <radialGradient id="g-sphere" cx="38%" cy="34%" r="70%"><stop offset="0" stop-color="#1a1f26"/><stop offset="0.55" stop-color="#101317"/><stop offset="1" stop-color="#07090c"/></radialGradient>
+              <radialGradient id="g-atmo" cx="50%" cy="50%" r="50%"><stop offset="0.86" stop-color="rgba(111,160,214,0)"/><stop offset="0.96" stop-color="rgba(111,160,214,0.22)"/><stop offset="1" stop-color="rgba(111,160,214,0)"/></radialGradient>
+              <clipPath id="c-sphere"><circle cx="200" cy="200" r="170"/></clipPath>
+              <filter id="f-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+            </defs>
+            <circle cx="200" cy="200" r="196" fill="url(#g-atmo)"/>
+            <circle cx="200" cy="200" r="170" fill="url(#g-sphere)" stroke="rgba(231,227,220,0.12)"/>
+            <g clip-path="url(#c-sphere)" style="animation:ts-rotate 240s linear infinite;transform-origin:200px 200px">
+              <g fill="#1a1f26" stroke="rgba(231,227,220,0.06)"><ellipse cx="150" cy="150" rx="58" ry="40"/><ellipse cx="240" cy="120" rx="70" ry="34"/><ellipse cx="270" cy="220" rx="46" ry="60"/><ellipse cx="120" cy="250" rx="34" ry="54"/><ellipse cx="205" cy="300" rx="52" ry="26"/></g>
+              <g fill="none" stroke="rgba(231,227,220,0.05)"><circle cx="200" cy="200" r="120"/><circle cx="200" cy="200" r="70"/><path d="M30 200 H370 M200 30 V370"/></g>
+            </g>
+            <!-- Routen: Flüge geflogen (domain.flight, 2 px), geplant (info, gestrichelt), Kreuzfahrt (domain.cruise, flach) -->
+            <path d="M120 250 Q 190 110 270 150" fill="none" stroke="#f0a947" stroke-width="2" stroke-opacity="0.85"/>
+            <path d="M150 150 Q 200 60 300 130" fill="none" stroke="#f0a947" stroke-width="2" stroke-opacity="0.85"/>
+            <path d="M140 165 Q 230 40 280 210" fill="none" stroke="#6fa0d6" stroke-width="2" stroke-dasharray="5 5" stroke-opacity="0.9"/>
+            <path d="M255 230 C 265 250, 240 280, 215 300" fill="none" stroke="#4aa6b0" stroke-width="2.5"/>
+            <!-- Ausgewählte Route: Glow + breiter -->
+            <path d="M120 250 Q 200 150 300 130" fill="none" stroke="#f0a947" stroke-width="8" stroke-opacity="0.35" filter="url(#f-glow)"/>
+            <path d="M120 250 Q 200 150 300 130" fill="none" stroke="#f6bd66" stroke-width="3"/>
+            <!-- Flughäfen: Punkt 6 px, Hover 9 px + Ring -->
+            <g fill="#f0a947"><circle cx="120" cy="250" r="3"/><circle cx="270" cy="150" r="3"/><circle cx="150" cy="150" r="3"/><circle cx="280" cy="210" r="3" fill="#6fa0d6"/></g>
+            <circle cx="300" cy="130" r="4.5" fill="#f6bd66" stroke="rgba(246,189,102,0.35)" stroke-width="6"/>
+            <g fill="#4aa6b0"><circle cx="255" cy="230" r="3"/><circle cx="215" cy="300" r="3"/></g>
+          </svg>
+          <!-- Hover-Karte -->
+          <div style="position:absolute;left:68%;top:22%;transform:translateX(-50%);background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;box-shadow:0 8px 20px rgba(0,0,0,0.4);animation:ts-menu 200ms ease-out;min-width:180px">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:600;color:#f4ece0">MUC</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">München</span></div>
+            <div style="display:flex;gap:10px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)"><span><span style="color:#e7e3dc">41</span> Besuche</span><span><span style="color:#e7e3dc">6</span> Airlines</span></div>
+            <div style="font-size:11px;color:rgba(231,227,220,0.6)">Letzter Besuch <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">2026-08-30</span> · Klick öffnet die Route</div>
+          </div>
+        </div>
+        <!-- Zeitleiste -->
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px;padding:0">Zeitachse · Abspielen</span><span style="display:flex;gap:6px"><sc-for list="{{ tlModes }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.onClick }}" style="height:26px;padding:0 10px;border-radius:999px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.color }};font-weight:600;font-size:11px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease">{{ m.label }}</button></sc-for></span></div>
+          <div style="display:flex;align-items:center;gap:12px"><button onClick="{{ togglePlay }}" style="width:36px;height:36px;border-radius:12px;background:#f0a947;border:none;color:#0b0d10;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="{{ playIcon }}"></use></svg></button><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">2015</span><span style="flex:1;height:2px;background:rgba(231,227,220,0.12);position:relative"><span style="position:absolute;left:0;top:0;height:2px;background:#f0a947;width:{{ progress }};transition:width 200ms linear"></span><span style="position:absolute;left:{{ progress }};top:-6px;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#f0a947;box-shadow:0 0 0 3px rgba(240,169,71,0.18);transition:left 200ms linear"></span></span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:#f4ece0">{{ year }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">· {{ speed }}</span></div>
+          <div style="font-size:11px;color:rgba(231,227,220,0.6)">Beim Ziehen zeichnen sich die Routen des Jahres nach; „Filter“ blendet alles außerhalb aus, „Abspielen“ läuft 30 T/s.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Festlegungen</div>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:4px 20px;display:flex;flex-direction:column"><sc-for list="{{ spec }}" as="s" hint-placeholder-count="12"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;min-height:48px;padding:8px 0;border-bottom:1px solid {{ s.divider }}"><span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:600">{{ s.k }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ s.note }}</span></span><span style="display:flex;align-items:center;gap:8px"><sc-if value="{{ s.swatch }}" hint-placeholder-val="{{ false }}"><span style="width:14px;height:14px;border-radius:4px;background:{{ s.swatch }};border:1px solid rgba(231,227,220,0.18)"></span></sc-if><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:#e7e3dc;white-space:nowrap">{{ s.v }}</span></span></div></sc-for></div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);padding:0 4px;text-wrap:pretty">Heute hart codiert in <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">MapContainer3D</span> und den Layern; Ziel: jede Zeile hier ist ein Token oder eine Regel in <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">tokens.json › map</span>.</div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic { state = { S: null, menu: null, narrow: false, playing: false, year: 2026, tl: 'Abspielen' };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._r = () => this.setState({ narrow: window.innerWidth < 960 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); clearInterval(this._i); }
+  renderVals() { const S = this.state.S; if (!S) return {}; const T = S.T; const st = this.state; const set = p => this.setState(p);
+    const chip = v => ({ label: v, onClick: () => set({ tl: v }), bg: st.tl === v ? T.accent : 'transparent', color: st.tl === v ? T.bg : T.text, border: st.tl === v ? T.accent : 'rgba(231,227,220,0.18)' });
+    return { ...S.navModel('dashboard', st, set), stop: e => e.stopPropagation(), cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(0,1.3fr) minmax(300px,1fr)',
+      tlModes: ['Aus', 'Abspielen', 'Filter'].map(chip), playIcon: S.I(st.playing ? 'x' : 'arrow-right'), togglePlay: () => { if (st.playing) { clearInterval(this._i); set({ playing: false }); } else { set({ playing: true, year: 2015 }); this._i = setInterval(() => this.setState(s => s.year >= 2026 ? (clearInterval(this._i), { playing: false }) : { year: s.year + 1 }), 700); } },
+      year: st.year, progress: Math.round((st.year - 2015) / 11 * 100) + '%', speed: '30 T/s',
+      spec: [['Kugel · Ozean', 'surface2 → canvas als Radialverlauf, Lichtquelle 38 % / 34 %', '#101317 → #07090c', '#101317'], ['Landmasse', 'tile, Hairline border 6 %', '#1a1f26', '#1a1f26'], ['Atmosphären-Rand', 'info bei 22 %, 10 % Breite außerhalb der Kugel', 'info · α .22', '#6fa0d6'], ['Gradnetz', 'Tinte 5 %, nur bei Zoom < 3', 'text · α .05', ''], ['Route Flug · geflogen', 'domainColor.flight, 2 px, Bogen', '#f0a947 · 2 px', '#f0a947'], ['Route Flug · geplant', 'info, 2 px, gestrichelt 5/5', '#6fa0d6 · dash', '#6fa0d6'], ['Route Kreuzfahrt', 'domainColor.cruise, 2,5 px, flach', '#4aa6b0 · 2.5 px', '#4aa6b0'], ['Ausgewählte Route', 'accentHover 3 px + Glow 8 px bei 35 % (blur 3)', '#f6bd66 + glow', '#f6bd66'], ['Flughafen', 'Punkt 6 px in Domänenfarbe; Hover 9 px + Ring 6 px bei 35 %', '6 → 9 px', ''], ['Hover-Karte', 'surface2, Radius 12, IATA mono, Besuche · Airlines · letzter Besuch', 'ts-menu 200 ms', ''], ['Auto-Rotation', '240 s / Umdrehung, stoppt bei Interaktion', '240 s', ''], ['Zeitleiste', 'unter der Kugel, Aus · Abspielen · Filter, 30 T/s', 'accent', '#f0a947'], ['Performance', 'Auto · Lite · Voll — Lite ohne Glow und Atmosphäre', 'Auto', ''], ['Reduzierte Bewegung', 'keine Rotation, keine Nachzeichnung', '0', '']].map(([k, note, v, swatch], i, a) => ({ k, note, v, swatch: swatch || false, divider: i === a.length - 1 ? 'transparent' : 'rgba(231,227,220,0.12)' })) }; } }
+</script>
+</body>
+</html>

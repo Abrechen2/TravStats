@@ -47,16 +47,16 @@ describe("DomainPickerStep", () => {
     }
   });
 
-  // A fresh install has never fetched /settings, so the flag is unknown and
-  // reads as OFF. That is the right answer for the setup wizard: a brand-new
-  // instance must not be offered a domain that is still in beta.
+  // A fresh install has never fetched /settings, so the flag is unknown. Until
+  // 2026-09-05 that hid the poi card (a new instance was not to be offered a
+  // domain in beta); the domain left the switch, so the card is always there.
   it.each([
     ["off", false],
     ["unknown (not loaded yet)", null],
-  ])("omits the poi card when the beta flag is %s", (_label, flag) => {
+  ])("offers the poi card when the beta flag is %s", (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     render(<DomainPickerStep value={["flight"]} onChange={vi.fn()} />);
-    expect(screen.queryByTestId("domain-card-poi")).toBeNull();
+    expect(screen.getByTestId("domain-card-poi")).toBeInTheDocument();
     expect(screen.getByTestId("domain-card-flight")).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import type { ProviderAvailability } from "../types";
 import type { ParsedBooking } from "../../bookingParser";
 import { templateRegistry } from "../templates/registry";
 import { detectAirline } from "../templates/detector";
-import { applyTemplate } from "../templates/engine";
+import { applyTemplateAll } from "../templates/engine";
 import { buildAirlineNotice, recordParseResult } from "../../trainingRecorder";
 import logger from "../../../utils/logger";
 
@@ -24,7 +24,7 @@ export class TemplateParser {
     const fromMatch = /^From:\s*(.+)$/im.exec(text);
     const fromAddress = fromMatch ? fromMatch[1].trim() : "";
 
-    const detectedIata = detectAirline(fromAddress, subject, html ?? "");
+    const detectedIata = detectAirline(fromAddress, subject, html ?? "", text);
     const template = detectedIata ? templateRegistry.getTemplate(detectedIata) : null;
 
     if (userId) {
@@ -44,8 +44,12 @@ export class TemplateParser {
       return [];
     }
 
-    const parsed = applyTemplate(template, text, html ?? "");
-    parsed.airlineNotice = buildAirlineNotice(detectedIata);
-    return [parsed];
+    // One booking per leg where the template knows how a mail is segmented
+    // (see `AirlineTemplate.segments`); one booking otherwise, as before.
+    const notice = buildAirlineNotice(detectedIata);
+    return applyTemplateAll(template, text, html ?? "").map((parsed) => ({
+      ...parsed,
+      airlineNotice: notice,
+    }));
   }
 }

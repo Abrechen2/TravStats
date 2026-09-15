@@ -1,58 +1,41 @@
-import { useBetaFeatureAccess } from "./useBetaFeatures";
 import { useEnabledDomains } from "./useEnabledDomains";
 
 /**
- * Whether the Places (POI) domain may be shown at all.
+ * Whether the Places (POI) domain may be shown.
  *
- * TWO independent conditions, and they answer different questions:
- *
- *   - `isEnabled("poi")`            — does THIS USER want the domain?
- *   - `isFeatureVisible("poiDomain")` — is the INSTANCE allowed to show it?
- *
- * Both must hold. They are combined here rather than at each call site because
- * there are six of them (nav, dashboard tab, dashboard counts, /places route,
- * the module toggle, the trip timeline) and a rule spread over six files is a
- * rule that will be applied five times after the next change. The registry
- * comment in config/betaFeatures.ts makes the same argument about bare
- * booleans, and this is the same failure one level up.
+ * ONE condition since 2026-09-05: `isEnabled("poi")` -- does THIS USER want
+ * the domain. Until then there was a second, the `poiDomain` beta gate
+ * -- was the INSTANCE allowed to show it -- and this hook existed to combine
+ * the two in one place because there were six call sites (nav, dashboard tab,
+ * dashboard counts, /places route, the module toggle, the trip timeline) and a
+ * rule spread over six files is a rule applied five times after the next
+ * change. The gate came off when its own condition was met (the CSV import
+ * got its surface, POI Phase D section 5); the hook stays, because the call
+ * sites still ask one question and the answer still deserves one home.
  *
  * VISIBILITY ONLY. `/api/v1/places` stays reachable for any authenticated
- * user whatever this returns — the beta flag is not an authorisation check,
- * and treating it as one would be the bug, not the feature. It also means a
- * user's places survive the flag being turned off: the rows are untouched and
- * reappear when it comes back on.
+ * user whatever this returns -- a user's places survive the domain being
+ * switched off: the rows are untouched and reappear when it comes back on.
  */
 export function usePlacesVisible(): boolean {
   return usePlacesAccess() === "allowed";
 }
 
 /**
- * The same rule as a THREE-state answer, for callers that must not treat
- * "don't know yet" as "no".
+ * The same rule as a THREE-state answer, for the route guards and the stats
+ * tab rule that were written for one.
  *
- * `betaFeaturesEnabled` is instance state and is deliberately never persisted
- * to localStorage (see the `partialize` in store/settingsStore.ts), so on a
- * cold load it is `null` until `GET /settings` answers. `enabledDomains` IS
- * persisted, which is why the other domains' routes survive a refresh and this
- * one did not: a hard navigation to /places evaluated the guard while the flag
- * was still unknown and redirected to the dashboard. Bookmarking the page,
- * hitting reload on it, or opening a place link in a new tab all bounced.
- * Found by driving a browser; every unit test passed throughout.
- *
- * So: hiding CHROME fails closed (a tab must never flash into view and then
- * vanish — that is what `usePlacesVisible` is for), while a ROUTE waits.
- * Redirecting on "unknown" throws the user off a page they asked for; showing
- * a spinner for one request costs nothing and cannot be wrong.
+ * "pending" is no longer produced: the beta flag that could be unknown for
+ * one request on a cold load is gone from this rule, and `enabledDomains` is
+ * persisted, so the answer is known at first render. The state stays in the
+ * type because `statsTabAccess.ts` and the route guards handle it, and a
+ * three-state consumer of a two-state answer is merely thorough -- the
+ * reverse, which bounced people off /places on every refresh in August, is
+ * the bug this shape was introduced to end.
  */
 export type PlacesAccess = "pending" | "allowed" | "denied";
 
 export function usePlacesAccess(): PlacesAccess {
   const { isEnabled } = useEnabledDomains();
-  // The pending/allowed/denied rule itself lives in useBetaFeatures now — a
-  // second gated route needed the same three states, and the argument this
-  // file makes about a rule spread over six call sites applies to the rule
-  // itself just as much.
-  const gate = useBetaFeatureAccess("poiDomain");
-  if (gate === "pending") return "pending";
-  return isEnabled("poi") && gate === "allowed" ? "allowed" : "denied";
+  return isEnabled("poi") ? "allowed" : "denied";
 }

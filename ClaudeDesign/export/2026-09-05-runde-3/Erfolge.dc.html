@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="19 Erfolge" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Erfolge</h1><div style="font-size:12px;color:rgba(231,227,220,0.6)"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace">83</span> von <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">140</span> freigeschaltet · <span style="font-family:'IBM Plex Mono',ui-monospace,monospace">8 585</span> Punkte · Stufe Gold</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a href="Erfolge.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-settings"></use></svg>Optionen</a><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-link-2"></use></svg>Teilen</button><a href="Bestenliste.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-trophy"></use></svg>Bestenliste</a></div></div>
+
+    <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;align-items:center">
+      <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0">
+          <span style="width:40px;height:40px;border-radius:999px;border:2px solid {{ t.color }};display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ t.fill }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ t.color }}"><use href="#i-trophy"></use></svg></span>
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:700;color:{{ t.color }}">{{ t.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);font-variant-numeric:tabular-nums">{{ t.count }}</span></span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <sc-for list="{{ cats }}" as="f" hint-placeholder-count="6"><button onClick="{{ f.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px" style-hover="border-color:rgba(231,227,220,0.3)">{{ f.label }}<sc-if value="{{ f.count }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;opacity:0.7">{{ f.count }}</span></sc-if></button></sc-for>
+      <span style="flex:1"></span>
+      <sc-for list="{{ doms }}" as="d" hint-placeholder-count="6"><button onClick="{{ d.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ d.border }};background:{{ d.bg }};color:{{ d.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px" style-hover="border-color:rgba(231,227,220,0.3)">{{ d.label }}</button></sc-for>
+      <span style="width:1px;height:24px;background:rgba(231,227,220,0.12)"></span>
+      <sc-for list="{{ states }}" as="s" hint-placeholder-count="3"><button onClick="{{ s.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ s.border }};background:{{ s.bg }};color:{{ s.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;display:inline-flex;align-items:center;gap:8px" style-hover="border-color:rgba(231,227,220,0.3)">{{ s.label }}<sc-if value="{{ s.count }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;opacity:0.7">{{ s.count }}</span></sc-if></button></sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+      <sc-for list="{{ items }}" as="a" hint-placeholder-count="9">
+        <a href="{{ a.href }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;opacity:{{ a.opacity }};border-color:{{ a.border }};color:inherit;text-decoration:none" style-hover="border-color:rgba(231,227,220,0.3);text-decoration:none;color:inherit">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span style="width:44px;height:44px;border-radius:999px;border:2px {{ a.ringStyle }} {{ a.tierColor }};display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ a.fill }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ a.iconColor }}"><use href="{{ a.icon }}"></use></svg></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:700;color:#f4ece0">{{ a.title }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ a.desc }}</span></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:{{ a.tierColor }}">{{ a.tier }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:rgba(231,227,220,0.6)">· {{ a.points }} P</span></span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);font-variant-numeric:tabular-nums">{{ a.meta }}</span>
+          </div>
+          <sc-if value="{{ a.hasBar }}" hint-placeholder-val="{{ false }}"><span style="height:4px;border-radius:999px;background:#101317;overflow:hidden;display:block"><span style="display:block;height:100%;width:{{ a.pct }};background:{{ a.tierColor }};border-radius:999px"></span></span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:center;padding-top:14px">{{ footer }}</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, cat: 'Alle', st: 'Alle', dom: 'Alle' };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const s = this.state;
+    const cats = ['Alle','Entdecker','Distanz','Sammler','Elite','Spezial','Planer','Überlebenskünstler','Kurios'];
+    const DOM = { plane: 'Flug', globe: 'Flug', route: 'Flug', layers: 'Flug', 'map-pin': 'Flug', clock: 'Flug', check: 'Flug', ship: 'Kreuzfahrt', 'book-open': 'Übergreifend', map: 'Übergreifend', mail: 'Übergreifend' };
+    const chip = (key, label, count) => ({ label, count: count || false, onClick: () => set({ [key]: label }), bg: s[key] === label ? T.accent : 'transparent', color: s[key] === label ? T.bg : T.text, border: s[key] === label ? T.accent : 'rgba(231,227,220,0.18)' });
+    const A = S.ACHIEVEMENTS; const TIER = S.TIERS;
+    const rows = A.map(a => { const v = S.achView(S, a); return { ...v, opacity: v.done ? 1 : 0.75, border: 'rgba(231,227,220,0.12)', hasBar: !v.done, pct: v.pctLabel }; });
+    const items = rows.filter(r => (s.cat === 'Alle' || r.cat === s.cat) && (s.st === 'Alle' || (s.st === 'Erreicht') === r.done) && (s.dom === 'Alle' || DOM[A.find(a => a[0] === r.id)[3]] === s.dom)).sort((a, b) => (b.done - a.done) || (b.points - a.points));
+    return { ...S.navModel('achievements', s, set), stop: e => e.stopPropagation(),
+      tiers: Object.entries(TIER).map(([k, [name, color]]) => ({ name, color, fill: S.rgba(color, .1), count: ({ bronze: '41 / 52', silver: '24 / 38', gold: '12 / 30', platinum: '5 / 14', diamond: '1 / 6' })[k] })),
+      cats: cats.map(c => chip('cat', c, c === 'Alle' ? A.length : A.filter(a => a[2] === c).length)),
+      states: ['Alle','Erreicht','Offen'].map(c => chip('st', c)), doms: ['Alle','Flug','Kreuzfahrt','Unterkunft','Orte','Übergreifend'].map(c => chip('dom', c)),
+      items, footer: items.length + ' Erfolge angezeigt · Regeln werden serverseitig nach jedem Eintrag geprüft' };
+  }
+}
+</script>
+</body>
+</html>

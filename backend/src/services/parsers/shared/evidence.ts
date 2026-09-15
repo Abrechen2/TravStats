@@ -1,4 +1,6 @@
 import logger from "../../../utils/logger";
+import { resolveAirlineCodes } from "../../../utils/airlineNormalize";
+import { isCurrencyCode } from "../../../shared/currencies";
 import type { ParsedBooking } from "../../bookingParser";
 
 /**
@@ -20,9 +22,34 @@ import type { ParsedBooking } from "../../bookingParser";
  * So: one rule, applied to whatever the chosen provider returns.
  */
 export function hasFlightEvidence(booking: Partial<ParsedBooking>): boolean {
-  const hasFlightNumber = Boolean(booking.flightNumber);
   const hasRoute = Boolean(booking.departureCode && booking.arrivalCode);
-  return hasFlightNumber || hasRoute;
+  if (hasRoute) return true;
+  return isCredibleFlightNumber(booking.flightNumber);
+}
+
+/**
+ * A flight number standing ALONE — no route beside it — is evidence only when
+ * its letters name an airline.
+ *
+ * Measured 2026-09-05 on 108 hotel confirmations run through the flight
+ * parser: 38 came back as a flight, none with a route, every "number" a price
+ * or a word with digits after it — CHF0 fourteen times, SIE20, AED350, NOK0,
+ * BIS14, VON08. Each satisfied the old rule ("a flight number or a route"),
+ * because the regex parser had picked the first unknown candidate when no
+ * known airline was among them, and a number alone was enough.
+ *
+ * So the letters are asked two questions: are they a currency (ISO 4217 —
+ * never an airline), and does the catalogue know them as an airline (IATA or
+ * ICAO)? A route beside the number is still evidence on its own, so an airline
+ * the catalogue has not heard of loses nothing as long as the mail names the
+ * airports — which a real confirmation does.
+ */
+export function isCredibleFlightNumber(flightNumber: string | undefined): boolean {
+  if (!flightNumber) return false;
+  const prefix = /^[A-Z]+/.exec(flightNumber.toUpperCase())?.[0] ?? "";
+  if (prefix.length < 2 || prefix.length > 3) return false;
+  if (isCurrencyCode(prefix)) return false;
+  return resolveAirlineCodes(prefix) !== null;
 }
 
 /**
