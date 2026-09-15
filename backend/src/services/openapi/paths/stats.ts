@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
+import { lodgingStatsResponseSchema } from "../../../schemas/statsLodging";
 import { cruiseStatsResponseSchema } from "../../../schemas/statsCruise";
 import {
   travelRecordsResponseSchema,
@@ -200,7 +201,6 @@ function readOnlyStat(path: string, summary: string, description?: string): void
   });
 }
 
-readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
 const continentSchema = z.enum([
   "Africa",
   "Antarctica",
@@ -332,6 +332,29 @@ registry.registerPath({
     "predicates the country drill-down uses — and carries a `lodging` stamp: the " +
     "nights proved by stays that happened and the town that stands for them, or null " +
     "when no house proves the country.",
+});
+
+const lodgingStats = registry.register(
+  "LodgingStats",
+  lodgingStatsResponseSchema.openapi("LodgingStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/lodging",
+  summary: "Lodging statistics",
+  description:
+    "A stay counts as nights only after its CHECK-OUT, so a stay in progress is " +
+    "not yet in the totals; what is booked ahead is reported separately as " +
+    "`plannedNights`. Money is only summed for stays whose FX snapshot matches " +
+    "the current base currency — the rest are counted, not converted.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Lodging aggregates, with price, ratings, geography, rhythm and loyalty",
+      content: { "application/json": { schema: lodgingStats } },
+    },
+  },
 });
 
 const countryDetail = registry.register(
