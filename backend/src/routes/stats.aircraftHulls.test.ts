@@ -19,6 +19,7 @@ jest.mock('../middleware/rateLimit', () => ({
 
 import request from 'supertest';
 import express from 'express';
+import { aircraftRankingResponseSchema } from '../schemas/statsAircraft';
 
 describe('GET /api/v1/stats/aircraft', () => {
   let app: express.Express;
@@ -44,5 +45,33 @@ describe('GET /api/v1/stats/aircraft', () => {
         where: expect.objectContaining({ status: { in: ['flown', 'historical'] } }),
       }),
     );
+  });
+
+  /**
+   * The route infers its TYPES from `schemas/statsAircraft`, which tsc checks —
+   * but a type is not a value. This parses what actually went over the wire, so
+   * the spec published to clients is held against the bytes rather than against
+   * a compile-time promise (forgejo#52).
+   */
+  it('answers a body the published schema accepts', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        aircraftRegistration: 'D-AIZP',
+        airline: 'Lufthansa',
+        aircraft: 'Airbus A320neo',
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 40.6413,
+        arrLon: -73.7781,
+        departureTime: new Date('2026-05-01T06:00:00.000Z'),
+        status: 'flown',
+      },
+    ]);
+
+    const res = await request(app).get('/api/v1/stats/aircraft');
+
+    const parsed = aircraftRankingResponseSchema.safeParse(res.body);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
+    expect(res.body.aircraft).toHaveLength(1);
   });
 });

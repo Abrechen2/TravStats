@@ -17,22 +17,22 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { AuthRequest } from '../../middleware/auth';
 import { countableFlightWhere } from '../../shared/flightCounting';
+// The response shapes live in `schemas/statsAircraft` and this file infers
+// from them, so the spec and the handler cannot describe different things
+// (forgejo#52).
+import type {
+  AircraftTypeItem,
+  AircraftRankingItem,
+  AircraftTypesResponse,
+  AircraftRankingResponse,
+  AircraftProfileResponse,
+  AircraftProfileFlight,
+} from '../../schemas/statsAircraft';
 import { calculateDistance } from '../../utils/geo';
 
 const router = Router();
 
 // ─── Aircraft type ranking ──────────────────────────────────────────────────
-
-interface AircraftTypeItem {
-  aircraft: string;
-  count: number;
-  percentage: number;
-}
-
-interface AircraftTypesResponse {
-  aircraftTypes: AircraftTypeItem[];
-  total: number;
-}
 
 // GET /api/v1/stats/aircraft-types — ranking by aircraft TYPE ("Airbus A320neo").
 // Distinct from /stats/aircraft, which ranks tail numbers and only sees
@@ -74,21 +74,6 @@ router.get(
 );
 
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
-
-interface AircraftRankingItem {
-  registration: string;
-  count: number;
-  airline: string | null;
-  aircraft: string | null;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-}
-
-interface AircraftRankingResponse {
-  aircraft: AircraftRankingItem[];
-  total: number;
-}
 
 // GET /api/v1/stats/aircraft — top tail numbers ("Hulls" tab).
 // Excludes flights without registration so the ranking only reflects
@@ -157,33 +142,6 @@ router.get(
     }
   },
 );
-
-interface AircraftProfileFlight {
-  id: string;
-  flightNumber: string | null;
-  airline: string | null;
-  depIata: string | null;
-  arrIata: string | null;
-  depName: string | null;
-  arrName: string | null;
-  departureTime: string | null;
-  arrivalTime: string | null;
-  distanceKm: number;
-  status: string;
-}
-
-interface AircraftProfileResponse {
-  registration: string;
-  modeS: string | null;
-  airline: string | null;
-  aircraft: string | null;
-  flightCount: number;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-  uniqueAirports: number;
-  flights: AircraftProfileFlight[];
-}
 
 // GET /api/v1/stats/aircraft/:registration — per-tail profile.
 // Returns aggregate stats plus the user's flights on that hull, newest

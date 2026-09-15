@@ -3,6 +3,11 @@
  */
 
 import { z } from "zod";
+import {
+  aircraftRankingResponseSchema,
+  aircraftTypesResponseSchema,
+  aircraftProfileResponseSchema,
+} from "../../../schemas/statsAircraft";
 
 import { registry } from "../registry";
 
@@ -182,8 +187,6 @@ readOnlyStat("/stats/routes", "Most-flown routes");
 readOnlyStat("/stats/airlines", "Airlines, by flights and distance");
 readOnlyStat("/stats/airports", "Airports, by visits and by role as origin or destination");
 readOnlyStat("/stats/countries", "Countries reached", "Counted by country CODE, not by the spelling a geocoder returned — the same country arriving as \"Egypt\" and as its own-language name is one country here.");
-readOnlyStat("/stats/aircraft", "Individual aircraft flown, by registration");
-readOnlyStat("/stats/aircraft-types", "Aircraft types flown");
 readOnlyStat("/stats/seats", "Seats and cabin classes");
 readOnlyStat("/stats/punctuality", "Delays, where actual times are known", "Only flights carrying an actual departure or arrival contribute; a flight with scheduled times alone is not counted as on time.");
 readOnlyStat("/stats/business", "Business travel");
@@ -387,6 +390,55 @@ registry.registerPath({
   },
 });
 
+// The three aircraft rankings carry their shapes, from the schemas the route
+// itself infers from (forgejo#52). The rest of this file still answers with a
+// description alone, which is what the response-schema ratchet records.
+const aircraftRanking = registry.register(
+  "AircraftRanking",
+  aircraftRankingResponseSchema.openapi("AircraftRanking")
+);
+const aircraftTypes = registry.register(
+  "AircraftTypes",
+  aircraftTypesResponseSchema.openapi("AircraftTypes")
+);
+const aircraftProfile = registry.register(
+  "AircraftProfile",
+  aircraftProfileResponseSchema.openapi("AircraftProfile")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/aircraft",
+  summary: "Individual aircraft flown, by registration",
+  description:
+    "Only flights carrying a registration appear, so this reflects the " +
+    "AeroDataBox-enriched rows rather than the whole logbook.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Airframes, most-flown first",
+      content: { "application/json": { schema: aircraftRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/aircraft-types",
+  summary: "Aircraft types flown",
+  description:
+    "Ranked by TYPE (\"Airbus A320neo\"), unlike /stats/aircraft which ranks tail " +
+    "numbers. `total` is the user's whole flight count, so percentages need not " +
+    "sum to 100 — the gap is the flights with no type recorded.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Types, most-flown first",
+      content: { "application/json": { schema: aircraftTypes } },
+    },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/stats/aircraft/{registration}",
@@ -395,7 +447,10 @@ registry.registerPath({
   tags: statsTag,
   request: { params: z.object({ registration: z.string() }) },
   responses: {
-    200: { description: "Aircraft history" },
+    200: {
+      description: "Aircraft history",
+      content: { "application/json": { schema: aircraftProfile } },
+    },
     404: { description: "No flights on that registration" },
   },
 });
