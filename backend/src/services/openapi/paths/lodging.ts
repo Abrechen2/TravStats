@@ -23,6 +23,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   createLodgingSchema,
+  proposeLodgingSchema,
   updateLodgingSchema,
   createStaySchema,
   updateStaySchema,
@@ -34,6 +35,11 @@ import {
 const lodgingCreateInput = registry.register(
   "LodgingCreateInput",
   createLodgingSchema.openapi("LodgingCreateInput")
+);
+
+const proposeLodgingInput = registry.register(
+  "LodgingProposeInput",
+  proposeLodgingSchema.openapi("LodgingProposeInput")
 );
 
 const lodgingUpdateInput = registry.register(
@@ -145,6 +151,75 @@ registry.registerPath({
       description: "Lodgings, without their stays",
       content: { "application/json": { schema: z.array(lodging) } },
     },
+  },
+});
+
+const lodgingProposal = registry.register(
+  "LodgingProposal",
+  z
+    .object({
+      action: z.enum(["create", "merge"]).openapi({
+        description:
+          "`merge` means a stored house is close enough to ASK the person about. " +
+          "It never means the server merged anything — this route writes nothing.",
+      }),
+      match: z
+        .object({
+          id: z.string().uuid(),
+          name: z.string(),
+          address: z.string().nullable(),
+          city: z.string().nullable(),
+          distanceMetres: z
+            .number()
+            .nullable()
+            .openapi({
+              description:
+                "Metres between the geocoded scan and the stored pin. Null when the " +
+                "match came from the name because one side had no coordinates.",
+            }),
+          stayCount: z.number().int(),
+          fillsFields: z.array(z.string()).openapi({
+            description: "Columns the stored row is missing that this scan could complete.",
+            example: ["address", "coordinates"],
+          }),
+        })
+        .nullable(),
+      reason: z.enum(["coordinates", "name"]).nullable(),
+      confidence: z.number().openapi({
+        description:
+          "Ordinal, not a probability: it exists so a client can sort candidates and " +
+          "pick a threshold. Do not show it to a user as a percentage.",
+        example: 0.95,
+      }),
+    })
+    .openapi("LodgingProposal")
+);
+
+registry.registerPath({
+  method: "post",
+  path: "/lodging/propose",
+  summary: "Ask whether a scanned house is one already stored",
+  description:
+    "Answers without writing. The server geocodes the incoming address — which the " +
+    "parse does not — and compares positions, so an OCR typo in the name or the town " +
+    "no longer produces a second house. Falls back to a fuzzy name comparison when " +
+    "either side has no coordinates.",
+  tags: ["Lodging"],
+  request: {
+    body: {
+      content: { "application/json": { schema: proposeLodgingInput } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Whether to create or to ask about a match",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: lodgingProposal }),
+        },
+      },
+    },
+    400: { description: "Invalid input", content: errorContent },
   },
 });
 

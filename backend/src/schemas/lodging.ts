@@ -206,6 +206,28 @@ export const updateStaySchema = partialForUpdate(baseStaySchema)
     { message: "checkOut must not precede checkIn", path: ["checkOut"] },
   );
 
+/**
+ * What a scan hands the server to ask "is this that house?" (forgejo#118).
+ *
+ * Deliberately NOT `createLodgingSchema.partial()`. This is a question, not a
+ * draft: the only field it needs is a name, and accepting a type, a star
+ * rating or a chain here would invite a client to send a create payload and
+ * expect it to be remembered. Nothing on this route is written.
+ *
+ * `checkIn`/`checkOut` from the proposal in forgejo#118 are not declared. The
+ * match does not read them today, and declaring a field the answer ignores is
+ * how a contract starts lying. Extra keys are ignored rather than rejected, so
+ * a client that sends them is not broken by their absence.
+ */
+export const proposeLodgingSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  address: z.string().max(300).nullable().optional(),
+  city: z.string().max(120).nullable().optional(),
+  country: z.string().max(120).nullable().optional(),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lon: z.number().min(-180).max(180).nullable().optional(),
+});
+
 export const lodgingQuerySchema = z.object({
   type: z.enum(LODGING_TYPES).optional(),
   chainId: z.coerce.number().int().positive().optional(),
