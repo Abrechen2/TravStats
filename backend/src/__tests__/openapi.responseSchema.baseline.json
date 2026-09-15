@@ -49,8 +49,6 @@
   "GET /stats/countries/{code}",
   "GET /stats/cruise",
   "GET /stats/lodging",
-  "GET /stats/records",
-  "GET /stats/travel-account",
   "GET /stats/wrapped",
   "GET /template-status",
   "GET /training/{id}",

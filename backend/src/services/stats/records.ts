@@ -47,37 +47,10 @@ export interface RecordFlightInput {
   status: string;
 }
 
-export type RecordId =
-  | "longest-flight"
-  | "shortest-flight"
-  | "busiest-day"
-  | "longest-aloft"
-  | "biggest-delay"
-  | "northernmost"
-  | "longest-streak";
-
-export type RecordUnit = "km" | "minutes" | "flights" | "days" | "degrees-north";
-
-export interface TravelRecord {
-  id: RecordId;
-  value: number;
-  unit: RecordUnit;
-  /** The flight this record is about, when it is about one. */
-  flightId?: string;
-  /** The airport it is about, when the record names a place rather than a leg. */
-  airportIata?: string;
-  /** Raw parts a client may render; never pre-composed prose. */
-  depIata?: string | null;
-  arrIata?: string | null;
-  flightNumber?: string | null;
-  durationMinutes?: number | null;
-  /** "YYYY-MM-DD" — a single day, or the ends of a stretch. */
-  date?: string;
-  startDate?: string;
-  endDate?: string;
-  /** Legs flown on the busiest day, in departure order. */
-  legs?: string[];
-}
+// Published by /stats/records, so the shape is described once in
+// `schemas/statsDomains.ts` and read here (forgejo#52).
+export type { RecordId, RecordUnit, TravelRecord } from "../../schemas/statsDomains";
+import type { TravelRecord } from "../../schemas/statsDomains";
 
 /**
  * Stored distance first, great-circle second, nothing third.

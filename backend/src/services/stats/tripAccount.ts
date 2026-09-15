@@ -52,40 +52,9 @@ export interface TripAccountInput {
   })[];
 }
 
-export interface TripAccountRow {
-  id: string;
-  name: string;
-  status: string;
-  category: string | null;
-  /** Null when the trip carries no dates at all — then coverage is unanswerable. */
-  days: number | null;
-  /** Days inside the trip with a hotel night, a night at sea, or a night in the air. */
-  coveredDays: number | null;
-  /** Days inside the trip with none of those. The nudge: something is missing here. */
-  uncoveredDays: number | null;
-  /** Amounts by original currency, never summed across them. */
-  spendByCurrency: Record<string, number>;
-  /** The lodging slice that HAS an FX snapshot, by the base currency it was taken in. */
-  spendBaseByCurrency: Record<string, number>;
-  journalEntries: number;
-  photoCount: number;
-}
-
-export interface TripAccount {
-  trips: TripAccountRow[];
-  tripsWithDates: number;
-  /** Trips whose every travelling day is accounted for. */
-  fullyCoveredTrips: number;
-  /** Total days across all trips with no record of where the night was spent. */
-  totalUncoveredDays: number;
-  avgTripDays: number | null;
-  longestTripDays: number | null;
-  byCategory: { key: string; trips: number; days: number }[];
-  byTag: { key: string; trips: number }[];
-  moods: { key: string; count: number }[];
-  weather: { key: string; count: number }[];
-  journalEntries: number;
-}
+// Published by /stats/travel-account (forgejo#52).
+export type { TripAccountRow, TripAccount } from "../../schemas/statsDomains";
+import type { TripAccountRow, TripAccount } from "../../schemas/statsDomains";
 
 function dayKey(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());

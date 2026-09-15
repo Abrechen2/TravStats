@@ -4,6 +4,10 @@
 
 import { z } from "zod";
 import {
+  travelRecordsResponseSchema,
+  travelAccountResponseSchema,
+} from "../../../schemas/statsDomains";
+import {
   timeseriesResponseSchema,
   funStatsSchema,
   routeRankingResponseSchema,
@@ -194,7 +198,6 @@ function readOnlyStat(path: string, summary: string, description?: string): void
   });
 }
 
-readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
 readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
 const continentSchema = z.enum([
@@ -330,17 +333,31 @@ registry.registerPath({
     "when no house proves the country.",
 });
 
-readOnlyStat(
-  "/stats/records",
-  "The seven travel records",
-  "Longest and shortest flight, busiest day, longest aloft, biggest delay, " +
+const travelRecords = registry.register(
+  "TravelRecords",
+  travelRecordsResponseSchema.openapi("TravelRecords")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/records",
+  summary: "The seven travel records",
+  description:
+    "Longest and shortest flight, busiest day, longest aloft, biggest delay, " +
     "northernmost airport and longest streak. Numbers, not sentences: each record " +
     "carries a value, a unit and the raw parts of its detail, because a formatted " +
     '"12.345 km" would fix the decimal separator and the unit for every client. A ' +
     "record that cannot be derived is OMITTED rather than zeroed — a shortest " +
     "flight of 0 km would win forever, and a missing delay means \"not recorded\", " +
-    "which is a different fact from \"on time\"."
-);
+    "which is a different fact from \"on time\".",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The records that could be derived",
+      content: { "application/json": { schema: travelRecords } },
+    },
+  },
+});
 
 registry.registerPath({
   method: "get",
@@ -389,6 +406,28 @@ registry.registerPath({
   responses: {
     200: { description: "The year in review" },
     404: { description: "No countable activity in any year" },
+  },
+});
+
+const travelAccount = registry.register(
+  "TravelAccount",
+  travelAccountResponseSchema.openapi("TravelAccount")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/travel-account",
+  summary: "Everything, across all domains",
+  description:
+    "The cross-domain rollup the overview tab draws: flights, cruises, lodging " +
+    "and places in one answer. Amounts are grouped by their original currency " +
+    "and never summed across them.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Years, trips and their coverage",
+      content: { "application/json": { schema: travelAccount } },
+    },
   },
 });
 

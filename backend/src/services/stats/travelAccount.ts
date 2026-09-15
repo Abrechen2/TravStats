@@ -57,34 +57,9 @@ export interface AccountFlight {
  * mutually exclusive and add up to the length of the year (or to the days
  * elapsed so far, for the current one).
  */
-export interface TravelAccountYear {
-  year: string;
-  /** Days the year contributes — shortened for the current year to days elapsed. */
-  days: number;
-  hotelNights: number;
-  seaNights: number;
-  /** Nights spent in the air: a flight whose departure and arrival fall on different dates. */
-  airNights: number;
-  homeNights: number;
-}
-
-export interface TravelAccount {
-  years: TravelAccountYear[];
-  /**
-   * Stays left out because they carry no usable date. They count in every
-   * total elsewhere; here there is nowhere to put them. Reported so a screen
-   * can say so rather than showing a year that quietly omits them.
-   */
-  undatedStays: number;
-  /**
-   * Nights that two domains both claimed — a hotel booked over a night
-   * actually spent at sea, or a red-eye out of a hotel whose check-out was
-   * the next morning. Reported rather than silently resolved, because the
-   * resolution below (sea beats hotel beats air) is a convention, not a fact,
-   * and a large number here means the log is wrong somewhere.
-   */
-  contestedNights: number;
-}
+// Published by /stats/travel-account (forgejo#52).
+export type { TravelAccountYear, TravelAccount } from "../../schemas/statsDomains";
+import type { TravelAccountYear, TravelAccount } from "../../schemas/statsDomains";
 
 function dayKey(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
