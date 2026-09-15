@@ -110,7 +110,7 @@ nichts aus dem Auftrag.
 
 | # | Block | Bindender Punkt | Zustand |
 |---|---|---|---|
-| A | Mobile Zeile für alle vier Logbücher | D-02, Abnahmefrage 1, Owner-Wiederholung | offen |
+| A | Mobile Zeile für alle vier Logbücher | D-02, Abnahmefrage 1, Owner-Wiederholung | **fertig** (`eb5723db`) |
 | B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | offen |
 | C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | offen |
 | D | Eine Dialog-Shell für die 44 eigenen Overlays | E11, §6 Zustände | offen |
@@ -123,3 +123,48 @@ nichts aus dem Auftrag.
 
 Jeder Block endet mit einem Wächter, der seinen Punkt misst, und zieht die
 Zahlen oben nach. Ein Block ohne Zahl gilt als nicht erledigt.
+
+## Block A — fertig, im Browser abgenommen (15.09.2026)
+
+Commit `eb5723db`. Der Baustein war da und ungenutzt: `Table`/`TableRow`
+fallen unter 640 px in eine Zeile zusammen und geben jeder Spalte ihren
+schmalen Platz per Name — gebaut in Block 2, gerendert nur von `/design`.
+Die vier echten Listen zeichneten daneben ihre eigene
+`<table class="min-w-[960px]">` in einem `overflow-x-auto`.
+
+**Gemessen bei 390 × 844, angemeldet, gegen die Dev-Datenbank:**
+
+| Logbuch | Titel | Unterzeile | Pille | Überlauf des Tisches |
+|---|---|---|---|---|
+| Flüge | MUC → CPH | `Mi 13.01.27 · LH2462 · 1h 30min` | Geplant | 0 |
+| Kreuzfahrten | Wonder of the Seas | `2026-11-27 – 2026-12-04` | Geplant | 0 |
+| Unterkünfte | Pension Alpenblick | `13.09.2024` | Abgeschlossen | 0 |
+| Orte | Nyhavn | `—` | Merkliste | 0 |
+
+Das `—` bei den Orten ist richtig, nicht leer: der Ort hat kein Besuchsdatum,
+und eine Null wäre eine Behauptung. Bild: `screenshots/design-system/2026-09-15-logbuch/`.
+
+### Zwei Befunde aus derselben Sitzung, die NICHT zu Block A gehören
+
+**Die Seite läuft um 14 px über — aus der Kopfleiste, nicht aus der Liste.**
+Der Tisch misst 335 von 335 px. Die 14 px kommen vom Konto-Menü
+(`aria-label="Konto-Menü"`) in `HEADER.sticky`, das bei 390 px rechts
+hinausragt. Das ist D-01 und gehört in Block C; hier steht es, damit es dort
+nicht neu gefunden werden muss.
+
+**D-07 ist live bestätigt, in EINER deutschen Sitzung:** Flüge zeigen
+`Mi 13.01.27`, Kreuzfahrten `2026-11-27`, Unterkünfte `13.09.2024`. Drei
+Datumsformate auf drei Seiten derselben Anwendung — genau der Befund des
+Handoffs, jetzt mit eigener Messung statt aus zweiter Hand. Block E.
+
+### Falle für jeden, der hier nachmisst
+
+Die Dev-Datenbank auf `localhost:5433` ist **von allen Worktrees geteilt**.
+Am 15.09. um 19:17 startete im Haupt-Checkout ein `npm test -- --forceExit`
+(Jest, PID 50464) und leerte mitten in der Abnahme die Benutzertabelle — die
+angemeldete Sitzung im Browser landete auf `/setup`, weil der Server null
+Admins zählte. Kein Produktfehler: die Backend-Suite räumt die Tabellen ab,
+und sie lief gegen dieselbe Datenbank.
+
+Wer im Browser abnimmt, prüft vorher, ob eine Suite läuft — und seedet NICHT
+blind nach, weil das in den fremden Lauf greift.
