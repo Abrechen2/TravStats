@@ -519,6 +519,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
 | Every beta gate key is registered, with a reason and an un-gating condition | `frontend/src/__tests__/config/betaFeatures.test.ts` — source-scans for `isFeatureVisible("…")` |
 | `/api` answers `no-store` unless a handler opts into `private` | `backend/src/__tests__/apiNoStore.test.ts` |
+| A frontend test reaches no network, and renders no NEW `act(...)` warning | `frontend/src/__tests__/setup.ts` — the network half fails outright; the act half is a ratchet against `consoleActBaseline.json` (34 files frozen 2026-09-15). It does not fail on a stale entry, on purpose: an act warning is timing-dependent, so that half would be flaky. |
 | 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
 | A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
@@ -526,7 +527,9 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 Four of these are **ratchets** carrying a list of today's offenders — file
 size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
-shrink.
+shrink. The act ratchet is a fifth and the one exception: it fails on a new
+offender but only PRINTS on a stale entry, because the thing it measures is
+timing-dependent and a flaky guard is worse than a weak one.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
 `ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
