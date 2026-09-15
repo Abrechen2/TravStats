@@ -252,6 +252,69 @@ export const airportStatsSchema = z.object({
   }),
 });
 
+// ─── /stats/timeseries ───────────────────────────────────────────────────────
+
+export const timeseriesPointSchema = z.object({
+  period: z.string().openapi({ example: "2026-05", description: "`YYYY` or `YYYY-MM`." }),
+  count: z.number().int(),
+  distanceKm: z.number(),
+  durationMin: z.number(),
+});
+
+const windowTotalsSchema = z.object({
+  count: z.number().int(),
+  distanceKm: z.number(),
+  durationMin: z.number(),
+});
+
+export const timeseriesResponseSchema = z.object({
+  domain: z.string(),
+  granularity: z.string(),
+  window: z.object({ from: z.string(), to: z.string() }),
+  series: z.array(timeseriesPointSchema).openapi({
+    description:
+      "A flight falls in the period of the DEPARTURE AIRPORT's calendar day, " +
+      "not of the UTC instant (forgejo#46). Before that was true, an evening " +
+      "departure east of UTC landed in the previous period and the trend chart " +
+      "disagreed with the countries list about which year a flight belonged to. " +
+      "An unbounded window has its leading and trailing empty buckets trimmed; " +
+      "a bounded one keeps its zeros, because there the zero is the answer.",
+  }),
+  current: windowTotalsSchema,
+  previous: windowTotalsSchema.openapi({
+    description: "The same totals for the window immediately before this one.",
+  }),
+});
+
+// ─── /stats/fun ──────────────────────────────────────────────────────────────
+
+export const funStatsSchema = z.object({
+  timezoneHopper: z.number().int(),
+  earlyBird: z.number().int(),
+  afternoon: z.number().int(),
+  nightOwl: z.number().int(),
+  weekendWarrior: z.number().int(),
+  weekendPercentage: z.number(),
+  loyaltyScore: z.number(),
+  mostUsedAirline: z.string().nullable(),
+  shortHaulKing: z.number().int(),
+  longHaulPilot: z.number().int(),
+  fastestDay: z.string().nullable(),
+  fastestDayFlights: z.number().int(),
+  co2FootprintKg: z.number(),
+  co2InElephants: z.number(),
+  milestoneYear: z.number().int().nullable(),
+  milestoneYearFlights: z.number().int(),
+  routeMaster: z.string().nullable(),
+  routeMasterCount: z.number().int(),
+}).openapi({
+  description:
+    "Every time-of-day figure here reads the clock at the departure airport, " +
+    "not UTC. A date-only historical row reports no hour at all: it counts in " +
+    "everything daily and above and is left out of anything hourly, rather " +
+    "than being counted at its 12:00 placeholder.",
+});
+
 export type PunctualityGroup = z.infer<typeof punctualityGroupSchema>;
 export type PunctualityStats = z.infer<typeof punctualityStatsSchema>;
 export type SeatStats = z.infer<typeof seatStatsSchema>;
@@ -263,3 +326,6 @@ export type RouteRankingResponse = z.infer<typeof routeRankingResponseSchema>;
 export type BusinessStats = z.infer<typeof businessStatsSchema>;
 export type UniqueStats = z.infer<typeof uniqueStatsSchema>;
 export type AirportStats = z.infer<typeof airportStatsSchema>;
+export type TimeseriesPoint = z.infer<typeof timeseriesPointSchema>;
+export type TimeseriesResponse = z.infer<typeof timeseriesResponseSchema>;
+export type FunStats = z.infer<typeof funStatsSchema>;

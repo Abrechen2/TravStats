@@ -618,13 +618,20 @@ check.
   the wild at 57 rows"). A comment restating the line below it is noise.
 - **Never document an invariant you do not test.** The OpenAPI description of
   `/stats/timeseries` claimed it grouped by "the departure airport's calendar
-  day". `utils/stats/timeseries.ts` buckets on `getUTCFullYear` /
-  `getUTCMonth` and never consults the timezone map the same route builds for
-  durations. No test could have caught it: `stats.timeseries.test.ts` stubs
-  the airport cache empty, so the zone is structurally unobservable. The claim
-  was deleted rather than left standing, and the endpoint sits on the OpenAPI
-  ratchet until it can be described truthfully. An empty spec beats a
-  confident one.
+  day" while `utils/stats/timeseries.ts` bucketed on `getUTCFullYear` /
+  `getUTCMonth` and never consulted the timezone map the same route built for
+  durations. No test could have caught it: `stats.timeseries.test.ts` stubs the
+  airport cache empty, so the zone was structurally unobservable. The claim was
+  deleted rather than left standing — an empty spec beats a confident one.
+
+  **The sentence is back, because the code caught up.** forgejo#46 made
+  `timeseriesRows.ts` resolve `airportCalendarDay(...)`, and
+  `stats.timeseriesLocalTime.test.ts` pins it with real catalogue airports, so
+  the zone is now observable. The endpoint left the OpenAPI ratchet on
+  2026-09-15 with a schema and that description. The order is the point: the
+  claim followed the test, not the other way round. This paragraph itself
+  described the old state for however long the fix had been in — corrected
+  2026-09-15, which is the same failure mode one level up.
 - **A visible change goes in the changelog, even when it is a fix.** `Fixed`
   is the largest section of 2.6.0; 2.5.1 and 2.5.2 are fix-only releases. Each
   entry is a sentence a user would recognise, then the cause — "**A backup no

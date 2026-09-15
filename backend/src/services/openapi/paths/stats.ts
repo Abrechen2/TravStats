@@ -4,6 +4,8 @@
 
 import { z } from "zod";
 import {
+  timeseriesResponseSchema,
+  funStatsSchema,
   routeRankingResponseSchema,
   businessStatsSchema,
   uniqueStatsSchema,
@@ -192,8 +194,6 @@ function readOnlyStat(path: string, summary: string, description?: string): void
   });
 }
 
-readOnlyStat("/stats/timeseries", "Flights and distance over time", "Grouped by the departure airport's calendar day.");
-readOnlyStat("/stats/fun", "The playful figures", "Time-of-day buckets, weekend warrior, fastest day, most countries in one day and the rest. All of them read the clock at the airport.");
 readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
 readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
@@ -389,6 +389,46 @@ registry.registerPath({
   responses: {
     200: { description: "The year in review" },
     404: { description: "No countable activity in any year" },
+  },
+});
+
+const timeseries = registry.register(
+  "Timeseries",
+  timeseriesResponseSchema.openapi("Timeseries")
+);
+const funStats = registry.register("FunStats", funStatsSchema.openapi("FunStats"));
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/timeseries",
+  summary: "Flights and distance over time",
+  description:
+    "Grouped by the DEPARTURE AIRPORT's calendar day. This description was once " +
+    "a promise the code did not keep — an evening departure east of UTC landed " +
+    "in the previous period — and was deleted rather than left standing. It is " +
+    "back because forgejo#46 made it true and a test pins it.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Buckets plus this window's totals and the one before it",
+      content: { "application/json": { schema: timeseries } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/fun",
+  summary: "The playful figures",
+  description:
+    "Time-of-day buckets, weekend warrior, fastest day and the rest. All read " +
+    "the clock at the airport, never UTC.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The playful figures",
+      content: { "application/json": { schema: funStats } },
+    },
   },
 });
 

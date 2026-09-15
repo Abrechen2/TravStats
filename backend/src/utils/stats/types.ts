@@ -1,30 +1,9 @@
 import type { FlightTimeSemantics } from '../timezone';
 
-export interface FunStats {
-  timezoneHopper: number;
-  earlyBird: number;
-  afternoon: number;
-  nightOwl: number;
-  weekendWarrior: number;
-  weekendPercentage: number;
-  loyaltyScore: number;
-  mostUsedAirline: string | null;
-  shortHaulKing: number;
-  longHaulPilot: number;
-  fastestDay: string | null;
-  fastestDayFlights: number;
-  co2FootprintKg: number;
-  co2InElephants: number;
-  milestoneYear: number | null;
-  milestoneYearFlights: number;
-  routeMaster: string | null;
-  routeMasterCount: number;
-}
-
 // These two shapes are published by /stats/business and /stats/unique, so the
 // schema in `schemas/statsFlights.ts` is where they are described and this is
 // where that description is read (forgejo#52). One description, not two.
-export type { BusinessStats, UniqueStats } from "../../schemas/statsFlights";
+export type { BusinessStats, UniqueStats, FunStats } from "../../schemas/statsFlights";
 
 export interface FlightData {
   id: string;
