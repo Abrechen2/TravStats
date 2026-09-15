@@ -219,7 +219,7 @@ describe("LodgingListPage", () => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
 
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.textContent).toMatch(/CHF/);
     expect(row?.textContent).not.toMatch(/\$883/);
   });
@@ -237,7 +237,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).toBeInTheDocument();
   });
 
@@ -251,7 +251,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
   });
 
@@ -369,12 +369,12 @@ describe("LodgingListPage", () => {
     const { container } = renderListPage();
 
     await waitFor(() => {
-      expect(container.querySelectorAll("tbody tr").length).toBe(3);
+      expect(container.querySelectorAll(".ts-table-row").length).toBe(3);
     });
 
     const rowNames = (): string[] =>
-      Array.from(container.querySelectorAll("tbody tr")).map(
-        (row) => row.querySelector("td")?.textContent ?? ""
+      Array.from(container.querySelectorAll(".ts-table-row")).map(
+        (row) => row.querySelector('[role="cell"]')?.textContent ?? ""
       );
     expect(rowNames()[0]).toContain("Zebra Lodge");
     expect(rowNames()[1]).toContain("Mid Motel");
@@ -415,7 +415,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.textContent).toMatch(/840/);
     expect(row?.textContent).toMatch(/CHF/);
     expect(row?.textContent).toMatch(/≈/);
@@ -438,7 +438,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.textContent).toMatch(/780/);
     expect(row?.textContent).toContain("lodging:fx.markerNone");
     expect(row?.textContent).not.toMatch(/≈/);
@@ -463,7 +463,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.textContent).toMatch(/883/);
     expect(row?.textContent).toContain("lodging:fx.omittedFromTotal");
   });
@@ -482,7 +482,7 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     // The spend cell must read "—", never a false "0 €" (a cleared price is
     // not the same as a confirmed free stay).
     // Positional index — it moved by one when the "Letzter Aufenthalt" column
@@ -491,7 +491,7 @@ describe("LodgingListPage", () => {
     // without looking at the spend cell at all (found while fixing forgejo#82).
     // Indexing cells by number is brittle; it is kept only because this
     // assertion is about the spend cell's CONTENT.
-    const spendCell = row?.querySelectorAll("td")[8];
+    const spendCell = row?.querySelectorAll('[role="cell"]')[8];
     expect(spendCell?.textContent).toBe("—");
   });
 
@@ -526,8 +526,8 @@ describe("LodgingListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
-    const spendCell = row?.querySelectorAll("td")[8];
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
+    const spendCell = row?.querySelectorAll('[role="cell"]')[8];
     expect(spendCell?.textContent).not.toMatch(/0\s?€/);
     expect(spendCell?.textContent).toMatch(/^—/);
     expect(spendCell?.textContent).toContain("lodging:list.spendPlanned");

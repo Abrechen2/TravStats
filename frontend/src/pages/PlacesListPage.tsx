@@ -4,12 +4,19 @@ import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { ColumnPicker } from "../components/table/ColumnPicker";
+import {
+  PlaceRow,
+  PLACE_COLUMN_IDS as COLUMN_IDS,
+  PLACE_COLUMN_LAYOUT,
+  type PlaceColumnId,
+  type PlaceSortKey,
+} from "../components/places/PlaceRow";
+import { Table, type TableColumn } from "../components/ui/Table";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
@@ -53,23 +60,13 @@ const PLACE_STATUS_KEY = {
 
 type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
-type PlaceSortKey =
-  "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
-type PlaceColumnId = PlaceSortKey | "status" | "actions";
-
-const COLUMN_IDS: readonly PlaceColumnId[] = [
-  "name",
-  "category",
-  "location",
-  "country",
-  "continent",
-  "visits",
-  "lastVisit",
-  "status",
-  "actions",
-];
-const ALWAYS_VISIBLE = ["name", "actions"] as const;
-const NUMERIC_COLUMNS: readonly PlaceColumnId[] = ["visits"];
+/**
+ * Not hideable. `name`, `lastVisit` and `status` are the three the row keeps
+ * when the table collapses at 390px — hiding one on a desktop would take it
+ * off the phone too, because a hidden column has no cell to collapse.
+ * `actions` was always here. See `components/table/narrowColumns.ts`.
+ */
+const ALWAYS_VISIBLE = ["name", "lastVisit", "status", "actions"] as const;
 
 const SORT_KEY_BY_COLUMN: Partial<Record<PlaceColumnId, PlaceSortKey>> = {
   name: "name",
@@ -252,6 +249,42 @@ export default function PlacesListPage(): JSX.Element {
       }
     },
     [sortBy, sortOrder, setSort]
+  );
+
+  /**
+   * The visible columns, in order, with their narrow places and their sort
+   * headers. One list feeds the head and every row, so a cell can no longer
+   * land under the wrong column.
+   */
+  const visibleColumns = useMemo<TableColumn[]>(
+    () =>
+      COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+        const layout = PLACE_COLUMN_LAYOUT[id];
+        const label = columnLabel(t, id);
+        const sortKey = SORT_KEY_BY_COLUMN[id];
+        return {
+          key: id,
+          width: layout.width,
+          align: layout.align,
+          mono: layout.mono,
+          onNarrow: layout.onNarrow,
+          label:
+            sortKey === undefined ? (
+              label
+            ) : (
+              <SortableHeader
+                column={sortKey}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                ariaLabel={t("places:list.sortBy", { col: label })}
+              >
+                {label}
+              </SortableHeader>
+            ),
+        };
+      }),
+    [columnPrefs, t, sortBy, sortOrder, handleSort]
   );
 
   const hasActiveFilter =
@@ -443,174 +476,99 @@ export default function PlacesListPage(): JSX.Element {
           unknown={loading || loadError}
         />
 
-        <div
-          className="overflow-hidden rounded-lg shadow-xs"
-          style={{ border: "1px solid var(--color-border)" }}
-        >
-          <div className="overflow-x-auto">
-            {loading ? (
-              <SkeletonTable rows={10} />
-            ) : loadError ? (
-              <div className="bg-[var(--bg-surface)] px-4 py-8 text-center">
-                <p className="text-[var(--danger)]">{t("places:list.loadError")}</p>
-                <button
-                  type="button"
-                  onClick={() => void load()}
-                  className="mt-2 text-sm underline"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {t("places:list.retry")}
-                </button>
-              </div>
-            ) : filtered.length === 0 ? (
-              /* Was its own inline ternary saying the same thing the other
+        <>
+          {loading ? (
+            <SkeletonTable rows={10} />
+          ) : loadError ? (
+            <div
+              className="overflow-hidden rounded-lg bg-[var(--bg-surface)] px-4 py-8 text-center"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <p className="text-[var(--danger)]">{t("places:list.loadError")}</p>
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="mt-2 text-sm underline"
+                style={{ color: "var(--accent)" }}
+              >
+                {t("places:list.retry")}
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            /* Was its own inline ternary saying the same thing the other
                  three lists say — the shared component so the wording and the
                  offer to clear the filter cannot drift apart again. */
+            <div
+              className="overflow-hidden rounded-lg"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
               <ListEmptyState
                 filtered={hasActiveFilter}
                 emptyTitle={t("places:list.empty")}
                 emptyHint={t("places:list.emptyHint")}
                 onReset={resetFilters}
               />
-            ) : (
-              <table className="w-full min-w-[900px] text-sm">
-                <thead
-                  style={{
-                    background: "var(--bg-elevated)",
-                    borderBottom: "1px solid var(--color-border)",
-                  }}
-                >
-                  <tr>
-                    {COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
-                      const right = NUMERIC_COLUMNS.includes(id) || id === "actions";
-                      const sortKey = SORT_KEY_BY_COLUMN[id];
-                      const label = columnLabel(t, id);
-                      return (
-                        <th
-                          key={id}
-                          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                            right ? "text-right whitespace-nowrap" : "text-left"
-                          }`}
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {sortKey === undefined ? (
-                            label
-                          ) : (
-                            <span className={right ? "flex justify-end" : undefined}>
-                              <SortableHeader
-                                column={sortKey}
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                                onSort={handleSort}
-                                ariaLabel={t("places:list.sortBy", { col: label })}
-                              >
-                                {label}
-                              </SortableHeader>
-                            </span>
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((p, index) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => navigate(`/places/${p.id}`)}
-                      className="cursor-pointer"
-                      style={{
-                        background: index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-                        borderTop: "1px solid var(--color-border)",
-                      }}
-                    >
-                      {columnPrefs.isVisible("name") && (
-                        <td className="px-4 py-3">
-                          <span className="flex items-center gap-2 font-medium">
-                            <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
-                            {p.name}
-                          </span>
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("category") && (
-                        <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {t(`places:categories.${p.category}`)}
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("location") && (
-                        <td className="px-4 py-3 text-[var(--text-muted)]">
-                          <span className="flex items-center gap-2">
-                            {p.city ?? "—"}
-                            {p.country && <FlagImg country={p.country} />}
-                          </span>
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("country") && (
-                        <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {placeCountryLabel(p, i18n.language) || "—"}
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("continent") && (
-                        <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {continentLabel(p.continent, t)}
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("visits") && (
-                        <td className="px-4 py-3 text-right">
-                          {p.visitCount}
-                          {/* Planned visits are shown but never folded into the
+            </div>
+          ) : (
+            <Table columns={visibleColumns} label={t("places:list.title")}>
+              {filtered.map((p) => (
+                <PlaceRow
+                  key={p.id}
+                  columns={visibleColumns}
+                  onOpen={() => navigate(`/places/${p.id}`)}
+                  onEdit={() => navigate(`/places/${p.id}`)}
+                  onDelete={() => setPendingDelete(p)}
+                  editLabel={t("common:buttons.edit")}
+                  deleteLabel={t("common:buttons.delete")}
+                  cells={{
+                    name: (
+                      <span className="flex items-center gap-2 font-medium">
+                        <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+                        {p.name}
+                      </span>
+                    ),
+                    category: t(`places:categories.${p.category}`),
+                    location: (
+                      <span className="flex items-center gap-2">
+                        {p.city ?? "—"}
+                        {p.country && <FlagImg country={p.country} />}
+                      </span>
+                    ),
+                    country: placeCountryLabel(p, i18n.language) || "—",
+                    continent: continentLabel(p.continent, t),
+                    visits: (
+                      <>
+                        {p.visitCount}
+                        {/* Planned visits are shown but never folded into the
                               count — the future-date rule, made visible rather
                               than silently applied. */}
-                          {p.plannedVisitCount > 0 && (
-                            <span className="ml-1 text-xs text-[var(--warning)]">
-                              {t("places:list.plannedSuffix", { count: p.plannedVisitCount })}
-                            </span>
-                          )}
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("lastVisit") && (
-                        <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {formatDate(p.lastVisitAt)}
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("status") && (
-                        <td className="px-4 py-3">
-                          {/* The shared palette every other list resolves its
-                              status through — green for happened, blue for
-                              still ahead, muted for a wishlist entry. It used
-                              to carry its own two colours, which is how a
-                              fourth shade of "done" gets into an app. */}
-                          <span
-                            className={STATUS_PILL_CLASS}
-                            style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
-                          >
-                            {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
+                        {p.plannedVisitCount > 0 && (
+                          <span className="ml-1 text-xs text-[var(--warning)]">
+                            {t("places:list.plannedSuffix", { count: p.plannedVisitCount })}
                           </span>
-                        </td>
-                      )}
-                      {columnPrefs.isVisible("actions") && (
-                        <td className="px-4 py-3">
-                          <RowActions>
-                            <RowActionButton
-                              icon="edit"
-                              label={t("common:buttons.edit")}
-                              onClick={() => navigate(`/places/${p.id}`)}
-                            />
-                            <RowActionButton
-                              icon="delete"
-                              label={t("common:buttons.delete")}
-                              onClick={() => setPendingDelete(p)}
-                            />
-                          </RowActions>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
+                        )}
+                      </>
+                    ),
+                    lastVisit: formatDate(p.lastVisitAt),
+                    /* The shared palette every other list resolves its status
+                         through — green for happened, blue for still ahead,
+                         muted for a wishlist entry. It used to carry its own two
+                         colours, which is how a fourth shade of "done" gets into
+                         an app. */
+                    status: (
+                      <span
+                        className={STATUS_PILL_CLASS}
+                        style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
+                      >
+                        {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
+                      </span>
+                    ),
+                  }}
+                />
+              ))}
+            </Table>
+          )}
+        </>
       </div>
 
       {creating && (

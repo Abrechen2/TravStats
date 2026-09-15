@@ -175,6 +175,20 @@ interface TableRowProps {
   dashed?: boolean;
   onClick?: () => void;
   dense?: boolean;
+  /**
+   * A subtitle for the narrow layout only, when no single column can be it.
+   *
+   * The flights list is the case this exists for: a phone needs "date ·
+   * flight number · duration" on one line, and the desktop says those three
+   * things in three separate columns — the time column alone is a two-line
+   * ab/an block that cannot shrink into a 12px subtitle. Supplying it here
+   * keeps the composition in the row rather than making the time cell aware
+   * of how wide the window is.
+   *
+   * It is `display: none` above 640px and the columns it summarises are
+   * `display: none` below it, so a screen reader is never read both.
+   */
+  narrowSubtitle?: ReactNode;
 }
 
 /**
@@ -191,6 +205,7 @@ export function TableRow({
   dashed = false,
   onClick,
   dense = false,
+  narrowSubtitle,
 }: TableRowProps): JSX.Element {
   return (
     <div
@@ -232,6 +247,11 @@ export function TableRow({
           </span>
         );
       })}
+      {narrowSubtitle === undefined ? null : (
+        <span role="cell" data-narrow="subtitle" data-narrow-only="yes" style={{ minWidth: 0 }}>
+          {narrowSubtitle}
+        </span>
+      )}
     </div>
   );
 }

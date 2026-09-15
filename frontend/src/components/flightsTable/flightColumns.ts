@@ -13,7 +13,14 @@ export const FLIGHT_COLUMN_IDS = [
   "trip",
   "actions",
 ] as const;
-export const FLIGHT_ALWAYS_VISIBLE = ["route", "actions"] as const;
+/**
+ * Not hideable. The route is the title of the narrow row and the status is its
+ * pill — hiding either on a desktop would take it off the phone too, because a
+ * hidden column has no cell to collapse. The date is safe without being listed
+ * here: `FlightRow` composes it into the narrow summary line rather than
+ * borrowing the time column. See `components/table/narrowColumns.ts`.
+ */
+export const FLIGHT_ALWAYS_VISIBLE = ["route", "status", "actions"] as const;
 
 export type FlightColumnId = (typeof FLIGHT_COLUMN_IDS)[number];
 export type FlightSortKey = "departureTime" | "airline" | "status" | "duration";

@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
-import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
+import {
+  CruiseRow,
+  CRUISE_COLUMN_LAYOUT,
+  type CruiseColumnId,
+} from "../components/Cruise/CruiseRow";
+import { Table, type TableColumn } from "../components/ui/Table";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -43,9 +48,13 @@ const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
   "trip",
   "actions",
 ];
-const CRUISE_ALWAYS_VISIBLE = ["ship", "actions"] as const;
-/** Columns whose values line up on the right. */
-const CRUISE_NUMERIC_COLUMNS: readonly CruiseColumnId[] = ["ports", "price"];
+/**
+ * Not hideable. `ship`, `dates` and `status` are the three the row keeps when
+ * the table collapses at 390px — hiding one on a desktop would take it off the
+ * phone too, because a hidden column has no cell to collapse. `actions` was
+ * always here. See `components/table/narrowColumns.ts`.
+ */
+const CRUISE_ALWAYS_VISIBLE = ["ship", "dates", "status", "actions"] as const;
 /** Sort key -> column id, so the footer can name the column the way the
  *  header and the picker do rather than keeping its own copy. */
 const SORT_KEY_TO_COLUMN: Partial<Record<string, CruiseColumnId>> = {
@@ -216,6 +225,43 @@ export default function CruisesPage(): JSX.Element {
     [filtered, sortBy, sortOrder]
   );
 
+  /**
+   * The visible columns, in order, with their narrow places and their sort
+   * headers. One list feeds the head and every row, so a cell can no longer
+   * land under the wrong column — the failure the old `isColumnVisible` pair
+   * made possible, where the header and the row each filtered separately.
+   */
+  const visibleColumns = useMemo<TableColumn[]>(
+    () =>
+      CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+        const layout = CRUISE_COLUMN_LAYOUT[id];
+        const label = t(`list.columns.${id}`);
+        const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
+        return {
+          key: id,
+          width: layout.width,
+          align: layout.align,
+          mono: layout.mono,
+          onNarrow: layout.onNarrow,
+          label:
+            sortKey === undefined ? (
+              label
+            ) : (
+              <SortableHeader
+                column={sortKey}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                ariaLabel={t("list.sortBy", { col: label })}
+              >
+                {label}
+              </SortableHeader>
+            ),
+        };
+      }),
+    [columnPrefs, t, sortBy, sortOrder, handleSort]
+  );
+
   const summaryFigures = useMemo(() => {
     let portCalls = 0;
     let seaDays = 0;
@@ -355,98 +401,35 @@ export default function CruisesPage(): JSX.Element {
             />
           </div>
         ) : (
-          <div
-            className="overflow-hidden rounded-lg shadow-xs"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[960px]">
-                <thead
-                  style={{
-                    background: "var(--bg-elevated)",
-                    borderBottom: "1px solid var(--color-border)",
-                  }}
-                >
-                  <tr>
-                    {/*
-                    One loop instead of six copied blocks. Each of those built
-                    its own sort button — and showed ▼ for ascending, the
-                    opposite of the shared component the lodging table uses.
-                    The same sort state read differently depending on which
-                    page you were on.
-                  */}
-                    {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
-                      const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
-                      const label = t(`list.columns.${id}`);
-                      const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
-                      return (
-                        <th
-                          key={id}
-                          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                            numeric ? "text-right" : "text-left"
-                          }`}
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {sortKey === undefined ? (
-                            label
-                          ) : (
-                            <span className={numeric ? "flex justify-end" : undefined}>
-                              <SortableHeader
-                                column={sortKey}
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                                onSort={handleSort}
-                                ariaLabel={t("list.sortBy", { col: label })}
-                              >
-                                {label}
-                              </SortableHeader>
-                            </span>
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((c, i) => (
-                    <CruiseRow
-                      key={c.id}
-                      index={i}
+          <>
+            <Table columns={visibleColumns} label={t("list.title")}>
+              {sorted.map((c) => (
+                <CruiseRow
+                  key={c.id}
+                  cruise={c}
+                  columns={visibleColumns}
+                  onOpen={() => navigate(`/cruises/${c.id}`)}
+                  actions={
+                    <CruiseRowActions
                       cruise={c}
-                      isColumnVisible={columnPrefs.isVisible}
-                      onOpen={() => navigate(`/cruises/${c.id}`)}
-                      actions={
-                        <CruiseRowActions
-                          cruise={c}
-                          onEdit={setEditingCruise}
-                          onDuplicate={startDuplicate}
-                          onDelete={() => setCruiseToDelete(c)}
-                        />
-                      }
+                      onEdit={setEditingCruise}
+                      onDuplicate={startDuplicate}
+                      onDelete={() => setCruiseToDelete(c)}
                     />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  }
+                />
+              ))}
+            </Table>
             {/* Same closing line the flights and lodging tables carry: how many
                 rows, and what they are sorted by. The count used to sit only in
                 the filter bar, so the table simply stopped. */}
-            <div
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs"
-              style={{
-                background: "var(--bg-elevated)",
-                borderTop: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              <span>
-                {t("list.sortedBy", {
-                  col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),
-                  dir: t(sortOrder === "asc" ? "list.ascending" : "list.descending"),
-                })}
-              </span>
-            </div>
-          </div>
+            <p className="mt-2 px-1 text-xs text-(--text-muted)">
+              {t("list.sortedBy", {
+                col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),
+                dir: t(sortOrder === "asc" ? "list.ascending" : "list.descending"),
+              })}
+            </p>
+          </>
         )}
 
         {/* Cruises had their own chooser, built before the shared one existed

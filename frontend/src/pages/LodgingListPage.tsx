@@ -3,26 +3,26 @@ import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import { StarRating } from "../components/lodging/StarRating";
-import { ChainNameLink } from "../components/lodging/ChainNameLink";
-import { LodgingStatusTag } from "../components/lodging/LodgingStatusTag";
-import { StayStatusPill } from "../components/lodging/StayStatusPill";
-import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import type { StayStatus } from "../types/lodging";
 import {
   LODGING_SORT_DEFAULT_ASC,
   sortLodgingRows,
   type LodgingSortKey,
 } from "../components/lodging/sortLodgingRows";
-import { formatDateInTimezone } from "../lib/dateUtils";
-import { latestStayDayOf } from "../lib/lodgingLatestStay";
+import {
+  LodgingRow,
+  LODGING_COLUMN_IDS as COLUMN_IDS,
+  LODGING_COLUMN_LAYOUT,
+  type LodgingColumnId,
+} from "../components/lodging/LodgingRow";
+import { Table, type TableColumn } from "../components/ui/Table";
+import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
@@ -31,12 +31,6 @@ import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAd
 import { useTranslation } from "../hooks/useTranslation";
 import { countryName } from "../shared/geo/countryCode";
 import { deleteLodging, listLodgings } from "../lib/api/lodging";
-import { lodgingTypeIcon } from "../lib/lodgingFormat";
-import {
-  hasOtherBaseCurrencySpend,
-  LodgingSpendCell,
-} from "../components/lodging/LodgingSpendCell";
-import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -57,23 +51,13 @@ const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "h
 
 // Column ids double as sort keys and as visibility-preference ids. The name
 // column is the row's identity and can't be hidden.
-/** Every column, sortable or not. `actions` carries no value to sort by. */
-type LodgingColumnId = LodgingSortKey | "actions";
-
-const COLUMN_IDS: readonly LodgingColumnId[] = [
-  "name",
-  "chain",
-  "location",
-  "status",
-  "lastStay",
-  "stays",
-  "nights",
-  "rating",
-  "spend",
-  "actions",
-];
-const ALWAYS_VISIBLE = ["name", "actions"] as const;
-const NUMERIC_COLUMNS: readonly LodgingColumnId[] = ["stays", "nights", "spend"];
+/**
+ * Not hideable. `name`, `lastStay` and `status` are the three the row keeps
+ * when the table collapses at 390px — hiding one on a desktop would take it
+ * off the phone too, because a hidden column has no cell to collapse.
+ * `actions` was always here. See `components/table/narrowColumns.ts`.
+ */
+const ALWAYS_VISIBLE = ["name", "lastStay", "status", "actions"] as const;
 
 /** Column id -> sort key. Identity, except that `actions` has none. */
 const SORT_KEY_BY_COLUMN: Partial<Record<LodgingColumnId, LodgingSortKey>> = {
@@ -148,6 +132,42 @@ export default function LodgingListPage(): JSX.Element {
       setSort(column, LODGING_SORT_DEFAULT_ASC.includes(column) ? "asc" : "desc");
     }
   };
+
+  /**
+   * The visible columns, in order, with their narrow places and their sort
+   * headers. One list feeds the head and every row, so a cell can no longer
+   * land under the wrong column.
+   */
+  const visibleColumns = useMemo<TableColumn[]>(
+    () =>
+      COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+        const layout = LODGING_COLUMN_LAYOUT[id];
+        const label = columnLabel(t, id);
+        const sortKey = SORT_KEY_BY_COLUMN[id];
+        return {
+          key: id,
+          width: layout.width,
+          align: layout.align,
+          mono: layout.mono,
+          onNarrow: layout.onNarrow,
+          label:
+            sortKey === undefined ? (
+              label
+            ) : (
+              <SortableHeader
+                column={sortKey}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                ariaLabel={t("lodging:list.sortBy", { col: label })}
+              >
+                {label}
+              </SortableHeader>
+            ),
+        };
+      }),
+    [columnPrefs, t, sortBy, sortOrder]
+  );
 
   useEffect(() => {
     void listLodgings({})
@@ -428,212 +448,37 @@ export default function LodgingListPage(): JSX.Element {
             {t("lodging:list.loadError")}
           </div>
         ) : (
-          // Flights-table shell: rounded, clipped, zebra rows, sticky-toned
-          // header, footer bar — one family across the domain list pages.
-          <div
-            className="overflow-hidden rounded-lg shadow-xs"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <div className="overflow-x-auto">
-              {loading ? (
-                <SkeletonTable rows={10} />
-              ) : filtered.length === 0 ? (
+          <>
+            {loading ? (
+              <SkeletonTable rows={10} />
+            ) : filtered.length === 0 ? (
+              <div
+                className="overflow-hidden rounded-lg"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
                 <ListEmptyState
                   filtered={hasActiveFilter}
                   emptyTitle={t("lodging:list.empty")}
                   emptyHint={t("lodging:list.emptyHint")}
                   onReset={resetFilters}
                 />
-              ) : (
-                <table className="w-full min-w-[960px] text-sm">
-                  <thead
-                    style={{
-                      background: "var(--bg-elevated)",
-                      borderBottom: "1px solid var(--color-border)",
-                    }}
-                  >
-                    <tr>
-                      {COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
-                        const right = NUMERIC_COLUMNS.includes(id) || id === "actions";
-                        const sortKey = SORT_KEY_BY_COLUMN[id];
-                        const label = columnLabel(t, id);
-                        return (
-                          <th
-                            key={id}
-                            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                              right ? "text-right whitespace-nowrap" : "text-left"
-                            }`}
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            {sortKey === undefined ? (
-                              label
-                            ) : (
-                              <span className={right ? "flex justify-end" : undefined}>
-                                <SortableHeader
-                                  column={sortKey}
-                                  sortBy={sortBy}
-                                  sortOrder={sortOrder}
-                                  onSort={handleSort}
-                                  ariaLabel={t("lodging:list.sortBy", { col: label })}
-                                >
-                                  {label}
-                                </SortableHeader>
-                              </span>
-                            )}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((l, index) => (
-                      <tr
-                        key={l.id}
-                        onClick={() => navigate(`/lodging/${l.id}`)}
-                        className="cursor-pointer"
-                        style={{
-                          background: index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-                          borderTop: "1px solid var(--color-border)",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "var(--bg-muted)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background =
-                            index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
-                        }}
-                      >
-                        {columnPrefs.isVisible("name") && (
-                          <td className="px-4 py-3">
-                            <span aria-hidden className="mr-2">
-                              {lodgingTypeIcon(l.type)}
-                            </span>
-                            <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
-                            {/* A saved-places import can bring in hundreds of houses
-                                the user has never slept in. Without a mark they are
-                                indistinguishable from the maintained ones. */}
-                            {!l.visited && (
-                              <span
-                                data-testid={`lodging-bookmarked-${l.id}`}
-                                title={t("lodging:list.bookmarkedHint")}
-                                className="ml-2 rounded border border-[var(--color-border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
-                              >
-                                {t("lodging:list.bookmarked")}
-                              </span>
-                            )}
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("chain") && (
-                          <td className="px-4 py-3 text-[var(--text-muted)]">
-                            {l.chain ? (
-                              <ChainNameLink chainId={l.chain.id} name={l.chain.name} />
-                            ) : (
-                              t("lodging:field.independent")
-                            )}
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("location") && (
-                          <td className="px-4 py-3 text-[var(--text-muted)]">
-                            {l.city || l.country ? (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span>{l.city || l.country}</span>
-                                <FlagImg country={resolveCountryCode(l.country)} height={12} />
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("status") && (
-                          <td className="px-4 py-3">
-                            {/* Lifecycle first (like the flights status pill:
-                                running / booked / past / cancelled), the
-                                data-quality tag beside it. */}
-                            <span className="inline-flex flex-wrap items-center gap-1.5">
-                              {(() => {
-                                const lifecycle = lodgingLifecycleStatus(l.stays);
-                                return lifecycle ? (
-                                  <StayStatusPill
-                                    status={lifecycle}
-                                    testId={`lodging-lifecycle-${l.id}`}
-                                  />
-                                ) : null;
-                              })()}
-                              <LodgingStatusTag lodging={l} />
-                            </span>
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("lastStay") && (
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {(() => {
-                              // The hotel's own date: newest stay, planned ones
-                              // included — same helper the activity sidebar uses,
-                              // so the two cannot drift apart.
-                              const day = latestStayDayOf(l);
-                              return day ? formatDateInTimezone(day, "UTC") : "—";
-                            })()}
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("stays") && (
-                          <td className="px-4 py-3 text-right">{l.stayCount}</td>
-                        )}
-                        {columnPrefs.isVisible("nights") && (
-                          <td className="px-4 py-3 text-right">{l.nights}</td>
-                        )}
-                        {columnPrefs.isVisible("rating") && (
-                          <td className="px-4 py-3">
-                            <StarRating value={l.overallRating} />
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("spend") && (
-                          <td className="px-4 py-3 text-right">
-                            <LodgingSpendCell lodging={l} baseCurrency={baseCurrency} />
-                            {hasOtherBaseCurrencySpend(
-                              l.totalSpendBaseByCurrency,
-                              baseCurrency
-                            ) && (
-                              <span
-                                className="ml-1 align-super text-[10px] text-[var(--text-muted)]"
-                                title={t("lodging:list.otherCurrencyHint")}
-                              >
-                                *
-                              </span>
-                            )}
-                          </td>
-                        )}
-                        {columnPrefs.isVisible("actions") && (
-                          <td className="px-4 py-3">
-                            <RowActions>
-                              <RowActionButton
-                                icon="edit"
-                                label={t("common:buttons.edit")}
-                                testId={`lodging-edit-${l.id}`}
-                                onClick={() => setEditing(l)}
-                              />
-                              <RowActionButton
-                                icon="delete"
-                                label={t("common:buttons.delete")}
-                                testId={`lodging-delete-${l.id}`}
-                                onClick={() => setToDelete(l)}
-                              />
-                            </RowActions>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            {!loading && filtered.length > 0 && (
-              <div
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs text-[var(--text-muted)]"
-                style={{
-                  background: "var(--bg-elevated)",
-                  borderTop: "1px solid var(--color-border)",
-                }}
-              >
-                <span>
+              </div>
+            ) : (
+              <>
+                <Table columns={visibleColumns} label={t("lodging:list.title")}>
+                  {filtered.map((l) => (
+                    <LodgingRow
+                      key={l.id}
+                      lodging={l}
+                      baseCurrency={baseCurrency}
+                      columns={visibleColumns}
+                      onOpen={() => navigate(`/lodging/${l.id}`)}
+                      onEdit={() => setEditing(l)}
+                      onDelete={() => setToDelete(l)}
+                    />
+                  ))}
+                </Table>
+                <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
                   {t("lodging:list.footer.sortedBy", {
                     label: columnLabel(t, sortBy),
                     direction:
@@ -641,10 +486,10 @@ export default function LodgingListPage(): JSX.Element {
                         ? t("common:sort.ascending")
                         : t("common:sort.descending"),
                   })}
-                </span>
-              </div>
+                </p>
+              </>
             )}
-          </div>
+          </>
         )}
 
         {/* The CSV tile used to sit here. It now lives in the central import

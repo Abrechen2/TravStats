@@ -181,6 +181,15 @@
 }
 
 /*
+ * A cell that exists only once the table is a row. Hidden here, shown in the
+ * narrow block below — never both, so a screen reader is read the columns or
+ * the summary line, not the same facts twice.
+ */
+.ts-table-row > [data-narrow-only="yes"] {
+  display: none;
+}
+
+/*
  * Below 640px the table IS the list row.
  *
  * Same markup, different grid: the mark on the left, title over subtitle in
@@ -220,6 +229,10 @@
   }
   .ts-table-row > [data-narrow="hide"] {
     display: none;
+  }
+
+  .ts-table-row > [data-narrow-only="yes"] {
+    display: block;
   }
 }
 
