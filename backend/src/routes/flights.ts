@@ -127,6 +127,31 @@ interface FlightUpdateData extends ExtendedFlightInput {
   dataSource?: string;
 }
 
+/**
+ * What the duplicate check needs to read, and what it hands back in a 409.
+ *
+ * Shared by both lookups on the create path so the two answer with the same
+ * shape — a client that handles a day-window duplicate must not have to
+ * handle a booking-reference one differently.
+ */
+const DEDUPE_SELECT = {
+  id: true,
+  flightNumber: true,
+  airline: true,
+  depIata: true,
+  arrIata: true,
+  departureTime: true,
+} as const;
+
+type DedupeCandidate = {
+  id: string;
+  flightNumber: string | null;
+  airline: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  departureTime: Date | null;
+};
+
 // All routes require authentication.
 // `requireWriteScope` is method-aware: GET/HEAD/OPTIONS pass through, anything
 // else demands a write- or admin-scoped PAT (cookie sessions are unaffected).
@@ -345,33 +370,52 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     //   manually-entered flight in place. force wins if both are set.
     const forceCreate = req.query['force'] === 'true';
     const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
-    if (data.flightNumber && !forceCreate && departureUtc) {
-      const dayStart = new Date(departureUtc);
-      dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(departureUtc);
-      dayEnd.setUTCHours(23, 59, 59, 999);
+    if (!forceCreate) {
+      // The booking reference finds what the day window cannot: the SAME
+      // booking moved to another date, or reissued under another flight
+      // number. Both arrive as an updated confirmation, which the Companion
+      // posts through this very path — so without this they landed as a
+      // second flight and the logbook grew a trip nobody took (forgejo#119).
+      //
+      // Matched on the reference AND the route, never the reference alone.
+      // One PNR covers every leg of a through ticket, so FRA-JFK and JFK-LAX
+      // share it; the endpoints are what tell a rebooking apart from the next
+      // leg, and a reference-only match would fold a connection into one row.
+      let existing: DedupeCandidate | null = null;
+      let sameBooking = false;
+      if (data.bookingReference && data.departure.iata && data.arrival.iata) {
+        existing = await prisma.flight.findFirst({
+          where: {
+            userId,
+            bookingReference: data.bookingReference,
+            depIata: data.departure.iata,
+            arrIata: data.arrival.iata,
+          },
+          select: DEDUPE_SELECT,
+        });
+        sameBooking = existing !== null;
+      }
 
-      const dayCandidates = await prisma.flight.findMany({
-        where: {
-          userId,
-          departureTime: { gte: dayStart, lte: dayEnd },
-        },
-        select: {
-          id: true,
-          flightNumber: true,
-          airline: true,
-          depIata: true,
-          arrIata: true,
-          departureTime: true,
-        },
-      });
+      if (!existing && data.flightNumber && departureUtc) {
+        const dayStart = new Date(departureUtc);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(departureUtc);
+        dayEnd.setUTCHours(23, 59, 59, 999);
 
-      const normalize = (s: string | null): string =>
-        (s ?? '').replace(/\s+/g, '').toUpperCase();
-      const wantFlightNumber = data.flightNumber; // already normalized by schema
-      const existing = dayCandidates.find(
-        (c) => normalize(c.flightNumber) === wantFlightNumber
-      );
+        const dayCandidates = await prisma.flight.findMany({
+          where: {
+            userId,
+            departureTime: { gte: dayStart, lte: dayEnd },
+          },
+          select: DEDUPE_SELECT,
+        });
+
+        const normalize = (s: string | null): string =>
+          (s ?? '').replace(/\s+/g, '').toUpperCase();
+        const wantFlightNumber = data.flightNumber; // already normalized by schema
+        existing =
+          dayCandidates.find((c) => normalize(c.flightNumber) === wantFlightNumber) ?? null;
+      }
 
       if (existing) {
         if (mergeIntoExisting) {
@@ -386,7 +430,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             });
             return;
           }
-          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data, {
+            rebooking: sameBooking,
+          });
 
           // Companions are resolved to Companion entities up front — same
           // reasoning as the create/update handlers, resolveCompanions uses
@@ -432,7 +478,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 
         res.status(409).json({
           error: 'DUPLICATE_FLIGHT',
-          message: `Flight ${data.flightNumber} on this day already exists`,
+          message: sameBooking
+            ? `Booking ${data.bookingReference} already has a flight on this route`
+            : `Flight ${data.flightNumber} on this day already exists`,
           existingFlight: existing,
         });
         return;

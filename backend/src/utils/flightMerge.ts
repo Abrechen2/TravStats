@@ -39,11 +39,20 @@ const NUMBER_FIELDS = ["price", "taxes", "fees"] as const;
 // On the existing Prisma row the column names are *Time / actual*; on the
 // validated incoming payload they come as (local + timezone) pairs and we
 // resolve them to a Date via fromZonedTime before comparing.
+//
+// `scheduled` marks the two the airline owns and may therefore move on a
+// rebooking; the `actual*` pair records what happened and is never moved by
+// an incoming document.
 const DATE_FIELDS = [
-  { existing: "departureTime", local: "departureLocal", tz: "depTimezone" },
-  { existing: "arrivalTime", local: "arrivalLocal", tz: "arrTimezone" },
-  { existing: "actualDeparture", local: "actualDepartureLocal", tz: "actualDepartureTz" },
-  { existing: "actualArrival", local: "actualArrivalLocal", tz: "actualArrivalTz" },
+  { existing: "departureTime", local: "departureLocal", tz: "depTimezone", scheduled: true },
+  { existing: "arrivalTime", local: "arrivalLocal", tz: "arrTimezone", scheduled: true },
+  {
+    existing: "actualDeparture",
+    local: "actualDepartureLocal",
+    tz: "actualDepartureTz",
+    scheduled: false,
+  },
+  { existing: "actualArrival", local: "actualArrivalLocal", tz: "actualArrivalTz", scheduled: false },
 ] as const;
 
 const ARRAY_FIELDS = ["tags", "coPassengers"] as const;
@@ -62,7 +71,35 @@ type NumberField = (typeof NUMBER_FIELDS)[number];
 type DateField = (typeof DATE_FIELDS)[number]["existing"];
 type ArrayField = (typeof ARRAY_FIELDS)[number] | typeof COMPANIONS_FIELD;
 
-export type MergeableField = StringField | NumberField | DateField | ArrayField;
+/** Only ever merged on a rebooking — see {@link FlightMergeOptions.rebooking}. */
+type RebookingField = "flightNumber";
+
+export type MergeableField =
+  | StringField
+  | NumberField
+  | DateField
+  | ArrayField
+  | RebookingField;
+
+export interface FlightMergeOptions {
+  /**
+   * The caller matched these two rows on the booking reference AND the route,
+   * so they are the same booking rather than merely a similar flight
+   * (forgejo#119).
+   *
+   * That changes what the incoming document is allowed to say. A resent
+   * confirmation for a rebooking carries the NEW departure and sometimes a new
+   * flight number, and those have to land: keeping the old ones shows the user
+   * a flight they are not taking, with nothing to indicate it moved. Every
+   * other field stays fill-if-empty, so a curated seat, note or price is as
+   * safe as it is on an ordinary merge.
+   *
+   * The route check belongs to the caller and is what keeps this from
+   * collapsing a connection — one PNR covers every leg of a through ticket, so
+   * only the endpoints tell a moved flight apart from the next leg.
+   */
+  rebooking?: boolean;
+}
 
 export interface FlightMergeResult {
   patch: Prisma.FlightUpdateInput;
@@ -95,6 +132,7 @@ const normalizeStringInput = (v: unknown): string | undefined => {
 export function buildFlightMergePatch(
   existing: Flight,
   incoming: CreateFlightInput,
+  options: FlightMergeOptions = {},
 ): FlightMergeResult {
   const patch: Prisma.FlightUpdateInput = {};
   const mergedFields: MergeableField[] = [];
@@ -115,13 +153,29 @@ export function buildFlightMergePatch(
     mergedFields.push(field);
   }
 
-  for (const { existing: existingField, local: localField, tz: tzField } of DATE_FIELDS) {
-    if (!isMissingDate((existing as Record<string, unknown>)[existingField])) continue;
+  for (const { existing: existingField, local: localField, tz: tzField, scheduled } of DATE_FIELDS) {
+    const currentValue = (existing as Record<string, unknown>)[existingField];
+    const mayReschedule = options.rebooking === true && scheduled;
+    if (!isMissingDate(currentValue) && !mayReschedule) continue;
     const localValue = (incoming as Record<string, unknown>)[localField];
     const tzValue = (incoming as Record<string, unknown>)[tzField];
     if (typeof localValue !== "string" || typeof tzValue !== "string") continue;
-    (patch as Record<string, unknown>)[existingField] = fromZonedTime(localValue, tzValue);
+    const next = fromZonedTime(localValue, tzValue);
+    // A resent confirmation that says the same thing is not a change, and
+    // reporting it as one would make every re-read look like a rebooking.
+    if (currentValue instanceof Date && currentValue.getTime() === next.getTime()) continue;
+    (patch as Record<string, unknown>)[existingField] = next;
     mergedFields.push(existingField);
+  }
+
+  // The flight number, same rule and same reason: only on a rebooking, and
+  // only when it actually differs.
+  if (options.rebooking === true) {
+    const nextFlightNumber = normalizeStringInput(incoming.flightNumber);
+    if (nextFlightNumber !== undefined && nextFlightNumber !== existing.flightNumber) {
+      patch.flightNumber = nextFlightNumber;
+      mergedFields.push("flightNumber");
+    }
   }
 
   for (const field of ARRAY_FIELDS) {
@@ -151,7 +205,12 @@ export function buildFlightMergePatch(
   // departureTime may also have been filled in the same merge pass (we read
   // it back from the patch we just built rather than from incoming, which
   // only carries the unresolved local+tz pair).
-  if (mergedFields.includes("actualDeparture")) {
+  // A rebooking moves the scheduled departure under an actual one that was
+  // already recorded, so the stored delay becomes a measurement against a time
+  // that no longer exists. Recompute it there too, from whichever side moved.
+  const departureRescheduled =
+    options.rebooking === true && mergedFields.includes("departureTime");
+  if (mergedFields.includes("actualDeparture") || departureRescheduled) {
     const patchRecord = patch as Record<string, unknown>;
     const depRaw =
       mergedFields.includes("departureTime") && patchRecord.departureTime instanceof Date
@@ -159,7 +218,9 @@ export function buildFlightMergePatch(
         : existing.departureTime;
     const actualDepRaw = patchRecord.actualDeparture instanceof Date
       ? patchRecord.actualDeparture
-      : null;
+      : departureRescheduled
+        ? existing.actualDeparture
+        : null;
     if (depRaw && actualDepRaw) {
       patch.delayMinutes = Math.round(
         (actualDepRaw.getTime() - depRaw.getTime()) / 60000,

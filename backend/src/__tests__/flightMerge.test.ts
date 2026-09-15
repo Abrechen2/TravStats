@@ -324,3 +324,111 @@ describe("buildFlightMergePatch", () => {
     expect(Object.keys(patch)).toEqual([]);
   });
 });
+
+/**
+ * forgejo#119. A booking reference is the booking's own identity, so a match
+ * on it plus the route means the two rows are the SAME flight — including
+ * when the airline moved it. A resent confirmation then carries the new date
+ * and sometimes a new flight number, and those have to land: leaving the old
+ * ones in place shows the user a flight they are not taking, with nothing to
+ * say it moved. Everything else stays fill-if-empty, so curated values are
+ * still safe.
+ *
+ * The route is what keeps this from collapsing a connection. One PNR covers
+ * every leg of a through ticket, so FRA-JFK and JFK-LAX share it; only the
+ * endpoints tell a moved flight apart from the next leg. That check lives in
+ * the caller — this file only pins what the patch does once the caller has
+ * decided the two are one booking.
+ */
+describe("buildFlightMergePatch — a rebooking of the same booking", () => {
+  it("moves the departure and arrival times", () => {
+    const existing = makeExistingFlight();
+    const incoming = createFlightSchema.parse({
+      ...validIncomingBase,
+      departureLocal: "2026-05-02T08:00",
+      arrivalLocal: "2026-05-02T17:00",
+    });
+
+    const { patch, mergedFields } = buildFlightMergePatch(existing, incoming, {
+      rebooking: true,
+    });
+
+    expect(patch.departureTime).toEqual(new Date("2026-05-02T06:00:00.000Z"));
+    expect(mergedFields).toEqual(expect.arrayContaining(["departureTime", "arrivalTime"]));
+  });
+
+  it("moves the flight number", () => {
+    const existing = makeExistingFlight({ flightNumber: "LH123" });
+    const incoming = createFlightSchema.parse({
+      ...validIncomingBase,
+      flightNumber: "LH456",
+    });
+
+    const { patch, mergedFields } = buildFlightMergePatch(existing, incoming, {
+      rebooking: true,
+    });
+
+    expect(patch.flightNumber).toBe("LH456");
+    expect(mergedFields).toContain("flightNumber");
+  });
+
+  it("still refuses to overwrite a curated value that is not the booking", () => {
+    const existing = makeExistingFlight({ seatNumber: "1A", notes: "window, over the wing" });
+    const incoming = createFlightSchema.parse({
+      ...validIncomingBase,
+      departureLocal: "2026-05-02T08:00",
+      arrivalLocal: "2026-05-02T17:00",
+      seatNumber: "12C",
+      notes: "something else",
+    });
+
+    const { patch } = buildFlightMergePatch(existing, incoming, { rebooking: true });
+
+    expect(patch).not.toHaveProperty("seatNumber");
+    expect(patch).not.toHaveProperty("notes");
+  });
+
+  it("reports nothing when the resent confirmation is unchanged", () => {
+    const existing = makeExistingFlight();
+    const incoming = createFlightSchema.parse({ ...validIncomingBase });
+
+    const { patch, mergedFields } = buildFlightMergePatch(existing, incoming, {
+      rebooking: true,
+    });
+
+    expect(mergedFields).toEqual([]);
+    expect(Object.keys(patch)).toEqual([]);
+  });
+
+  it("leaves the times alone without the rebooking flag, which is the old rule", () => {
+    const existing = makeExistingFlight();
+    const incoming = createFlightSchema.parse({
+      ...validIncomingBase,
+      departureLocal: "2026-05-02T08:00",
+      arrivalLocal: "2026-05-02T17:00",
+      flightNumber: "LH456",
+    });
+
+    const { patch, mergedFields } = buildFlightMergePatch(existing, incoming);
+
+    expect(patch).not.toHaveProperty("departureTime");
+    expect(patch).not.toHaveProperty("flightNumber");
+    expect(mergedFields).toEqual([]);
+  });
+
+  it("recomputes the delay when the scheduled departure moves under a recorded actual", () => {
+    const existing = makeExistingFlight({
+      actualDeparture: new Date("2026-05-02T06:30:00.000Z"),
+      delayMinutes: 1470,
+    });
+    const incoming = createFlightSchema.parse({
+      ...validIncomingBase,
+      departureLocal: "2026-05-02T08:00",
+      arrivalLocal: "2026-05-02T17:00",
+    });
+
+    const { patch } = buildFlightMergePatch(existing, incoming, { rebooking: true });
+
+    expect(patch.delayMinutes).toBe(30);
+  });
+});
