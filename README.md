@@ -52,7 +52,7 @@ no ads.
 - 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
 - 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
 - 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
+- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, rate limiting on every sensitive endpoint
 - 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
 
 ## Is TravStats for you?
@@ -117,7 +117,7 @@ The same route with screenshots and the per-platform detail:
 
 ```bash
 # 1. Grab the compose file
-curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/Main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/main/docker-compose.prod.yml
 
 # 2. Set one variable
 echo "DB_PASSWORD=$(openssl rand -base64 32)" > .env
