@@ -111,7 +111,7 @@ nichts aus dem Auftrag.
 | # | Block | Bindender Punkt | Zustand |
 |---|---|---|---|
 | A | Mobile Zeile für alle vier Logbücher | D-02, Abnahmefrage 1, Owner-Wiederholung | **fertig** (`eb5723db`) |
-| B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | offen |
+| B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | **fertig** (`6acbb1cd`), Browserblick offen |
 | C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | offen |
 | D | Eine Dialog-Shell für die 44 eigenen Overlays | E11, §6 Zustände | offen |
 | E | Status- und Datumsvokabular über alle Domänen | D-07 | offen |
@@ -168,3 +168,53 @@ und sie lief gegen dieselbe Datenbank.
 
 Wer im Browser abnimmt, prüft vorher, ob eine Suite läuft — und seedet NICHT
 blind nach, weil das in den fremden Lauf greift.
+
+## Block B — fertig, Browserblick offen (15.09.2026)
+
+Commit `6acbb1cd`. `DetailHeader` in `components/ui/`, von allen vier
+Eintragsdetails benutzt; die vier haben dabei ihre selbstgebaute Shell
+verlassen. Wächter: `detailHeaderFamily.test.ts`.
+
+Gemessener Ausgangszustand — vier Antworten auf eine Frage, keine davon vom
+Inhalt verlangt:
+
+| | Flug | Kreuzfahrt | Unterkunft | Ort |
+|---|---|---|---|---|
+| Rahmen | Karte | Karte | Karte | **keiner** |
+| Breite | `max-w-6xl` | `max-w-6xl` | `max-w-6xl` | `max-w-[1100px]` |
+| Marke | 48-px-Kachel | 48-px-Kachel | 48-px-Kachel | **im `h1`** |
+| Status | Pille | Pille + 3 Kästchen | **keiner** | eigene Pille, eigene Farben |
+| Zurück | `button` | `button` | `button` | stiller Link |
+| Bearbeiten | Akzentfläche | Akzentfläche | Akzentfläche | Umriss |
+
+Vier Dinge wurden dabei geändert statt verschoben, jedes mit Grund: Zurück ist
+ein `Link` (ein `button` nimmt Mittelklick und „in neuem Tab öffnen"); der
+Pfeil ist `aria-hidden` (er war Teil der Beschriftung, ein Screenreader las
+„Pfeil links Kempinski"); die Unterkunft zeigt jetzt dieselbe Lebenszyklus-Pille
+wie die Liste, über denselben Helfer; und Löschen ist ein Sekundärknopf, weil
+`Button` selbst festlegt, dass Gefahr in den Bestätigen-Dialog gehört.
+
+Zahlen danach: Shell-Ratsche **17 → 13**, Tailwind-Paletten **72 → 70**,
+Tests 3737 in 433 Dateien.
+
+### Der Browserblick fehlt — und warum
+
+Nicht aus Nachlässigkeit, sondern weil die Umgebung zumachte:
+
+1. Die geteilte Dev-Datenbank auf 5433 wird von einer fremden Backend-Suite
+   geleert (siehe Block A). Also eine **eigene** Datenbank aufgesetzt:
+   Container `travstats-db-design`, Postgis 15-3.4, Port **5434**, Datenbank
+   `flights_design`, migriert, Kataloge (30 Schiffe, 12 059 Häfen) und
+   Demo-Seed eingespielt. Die steht und ist isoliert.
+2. Am Dev-Server ist es gescheitert. `TaskStop` beendet den `npx`-Wrapper,
+   nicht das `tsx`/`vite`-Kind — die bekannte Verwaisung. Jeder Neustart
+   brauchte deshalb einen neuen Port, jeder neue Port eine neue CORS-Herkunft,
+   und `taskkill` ist in diesem Projekt untersagt. Ergebnis: fünf verwaiste
+   Vite-Server auf 3003–3007 und zwei Backends auf 8002/8003.
+
+**Für den nächsten Anlauf, damit das nicht wieder passiert:** Backend mit
+`CORS_ORIGIN` als **Liste** starten (`http://localhost:3003,…,3010`) — die
+Variable nimmt kommagetrennte Werte, das beendet das Portkarussell sofort.
+Und: `VITE_API_URL` aus der **Shell** schlägt `.env.local`; ein `--force` ist
+nötig, weil Vite den `import.meta.env`-Block in den Transform-Cache backt und
+sonst die alte Backend-Adresse weiterliefert.
