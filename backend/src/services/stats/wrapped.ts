@@ -91,34 +91,10 @@ export interface WrappedCountry {
   counted: boolean;
 }
 
-export type WrappedRank = "top" | "second" | "other";
-
-export interface Wrapped {
-  year: number;
-  /**
-   * Every year with countable activity, ascending. Here so a client can offer
-   * a year picker without a second round trip — and so it never offers a year
-   * the story would be empty for.
-   */
-  availableYears: number[];
-  rank: WrappedRank;
-  /** The one year that beat this one, when exactly one did. See rule 2. */
-  comparisonYear: number | null;
-  flights: number;
-  distanceKm: number;
-  /** `distanceKm` in trips around the Earth, one decimal. */
-  earthFactor: number;
-  /**
-   * Countries first evidenced in this year AND reaching the user's counting
-   * threshold. See the header, and `PassportCountry.counted`.
-   */
-  newCountries: number;
-  cruises: number;
-  /** The year's most-flown carrier. Null when no flight named one. */
-  topAirline: { name: string; code: string | null; flights: number } | null;
-  /** The year's most-flown pair, codes sorted. Null when none is derivable. */
-  topRoute: { from: string; to: string; flights: number } | null;
-}
+// Published by GET /stats/wrapped, so the shape is described once in
+// `schemas/statsWrapped.ts` and read here (forgejo#52).
+export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
+import type { Wrapped } from "../../schemas/statsWrapped";
 
 /** Cruises are stored as a calendar start date, so UTC IS their local day. */
 const cruiseYearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);

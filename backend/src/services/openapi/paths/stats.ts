@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
 import { lodgingStatsResponseSchema } from "../../../schemas/statsLodging";
+import { wrappedSchema } from "../../../schemas/statsWrapped";
 import { cruiseStatsResponseSchema } from "../../../schemas/statsCruise";
 import {
   travelRecordsResponseSchema,
@@ -190,16 +191,10 @@ registry.registerPath({
  */
 const statsTag = ["Stats"];
 
-function readOnlyStat(path: string, summary: string, description?: string): void {
-  registry.registerPath({
-    method: "get",
-    path,
-    summary,
-    ...(description ? { description } : {}),
-    tags: statsTag,
-    responses: { 200: { description: summary } },
-  });
-}
+// `readOnlyStat` used to live here: a helper that registered a 200 carrying a
+// description and nothing else. Every /stats endpoint now publishes a schema
+// (forgejo#52), so it has no callers — and leaving it would be leaving the
+// easy way to add another shapeless endpoint.
 
 const continentSchema = z.enum([
   "Africa",
@@ -443,6 +438,8 @@ registry.registerPath({
   },
 });
 
+const wrapped = registry.register("Wrapped", wrappedSchema.openapi("Wrapped"));
+
 registry.registerPath({
   method: "get",
   path: "/stats/wrapped",
@@ -459,7 +456,10 @@ registry.registerPath({
   tags: statsTag,
   request: { query: z.object({ year: z.coerce.number().int().optional() }) },
   responses: {
-    200: { description: "The year in review" },
+    200: {
+      description: "The year in review",
+      content: { "application/json": { schema: wrapped } },
+    },
     404: { description: "No countable activity in any year" },
   },
 });

@@ -1,4 +1,5 @@
 import { buildWrapped, type WrappedFlight } from "../wrapped";
+import { wrappedSchema } from "../../../schemas/statsWrapped";
 
 /**
  * Forgejo #42, the last of the four pieces: the year in review is derived on
@@ -240,5 +241,31 @@ describe("buildWrapped", () => {
 
     expect(wrapped?.cruises).toBe(1);
     expect(wrapped?.availableYears).toEqual([2019, 2024]);
+  });
+
+  /**
+   * `/stats/wrapped` publishes this shape and the function infers its type from
+   * the schema, which tsc checks — but a type is not a value. This parses the
+   * real result, including the case where every nullable field is null, because
+   * that is the shape a thin year actually produces (forgejo#52).
+   */
+  it("produces a body the published schema accepts, rich and thin", () => {
+    const rich = buildWrapped(
+      [flight({ departureYear: 2024, flightNumber: "LH400", airline: "Lufthansa" })],
+      [],
+      []
+    );
+    expect(wrappedSchema.safeParse(rich).success).toBe(true);
+
+    // A year with a flight that names no carrier and no derivable pair: every
+    // nullable field is null at once, which no other case here exercises.
+    const thin = buildWrapped(
+      [flight({ departureYear: 2024, flightNumber: null, airline: null })],
+      [],
+      []
+    );
+    const parsed = wrappedSchema.safeParse(thin);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
+    expect(thin?.topAirline).toBeNull();
   });
 });
