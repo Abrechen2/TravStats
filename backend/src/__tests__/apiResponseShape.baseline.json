@@ -59,6 +59,7 @@
     "settings/types.ts",
     "setup.ts",
     "stats.ts",
+    "stats/aircraft.ts",
     "suggestions.ts",
     "templateStatus.ts",
     "training.ts",
