@@ -44,9 +44,16 @@ vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
 vi.mock("./CopyActionButton", () => ({ default: () => null }));
 vi.mock("../CurrencyInput", () => ({ default: () => null }));
 
-function baseProps(
-  overrides: Partial<FlightCompleteStepProps> = {}
-): FlightCompleteStepProps {
+// TripSelectField fetches the trip list on mount from `lib/api/trips` — a
+// different module than the `lib/api` barrel, so a barrel mock never covered it
+// and the request escaped to the network (forgejo#110). An empty list is what a
+// failed request already produced, so the assertions below are unchanged.
+vi.mock("@/lib/api/trips", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/trips")>();
+  return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
+});
+
+function baseProps(overrides: Partial<FlightCompleteStepProps> = {}): FlightCompleteStepProps {
   return {
     selectedFlight: null,
     timeEstimationWarning: null,
@@ -150,7 +157,9 @@ describe("FlightCompleteStep status field", () => {
   });
 
   it('shows an unchecked cancelled checkbox for status "scheduled"', () => {
-    const { getByLabelText } = render(<FlightCompleteStep {...baseProps({ status: "scheduled" })} />);
+    const { getByLabelText } = render(
+      <FlightCompleteStep {...baseProps({ status: "scheduled" })} />
+    );
     // Two checkboxes exist (historical + cancelled) — target by its label so
     // this doesn't accidentally grab the unrelated "historical" checkbox.
     const checkbox = getByLabelText("flights:status.cancelledCheckbox") as HTMLInputElement;

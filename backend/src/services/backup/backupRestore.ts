@@ -7,6 +7,7 @@ import { DATABASE_URL } from '../../utils/database';
 import { BACKUP_BASE_DIR, DOCKER_DB_CONTAINER, RestoreOptions } from './backupConfig';
 import { parseDatabaseUrl } from './backupDatabase';
 import { AppError } from '../../middleware/errorHandler';
+import { reconcileInterruptedBackups } from './reconcileBackups';
 
 /**
  * Restore backup
@@ -204,6 +205,16 @@ export async function restoreBackup(
         await extractUploadsArchive(filesBackupPath, uploadsDir);
         logger.info({ operation: 'restore_files_complete', message: 'Files restored' });
       }
+    }
+
+    // A restored database carries the backup rows as they stood when the dump
+    // was taken — including the row of the very backup being dumped, which was
+    // still 'running' at that moment. Left alone it becomes a permanent lock:
+    // further backups and restores answer 409 and the scheduler skips. The
+    // route verified no operation was running before this restore began, so
+    // anything in flight now came out of the archive (AUD-069).
+    if (options.scope === 'full' || options.scope === 'database') {
+      await reconcileInterruptedBackups(`restore of backup ${id}`);
     }
 
     // Cleanup

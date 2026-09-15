@@ -1,7 +1,8 @@
-import { find as findTimezone } from 'geo-tz';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { getCachedAirport, invalidateAirportCache, compareAirportAuthority } from './airportCache';
+import { find as findTimezone } from "geo-tz";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { getCachedAirport, invalidateAirportCache, compareAirportAuthority } from "./airportCache";
 
 export interface AirportData {
   iata?: string | null;
@@ -13,6 +14,13 @@ export interface AirportData {
   lon: number;
   altitude?: number | null;
   timezone?: string | null;
+  /**
+   * The city the airport SERVES, from AeroDataBox — as opposed to `city`, which
+   * is OurAirports' municipality (the town the runway sits in). Backfilled only
+   * as a side effect of a flight lookup, so it is usually null. See
+   * `utils/airportDisplay.ts`.
+   */
+  municipalityName?: string | null;
 }
 
 interface ExternalAirportData {
@@ -41,7 +49,7 @@ let csvCache: CsvCache = { data: null, timestamp: 0 };
  */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
 
   for (let i = 0; i < line.length; i++) {
@@ -50,10 +58,10 @@ function parseCSVLine(line: string): string[] {
     if (char === '"') {
       // Toggle quote state
       inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === "," && !inQuotes) {
       // End of field
       result.push(current);
-      current = '';
+      current = "";
     } else {
       // Regular character
       current += char;
@@ -70,12 +78,7 @@ function parseCSVLine(line: string): string[] {
  * Calculate distance between two coordinates (Haversine formula)
  * Returns distance in kilometers
  */
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
   const toRad = (deg: number) => deg * (Math.PI / 180);
 
@@ -84,13 +87,27 @@ function calculateDistance(
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+/**
+ * The stored airport for a code, or null.
+ *
+ * Prefers the active airport when a closed predecessor shares the same
+ * IATA/ICAO (Munich Airport vs. Munich-Riem, both EDDM/MUC), and a real ICAO
+ * over a synthetic US-#### placeholder — see `compareAirportAuthority`.
+ *
+ * A function rather than inline code because the create path has to repeat
+ * this read after losing a race, and the two must pick the same row.
+ */
+async function readStoredAirport(upperCode: string): Promise<AirportData | null> {
+  const candidates = await prisma.airport.findMany({
+    where: { OR: [{ iata: upperCode }, { icao: upperCode }] },
+  });
+  return [...candidates].sort(compareAirportAuthority)[0] ?? null;
 }
 
 /**
@@ -107,27 +124,14 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
 
   // 2. If not in cache, check database (cache will be populated by getCachedAirport if found)
   // This handles the case where cache returned null but airport might exist
-  // Prefer the active airport when a closed predecessor shares the same
-  // IATA/ICAO (e.g. Munich Airport vs. Munich-Riem, both EDDM/MUC).
-  const candidates = await prisma.airport.findMany({
-    where: {
-      OR: [
-        { iata: upperCode },
-        { icao: upperCode },
-      ],
-    },
-  });
-  // Prefer the authoritative airport on a code collision: active over closed,
-  // and a real ICAO over a synthetic US-#### placeholder (see
-  // compareAirportAuthority).
-  const existingAirport = [...candidates].sort(compareAirportAuthority)[0] ?? null;
+  const existingAirport = await readStoredAirport(upperCode);
 
   if (existingAirport) {
     return existingAirport;
   }
 
   logger.debug({
-    operation: 'airport_lookup_external',
+    operation: "airport_lookup_external",
     message: `Airport ${code} not found locally, searching external sources`,
     context: { code },
   });
@@ -144,24 +148,46 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
   const derivedTimezone = deriveTimezone(externalData.lat, externalData.lon);
 
   logger.info({
-    operation: 'airport_lookup_store',
+    operation: "airport_lookup_store",
     message: `Storing new airport: ${externalData.name} (${code})`,
     context: { code, airportName: externalData.name, timezone: derivedTimezone },
   });
 
-  const newAirport = await prisma.airport.create({
-    data: {
-      iata: externalData.iata || null,
-      icao: externalData.icao || null,
-      name: externalData.name,
-      city: externalData.city || null,
-      country: externalData.country || null,
-      lat: externalData.lat,
-      lon: externalData.lon,
-      altitude: externalData.altitude || null,
-      timezone: derivedTimezone,
-    },
-  });
+  // The check above and this create are not atomic, and an import resolves its
+  // airports concurrently — so two requests for the SAME unseen code both find
+  // nothing and both insert. `(iata, isClosed)` and `(icao, isClosed)` are
+  // unique, so the loser used to get P2002 and fail a perfectly valid import
+  // (AUD-091). A lost race is not an error: the row it wanted now exists, so
+  // it is read and returned. Read through the same helper as the first check,
+  // or the two could disagree about which row wins a code collision.
+  let newAirport: AirportData;
+  try {
+    newAirport = await prisma.airport.create({
+      data: {
+        iata: externalData.iata || null,
+        icao: externalData.icao || null,
+        name: externalData.name,
+        city: externalData.city || null,
+        country: externalData.country || null,
+        lat: externalData.lat,
+        lon: externalData.lon,
+        altitude: externalData.altitude || null,
+        timezone: derivedTimezone,
+      },
+    });
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      throw error;
+    }
+    const raced = await readStoredAirport(upperCode);
+    if (!raced) throw error;
+    logger.info({
+      operation: "airport_lookup_race_resolved",
+      message: `Another request stored ${upperCode} first; using that row`,
+      context: { code: upperCode, airportName: raced.name },
+    });
+    return raced;
+  }
 
   // Invalidate cache so new airport is cached on next lookup
   if (newAirport.iata) {
@@ -186,7 +212,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
  */
 export async function enrichAirportMetadata(
   code: string,
-  data: { shortName?: string | null; municipalityName?: string | null },
+  data: { shortName?: string | null; municipalityName?: string | null }
 ): Promise<boolean> {
   const incomingShort = data.shortName?.trim();
   const incomingMunicipality = data.municipalityName?.trim();
@@ -195,14 +221,15 @@ export async function enrichAirportMetadata(
   const upperCode = code.toUpperCase();
   const airport = await prisma.airport.findFirst({
     where: { OR: [{ iata: upperCode }, { icao: upperCode }] },
-    orderBy: { isClosed: 'asc' },
+    orderBy: { isClosed: "asc" },
     select: { id: true, iata: true, icao: true, shortName: true, municipalityName: true },
   });
   if (!airport) return false;
 
   const patch: { shortName?: string; municipalityName?: string } = {};
   if (incomingShort && !airport.shortName) patch.shortName = incomingShort;
-  if (incomingMunicipality && !airport.municipalityName) patch.municipalityName = incomingMunicipality;
+  if (incomingMunicipality && !airport.municipalityName)
+    patch.municipalityName = incomingMunicipality;
   if (Object.keys(patch).length === 0) return false;
 
   await prisma.airport.update({ where: { id: airport.id }, data: patch });
@@ -211,8 +238,8 @@ export async function enrichAirportMetadata(
   if (airport.icao) invalidateAirportCache(airport.icao);
 
   logger.info({
-    operation: 'airport_metadata_enriched',
-    message: `Backfilled metadata for ${code}: ${Object.keys(patch).join(', ')}`,
+    operation: "airport_metadata_enriched",
+    message: `Backfilled metadata for ${code}: ${Object.keys(patch).join(", ")}`,
     context: { code, fields: Object.keys(patch) },
   });
 
@@ -226,33 +253,33 @@ export async function enrichAirportMetadata(
 async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData | null> {
   // Versuche zuerst die kostenlose Airport-Codes API
   try {
-    const response = await fetch(
-      `https://www.airport-data.com/api/ap_info.json?iata=${code}`
-    );
+    const response = await fetch(`https://www.airport-data.com/api/ap_info.json?iata=${code}`);
 
     if (response.ok) {
-      const data = await response.json() as Record<string, unknown>;
+      const data = (await response.json()) as Record<string, unknown>;
 
       if (data && data.latitude && data.longitude) {
         return {
-          iata: (typeof data.iata === 'string' ? data.iata : code) || code,
-          icao: typeof data.icao === 'string' ? data.icao : undefined,
-          name: typeof data.name === 'string' ? data.name : code,
-          city: typeof data.location === 'string' ? data.location : undefined,
-          country: typeof data.country === 'string' ? data.country : undefined,
+          iata: (typeof data.iata === "string" ? data.iata : code) || code,
+          icao: typeof data.icao === "string" ? data.icao : undefined,
+          name: typeof data.name === "string" ? data.name : code,
+          city: typeof data.location === "string" ? data.location : undefined,
+          country: typeof data.country === "string" ? data.country : undefined,
           lat: parseFloat(String(data.latitude)),
           lon: parseFloat(String(data.longitude)),
-          altitude: data.elevation_ft ? Math.round(parseFloat(String(data.elevation_ft)) * 0.3048) : undefined,
+          altitude: data.elevation_ft
+            ? Math.round(parseFloat(String(data.elevation_ft)) * 0.3048)
+            : undefined,
         };
       }
     }
   } catch (error) {
     logger.debug({
-      operation: 'airport_lookup_api_failed',
+      operation: "airport_lookup_api_failed",
       message: `Airport-data.com API failed for ${code}`,
       context: { code },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
@@ -263,18 +290,18 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     const now = Date.now();
 
     // Check if cache is valid
-    if (csvCache.data && (now - csvCache.timestamp) < CSV_CACHE_TTL) {
+    if (csvCache.data && now - csvCache.timestamp < CSV_CACHE_TTL) {
       const cacheAge = Math.round((now - csvCache.timestamp) / 1000 / 60);
       logger.debug({
-        operation: 'airport_lookup_csv_cache',
+        operation: "airport_lookup_csv_cache",
         message: `Using cached OurAirports data (age: ${cacheAge}min)`,
         context: { cacheAgeMinutes: cacheAge },
       });
       csvText = csvCache.data;
     } else {
       logger.info({
-        operation: 'airport_lookup_csv_download',
-        message: 'Downloading OurAirports CSV data',
+        operation: "airport_lookup_csv_download",
+        message: "Downloading OurAirports CSV data",
       });
       const response = await fetch(
         `https://davidmegginson.github.io/ourairports-data/airports.csv`
@@ -293,15 +320,15 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
       };
       const csvSizeMB = (csvText.length / 1024 / 1024).toFixed(2);
       logger.info({
-        operation: 'airport_lookup_csv_cached',
+        operation: "airport_lookup_csv_cached",
         message: `CSV data cached (${csvSizeMB}MB)`,
         context: { sizeMB: parseFloat(csvSizeMB) },
       });
     }
 
-    const lines = csvText.split('\n');
+    const lines = csvText.split("\n");
     logger.debug({
-      operation: 'airport_lookup_csv_search',
+      operation: "airport_lookup_csv_search",
       message: `Searching ${lines.length} airports for code: ${code}`,
       context: { code, lineCount: lines.length },
     });
@@ -322,14 +349,14 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
       // 6: elevation_ft, 7: continent, 8: iso_country, 9: iso_region, 10: municipality,
       // 11: scheduled_service, 12: gps_code (ICAO backup), 13: iata_code, 14: local_code
 
-      const iataCode = parts[13]?.trim() || '';
-      const icaoCode = parts[1]?.trim() || parts[12]?.trim() || '';
+      const iataCode = parts[13]?.trim() || "";
+      const icaoCode = parts[1]?.trim() || parts[12]?.trim() || "";
 
       // Case-insensitive comparison
       if (iataCode.toUpperCase() === code || icaoCode.toUpperCase() === code) {
         foundLine = i + 1;
         logger.debug({
-          operation: 'airport_lookup_csv_found',
+          operation: "airport_lookup_csv_found",
           message: `Found airport in CSV (line ${foundLine})`,
           context: {
             code,
@@ -348,7 +375,7 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
 
         if (isNaN(lat) || isNaN(lon)) {
           logger.warn({
-            operation: 'airport_lookup_csv_invalid_coords',
+            operation: "airport_lookup_csv_invalid_coords",
             message: `Invalid coordinates for ${code}, skipping`,
             context: { code, lat: parts[4], lon: parts[5] },
           });
@@ -370,25 +397,25 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
 
     if (foundLine === 0) {
       logger.debug({
-        operation: 'airport_lookup_csv_not_found',
+        operation: "airport_lookup_csv_not_found",
         message: `Code ${code} not found in CSV`,
         context: { code, linesChecked: lines.length },
       });
     }
   } catch (error) {
     logger.error({
-      operation: 'airport_lookup_csv_error',
+      operation: "airport_lookup_csv_error",
       message: `OurAirports CSV lookup failed for ${code}`,
       context: { code },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
   }
 
   logger.debug({
-    operation: 'airport_lookup_no_match',
+    operation: "airport_lookup_no_match",
     message: `No external match for ${code}`,
     context: { code },
   });
@@ -569,14 +596,14 @@ export async function backfillAirportTimezones(): Promise<number> {
 
   if (airports.length === 0) {
     logger.info({
-      operation: 'airport_timezone_backfill',
-      message: 'All airports already have timezone data',
+      operation: "airport_timezone_backfill",
+      message: "All airports already have timezone data",
     });
     return 0;
   }
 
   logger.info({
-    operation: 'airport_timezone_backfill',
+    operation: "airport_timezone_backfill",
     message: `Backfilling timezone for ${airports.length} airports`,
   });
 
@@ -591,7 +618,7 @@ export async function backfillAirportTimezones(): Promise<number> {
       updated++;
     } else {
       logger.warn({
-        operation: 'airport_timezone_backfill',
+        operation: "airport_timezone_backfill",
         message: `Could not derive timezone for airport ${airport.iata || airport.icao}`,
         context: { lat: airport.lat, lon: airport.lon },
       });
@@ -599,7 +626,7 @@ export async function backfillAirportTimezones(): Promise<number> {
   }
 
   logger.info({
-    operation: 'airport_timezone_backfill',
+    operation: "airport_timezone_backfill",
     message: `Backfill complete: ${updated}/${airports.length} airports updated`,
   });
 
@@ -615,13 +642,23 @@ export async function backfillAirportTimezones(): Promise<number> {
  */
 export async function airportsInCityOf(
   code: string
-): Promise<Array<{ iata: string | null; icao: string | null; name: string; city: string | null; isClosed: boolean }>> {
+): Promise<
+  Array<{
+    iata: string | null;
+    icao: string | null;
+    name: string;
+    city: string | null;
+    isClosed: boolean;
+  }>
+> {
   const upper = code.toUpperCase();
   const own = await prisma.airport.findMany({
     where: { OR: [{ iata: upper }, { icao: upper }] },
     select: { city: true },
   });
-  const cities = [...new Set(own.map((row) => row.city).filter((city): city is string => Boolean(city)))];
+  const cities = [
+    ...new Set(own.map((row) => row.city).filter((city): city is string => Boolean(city))),
+  ];
   if (cities.length === 0) return [];
   return prisma.airport.findMany({
     where: { city: { in: cities }, iata: { not: null } },

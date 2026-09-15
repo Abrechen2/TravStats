@@ -33,6 +33,23 @@ export interface AccountFlight {
   status: string;
   departureTime: Date | null;
   arrivalTime: Date | null;
+  /**
+   * The calendar day at the DEPARTURE airport and at the ARRIVAL airport, as
+   * UTC midnight — resolved by the caller through `departureClock`.
+   *
+   * Whether a flight took a night is a question about local clocks, and this
+   * used to be decided by comparing the stored instants in UTC. An evening hop
+   * from Los Angeles at 16:30 local, landing 17:30 local, is 23:30Z to 00:30Z:
+   * it crossed a UTC date boundary and was billed as a night in the plane,
+   * subtracted from nights at home. The mirror case, a genuine red-eye
+   * departing 23:30 local and landing 00:30 local, is 06:30Z to 07:30Z on one
+   * UTC day and counted as no night at all (AUD-079).
+   *
+   * Null where no timezone is known; the stored instant is then the best
+   * available answer and is used as before.
+   */
+  depLocalDay: Date | null;
+  arrLocalDay: Date | null;
 }
 
 /**
@@ -132,10 +149,11 @@ export function buildTravelAccount(input: {
   for (const flight of flights) {
     if (!isCountableFlight(flight)) continue;
     if (flight.departureTime === null || flight.arrivalTime === null) continue;
-    // A night in the air is a flight that crosses a date boundary. A day-time
-    // hop does not take a night from anyone.
-    const dep = dayKey(flight.departureTime);
-    const arr = dayKey(flight.arrivalTime);
+    // A night in the air is a flight that crosses a date boundary ON THE
+    // CLOCKS AT EITHER END. A day-time hop does not take a night from anyone,
+    // however it happens to fall in UTC.
+    const dep = dayKey(flight.depLocalDay ?? flight.departureTime);
+    const arr = dayKey(flight.arrLocalDay ?? flight.arrivalTime);
     if (arr <= dep || arr > today) continue;
     for (let cursor = dep; cursor < arr; cursor += DAY_MS) air.add(cursor);
   }

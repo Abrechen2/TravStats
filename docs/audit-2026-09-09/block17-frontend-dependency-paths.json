@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "name": "travstats-frontend",
+  "dependencies": {
+    "deck.gl": {
+      "version": "9.3.11",
+      "resolved": "https://registry.npmjs.org/deck.gl/-/deck.gl-9.3.11.tgz",
+      "overridden": false,
+      "dependencies": {
+        "@deck.gl/carto": {
+          "version": "9.3.11",
+          "resolved": "https://registry.npmjs.org/@deck.gl/carto/-/carto-9.3.11.tgz",
+          "overridden": false,
+          "dependencies": {
+            "@loaders.gl/compression": {
+              "version": "4.4.5",
+              "resolved": "https://registry.npmjs.org/@loaders.gl/compression/-/compression-4.4.5.tgz",
+              "overridden": false,
+              "dependencies": {
+                "fflate": {
+                  "version": "0.7.4",
+                  "resolved": "https://registry.npmjs.org/fflate/-/fflate-0.7.4.tgz",
+                  "overridden": false
+                }
+              }
+            }
+          }
+        },
+        "@deck.gl/geo-layers": {
+          "version": "9.3.11",
+          "resolved": "https://registry.npmjs.org/@deck.gl/geo-layers/-/geo-layers-9.3.11.tgz",
+          "overridden": false,
+          "dependencies": {
+            "@luma.gl/gltf": {
+              "version": "9.3.6",
+              "resolved": "https://registry.npmjs.org/@luma.gl/gltf/-/gltf-9.3.6.tgz",
+              "overridden": false,
+              "dependencies": {
+                "@loaders.gl/textures": {
+                  "version": "4.4.5",
+                  "resolved": "https://registry.npmjs.org/@loaders.gl/textures/-/textures-4.4.5.tgz",
+                  "overridden": false,
+                  "dependencies": {
+                    "texture-compressor": {
+                      "version": "1.0.2",
+                      "resolved": "https://registry.npmjs.org/texture-compressor/-/texture-compressor-1.0.2.tgz",
+                      "overridden": false,
+                      "dependencies": {
+                        "image-size": {
+                          "version": "0.7.5",
+                          "resolved": "https://registry.npmjs.org/image-size/-/image-size-0.7.5.tgz",
+                          "overridden": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "eslint": {
+      "version": "8.57.1",
+      "resolved": "https://registry.npmjs.org/eslint/-/eslint-8.57.1.tgz",
+      "overridden": false,
+      "dependencies": {
+        "@eslint/eslintrc": {
+          "version": "2.1.4",
+          "resolved": "https://registry.npmjs.org/@eslint/eslintrc/-/eslintrc-2.1.4.tgz",
+          "overridden": false,
+          "dependencies": {
+            "js-yaml": {
+              "version": "4.3.0"
+            }
+          }
+        },
+        "js-yaml": {
+          "version": "4.3.0",
+          "resolved": "https://registry.npmjs.org/js-yaml/-/js-yaml-4.3.0.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "jspdf": {
+      "version": "4.2.1",
+      "resolved": "https://registry.npmjs.org/jspdf/-/jspdf-4.2.1.tgz",
+      "overridden": false,
+      "dependencies": {
+        "dompurify": {
+          "version": "3.4.12",
+          "resolved": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.12.tgz",
+          "overridden": false
+        },
+        "fflate": {
+          "version": "0.8.3",
+          "resolved": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz",
+          "overridden": false
+        }
+      }
+    }
+  }
+}

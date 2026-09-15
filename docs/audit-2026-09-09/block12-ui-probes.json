@@ -1,0 +1,72 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "heuristicControl",
+      "rejectAvailable": true,
+      "clearedMatchedId": true
+    },
+    {
+      "name": "sameDateHeuristic",
+      "rejectAvailable": false,
+      "matchedIdStillSent": true
+    },
+    {
+      "name": "nameJoin",
+      "rejectAvailable": false,
+      "matchedIdStillSent": true
+    },
+    {
+      "name": "AUD-057 currency choice",
+      "unpricedUnitBlocksCommit": true,
+      "EURSelectable": true,
+      "AEDSelectable": false,
+      "KWDSelectable": false,
+      "EURPayloadPreserved": true
+    },
+    {
+      "name": "AUD-059/060 combined CSV control",
+      "lat": 52.52,
+      "lon": 13.405,
+      "ratingRoom": 0.5,
+      "rowErrors": 0
+    },
+    {
+      "name": "AUD-037 standard visible controls",
+      "tabs": [
+        {
+          "id": "first",
+          "inside": true
+        },
+        {
+          "id": "last",
+          "inside": true
+        },
+        {
+          "id": "first",
+          "inside": true
+        },
+        {
+          "id": "last",
+          "inside": true
+        },
+        {
+          "id": "first",
+          "inside": true
+        },
+        {
+          "id": "last",
+          "inside": true
+        },
+        {
+          "id": "first",
+          "inside": true
+        },
+        {
+          "id": "last",
+          "inside": true
+        }
+      ]
+    }
+  ]
+}

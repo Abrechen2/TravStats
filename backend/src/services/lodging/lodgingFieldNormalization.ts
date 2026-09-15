@@ -87,6 +87,32 @@ const BOARD_PATTERNS: ReadonlyArray<readonly [RegExp, LodgingBoard]> = [
   [/ohne\s+verpflegung|room\s*only|nur\s+(die\s+)?(ü|ue)bernachtung|no\s+meals/i, "none"],
 ];
 
+const MEAL_WORD = "(?:breakfast|fr(?:ü|ue)hst(?:ü|ue)ck|board|pension|meals?|verpflegung)";
+
+/**
+ * "No breakfast included", "Breakfast not included", "Ohne Frühstück". The
+ * model copies the meal plan as printed, and a printed EXCLUSION contains the
+ * very word the positive patterns key on — so all three came back as
+ * `breakfast`, turning the plan into its opposite (AUD-053). A negation
+ * within a clause of the meal word (no comma or full stop between) is read
+ * before any positive match.
+ */
+const NEGATED_MEAL = new RegExp(
+  `\\b(?:no|not|without|excluding|excludes|excl\\.?|ohne|keine?|nicht|exkl\\.?|exklusive)\\b[^.,;]{0,25}?${MEAL_WORD}` +
+    `|${MEAL_WORD}[^.,;]{0,25}?\\b(?:not|nicht|excluded|exkl\\.?|ausgeschlossen)\\b`,
+  "i",
+);
+
+/**
+ * A meal that can be ADDED is not one that was booked. Whether the user took
+ * it, the document does not say — so this is neither `breakfast` nor `none`.
+ */
+const OPTIONAL_MEAL = new RegExp(
+  `${MEAL_WORD}[^.,;]{0,25}?(?:optional|surcharge|aufpreis|extra\\s+charge|zubuchbar|buchbar|available|gegen\\s+(?:aufpreis|geb(?:ü|ue)hr)|for\\s+an?\\s+(?:additional|extra))` +
+    `|(?:optional|zubuchbar|gegen\\s+(?:aufpreis|geb(?:ü|ue)hr))[^.,;]{0,25}?${MEAL_WORD}`,
+  "i",
+);
+
 export function normalizeBoard(value: unknown): LodgingBoard | null {
   const text = cleanText(value);
   if (text === null) return null;
@@ -94,6 +120,9 @@ export function normalizeBoard(value: unknown): LodgingBoard | null {
   // Already the wire value (a re-import, or a model that copied the enum).
   const asEnum = BOARD_TYPES.find((b) => b === text.toLowerCase());
   if (asEnum) return asEnum;
+
+  if (NEGATED_MEAL.test(text)) return "none";
+  if (OPTIONAL_MEAL.test(text)) return null;
 
   for (const [pattern, board] of BOARD_PATTERNS) {
     if (pattern.test(text)) return board;

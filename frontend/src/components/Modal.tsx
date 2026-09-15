@@ -54,6 +54,38 @@ interface ModalProps {
 
 let idCounter = 0;
 
+/** What Tab can land on inside the panel. Disabled controls are skipped, as the browser would. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Keep Tab inside the dialog. `aria-modal` promises that the page behind is
+ * inert, and the promise was not kept: six Tab presses walked out of the
+ * dialog into the page under it (AUD-037). Wraps at both ends; with nothing
+ * focusable inside, focus stays on the panel itself.
+ */
+function trapTab(e: KeyboardEvent, panel: HTMLElement): void {
+  const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+  const active = document.activeElement;
+  if (focusable.length === 0) {
+    e.preventDefault();
+    panel.focus();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const outside = !(active instanceof Node) || !panel.contains(active);
+  if (e.shiftKey) {
+    if (outside || active === first || active === panel) {
+      e.preventDefault();
+      last.focus();
+    }
+  } else if (outside || active === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
 export default function Modal({
   open,
   onClose,
@@ -83,6 +115,7 @@ export default function Modal({
 
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape" && !busy) onClose();
+      if (e.key === "Tab" && panelRef.current) trapTab(e, panelRef.current);
     };
     window.addEventListener("keydown", onKey);
 

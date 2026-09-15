@@ -1,0 +1,125 @@
+[
+  {
+    "case": "photon_contradiction",
+    "result": {
+      "attempted": 1,
+      "filled": 1
+    },
+    "stored": {
+      "city": "Berlin",
+      "country": "Deutschland",
+      "lat": 41.9,
+      "lon": 12.5
+    }
+  },
+  {
+    "case": "manual_pin_overwritten",
+    "result": {
+      "attempted": 1,
+      "filled": 1
+    },
+    "manual": [
+      52.52,
+      13.405
+    ],
+    "after": [
+      41.9,
+      12.5
+    ]
+  },
+  {
+    "case": "place_guard_vocabulary",
+    "correctIsoHitFilled": 0,
+    "tokyoVsOsakaAccepted": true,
+    "controls": {
+      "sameCountryName": true,
+      "latinMismatch": false
+    }
+  },
+  {
+    "case": "manual_type_overwritten",
+    "before": "campsite",
+    "after": "hotel"
+  },
+  {
+    "case": "http_error_negative_cache_forward",
+    "first": null,
+    "retry": null,
+    "callsIncludingControl": 2,
+    "control": {
+      "lat": 52.52,
+      "lon": 13.405
+    }
+  },
+  {
+    "case": "http_error_negative_cache_reverse",
+    "first": null,
+    "retry": null,
+    "callsIncludingControl": 2,
+    "control": {
+      "address": null,
+      "city": "Berlin",
+      "country": "Deutschland"
+    }
+  },
+  {
+    "case": "fx_provider_day_discarded",
+    "providerDate": "2026-09-04",
+    "snapshot": {
+      "baseAmount": 90,
+      "rate": 0.9,
+      "rateDate": "2026-09-05T00:00:00.000Z",
+      "baseCurrency": "EUR",
+      "source": "ecb"
+    }
+  },
+  {
+    "case": "invalid_fx_rates",
+    "zeroRate": {
+      "rate": 0,
+      "source": "ecb"
+    },
+    "zeroCached": {
+      "rate": 0,
+      "source": "ecb"
+    },
+    "negativeRate": {
+      "rate": -0.1,
+      "source": "cdn"
+    }
+  },
+  {
+    "case": "fx_deadline_options",
+    "optionsSeen": [
+      {
+        "provider": "api.frankfurter.app",
+        "hasAbortSignal": false
+      },
+      {
+        "provider": "cdn.jsdelivr.net",
+        "hasAbortSignal": false
+      }
+    ]
+  },
+  {
+    "case": "chain_domain_controls",
+    "chains": [
+      {
+        "input": "https://all.accor.com/hotel",
+        "chain": "Accor"
+      },
+      {
+        "input": "https://hilton.com.evil.invalid/",
+        "chain": null
+      },
+      {
+        "input": "https://hilton.com@evil.invalid/",
+        "chain": null
+      },
+      {
+        "input": "not a URL",
+        "chain": null
+      }
+    ]
+  }
+]

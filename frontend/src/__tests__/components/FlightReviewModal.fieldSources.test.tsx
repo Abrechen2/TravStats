@@ -32,6 +32,16 @@ vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+// The aircraft suggestion list loads on mount; an empty list is what the failed
+// request already produced (forgejo#110).
+vi.mock("@/lib/api/suggestions", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/suggestions")>();
+  return {
+    ...actual,
+    suggestionsApi: { ...actual.suggestionsApi, aircraft: vi.fn().mockResolvedValue([]) },
+  };
+});
+
 describe("FlightReviewModal fieldSources", () => {
   it("applies green border class for template-sourced flight number field", () => {
     render(

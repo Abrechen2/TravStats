@@ -16,7 +16,7 @@ import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import type { DatedRow } from "../../utils/stats/timeseries";
-import { buildTzMap } from "./departureClock";
+import { airportCalendarDay, buildTzMap } from "./departureClock";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -25,11 +25,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * it, expressed as that day's UTC midnight so the existing bucketing arithmetic
  * keeps working unchanged.
  */
-const airportCalendarDay = (
-  stored: Date,
-  timezone: string | null,
-  semantics: FlightTimeSemantics,
-): Date => new Date(`${localWallClockOf(stored, timezone, semantics).date}T00:00:00Z`);
+// The rule lives in departureClock.ts, next to the timezone resolution every
+// caller of it has already done. This file used to carry its own copy.
+
 
 export async function fetchFlightDatedRows(
   userId: string,

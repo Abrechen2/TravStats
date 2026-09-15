@@ -1,0 +1,102 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "east local new year",
+      "departureUtc": "2024-12-31T18:30:00Z",
+      "timezone": "Asia/Bangkok",
+      "year": 2025,
+      "expectedLocalYearCount": 1,
+      "summaryCount": 0,
+      "summaryPrevious": 1,
+      "seriesCount": 1,
+      "seriesPrevious": 0,
+      "wrappedCount": 0,
+      "wrappedAvailableYears": [
+        2024
+      ]
+    },
+    {
+      "name": "west local previous year",
+      "departureUtc": "2025-01-01T04:30:00Z",
+      "timezone": "America/Los_Angeles",
+      "year": 2025,
+      "expectedLocalYearCount": 0,
+      "summaryCount": 1,
+      "summaryPrevious": 0,
+      "seriesCount": 0,
+      "seriesPrevious": 1,
+      "wrappedCount": 1,
+      "wrappedAvailableYears": [
+        2025
+      ]
+    },
+    {
+      "name": "midyear control",
+      "departureUtc": "2025-06-01T10:00:00Z",
+      "timezone": "Asia/Bangkok",
+      "year": 2025,
+      "expectedLocalYearCount": 1,
+      "summaryCount": 1,
+      "summaryPrevious": 0,
+      "seriesCount": 1,
+      "seriesPrevious": 0,
+      "wrappedCount": 1,
+      "wrappedAvailableYears": [
+        2025
+      ]
+    },
+    {
+      "name": "aircraft ranking versus profile",
+      "rankingCount": 1,
+      "profileCount": 3,
+      "rankingDistanceKm": 543.6096877098261,
+      "profileDistanceKm": 1630.829063129478,
+      "profileStatuses": [
+        "scheduled",
+        "cancelled",
+        "flown"
+      ],
+      "profileLastDate": "2099-06-03T16:00:00.000Z"
+    },
+    {
+      "name": "local afternoon crosses UTC midnight",
+      "timezone": "America/Los_Angeles",
+      "localDeparture": "2025-06-01 16:30",
+      "localArrival": "2025-06-01 17:30",
+      "expectedAirNights": 0,
+      "actualAirNights": 1,
+      "years": [
+        {
+          "year": "2025",
+          "days": 365,
+          "hotelNights": 0,
+          "seaNights": 0,
+          "airNights": 1,
+          "homeNights": 364
+        }
+      ]
+    },
+    {
+      "name": "local midnight remains same UTC date",
+      "timezone": "America/Los_Angeles",
+      "localDeparture": "2025-06-01 23:30",
+      "localArrival": "2025-06-02 00:30",
+      "expectedAirNights": 1,
+      "actualAirNights": 0,
+      "years": []
+    },
+    {
+      "name": "trip cost booking and taxes parity",
+      "bookingPrice": 300,
+      "ownPrice": 100,
+      "taxes": 20,
+      "fees": 10,
+      "summaryTotal": 430,
+      "tripSpend": {
+        "EUR": 100
+      }
+    }
+  ],
+  "externalFetchAttempts": 0
+}

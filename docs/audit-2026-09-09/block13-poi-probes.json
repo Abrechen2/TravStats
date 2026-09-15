@@ -1,0 +1,98 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "derived sort before/after paging",
+      "sortBy": "visitCount",
+      "firstWithLimit1": "A lesser",
+      "firstWithLimit2": "Z greater",
+      "total": 2
+    },
+    {
+      "name": "derived sort before/after paging",
+      "sortBy": "lastVisit",
+      "firstWithLimit1": "A lesser",
+      "firstWithLimit2": "Z greater",
+      "total": 2
+    },
+    {
+      "name": "POI import date and country preservation",
+      "preview": [
+        {
+          "name": "Imported past",
+          "visitedAt": "2020-01-02",
+          "action": "create",
+          "flags": []
+        },
+        {
+          "name": "Imported future",
+          "visitedAt": "2099-01-02",
+          "action": "create",
+          "flags": []
+        }
+      ],
+      "created": 2,
+      "stored": [
+        {
+          "name": "Imported future",
+          "visited": true,
+          "visitRows": 0,
+          "country": "Deutschland",
+          "isoCountryCode": null
+        },
+        {
+          "name": "Imported past",
+          "visited": true,
+          "visitRows": 0,
+          "country": "Deutschland",
+          "isoCountryCode": null
+        }
+      ],
+      "stats": {
+        "places": 2,
+        "visits": 0,
+        "countries": 0
+      },
+      "countryFilterTotal": 0
+    },
+    {
+      "name": "manual country positive control",
+      "status": 201,
+      "isoCountryCode": "DE"
+    },
+    {
+      "name": "photo lifecycle",
+      "deleted": "photo",
+      "uploadHttp": 201,
+      "getBeforeHttp": 200,
+      "otherUserDeleteHttp": 404,
+      "deleteHttp": 204,
+      "photoRowExists": false,
+      "fileStillExists": false,
+      "getAfterHttp": 404
+    },
+    {
+      "name": "photo lifecycle",
+      "deleted": "visit",
+      "uploadHttp": 201,
+      "getBeforeHttp": 200,
+      "otherUserDeleteHttp": 404,
+      "deleteHttp": 200,
+      "photoRowExists": false,
+      "fileStillExists": true,
+      "getAfterHttp": 404
+    },
+    {
+      "name": "photo lifecycle",
+      "deleted": "place",
+      "uploadHttp": 201,
+      "getBeforeHttp": 200,
+      "otherUserDeleteHttp": 404,
+      "deleteHttp": 200,
+      "photoRowExists": false,
+      "fileStillExists": true,
+      "getAfterHttp": 404
+    }
+  ],
+  "blockedExternalFetches": 0
+}

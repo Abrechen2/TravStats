@@ -16,6 +16,15 @@ vi.mock("../../../../lib/stats/domain-stats", async () => {
   return { ...actual, useDomainStats: vi.fn() };
 });
 
+// The overview tab loads the travel account on mount.
+vi.mock("@/lib/api/stats", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/stats")>();
+  return {
+    ...actual,
+    statsApi: { ...actual.statsApi, getTravelAccount: vi.fn().mockResolvedValue(null) },
+  };
+});
+
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { useStatsCompareStore } from "../../../../store/statsCompareStore";

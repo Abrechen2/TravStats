@@ -21,6 +21,14 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+// The currency picker asks the server which currencies were used recently. The
+// hook fetches on mount, so it reached the network from every test that renders
+// a price field (forgejo#110); an empty list is the failed request's own result.
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => [] };
+});
+
 describe("CruiseEditModal", () => {
   beforeEach(() => {
     vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);
@@ -153,7 +161,12 @@ describe("CruiseEditModal", () => {
   it("renders existing companions as removable chips instead of a CSV text field", () => {
     const cruiseWithCompanions: Cruise = { ...baseCruise, companions: ["Anna", "Jonas"] };
     render(
-      <CruiseEditModal mode="edit" cruise={cruiseWithCompanions} onClose={vi.fn()} onSaved={vi.fn()} />
+      <CruiseEditModal
+        mode="edit"
+        cruise={cruiseWithCompanions}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
     );
     expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
     expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
@@ -169,10 +182,7 @@ describe("CruiseEditModal", () => {
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    await userEvent.type(
-      screen.getByRole("combobox", { name: "picker.label" }),
-      "Marie{Enter}"
-    );
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Marie{Enter}");
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
     await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
@@ -287,7 +297,9 @@ describe("CruiseEditModal", () => {
       render(<CruiseEditModal mode="edit" cruise={linked} onClose={vi.fn()} onSaved={vi.fn()} />);
 
       const select = await screen.findByLabelText("field.trip");
-      await waitFor(() => expect(screen.getByRole("option", { name: "Karibik 2027" })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole("option", { name: "Karibik 2027" })).toBeInTheDocument()
+      );
       expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument();
       expect((select as HTMLSelectElement).value).toBe("trip-2");
     });
@@ -296,10 +308,14 @@ describe("CruiseEditModal", () => {
       vi.mocked(tripsApi.getAll).mockResolvedValue(trips);
       vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
 
-      render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+      render(
+        <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
 
       const select = await screen.findByLabelText("field.trip");
-      await waitFor(() => expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+      );
       await userEvent.selectOptions(select, "trip-1");
 
       await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
@@ -320,7 +336,9 @@ describe("CruiseEditModal", () => {
       render(<CruiseEditModal mode="edit" cruise={linked} onClose={vi.fn()} onSaved={vi.fn()} />);
 
       const select = await screen.findByLabelText("field.trip");
-      await waitFor(() => expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+      );
       await userEvent.selectOptions(select, "");
 
       await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
@@ -335,7 +353,9 @@ describe("CruiseEditModal", () => {
     it("still renders the form when the trip list fails to load", async () => {
       vi.mocked(tripsApi.getAll).mockRejectedValue(new Error("network"));
 
-      render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+      render(
+        <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
 
       expect(await screen.findByLabelText("field.trip")).toBeInTheDocument();
       expect(screen.getByLabelText("field.line")).toBeInTheDocument();

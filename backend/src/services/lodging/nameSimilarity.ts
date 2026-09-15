@@ -84,8 +84,10 @@ function foldGerman(text: string): string {
 }
 
 function tokenize(name: string): string[] {
+  // Every script's letters are tokens — see `normalizeLodgingName` (AUD-054).
   return foldGerman(name)
-    .replace(/[^a-z0-9]+/g, " ")
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .split(/\s+/)
     .filter((t) => t.length > 0);

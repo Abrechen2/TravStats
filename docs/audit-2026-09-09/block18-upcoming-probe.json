@@ -1,0 +1,17 @@
+{
+  "commit": "39715ec5",
+  "results": [
+    {
+      "name": "previous local day excluded",
+      "now": "2026-06-02T02:00:00.000Z",
+      "actualUpcomingInstant": "2026-06-02T05:30:00.000Z",
+      "httpStatus": 200,
+      "returnedEntries": 0
+    },
+    {
+      "name": "same UTC day positive control",
+      "httpStatus": 200,
+      "returnedEntries": 1
+    }
+  ]
+}

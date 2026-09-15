@@ -1,8 +1,12 @@
 import logger from "../../utils/logger";
+import { fetchWithTimeout, isSettledRateDate, isUsableRate } from "./fxGuards";
 
 const BASE_URL = "https://api.frankfurter.app";
 // Cache one rate per (from,to,date) for the process lifetime. Historical ECB
-// rates never change, so an unbounded map keyed by the tuple is safe and small.
+// rates never change, so an unbounded map keyed by the tuple is safe and small
+// — but only for SETTLED days. Today's rate is still moving (the ECB publishes
+// around midday), and caching it for the process lifetime froze the morning's
+// answer for good. See `isSettledRateDate`.
 const rateCache = new Map<string, number>();
 
 /**
@@ -25,18 +29,18 @@ export async function getRate(from: string, to: string, date: string): Promise<F
   if (cached !== undefined) return { rate: cached, source: "ecb" };
   try {
     const url = `${BASE_URL}/${date}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       logger.warn({ from, to, date, status: res.status }, "FX rate lookup non-OK");
       return null;
     }
     const body = (await res.json()) as { rates?: Record<string, number> };
     const rate = body.rates?.[to];
-    if (typeof rate !== "number" || !Number.isFinite(rate)) {
-      logger.warn({ from, to, date }, "FX rate missing in response");
+    if (!isUsableRate(rate)) {
+      logger.warn({ from, to, date, rate }, "FX rate missing or not usable in response");
       return null;
     }
-    rateCache.set(key, rate);
+    if (isSettledRateDate(date)) rateCache.set(key, rate);
     return { rate, source: "ecb" };
   } catch (error) {
     logger.warn({ error, from, to, date }, "FX rate lookup failed");

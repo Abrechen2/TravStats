@@ -388,10 +388,35 @@ function buildFlightAnchors(flights: readonly FlightAnchorInput[]): SuggestionAn
 
 // ---------------------------------------------------------------- matching
 
-/** Degrees of latitude per grid cell. One degree ≈ 111 km, comfortably past
- *  the widest radius, so a target can only match anchors in its own cell or a
- *  neighbouring one. */
+/** Degrees per grid cell. One degree of LATITUDE is ≈ 111 km everywhere,
+ *  comfortably past the widest radius. */
 const CELL_DEG = 1;
+
+/** Great-circle kilometres in one degree of latitude. */
+const KM_PER_LAT_DEG = 111.32;
+
+/** The widest radius any anchor kind uses — the grid must reach at least this far. */
+const MAX_RADIUS_KM = Math.max(...Object.values(RADIUS_KM));
+
+/**
+ * How many longitude cells the widest radius can reach at this latitude.
+ *
+ * A degree of LONGITUDE is not 111 km — it is 111 km × cos(latitude), and it
+ * shrinks to nothing at the poles. Scanning a fixed −1..+1 neighbourhood
+ * therefore held only near the equator. Measured at 69.65°N: a degree of
+ * longitude is ≈ 38.6 km, so two points 39.4 km apart — inside the 40 km
+ * cruise-port radius — landed two cells apart and produced no suggestion at
+ * all, while the identical pair shifted 0.1° west produced one (AUD-082).
+ *
+ * The antimeridian is still not wrapped, as documented on `suggestVisits`.
+ */
+function lonCellSpan(lat: number): number {
+  const kmPerLonDeg = KM_PER_LAT_DEG * Math.cos((lat * Math.PI) / 180) * CELL_DEG;
+  // Within a few km of a pole every meridian is in range; scan them all rather
+  // than divide by ~zero.
+  if (kmPerLonDeg <= MAX_RADIUS_KM / (180 / CELL_DEG)) return Math.ceil(180 / CELL_DEG);
+  return Math.max(1, Math.ceil(MAX_RADIUS_KM / kmPerLonDeg));
+}
 
 const cellKey = (lat: number, lon: number): string =>
   `${Math.floor(lat / CELL_DEG)}:${Math.floor(lon / CELL_DEG)}`;
@@ -427,9 +452,11 @@ export function suggestVisits(
     const latCell = Math.floor(target.lat / CELL_DEG);
     const lonCell = Math.floor(target.lon / CELL_DEG);
 
+    const lonSpan = lonCellSpan(target.lat);
+
     let best: { anchor: SuggestionAnchor; distance: number } | null = null;
     for (let dLat = -1; dLat <= 1; dLat += 1) {
-      for (let dLon = -1; dLon <= 1; dLon += 1) {
+      for (let dLon = -lonSpan; dLon <= lonSpan; dLon += 1) {
         const cell = grid.get(`${latCell + dLat}:${lonCell + dLon}`);
         if (!cell) continue;
         for (const anchor of cell) {

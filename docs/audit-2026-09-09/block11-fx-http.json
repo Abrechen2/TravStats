@@ -1,0 +1,37 @@
+[
+  {
+    "case": "save_after_client_timeout",
+    "clientTimeoutMs": 10007,
+    "recordsAtTimeout": 0,
+    "recordPersistedAfterMs": 11112,
+    "baseAmount": 90,
+    "providerAbortSignal": false
+  },
+  {
+    "case": "invalid_rate_persisted",
+    "status": 201,
+    "original": 100,
+    "converted": 0,
+    "rate": 0
+  },
+  {
+    "case": "current_day_rate_frozen",
+    "date": "2026-09-11",
+    "publishedRateNow": 0.95,
+    "first": {
+      "baseAmount": 90,
+      "rate": 0.9,
+      "rateDate": "2026-09-11T00:00:00.000Z",
+      "baseCurrency": "EUR",
+      "source": "ecb"
+    },
+    "newSnapshot": {
+      "baseAmount": 180,
+      "rate": 0.9,
+      "rateDate": "2026-09-11T00:00:00.000Z",
+      "baseCurrency": "EUR",
+      "source": "ecb"
+    },
+    "providerCalls": 1
+  }
+]

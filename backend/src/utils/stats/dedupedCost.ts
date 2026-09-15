@@ -61,6 +61,61 @@ export interface DedupedCost {
  * a rate on a day, and re-converting at read time would make last year's total
  * move every time the ECB publishes.
  */
+/** What one flight contributes to a cost total, in the currency it was paid in. */
+export interface FlightCostShare {
+  /** Zero when this flight's booking was already counted for another segment. */
+  amount: number;
+  currency: string | null;
+  /** Base-currency snapshot of `amount`, where one exists. */
+  amountBase: number | null;
+  snapshotCurrency: string | null;
+  /** True even when `amount` is 0 because the booking was counted elsewhere. */
+  priced: boolean;
+}
+
+/**
+ * The rule for what a flight costs, in ONE place.
+ *
+ * Two things are easy to get wrong separately and were: a flight's own cost is
+ * its price PLUS taxes and fees, and a booking shared by several segments is
+ * counted once across them. `computeDedupedTotalCost` converts to a base
+ * currency afterwards, while the trip account sums by original currency and
+ * never converts — so the rule is here and the arithmetic stays with each
+ * caller. The trip account previously added `flight.price` alone, which
+ * dropped both halves: two segments sharing a 300 EUR booking contributed
+ * nothing, and 100 + 20 tax + 10 fees was reported as 100 (AUD-080).
+ *
+ * `countedBookingIds` is carried by the caller and mutated here, because
+ * "already counted" is a property of the run, not of the flight.
+ */
+export function flightCostShare(
+  flight: CostFlight,
+  countedBookingIds: Set<string>,
+): FlightCostShare {
+  if (flight.bookingId && flight.booking?.price) {
+    // Every segment of a priced booking is a priced flight, even though the
+    // booking's amount is added once.
+    const first = !countedBookingIds.has(flight.bookingId);
+    if (first) countedBookingIds.add(flight.bookingId);
+    return {
+      amount: first ? flight.booking.price : 0,
+      currency: flight.booking.currency,
+      amountBase: first ? flight.booking.priceBase : null,
+      snapshotCurrency: flight.booking.fxBaseCurrency,
+      priced: true,
+    };
+  }
+
+  const own = (flight.price ?? 0) + (flight.taxes ?? 0) + (flight.fees ?? 0);
+  return {
+    amount: own,
+    currency: flight.currency,
+    amountBase: flight.priceBase,
+    snapshotCurrency: flight.fxBaseCurrency,
+    priced: own > 0,
+  };
+}
+
 export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: string): DedupedCost {
   const seenBookingIds = new Set<string>();
   let base = 0;
@@ -101,25 +156,10 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
   };
 
   for (const flight of flights) {
-    if (flight.bookingId && flight.booking?.price) {
-      // Every segment of a priced booking is a priced flight, even though the
-      // booking's amount is added once.
-      pricedFlights++;
-      if (!seenBookingIds.has(flight.bookingId)) {
-        seenBookingIds.add(flight.bookingId);
-        add(
-          flight.booking.price,
-          flight.booking.priceBase,
-          flight.booking.fxBaseCurrency,
-          flight.booking.currency,
-        );
-      }
-    } else {
-      const own = (flight.price ?? 0) + (flight.taxes ?? 0) + (flight.fees ?? 0);
-      if (own > 0) pricedFlights++;
-      else unpricedFlights++;
-      add(own, flight.priceBase, flight.fxBaseCurrency, flight.currency);
-    }
+    const share = flightCostShare(flight, seenBookingIds);
+    if (share.priced) pricedFlights++;
+    else unpricedFlights++;
+    add(share.amount, share.amountBase, share.snapshotCurrency, share.currency);
   }
 
   return {

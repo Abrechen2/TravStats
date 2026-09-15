@@ -81,38 +81,61 @@ export async function mergeImmichAlbums(
   return duplicates.length;
 }
 
+export interface MergedPhotos {
+  /** Source rows dropped as duplicates of an asset another row already holds. */
+  dropped: number;
+  /** Dropped row id → the row that survives for the same asset. */
+  survivorFor: ReadonlyMap<string, string>;
+}
+
 /**
- * Move photos onto the target, dropping a source row that would duplicate an
- * Immich asset the target already holds. Returns the number dropped.
+ * Move photos onto the target, keeping ONE row per Immich asset across the
+ * target and every source.
+ *
+ * The first version dropped only source rows colliding with the TARGET's
+ * assets. Two sources holding the same asset — an album linked from both
+ * trips — then both moved onto an empty target and hit the unique
+ * `(tripId, immichAssetId)` index, and the whole merge rolled back
+ * (AUD-029). The target's own row wins where it has one; otherwise the
+ * first source row in sort order does. Which row survived is reported, so
+ * a cover URL naming a dropped row can follow its photo (AUD-030).
  */
 export async function mergeTripPhotos(
   tx: TripTx,
   sourceIds: string[],
   targetId: string,
-): Promise<number> {
-  const targetAssets = await tx.tripPhoto.findMany({
-    where: { tripId: targetId, immichAssetId: { not: null } },
-    select: { immichAssetId: true },
+): Promise<MergedPhotos> {
+  const imported = await tx.tripPhoto.findMany({
+    where: { tripId: { in: [targetId, ...sourceIds] }, immichAssetId: { not: null } },
+    select: { id: true, tripId: true, immichAssetId: true },
+    orderBy: [{ sortIdx: "asc" }, { id: "asc" }],
   });
-  const held = new Set(targetAssets.map((p) => p.immichAssetId as string));
 
-  let dropped = 0;
-  if (held.size > 0) {
-    const collisions = await tx.tripPhoto.findMany({
-      where: { tripId: { in: sourceIds }, immichAssetId: { in: [...held] } },
-      select: { id: true },
-    });
-    if (collisions.length > 0) {
-      await tx.tripPhoto.deleteMany({ where: { id: { in: collisions.map((c) => c.id) } } });
-      dropped = collisions.length;
+  const survivorByAsset = new Map<string, string>();
+  for (const row of imported) {
+    if (row.tripId === targetId && row.immichAssetId) survivorByAsset.set(row.immichAssetId, row.id);
+  }
+  const survivorFor = new Map<string, string>();
+  for (const row of imported) {
+    if (row.tripId === targetId || !row.immichAssetId) continue;
+    const survivor = survivorByAsset.get(row.immichAssetId);
+    if (survivor === undefined) {
+      survivorByAsset.set(row.immichAssetId, row.id);
+      continue;
     }
+    survivorFor.set(row.id, survivor);
+  }
+
+  const dropIds = [...survivorFor.keys()];
+  if (dropIds.length > 0) {
+    await tx.tripPhoto.deleteMany({ where: { id: { in: dropIds } } });
   }
 
   await tx.tripPhoto.updateMany({
     where: { tripId: { in: sourceIds } },
     data: { tripId: targetId },
   });
-  return dropped;
+  return { dropped: dropIds.length, survivorFor };
 }
 
 /**
@@ -126,6 +149,11 @@ export async function mergeTripPhotos(
  *
  * Only our own internal shape is rewritten. A cover somebody pasted from
  * elsewhere is their URL, not ours, and is returned untouched.
+ *
+ * `survivorFor` is what `mergeTripPhotos` reports: a source photo dropped as
+ * a duplicate of the target's copy of the same asset. A cover naming that
+ * dropped row kept its id and answered 404 against the merged trip
+ * (AUD-030) — it now names the surviving row instead.
  */
 const INTERNAL_COVER = /^\/api\/v1\/trips\/([^/]+)\/photos\/([^/]+)\/file$/;
 
@@ -133,11 +161,12 @@ export function retargetCoverUrl(
   url: string | null | undefined,
   sourceIds: string[],
   targetId: string,
+  survivorFor: ReadonlyMap<string, string> = new Map(),
 ): string | null {
   if (!url) return null;
   const match = INTERNAL_COVER.exec(url);
   if (!match) return url;
   const [, tripId, photoId] = match;
   if (!sourceIds.includes(tripId)) return url;
-  return `/api/v1/trips/${targetId}/photos/${photoId}/file`;
+  return `/api/v1/trips/${targetId}/photos/${survivorFor.get(photoId) ?? photoId}/file`;
 }

@@ -400,8 +400,12 @@ export async function updatePendingUpdate(
       throw new Error('Pending update not found');
     }
 
-    if (pendingUpdate.status !== 'pending') {
-      throw new Error('Can only edit pending updates');
+    // `edited` too, not just `pending`. The card offers "edit" for an already
+    // edited suggestion — correctly, since nothing has been applied yet — and
+    // the server refused it, so the button was there and did not work
+    // (AUD-094). These are the same two statuses `applyPendingUpdate` accepts.
+    if (pendingUpdate.status !== 'pending' && pendingUpdate.status !== 'edited') {
+      throw new Error('Can only edit pending or edited updates');
     }
 
     // Calculate edited changes
@@ -479,6 +483,83 @@ function calculateChanges(original: FlightDataSnapshot, proposed: FlightDataSnap
   }
 
   return changes;
+}
+
+/**
+ * Fields written as a consequence of another one, and the field they follow.
+ * Applying a coordinate while refusing the airport it belongs to would produce
+ * a flight that contradicts itself.
+ */
+const DERIVED_FIELDS: Record<string, string> = {
+  depLat: 'depIata',
+  depLon: 'depIata',
+  arrLat: 'arrIata',
+  arrLon: 'arrIata',
+  delayMinutes: 'actualDeparture',
+};
+
+/** Fields that describe the UPDATE itself rather than the flight's data. */
+const PROVENANCE_FIELDS = new Set([
+  'dataSource',
+  'lastModifiedBy',
+  'routeSource',
+  'hasLiveTracking',
+  'enrichmentHistory',
+  'depTimeSemantics',
+  'arrTimeSemantics',
+]);
+
+/** Compare a stored value with its snapshot form — dates arrive as strings. */
+function sameStoredValue(current: unknown, snapshot: unknown): boolean {
+  if (current instanceof Date) {
+    if (snapshot === null || snapshot === undefined) return false;
+    const asDate = new Date(String(snapshot));
+    return !Number.isNaN(asDate.getTime()) && asDate.getTime() === current.getTime();
+  }
+  if (current === null || current === undefined) {
+    return snapshot === null || snapshot === undefined;
+  }
+  return current === snapshot;
+}
+
+/**
+ * Narrow `updateData` in place to the fields this suggestion actually proposes
+ * AND that the user has not changed since it was made. Returns the names it
+ * removed for a conflict, so the caller can say so.
+ *
+ * A suggestion with no recorded change list is applied whole, as before —
+ * refusing it would break every row written before `changes` existed.
+ */
+function restrictToUncontestedProposal(
+  updateData: Record<string, unknown>,
+  changes: ChangeEntry[] | null,
+  originalData: FlightDataSnapshot | null,
+  flight: Record<string, unknown>,
+): string[] {
+  if (!Array.isArray(changes) || changes.length === 0) return [];
+
+  const proposed = new Set(changes.map((c) => c.field));
+  const original = (originalData ?? {}) as Record<string, unknown>;
+  const conflicted: string[] = [];
+
+  for (const key of Object.keys(updateData)) {
+    if (PROVENANCE_FIELDS.has(key)) continue;
+
+    const governing = DERIVED_FIELDS[key] ?? key;
+    if (!proposed.has(governing)) {
+      // Never proposed: leave whatever the flight says today.
+      delete updateData[key];
+      continue;
+    }
+    if (originalData && !sameStoredValue(flight[governing], original[governing])) {
+      // Proposed, but the user has since written something else here. Their
+      // edit is the more recent statement of intent, so it stands.
+      conflicted.push(governing);
+      delete updateData[key];
+    }
+  }
+
+  return [...new Set(conflicted)];
 }
 
 /**
@@ -639,6 +720,46 @@ export async function applyPendingUpdate(
         sourceFlightsCount: metadata.sourceFlightsCount,
       };
       updateData.enrichmentHistory = [...existingHistory, newHistoryEntry] as unknown as Prisma.InputJsonValue;
+    }
+
+    // Only what was actually PROPOSED, and only where the user has not moved on.
+    //
+    // `updateData` above describes the whole desired flight, so applying it
+    // wrote back snapshot values for fields the proposal never suggested
+    // changing — silently reverting anything the user had corrected by hand
+    // since the suggestion was made, with nothing on screen to say so
+    // (AUD-092). Both halves are answerable from the row itself: `changes`
+    // names the proposed fields, and `originalData` is the flight as it stood
+    // when the snapshot was taken.
+    const skipped = restrictToUncontestedProposal(
+      updateData,
+      (pendingUpdate.editedChanges ?? pendingUpdate.changes) as unknown as ChangeEntry[] | null,
+      pendingUpdate.originalData as FlightDataSnapshot | null,
+      flight,
+    );
+    if (skipped.length > 0) {
+      logger.info({
+        operation: 'apply_pending_update_skipped_fields',
+        message: 'Left fields alone that the user changed after the suggestion was made',
+        context: { pendingUpdateId: id, flightId: flight.id, skipped },
+      });
+    }
+
+    // The flight this would PRODUCE has to be a possible flight. An edited
+    // suggestion goes onto the row without passing the invariants the ordinary
+    // flight write path enforces, so an arrival before its departure could be
+    // stored through this door and through no other (AUD-093). Checked after
+    // the field filter above, on exactly the values about to be written.
+    const resultingDeparture =
+      (updateData.departureTime as Date | null | undefined) ?? flight.departureTime;
+    const resultingArrival =
+      (updateData.arrivalTime as Date | null | undefined) ?? flight.arrivalTime;
+    if (
+      resultingDeparture &&
+      resultingArrival &&
+      resultingArrival.getTime() < resultingDeparture.getTime()
+    ) {
+      throw new Error('Arrival time must not precede departure time');
     }
 
     // Update flight

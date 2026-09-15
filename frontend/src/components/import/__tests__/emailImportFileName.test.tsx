@@ -30,6 +30,19 @@ vi.mock("../../../lib/api/settings", () => ({
   settingsApi: { getParserCapabilities: vi.fn().mockResolvedValue({ data: { hasLlm: false } }) },
 }));
 
+// EmailImportTab asks `/parser-capabilities` on mount through the axios client
+// directly, so no api-module mock covers it and the request escaped the test
+// (forgejo#110). `hasLlm: false` is what its own catch already assumed.
+vi.mock("@/lib/api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/client")>();
+  return {
+    ...actual,
+    api: Object.assign(Object.create(Object.getPrototypeOf(actual.api)), actual.api, {
+      get: vi.fn().mockResolvedValue({ data: { hasLlm: false } }),
+    }),
+  };
+});
+
 function msgFile(name: string): File {
   return new File(["x"], name, { type: "application/vnd.ms-outlook" });
 }

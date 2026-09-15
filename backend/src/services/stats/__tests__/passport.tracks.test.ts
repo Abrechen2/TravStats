@@ -166,3 +166,43 @@ describe("the threshold still moves nothing but the headline", () => {
     expect(strict.countries.every((c) => c.counted === false)).toBe(true);
   });
 });
+
+/**
+ * AUD-086. The fold that turns evidence into passport rows only ever read
+ * `firstDate`, and only when the row CREATED the country's accumulator — so a
+ * country that already had a row got no year update from its evidence at all.
+ * `countryDetail` has always extended by both ends, which is why the two pages
+ * disagreed about the same account.
+ */
+describe("evidence widens a country's years by BOTH of its ends", () => {
+  it("spans from the first track day to the last", () => {
+    const p = withTracks([day("2020-06-01", "DE"), day("2025-06-01", "DE")]);
+
+    const de = p.countries.find((c) => c.code === "DE");
+    expect(de?.daysPresent).toBe(2);
+    expect(de?.firstYear).toBe(2020);
+    // Read 2020 before the fix: the last end was never looked at.
+    expect(de?.lastYear).toBe(2025);
+  });
+
+  it("does not collapse to a single year when another record lands between", () => {
+    // Codex's mixed case: a place visit in 2023 alongside the two track days.
+    // The passport reported 2023-2023 while the detail page still read
+    // 2020-2025 — the visit's year replaced the span instead of sitting in it.
+    const p = buildPassport(
+      [],
+      AIRPORTS,
+      [],
+      NOW,
+      [],
+      [{ isoCountryCode: "DE", at: new Date("2023-06-01T00:00:00Z") }],
+      [],
+      undefined,
+      [day("2020-06-01", "DE"), day("2025-06-01", "DE")]
+    );
+
+    const de = p.countries.find((c) => c.code === "DE");
+    expect(de?.firstYear).toBe(2020);
+    expect(de?.lastYear).toBe(2025);
+  });
+});

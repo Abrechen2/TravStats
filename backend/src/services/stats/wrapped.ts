@@ -53,6 +53,17 @@ export interface WrappedFlight {
   depIata: string | null;
   arrIata: string | null;
   departureTime: Date | null;
+  /**
+   * The calendar year at the DEPARTURE AIRPORT, resolved by the caller with
+   * `withDepartureClock` — not `departureTime.getUTCFullYear()`.
+   *
+   * This used to be derived here from the stored instant, which put a Bangkok
+   * departure at 01:30 local on 1 January into the previous year and a Los
+   * Angeles departure at 20:30 local on 31 December into the next one, so the
+   * year in review disagreed with the trend chart about which years even
+   * existed (AUD-077). Null when the flight has no departure time.
+   */
+  departureYear: number | null;
   airline: string | null;
   flightNumber: string | null;
   status: string;
@@ -109,7 +120,8 @@ export interface Wrapped {
   topRoute: { from: string; to: string; flights: number } | null;
 }
 
-const yearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
+/** Cruises are stored as a calendar start date, so UTC IS their local day. */
+const cruiseYearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
 
 /**
  * The two-letter prefix of a flight number, which is the airline's IATA code
@@ -137,13 +149,13 @@ export function buildWrapped(
 
   const flightsPerYear = new Map<number, number>();
   for (const flight of flown) {
-    const year = yearOf(flight.departureTime);
+    const year = flight.departureYear;
     if (year === null) continue;
     flightsPerYear.set(year, (flightsPerYear.get(year) ?? 0) + 1);
   }
   const cruisesPerYear = new Map<number, number>();
   for (const cruise of sailed) {
-    const year = yearOf(cruise.startDate);
+    const year = cruiseYearOf(cruise.startDate);
     if (year === null) continue;
     cruisesPerYear.set(year, (cruisesPerYear.get(year) ?? 0) + 1);
   }
@@ -158,7 +170,7 @@ export function buildWrapped(
   // question that was asked; picking a different year would not be.
   const year = requestedYear ?? availableYears[availableYears.length - 1];
 
-  const inYear = flown.filter((f) => yearOf(f.departureTime) === year);
+  const inYear = flown.filter((f) => f.departureYear === year);
   const distanceKm = Math.round(
     inYear.reduce((sum, f) => sum + (Number.isFinite(f.distanceKm) ? f.distanceKm : 0), 0)
   );

@@ -1,0 +1,54 @@
+// Audit-only reproduction on the frozen copy; assertions pin current behavior.
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { LodgingFormModal } from '../src/components/lodging/LodgingFormModal';
+
+vi.mock('../src/lib/api/lodging', () => ({ createLodging: vi.fn(), updateLodging: vi.fn() }));
+vi.mock('../src/components/lodging/ChainPicker', () => ({ ChainPicker: () => null }));
+vi.mock('../src/components/location/useLocationSearch', () => ({
+  useLocationSearch: () => ({ results: [], isSearching: false, searchError: false, reset: () => {} }),
+}));
+vi.mock('../src/components/location/LocationMapModal', () => ({
+  LocationMapModal: ({ open, onConfirm }: { open: boolean; onConfirm: (v: { lat: number; lon: number }) => void }) =>
+    open ? <button onClick={() => onConfirm({ lat: 52.52, lon: 13.405 })}>audit-confirm-map</button> : null,
+}));
+afterEach(cleanup);
+
+function invalidForm() {
+  render(<LodgingFormModal mode="create" onClose={() => {}} onSaved={() => {}} />);
+  fireEvent.change(screen.getByLabelText('lodging:field.name'), { target: { value: 'Synthetic Hotel' } });
+  const advanced = document.querySelector('details');
+  if (advanced) advanced.open = true;
+  fireEvent.change(screen.getByLabelText('location:field.lat'), { target: { value: '999' } });
+  fireEvent.change(screen.getByLabelText('location:field.lon'), { target: { value: '8' } });
+  const save = screen.getByRole('button', { name: 'common:buttons.save' });
+  expect(save).toBeDisabled();
+  expect(screen.getByTestId('location-range-error')).toBeInTheDocument();
+  return save;
+}
+
+describe('Block 11: a corrected location after a range error', () => {
+  it('BUG: pasted valid coordinates update both fields but leave Save disabled', () => {
+    const save = invalidForm();
+    fireEvent.change(screen.getByRole('combobox', { name: 'lodging:form.searchLabel' }), { target: { value: '52.52, 13.405' } });
+    expect(screen.getByLabelText('location:field.lat')).toHaveValue(52.52);
+    expect(screen.getByLabelText('location:field.lon')).toHaveValue(13.405);
+    expect(screen.getByTestId('location-range-error')).toBeInTheDocument();
+    expect(save).toBeDisabled();
+  });
+  it('BUG: a confirmed map selection also leaves Save disabled', () => {
+    const save = invalidForm();
+    fireEvent.click(screen.getByRole('button', { name: 'location:mapPick' }));
+    fireEvent.click(screen.getByRole('button', { name: 'audit-confirm-map' }));
+    expect(screen.getByLabelText('location:field.lat')).toHaveValue(52.52);
+    expect(screen.getByLabelText('location:field.lon')).toHaveValue(13.405);
+    expect(screen.getByTestId('location-range-error')).toBeInTheDocument();
+    expect(save).toBeDisabled();
+  });
+  it('CONTROL: correction in the advanced input clears the error and enables Save', () => {
+    const save = invalidForm();
+    fireEvent.change(screen.getByLabelText('location:field.lat'), { target: { value: '52.52' } });
+    expect(screen.queryByTestId('location-range-error')).toBeNull();
+    expect(save).toBeEnabled();
+  });
+});

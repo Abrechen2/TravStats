@@ -503,6 +503,38 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
     const nextEndDate = endDate === undefined ? undefined : endDate ? new Date(endDate) : null;
 
+    // The MERGED state, not the payload. `createCruiseSchema` refuses an end
+    // before a start; the update schema saw only the fields that arrived, so
+    // the same full date swap that a POST rejected with 400 was accepted by a
+    // PATCH with 200 — and so was a one-sided end moved behind an untouched
+    // start (AUD-088). Checked BEFORE any mutation, so a refused update
+    // changes nothing at all.
+    const finalStartDate = nextStartDate !== undefined ? nextStartDate : existing.startDate;
+    const finalEndDate = nextEndDate !== undefined ? nextEndDate : existing.endDate;
+    if (
+      finalStartDate !== null &&
+      finalEndDate !== null &&
+      finalEndDate.getTime() < finalStartDate.getTime()
+    ) {
+      throw new AppError('endDate must not precede startDate', 400);
+    }
+
+    // A batch id is client-supplied and is a handle into an import's undo
+    // history, so it needs the same ownership and domain check the create path
+    // already does. Without it a user could file their cruise under a
+    // STRANGER's import run: the other account's import list then counted a
+    // cruise it could not show, because its own content query correctly
+    // filtered it out (AUD-090).
+    if (rest.importBatchId !== undefined && rest.importBatchId !== null) {
+      const batch = await prisma.importBatch.findFirst({
+        where: { id: rest.importBatchId, userId, domain: 'cruise' },
+        select: { id: true },
+      });
+      // Dropped rather than refused, exactly as on create: the edit the user
+      // asked for matters more than the record of where the row came from.
+      rest.importBatchId = batch?.id ?? null;
+    }
+
     // The status field is a client-sent HINT, not the source of truth (spec
     // 2026-07-17-status-from-dates). Derive from the FINAL start/end values —
     // an update may move dates without sending status, or send status
@@ -523,11 +555,9 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       // cruise back into the derived scheduled/in_progress/flown lifecycle.
       effectiveStatus = undefined;
     } else {
-      const finalStart = nextStartDate !== undefined ? nextStartDate : existing.startDate;
-      const finalEnd = nextEndDate !== undefined ? nextEndDate : existing.endDate;
       effectiveStatus = deriveCruiseStatus({
-        startDate: finalStart,
-        endDate: finalEnd,
+        startDate: finalStartDate,
+        endDate: finalEndDate,
         current: requestedStatus ?? existing.status,
       });
     }

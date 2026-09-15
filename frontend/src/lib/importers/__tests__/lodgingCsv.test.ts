@@ -402,6 +402,136 @@ describe("buildLodgingCandidates: totalPrice garbage vs. genuine 0 vs. locale fo
   });
 });
 
+// AUD-059: the money reader's "three trailing digits are a thousands group"
+// rule read "52.520" as 52520 degrees — no row error, and the preview request
+// for the whole file was then refused.
+describe("buildLodgingCandidates: a coordinate is not money", () => {
+  const mapping: LodgingCsvMapping = { name: "Name", lat: "lat", lon: "lon" };
+
+  function coordsFor(rawLat: string, rawLon: string) {
+    const csv = ["Name,lat,lon", `Test Hotel,${rawLat},${rawLon}`].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it("reads three decimals as decimals", () => {
+    const result = coordsFor("52.520", "13.405");
+    expect(result.candidates[0].lodging?.lat).toBeCloseTo(52.52, 3);
+    expect(result.candidates[0].lodging?.lon).toBeCloseTo(13.405, 3);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("reads a decimal comma the same way", () => {
+    const result = coordsFor('"52,520"', '"-13,405"');
+    expect(result.candidates[0].lodging?.lat).toBeCloseTo(52.52, 3);
+    expect(result.candidates[0].lodging?.lon).toBeCloseTo(-13.405, 3);
+  });
+
+  it("reports a value no coordinate can have instead of sending it", () => {
+    const result = coordsFor("91.5", "13.405");
+    expect(result.candidates[0].lodging?.lat).toBeNull();
+    expect(result.candidates[0].lodging?.lon).toBeCloseTo(13.405, 3);
+    expect(result.rowErrors).toEqual([
+      {
+        rowIndex: 0,
+        code: "out_of_range",
+        message: expect.stringContaining("latitude"),
+        sample: "91.5",
+      },
+    ]);
+  });
+});
+
+// AUD-059, the money half: "1.234" in a currency with three decimals is a
+// thousand-fold guess either way, so it is reported rather than decided.
+describe("buildLodgingCandidates: a three-decimal currency makes 1.234 ambiguous", () => {
+  const mapping: LodgingCsvMapping = {
+    name: "Hotel",
+    checkIn: "Anreise",
+    checkOut: "Abreise",
+    totalPrice: "Preis",
+    currency: "Währung",
+  };
+
+  function priceFor(rawPrice: string, currency: string) {
+    const csv = [
+      "Hotel,Anreise,Abreise,Preis,Währung",
+      `Test Hotel,01.01.2026,02.01.2026,"${rawPrice}",${currency}`,
+    ].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it("reports 1.234 KWD instead of guessing", () => {
+    const result = priceFor("1.234", "KWD");
+    expect(result.candidates[0].stay?.totalPrice).toBeNull();
+    expect(result.candidates[0].stay?.currency).toBe("KWD");
+    expect(result.rowErrors).toEqual([
+      { rowIndex: 0, code: "ambiguous_amount", message: expect.any(String), sample: "1.234" },
+    ]);
+  });
+
+  it("still reads 1.234 EUR as twelve hundred and 1,234.500 KWD as unambiguous", () => {
+    expect(priceFor("1.234", "EUR").candidates[0].stay?.totalPrice).toBe(1234);
+    expect(priceFor("1,234.500", "KWD").candidates[0].stay?.totalPrice).toBeCloseTo(1234.5, 3);
+    expect(priceFor("1,234.500", "KWD").rowErrors).toEqual([]);
+  });
+});
+
+// AUD-060: the CSV floor was 1 while the editor and both backend schemas
+// accept 0.5 — the worst ratings a sheet carried became "unrated", silently.
+describe("buildLodgingCandidates: half-star ratings", () => {
+  const mapping: LodgingCsvMapping = {
+    name: "Hotel",
+    checkIn: "Anreise",
+    checkOut: "Abreise",
+    ratingRoom: "Zimmer",
+    ratingBreakfast: "Fruehstueck",
+    ratingService: "Service",
+    ratingOverall: "Gesamt",
+  };
+
+  function ratingsFor(room: string, breakfast: string, service: string, overall: string) {
+    const csv = [
+      "Hotel,Anreise,Abreise,Zimmer,Fruehstueck,Service,Gesamt",
+      `Test Hotel,01.01.2026,02.01.2026,${room},${breakfast},${service},${overall}`,
+    ].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it("keeps 0.5 in every rating column", () => {
+    const result = ratingsFor("0.5", '"0,5"', "0.5", "0.5");
+    const stay = result.candidates[0].stay;
+    expect([
+      stay?.ratingRoom,
+      stay?.ratingBreakfast,
+      stay?.ratingService,
+      stay?.ratingOverall,
+    ]).toEqual([0.5, 0.5, 0.5, 0.5]);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("keeps the ends of the scale", () => {
+    const stay = ratingsFor("1", "4.5", "5", "3").candidates[0].stay;
+    expect([
+      stay?.ratingRoom,
+      stay?.ratingBreakfast,
+      stay?.ratingService,
+      stay?.ratingOverall,
+    ]).toEqual([1, 4.5, 5, 3]);
+  });
+
+  it("reports a rating the scale cannot hold instead of dropping it in silence", () => {
+    const result = ratingsFor("0.2", "6", "4", "4");
+    const stay = result.candidates[0].stay;
+    expect(stay?.ratingRoom).toBeNull();
+    expect(stay?.ratingBreakfast).toBeNull();
+    expect(stay?.ratingService).toBe(4);
+    expect(result.rowErrors.map((e) => [e.code, e.sample])).toEqual([
+      ["out_of_range", "0.2"],
+      ["out_of_range", "6"],
+    ]);
+  });
+});
+
 describe("buildLodgingCandidates: isRealCalendarDay rejects impossible calendar days", () => {
   const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
 

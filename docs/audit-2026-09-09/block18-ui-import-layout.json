@@ -1,0 +1,172 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "320px settings geometry and password dialog",
+      "passed": false,
+      "error": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog').last() to be visible\u001b[22m\n"
+    },
+    {
+      "name": "320px main navigation",
+      "passed": true,
+      "layout": {
+        "viewport": 320,
+        "scrollWidth": 329,
+        "scrollX": 0,
+        "controls": [
+          {
+            "text": "Konto-Menü",
+            "left": 268,
+            "right": 329
+          },
+          {
+            "text": "⚓Kreuzfahrten2",
+            "left": 287,
+            "right": 437
+          },
+          {
+            "text": "📍POIs1",
+            "left": 441,
+            "right": 545
+          },
+          {
+            "text": "🏨Unterkünfte2",
+            "left": 549,
+            "right": 691
+          },
+          {
+            "text": "🧭Touren",
+            "left": 695,
+            "right": 794
+          },
+          {
+            "text": "✈\nAls Nächstes · in 111 Tagen\nFrankfurt am Main → New York\nLufthansa LH702",
+            "left": 798,
+            "right": 820
+          }
+        ]
+      },
+      "accessibleTree": "- banner:\n  - button \"Menü umschalten\":\n    - img\n  - link \"Startseite\":\n    - /url: /\n  - button \"Fehler melden\": Bug\n  - button \"Konto-Menü\""
+    },
+    {
+      "name": "Flight form accessible tree",
+      "passed": true,
+      "tree": "- banner:\n  - button \"Menü umschalten\":\n    - img\n  - link \"Startseite\":\n    - /url: /\n  - button \"Fehler melden\": Bug\n  - button \"Konto-Menü\"\n- searchbox \"Airline, Flugnummer oder Flughafen …\"\n- combobox \"Status\":\n  - option \"Alle Status\" [selected]\n  - option \"Geflogen\"\n  - option \"Geplant\"\n  - option \"Storniert\"\n  - option \"Historisch\"\n  - option \"Dupliziert\"\n- combobox \"Jahr\":\n  - option \"Alle Jahre\" [selected]\n  - option \"2027\"\n  - option \"2025\"\n- button \"Filter\"\n- text: 4 angezeigt\n- heading \"Flüge\" [level=1]\n- button \"Spalten ▾\"\n- button \"+ Flug hinzufügen\"\n- text: 4 Flüge 1 Airlines 4 Flughäfen\n- paragraph:\n  - text: Ein ganzes Logbuch auf einmal?\n  - link \"Importieren\":\n    - /url: /settings?section=import\n- table:\n  - rowgroup:\n    - row \"Nach Airline sortieren Flugnummer Route Nach Zeit sortieren Nach Status sortieren Nach Flugzeit (h) sortieren Flugzeug Preis Reisen Aktionen\":\n      - columnheader \"Nach Airline sortieren\":\n        - button \"Nach Airline sortieren\": Airline\n      - columnheader \"Flugnummer\"\n      - columnheader \"Route\"\n      - columnheader \"Nach Zeit sortieren\":\n        - button \"Nach Zeit sortieren\": Zeit\n      - columnheader \"Nach Status sortieren\":\n        - button \"Nach Status sortieren\": Status\n      - columnheader \"Nach Flugzeit (h) sortieren\":\n        - button \"Nach Flugzeit (h) sortieren\": Flugzeit (h)\n      - columnheader \"Flugzeug\"\n      - columnheader \"Preis\"\n      - columnheader \"Reisen\"\n      - columnheader \"Aktionen\"\n  - rowgroup:\n    - row \"Lufthansa LH702 Deutschland FRA ✈ Vereinigte Staaten JFK Frankfurt Airport → John F Kennedy International Airport ab So 03.01.27 11:00 an So 03.01.27 17:00 Geplant 12h Airbus A350 500 € — Bearbeiten Duplizieren Löschen\":\n      - cell \"Lufthansa\"\n      - cell \"LH702\"\n      - cell \"Deutschland FRA ✈ Vereinigte Staaten JFK Frankfurt Airport → John F Kennedy International Airport\":\n        - img \"Deutschland\"\n        - text: FRA ✈\n        - img \"Vereinigte Staaten\"\n        - text: JFK Frankfurt Airport → John F Kennedy International Airport\n      - cell \"ab So 03.01.27 11:00 an So 03.01.27 17:00\"\n      - cell \"Geplant\"\n      - cell \"12h\"\n      - cell \"Airbus A350\"\n      - cell \"500 €\"\n      - cell \"—\"\n      - cell \"Bearbeiten Duplizieren Löschen\":\n        - button \"Bearbeiten\"\n        - button \"Duplizieren\"\n        - button \"Löschen\"\n    - row \"Lufthansa LH1818 Deutschland FRA ✈ Vereinigtes Königreich LHR Frankfurt Airport → London Heathrow Airport ab So 15.06.25 12:00 an So 15.06.25 13:00 Geflogen 2h k.A. k.A. — Bearbeiten Duplizieren Löschen\":\n      - cell \"Lufthansa\"\n      - cell \"LH1818\"\n      - cell \"Deutschland FRA ✈ Vereinigtes Königreich LHR Frankfurt Airport → London Heathrow Airport\":\n        - img \"Deutschland\"\n        - text: FRA ✈\n        - img \"Vereinigtes Königreich\"\n        - text: LHR Frankfurt Airport → London Heathrow Airport\n      - cell \"ab So 15.06.25 12:00 an So 15.06.25 13:00\"\n      - cell \"Geflogen\"\n      - cell \"2h\"\n      - cell \"k.A.\"\n      - cell \"k.A.\"\n      - cell \"—\"\n      - cell \"Bearbeiten Duplizieren Löschen\":\n        - button \"Bearbeiten\"\n        - button \"Duplizieren\"\n        - button \"Löschen\"\n    - 'row \"Lufthansa LH701 Singapur SIN ✈ Deutschland FRA Singapore Changi Airport → Frankfurt Airport ab Di 10.06.25 20:00 an Mi 11.06.25 02:00 +1 Geflogen 12h Airbus A350 500 € Audit: Singapur und Europa Bearbeiten Duplizieren Löschen\"':\n      - cell \"Lufthansa\"\n      - cell \"LH701\"\n      - cell \"Singapur SIN ✈ Deutschland FRA Singapore Changi Airport → Frankfurt Airport\":\n        - img \"Singapur\"\n        - text: SIN ✈\n        - img \"Deutschland\"\n        - text: FRA Singapore Changi Airport → Frankfurt Airport\n      - cell \"ab Di 10.06.25 20:00 an Mi 11.06.25 02:00 +1\"\n      - cell \"Geflogen\"\n      - cell \"12h\"\n      - cell \"Airbus A350\"\n      - cell \"500 €\"\n      - 'cell \"Audit: Singapur und Europa\"':\n        - 'link \"Audit: Singapur und Europa\"':\n          - /url: /trips/48c27628-7473-4efa-aec0-5226844d98fc\n      - cell \"Bearbeiten Duplizieren Löschen\":\n        - button \"Bearbeiten\"\n        - button \"Duplizieren\"\n        - button \"Löschen\"\n    - 'row \"Lufthansa LH700 Deutschland FRA ✈ Singapur SIN Frankfurt Airport → Singapore Changi Airport ab So 01.06.25 12:00 an Mo 02.06.25 06:00 +1 Geflogen 12h Airbus A350 500 € Audit: Singapur und Europa Bearbeiten Duplizieren Löschen\"':\n      - cell \"Lufthansa\"\n      - cell \"LH700\"\n      - cell \"Deutschland FRA ✈ Singapur SIN Frankfurt Airport → Singapore Changi Airport\":\n        - img \"Deutschland\"\n        - text: FRA ✈\n        - img \"Singapur\"\n        - text: SIN Frankfurt Airport → Singapore Changi Airport\n      - cell \"ab So 01.06.25 12:00 an Mo 02.06.25 06:00 +1\"\n      - cell \"Geflogen\"\n      - cell \"12h\"\n      - cell \"Airbus A350\"\n      - cell \"500 €\"\n      - 'cell \"Audit: Singapur und Europa\"':\n        - 'link \"Audit: Singapur und Europa\"':\n          - /url: /trips/48c27628-7473-4efa-aec0-5226844d98fc\n      - cell \"Bearbeiten Duplizieren Löschen\":\n        - button \"Bearbeiten\"\n        - button \"Duplizieren\"\n        - button \"Löschen\"\n- text: Sortiert nach Abflug (absteigend)\n- heading \"Flug hinzufügen\" [level=2]\n- paragraph: Flugdetails überprüfen und vervollständigen\n- text: Bitte wähle Start- und Zielflughafen aus Von *\n- button \"Hilfe anzeigen\":\n  - img\n- textbox \"FRA, Frankfurt\"\n- text: Nach *\n- button \"Hilfe anzeigen\":\n  - img\n- textbox \"LHR, London\"\n- checkbox \"Historischer Flug (nur Route bekannt)\"\n- text: Historischer Flug (nur Route bekannt) Abflugdatum *\n- button \"Hilfe anzeigen\":\n  - img\n- textbox \"Abflugdatum *\": 2026-09-13\n- text: Abflugzeit\n- button \"Hilfe anzeigen\":\n  - img\n- textbox \"Abflugzeit\": 12:00\n- text: Ankunftsdatum\n- button \"Hilfe anzeigen\":\n  - img\n- button \"Abflugdatum übernehmen\"\n- textbox \"Ankunftsdatum\": 2026-09-13\n- text: Ankunftszeit\n- button \"Hilfe anzeigen\":\n  - img\n- button \"Bitte beide Flughäfen auswählen\" [disabled]\n- textbox \"Ankunftszeit\": 14:00\n- heading \"Tatsächliche Zeiten\" [level=4]\n- button \"Geplante Zeiten übernehmen — füllt nur leere Felder\"\n- text: Tatsächl. Abflugdatum\n- textbox \"Tatsächl. Abflugdatum\"\n- text: Tatsächl. Abflugzeit\n- textbox \"Tatsächl. Abflugzeit\"\n- text: Tatsächl. Ankunftsdatum\n- textbox \"Tatsächl. Ankunftsdatum\"\n- text: Tatsächl. Ankunftszeit\n- textbox \"Tatsächl. Ankunftszeit\"\n- text: Fluggesellschaft\n- textbox \"Lufthansa\"\n- text: Durchgeführt von\n- textbox \"z.B. Eurowings, Deutsche Bahn\"\n- text: Flugnummer\n- textbox \"LH400\"\n- text: Status Geplant\n- checkbox \"Storniert\"\n- text: Storniert Flugzeug\n- textbox \"A320, B737\"\n- text: Terminal\n- textbox \"T1\"\n- text: Gate\n- textbox \"A12\"\n- text: Sitzplatz\n- textbox \"12A\"\n- text: Boarding-Gruppe\n- textbox \"1 oder A\"\n- text: Sitzklasse\n- combobox:\n  - option \"Optional\" [selected]\n  - option \"Economy\"\n  - option \"Premium Economy\"\n  - option \"Business\"\n  - option \"First Class\"\n- text: Kategorie\n- combobox:\n  - option \"Optional\" [selected]\n  - option \"Geschäftlich\"\n  - option \"Privat\"\n  - option \"Urlaub\"\n- text: Preis\n- button \"Hilfe anzeigen\":\n  - img\n- spinbutton\n- text: Währung\n- textbox \"EUR — Euro\": EUR\n- text: Beleg\n- img\n- button \"Datei hochladen\"\n- paragraph: oder hier ablegen\n- paragraph: PNG, JPG, GIF, WebP, PDF bis zu 10MB\n- text: Buchungsreferenz (PNR)\n- textbox \"9RFAA7\"\n- text: Ticketnummer\n- textbox \"2202236084346\"\n- text: Buchungsklasse (Code)\n- textbox \"Y\"\n- text: Freigepäck\n- textbox \"23 kg\"\n- text: Vielfliegernummer\n- textbox \"992223334\"\n- text: Reise\n- combobox:\n  - option \"Keiner Reise zugeordnet\" [selected]\n- text: Tags\n- button \"Hilfe anzeigen\":\n  - img\n- textbox \"business, vacation, conference\"\n- paragraph: Durch Kommas getrennte Tags zum Filtern.\n- text: Reisebegleiter\n- combobox \"Begleitpersonen\"\n- text: Notizen\n- textbox \"Zusätzliche Informationen...\"\n- button \"Abbrechen\"\n- button \"Speichern + Rückflug anlegen\" [disabled]\n- button \"Flug speichern\" [disabled]",
+      "layout": {
+        "viewport": 320,
+        "scrollWidth": 329,
+        "scrollX": 0,
+        "controls": [
+          {
+            "text": "Konto-Menü",
+            "left": 268,
+            "right": 329
+          },
+          {
+            "text": "Nach Zeit sortieren",
+            "left": 516,
+            "right": 561
+          },
+          {
+            "text": "Nach Status sortieren",
+            "left": 709,
+            "right": 775
+          },
+          {
+            "text": "Nach Flugzeit (h) sortieren",
+            "left": 809,
+            "right": 889
+          },
+          {
+            "text": "Bearbeiten",
+            "left": 1197,
+            "right": 1225
+          },
+          {
+            "text": "Duplizieren",
+            "left": 1233,
+            "right": 1261
+          },
+          {
+            "text": "Löschen",
+            "left": 1269,
+            "right": 1297
+          },
+          {
+            "text": "Bearbeiten",
+            "left": 1197,
+            "right": 1225
+          },
+          {
+            "text": "Duplizieren",
+            "left": 1233,
+            "right": 1261
+          },
+          {
+            "text": "Löschen",
+            "left": 1269,
+            "right": 1297
+          },
+          {
+            "text": "Bearbeiten",
+            "left": 1197,
+            "right": 1225
+          },
+          {
+            "text": "Duplizieren",
+            "left": 1233,
+            "right": 1261
+          },
+          {
+            "text": "Löschen",
+            "left": 1269,
+            "right": 1297
+          },
+          {
+            "text": "Bearbeiten",
+            "left": 1197,
+            "right": 1225
+          },
+          {
+            "text": "Duplizieren",
+            "left": 1233,
+            "right": 1261
+          },
+          {
+            "text": "Löschen",
+            "left": 1269,
+            "right": 1297
+          }
+        ]
+      }
+    },
+    {
+      "name": "Trip form accessible tree",
+      "passed": true,
+      "tree": "- banner:\n  - button \"Menü umschalten\":\n    - img\n  - link \"Startseite\":\n    - /url: /\n  - button \"Fehler melden\": Bug\n  - button \"Konto-Menü\"\n- heading \"Reisen\" [level=1]\n- paragraph: 2 Reisen\n- 'button \"Längste Reise 20.560 km Audit: Singapur und Europa\"'\n- 'button \"Teuerste Reise 1.800 € Audit: Singapur und Europa\"'\n- 'button \"Meiste Länder 2 Audit: Singapur und Europa\"'\n- paragraph: 2 Reisen\n- button \"🧹 Aufräumen\"\n- button \"⇶ Zusammenführen\"\n- button \"＋ Reise hinzufügen\"\n- link \"Abgeschlossen Audit UI trip 1789295800652 01. Juni – 08. Juni 2025 · 7 Nächte 0 Flüge — km — Länder — Gesamtkosten → Öffnen Reise bearbeiten Reise löschen\":\n  - text: Abgeschlossen\n  - heading \"Audit UI trip 1789295800652\" [level=3]\n  - paragraph: 01. Juni – 08. Juni 2025 · 7 Nächte\n  - text: 0 Flüge — km — Länder — Gesamtkosten\n  - button \"→ Öffnen\"\n  - button \"Reise bearbeiten\": ✏\n  - button \"Reise löschen\": ✕\n- 'link \"Abgeschlossen Audit: Singapur und Europa 01. Juni – 20. Juni 2025 · 19 Nächte FRA → SIN → FRA 2 Flüge 20.6k km 2 Länder 1.800 € Gesamtkosten → Öffnen Reise bearbeiten Reise löschen\"':\n  - text: Abgeschlossen\n  - 'heading \"Audit: Singapur und Europa\" [level=3]'\n  - paragraph: 01. Juni – 20. Juni 2025 · 19 Nächte\n  - text: FRA → SIN → FRA 2 Flüge 20.6k km 2 Länder 1.800 € Gesamtkosten\n  - button \"→ Öffnen\"\n  - button \"Reise bearbeiten\": ✏\n  - button \"Reise löschen\": ✕\n- button \"＋ Neue Reise erstellen Flüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt\"\n- dialog \"Reise hinzufügen\":\n  - banner:\n    - heading \"Reise hinzufügen\" [level=2]\n    - paragraph: Womit fangen wir an?\n    - button \"Schließen\":\n      - img\n  - paragraph: Aus vorhandenen Einträgen bauen\n  - paragraph: Zeitraum wählen — wir schlagen vor, was zusammengehört.\n  - button \"Auswählen\"\n  - button \"Leer anlegen und von Hand füllen\"\n- dialog:\n  - heading \"Reise erstellen\" [level=2]\n  - tablist:\n    - tab \"📋 Allgemein\" [selected]\n    - tab \"👥 Reisende & Tags\"\n    - tab \"🎨 Erscheinungsbild\"\n    - tab \"📝 Notizen\"\n  - text: Reisename\n  - textbox \"z.B. Trondheim Jun 2024\"\n  - text: Kategorie\n  - combobox:\n    - option \"—\" [selected]\n    - option \"🏖 Urlaub\"\n    - option \"💼 Geschäft\"\n    - option \"🎒 Wochenende\"\n    - option \"👨‍👩‍👧 Familie\"\n    - option \"🗺 Sonstiges\"\n  - text: Startdatum\n  - textbox\n  - text: Enddatum\n  - textbox\n  - text: Herkunft\n  - textbox \"München\"\n  - text: Ziel\n  - textbox \"Tokyo, Japan\"\n  - text: Beschreibung (optional)\n  - textbox \"Notizen zur Reise …\"\n  - paragraph: Kurzbeschreibung — erscheint auf der Karte.\n  - button \"Abbrechen\"\n  - button \"Speichern\" [disabled]",
+      "layout": {
+        "viewport": 320,
+        "scrollWidth": 329,
+        "scrollX": 1,
+        "controls": [
+          {
+            "text": "Konto-Menü",
+            "left": 267,
+            "right": 328
+          },
+          {
+            "text": "🎨\nErscheinungsbild",
+            "left": 262,
+            "right": 417
+          },
+          {
+            "text": "📝\nNotizen",
+            "left": 421,
+            "right": 518
+          }
+        ]
+      }
+    }
+  ],
+  "pageErrors": []
+}

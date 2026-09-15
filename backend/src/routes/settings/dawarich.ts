@@ -107,6 +107,28 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
       const stored = await getDawarichConnection(req.userId!);
       // Machine-readable failure kind, consistent with the Immich routes.
       if (!stored) throw new AppError("notConfigured", 400);
+
+      // A URL and the key that reaches it are ONE connection, not two fields.
+      // A stored key the caller never saw — admin-global or ENV — may only be
+      // spent on the target it was configured for. Without that binding, any
+      // signed-in user could name their own server, omit the key, and have the
+      // instance-wide credential delivered to them (AUD-087). The caller's OWN
+      // key carries no such restriction: they supplied it, so sending it back
+      // to a target of their choosing reveals nothing they did not already
+      // have.
+      if (!apiKey && baseUrl && stored.source !== "user") {
+        let requested: string;
+        try {
+          requested = normalizeDawarichBaseUrl(baseUrl);
+        } catch (error) {
+          throw new AppError(error instanceof DawarichError ? error.kind : "invalidUrl", 400);
+        }
+        if (requested !== stored.baseUrl) throw new AppError("keyRequired", 400);
+        // The normalized form is what gets tested, so a trailing slash is not
+        // mistaken for a different target.
+        baseUrl = requested;
+      }
+
       baseUrl = baseUrl ?? stored.baseUrl;
       apiKey = apiKey ?? stored.apiKey;
     }

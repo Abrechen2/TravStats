@@ -102,6 +102,19 @@ vi.mock("../../components/AirportAutocomplete", () => ({
   ),
 }));
 
+// The airline combobox searches the catalogue as soon as it has a query.
+vi.mock("@/lib/api/catalogue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/catalogue")>();
+  return {
+    ...actual,
+    airlinesApi: {
+      ...actual.airlinesApi,
+      search: vi.fn().mockResolvedValue([]),
+      list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    },
+  };
+});
+
 import FlightEditModal from "../../components/FlightEditModal";
 
 // A flight stored at 12:35/16:50 UTC, departing Tokyo (UTC+9), arriving New

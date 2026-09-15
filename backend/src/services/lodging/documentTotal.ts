@@ -14,6 +14,8 @@
  * a labelled total in the source overrules it.
  */
 
+import { isCurrencyCode } from "../../shared/currencies";
+
 /**
  * Money as printed, in either grouping convention.
  *
@@ -98,20 +100,40 @@ function looksLikeMoney(num: string, pre?: string, post?: string): boolean {
 }
 
 /**
- * The tax-inclusive total the document names, or null when it names none.
+ * The unit a marker next to a figure names, when it names exactly one. A
+ * three-letter code is checked against ISO-4217; "€" and "£" are unambiguous.
+ * "$" and "¥" are not — US, Singapore, Australian, Chinese, Japanese — so they
+ * stay unknown rather than being guessed.
+ */
+function currencyOfMarker(marker: string | undefined): string | null {
+  if (!marker) return null;
+  if (marker === "€") return "EUR";
+  if (marker === "£") return "GBP";
+  return isCurrencyCode(marker) ? marker : null;
+}
+
+export interface LabelledMoney {
+  value: number;
+  /** Null when the figure carried no marker, or an ambiguous one. */
+  currency: string | null;
+}
+
+/**
+ * The tax-inclusive total the document names — with its unit, where the
+ * document prints one — or null when it names none.
  *
  * When several labels match, the LAST one wins: confirmations print the running
  * figures first and the final one last, and a summary block at the foot of a
  * mail is the more authoritative statement.
  */
-export function findLabelledTotal(text: string): number | null {
+export function findLabelledMoney(text: string): LabelledMoney | null {
   // The amount a label refers to is the one printed right after it. Ranking by
   // DISTANCE rather than by document order is what separates
   //   "Gesamtpreis	$135,87"                        -> 0 characters away
   // from
   //   "Der Gesamtpreis gilt für ... Frühstück $15"   -> sixty characters away
   // in a document that says "Gesamtpreis" twice.
-  let best: { distance: number; value: number } | null = null;
+  let best: { distance: number; money: LabelledMoney } | null = null;
 
   for (const label of TOTAL_LABELS) {
     const pattern = new RegExp(label.source, `${label.flags}g`);
@@ -127,13 +149,49 @@ export function findLabelledTotal(text: string): number | null {
         const distance = money.index ?? 0;
         // `<=` so a later label wins a tie: a summary block at the foot of a
         // mail is the more authoritative statement.
-        if (best === null || distance <= best.distance) best = { distance, value };
+        if (best === null || distance <= best.distance) {
+          best = {
+            distance,
+            money: { value, currency: currencyOfMarker(pre) ?? currencyOfMarker(post) },
+          };
+        }
         break;
       }
     }
   }
 
-  return best?.value ?? null;
+  return best?.money ?? null;
+}
+
+/** `findLabelledMoney` for callers that only want the figure. */
+export function findLabelledTotal(text: string): number | null {
+  return findLabelledMoney(text)?.value ?? null;
+}
+
+/**
+ * The part of a multi-booking document that belongs to ONE booking: from the
+ * first mention of its hotel to the first later mention of any other hotel
+ * the model found. With a single booking the whole text is its section.
+ *
+ * Returns "" — a section in which no total can be found — when the hotel's
+ * name does not appear at all in a document that holds several bookings: a
+ * total that cannot be attributed must not overrule anything (AUD-050).
+ */
+export function documentSectionFor(
+  text: string,
+  hotelName: string | null,
+  otherHotelNames: readonly string[],
+): string {
+  if (otherHotelNames.length === 0) return text;
+  if (!hotelName) return "";
+  const lower = text.toLowerCase();
+  const start = lower.indexOf(hotelName.toLowerCase());
+  if (start < 0) return "";
+  const ends = otherHotelNames
+    .map((other) => lower.indexOf(other.toLowerCase(), start + hotelName.length))
+    .filter((at) => at >= 0);
+  const end = ends.length > 0 ? Math.min(...ends) : text.length;
+  return text.slice(start, end);
 }
 
 export type TotalSource = "document" | "model" | "none";
@@ -152,9 +210,22 @@ const AGREEMENT_EPSILON = 0.01;
  * `source` is reported rather than swallowed: a caller that wants to flag a
  * corrected price, or count how often the model and the document disagree,
  * needs to know which one it got.
+ *
+ * `modelCurrency` is the unit the RESULT will carry. A labelled total printed
+ * in a different unit — the "EUR 100.00" a Dubai hotel shows under its
+ * 400 AED fee — is a conversion, not the price, and is left alone rather than
+ * written as 100 AED (AUD-050). A figure with no marker is compared as before.
  */
-export function reconcileTotalPrice(modelValue: number | null, text: string): ReconciledTotal {
-  const documentValue = findLabelledTotal(text);
+export function reconcileTotalPrice(
+  modelValue: number | null,
+  text: string,
+  modelCurrency?: string | null,
+): ReconciledTotal {
+  const labelled = findLabelledMoney(text);
+  const documentValue =
+    labelled === null || (modelCurrency && labelled.currency && labelled.currency !== modelCurrency)
+      ? null
+      : labelled.value;
 
   if (documentValue === null) {
     return modelValue === null ? { value: null, source: "none" } : { value: modelValue, source: "model" };

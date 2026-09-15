@@ -53,6 +53,22 @@ vi.mock("../../../store/settingsStore", () => ({
   ),
 }));
 
+// The currency picker asks the server which currencies were used recently. The
+// hook fetches on mount, so it reached the network from every test that renders
+// a price field (forgejo#110); an empty list is the failed request's own result.
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => [] };
+});
+
+// Saving from the preview opens an import batch. This is a WRITE that escaped
+// the test to the real network (forgejo#110) — the request failed, so the save
+// path was never exercised past this call.
+vi.mock("@/lib/api/importBatches", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/importBatches")>();
+  return { ...actual, createImportBatch: vi.fn().mockResolvedValue({ id: "test-batch" }) };
+});
+
 const baseEntry: ParsedCruiseEntry = {
   input: {
     cruiseLine: "AIDA",
@@ -113,7 +129,7 @@ describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
     expect(payload.status).toBe("cancelled");
   });
 
-  it("unchecking the Storniert checkbox reverts to \"scheduled\" (backend re-derives)", async () => {
+  it('unchecking the Storniert checkbox reverts to "scheduled" (backend re-derives)', async () => {
     vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
     const cancelledEntry: ParsedCruiseEntry = {
       ...baseEntry,

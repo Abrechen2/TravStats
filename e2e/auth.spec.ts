@@ -19,6 +19,10 @@
  */
 import { test, expect } from "@playwright/test";
 
+// These are the LOGGED-OUT paths, so they must not inherit the signed-in
+// session the setup project writes for everything else (AUD-098).
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("Authentication Flow", () => {
   test("shows the username/password form on the login page", async ({ page }) => {
     await page.goto("/login");
@@ -44,11 +48,23 @@ test.describe("Authentication Flow", () => {
     await expect(page).toHaveURL(/.*login/);
   });
 
-  test("links to the registration page", async ({ page }) => {
+  test("does not advertise registration while it is closed", async ({ page }) => {
+    // `LoginPage` renders the link only when `registrationEnabled !== false`,
+    // and the seeded dev instance has an admin, which closes registration. The
+    // old version clicked a link that is not there and failed on every run.
+    //
+    // Asserting its ABSENCE is the deterministic half, and the one worth
+    // having: an instance that is closed must not invite people to sign up.
     await page.goto("/login");
-    // href-based, so the assertion holds in either locale.
-    await page.locator('a[href="/register"]').click();
-    await expect(page).toHaveURL(/.*register/);
+    await expect(page.locator('a[href="/register"]')).toHaveCount(0);
+  });
+
+  test("serves the registration route by URL regardless", async ({ page }) => {
+    // The route exists whether or not the login page advertises it; what it
+    // then shows is the instance's decision, and either way it must not be a
+    // blank page.
+    await page.goto("/register");
+    await expect(page.locator("h1, h2, form").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("native validation keeps an empty submit on the login page", async ({ page }) => {
@@ -97,6 +113,17 @@ test.describe("Authenticated User Flow", () => {
     await page.fill("input#password", "admin123");
     await page.click('button[type="submit"]');
     await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 15000 });
+
+    // Away from the dashboard, and then WAIT for the page to settle. The
+    // account-menu button is found immediately but keeps failing Playwright's
+    // "stable" check while the header reflows around loading data, so the
+    // click times out on an element it has already located — a failure about
+    // page settling, not about logging out.
+    await page.goto("/flights");
+    await expect(page.getByRole("heading", { name: /^Flüge$|^Flights$/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: /Account menu|Konto-Menü/ }).click();
     await page.locator("text=/Abmelden|Logout/i").first().click();

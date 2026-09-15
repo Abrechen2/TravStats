@@ -1,0 +1,105 @@
+{
+  "commit": "39715ec56d3879723af4e0ab4c98bd1d997a971f",
+  "backend": {
+    "files": 494,
+    "passedFiles": 492,
+    "skippedFiles": 2,
+    "passed": 4274,
+    "skipped": 11,
+    "failed": 0
+  },
+  "frontend": {
+    "files": 433,
+    "passed": 3710,
+    "failed": 0
+  },
+  "totalPassed": 7984,
+  "findings": {
+    "totalHistoricalIds": 103,
+    "newIdsThisBlock": [
+      99,
+      100,
+      101,
+      102,
+      103
+    ]
+  },
+  "backendSkips": [
+    {
+      "file": "src\\__tests__\\lodgingBookingParser.test.ts",
+      "test": "parseLodgingBookingText real sample: direct hotel booking (LLM fully mocked) does not match the Booking.com template and reaches the mocked LLM fallback"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) recognises a Booking.com confirmation and rejects a direct hotel booking"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Bastion Hotel Zoetermeer confirmation (3 nights, NL postcode)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Engimatt confirmation (1 night, CHF, district in the address)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Hotel Stiegler confirmation (AT)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the NH Ludwigsburg confirmation (DE)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Novotel Suites Berlin confirmation (2 nights, district in the address)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Vienna House confirmation (whole-euro total, no decimals)"
+    },
+    {
+      "file": "src\\__tests__\\bookingComTemplate.test.ts",
+      "test": "Booking.com template parser (real samples) parses the Hotel Alzinn confirmation (stacked label/value layout)"
+    },
+    {
+      "file": "src\\services\\backup\\__tests__\\uploadsRoundTrip.test.ts",
+      "test": "uploads survive a backup and a restore puts a restored file back where the database expects it"
+    },
+    {
+      "file": "src\\__tests__\\lodgingParseRoutes.realSample.test.ts",
+      "test": "POST /api/v1/parse-email-file (domain=lodging, real sample, unmocked parser) parses a real Booking.com .msg into a candidate with hotel, dates and price"
+    }
+  ],
+  "ui": {
+    "create": 5,
+    "poiRerun": true,
+    "csvRerun": true,
+    "editDelete": true
+  },
+  "dependencies": {
+    "root": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "backend": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 4,
+      "critical": 0,
+      "total": 4
+    },
+    "frontend": {
+      "info": 0,
+      "low": 0,
+      "moderate": 5,
+      "high": 10,
+      "critical": 0,
+      "total": 15
+    }
+  }
+}

@@ -22,7 +22,6 @@ import {
   fxColumnsFor,
   flightOwnAmount,
   getBaseCurrency,
-  CLEARED_FX_COLUMNS,
   type FxColumns,
 } from "../services/fx/snapshot";
 
@@ -141,6 +140,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     // transaction) — the row write and the link write still happen together
     // inside the transaction below, so a failure never leaves the legacy
     // `companions` array and the `companionLinks` table disagreeing.
+    // The FX snapshot is resolved here too, OUTSIDE the transaction (the rate
+    // lookup goes to the network, and the batch write must not sit open
+    // waiting for it) — and it is held ON THE ROW. It used to sit in a map
+    // keyed by `externalRef`, which a comment called unique per row. It is
+    // null for every manual and API flight, so two hand-typed EUR flights of
+    // 100 and 500 both landed on the same map slot and both stored 500 as
+    // their base amount (AUD-049).
+    const baseCurrency = await getBaseCurrency(userId);
     const enrichedDataList = await Promise.all(
       flightsToCreate.map(async (data, index) => {
         const enriched = await enrichFlightAirports({
@@ -160,29 +167,16 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
           },
         });
         const resolvedCompanions = await resolveCompanions(userId, data.companions ?? []);
-        return { data, enriched, resolvedCompanions, externalRef: refsToCreate[index] };
-      })
-    );
-
-    // FX snapshots for every flight, resolved OUTSIDE the transaction: the
-    // rate lookup goes to the network, and the batch write must not sit open
-    // waiting for it. Keyed by the external ref, which is unique per row.
-    const baseCurrency = await getBaseCurrency(userId);
-    const fxByRef = new Map<string | null | undefined, FxColumns>();
-    await Promise.all(
-      enrichedDataList.map(async ({ data, externalRef }) => {
-        fxByRef.set(
-          externalRef,
-          await fxColumnsFor(
-            {
-              amount: flightOwnAmount(data),
-              currency: data.currency,
-              date: toUtcDate(data.departureLocal, data.depTimezone),
-            },
-            baseCurrency,
-          ),
+        const fx: FxColumns = await fxColumnsFor(
+          {
+            amount: flightOwnAmount(data),
+            currency: data.currency,
+            date: toUtcDate(data.departureLocal, data.depTimezone),
+          },
+          baseCurrency,
         );
-      }),
+        return { data, enriched, resolvedCompanions, fx, externalRef: refsToCreate[index] };
+      })
     );
 
     // Step 2: All DB writes inside a single transaction — if any step fails, all are rolled back
@@ -205,7 +199,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
-      for (const { data, enriched, resolvedCompanions, externalRef } of enrichedDataList) {
+      for (const { data, enriched, resolvedCompanions, fx, externalRef } of enrichedDataList) {
         const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
@@ -314,7 +308,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             // The same FX snapshot the single-create route takes. Resolved
             // BEFORE the transaction (it goes to the network), so a slow rate
             // lookup cannot hold a write transaction open.
-            ...(fxByRef.get(externalRef) ?? CLEARED_FX_COLUMNS),
+            ...fx,
             // Default to 'email_import' for backward compat (this route was
             // originally only called from the email/PDF parsers). AI-agent
             // and xlsx imports can override with 'bulk_import'.

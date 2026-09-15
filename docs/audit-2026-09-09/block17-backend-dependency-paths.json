@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "name": "travstats-backend",
+  "dependencies": {
+    "cheerio": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/cheerio/-/cheerio-1.2.0.tgz",
+      "overridden": false,
+      "dependencies": {
+        "undici": {
+          "version": "7.28.0",
+          "resolved": "https://registry.npmjs.org/undici/-/undici-7.28.0.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "multer": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/multer/-/multer-2.2.0.tgz",
+      "overridden": false
+    },
+    "nodemailer": {
+      "version": "9.0.6",
+      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.0.6.tgz",
+      "overridden": false
+    },
+    "openai": {
+      "version": "7.10.0",
+      "resolved": "https://registry.npmjs.org/openai/-/openai-7.10.0.tgz",
+      "overridden": false,
+      "dependencies": {
+        "undici": {
+          "version": "7.28.0"
+        }
+      }
+    },
+    "ts-jest": {
+      "version": "29.4.12",
+      "resolved": "https://registry.npmjs.org/ts-jest/-/ts-jest-29.4.12.tgz",
+      "overridden": false,
+      "dependencies": {
+        "@jest/transform": {
+          "version": "29.7.0",
+          "resolved": "https://registry.npmjs.org/@jest/transform/-/transform-29.7.0.tgz",
+          "overridden": false,
+          "dependencies": {
+            "babel-plugin-istanbul": {
+              "version": "6.1.1",
+              "resolved": "https://registry.npmjs.org/babel-plugin-istanbul/-/babel-plugin-istanbul-6.1.1.tgz",
+              "overridden": false,
+              "dependencies": {
+                "@istanbuljs/load-nyc-config": {
+                  "version": "1.1.0",
+                  "resolved": "https://registry.npmjs.org/@istanbuljs/load-nyc-config/-/load-nyc-config-1.1.0.tgz",
+                  "overridden": false,
+                  "dependencies": {
+                    "js-yaml": {
+                      "version": "3.15.0",
+                      "resolved": "https://registry.npmjs.org/js-yaml/-/js-yaml-3.15.0.tgz",
+                      "overridden": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "service": "immich",
+      "isAdmin": false,
+      "suppliedFields": [
+        "baseUrl"
+      ],
+      "unauthenticatedStatus": 401,
+      "authenticatedStatus": 200,
+      "testSuccess": true,
+      "received": [
+        {
+          "path": "/api/server/version",
+          "immichMatches": true,
+          "dawarichMatches": false,
+          "hasAuth": true
+        },
+        {
+          "path": "/api/users/me",
+          "immichMatches": true,
+          "dawarichMatches": false,
+          "hasAuth": true
+        }
+      ]
+    },
+    {
+      "service": "dawarich",
+      "isAdmin": false,
+      "suppliedFields": [
+        "baseUrl"
+      ],
+      "unauthenticatedStatus": 401,
+      "authenticatedStatus": 200,
+      "testSuccess": true,
+      "received": [
+        {
+          "path": "/api/v1/health",
+          "immichMatches": false,
+          "dawarichMatches": false,
+          "hasAuth": false
+        },
+        {
+          "path": "/api/v1/points",
+          "immichMatches": false,
+          "dawarichMatches": true,
+          "hasAuth": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "commit": "9678e6cd",
+  "multerVersion": "2.2.0",
+  "unauthenticated": {
+    "status": 401
+  },
+  "authenticated": {
+    "status": 500
+  },
+  "errorKinds": [
+    {
+      "name": "AppError",
+      "message": "No token provided",
+      "stack": [
+        "AppError: No token provided",
+        "    at authenticate (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\src\\middleware\\auth.ts:69:13)",
+        "    at Layer.handle [as handle_request] (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\layer.js:95:5)",
+        "    at next (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\route.js:149:13)",
+        "    at Route.dispatch (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\route.js:119:3)",
+        "    at Layer.handle [as handle_request] (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\layer.js:95:5)",
+        "    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\index.js:284:15",
+        "    at router.process_params (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\index.js:346:12)",
+        "    at next (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\index.js:280:10)",
+        "    at router.handle (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\index.js:175:3)",
+        "    at router (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\express\\lib\\router\\index.js:47:12)"
+      ]
+    },
+    {
+      "name": "RangeError",
+      "message": "Invalid array length",
+      "stack": [
+        "RangeError: Invalid array length",
+        "    at Array.push (<anonymous>)",
+        "    at setLastValue (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\append-field\\lib\\set-value.js:18:25)",
+        "    at setValue (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\append-field\\lib\\set-value.js:31:25)",
+        "    at D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\append-field\\index.js:8:12",
+        "    at Array.reduce (<anonymous>)",
+        "    at appendField (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\append-field\\index.js:7:9)",
+        "    at Multipart.<anonymous> (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\multer\\lib\\make-middleware.js:160:7)",
+        "    at Multipart.emit (node:events:508:28)",
+        "    at SBMH.ssCb [as _cb] (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\busboy\\lib\\types\\multipart.js:537:16)",
+        "    at feed (D:\\TravStats_Projekt\\TravStats\\.tmp\\audit-round2-9678e6cd\\backend\\node_modules\\streamsearch\\lib\\sbmh.js:219:14)"
+      ]
+    }
+  ],
+  "routedErrorsAfterAuthControl": 1,
+  "requestBytes": 202,
+  "crashReproduced": false,
+  "runtime": "v24.11.0"
+}

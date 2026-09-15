@@ -273,6 +273,11 @@ export function SegControl<V extends string>({
           <button
             key={opt.value}
             type="button"
+            // Which option is chosen was conveyed by colour alone, so a screen
+            // reader — and a test — had no way to ask. `aria-pressed` states it
+            // programmatically, the same gap AUD-096 closed for the flight
+            // update editor's labels.
+            aria-pressed={active}
             onClick={() => onChange(opt.value)}
             className="flex cursor-pointer flex-col items-center gap-0.5 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
             style={{

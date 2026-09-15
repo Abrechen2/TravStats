@@ -602,6 +602,13 @@ if (process.env.NODE_ENV !== 'test') {
 
     // Initialize backup scheduler
     try {
+      // A process that just booted owns no backup, so anything still marked
+      // in-flight is the wreckage of a crash or a kill mid-backup — and it is
+      // also the lock every future backup, restore and scheduler run checks.
+      // Clear it BEFORE the scheduler starts, or the first nightly run skips.
+      const { reconcileInterruptedBackups } = await import('./services/backup/reconcileBackups');
+      await reconcileInterruptedBackups('server restart');
+
       const { startScheduler } = await import('./services/backupScheduler');
       await startScheduler();
     } catch (error) {

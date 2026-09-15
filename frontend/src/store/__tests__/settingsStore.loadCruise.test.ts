@@ -24,6 +24,11 @@ describe("settingsStore.loadRemoteSettings — cruise slice", () => {
       cruise: { defaultLine: "", defaultCabinType: null, showCruiseArcs: true },
     });
     vi.restoreAllMocks();
+    // `loadRemoteSettings` also fetches the birthdate on a parallel request whose
+    // failure it deliberately swallows (settingsStore.ts:469). Unmocked, that one
+    // reached the real network from every case in this file and the test quietly
+    // exercised the failure path instead of the merge (forgejo#110).
+    vi.spyOn(settingsApi, "getProfile").mockResolvedValue({ birthdate: null } as never);
   });
 
   it("takes the cruise defaults from the server answer", async () => {

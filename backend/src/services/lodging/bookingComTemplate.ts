@@ -1,4 +1,5 @@
 import { splitPostcodeFromCity } from "./lodgingFieldNormalization";
+import { parseAmount as parseMoney } from "./documentTotal";
 import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
 import type { LodgingBoard } from "./lodgingFieldNormalization";
 import type { LODGING_TYPES } from "../../schemas/lodging";
@@ -281,8 +282,13 @@ function parseAmount(line: string): { amount: number; currency: LodgingCurrency 
   const token = m[1];
   const currency = CURRENCY_SYMBOLS[token] ?? (isCurrencyCode(token) ? token : null);
   if (!currency) return null;
-  const numeric = Number(m[2].replace(/\./g, "").replace(",", "."));
-  if (!Number.isFinite(numeric)) return null;
+  // The shared money reader, not a German-only replace: stripping every dot
+  // as a grouping mark read "US$ 135.87" as 13587 dollars and "EUR 1,234.50"
+  // as 1.2345 — both with `missing: []`, both accepted as a clean template
+  // hit (AUD-052). A currency says nothing about which separator the
+  // printer used for the decimals.
+  const numeric = parseMoney(m[2]);
+  if (numeric === null) return null;
   return { amount: numeric, currency };
 }
 

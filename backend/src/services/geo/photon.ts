@@ -9,6 +9,7 @@
  * never-log-the-raw-body discipline established in
  * `services/lodging/mappingSuggestion.ts`.
  */
+import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
 import { z } from "zod";
 import { formatStreetAddress } from "./streetAddress";
 import {
@@ -176,8 +177,9 @@ function normalizeFeature(feature: PhotonFeature): PlaceResult | null {
 
   // GeoJSON order is [lon, lat] — NOT [lat, lon].
   const [lon, lat] = coords;
-  if (typeof lon !== "number" || typeof lat !== "number") return null;
-  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  // Finiteness alone let a latitude of 1000 through as a position, and let a
+  // null coerce to a perfectly finite zero (AUD-071).
+  if (!isPlausibleCoordinate(lat, lon)) return null;
 
   return {
     name: props.name,

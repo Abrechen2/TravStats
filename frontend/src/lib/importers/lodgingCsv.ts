@@ -1,4 +1,4 @@
-import { isCurrencyCode } from "../../shared/currencies";
+import { isCurrencyCode, minorUnits } from "../../shared/currencies";
 // Lodging CSV importer: field spec, header heuristic, shape detection and
 // candidate builder. This is a ONE-TIME MIGRATION TOOL (spec §3.1) — the
 // ongoing lodging import path is email/PDF via cruiseBookingParser-style
@@ -68,7 +68,16 @@ export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
   lon: ["lon", "lng", "long", "longitude", "laengengrad", "längengrad"],
   // "url"/"link": a Google Maps saved-places export has no id column at all —
   // the identity sits inside the map link, which `extractPlaceId` pulls out.
-  googlePlaceId: ["googleplaceid", "placeid", "googleid", "cid", "url", "link", "maps", "googlemaps"],
+  googlePlaceId: [
+    "googleplaceid",
+    "placeid",
+    "googleid",
+    "cid",
+    "url",
+    "link",
+    "maps",
+    "googlemaps",
+  ],
   checkIn: ["checkin", "anreise", "von", "startdate", "arrival"],
   checkOut: ["checkout", "abreise", "bis", "enddate", "departure"],
   roomCategory: ["roomcategory", "zimmer", "zimmerkategorie", "zimmertyp", "roomtype"],
@@ -165,7 +174,14 @@ export function detectCsvShape(mapping: LodgingCsvMapping): LodgingCsvShape {
  * instead of leaving the user to guess which of their columns is wrong.
  * `message` stays alongside for logs and tests — it is never shown as-is.
  */
-export type LodgingRowErrorCode = "missing_name" | "unreadable_date" | "unreadable_number";
+export type LodgingRowErrorCode =
+  | "missing_name"
+  | "unreadable_date"
+  | "unreadable_number"
+  /** Numeric, but outside what the field can hold — a 7-star hotel, a 0.2 rating, a latitude of 52520. */
+  | "out_of_range"
+  /** "1.234" in a currency with three decimals: thousands, or one dinar and change? Not guessed. */
+  | "ambiguous_amount";
 
 export interface LodgingRowError {
   rowIndex: number;
@@ -287,8 +303,14 @@ export function parseNumericCell(raw: string): NumericCellResult {
   if (separatorPositions.length > 0) {
     const lastPos = separatorPositions[separatorPositions.length - 1];
     const trailingDigits = cleaned.length - lastPos - 1;
+    // Both separator kinds present: the RIGHTMOST is the decimal point, whatever
+    // follows it — every locale that uses both puts the grouping one further
+    // left, so "1,234.500" is 1234.5 and never 1234500 (AUD-059). The
+    // three-trailing-digits rule only applies when ONE kind of separator is
+    // used and the string is therefore genuinely ambiguous.
+    const bothKinds = cleaned.includes(".") && cleaned.includes(",");
     normalized =
-      trailingDigits === 3
+      trailingDigits === 3 && !bothKinds
         ? cleaned.replace(/[.,]/g, "")
         : Array.from(cleaned)
             .map((ch, i) => {
@@ -302,13 +324,67 @@ export function parseNumericCell(raw: string): NumericCellResult {
   return Number.isFinite(n) ? { value: n, unparseable: false } : { value: null, unparseable: true };
 }
 
-function toRating(raw: string): NumericCellResult {
+export interface RangedCellResult extends NumericCellResult {
+  /** Read as a number, but outside the field's range — reported, never silently nulled. */
+  outOfRange: boolean;
+}
+
+/**
+ * Same 0.5 floor as the stay editor and both backend schemas. The old floor
+ * of 1 turned every half-star cell into "unrated" with no row error — the
+ * worst ratings a sheet carried simply vanished (AUD-060). A value the field
+ * cannot hold is now reported as such instead of being dropped in silence.
+ */
+function toRating(raw: string): RangedCellResult {
   const parsed = parseNumericCell(raw);
-  if (parsed.unparseable) return parsed;
-  return {
-    value: parsed.value !== null && parsed.value >= 1 && parsed.value <= 5 ? parsed.value : null,
-    unparseable: false,
-  };
+  if (parsed.unparseable || parsed.value === null) return { ...parsed, outOfRange: false };
+  const inRange = parsed.value >= 0.5 && parsed.value <= 5;
+  return { value: inRange ? parsed.value : null, unparseable: false, outOfRange: !inRange };
+}
+
+/**
+ * A coordinate cell. NOT the money reader above: its "exactly three trailing
+ * digits means thousands grouping" rule is right for prices and wrong for
+ * degrees — "52.520" / "13.405" came out as 52520 / 13405 with no row error,
+ * and the preview request was then refused for the whole file (AUD-059). A
+ * coordinate is never grouped: one separator of either kind is the decimal
+ * point, more than one is not a coordinate.
+ */
+export function parseCoordinateCell(raw: string, limit: number): RangedCellResult {
+  if (!raw) return { value: null, unparseable: false, outOfRange: false };
+  const cleaned = raw.replace(/[^\d.,-]/g, "");
+  if (!/\d/.test(cleaned)) return { value: null, unparseable: true, outOfRange: false };
+  const separators = cleaned.match(/[.,]/g) ?? [];
+  if (separators.length > 1) return { value: null, unparseable: true, outOfRange: false };
+  const n = Number(cleaned.replace(",", "."));
+  if (!Number.isFinite(n)) return { value: null, unparseable: true, outOfRange: false };
+  if (Math.abs(n) > limit) return { value: null, unparseable: false, outOfRange: true };
+  return { value: n, unparseable: false, outOfRange: false };
+}
+
+export interface MoneyCellResult extends NumericCellResult {
+  /** Readable two ways, and the currency does not settle it. */
+  ambiguous: boolean;
+}
+
+/**
+ * A price cell, read with the currency in mind. The money reader treats
+ * exactly three trailing digits as a thousands group, which for "1.234 KWD"
+ * is a guess presented as a fact: the dinar HAS three decimals, and the
+ * factor between the two readings is a thousand (AUD-059). Such a cell is
+ * reported, not decided.
+ */
+export function parseMoneyCell(raw: string, currency: string | null): MoneyCellResult {
+  const parsed = parseNumericCell(raw);
+  if (parsed.value === null) return { ...parsed, ambiguous: false };
+  const cleaned = raw.replace(/[^\d.,]/g, "");
+  const separators = cleaned.match(/[.,]/g) ?? [];
+  const lastSeparator = Math.max(cleaned.lastIndexOf("."), cleaned.lastIndexOf(","));
+  const trailing = cleaned.length - lastSeparator - 1;
+  if (currency && minorUnits(currency) === 3 && separators.length === 1 && trailing === 3) {
+    return { value: null, unparseable: false, ambiguous: true };
+  }
+  return { ...parsed, ambiguous: false };
 }
 
 const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
@@ -411,6 +487,17 @@ function numberError(field: string, sample: string): PendingRowError {
   return { code: "unreadable_number", message: `Row has an unreadable ${field} value`, sample };
 }
 
+function rangeError(field: string, sample: string): PendingRowError {
+  return { code: "out_of_range", message: `Row has an out-of-range ${field} value`, sample };
+}
+
+/** The error a ranged cell earned, if any. */
+function rangedCellError(field: string, sample: string, cell: RangedCellResult): PendingRowError[] {
+  if (cell.unparseable) return [numberError(field, sample)];
+  if (cell.outOfRange) return [rangeError(field, sample)];
+  return [];
+}
+
 /**
  * The identity inside a Google Maps link.
  *
@@ -449,16 +536,16 @@ function buildLodgingFields(
 
   const starsCell = parseNumericCell(cell(record, m.stars));
   if (starsCell.unparseable) errors.push(numberError("stars", cell(record, m.stars)));
-  const stars =
-    starsCell.value !== null && starsCell.value >= 1 && starsCell.value <= 5
-      ? Math.round(starsCell.value)
-      : null;
+  const starsValue = starsCell.value;
+  const starsInRange = starsValue !== null && starsValue >= 1 && starsValue <= 5;
+  if (starsValue !== null && !starsInRange) errors.push(rangeError("stars", cell(record, m.stars)));
+  const stars = starsValue !== null && starsInRange ? Math.round(starsValue) : null;
 
-  const latCell = parseNumericCell(cell(record, m.lat));
-  if (latCell.unparseable) errors.push(numberError("latitude", cell(record, m.lat)));
+  const latCell = parseCoordinateCell(cell(record, m.lat), 90);
+  errors.push(...rangedCellError("latitude", cell(record, m.lat), latCell));
 
-  const lonCell = parseNumericCell(cell(record, m.lon));
-  if (lonCell.unparseable) errors.push(numberError("longitude", cell(record, m.lon)));
+  const lonCell = parseCoordinateCell(cell(record, m.lon), 180);
+  errors.push(...rangedCellError("longitude", cell(record, m.lon), lonCell));
 
   return {
     fields: {
@@ -490,24 +577,35 @@ function buildStayFields(
 ): FieldBuildResult<StayCandidateFields> {
   const errors: PendingRowError[] = [];
 
-  const priceCell = parseNumericCell(cell(record, m.totalPrice));
+  // The currency first: how a price cell reads depends on it (see `parseMoneyCell`).
+  const currency = toCurrency(cell(record, m.currency));
+  const priceCell = parseMoneyCell(cell(record, m.totalPrice), currency);
   if (priceCell.unparseable) errors.push(numberError("price", cell(record, m.totalPrice)));
+  if (priceCell.ambiguous) {
+    errors.push({
+      code: "ambiguous_amount",
+      message: "Row has a price that reads as thousands or as three decimals",
+      sample: cell(record, m.totalPrice),
+    });
+  }
 
   const ratingRoomCell = toRating(cell(record, m.ratingRoom));
-  if (ratingRoomCell.unparseable)
-    errors.push(numberError("room rating", cell(record, m.ratingRoom)));
+  errors.push(...rangedCellError("room rating", cell(record, m.ratingRoom), ratingRoomCell));
 
   const ratingBreakfastCell = toRating(cell(record, m.ratingBreakfast));
-  if (ratingBreakfastCell.unparseable)
-    errors.push(numberError("breakfast rating", cell(record, m.ratingBreakfast)));
+  errors.push(
+    ...rangedCellError("breakfast rating", cell(record, m.ratingBreakfast), ratingBreakfastCell)
+  );
 
   const ratingServiceCell = toRating(cell(record, m.ratingService));
-  if (ratingServiceCell.unparseable)
-    errors.push(numberError("service rating", cell(record, m.ratingService)));
+  errors.push(
+    ...rangedCellError("service rating", cell(record, m.ratingService), ratingServiceCell)
+  );
 
   const ratingOverallCell = toRating(cell(record, m.ratingOverall));
-  if (ratingOverallCell.unparseable)
-    errors.push(numberError("overall rating", cell(record, m.ratingOverall)));
+  errors.push(
+    ...rangedCellError("overall rating", cell(record, m.ratingOverall), ratingOverallCell)
+  );
 
   return {
     fields: {
@@ -518,7 +616,7 @@ function buildStayFields(
       // Alex's stays sheet has no price column at all — null here is correct
       // data, and the backend simply writes no FX snapshot for it.
       totalPrice: priceCell.value,
-      currency: toCurrency(cell(record, m.currency)),
+      currency,
       ratingRoom: ratingRoomCell.value,
       ratingBreakfast: ratingBreakfastCell.value,
       ratingService: ratingServiceCell.value,

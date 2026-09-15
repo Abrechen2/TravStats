@@ -414,4 +414,76 @@ describe("nominatim geocoder", () => {
     ).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  /**
+   * AUD-064. The cache's own comment says it stores "a definitive answer
+   * (found or confirmed-empty)" and that a transient failure "must not poison
+   * the cache". But a non-OK HTTP status returned null without throwing, so a
+   * 503 WAS stored as a confirmed miss — for the life of the process. One bad
+   * minute at the provider permanently unresolved every address asked for
+   * during it.
+   *
+   * Each case uses a query of its own: the cache is module state keyed by the
+   * query and outlives an `it()` block.
+   */
+  describe("a provider having a moment is not an answer about the place", () => {
+    const status = (code: number) =>
+      ({ ok: false, status: code, json: async () => ({}) }) as unknown as Response;
+
+    it.each([
+      ["503", 503, "Servicestrasse 1"],
+      ["500", 500, "Fehlerweg 2"],
+      ["429", 429, "Drosselgasse 3"],
+      ["408", 408, "Zeitgasse 4"],
+    ])("retries after a %s instead of caching it as a miss", async (_label, code, address) => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(status(code))
+        .mockResolvedValueOnce(okResponse([{ lat: "47.3769", lon: "8.5417" }]));
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(await geocodeAddress({ address, city: "Zürich" })).toBeNull();
+      expect(await geocodeAddress({ address, city: "Zürich" })).toEqual({
+        lat: 47.3769,
+        lon: 8.5417,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("still caches a 400, which says the query itself is no good", async () => {
+      // The control. Retrying a malformed query on every call would turn one
+      // bad row into an endless stream of requests, so a client error is a
+      // definitive answer and stays cached.
+      const fetchMock = jest.fn().mockResolvedValue(status(400));
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(await geocodeAddress({ address: "Kaputtweg 5", city: "Zürich" })).toBeNull();
+      expect(await geocodeAddress({ address: "Kaputtweg 5", city: "Zürich" })).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("still caches a confirmed empty result", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(okResponse([]));
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(await geocodeAddress({ address: "Nirgendwo 6", city: "Zürich" })).toBeNull();
+      expect(await geocodeAddress({ address: "Nirgendwo 6", city: "Zürich" })).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * AUD-071, at the parse. `Number(null)` and `Number("")` are both 0, and 0/0
+   * is a real point in the Atlantic — so a row with a missing latitude used to
+   * come back as a successfully located position.
+   */
+  it.each([
+    ["a null latitude", { lat: null, lon: "8.5417" }],
+    ["an empty-string longitude", { lat: "47.3769", lon: "" }],
+    ["a latitude past the pole", { lat: "1000", lon: "8.5417" }],
+    ["both missing", { lat: null, lon: null }],
+  ])("treats %s as no result", async (label, row) => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse([row])) as unknown as typeof fetch;
+    expect(await geocodeAddress({ address: `Parsefall ${label}`, city: "Zürich" })).toBeNull();
+  });
 });

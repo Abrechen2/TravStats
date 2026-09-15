@@ -1,0 +1,45 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "unsubscribe and resubscribe",
+      "initial": {
+        "placeCount": 1,
+        "visitedCount": 1
+      },
+      "after": {
+        "placeCount": 0,
+        "visitedCount": 0,
+        "curatedItemCount": 1,
+        "progressTicked": 1,
+        "listEntryCount": 0
+      },
+      "placeRetained": true,
+      "visitsRetained": 1
+    },
+    {
+      "name": "explicit retick repairs membership",
+      "visitedCount": 1
+    },
+    {
+      "name": "list ownership controls",
+      "refusals": [
+        {
+          "method": "get",
+          "status": 404
+        },
+        {
+          "method": "patch",
+          "status": 404
+        },
+        {
+          "method": "delete",
+          "status": 404
+        }
+      ],
+      "foreignPlaceAdd": 404
+    }
+  ],
+  "addressEnrichmentStubs": 2,
+  "externalFetchAttempts": 0
+}

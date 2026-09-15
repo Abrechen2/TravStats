@@ -259,9 +259,13 @@
       "needsInputLabel": "brauchen dich",
       "needsInputHint": "Bitte prüfe und entscheide diese Zeilen, bevor du übernimmst.",
       "commit": "Übernehmen",
-      "commitError": "Import konnte nicht übernommen werden"
+      "commitError": "Import konnte nicht übernommen werden",
+      "chooseCurrency": "— Währung —",
+      "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen."
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
+    "matchedAs": "Zugeordnet zu:",
+    "rejectMatch": "Nicht dasselbe Hotel — neu anlegen",
     "fields": {
       "name": "Name",
       "type": "Typ",
@@ -323,7 +327,9 @@
       "rowReasons": {
         "missing_name": "{{count}}× kein Hotelname",
         "unreadable_date": "{{count}}× Datum unlesbar (erwartet: 2026-03-07, 07.03.2026 oder 07.03.26)",
-        "unreadable_number": "{{count}}× Zahl unlesbar"
+        "unreadable_number": "{{count}}× Zahl unlesbar",
+        "out_of_range": "{{count}}× Wert außerhalb des erlaubten Bereichs",
+        "ambiguous_amount": "{{count}}× Betrag mehrdeutig (Tausender oder drei Nachkommastellen?)"
       },
       "rowSample": " (z. B. „{{sample}}“ in Zeile {{row}})",
       "skippedRows": "{{count}} Zeilen wurden wegen ungültiger Werte übersprungen.",

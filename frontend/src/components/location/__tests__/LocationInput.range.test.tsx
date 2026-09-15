@@ -100,4 +100,56 @@ describe("LocationInput — coordinates out of range", () => {
     // partial pair.
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  /**
+   * AUD-068. Only the advanced number fields cleared the error and reported
+   * validity again, so a correction made ANY OTHER WAY left the message and
+   * the disabled Save button in place — with nothing on screen still wrong.
+   * The user's only way out was to go back to the field they had already
+   * given up on.
+   */
+  describe("a valid position accepted any other way clears the error", () => {
+    /** Put the input into the rejected state the finding starts from. */
+    function rejectFirst() {
+      const utils = renderInput();
+      fireEvent.change(screen.getByLabelText("location:field.lat"), { target: { value: "999" } });
+      fireEvent.change(screen.getByLabelText("location:field.lon"), { target: { value: "8" } });
+      expect(screen.getByTestId("location-range-error")).toBeInTheDocument();
+      expect(utils.onValidityChange).toHaveBeenLastCalledWith(false);
+      return utils;
+    }
+
+    it("clears it when coordinates are pasted into the search box", () => {
+      const { onChange, onValidityChange } = rejectFirst();
+
+      fireEvent.change(screen.getByLabelText("location:searchLabel"), {
+        target: { value: "52.52, 13.405" },
+      });
+
+      expect(screen.queryByTestId("location-range-error")).not.toBeInTheDocument();
+      expect(onValidityChange).toHaveBeenLastCalledWith(true);
+      expect(onChange).toHaveBeenLastCalledWith({ lat: 52.52, lon: 13.405 });
+    });
+
+    it("still reports the error while the pasted text is not a position yet", () => {
+      // The control: clearing on ANY keystroke would hide a real problem.
+      rejectFirst();
+
+      fireEvent.change(screen.getByLabelText("location:searchLabel"), {
+        target: { value: "Berlin" },
+      });
+
+      expect(screen.getByTestId("location-range-error")).toBeInTheDocument();
+    });
+
+    it("clears it when a correction is typed back into the number field", () => {
+      // The path that always worked, kept so the fix cannot have moved it.
+      const { onValidityChange } = rejectFirst();
+
+      fireEvent.change(screen.getByLabelText("location:field.lat"), { target: { value: "52.52" } });
+
+      expect(screen.queryByTestId("location-range-error")).not.toBeInTheDocument();
+      expect(onValidityChange).toHaveBeenLastCalledWith(true);
+    });
+  });
 });

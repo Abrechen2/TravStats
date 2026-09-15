@@ -1,0 +1,27 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "stale snapshot",
+      "manualPutStatus": 200,
+      "gateBeforeApply": "B9",
+      "gateAfterApply": "A1",
+      "aircraftAfterApply": "A321"
+    },
+    {
+      "name": "edited reversed chronology",
+      "editStatus": 200,
+      "applyStatus": 200,
+      "departure": "2025-06-02T10:00:00.000Z",
+      "arrival": "2025-06-01T12:00:00.000Z"
+    },
+    {
+      "name": "repeat edit",
+      "firstStatus": 200,
+      "secondStatus": 500,
+      "persistedStatus": "edited"
+    }
+  ],
+  "foreignApplyStatus": 404,
+  "externalFetchAttempts": 0
+}

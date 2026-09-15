@@ -208,6 +208,8 @@
     "testing": "Teste...",
     "testOk": "WebDAV-Verbindung erfolgreich",
     "testFailed": "WebDAV-Verbindung fehlgeschlagen",
+    "testNeedsSave": "Der Test prüft die gespeicherte Konfiguration — erst speichern, dann testen.",
+    "testNeedsEnabled": "Der Test prüft die gespeicherte Konfiguration, und dort ist WebDAV-Sync ausgeschaltet.",
     "fields": {
       "enabled": {
         "label": "WebDAV-Sync aktivieren",

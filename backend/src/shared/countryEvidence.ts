@@ -99,6 +99,7 @@
 
 import { resolveCountryCode } from "./geo/countryCode";
 import { classifyStay, type CountableStay } from "./lodgingCounting";
+import { stayNamesExactDays } from "./lodgingTiming";
 import { isoCountryCode } from "../utils/continents";
 
 /**
@@ -458,6 +459,21 @@ export function foldCountryEvidence(inputs: readonly EvidenceInput[]): CountryEv
 
     const acc = measured.get(entry.code);
     entry.daysPresent = acc?.days.size ?? 0;
+
+    // The span comes from the DAYS the evidence attests, not from `at` alone.
+    // `at` is one representative instant — a track hands over its first day
+    // there while its whole day set travels in `days`, so a country visited in
+    // 2020 and again in 2025 folded to firstDate = lastDate = 2020 and the
+    // passport reported a single year (AUD-086). Every kind with a span
+    // benefits; a place visit, whose day set is its one day, is unchanged.
+    if (acc && acc.days.size > 0) {
+      const ordered = [...acc.days].sort();
+      const earliest = ordered[0]!;
+      const latest = ordered[ordered.length - 1]!;
+      entry.firstDate =
+        entry.firstDate === null || earliest < entry.firstDate ? earliest : entry.firstDate;
+      entry.lastDate = entry.lastDate === null || latest > entry.lastDate ? latest : entry.lastDate;
+    }
     /**
      * The three states of §3.4b, decided here and nowhere else.
      *
@@ -551,10 +567,24 @@ export interface LodgingEvidence {
 
 /** The days a completed stay covers. A stay with no check-in names only the day
  *  it ended: that is what the record says, and stretching it back would invent
- *  nights nobody recorded. */
+ *  nights nobody recorded.
+ *
+ *  A stay whose dates are a MONTH or YEAR placeholder names no days at all.
+ *  Its stored ends span the whole period, so walking them turned a three-night
+ *  stay into 32 days of attested presence in a country (AUD-083). The nights
+ *  are known; which days they fell on is not, and this function's product is
+ *  days. */
 function stayDays(stay: CountableStay, now: Date): string[] {
   const out = isoDay(stay.checkOut);
   if (out === null || (stay.checkOut as Date).getTime() > now.getTime()) return [];
+  if (!stayNamesExactDays({
+    checkIn: stay.checkIn,
+    checkOut: stay.checkOut,
+    datePrecision: stay.datePrecision ?? "DAY",
+    nights: stay.nights ?? null,
+  })) {
+    return [];
+  }
   return daysBetween(isoDay(stay.checkIn) ?? out, out);
 }
 

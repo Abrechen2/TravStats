@@ -50,6 +50,7 @@ export const DAWARICH_FAILURE_KINDS = [
   "notFound",
   "protocol",
   "invalidUrl",
+  "keyRequired",
 ] as const;
 
 export type DawarichFailureKind = (typeof DAWARICH_FAILURE_KINDS)[number];

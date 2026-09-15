@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { clearAirportCache } from "../../services/airportCache";
 
 /**
  * The tab strip's "next up" line. What matters here is not that each query
@@ -58,9 +59,30 @@ describe("GET /api/v1/upcoming", () => {
     await enableDomains(["flight"]);
     await prisma.flight.createMany({
       data: [
-        { userId, flightNumber: "PAST", depIata: "MUC", arrIata: "JFK", ...COORDS, departureTime: inDays(-3) },
-        { userId, flightNumber: "SOON", depIata: "MUC", arrIata: "VIE", ...COORDS, departureTime: inDays(2) },
-        { userId, flightNumber: "LATER", depIata: "MUC", arrIata: "LHR", ...COORDS, departureTime: inDays(9) },
+        {
+          userId,
+          flightNumber: "PAST",
+          depIata: "MUC",
+          arrIata: "JFK",
+          ...COORDS,
+          departureTime: inDays(-3),
+        },
+        {
+          userId,
+          flightNumber: "SOON",
+          depIata: "MUC",
+          arrIata: "VIE",
+          ...COORDS,
+          departureTime: inDays(2),
+        },
+        {
+          userId,
+          flightNumber: "LATER",
+          depIata: "MUC",
+          arrIata: "LHR",
+          ...COORDS,
+          departureTime: inDays(9),
+        },
       ],
     });
 
@@ -69,6 +91,55 @@ describe("GET /api/v1/upcoming", () => {
     expect(res.status).toBe(200);
     const flight = res.body.data.entries.find((e: { domain: string }) => e.domain === "flight");
     expect(flight.secondary).toContain("SOON");
+  });
+
+  it("names the airport, not the town the runway sits in", async () => {
+    // #332: the strip read "Ferno" on a flight to Milan Malpensa. `city` is
+    // seeded from OurAirports' municipality; these two rows are that catalogue
+    // verbatim, under private codes so the shared table is left alone.
+    await enableDomains(["flight"]);
+    await prisma.airport.createMany({
+      data: [
+        {
+          iata: "QMX",
+          name: "Milan Malpensa International Airport",
+          city: "Ferno (VA)",
+          country: "IT",
+          lat: 45.63,
+          lon: 8.72,
+        },
+        {
+          iata: "QLH",
+          name: "London Heathrow Airport",
+          city: "London",
+          country: "GB",
+          lat: 51.47,
+          lon: -0.45,
+        },
+      ],
+    });
+    clearAirportCache();
+    await prisma.flight.create({
+      data: {
+        userId,
+        flightNumber: "AZ100",
+        depIata: "QMX",
+        arrIata: "QLH",
+        ...COORDS,
+        departureTime: inDays(2),
+      },
+    });
+
+    try {
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const flight = res.body.data.entries.find((e: { domain: string }) => e.domain === "flight");
+      expect(flight.primary).toBe("Milan Malpensa → London Heathrow");
+      expect(flight.primary).not.toContain("Ferno");
+    } finally {
+      await prisma.airport.deleteMany({ where: { iata: { in: ["QMX", "QLH"] } } });
+      clearAirportCache();
+    }
   });
 
   it("does not repeat the carrier when the flight number already carries it", async () => {
@@ -125,7 +196,14 @@ describe("GET /api/v1/upcoming", () => {
           departureTime: inDays(1),
           status: "cancelled",
         },
-        { userId, flightNumber: "ON", depIata: "MUC", arrIata: "LHR", ...COORDS, departureTime: inDays(5) },
+        {
+          userId,
+          flightNumber: "ON",
+          depIata: "MUC",
+          arrIata: "LHR",
+          ...COORDS,
+          departureTime: inDays(5),
+        },
       ],
     });
 
@@ -140,12 +218,21 @@ describe("GET /api/v1/upcoming", () => {
     // rule every other domain-aware surface follows.
     await enableDomains(["cruise"]);
     await prisma.flight.create({
-      data: { userId, flightNumber: "HIDDEN", depIata: "MUC", arrIata: "VIE", ...COORDS, departureTime: inDays(1) },
+      data: {
+        userId,
+        flightNumber: "HIDDEN",
+        depIata: "MUC",
+        arrIata: "VIE",
+        ...COORDS,
+        departureTime: inDays(1),
+      },
     });
 
     const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
 
-    expect(res.body.data.entries.some((e: { domain: string }) => e.domain === "flight")).toBe(false);
+    expect(res.body.data.entries.some((e: { domain: string }) => e.domain === "flight")).toBe(
+      false
+    );
   });
 
   it("sorts what it found soonest first, across domains", async () => {
@@ -154,7 +241,14 @@ describe("GET /api/v1/upcoming", () => {
       data: { userId, name: "Tokyo", startDate: inDays(1) },
     });
     await prisma.flight.create({
-      data: { userId, flightNumber: "LH1", depIata: "MUC", arrIata: "VIE", ...COORDS, departureTime: inDays(4) },
+      data: {
+        userId,
+        flightNumber: "LH1",
+        depIata: "MUC",
+        arrIata: "VIE",
+        ...COORDS,
+        departureTime: inDays(4),
+      },
     });
 
     const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
@@ -203,7 +297,14 @@ describe("GET /api/v1/upcoming", () => {
   it("returns an empty list when nothing lies ahead", async () => {
     await enableDomains(["flight", "cruise", "lodging"]);
     await prisma.flight.create({
-      data: { userId, flightNumber: "OLD", depIata: "MUC", arrIata: "VIE", ...COORDS, departureTime: inDays(-9) },
+      data: {
+        userId,
+        flightNumber: "OLD",
+        depIata: "MUC",
+        arrIata: "VIE",
+        ...COORDS,
+        departureTime: inDays(-9),
+      },
     });
 
     const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
@@ -223,9 +324,13 @@ describe("GET /api/v1/upcoming", () => {
       return d;
     };
 
-    const createStay = async (checkIn: Date, checkInTime: string | null): Promise<string> => {
+    const createStay = async (
+      checkIn: Date,
+      checkInTime: string | null,
+      where: { lat: number; lon: number } | null = null
+    ): Promise<string> => {
       const lodging = await prisma.lodging.create({
-        data: { userId, name: "B&B Test Adlershof" },
+        data: { userId, name: "B&B Test Adlershof", ...(where ?? {}) },
       });
       await prisma.lodgingStay.create({
         data: {
@@ -253,9 +358,59 @@ describe("GET /api/v1/upcoming", () => {
 
       const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
       expect(stay).toBeDefined();
-      expect(stay.startsAt).toBe(
-        new Date(dayAnchor(2).getTime() + 15 * 3_600_000).toISOString(),
-      );
+      expect(stay.startsAt).toBe(new Date(dayAnchor(2).getTime() + 15 * 3_600_000).toISOString());
+    });
+
+    // #331: the combined instant read the wall clock AS UTC, so a 22:30
+    // check-in was counted down to 22:30Z. In Berlin that is 00:30 the next
+    // morning and the banner said "in 1 hour" for a stay beginning in three.
+    // Tokyo is used here because it holds UTC+9 all year, which makes the
+    // expectation a constant rather than something this test has to re-derive
+    // with the same helper it is checking.
+    it("reads the check-in time on the hotel's own clock, not as UTC", async () => {
+      await enableDomains(["lodging"]);
+      const anchor = dayAnchor(2);
+      await createStay(anchor, "22:30", { lat: 35.6762, lon: 139.6503 });
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay).toBeDefined();
+      // 22:30 in Tokyo is 13:30 UTC on the same day.
+      expect(stay.startsAt).toBe(new Date(anchor.getTime() + 13.5 * 3_600_000).toISOString());
+      expect(stay.startsAt).not.toBe(new Date(anchor.getTime() + 22.5 * 3_600_000).toISOString());
+    });
+
+    // AUD-099: the database filter counts in UTC while `checkIn` is a day in the
+    // HOTEL's calendar, and the conversion happens after it. West of Greenwich
+    // those disagree: a Honolulu check-in stored on the 1st at 22:30 local is
+    // 08:30 UTC on the 2nd, so at 02:00 UTC on the 2nd it is still six hours
+    // away — and the filter had already dropped it with the previous day.
+    //
+    // The clock has to be frozen, because the case only exists while the UTC
+    // day is younger than the offset. Only Date is faked; the timers stay real,
+    // or the awaited database calls never resolve.
+    it("still shows a stay whose stored day is yesterday in UTC but is hours away locally", async () => {
+      await enableDomains(["lodging"]);
+      jest.useFakeTimers({
+        doNotFake: ["setTimeout", "setInterval", "setImmediate", "nextTick", "queueMicrotask"],
+      });
+      try {
+        jest.setSystemTime(new Date("2026-06-02T02:00:00.000Z"));
+        // Honolulu is UTC-10 all year — no daylight saving to date the test.
+        await createStay(new Date("2026-06-01T00:00:00.000Z"), "22:30", {
+          lat: 21.3099,
+          lon: -157.8581,
+        });
+
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+        const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+        expect(stay).toBeDefined();
+        expect(stay.startsAt).toBe("2026-06-02T08:30:00.000Z");
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     // #314: the strip linked to the domain's LIST, so the line naming your

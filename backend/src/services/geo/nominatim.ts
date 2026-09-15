@@ -5,6 +5,7 @@ import {
 import logger from "../../utils/logger";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import { toCoordinates } from "../../shared/geo/coordinates";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
 // The contact URL matters (#263): a contactless UA identical across every
@@ -128,6 +129,15 @@ function buildQuery(parts: GeocodeParts): string {
     .join(", ");
 }
 
+/**
+ * Statuses that mean "ask again later" rather than "there is no such place".
+ * Everything else non-OK is a definitive answer about the query and may be
+ * cached — a malformed query would otherwise be retried on every call.
+ */
+function isTransientStatus(status: number): boolean {
+  return status >= 500 || status === 429 || status === 408;
+}
+
 async function throttle(): Promise<void> {
   const wait = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
   if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
@@ -135,10 +145,11 @@ async function throttle(): Promise<void> {
 }
 
 function parseRow(row: NominatimRow): Coordinates | null {
-  const lat = Number(row.lat);
-  const lon = Number(row.lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return { lat, lon };
+  // `Number(null)` and `Number("")` are both 0, and 0/0 is a real point in the
+  // Atlantic — so a row with a missing latitude used to parse as a finite,
+  // in-range, entirely wrong position (AUD-071). `toCoordinates` refuses the
+  // coercion and the bounds in one place.
+  return toCoordinates(row.lat, row.lon);
 }
 
 async function fetchCoordinates(
@@ -152,6 +163,14 @@ async function fetchCoordinates(
   });
   if (!res.ok) {
     logger.warn({ query, status: res.status }, "geocoding lookup non-OK");
+    // A 5xx, a 429 or a timeout says nothing about the place — it says the
+    // provider is having a moment. Returning null here made the caller cache
+    // it as a confirmed miss for the life of the process, so one bad minute
+    // permanently unresolved every address asked for during it (AUD-064).
+    // Thrown, so it takes the existing transient path, which does not cache.
+    if (isTransientStatus(res.status)) {
+      throw new Error(`geocoding provider returned ${res.status}`);
+    }
     return null;
   }
   const rows = (await res.json()) as NominatimRow[];

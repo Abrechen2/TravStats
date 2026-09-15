@@ -10,17 +10,34 @@ const stay = (checkIn: string, checkOut: string, status = "completed") => ({
   checkOut: d(checkOut),
 });
 
+/** UTC midnight of the calendar day an ISO instant falls on, in UTC. */
+const utcDay = (at: Date): Date =>
+  new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+
+/**
+ * A flight whose local days are simply its UTC days — an airport sitting in
+ * UTC. Keeps every case written before AUD-079 reading exactly as it did; the
+ * two below that care about the difference state their local days explicitly.
+ */
+const utcFlight = (departure: string, arrival: string, status = "flown") => {
+  const departureTime = new Date(departure);
+  const arrivalTime = new Date(arrival);
+  return {
+    status,
+    departureTime,
+    arrivalTime,
+    depLocalDay: utcDay(departureTime),
+    arrLocalDay: utcDay(arrivalTime),
+  };
+};
+
 describe("buildTravelAccount", () => {
   it("closes out the year: every night is in exactly one bucket", () => {
     const account = buildTravelAccount({
       stays: [stay("2025-03-01", "2025-03-04")],
       cruises: [{ status: "flown", startDate: d("2025-06-01"), endDate: d("2025-06-08") }],
       flights: [
-        {
-          status: "flown",
-          departureTime: new Date("2025-09-01T22:00:00Z"),
-          arrivalTime: new Date("2025-09-02T08:00:00Z"),
-        },
+        utcFlight("2025-09-01T22:00:00Z", "2025-09-02T08:00:00Z"),
       ],
       now: NOW,
     });
@@ -36,11 +53,7 @@ describe("buildTravelAccount", () => {
       stays: [],
       cruises: [],
       flights: [
-        {
-          status: "flown",
-          departureTime: new Date("2025-09-01T08:00:00Z"),
-          arrivalTime: new Date("2025-09-01T11:00:00Z"),
-        },
+        utcFlight("2025-09-01T08:00:00Z", "2025-09-01T11:00:00Z"),
       ],
       now: NOW,
     });
@@ -104,6 +117,73 @@ describe("buildTravelAccount", () => {
     expect(account.years).toEqual([]);
     expect(account.contestedNights).toBe(0);
   });
+
+  /**
+   * AUD-079. Whether a flight took a night is a question about the clocks at
+   * either end. Deciding it on the stored UTC instants gets both of these
+   * exactly backwards — and they are each other's mirror, so a fix that merely
+   * shifted the boundary rather than reading the local day fails one of them.
+   */
+  describe("a night in the air is a night on the local clocks", () => {
+    // LAX -> SFO, 16:30 to 17:30 local on 1 June. In UTC that is
+    // 23:30 to 00:30, i.e. across a UTC date boundary.
+    const eveningHop = {
+      status: "flown",
+      departureTime: new Date("2025-06-01T23:30:00Z"),
+      arrivalTime: new Date("2025-06-02T00:30:00Z"),
+      depLocalDay: d("2025-06-01"),
+      arrLocalDay: d("2025-06-01"),
+    };
+
+    // The mirror: 23:30 to 00:30 LOCAL, which is 06:30 to 07:30 UTC on one
+    // and the same UTC day — a genuine night, invisible to a UTC comparison.
+    const redEye = {
+      status: "flown",
+      departureTime: new Date("2025-06-02T06:30:00Z"),
+      arrivalTime: new Date("2025-06-02T07:30:00Z"),
+      depLocalDay: d("2025-06-01"),
+      arrLocalDay: d("2025-06-02"),
+    };
+
+    it("does not bill an evening hop as a night in the plane", () => {
+      const account = buildTravelAccount({
+        stays: [],
+        cruises: [],
+        flights: [eveningHop],
+        now: NOW,
+      });
+      // No night anywhere means no year row at all — the same answer the
+      // account gives for a daytime hop.
+      expect(account.years).toEqual([]);
+    });
+
+    it("does bill a real red-eye, even though it sits inside one UTC day", () => {
+      const account = buildTravelAccount({
+        stays: [],
+        cruises: [],
+        flights: [redEye],
+        now: NOW,
+      });
+      const y = account.years.find((r) => r.year === "2025");
+      expect(y?.airNights).toBe(1);
+    });
+  });
+});
+
+/** A trip flight with the full cost shape, defaulting to "nothing recorded". */
+const costFlight = (o: Partial<TripAccountInput["flights"][number]> = {}) => ({
+  status: "flown",
+  departureTime: null,
+  arrivalTime: null,
+  price: null,
+  taxes: null,
+  fees: null,
+  currency: null,
+  priceBase: null,
+  fxBaseCurrency: null,
+  bookingId: null,
+  booking: null,
+  ...o,
 });
 
 const trip = (o: Partial<TripAccountInput> = {}): TripAccountInput => ({
@@ -254,5 +334,75 @@ describe("buildTripAccount", () => {
     expect(account.avgTripDays).toBeNull();
     expect(account.longestTripDays).toBeNull();
     expect(account.byCategory).toEqual([]);
+  });
+});
+
+/**
+ * AUD-080. The trip account added `flight.price` and nothing else, so it
+ * disagreed with the flight summary about what the same flights cost. Codex's
+ * case: 430 EUR on the summary, 100 EUR on the travel account.
+ */
+describe("buildTripAccount — what a flight costs", () => {
+  const BOOKING = { price: 300, currency: "EUR", priceBase: null, fxBaseCurrency: null };
+
+  it("counts a shared booking once, not once per segment and not zero times", () => {
+    const account = buildTripAccount([
+      trip({
+        flights: [
+          // Both segments carry no own price — the money is on the booking.
+          costFlight({ bookingId: "b1", booking: BOOKING }),
+          costFlight({ bookingId: "b1", booking: BOOKING }),
+        ],
+      }),
+    ]);
+
+    expect(account.trips[0]!.spendByCurrency).toEqual({ EUR: 300 });
+  });
+
+  it("includes taxes and fees in a flight's own price", () => {
+    const account = buildTripAccount([
+      trip({
+        flights: [costFlight({ price: 100, taxes: 20, fees: 10, currency: "EUR" })],
+      }),
+    ]);
+
+    expect(account.trips[0]!.spendByCurrency).toEqual({ EUR: 130 });
+  });
+
+  it("agrees with the flight summary on Codex's mixed case", () => {
+    // Two segments on one 300 EUR booking, plus 100 + 20 + 10 on a third.
+    const account = buildTripAccount([
+      trip({
+        flights: [
+          costFlight({ bookingId: "b1", booking: BOOKING }),
+          costFlight({ bookingId: "b1", booking: BOOKING }),
+          costFlight({ price: 100, taxes: 20, fees: 10, currency: "EUR" }),
+        ],
+      }),
+    ]);
+
+    expect(account.trips[0]!.spendByCurrency).toEqual({ EUR: 430 });
+  });
+
+  it("counts a booking shared across two trips for both of them", () => {
+    // Not a duplicate: it really is a cost of each trip, and suppressing it
+    // for the second would understate that trip.
+    const account = buildTripAccount([
+      trip({ id: "t1", flights: [costFlight({ bookingId: "b1", booking: BOOKING })] }),
+      trip({ id: "t2", flights: [costFlight({ bookingId: "b1", booking: BOOKING })] }),
+    ]);
+
+    expect(account.trips[0]!.spendByCurrency).toEqual({ EUR: 300 });
+    expect(account.trips[1]!.spendByCurrency).toEqual({ EUR: 300 });
+  });
+
+  it("leaves a cancelled flight out entirely", () => {
+    const account = buildTripAccount([
+      trip({
+        flights: [costFlight({ status: "cancelled", price: 100, taxes: 20, currency: "EUR" })],
+      }),
+    ]);
+
+    expect(account.trips[0]!.spendByCurrency).toEqual({});
   });
 });

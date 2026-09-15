@@ -115,6 +115,7 @@
       "arrIcao": "Zielflughafen (ICAO)",
       "departureTime": "Abflugzeit",
       "arrivalTime": "Ankunftszeit",
+      "utcSuffix": "(UTC)",
       "depLat": "Abflug-Breitengrad",
       "depLon": "Abflug-Längengrad",
       "arrLat": "Ankunft-Breitengrad",
