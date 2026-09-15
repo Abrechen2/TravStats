@@ -112,7 +112,7 @@ nichts aus dem Auftrag.
 |---|---|---|---|
 | A | Mobile Zeile für alle vier Logbücher | D-02, Abnahmefrage 1, Owner-Wiederholung | **fertig** (`eb5723db`) |
 | B | Eine Detail-Familie (Flug, Kreuzfahrt, Unterkunft, Ort) | D-08 | **fertig** (`6acbb1cd`), Browserblick offen |
-| C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | offen |
+| C | Shell: 17 Seiten von der Eigenbau-Shell auf `AppShell` | D-01 | **fertig** (`0263b509`), Browserblick offen |
 | D | Eine Dialog-Shell für die 44 eigenen Overlays | E11, §6 Zustände | offen |
 | E | Status- und Datumsvokabular über alle Domänen | D-07 | offen |
 | F | Kartensteuerung und Sheet-Höhen | D-03 | offen |
@@ -218,3 +218,43 @@ Variable nimmt kommagetrennte Werte, das beendet das Portkarussell sofort.
 Und: `VITE_API_URL` aus der **Shell** schlägt `.env.local`; ein `--force` ist
 nötig, weil Vite den `import.meta.env`-Block in den Transform-Cache backt und
 sonst die alte Backend-Adresse weiterliefert.
+
+## Block C — fertig, Browserblick offen (15.09.2026)
+
+Commit `0263b509`. Die dreizehn verbliebenen Seiten sind auf `AppShell`;
+`appShell.ratchet.test.ts` ist damit **absolut** statt eingefroren, wie der
+`dark:`-Wächter, als er zuging. Die leere Liste bleibt mit Absicht in der
+Datei: sie hält fest, dass die Zahl null erreicht hat.
+
+Was die dreizehn an Breite verbrauchten: zehn verschiedene Werte, und drei
+Seiten trugen zwei bis drei Shells **je Seite** — eine für Laden, eine für
+Fehler, eine für den Inhalt, jede mit eigener Navigation, eigenem
+`min-h-screen` und eigenem Container. `AchievementsPage` hatte drei,
+`TripRouteEditorPage` drei, die Orte-Familie je zwei.
+
+Drei Seiten haben dabei ein handgebautes Bedienelement verloren: ein
+Zurück-`button` wurde ein `Link`, zwei Wiederholen-`button` wurden `Button` —
+aus demselben Grund wie in Block B.
+
+**Die Kopfleiste selbst lief über**, gemessen bei 390 px auf der Flugliste:
+die Seite scrollte um 14 px seitlich, während der Tisch darin exakt 335 von
+335 maß. Die Zeile konnte nirgends schrumpfen, also wurde das Konto-Menü über
+den rechten Rand geschoben. Die linke Hälfte gibt jetzt nach (`min-w-0`), der
+Schriftzug verschwindet unter 400 px — die Marke allein sagt weiter, welche
+Anwendung das ist — und die rechte Hälfte ist `shrink-0`, weil ein auf halbe
+Tap-Fläche gequetschtes Bedienelement schlimmer ist als ein Schriftzug, der
+zur Seite tritt.
+
+**Das letzte Stück ist begründet, nicht gesehen.** Der Browserblick steht für
+B und C gemeinsam aus, aus dem Grund, der oben unter Block B steht.
+
+### Stand der Zähler nach A–C
+
+| Wächter | 15.09. früh | jetzt |
+|---|---|---|
+| Seiten mit eigener Shell | 17 | **0 — geschlossen** |
+| rohe Tailwind-Palettenklassen | 72 | 70 |
+| Hex-Literale | 80 | 80 |
+| eigene `fixed inset-0`-Overlays | 44 | 44 |
+| Tests | 3715 | 3737 |
+| Datei-Größen-Baseline | 20 | 19 |
