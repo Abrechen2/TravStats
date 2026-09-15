@@ -5,8 +5,8 @@ import { logger } from "../lib/logger";
 import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
 import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
-import PageTransition from "../components/PageTransition";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
+import PageHeader from "../components/ui/PageHeader";
 
 /**
  * Top-level Trips page (Phase-1 redesign). Was previously embedded as a
@@ -35,27 +35,10 @@ export default function TripsPage(): JSX.Element {
   }, []);
 
   return (
-    <PageTransition>
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        {/* px-4 OUTSIDE the max-width, the same order the insights bar and the
-            trip list use. With the padding inside, the heading sat 16 px
-            further in than everything below it — visible the moment the tiles
-            below stopped running to the browser edge (#271). */}
-        <div className="px-4 py-6">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="t-screen-title mb-1">{t("trips:tab")}</h1>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("trips:count", { count: trips.length })}
-            </p>
-          </div>
-        </div>
-        <TripInsightsBar trips={trips} />
-        <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
-      </div>
-    </PageTransition>
+    <AppShell width="list">
+      <PageHeader title={t("trips:tab")} meta={t("trips:count", { count: trips.length })} />
+      <TripInsightsBar trips={trips} />
+      <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
+    </AppShell>
   );
 }

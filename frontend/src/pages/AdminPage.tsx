@@ -4,7 +4,7 @@ import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
 import axios from "axios";
 import { logger } from "../lib/logger";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
 import { useDomainTabs } from "../hooks/useDomainTabs";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOMAINS } from "../shared/domains";
@@ -597,23 +597,16 @@ export default function AdminPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">Admin Panel</div>
-      </div>
+      <AppShell width="list">
+        <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+          Admin Panel
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-    >
-      <NavigationBar />
-
+    <AppShell width="list">
       {/* Top tab bar — same pattern as SettingsPage (commit fbbcd13) */}
       <div
         className="px-4 pt-3"
@@ -891,6 +884,6 @@ export default function AdminPage(): JSX.Element {
           )}
         </main>
       </div>
-    </div>
+    </AppShell>
   );
 }

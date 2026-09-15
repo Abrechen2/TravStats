@@ -192,8 +192,17 @@ export default function NavigationBar(): JSX.Element {
       >
         <div className="px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
-            {/* Left: Hamburger + Wordmark */}
-            <div className="flex items-center gap-3">
+            {/*
+              Left: Hamburger + Wordmark.
+
+              `min-w-0` because this is the half that gives way. Measured at
+              390px on 2026-09-15: the row's intrinsic width was 14px wider
+              than the viewport, and the whole page scrolled sideways —
+              nothing here could shrink, so the account menu on the right was
+              pushed off the edge. The wordmark is the one thing that can lose
+              width without losing meaning.
+            */}
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="xl:hidden p-2 rounded-lg transition-colors nav-icon-btn"
@@ -221,12 +230,16 @@ export default function NavigationBar(): JSX.Element {
 
               <Link
                 to="/"
-                className="flex items-center gap-2.5 no-underline"
+                className="flex min-w-0 items-center gap-2.5 no-underline"
                 aria-label={t("common:accessibility.home")}
               >
-                <span aria-hidden="true" className="flex items-center gap-2.5">
+                <span aria-hidden="true" className="flex min-w-0 items-center gap-2.5">
                   <LogoMark size={26} />
-                  <LogoWordmark size={16} />
+                  {/* The mark alone still says which app this is; the wordmark
+                      is what the narrow row can afford to drop. */}
+                  <span className="hidden min-[400px]:flex">
+                    <LogoWordmark size={16} />
+                  </span>
                 </span>
               </Link>
               <UpdateBadge />
@@ -243,8 +256,10 @@ export default function NavigationBar(): JSX.Element {
               )}
             </nav>
 
-            {/* Right: Support + System + Username + Logout */}
-            <div className="flex items-center gap-2">
+            {/* Right: Support + System + Username + Logout. `shrink-0`: these
+                are controls, and a control that has been squeezed to half a
+                tap target is worse than one that pushed the wordmark. */}
+            <div className="flex shrink-0 items-center gap-2">
               {/* Bug-Report button — visible on all breakpoints so users can
                   always reach the diagnostic export. Support / System stay
                   desktop-only because they're brand vanity / secondary nav. */}

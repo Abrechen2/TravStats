@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import AppShell from "../components/ui/AppShell";
 import { StarRating } from "../components/lodging/StarRating";
 import { MembershipManager } from "../components/lodging/MembershipManager";
 import { useTranslation } from "../hooks/useTranslation";
@@ -94,29 +94,24 @@ export default function LodgingChainDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="p-6 text-[var(--text-muted)]">{t("lodging:chainDetail.loading")}</div>
-      </div>
+      <AppShell width="list">
+        <p className="text-[var(--text-muted)]">{t("lodging:chainDetail.loading")}</p>
+      </AppShell>
     );
   }
 
   if (notFound || !detail) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl p-6">
-          <button
-            onClick={() => navigate("/lodging")}
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
+      <AppShell width="reading">
+        <div>
+          <Link to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("lodging:list.title")}
-          </button>
+          </Link>
           <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
             {t("lodging:chainDetail.notFound")}
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -135,15 +130,14 @@ export default function LodgingChainDetailPage(): JSX.Element {
       : undefined;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <button
-          onClick={() => navigate("/lodging")}
-          className="mb-3 text-sm text-[var(--accent)] hover:underline"
+    <AppShell width="list">
+      <div>
+        <Link
+          to="/lodging"
+          className="ts-back-link mb-3 inline-block text-sm text-[var(--text-muted)]"
         >
           ← {t("lodging:list.title")}
-        </button>
+        </Link>
 
         {/* Header: chain name + brand-colour mark + loyalty program.
             The brand colour is a MARK, never a border-left stripe on a boxed
@@ -268,7 +262,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }
 

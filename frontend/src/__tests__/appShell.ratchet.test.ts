@@ -9,29 +9,20 @@ import { describe, expect, it } from "vitest";
  * `max-w-*` values, which is why no two pages agreed on how wide a page is.
  * `components/ui/AppShell.tsx` owns both since 2.7.0.
  *
- * A ratchet, not a rule with a deadline: the list below is what still has to
- * move, frozen at today's count. It fails on a NEW entry and equally on a
- * STALE one, so it can only ever shrink — the same shape as the file-size and
- * OpenAPI ratchets, and for the same reason. Blocks 4 to 6 empty it.
+ * CLOSED on 2026-09-15, so absolute rather than frozen.
+ *
+ * It began as a ratchet with 17 names — what still had to move, failing on a
+ * new entry and equally on a stale one so the list could only shrink. It
+ * reached zero: every page under `pages/` now asks for a width by name. The
+ * empty list stays in the file on purpose, as the `dark:` warden's does. It
+ * records that the list got to zero rather than that the rule was never
+ * needed, and it is what a reviewer reads when someone proposes a page that
+ * "just needs its own layout for a moment".
  */
 const PAGES = resolve(__dirname, "..", "pages");
 
-/** Frozen 2026-09-06. Remove a name when its page moves onto AppShell. */
-const STILL_BUILDS_ITS_OWN_SHELL: readonly string[] = [
-  "AchievementsPage.tsx",
-  "AdminPage.tsx",
-  "AdvancedStatsPage.tsx",
-  "AircraftPage.tsx",
-  "CuratedChecklistPage.tsx",
-  "LodgingChainDetailPage.tsx",
-  "NotFoundPage.tsx",
-  "ParserPage.tsx",
-  "PlaceListDetailPage.tsx",
-  "PlaceListsPage.tsx",
-  "TripDetailPage.tsx",
-  "TripRouteEditorPage.tsx",
-  "TripsPage.tsx",
-];
+/** Empty since 2026-09-15. A name here would mean a page went backwards. */
+const STILL_BUILDS_ITS_OWN_SHELL: readonly string[] = [];
 
 function pagesImportingNavigationBar(): string[] {
   return readdirSync(PAGES)
@@ -43,18 +34,20 @@ function pagesImportingNavigationBar(): string[] {
 }
 
 describe("AppShell owns the navigation and the width", () => {
-  it("gains no new page that builds its own shell", () => {
-    const offenders = pagesImportingNavigationBar();
-    const added = offenders.filter((name) => !STILL_BUILDS_ITS_OWN_SHELL.includes(name));
-    expect(added, "a new page imports NavigationBar — use AppShell instead").toEqual([]);
+  it("has no page left that builds its own shell", () => {
+    expect(
+      pagesImportingNavigationBar(),
+      "a page imports NavigationBar — ask AppShell for a width instead"
+    ).toEqual([]);
+    expect(STILL_BUILDS_ITS_OWN_SHELL).toEqual([]);
   });
 
-  it("has no stale entry — a page that moved must leave the list", () => {
-    const offenders = pagesImportingNavigationBar();
-    const stale = STILL_BUILDS_ITS_OWN_SHELL.filter((name) => !offenders.includes(name));
-    expect(stale, "these pages no longer import NavigationBar; drop them from the list").toEqual(
-      []
-    );
+  it("finds pages to judge — otherwise the scan has drifted and passes silently", () => {
+    // The scan looks for one import string. If `AppShell` is ever renamed or
+    // moved, this assertion is what stops the warden from reporting a clean
+    // tree because it is reading nothing at all.
+    const pages = readdirSync(PAGES).filter((name) => name.endsWith(".tsx"));
+    expect(pages.length).toBeGreaterThan(20);
   });
 
   it("keeps the four logbook lists on the shell", () => {

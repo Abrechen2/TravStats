@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
 import type {
@@ -59,7 +59,6 @@ import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
-import PageTransition from "../components/PageTransition";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
@@ -625,22 +624,17 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   if (showLoader) {
     return (
-      <PageTransition>
-        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-          <NavigationBar />
-          <div className="container mx-auto px-6 py-8 flex items-center justify-center min-h-[60vh]">
-            <GlobeLoader size={180} label={t("common:loading.stats")} />
-          </div>
+      <AppShell width="list">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <GlobeLoader size={180} label={t("common:loading.stats")} />
         </div>
-      </PageTransition>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-
+    <AppShell width="list">
+      <div>
         {/* Domain top-tab bar — same pattern as SettingsPage / AdminPage.
             Replaces the earlier display-only chip-row with real content
             switching: Flug tab keeps the existing flight stats, Kreuzfahrt
@@ -893,6 +887,6 @@ export default function AdvancedStatsPage(): JSX.Element {
           )}
         </div>
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

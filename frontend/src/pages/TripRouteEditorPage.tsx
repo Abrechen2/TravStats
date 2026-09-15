@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
+import AppShell from "../components/ui/AppShell";
 import TripMap from "../components/Trips/TripMap";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourLegList from "../components/Trips/TourLegList";
@@ -422,24 +421,18 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
-      >
-        <NavigationBar />
-        <div className="flex items-center justify-center py-20">{t("common:loading.default")}</div>
-      </div>
+      <AppShell width="list">
+        <div className="flex items-center justify-center py-20 text-(--text-muted)">
+          {t("common:loading.default")}
+        </div>
+      </AppShell>
     );
   }
 
   if (failure || !trip || !route) {
     return (
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+      <AppShell width="reading">
+        <div className="py-16 text-center">
           <p className="text-sm text-rose-400">
             {failure === "notFound" ? t("trips:tours.notFound") : t("trips:tours.loadError")}
           </p>
@@ -454,69 +447,63 @@ export default function TripRouteEditorPage(): JSX.Element {
             </Link>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-          <header>
-            <Link to={`/trips/${id}`} className="text-xs text-(--text-muted) hover:underline">
-              ← {t("trips:tours.backToTrip")}
-            </Link>
-            <h1 className="t-screen-title mt-1">{route.name}</h1>
-            <p className="text-sm text-(--text-muted)">
-              {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
-            </p>
-          </header>
+    <AppShell width="list">
+      <div className="space-y-6">
+        <header>
+          <Link to={`/trips/${id}`} className="text-xs text-(--text-muted) hover:underline">
+            ← {t("trips:tours.backToTrip")}
+          </Link>
+          <h1 className="t-screen-title mt-1">{route.name}</h1>
+          <p className="text-sm text-(--text-muted)">
+            {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
+          </p>
+        </header>
 
-          <TripMap trip={trip} tourGeometries={tourGeometries} />
+        <TripMap trip={trip} tourGeometries={tourGeometries} />
 
-          <section>
-            <h2 className="text-lg font-semibold mb-3">{t("trips:tours.stopsHeading")}</h2>
-            <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
-          </section>
+        <section>
+          <h2 className="text-lg font-semibold mb-3">{t("trips:tours.stopsHeading")}</h2>
+          <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
+        </section>
 
-          <section>
-            <h2 className="text-lg font-semibold mb-3">{t("trips:tours.legsHeading")}</h2>
-            <TourLegList
-              legs={legs}
-              stopTitleById={stopTitleById}
-              routingAvailable={routingAvailable}
-              onSetSource={handleSetLegSource}
-              onRoute={handleRouteLeg}
-              trackCoverageByLegId={trackCoverageByLegId}
-              tracksKnown={tracksKnown}
-              onAdoptTrack={handleAdoptTrack}
-              onClear={handleClearLeg}
-              onRouteAll={handleRouteAll}
-              routingAllInProgress={routingAllInProgress}
-            />
-          </section>
+        <section>
+          <h2 className="text-lg font-semibold mb-3">{t("trips:tours.legsHeading")}</h2>
+          <TourLegList
+            legs={legs}
+            stopTitleById={stopTitleById}
+            routingAvailable={routingAvailable}
+            onSetSource={handleSetLegSource}
+            onRoute={handleRouteLeg}
+            trackCoverageByLegId={trackCoverageByLegId}
+            tracksKnown={tracksKnown}
+            onAdoptTrack={handleAdoptTrack}
+            onClear={handleClearLeg}
+            onRouteAll={handleRouteAll}
+            routingAllInProgress={routingAllInProgress}
+          />
+        </section>
 
-          <section>
-            <h2 className="text-lg font-semibold mb-3">{t("trips:tours.tracks.heading")}</h2>
-            <TourTrackList
-              tracks={tracks}
-              loading={tracksLoading}
-              loadError={tracksLoadError}
-              onRetry={loadTracks}
-              uploading={trackUploading}
-              onUpload={handleUploadTrack}
-              onDelete={handleDeleteTrack}
-              pulling={trackPulling}
-              dawarichAvailable={dawarichAvailable}
-              onPullDawarich={handlePullDawarich}
-            />
-          </section>
-        </div>
+        <section>
+          <h2 className="text-lg font-semibold mb-3">{t("trips:tours.tracks.heading")}</h2>
+          <TourTrackList
+            tracks={tracks}
+            loading={tracksLoading}
+            loadError={tracksLoadError}
+            onRetry={loadTracks}
+            uploading={trackUploading}
+            onUpload={handleUploadTrack}
+            onDelete={handleDeleteTrack}
+            pulling={trackPulling}
+            dawarichAvailable={dawarichAvailable}
+            onPullDawarich={handlePullDawarich}
+          />
+        </section>
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

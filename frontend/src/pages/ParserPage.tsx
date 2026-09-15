@@ -2,7 +2,9 @@ import { useState, useRef } from "react";
 import { trainingApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
+import PageHeader from "../components/ui/PageHeader";
+import Pill from "../components/ui/Pill";
 import EmailAnnotation from "../components/Training/EmailAnnotation";
 import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotation";
 import ParseLogStats from "../components/Training/ParseLogStats";
@@ -49,21 +51,17 @@ export default function ParserPage(): JSX.Element {
   ];
 
   return (
-    <div className="min-h-screen bg-(--bg-base)">
-      <NavigationBar />
-      <header className="bg-(--bg-elevated) border-b border-(--color-border)">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="t-screen-title">{t("parser:title")}</h1>
-            <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-(--warning)/10 text-(--warning) ring-(--warning)/25">
-              {t("parser:beta")}
-            </span>
-          </div>
-          <p className="text-sm text-(--text-muted)">{t("parser:description")}</p>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <AppShell width="list">
+      <PageHeader
+        title={t("parser:title")}
+        meta={t("parser:description")}
+        actions={
+          <Pill color="var(--ts-warn)" title={t("parser:betaNotice")}>
+            {t("parser:beta")}
+          </Pill>
+        }
+      />
+      <div>
         {/* Beta notice */}
         <div className="mb-4 rounded-lg border p-3 border-(--warning)/30 bg-(--warning)/10">
           <p className="text-sm text-(--warning)">{t("parser:betaNotice")}</p>
@@ -198,7 +196,7 @@ export default function ParserPage(): JSX.Element {
             <ParseLogStats />
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

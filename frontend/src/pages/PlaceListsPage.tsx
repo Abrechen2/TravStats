@@ -2,8 +2,7 @@ import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
+import AppShell from "../components/ui/AppShell";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { curatedText } from "../lib/curatedCopy";
@@ -122,30 +121,25 @@ export default function PlaceListsPage(): JSX.Element {
 
   if (access === "pending") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
-          {t("common:loading.default")}
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
+      </AppShell>
     );
   }
 
   if (access === "denied") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
-        </div>
-      </PageTransition>
+        </p>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <NavigationBar />
-      <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+    <AppShell width="list">
+      <div>
         <Link to="/places" className="text-sm" style={{ color: "var(--text-muted)" }}>
           ← {t("places:detail.backToList")}
         </Link>
@@ -408,6 +402,6 @@ export default function PlaceListsPage(): JSX.Element {
           </>
         )}
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

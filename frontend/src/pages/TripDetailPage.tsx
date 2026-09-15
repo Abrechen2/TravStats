@@ -17,10 +17,9 @@ import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStop } from "../types";
-import PageTransition from "../components/PageTransition";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
 import TripHero from "../components/Trips/TripHero";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
@@ -149,95 +148,87 @@ export default function TripDetailPage(): JSX.Element {
 
   if (loading || !trip) {
     return (
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
-      >
-        <NavigationBar />
-        <div className="flex items-center justify-center py-20">{t("common:loading.default")}</div>
-      </div>
+      <AppShell width="list">
+        <div className="flex items-center justify-center py-20 text-(--text-muted)">
+          {t("common:loading.default")}
+        </div>
+      </AppShell>
     );
   }
 
   const shownTrip = displayTrip ?? trip;
 
   return (
-    <PageTransition>
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        <TripHero
-          trip={shownTrip}
-          locale={i18n.language}
-          t={t}
-          onEdit={() => setEditing(true)}
-          onDelete={() => setConfirmDelete(true)}
-        />
+    <AppShell width="list">
+      <TripHero
+        trip={shownTrip}
+        locale={i18n.language}
+        t={t}
+        onEdit={() => setEditing(true)}
+        onDelete={() => setConfirmDelete(true)}
+      />
 
-        <TabBar tab={tab} onChange={setTab} t={t} />
+      <TabBar tab={tab} onChange={setTab} t={t} />
 
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {hiddenCruiseCount > 0 && (
-            <div
-              className="mb-4 rounded-lg px-4 py-2.5 text-xs"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
-            </div>
-          )}
-          {hiddenLodgingCount > 0 && (
-            <div
-              className="mb-4 rounded-lg px-4 py-2.5 text-xs"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
-            </div>
-          )}
-          {tab === "overview" && (
-            <OverviewTab
-              trip={shownTrip}
-              t={t}
-              language={i18n.language}
-              onChanged={() => void load()}
-            />
-          )}
-          {tab === "timeline" && (
-            <TimelineTab
-              trip={shownTrip}
-              onChanged={() => void load()}
-              t={t}
-              language={i18n.language}
-            />
-          )}
-          {tab === "map" && <TripMap trip={shownTrip} />}
-          {tab === "gallery" && (
-            <TripGallery
-              tripId={shownTrip.id}
-              photos={shownTrip.photos ?? []}
-              immichAlbums={shownTrip.immichAlbums ?? []}
-              onChange={() => void load()}
-            />
-          )}
-          {tab === "logistics" && (
-            <LogisticsTab
-              trip={shownTrip}
-              t={t}
-              language={i18n.language}
-              onChanged={() => void load()}
-            />
-          )}
-          {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
-        </div>
+      <div className="py-6">
+        {hiddenCruiseCount > 0 && (
+          <div
+            className="mb-4 rounded-lg px-4 py-2.5 text-xs"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--color-border)",
+              color: "var(--text-muted)",
+            }}
+          >
+            ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
+          </div>
+        )}
+        {hiddenLodgingCount > 0 && (
+          <div
+            className="mb-4 rounded-lg px-4 py-2.5 text-xs"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--color-border)",
+              color: "var(--text-muted)",
+            }}
+          >
+            🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
+          </div>
+        )}
+        {tab === "overview" && (
+          <OverviewTab
+            trip={shownTrip}
+            t={t}
+            language={i18n.language}
+            onChanged={() => void load()}
+          />
+        )}
+        {tab === "timeline" && (
+          <TimelineTab
+            trip={shownTrip}
+            onChanged={() => void load()}
+            t={t}
+            language={i18n.language}
+          />
+        )}
+        {tab === "map" && <TripMap trip={shownTrip} />}
+        {tab === "gallery" && (
+          <TripGallery
+            tripId={shownTrip.id}
+            photos={shownTrip.photos ?? []}
+            immichAlbums={shownTrip.immichAlbums ?? []}
+            onChange={() => void load()}
+          />
+        )}
+        {tab === "logistics" && (
+          <LogisticsTab
+            trip={shownTrip}
+            t={t}
+            language={i18n.language}
+            onChanged={() => void load()}
+          />
+        )}
+        {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
       </div>
 
       {editing && (
@@ -265,7 +256,7 @@ export default function TripDetailPage(): JSX.Element {
         cancelText={t("trips:modal.cancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />
-    </PageTransition>
+    </AppShell>
   );
 }
 
