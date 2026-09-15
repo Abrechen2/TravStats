@@ -4,6 +4,7 @@ import {
   MIN_GROUP_SAMPLE,
   type PunctualityFlight,
 } from "../punctualityStats";
+import { punctualityStatsSchema } from "../../schemas/statsFlights";
 
 const f = (over: Partial<PunctualityFlight>): PunctualityFlight => ({
   delayMinutes: 0,
@@ -83,5 +84,22 @@ describe("computePunctuality (#2)", () => {
     );
     const r = computePunctuality(rows);
     expect(r.worstAirline?.key).toBe("Private Charter");
+  });
+
+  /**
+   * `/stats/punctuality` publishes this shape, and the route infers its type
+   * from the schema — which tsc checks. A type is not a value, so this parses
+   * the actual result, including the empty case where every group is null
+   * (forgejo#52).
+   */
+  it("produces a body the published schema accepts, populated and empty", () => {
+    const populated = computePunctuality(
+      Array.from({ length: MIN_GROUP_SAMPLE }, () => f({ delayMinutes: 20 }))
+    );
+    expect(punctualityStatsSchema.safeParse(populated).success).toBe(true);
+
+    const empty = computePunctuality([]);
+    expect(punctualityStatsSchema.safeParse(empty).success).toBe(true);
+    expect(empty.bestAirline).toBeNull();
   });
 });

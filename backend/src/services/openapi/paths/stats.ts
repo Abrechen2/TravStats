@@ -4,6 +4,12 @@
 
 import { z } from "zod";
 import {
+  punctualityStatsSchema,
+  seatStatsSchema,
+  airlineRankingResponseSchema,
+  countryStatsResponseSchema,
+} from "../../../schemas/statsFlights";
+import {
   aircraftRankingResponseSchema,
   aircraftTypesResponseSchema,
   aircraftProfileResponseSchema,
@@ -184,11 +190,7 @@ function readOnlyStat(path: string, summary: string, description?: string): void
 
 readOnlyStat("/stats/timeseries", "Flights and distance over time", "Grouped by the departure airport's calendar day.");
 readOnlyStat("/stats/routes", "Most-flown routes");
-readOnlyStat("/stats/airlines", "Airlines, by flights and distance");
 readOnlyStat("/stats/airports", "Airports, by visits and by role as origin or destination");
-readOnlyStat("/stats/countries", "Countries reached", "Counted by country CODE, not by the spelling a geocoder returned — the same country arriving as \"Egypt\" and as its own-language name is one country here.");
-readOnlyStat("/stats/seats", "Seats and cabin classes");
-readOnlyStat("/stats/punctuality", "Delays, where actual times are known", "Only flights carrying an actual departure or arrival contribute; a flight with scheduled times alone is not counted as on time.");
 readOnlyStat("/stats/business", "Business travel");
 readOnlyStat("/stats/fun", "The playful figures", "Time-of-day buckets, weekend warrior, fastest day, most countries in one day and the rest. All of them read the clock at the airport.");
 readOnlyStat("/stats/unique", "Firsts and unique counts");
@@ -387,6 +389,79 @@ registry.registerPath({
   responses: {
     200: { description: "The year in review" },
     404: { description: "No countable activity in any year" },
+  },
+});
+
+const punctuality = registry.register(
+  "Punctuality",
+  punctualityStatsSchema.openapi("Punctuality")
+);
+const seatStats = registry.register("SeatStats", seatStatsSchema.openapi("SeatStats"));
+const airlineRanking = registry.register(
+  "AirlineRanking",
+  airlineRankingResponseSchema.openapi("AirlineRanking")
+);
+const countryStats = registry.register(
+  "CountryStats",
+  countryStatsResponseSchema.openapi("CountryStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/airlines",
+  summary: "Airlines, by flights and distance",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Carriers, most-flown first",
+      content: { "application/json": { schema: airlineRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/countries",
+  summary: "Countries reached",
+  description:
+    "Counted by country CODE, not by the spelling a geocoder returned — the same " +
+    "country arriving as \"Egypt\" and as its own-language name is one country here.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Countries, and the ISO sets the cross-domain figures union",
+      content: { "application/json": { schema: countryStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/seats",
+  summary: "Seats and cabin classes",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Seat positions, zones and classes",
+      content: { "application/json": { schema: seatStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/punctuality",
+  summary: "Delays, where actual times are known",
+  description:
+    "Only flights carrying an actual departure or arrival contribute. A flight " +
+    "with scheduled times alone is not counted as on time — it is outside the " +
+    "sample entirely.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Delay aggregates over the flights that carry one",
+      content: { "application/json": { schema: punctuality } },
+    },
   },
 });
 

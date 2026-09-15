@@ -8,6 +8,16 @@ import { getCachedAirports } from '../services/airportCache';
 import type { AirportData } from '../services/airportLookup';
 import { buildFlightNetwork } from '../services/stats/network';
 import { computePunctuality } from '../services/punctualityStats';
+// Response shapes: the spec and these handlers describe one thing, not two
+// (forgejo#52). The prose that used to sit on these interfaces moved with them,
+// so a consumer reading the spec gets the same caveats.
+import type {
+  SeatStats,
+  AirlineRankingItem,
+  AirlineRankingResponse,
+  CountryStat,
+  CountryStatsResponse,
+} from '../schemas/statsFlights';
 import { Prisma } from '@prisma/client';
 import {
   calculateFunStats,
@@ -1367,20 +1377,6 @@ router.get(
 );
 
 // Seat position statistics
-interface SeatStats {
-  windowCount: number;
-  middleCount: number;
-  aisleCount: number;
-  unknownCount: number;
-  noSeatCount: number;
-  frontCount: number;
-  middleZoneCount: number;
-  backCount: number;
-  mostCommonSeat: string | null;
-  seatClassDistribution: Record<string, number>;
-  avgRowNumber: number | null;
-}
-
 router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
@@ -1514,23 +1510,6 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
 
 // ─── Airline Ranking ─────────────────────────────────────────────────────────
 
-interface AirlineRankingItem {
-  airline: string;
-  count: number;
-  percentage: number;
-  /** IATA code via strict exact lookup; omitted when nothing matches. */
-  iata?: string;
-}
-
-interface AirlineRankingResponse {
-  airlines: AirlineRankingItem[];
-  total: number;
-  /** Flights carrying no airline — excluded from the ranking and from the
-   *  percentage denominator, reported so the gap is visible rather than
-   *  ranked as a carrier called "Unknown". */
-  flightsWithoutAirline: number;
-}
-
 // GET /api/v1/stats/airlines — loyalty ranking by flight count.
 // Scoped to flown + historical like every other aggregate in this file. It used
 // to count every row, so a cancelled or still-scheduled booking inflated the
@@ -1612,38 +1591,6 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
  */
 function isoCodes(values: Iterable<string>): string[] {
   return [...normalizeCountrySet(values)].sort();
-}
-
-interface CountryStat {
-  country: string;
-  count: number;
-}
-
-interface CountryStatsResponse {
-  /** Display vocabulary, ranked by flight count. Rendered as-is. */
-  countries: CountryStat[];
-  total: number;
-  /**
-   * Counting vocabulary: lifetime countries VISITED as ISO alpha-2 — every
-   * country either end of a flight touched, not just departures (#233) — with
-   * `Unknown` and the catalogue's placeholders dropped. The cross-domain KPI
-   * unions this with the port catalogue's equivalent; keeping unresolvable
-   * entries would mean counting things that cannot be deduplicated.
-   */
-  countriesIso: string[];
-  /**
-   * Visited countries keyed by year, same ISO vocabulary. Both ends of a
-   * flight land in its DEPARTURE year, so a red-eye is one journey rather
-   * than a country visited in a year the traveller never flew. The cross-domain
-   * overview used to render the lifetime set for whichever year was selected
-   * and stack a year-over-year delta on top of it that could only ever read
-   * zero — a comparison that could not exist, presented as data.
-   *
-   * The year is the one on the clock at the DEPARTURE airport (see
-   * localWallClockOf), not the UTC instant. A flight without a departure time
-   * still counts towards `countries` but belongs to no year.
-   */
-  byYear: Record<string, string[]>;
 }
 
 // GET /api/v1/stats/countries — visited-country distribution (both flight ends)
