@@ -304,3 +304,64 @@ Messung und war keine. Jede Seite wurde danach einzeln angesteuert.
 D-07 ist innerhalb **einer** Domäne sichtbar: die Kreuzfahrtliste schreibt
 `2026-11-27`, das Kreuzfahrtdetail `10.11.2026 – 17.11.2026`. Gleiche Daten,
 gleiche Sitzung, zwei Formate. Block E.
+
+## Statistik — die zwei Review-Punkte des Owners, nachgemessen (15.09., abends)
+
+Nachtrag zum Paket (21:51 Uhr): drei Statistik-Reiter für Kreuzfahrten,
+Unterkünfte und Orte, Route `/stats?tab=cruise|lodging|poi`.
+
+**Erster Befund: die Route und die drei Abschnitte gibt es schon.**
+`AdvancedStatsPage` liest `?tab=` seit Längerem, samt Absicherung, dass ein
+Deep-Link keine abgeschaltete Domäne aufzieht; `CruiseStatsSection`,
+`LodgingStatsSection` und `PoiStatsSection` existieren und zeichnen. Im
+Browser gegengeprüft: der Unterkunfts-Reiter zeigt „Was eine Nacht kostet",
+„Wie es dir gefallen hat", Ranglisten nach Kette, Land, Verpflegung und
+Sternekategorie — die Blöcke, die der Export als neu beschreibt. Der Export
+wurde gegen den Referenzstand vom 06.09. gebaut und konnte das nicht wissen.
+
+### Punkt 1 ist eine FOLGE von Punkt 2, keine eigene Ursache
+
+Der Owner sieht in „Gesamt" bei Unterkünften und Orten „keine Daten", während
+deren Reiter Daten zeigen. Gemessen auf der isolierten Datenbank:
+
+| Zeitraum | Zusammensetzung in „Gesamt" |
+|---|---|
+| Jahr 2026 | `6 Flüge · 1 POI / Besuche · 2 Kreuzfahrten` — Unterkünfte fehlen |
+| Alle Jahre | `115 Flüge · 1 POI / Besuche · 4 Unterkünfte · 19 Kreuzfahrten` |
+
+„Gesamt" ignoriert die beiden Domänen also **nicht**. Es filtert nach Jahr, und
+meine Demo-Aufenthalte liegen in 2024. Die Bereichsreiter filtern dagegen
+**gar nicht** — sie zeigen Lebenszeitdaten. Beide Aussagen stimmen für sich und
+widersprechen sich auf dem Bildschirm, und genau das sieht man.
+
+### Punkt 2, die Ursache, gemessen
+
+| Reiter | Zeitraumleiste | Vergleich | Abschnitte ausblenden |
+|---|---|---|---|
+| Gesamt | ja (eigene) | ja | – |
+| Flüge | ja (eigene) | ja | ja |
+| Kreuzfahrten | **nein** | **nein** | **nein** |
+| Unterkünfte | **nein** | **nein** | **nein** |
+| Orte | **nein** | **nein** | **nein** |
+
+Im Code: `SectionVisibilityMenu` steht hinter `effectiveFilter === "flight"`
+(`AdvancedStatsPage.tsx:681`), und die drei Bereichs-Abschnitte nehmen **gar
+keine Eigenschaften** entgegen — kein Jahr, keinen Vergleich. Es gibt zwei
+unabhängige Zeitraumleisten (eine für Gesamt, eine für Flüge) und drei
+Abschnitte ohne jede.
+
+### Was das für die Umsetzung heißt
+
+`/stats/cruise` und `/stats/lodging` nehmen **kein** Jahr entgegen; beide laden
+Zeilen und reichen sie an einen gemeinsamen Rechner weiter. `PoiStatsSection`
+holt dagegen die Rohliste und rechnet im Client — dort ist das Filtern reine
+Frontend-Arbeit. Die Reihenfolge ist damit vorgegeben:
+
+1. **Backend**: `?year=` für `/stats/cruise` und `/stats/lodging`, gefiltert
+   nach der Regel, die `Overview/aggregate.ts` bereits schreibt — ein Ereignis
+   zählt in dem Jahr, in dem es *beginnt*.
+2. **Frontend**: EINE Zeitraumleiste für alle fünf Reiter statt zweier, Jahr
+   und Vergleich in die drei Abschnitte durchgereicht.
+3. **Abschnitte ausblenden** für alle Reiter — der Haken
+   `useSectionVisibility(filter)` ist bereits bereichsweise, nur das Menü ist
+   auf Flüge beschränkt.
