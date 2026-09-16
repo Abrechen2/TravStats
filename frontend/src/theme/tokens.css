@@ -33,6 +33,7 @@
   --ts-warn: #d8952f;
   --ts-paper: #f5f1e8;
   --ts-paper-text: #2a2419;
+  --ts-paper-accent: #8a5213;
   --ts-pro-bg: rgba(240,169,71,0.15);
   --ts-pro-text: #f0a947;
 
@@ -171,6 +172,7 @@
   --color-ts-warn: var(--ts-warn);
   --color-ts-paper: var(--ts-paper);
   --color-ts-paper-text: var(--ts-paper-text);
+  --color-ts-paper-accent: var(--ts-paper-accent);
   --color-ts-pro-bg: var(--ts-pro-bg);
   --color-ts-pro-text: var(--ts-pro-text);
   --color-ts-border-input: var(--ts-border-input);

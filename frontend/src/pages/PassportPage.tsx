@@ -161,7 +161,7 @@ export default function PassportPage(): JSX.Element {
                   a dark app. `.ts-paper` redefines the eight variables this
                   subtree reads, so the country table and the evidence summary
                   follow without being touched. */}
-            <div className="ts-paper rounded-2xl p-6 print:p-0">
+            <div className="ts-paper rounded-2xl p-3 sm:p-6 print:p-0">
               {passport.summary.countriesTotal === 0 ? (
                 <div
                   className="rounded-xl p-8 text-center"
@@ -176,7 +176,7 @@ export default function PassportPage(): JSX.Element {
                 <>
                   {/* ── the paper card ─────────────────────────────────── */}
                   <section
-                    className="rounded-xl p-6 mb-6 border"
+                    className="rounded-xl p-4 sm:p-6 mb-6 border"
                     style={{
                       background: "var(--bg-elevated)",
                       borderColor: "var(--border)",
@@ -226,40 +226,6 @@ export default function PassportPage(): JSX.Element {
                         <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
                           {t("passport:summary.countriesTotal")}
                         </dd>
-                        {/* Design §5: every user's number moved when evidence tiers
-                            arrived, and a number that changes without explanation
-                            reads as data loss. Said once, with the real figures. */}
-                        {passport.summary.legacyCountries !== passport.summary.countries &&
-                          !countingNotice.dismissed && (
-                            <dd
-                              className="mt-2 rounded-md px-3 py-2 text-xs"
-                              style={{
-                                background: "var(--bg-elevated)",
-                                border: "1px solid var(--color-border)",
-                                color: "var(--text-primary)",
-                              }}
-                            >
-                              <span>
-                                {t("passport:countingChanged.text", {
-                                  before: passport.summary.legacyCountries,
-                                  after: passport.summary.countries,
-                                })}
-                              </span>
-                              <span className="ml-2">
-                                <a href="#passport-evidence" className="underline">
-                                  {t("passport:countingChanged.what")}
-                                </a>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={countingNotice.dismiss}
-                                className="ml-3 underline"
-                                style={{ color: "var(--text-muted)" }}
-                              >
-                                {t("passport:countingChanged.dismiss")}
-                              </button>
-                            </dd>
-                          )}
                       </div>
                       {[
                         ["airports", passport.summary.airports],
@@ -300,6 +266,42 @@ export default function PassportPage(): JSX.Element {
                       </div>
                     </dl>
 
+                    {/* Across the full width, not inside the country figure's column,
+                        where a phone squeezed it to one word per line (B08). Design §5: every user's number moved when evidence tiers
+                            arrived, and a number that changes without explanation
+                            reads as data loss. Said once, with the real figures. */}
+                    {passport.summary.legacyCountries !== passport.summary.countries &&
+                      !countingNotice.dismissed && (
+                        <p
+                          className="mb-6 rounded-md px-3 py-2 text-xs"
+                          style={{
+                            background: "var(--bg-elevated)",
+                            border: "1px solid var(--color-border)",
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          <span>
+                            {t("passport:countingChanged.text", {
+                              before: passport.summary.legacyCountries,
+                              after: passport.summary.countries,
+                            })}
+                          </span>
+                          <span className="ml-2">
+                            <a href="#passport-evidence" className="underline">
+                              {t("passport:countingChanged.what")}
+                            </a>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={countingNotice.dismiss}
+                            className="ml-3 underline"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {t("passport:countingChanged.dismiss")}
+                          </button>
+                        </p>
+                      )}
+
                     {/* Why the headline is not the total — the rule, named. */}
                     <section id="passport-evidence">
                       <EvidenceSummary summary={passport.summary} hasTracks={hasTracks} />
@@ -335,7 +337,7 @@ export default function PassportPage(): JSX.Element {
 
                   {/* ── the continent band ─────────────────────────────── */}
                   <section
-                    className="rounded-xl p-6 mb-6 border"
+                    className="rounded-xl p-4 sm:p-6 mb-6 border"
                     style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
                     aria-labelledby="continents-heading"
                   >

@@ -129,11 +129,56 @@
   --text-muted: color-mix(in srgb, var(--ts-paper-text) 60%, transparent);
   --border: color-mix(in srgb, var(--ts-paper-text) 18%, transparent);
   --color-border: var(--border);
-  /* The brand amber in its pressed shade — the accent stays legible on light. */
-  --accent: var(--ts-accent-pressed);
+  /*
+   * A dark amber of its own. The pressed shade (#d8952f) was the accent here
+   * until the CT106 audit measured "Belege zeigen" at 2.06:1 on the paper
+   * (B09); #8a5213 measures 5.16:1 on the same composed background, above the
+   * 4.5:1 small text needs. `paperAccent.test.ts` recomputes it.
+   */
+  --accent: var(--ts-paper-accent);
 
   background: var(--ts-paper);
   color: var(--ts-paper-text);
+}
+
+/*
+ * The passport's country table, below 640px: every row becomes a card. The
+ * country and its evidence span the card, the figures sit in two columns
+ * under their own labels. The table was ~756px wide in a 292px scroll area,
+ * with entries, days, period and airports off the right edge (CT106 audit
+ * B08). One DOM for both layouts, so nothing is read twice.
+ */
+@media (max-width: 639px) {
+  .ts-passport-table,
+  .ts-passport-table tbody {
+    display: block;
+  }
+  .ts-passport-table thead {
+    display: none;
+  }
+  .ts-passport-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px var(--ts-space-lg);
+    padding: var(--ts-space-md) var(--ts-space-lg);
+  }
+  .ts-passport-table td {
+    display: block;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .ts-passport-table td[data-wide] {
+    grid-column: 1 / -1;
+  }
+  .ts-passport-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
 }
 
 /* ─── Status pill ───────────────────────────────────────────────────────── */

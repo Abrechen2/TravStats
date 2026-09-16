@@ -68,7 +68,7 @@ export default function CountryRow({
   return (
     <>
       <tr className="border-t" style={rowStyle} data-counted={row.counted ? "true" : "false"}>
-        <td className="px-6 py-2.5">
+        <td className="px-6 py-2.5" data-wide>
           <span className="font-mono text-xs mr-2 opacity-70">{row.code}</span>
           {countryLabel}
           {row.isHome && (
@@ -89,7 +89,7 @@ export default function CountryRow({
           )}
         </td>
 
-        <td className="px-3 py-2.5">
+        <td className="px-3 py-2.5" data-wide>
           <div className="flex flex-wrap items-center gap-1.5">
             <TierBadge tier={row.tier} />
             {!row.counted && (
@@ -121,15 +121,21 @@ export default function CountryRow({
               type="button"
               onClick={(): void => setOpen((v) => !v)}
               aria-expanded={open}
-              className="text-[11px] underline print:hidden"
-              style={{ color: "var(--accent)" }}
+              // 12px and a 32px-tall target: 11px text with no padding was the
+              // other half of B09.
+              className="text-xs font-semibold underline print:hidden"
+              style={{ color: "var(--accent)", minHeight: 32, padding: "6px 0" }}
             >
               {t(open ? "passport:countries.hideRecords" : "passport:countries.showRecords")}
             </button>
           </div>
         </td>
 
-        <td className="px-3 py-2.5 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <td
+          className="px-3 py-2.5 text-right"
+          style={{ fontVariantNumeric: "tabular-nums" }}
+          data-label={t("passport:countries.entries")}
+        >
           {flown ? (
             row.entries
           ) : (
@@ -138,7 +144,11 @@ export default function CountryRow({
         </td>
 
         {/* Days present — a plain count, zero included. See the file comment. */}
-        <td className="px-3 py-2.5 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <td
+          className="px-3 py-2.5 text-right"
+          style={{ fontVariantNumeric: "tabular-nums" }}
+          data-label={t("passport:countries.daysPresent")}
+        >
           <span
             data-testid="days-present"
             title={
@@ -155,6 +165,7 @@ export default function CountryRow({
         <td
           className="px-3 py-2.5 text-right whitespace-nowrap"
           style={{ fontVariantNumeric: "tabular-nums" }}
+          data-label={t("passport:countries.groundTime")}
         >
           <GroundTimeCell groundTime={row.groundTime} />
         </td>
@@ -162,13 +173,18 @@ export default function CountryRow({
         <td
           className="px-3 py-2.5 whitespace-nowrap"
           style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}
+          data-label={t("passport:countries.period")}
         >
           {years ?? (
             <span title={t("passport:value.unknownPeriod")}>{t("passport:value.dash")}</span>
           )}
         </td>
 
-        <td className="px-6 py-2.5 font-mono text-xs" style={{ color: "var(--text-secondary)" }}>
+        <td
+          className="px-6 py-2.5 font-mono text-xs"
+          style={{ color: "var(--text-secondary)" }}
+          data-label={t("passport:countries.airports")}
+        >
           {row.airports.length > 0 ? (
             row.airports.join(" · ")
           ) : (
@@ -181,7 +197,7 @@ export default function CountryRow({
 
       {open && (
         <tr className="border-t" style={{ borderColor: "var(--border)" }}>
-          <td colSpan={7} className="px-6 py-3" style={{ background: "var(--bg-base)" }}>
+          <td colSpan={7} className="px-6 py-3" style={{ background: "var(--bg-base)" }} data-wide>
             <CountryProvenance code={row.code} />
           </td>
         </tr>

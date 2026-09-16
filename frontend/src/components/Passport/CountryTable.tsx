@@ -37,14 +37,14 @@ export default function CountryTable({
       style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
       aria-labelledby="countries-heading"
     >
-      <h2 id="countries-heading" className="text-sm font-semibold px-6 pt-6 pb-1">
+      <h2 id="countries-heading" className="text-sm font-semibold px-4 pt-4 pb-1 sm:px-6 sm:pt-6">
         {t("passport:countries.title")}
       </h2>
-      <p className="text-xs px-6 pb-3" style={{ color: "var(--text-muted)" }}>
+      <p className="text-xs px-4 pb-3 sm:px-6" style={{ color: "var(--text-muted)" }}>
         {t("passport:countries.listNote")}
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="ts-passport-table w-full text-sm">
           <thead>
             <tr
               className="text-left text-[11px] uppercase tracking-wider"
@@ -75,10 +75,10 @@ export default function CountryTable({
           </tbody>
         </table>
       </div>
-      <p className="text-xs px-6 pt-3" style={{ color: "var(--text-muted)" }}>
+      <p className="text-xs px-4 pt-3 sm:px-6" style={{ color: "var(--text-muted)" }}>
         {t("passport:countries.dashLegend")}
       </p>
-      <p className="text-xs px-6 pb-3 pt-1" style={{ color: "var(--text-muted)" }}>
+      <p className="text-xs px-4 pb-3 pt-1 sm:px-6" style={{ color: "var(--text-muted)" }}>
         {t("passport:countries.groundTimeLegend")}
       </p>
     </section>
