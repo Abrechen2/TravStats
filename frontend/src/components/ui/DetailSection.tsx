@@ -15,6 +15,10 @@ interface DetailSectionProps {
   facts?: readonly DetailFact[];
   /** Free content instead of (or after) the facts — a link, a list, notes. */
   children?: ReactNode;
+  /** Content above the facts — a map the values below describe. */
+  lead?: ReactNode;
+  /** Grid columns from `sm` up; a sidebar section reads better with two. */
+  columns?: 2 | 3;
 }
 
 const isEmpty = (value: ReactNode): boolean =>
@@ -37,9 +41,11 @@ export default function DetailSection({
   aside,
   facts = [],
   children,
+  lead,
+  columns = 3,
 }: DetailSectionProps): JSX.Element | null {
   const filled = facts.filter((fact) => !isEmpty(fact.value));
-  if (filled.length === 0 && isEmpty(children)) return null;
+  if (filled.length === 0 && isEmpty(children) && isEmpty(lead)) return null;
 
   return (
     <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
@@ -57,9 +63,10 @@ export default function DetailSection({
           padding: "var(--ts-space-lg) var(--ts-space-xl)",
         }}
       >
+        {lead}
         {filled.length > 0 && (
           <dl
-            className="grid grid-cols-2 sm:grid-cols-3"
+            className={`grid grid-cols-2 ${columns === 3 ? "sm:grid-cols-3" : ""}`}
             style={{ gap: "var(--ts-space-lg) var(--ts-space-xl)" }}
           >
             {filled.map((fact) => (

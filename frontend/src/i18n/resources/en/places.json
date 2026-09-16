@@ -109,7 +109,9 @@
     "loadError": "The place could not be loaded.",
     "visitedWithoutVisit": "Marked as visited, with no dated visit. Add one if you want to record a date, a note or a photograph.",
     "visitTrip": "Trip",
-    "visitNoTrip": "Not linked to a trip"
+    "visitNoTrip": "Not linked to a trip",
+    "coordinates": "Coordinates",
+    "backToLogbook": "Logbook · Places"
   },
   "lists": {
     "title": "Lists",
