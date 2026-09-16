@@ -7,7 +7,6 @@
     "frontend/src/pages/TripDetailPage.tsx": 1589,
     "backend/src/routes/flights.ts": 1491,
     "backend/src/services/schematicRouter.ts": 1114,
-    "frontend/src/components/FlightForm/useFlightForm.ts": 1075,
     "backend/src/services/flightLookup.ts": 1073,
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 1038,
     "frontend/src/components/DeckGLMap.tsx": 1009,
@@ -16,6 +15,7 @@
     "frontend/src/pages/AdminPage.tsx": 901,
     "backend/src/services/flightEnrichmentService.ts": 900,
     "frontend/src/pages/AdvancedStatsPage.tsx": 898,
+    "frontend/src/components/FlightForm/useFlightForm.ts": 894,
     "frontend/src/components/FlightCertificate.tsx": 883,
     "backend/src/utils/achievementChecks.ts": 873,
     "frontend/src/components/Training/EmailAnnotation.tsx": 868
