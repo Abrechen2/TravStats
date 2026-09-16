@@ -56,24 +56,30 @@ const trip = {
 
 describe("TripCard cost tile", () => {
   beforeEach(() => {
-    settings.value = { features: { enableCostTracking: false }, enabledDomains: ["flight", "cruise"] };
+    settings.value = {
+      features: { enableCostTracking: false },
+      enabledDomains: ["flight", "cruise"],
+    };
   });
 
   it("shows the total even when cost TRACKING is switched off", () => {
     render(
       <MemoryRouter>
-        <TripCard trip={trip} onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} />
-      </MemoryRouter>,
+        <TripCard trip={trip} onOpen={() => {}} />
+      </MemoryRouter>
     );
     expect(screen.getByText(/2\.?832/)).toBeInTheDocument();
   });
 
   it("shows the total when cost tracking is on, too", () => {
-    settings.value = { features: { enableCostTracking: true }, enabledDomains: ["flight", "cruise"] };
+    settings.value = {
+      features: { enableCostTracking: true },
+      enabledDomains: ["flight", "cruise"],
+    };
     render(
       <MemoryRouter>
-        <TripCard trip={trip} onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} />
-      </MemoryRouter>,
+        <TripCard trip={trip} onOpen={() => {}} />
+      </MemoryRouter>
     );
     expect(screen.getByText(/2\.?832/)).toBeInTheDocument();
   });
@@ -82,8 +88,8 @@ describe("TripCard cost tile", () => {
     const free = { ...trip, bookings: [], flights: [] } as unknown as Trip;
     render(
       <MemoryRouter>
-        <TripCard trip={free} onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} />
-      </MemoryRouter>,
+        <TripCard trip={free} onOpen={() => {}} />
+      </MemoryRouter>
     );
     expect(screen.queryByText(/2\.?832/)).not.toBeInTheDocument();
   });

@@ -414,5 +414,16 @@
   },
   "overview": {
     "daysAway": "Days away"
+  },
+  "card": {
+    "days_one": "day",
+    "days_other": "days",
+    "countries_one": "country",
+    "countries_other": "countries",
+    "entries_one": "entry",
+    "entries_other": "entries"
+  },
+  "list": {
+    "undated": "Undated"
   }
 }

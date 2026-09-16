@@ -414,5 +414,16 @@
   },
   "overview": {
     "daysAway": "Tage unterwegs"
+  },
+  "card": {
+    "days_one": "Tag",
+    "days_other": "Tage",
+    "countries_one": "Land",
+    "countries_other": "Länder",
+    "entries_one": "Eintrag",
+    "entries_other": "Einträge"
+  },
+  "list": {
+    "undated": "Ohne Datum"
   }
 }

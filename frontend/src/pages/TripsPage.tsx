@@ -6,16 +6,14 @@ import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
 import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
 import AppShell from "../components/ui/AppShell";
-import PageHeader from "../components/ui/PageHeader";
 
 /**
  * Top-level Trips page (Phase-1 redesign). Was previously embedded as a
  * sub-tab in `FlightsTablePage`; now it owns its own URL (`/trips`) so a
  * trip is a first-class destination, not a flight-side label.
  *
- * The actual list rendering still lives in `TripsTab` so the migration
- * stays small. A later iteration will replace it with the redesign mockup
- * (richer cards, status filter, multi-domain stats).
+ * The list, its header actions and filters live in `TripsTab`; the page
+ * loads the trips and hands over the title and the insights strip.
  */
 export default function TripsPage(): JSX.Element {
   const { t } = useTranslation(["trips"]);
@@ -36,9 +34,12 @@ export default function TripsPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <PageHeader title={t("trips:tab")} meta={t("trips:count", { count: trips.length })} />
-      <TripInsightsBar trips={trips} />
-      <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
+      <TripsTab
+        trips={trips}
+        onTripsChange={() => void loadTrips()}
+        header={{ title: t("trips:tab"), meta: t("trips:count", { count: trips.length }) }}
+        insights={<TripInsightsBar trips={trips} />}
+      />
     </AppShell>
   );
 }

@@ -1,11 +1,8 @@
-import ConfirmModal from "../Training/ConfirmModal";
 import Modal from "../Modal";
-import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trip, TripCategory, TripStatus } from "../../types";
-import TripCard from "./TripCard";
-import TripModal from "./TripModal";
+import TripCard, { tripDays, tripSpan } from "./TripCard";
 import DomainImportPanel from "../import/DomainImportPanel";
 import { useTripImportAdapter } from "../import/adapters/tripAdapter";
 import TripCleanupModal from "./TripCleanupModal";
@@ -14,10 +11,20 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_GRID_CLASS } from "./tripGrid";
+import Button from "../ui/Button";
+import PageHeader from "../ui/PageHeader";
 
 interface TripsTabProps {
   trips: Trip[];
   onTripsChange: () => void;
+  /**
+   * The page title and meta line. The tab draws the header itself because
+   * the actions beside the title (add, clean up, merge) are its own state —
+   * round 4 puts them there, not in a row between the banner and filters.
+   */
+  header?: { title: string; meta: ReactNode };
+  /** Rendered between the header and the detection banner. */
+  insights?: ReactNode;
 }
 
 type StatusFilter = "all" | TripStatus;
@@ -33,22 +40,17 @@ const CATEGORY_OPTIONS: CategoryFilter[] = [
   "other",
 ];
 
-const CATEGORY_ICON: Record<TripCategory, string> = {
-  vacation: "🏖",
-  business: "💼",
-  weekend: "🎒",
-  family: "👨‍👩‍👧",
-  other: "🗺",
-};
-
-export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.Element {
+export default function TripsTab({
+  trips,
+  onTripsChange,
+  header,
+  insights,
+}: TripsTabProps): JSX.Element {
   const { t } = useTranslation(["trips", "import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const navigate = useNavigate();
-  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [showAddPanel, setShowAddPanel] = useState(false);
   const tripAdapter = useTripImportAdapter(onTripsChange);
-  const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [showCleanup, setShowCleanup] = useState(false);
 
   // Merge mode: clicking a card toggles selection instead of opening it.
@@ -59,19 +61,6 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [search, setSearch] = useState("");
-
-  const handleConfirmDelete = async (): Promise<void> => {
-    if (!deleteTarget) return;
-    try {
-      await tripsApi.delete(deleteTarget.id);
-      addToast("success", t("trips:toasts.deleted"));
-      setDeleteTarget(null);
-      onTripsChange();
-    } catch {
-      addToast("error", t("trips:toasts.deleteError"));
-      setDeleteTarget(null);
-    }
-  };
 
   const handleOpen = (trip: Trip): void => {
     navigate(`/trips/${trip.id}`);
@@ -128,55 +117,65 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         return haystack.includes(q);
       })
       .sort((a, b) => {
-        const order: Record<TripStatus, number> = {
-          in_progress: 0,
-          planned: 1,
-          completed: 2,
-        };
-        const so = order[a.status] - order[b.status];
-        if (so !== 0) return so;
-        // For completed: newest first by startDate, falling back to createdAt
-        const at = a.startDate ?? a.createdAt;
-        const bt = b.startDate ?? b.createdAt;
-        return new Date(bt).getTime() - new Date(at).getTime();
+        // Newest first; the grid groups by start year, so status no longer
+        // decides the order — a planned trip sits in its own year.
+        const at = tripSpan(a).start?.getTime() ?? Number.NEGATIVE_INFINITY;
+        const bt = tripSpan(b).start?.getTime() ?? Number.NEGATIVE_INFINITY;
+        return bt - at;
       });
   }, [trips, statusFilter, categoryFilter, search]);
 
   const showFilters = trips.length >= 4;
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: trips.length };
+    for (const trip of trips) counts[trip.status] = (counts[trip.status] ?? 0) + 1;
+    for (const trip of trips) {
+      if (trip.category) counts[`cat:${trip.category}`] = (counts[`cat:${trip.category}`] ?? 0) + 1;
+    }
+    return counts;
+  }, [trips]);
+
+  /** Trips by start year, newest year first; undated ones last. */
+  const groups = useMemo(() => {
+    const byYear = new Map<string, Trip[]>();
+    for (const trip of filtered) {
+      const start = tripSpan(trip).start;
+      const key = start ? String(start.getUTCFullYear()) : "";
+      byYear.set(key, [...(byYear.get(key) ?? []), trip]);
+    }
+    return [...byYear.entries()];
+  }, [filtered]);
+
+  const pageActions = (
+    <>
+      {trips.length >= 2 && !mergeMode && (
+        // Clean-up and merge are rare housekeeping. On a phone they sit
+        // behind "…", so the list starts sooner (CT106 audit B10).
+        <RareActions
+          onCleanup={() => setShowCleanup(true)}
+          onMerge={() => setMergeMode(true)}
+          cleanupLabel={t("trips:cleanup.button")}
+          mergeLabel={t("trips:merge.button")}
+          moreLabel={t("common:buttons.moreActions")}
+        />
+      )}
+      <Button variant="primary" onClick={() => setShowAddPanel(true)}>
+        + {t("import:trip.triggerLabel")}
+      </Button>
+    </>
+  );
+
   return (
     <div className="pb-12">
       <div className="max-w-7xl mx-auto">
+        {header ? (
+          <PageHeader title={header.title} meta={header.meta} actions={pageActions} />
+        ) : (
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">{pageActions}</div>
+        )}
+        {insights}
         <DetectTripsBanner onChange={onTripsChange} />
-
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <p className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            {trips.length === 0 ? t("trips:noTrips") : t("trips:count", { count: filtered.length })}
-            {filtered.length !== trips.length && (
-              <span style={{ opacity: 0.7 }}> / {trips.length}</span>
-            )}
-          </p>
-          <div className="flex items-center gap-2">
-            {trips.length >= 2 && !mergeMode && (
-              // Clean-up and merge are rare housekeeping. On a phone they sit
-              // behind "…", so the list starts sooner (CT106 audit B10).
-              <RareActions
-                onCleanup={() => setShowCleanup(true)}
-                onMerge={() => setMergeMode(true)}
-                cleanupLabel={t("trips:cleanup.button")}
-                mergeLabel={`⇶ ${t("trips:merge.button")}`}
-                moreLabel={t("common:buttons.moreActions")}
-              />
-            )}
-            <button
-              onClick={() => setShowAddPanel(true)}
-              className="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-(--accent) hover:text-(--accent)"
-              style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-            >
-              ＋ {t("import:trip.triggerLabel")}
-            </button>
-          </div>
-        </div>
 
         {mergeMode && (
           <div
@@ -208,42 +207,42 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         )}
 
         {showFilters && (
-          <div className="flex items-center gap-2 mb-5 flex-wrap">
-            <FilterGroup>
-              {STATUS_OPTIONS.map((opt) => (
-                <FilterButton
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="flex max-w-full gap-2 overflow-x-auto scrollbar-none">
+              {STATUS_OPTIONS.filter((opt) => opt === "all" || statusCounts[opt]).map((opt) => (
+                <FilterPill
                   key={opt}
                   active={statusFilter === opt}
+                  count={statusCounts[opt] ?? 0}
                   onClick={() => setStatusFilter(opt)}
                 >
                   {opt === "all" ? t("trips:filterBar.allStatuses") : t(`trips:status.${opt}`)}
-                </FilterButton>
+                </FilterPill>
               ))}
-            </FilterGroup>
-            <FilterGroup>
-              {CATEGORY_OPTIONS.map((opt) => (
-                <FilterButton
-                  key={opt}
-                  active={categoryFilter === opt}
-                  onClick={() => setCategoryFilter(opt)}
-                >
-                  {opt === "all"
-                    ? t("trips:filterBar.allCategories")
-                    : `${CATEGORY_ICON[opt]} ${t(`trips:category.${opt}`)}`}
-                </FilterButton>
-              ))}
-            </FilterGroup>
+              {CATEGORY_OPTIONS.filter((opt) => opt !== "all" && statusCounts[`cat:${opt}`]).map(
+                (opt) => (
+                  <FilterPill
+                    key={opt}
+                    active={categoryFilter === opt}
+                    count={statusCounts[`cat:${opt}`] ?? 0}
+                    onClick={() => setCategoryFilter(categoryFilter === opt ? "all" : opt)}
+                  >
+                    {t(`trips:category.${opt}`)}
+                  </FilterPill>
+                )
+              )}
+            </div>
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("trips:filterBar.search")}
-              className="rounded-lg px-3 py-1.5 text-xs ml-auto"
+              aria-label={t("trips:filterBar.search")}
+              className="ml-auto w-full rounded-[var(--ts-radius-button)] px-3 py-2 text-sm sm:w-60"
               style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-primary)",
-                minWidth: 220,
+                background: "var(--ts-surface)",
+                border: "1px solid var(--ts-border)",
+                color: "var(--ts-text-bright)",
               }}
             />
           </div>
@@ -271,54 +270,49 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             {t("trips:filterBar.noResults")}
           </div>
         ) : (
-          <div className={TRIP_GRID_CLASS}>
-            {filtered.map((trip) => (
-              <div
-                key={trip.id}
-                className="rounded-xl"
-                style={
-                  mergeMode
-                    ? {
-                        outline: mergeSelection.has(trip.id)
-                          ? "2px solid var(--accent)"
-                          : "2px solid transparent",
-                        outlineOffset: 2,
-                      }
-                    : undefined
-                }
-              >
-                <TripCard
-                  trip={trip}
-                  onOpen={mergeMode ? toggleMergeSelection : handleOpen}
-                  onEdit={setEditingTrip}
-                  onDelete={setDeleteTarget}
-                />
-              </div>
-            ))}
-            {/* New trip placeholder card — only on the unfiltered list */}
-            {statusFilter === "all" && categoryFilter === "all" && search === "" && (
-              <button
-                onClick={() => setShowAddPanel(true)}
-                className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[280px] gap-2 transition-colors hover:border-(--accent)/50"
-                style={{
-                  borderColor: "var(--color-border)",
-                  background: "var(--bg-muted)",
-                }}
-              >
-                <span className="text-3xl opacity-20">＋</span>
-                <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("trips:newTrip")}
-                </span>
-                <span
-                  className="text-xs text-center px-4"
-                  // No second dimming on top of --text-muted: the token is
-                  // already ~6:1, and the extra 0.6 measured 2.70:1 (forgejo#114).
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {t("trips:newTripDesc")}
-                </span>
-              </button>
-            )}
+          <div className="flex flex-col gap-6">
+            {groups.map(([year, list]) => {
+              const days = list.reduce((sum, trip) => sum + (tripDays(trip) ?? 0), 0);
+              return (
+                <section key={year || "undated"} className="flex flex-col gap-3">
+                  <h2
+                    className="t-caption flex gap-4"
+                    style={{ fontFamily: "var(--ts-font-mono)" }}
+                  >
+                    <span style={{ color: "var(--ts-text-bright)" }}>
+                      {year || t("trips:list.undated")}
+                    </span>
+                    <span>
+                      {t("trips:count", { count: list.length })}
+                      {days > 0 && ` · ${t("trips:head.days", { count: days })}`}
+                    </span>
+                  </h2>
+                  <div className={TRIP_GRID_CLASS}>
+                    {list.map((trip) => (
+                      <div
+                        key={trip.id}
+                        className="rounded-[var(--ts-radius-card)]"
+                        style={
+                          mergeMode
+                            ? {
+                                outline: mergeSelection.has(trip.id)
+                                  ? "2px solid var(--ts-accent)"
+                                  : "2px solid transparent",
+                                outlineOffset: 2,
+                              }
+                            : undefined
+                        }
+                      >
+                        <TripCard
+                          trip={trip}
+                          onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
@@ -345,31 +339,6 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         onClose={() => setShowAddPanel(false)}
         onItemsCreated={onTripsChange}
         adapter={tripAdapter}
-      />
-
-      {editingTrip !== null && (
-        <TripModal
-          trip={editingTrip}
-          onClose={() => setEditingTrip(null)}
-          onSaved={() => {
-            setEditingTrip(null);
-            onTripsChange();
-          }}
-        />
-      )}
-
-      {/* The delete question is the shared one. It drew its own scrim until
-          2026-09-15, with its own darkness and a `var(--danger, #f87171)`
-          fallback that was a colour nobody decided. */}
-      <ConfirmModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => void handleConfirmDelete()}
-        title={t("trips:deleteTripConfirmTitle")}
-        message={t("trips:deleteTripConfirm", { name: deleteTarget?.name ?? "" })}
-        confirmText={t("trips:deleteTrip")}
-        cancelText={t("trips:modal.cancel")}
-        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </div>
   );
@@ -445,48 +414,37 @@ function MergeConfirmModal({
 }
 
 /**
- * A segmented control that scrolls INSIDE itself.
- *
- * Forgejo #16: on a 390px phone the category group — eight buttons — pushed the
- * document to 511px, so the whole Trips page sat partly off-canvas and the last
- * category was unreachable. The row around these groups wraps, but a group
- * cannot break itself apart: it is one bordered pill, and wrapping mid-control
- * looks broken.
- *
- * So the group takes the width it is given and scrolls its own overflow, and
- * the buttons refuse to shrink — a squashed "Familie" is not better than a
- * scrollable one.
+ * A filter pill with its count, round 4 ("Reisen"). The row around the pills
+ * scrolls inside itself: on a 390px phone the old category group pushed the
+ * document to 511px (forgejo#16), and a pill must not shrink either.
  */
-function FilterGroup({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <div
-      className="flex gap-1 rounded-lg p-1 max-w-full overflow-x-auto scrollbar-none"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function FilterButton({
+function FilterPill({
   active,
+  count,
   onClick,
   children,
 }: {
   active: boolean;
+  count: number;
   onClick: () => void;
   children: React.ReactNode;
 }): JSX.Element {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
-      className="px-3 py-1 rounded-md text-xs transition-colors shrink-0 whitespace-nowrap"
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold"
       style={{
-        background: active ? "var(--bg-muted)" : "transparent",
-        color: active ? "var(--text-primary)" : "var(--text-muted)",
+        background: active ? "var(--ts-accent)" : "transparent",
+        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
+        border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
       }}
     >
       {children}
+      <span className="text-xs" style={{ fontFamily: "var(--ts-font-mono)", opacity: 0.75 }}>
+        {count}
+      </span>
     </button>
   );
 }
