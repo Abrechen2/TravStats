@@ -40,6 +40,7 @@ const period: StatsPeriod = {
   setSelectedYear: () => {},
   setCompareYear: () => {},
   setCompareEnabled: () => {},
+  scope: { year: 2024, compareYear: null },
 };
 
 function renderOverview(): void {

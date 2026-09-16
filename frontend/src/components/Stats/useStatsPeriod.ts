@@ -9,6 +9,19 @@ export interface StatsPeriod {
   setSelectedYear: (year: number | null) => void;
   setCompareYear: (year: number) => void;
   setCompareEnabled: (enabled: boolean) => void;
+  /** The same period, as the domain tabs consume it. */
+  scope: PeriodScope;
+}
+
+/**
+ * What a domain tab needs to know: which year, and which year to set it
+ * against. `compareYear` is non-null ONLY while a comparison is really on — the
+ * store keeps a remembered compare year while the toggle is off (#188), and a
+ * tab reading that raw value would draw a comparison nobody asked for.
+ */
+export interface PeriodScope {
+  year: number | null;
+  compareYear: number | null;
 }
 
 /**
@@ -72,5 +85,9 @@ export function useStatsPeriod(years: number[], loading: boolean): StatsPeriod {
     setSelectedYear,
     setCompareYear,
     setCompareEnabled,
+    scope: {
+      year: selectedYear,
+      compareYear: compareEnabled && selectedYear !== null ? compareYear : null,
+    },
   };
 }

@@ -13,6 +13,9 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { convertDistance, getDistanceLabel } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
+import { cruisesStartedIn } from "../../lib/stats/periodScope";
+import PeriodComparisonStrip from "./PeriodComparisonStrip";
+import type { PeriodScope } from "./useStatsPeriod";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
@@ -26,12 +29,18 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
  *   3. Depth + loyalty row
  *   4. Discovery tag clouds (lines, regions, countries)
  *   5. Achievement-style boolean flag pills
+ *
+ * Scoped to the page's period twice over, and both ways say the same thing: the
+ * rollup by the server (`?year=`), the rows behind the rhythm, money and fun
+ * blocks by `cruisesStartedIn` — the year a cruise sailed from.
  */
-export default function CruiseStatsSection(): JSX.Element {
+export default function CruiseStatsSection({ scope }: { scope: PeriodScope }): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "cruise", "common"]);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const distanceLabel = getDistanceLabel(distanceUnit, t);
+  const { year, compareYear } = scope;
   const [stats, setStats] = useState<CruiseStatsResponse | null>(null);
+  const [previous, setPrevious] = useState<CruiseStatsResponse | null>(null);
   // The rollup answers the collection questions and carries no calendar, no
   // money and no firsts — those live on the rows.
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -43,10 +52,19 @@ export default function CruiseStatsSection(): JSX.Element {
     let cancelled = false;
     void (async () => {
       try {
-        const [data, rows] = await Promise.all([statsApi.getCruiseStats(), cruiseApi.list()]);
+        // Earlier figures stay on screen while the next year loads.
+        const [data, before, rows] = await Promise.all([
+          statsApi.getCruiseStats(year === null ? undefined : { year }),
+          compareYear === null
+            ? Promise.resolve(null)
+            : statsApi.getCruiseStats({ year: compareYear }),
+          cruiseApi.list(),
+        ]);
         if (cancelled) return;
         setStats(data);
+        setPrevious(before);
         setCruises(rows);
+        setError(null);
       } catch (err) {
         logger.error("Failed to load cruise stats:", err);
         if (!cancelled) setError(t("stats:cruiseSection.loadError"));
@@ -57,7 +75,7 @@ export default function CruiseStatsSection(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, year, compareYear]);
 
   if (loading) {
     return (
@@ -83,6 +101,54 @@ export default function CruiseStatsSection(): JSX.Element {
         }}
       >
         <p className="text-sm">{error ?? t("stats:cruiseSection.loadError")}</p>
+      </div>
+    );
+  }
+
+  const comparison =
+    previous && year !== null && compareYear !== null ? (
+      <PeriodComparisonStrip
+        year={year}
+        compareYear={compareYear}
+        rows={[
+          {
+            key: "cruises",
+            label: t("stats:cruiseSection.count"),
+            current: stats.cruisesCount,
+            previous: previous.cruisesCount,
+          },
+          {
+            key: "seaDays",
+            label: t("stats:cruiseSection.seaDays"),
+            current: stats.seaDays,
+            previous: previous.seaDays,
+          },
+          {
+            key: "ports",
+            label: t("stats:cruiseSection.ports"),
+            current: stats.cruisePortsUnique,
+            previous: previous.cruisePortsUnique,
+          },
+          {
+            key: "distance",
+            label: t("stats:cruiseSection.totalDistance"),
+            current: convertDistance(stats.totalDistanceKm, distanceUnit),
+            previous: convertDistance(previous.totalDistanceKm, distanceUnit),
+            format: (n) => `${formatNumber(n)} ${distanceLabel}`,
+          },
+        ]}
+      />
+    ) : null;
+
+  // A year with no cruise names the year. The lifetime empty state invites the
+  // first cruise, which is the wrong thing to say to someone with twenty.
+  if (stats.cruisesCount === 0 && year !== null) {
+    return (
+      <div className="space-y-6">
+        {comparison}
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("stats:period.emptyYear", { year })}
+        </p>
       </div>
     );
   }
@@ -168,12 +234,14 @@ export default function CruiseStatsSection(): JSX.Element {
     },
   ];
 
-  const detail = deriveCruiseStats(cruises);
+  const detail = deriveCruiseStats(year === null ? cruises : cruisesStartedIn(cruises, year));
   const accent = colorOf("cruise");
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
 
   return (
     <div className="space-y-6">
+      {comparison}
+
       {/* 1) Hero KPI grid */}
       <KpiGrid kpis={heroKpis} />
 

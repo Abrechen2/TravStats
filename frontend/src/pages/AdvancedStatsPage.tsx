@@ -161,7 +161,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   });
   const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
   const period = useStatsPeriod(periodYears, domainStatsLoading);
-  const { selectedYear, compareYear, compareEnabled } = period;
+  const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
   const [compareSummary, setCompareSummary] = useState<SummaryStats | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -623,16 +623,16 @@ export default function AdvancedStatsPage(): JSX.Element {
           )}
 
           {/* Cruise tab renders its own stats section. */}
-          {effectiveFilter === "cruise" && <CruiseStatsSection />}
+          {effectiveFilter === "cruise" && <CruiseStatsSection scope={scope} />}
           {/* Moved off the dashboard map, where these numbers floated on top of
               the world the user came to look at. */}
-          {effectiveFilter === "lodging" && <LodgingStatsSection />}
-          {/* The POI tab existed with no branch behind it since before 2.5.2 —
-              the strip offered it and the page rendered nothing. */}
+          {effectiveFilter === "lodging" && <LodgingStatsSection scope={scope} />}
           {/* `allowed`, not "not denied": while the instance flag is still
               unknown this renders nothing rather than drawing the section and
               tearing it away a moment later. */}
-          {effectiveFilter === "poi" && placesAccess === "allowed" && <PoiStatsSection />}
+          {effectiveFilter === "poi" && placesAccess === "allowed" && (
+            <PoiStatsSection scope={scope} />
+          )}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

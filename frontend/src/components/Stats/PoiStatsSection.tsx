@@ -16,6 +16,9 @@ import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import PoiRhythmSection from "./poi/PoiRhythmSection";
 import PoiFunSection from "./poi/PoiFunSection";
 import PoiQualitySection from "./poi/PoiQualitySection";
+import PeriodComparisonStrip from "./PeriodComparisonStrip";
+import type { PeriodScope } from "./useStatsPeriod";
+import { placesVisitedIn } from "../../lib/stats/periodScope";
 
 /**
  * The places numbers, on the statistics page.
@@ -30,11 +33,17 @@ import PoiQualitySection from "./poi/PoiQualitySection";
  * server's achievement engine use, which is what stops this page and the
  * places list disagreeing about whether an undated visit happened, or whether
  * a future-dated one counts yet.
+ *
+ * Scoped to the page's period HERE, not by the server: there is no places
+ * rollup, so the rows are cut to the year by `placesVisitedIn` before either
+ * of those modules sees them. Lists and checklists have no date at all, so a
+ * year leaves them out rather than showing a lifetime figure under its label.
  */
-export default function PoiStatsSection(): JSX.Element {
+export default function PoiStatsSection({ scope }: { scope: PeriodScope }): JSX.Element {
   const { t, i18n } = useTranslation(["places", "stats", "common"]);
   const { colorOf } = useDomainColors();
   const accent = colorOf("poi");
+  const { year, compareYear } = scope;
 
   const [places, setPlaces] = useState<Place[] | null>(null);
   const [lists, setLists] = useState<PlaceList[]>([]);
@@ -69,19 +78,31 @@ export default function PoiStatsSection(): JSX.Element {
     };
   }, []);
 
+  const scoped = useMemo(
+    () => (places && year !== null ? placesVisitedIn(places, year) : places),
+    [places, year]
+  );
+
   // `DomainStats` is a union on `hasData`; narrowing it here means the figures
   // below read straight off it instead of each one re-checking.
   const stats = useMemo(() => {
-    if (!places) return null;
-    const adapted = adaptPoi({ places, lists, curated });
+    if (!scoped) return null;
+    const adapted = adaptPoi({ places: scoped, lists, curated });
     return adapted.hasData ? adapted : null;
-  }, [places, lists, curated]);
+  }, [scoped, lists, curated]);
 
   // One derivation for the whole page, tested on its own. Nothing below counts
   // rows itself — that is how two figures on one screen come to disagree.
   const detail = useMemo(
-    () => (places ? derivePoiStats(places, PLACE_CATEGORIES.length) : null),
-    [places]
+    () => (scoped ? derivePoiStats(scoped, PLACE_CATEGORIES.length) : null),
+    [scoped]
+  );
+  const previous = useMemo(
+    () =>
+      places && compareYear !== null
+        ? derivePoiStats(placesVisitedIn(places, compareYear), PLACE_CATEGORIES.length)
+        : null,
+    [places, compareYear]
   );
 
   if (loading) {
@@ -90,8 +111,46 @@ export default function PoiStatsSection(): JSX.Element {
   if (failed) {
     return <p className="text-sm text-(--text-muted)">{t("places:list.loadError")}</p>;
   }
+
+  const comparison =
+    detail && previous && year !== null && compareYear !== null ? (
+      <PeriodComparisonStrip
+        year={year}
+        compareYear={compareYear}
+        rows={[
+          {
+            key: "places",
+            label: t("places:stats.visitedPlaces"),
+            current: detail.visitedPlaces.length,
+            previous: previous.visitedPlaces.length,
+          },
+          {
+            // Within a year every visit counted is dated and has happened, so
+            // the plain total is the same figure on both sides.
+            key: "visits",
+            label: t("places:stats.visits"),
+            current: detail.visitsTotal,
+            previous: previous.visitsTotal,
+          },
+          {
+            key: "countries",
+            label: t("places:stats.countries"),
+            current: detail.countries.size,
+            previous: previous.countries.size,
+          },
+        ]}
+      />
+    ) : null;
+
   if (!stats || !detail || detail.visitedPlaces.length === 0) {
-    return <p className="text-sm text-(--text-muted)">{t("places:stats.empty")}</p>;
+    return (
+      <section className="flex flex-col gap-6">
+        {comparison}
+        <p className="text-sm text-(--text-muted)">
+          {year === null ? t("places:stats.empty") : t("stats:period.emptyYear", { year })}
+        </p>
+      </section>
+    );
   }
 
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
@@ -143,15 +202,19 @@ export default function PoiStatsSection(): JSX.Element {
 
   return (
     <section>
+      {comparison && <div className="mb-8">{comparison}</div>}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           accent={accent}
           valueSize="md"
           title={t("places:stats.visitedPlaces")}
           value={detail.visitedPlaces.length}
-          description={t("places:stats.visitedPlacesDesc", {
-            wishlist: detail.wishlistCount,
-          })}
+          // A year holds no wishlist — it would always read "0 more".
+          description={
+            year === null
+              ? t("places:stats.visitedPlacesDesc", { wishlist: detail.wishlistCount })
+              : undefined
+          }
         />
         <StatCard
           accent={accent}
@@ -182,16 +245,18 @@ export default function PoiStatsSection(): JSX.Element {
           value={detail.countries.size}
           description={t("places:stats.citiesDesc", { count: detail.cities.size })}
         />
-        <StatCard
-          accent={accent}
-          valueSize="md"
-          title={t("places:stats.lists")}
-          value={lists.length}
-          description={t("places:stats.listsDesc", {
-            own: ownLists.length,
-            checklists: lists.length - ownLists.length,
-          })}
-        />
+        {year === null && (
+          <StatCard
+            accent={accent}
+            valueSize="md"
+            title={t("places:stats.lists")}
+            value={lists.length}
+            description={t("places:stats.listsDesc", {
+              own: ownLists.length,
+              checklists: lists.length - ownLists.length,
+            })}
+          />
+        )}
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -227,7 +292,7 @@ export default function PoiStatsSection(): JSX.Element {
         />
       </div>
 
-      {checklistRows.length > 0 && (
+      {year === null && checklistRows.length > 0 && (
         <div className="mt-6">
           <RankedBarList
             title={t("places:stats.checklists")}

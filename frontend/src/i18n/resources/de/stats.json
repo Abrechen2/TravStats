@@ -605,5 +605,8 @@
     "airlines": "Airlines",
     "aircraft": "Flugzeuge",
     "countries": "Länder"
+  },
+  "period": {
+    "emptyYear": "Für {{year}} ist hier nichts erfasst."
   }
 }
