@@ -56,20 +56,27 @@ describe("SimplifiedFlightFormV2", () => {
     expect(screen.getByText(/flights:form\.title/i)).toBeInTheDocument();
   });
 
-  // #289: the backdrop paired `bg-black` with the Tailwind 3 `bg-opacity-*`
-  // utility. Tailwind 4 dropped that utility and emits nothing for it, so the
-  // map behind the form went solid black. The `/50` modifier is what Tailwind
-  // 4 reads. A class name is only visible to a test that looks at it, which is
-  // why this one does — the form rendered fine either way.
-  it("dims the page behind it rather than painting it black (#289)", () => {
-    const { container } = render(
-      <SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
-    );
+  // #289 painted the page behind the form solid black; since the CT106
+  // design-6 recheck (R01) the form sits in the shared dialog frame, whose
+  // scrim is a token. What must hold is that it IS a dialog: named, modal,
+  // holding focus, and closing on Escape without anything else answering.
+  it("is a modal dialog that takes focus and closes on Escape (R01)", () => {
+    render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    const backdrop = container.firstElementChild;
-    expect(backdrop).not.toBeNull();
-    expect(backdrop?.className).toMatch(/\bbg-black\/50\b/);
-    expect(backdrop?.className).not.toMatch(/bg-opacity-/);
+    const dialog = screen.getByRole("dialog", { name: /flights:form\.title/i });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog.closest(".ts-dialog-scrim")).not.toBeNull();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(mockOnCancel).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it("offers a close control in the header, not only below the fold (R01)", () => {
+    render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    fireEvent.click(screen.getByRole("button", { name: /common:buttons\.close/i }));
+    expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
   it("should show error when airports are missing", async () => {

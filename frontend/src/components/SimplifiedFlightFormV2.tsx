@@ -10,7 +10,9 @@
  * Step UIs live in FlightForm/FlightLookupStep, FlightSelectStep, FlightCompleteStep
  */
 
+import { useId } from "react";
 import { useTranslation } from "../hooks/useTranslation";
+import Modal from "./Modal";
 
 import FlightReviewModal from "./FlightReviewModal";
 import FlightLookupStep from "./FlightForm/FlightLookupStep";
@@ -41,41 +43,94 @@ export default function SimplifiedFlightFormV2({
   const { t } = useTranslation(["flights", "errors", "common"]);
 
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
+  // The footer's submit button sits outside the <form>; `form={id}` ties it back.
+  const formId = useId();
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
-  const bgClass = "bg-(--bg-surface)";
   const textClass = "text-white";
   const mutedTextClass = "text-(--text-muted)";
-  const borderClass = "border-border";
   const sizedInputClass =
     "bg-(--bg-surface) border-border text-white placeholder-(--text-muted) text-base py-3";
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-100 p-4">
-      <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
-        {/* Header */}
-        <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>
-          <h2 className={`text-2xl font-bold ${textClass}`}>{t("flights:form.title")}</h2>
-          <p className={`text-sm ${mutedTextClass} mt-1`}>
-            {form.step === "input" && t("flights:form.steps.input")}
-            {form.step === "select" && t("flights:form.steps.select")}
-            {form.step === "complete" && t("flights:form.steps.complete")}
-          </p>
-        </div>
+    <>
+      {/* The shared frame (CT106 design-6 recheck R01): it was two fixed DIVs
+          with no dialog role, so focus stayed on the button behind it, Escape
+          did nothing, Tab walked into the page, and "Abbrechen" sat below the
+          90vh fold with no close control above it. Modal gives the role, the
+          focus trap, Escape for the TOP dialog only, a close button in the
+          header and a footer that stays in view while the body scrolls. */}
+      <Modal
+        open
+        onClose={onCancel}
+        busy={form.loading}
+        title={t("flights:form.title")}
+        maxWidth={672}
+        closeLabel={t("common:buttons.close")}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn-secondary"
+              disabled={form.loading}
+            >
+              {t("flights:form.cancel")}
+            </button>
+            {form.step === "complete" && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    void form.handleSubmitAndReturn(e);
+                  }}
+                  className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={form.loading || !form.canSubmit}
+                  title={
+                    !form.canSubmit
+                      ? t("flights:form.validation.selectAirportsAndDates")
+                      : t("flights:form.submitAndReturn")
+                  }
+                >
+                  {t("flights:form.submitAndReturn")}
+                </button>
+                <button
+                  type="submit"
+                  form={formId}
+                  className={`btn-primary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={form.loading || !form.canSubmit}
+                  title={
+                    !form.canSubmit
+                      ? t("flights:form.validation.selectAirportsAndDates")
+                      : t("flights:form.submit")
+                  }
+                >
+                  {form.loading ? t("flights:form.saving") : t("flights:form.submit")}
+                </button>
+              </>
+            )}
+          </>
+        }
+      >
+        <p className={`text-sm ${mutedTextClass} mb-2`}>
+          {form.step === "input" && t("flights:form.steps.input")}
+          {form.step === "select" && t("flights:form.steps.select")}
+          {form.step === "complete" && t("flights:form.steps.complete")}
+        </p>
 
         {form.error && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
+          <div className="mt-2 rounded-sm border px-4 py-3 text-sm" style={ERROR_STYLE}>
             {form.error}
           </div>
         )}
 
         {form.step === "complete" && (!form.departure || !form.arrival) && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
+          <div className="mt-2 rounded-sm border px-4 py-3 text-sm" style={ERROR_STYLE}>
             {t("errors:missingAirports")}
           </div>
         )}
 
-        <form onSubmit={form.handleSubmit} className="p-6 space-y-6">
+        <form id={formId} onSubmit={form.handleSubmit} className="space-y-6 pt-2">
           {form.step === "input" && (
             <FlightLookupStep
               flightNumber={form.flightNumber}
@@ -195,59 +250,8 @@ export default function SimplifiedFlightFormV2({
               setTimeEstimationWarning={form.setTimeEstimationWarning}
             />
           )}
-
-          {/* Action Buttons */}
-          {/*
-            `flex-wrap` is load-bearing, not decoration. Three buttons with
-            German labels in one unwrapping row are wider than a 320px screen:
-            measured at that width, "Abbrechen" ran from x = -69 to x = 42, so
-            half its label sat outside the dialog and the scroll container
-            refused to reach it (AUD-103). Wrapping is the shared Modal's own
-            answer to the same problem — see its footer.
-          */}
-          <div className="flex flex-wrap gap-3 justify-end pt-4 border-t">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn-secondary"
-              disabled={form.loading}
-            >
-              {t("flights:form.cancel")}
-            </button>
-            {form.step === "complete" && (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    void form.handleSubmitAndReturn(e);
-                  }}
-                  className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={form.loading || !form.canSubmit}
-                  title={
-                    !form.canSubmit
-                      ? t("flights:form.validation.selectAirportsAndDates")
-                      : t("flights:form.submitAndReturn")
-                  }
-                >
-                  {t("flights:form.submitAndReturn")}
-                </button>
-                <button
-                  type="submit"
-                  className={`btn-primary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={form.loading || !form.canSubmit}
-                  title={
-                    !form.canSubmit
-                      ? t("flights:form.validation.selectAirportsAndDates")
-                      : t("flights:form.submit")
-                  }
-                >
-                  {form.loading ? t("flights:form.saving") : t("flights:form.submit")}
-                </button>
-              </>
-            )}
-          </div>
         </form>
-      </div>
+      </Modal>
 
       {/* Flight Review Modal (for Email & Boarding Pass) */}
       {form.showFlightReview && form.parsedFlights.length > 0 && (
@@ -267,48 +271,56 @@ export default function SimplifiedFlightFormV2({
         />
       )}
 
-      {/* Duplicate Flight Dialog */}
+      {/* Duplicate Flight Dialog — the same frame, so Escape closes this
+          question and not the form underneath it. */}
       {form.duplicateFlight && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-(--bg-elevated) border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-(--text-primary) mb-2">
-              {t("flights:form.duplicate.title")}
-            </h3>
-            <p className="text-(--text-secondary) mb-4">
-              {t("flights:form.duplicate.message", {
-                flightNumber: form.duplicateFlight.flightNumber,
-                route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
-              })}
-            </p>
-            <p className="text-xs text-(--text-muted) mb-4">
-              {t("flights:form.duplicate.mergeHint")}
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+        <Modal
+          open
+          onClose={() => form.setDuplicateFlight(null)}
+          title={t("flights:form.duplicate.title")}
+          maxWidth={448}
+          closeLabel={t("common:buttons.close")}
+          footer={
+            <>
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
-                className="btn-secondary flex-1"
+                className="btn-secondary"
               >
                 {t("flights:form.duplicate.cancel")}
               </button>
               <button
                 type="button"
-                onClick={() => void form.handleMergeSubmit()}
-                className="btn-primary flex-1"
-              >
-                {t("flights:form.duplicate.merge")}
-              </button>
-              <button
-                type="button"
                 onClick={() => void form.handleForceSubmit()}
-                className="btn-secondary flex-1"
+                className="btn-secondary"
               >
                 {t("flights:form.duplicate.addAnyway")}
               </button>
-            </div>
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={() => void form.handleMergeSubmit()}
+                className="btn-primary"
+              >
+                {t("flights:form.duplicate.merge")}
+              </button>
+            </>
+          }
+        >
+          <p className="mb-3" style={{ color: "var(--ts-text)" }}>
+            {t("flights:form.duplicate.message", {
+              flightNumber: form.duplicateFlight!.flightNumber,
+              route: `${form.duplicateFlight!.depIata ?? "?"} → ${form.duplicateFlight!.arrIata ?? "?"}`,
+            })}
+          </p>
+          <p className="t-caption">{t("flights:form.duplicate.mergeHint")}</p>
+        </Modal>
       )}
-    </div>
+    </>
   );
 }
+
+const ERROR_STYLE = {
+  color: "var(--ts-bad)",
+  borderColor: "color-mix(in srgb, var(--ts-bad) 40%, transparent)",
+  background: "color-mix(in srgb, var(--ts-bad) 10%, transparent)",
+} as const;

@@ -102,7 +102,6 @@
     "components/ReceiptUpload.tsx",
     "components/Settings/PasskeySection.tsx",
     "components/Settings/SecuritySection.tsx",
-    "components/SimplifiedFlightFormV2.tsx",
     "components/SpecialFlightModal.tsx",
     "components/StatisticsImpactPreview.tsx",
     "components/Stats/AircraftRankingCard.tsx",
@@ -136,8 +135,6 @@
   "overlays": [
     "components/BoardingPassScanner.tsx",
     "components/Cruise/CruiseImportPreviewModal.tsx",
-    "components/FlightReviewModal.tsx",
-    "components/SimplifiedFlightFormV2.tsx",
     "components/SpecialFlightModal.tsx",
     "components/Trips/DetectReviewModal.tsx",
     "components/Trips/TripModal.tsx",

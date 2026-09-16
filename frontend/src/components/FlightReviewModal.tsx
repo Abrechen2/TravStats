@@ -1,4 +1,6 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useDialogChrome } from "./ui/useDialogChrome";
 import type { FlightInput, ParsedBooking } from "../types";
 import { type Airport, airportsApi } from "../lib/api";
 import { useSettingsStore } from "../store/settingsStore";
@@ -326,6 +328,9 @@ export default function FlightReviewModal({
     }
   };
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogChrome({ open: isOpen, onClose, panelRef, busy: loading });
+
   if (!isOpen) return null;
 
   const title = t("flights:review.title");
@@ -341,9 +346,20 @@ export default function FlightReviewModal({
    */
   const isFinalStep = showProgress && flightIndex! + 1 === totalFlights;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+  // Portalled and wired to the shared chrome (CT106 design-6 recheck R01):
+  // opened from the flight form, it is the dialog ON TOP, and only a scrim
+  // later in the document than the form's answers Escape — so this closes the
+  // review and leaves the form underneath open.
+  return createPortal(
+    <div className="ts-dialog-scrim">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto outline-none"
+      >
         {/* Header */}
         <div className="sticky top-0 bg-(--bg-surface) border-b px-6 py-4 flex items-center justify-between">
           <div>
@@ -782,6 +798,7 @@ export default function FlightReviewModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
