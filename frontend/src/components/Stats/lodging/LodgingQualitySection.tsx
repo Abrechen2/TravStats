@@ -33,10 +33,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
   const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const score = (value: number | null): string => (value !== null ? `★ ${value.toFixed(1)}` : "—");
-  const ratingRows = (
-    groups: LodgingRatingGroup[],
-    label: (key: string) => string,
-  ): RankedRow[] =>
+  const ratingRows = (groups: LodgingRatingGroup[], label: (key: string) => string): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),
@@ -46,6 +43,21 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
     }));
 
   const nothingRated = ratings.ratedStays === 0;
+
+  // The same rule as the money section: no rating at all is one sentence, not
+  // four "—" tiles and their empty rankings (B12).
+  if (nothingRated) {
+    return (
+      <section className="mt-8">
+        <h2 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+          {t("lodging:stats.quality.title")}
+        </h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("lodging:stats.quality.nothingRated")}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8">

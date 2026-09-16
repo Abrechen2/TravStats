@@ -16,6 +16,12 @@ interface LodgingStatStripProps {
    * hairline instead of a card border).
    */
   variant?: LodgingStatStripVariant;
+  /**
+   * Cells to leave out because something beside the strip already shows them —
+   * the period comparison above it carries stays, nights and houses, and the
+   * same three numbers twice in a row read as a mistake (CT106 audit B12).
+   */
+  omit?: readonly string[];
 }
 
 const OVERLAY_CELL_STYLE: CSSProperties = {
@@ -40,7 +46,11 @@ const INLINE_CELL_STYLE: CSSProperties = {
  * Shared between the Dashboard map tab (`variant="overlay"`) and the
  * `/lodging` list page (`variant="inline"`).
  */
-export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStripProps): JSX.Element {
+export function LodgingStatStrip({
+  stats,
+  variant = "overlay",
+  omit = [],
+}: LodgingStatStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "lodging"]);
   // `spendBaseTotal` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`, ECB rate applied per stay's
@@ -62,7 +72,9 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
   const spendSubParts = [
     otherSpend
       ? t("dashboard:lodgingTab.stats.spendOtherCurrency", {
-          orig: otherSpend.currencies.map(({ currency, amount }) => formatCurrency(amount, currency)).join(" + "),
+          orig: otherSpend.currencies
+            .map(({ currency, amount }) => formatCurrency(amount, currency))
+            .join(" + "),
           converted: formatCurrency(otherSpend.convertedTotal, baseCurrency),
         })
       : null,
@@ -71,6 +83,11 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
       : null,
   ].filter((part): part is string => part !== null);
   const spendSub = spendSubParts.length > 0 ? spendSubParts.join(" · ") : null;
+
+  const nothingConverted =
+    stats.spendBaseTotal === 0 &&
+    (Object.keys(stats.spendByCurrency).length === 0 || stats.spendUnconvertedStays > 0) &&
+    Object.values(stats.spendBaseByCurrency ?? {}).every((amount) => amount === 0);
 
   const cells: { key: string; value: string; label: string; sub?: string | null }[] = [
     {
@@ -93,12 +110,23 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
       value: String(stats.chainsUnique),
       label: t("dashboard:lodgingTab.stats.chains", { count: stats.chainsUnique }),
     },
-    {
-      key: "spend",
-      value: formatCurrency(stats.spendBaseTotal, baseCurrency),
-      label: t("dashboard:lodgingTab.stats.spend"),
-      sub: spendSub,
-    },
+    // "0 €" only when a price of nothing was actually recorded. With no price
+    // at all, or with prices that could not be converted into the base
+    // currency, a zero read as "all free" (CT106 audit B12, measured with
+    // three unconverted stays under "0 € Ausgaben").
+    nothingConverted
+      ? {
+          key: "spend",
+          value: "—",
+          label: t("dashboard:lodgingTab.stats.spend"),
+          sub: spendSub ?? t("lodging:stats.money.noPrices"),
+        }
+      : {
+          key: "spend",
+          value: formatCurrency(stats.spendBaseTotal, baseCurrency),
+          label: t("dashboard:lodgingTab.stats.spend"),
+          sub: spendSub,
+        },
     { key: "rating", value: ratingLabel, label: t("dashboard:lodgingTab.stats.rating") },
   ];
 
@@ -131,33 +159,39 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
 
   return (
     <div style={containerStyle} data-testid="lodging-stat-strip" data-variant={variant}>
-      {cells.map((cell) => (
-        <div key={cell.key} style={cellStyle}>
-          <strong
-            style={{ fontSize: valueFontSize, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}
-          >
-            {cell.value}
-          </strong>
-          <span
-            style={{
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              color: "var(--text-muted)",
-            }}
-          >
-            {cell.label}
-          </span>
-          {cell.sub && (
-            <span
-              data-testid="lodging-stat-strip-spend-sub"
-              style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
+      {cells
+        .filter((cell) => !omit.includes(cell.key))
+        .map((cell) => (
+          <div key={cell.key} style={cellStyle}>
+            <strong
+              style={{
+                fontSize: valueFontSize,
+                color: "var(--text-primary)",
+                fontVariantNumeric: "tabular-nums",
+              }}
             >
-              {cell.sub}
+              {cell.value}
+            </strong>
+            <span
+              style={{
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                color: "var(--text-muted)",
+              }}
+            >
+              {cell.label}
             </span>
-          )}
-        </div>
-      ))}
+            {cell.sub && (
+              <span
+                data-testid="lodging-stat-strip-spend-sub"
+                style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
+              >
+                {cell.sub}
+              </span>
+            )}
+          </div>
+        ))}
     </div>
   );
 }

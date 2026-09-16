@@ -32,10 +32,7 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
   const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const money = (value: number): string => formatCurrency(value, baseCurrency);
-  const priceRows = (
-    groups: LodgingPriceGroup[],
-    label: (key: string) => string,
-  ): RankedRow[] =>
+  const priceRows = (groups: LodgingPriceGroup[], label: (key: string) => string): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),
@@ -48,6 +45,25 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
     }));
 
   const noPrices = price.pricedStays === 0;
+
+  // Without a single price the four tiles and four rankings were eight empty
+  // states in a row — most of an 8,000px phone page for one stay (CT106 audit
+  // B12). One sentence says it; award nights, which carry a value of their own,
+  // still show.
+  if (noPrices && stats.awardNights === 0) {
+    return (
+      <section className="mt-8">
+        <h2 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+          {t("lodging:stats.money.title")}
+        </h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("lodging:stats.money.noPrices")}
+          {price.unpricedStays > 0 &&
+            ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8">
@@ -62,7 +78,8 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
               nights: price.pricedNights,
               currency: baseCurrency,
             })}
-        {price.unpricedStays > 0 && ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
+        {price.unpricedStays > 0 &&
+          ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
       </p>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

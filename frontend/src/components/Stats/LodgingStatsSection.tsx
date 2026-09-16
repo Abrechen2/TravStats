@@ -149,8 +149,20 @@ export default function LodgingStatsSection({
           the currency card is translucent, so the hotel names showed through
           it. The list page always passed "inline"; this one passed nothing and
           got the overlay default. */}
-      {show("kpis") && <LodgingStatStrip stats={stats} variant="inline" />}
-      {show("money") && <LodgingCurrencyBreakdown stats={stats} variant="inline" />}
+      {show("kpis") && (
+        <LodgingStatStrip
+          stats={stats}
+          variant="inline"
+          omit={comparison ? ["stays", "nights", "hotels"] : []}
+        />
+      )}
+      {/* A breakdown of currencies nobody paid in is an empty card; the money
+          section below says once that no prices are recorded. */}
+      {show("money") &&
+        (Object.keys(stats.spendByCurrency ?? {}).length > 0 ||
+          Object.keys(stats.spendBaseByCurrency ?? {}).length > 0) && (
+          <LodgingCurrencyBreakdown stats={stats} variant="inline" />
+        )}
       {show("money") && <LodgingMoneySection stats={stats} />}
       {show("quality") && <LodgingQualitySection stats={stats} />}
       {show("geo") && <LodgingGeoSection stats={stats} />}

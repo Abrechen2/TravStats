@@ -116,4 +116,60 @@ describe("LodgingStatStrip", () => {
 
     expect(screen.queryByTestId("lodging-stat-strip-spend-sub")).not.toBeInTheDocument();
   });
+
+  // CT106 audit B12.
+  it("shows a dash, not 0, when no money is recorded at all", () => {
+    render(
+      <LodgingStatStrip
+        stats={{ ...stats, spendBaseTotal: 0, spendByCurrency: {}, spendBaseByCurrency: {} }}
+        variant="inline"
+      />
+    );
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("lodging:stats.money.noPrices")).toBeInTheDocument();
+  });
+
+  it("leaves out the cells the period comparison already shows", () => {
+    render(
+      <LodgingStatStrip stats={stats} variant="inline" omit={["stays", "nights", "hotels"]} />
+    );
+    expect(screen.queryByText(/lodgingTab\.stats\.stays/)).toBeNull();
+    expect(screen.queryByText(/lodgingTab\.stats\.nights/)).toBeNull();
+    expect(screen.getByText(/lodgingTab\.stats\.chains/)).toBeInTheDocument();
+  });
+
+  it("shows a dash with the reason when prices exist but none could be converted", () => {
+    render(
+      <LodgingStatStrip
+        stats={{
+          ...stats,
+          spendBaseTotal: 0,
+          spendByCurrency: { USD: 300 },
+          spendBaseByCurrency: {},
+          spendUnconvertedStays: 3,
+        }}
+        variant="inline"
+      />
+    );
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByTestId("lodging-stat-strip-spend-sub")).toHaveTextContent(
+      "lodging:fx.omittedFromTotal"
+    );
+  });
+
+  it("still shows 0 when a price of nothing was recorded", () => {
+    render(
+      <LodgingStatStrip
+        stats={{
+          ...stats,
+          spendBaseTotal: 0,
+          spendByCurrency: { EUR: 0 },
+          spendBaseByCurrency: { EUR: 0 },
+          spendUnconvertedStays: 0,
+        }}
+        variant="inline"
+      />
+    );
+    expect(screen.queryByText("—")).toBeNull();
+  });
 });
