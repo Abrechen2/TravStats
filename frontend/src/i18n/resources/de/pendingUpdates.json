@@ -54,7 +54,8 @@
     "rejected": "Abgelehnt",
     "expired": "Abgelaufen",
     "createdAt": "Erstellungsdatum",
-    "expiresAt": "Ablaufdatum"
+    "expiresAt": "Ablaufdatum",
+    "sortOrder": "Reihenfolge umkehren"
   },
   "statistics": {
     "title": "Update-Statistiken",
