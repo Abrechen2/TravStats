@@ -11,7 +11,7 @@
  *  - Logout lives in the account menu (UserMenu, since #241) — not the top bar
  *
  * Prerequisites, same as the import specs:
- *  - dev server running (PLAYWRIGHT_BASE_URL or localhost:5173)
+ *  - dev server running (PLAYWRIGHT_BASE_URL or localhost:3000)
  *  - dev DB seeded with admin:admin123 via `npm run seed:dev-admin`
  *
  * The config runs with locale de-DE, so user-facing copy asserts the German

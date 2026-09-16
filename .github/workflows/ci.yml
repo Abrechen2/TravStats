@@ -360,6 +360,112 @@ jobs:
         run: node scripts/check-coverage.mjs backend
 
   # ---------------------------------------------------------------------
+  # E2E (Playwright, Chromium) — added 2026-09-16 (forgejo#28).
+  #
+  # The browser suite existed and ran only on a developer machine. It needs
+  # the whole stack, so this job builds it: PostGIS, migrations, the test
+  # catalogues, the seeded dev admin (admin:admin123 with demo data), the
+  # backend, and — started by playwright.config.ts's webServer — Vite on 3000.
+  #
+  # Chromium only: the full three-browser run takes ~7 minutes locally and
+  # adds no coverage of our code, only of browser engines. The auth-ladder
+  # passkey case needs Chromium anyway (CDP virtual authenticator).
+  #
+  # NODE_ENV=development on purpose: the E2E stack is a dev stack, and the
+  # address-keyed rate limits step aside in development (one runner is one
+  # address for every spec). OLLAMA_URL is empty so the booking-import spec
+  # is answered by the template, as it demands.
+  #
+  # Until 2026-09-16 playwright.config.ts defaulted to port 5173 while Vite
+  # serves 3000, so `npm run test:e2e` without PLAYWRIGHT_BASE_URL waited for
+  # a server that never came up — the reason this could not simply be wired.
+  # ---------------------------------------------------------------------
+  e2e:
+    name: E2E (Playwright, Chromium)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # CI-local throwaways, unrelated to any real credentials.
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_e2e
+      NODE_ENV: development
+      PORT: "8000"
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      COOKIE_SECURE: "false"
+      OLLAMA_URL: ""
+      VITE_API_URL: http://localhost:8000
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci && (cd backend && npm ci) && (cd frontend && npm ci)
+
+      - name: Apply migrations
+        run: cd backend && npx prisma migrate deploy
+
+      - name: Seed catalogues and the dev admin
+        run: |
+          cd backend
+          npx tsx scripts/seed-test-catalogues.ts
+          npm run seed:dev-admin
+
+      - name: Start backend
+        run: |
+          cd backend
+          nohup npx tsx src/index.ts > ../backend-e2e.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8000/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "backend did not become healthy" >&2
+          tail -50 ../backend-e2e.log >&2
+          exit 1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright
+        run: npx playwright test --project=chromium --reporter=line
+
+      - name: Upload report and backend log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+            backend-e2e.log
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
   # SAFE TO REQUIRE — but note it only checks files the change touched.
   #
   # Scoped on purpose: ~95 files under frontend/src have never been
