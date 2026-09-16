@@ -190,8 +190,6 @@
   },
   "overview": {
     "loading": "Lade Multi-Domain-Statistiken …",
-    "rangeLabel": "Zeitraum",
-    "rangeHint": "Cross-Domain — wirkt auf KPIs, Chart, Heatmap und Domain-Karten",
     "kpisLabel": "Gesamt-Übersicht",
     "scopeLifetime": "Lifetime · alle Jahre",
     "scopeYear": "Jahr {{year}}",
@@ -217,9 +215,6 @@
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {
-    "allTime": "Alle Jahre",
-    "selectYear": "Nach Jahr filtern",
-    "compareWith": "Vergleich mit",
     "vs": "ggü. {{year}}",
     "scopeLabel": "── Jahr {{year}} ──"
   },

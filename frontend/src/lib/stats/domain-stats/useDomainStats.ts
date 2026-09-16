@@ -32,9 +32,18 @@ export interface UseDomainStatsResult {
  * Loads all enabled domains' stats in parallel. Flight data is supplied
  * by the caller (already loaded by AdvancedStatsPage) to avoid a second
  * round-trip; the country list is fetched here.
+ *
+ * `ready: false` holds the fetch back and keeps `loading` true. The statistics
+ * page owns this hook for its whole lifetime, including the seconds before its
+ * flights arrive; without the gate every domain was fetched once against an
+ * empty flight list and again against the real one, and the period bar picked
+ * its default year from the first, incomplete answer.
  */
-export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResult {
-  const { flights } = input;
+export function useDomainStats(input: {
+  flights: Flight[];
+  ready?: boolean;
+}): UseDomainStatsResult {
+  const { flights, ready = true } = input;
   // Domain-gating: only the user's enabled domains are fetched — a
   // disabled domain must not surface in the cross-domain overview, so
   // its stats are never loaded in the first place.
@@ -44,6 +53,7 @@ export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResu
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     void (async () => {
       const result: DomainStatsMap = {};
@@ -68,7 +78,7 @@ export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResu
     return () => {
       cancelled = true;
     };
-  }, [flights, enabled]);
+  }, [flights, enabled, ready]);
 
   return { stats, errors, loading };
 }
@@ -93,10 +103,7 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       return adaptCruise({ stats: cruiseStats, cruises });
     }
     case "lodging": {
-      const [lodgingStats, lodgings] = await Promise.all([
-        getLodgingStats(),
-        listLodgings({}),
-      ]);
+      const [lodgingStats, lodgings] = await Promise.all([getLodgingStats(), listLodgings({})]);
       return adaptLodging({ stats: lodgingStats, lodgings });
     }
     case "poi": {

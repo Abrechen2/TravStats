@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
@@ -30,16 +30,20 @@ import { FlightCertificate, type FlightCertificateStats } from "../components/Fl
 import AirlineRankingCard from "../components/Stats/AirlineRankingCard";
 import AircraftRankingCard from "../components/Stats/AircraftRankingCard";
 import CountryDistributionCard from "../components/Stats/CountryDistributionCard";
-import StatsYearFilter from "../components/Stats/StatsYearFilter";
+import FlightYearSummaryCards from "../components/Stats/FlightYearSummaryCards";
+import StatsPeriodBar from "../components/Stats/StatsPeriodBar";
+import StatsTabStrip from "../components/Stats/StatsTabStrip";
+import { useStatsPeriod } from "../components/Stats/useStatsPeriod";
+import { FLIGHT_SECTIONS } from "../components/Stats/statsSections";
+import { collectYears } from "../components/Stats/Overview/aggregate";
+import { useDomainStats } from "../lib/stats/domain-stats";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
 import StatsChartsSection from "../components/Stats/StatsChartsSection";
 import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
-import SectionVisibilityMenu, {
-  type SectionOption,
-} from "../components/Stats/SectionVisibilityMenu";
+import SectionVisibilityMenu from "../components/Stats/SectionVisibilityMenu";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
@@ -62,32 +66,7 @@ import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
-import { DOMAINS, type DomainKey } from "../shared/domains";
-
-/**
- * The flight tab's blocks, in the order they are drawn.
- *
- * A list rather than keys scattered through the page: the menu and the page
- * have to agree, and a key typed in two places is a key that will disagree in
- * one of them. A block added here but not wrapped simply offers a switch that
- * does nothing, which is why the two live next to each other.
- */
-const FLIGHT_SECTIONS = (t: (key: string) => string): SectionOption[] => [
-  { key: "overview", label: t("stats:sections.overview") },
-  { key: "charts", label: t("stats:sections.charts") },
-  { key: "calendar", label: t("stats:calendar.title") },
-  { key: "distance", label: t("stats:sections.distance") },
-  { key: "breakdown", label: t("stats:sections.breakdown") },
-  { key: "punctuality", label: t("stats:sections.punctuality") },
-  { key: "fun", label: t("stats:sections.fun") },
-  { key: "business", label: t("stats:sections.business") },
-  { key: "unique", label: t("stats:sections.unique") },
-  { key: "airports", label: t("stats:sections.airports") },
-  { key: "seats", label: t("stats:sections.seats") },
-  { key: "airlines", label: t("stats:sections.airlines") },
-  { key: "aircraft", label: t("stats:sections.aircraft") },
-  { key: "countries", label: t("stats:sections.countries") },
-];
+import type { DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
@@ -173,9 +152,16 @@ export default function AdvancedStatsPage(): JSX.Element {
   const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
 
   // Year filter + comparison state
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [compareYear, setCompareYear] = useState<number | null>(null);
-  const [compareEnabled, setCompareEnabled] = useState(false);
+  // ONE period for every tab (owner review, 2026-09-15). The year list is the
+  // union across domains, so it is fed by the same per-domain stats the
+  // overview draws; they wait for the flights, which that loader supplies.
+  const { stats: domainStats, loading: domainStatsLoading } = useDomainStats({
+    flights,
+    ready: !loading,
+  });
+  const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
+  const period = useStatsPeriod(periodYears, domainStatsLoading);
+  const { selectedYear, compareYear, compareEnabled } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
   const [compareSummary, setCompareSummary] = useState<SummaryStats | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -214,21 +200,6 @@ export default function AdvancedStatsPage(): JSX.Element {
       setCompareSummary(null);
     }
   }, [selectedYear, compareEnabled, compareYear, loadYearSummary]);
-
-  // Auto-select the most recent year once flight data has loaded so the
-  // year-scoped buttons (PDF report, comparisons) are enabled by default.
-  // Without this, "PDF Jahresbericht" appears permanently greyed out and
-  // looks broken until the user discovers the year dropdown above.
-  useEffect(() => {
-    if (selectedYear === null && flights.length > 0) {
-      const years = flights
-        .map((f) => (f.departureTime ? new Date(f.departureTime).getFullYear() : null))
-        .filter((y): y is number => y !== null);
-      if (years.length > 0) {
-        setSelectedYear(Math.max(...years));
-      }
-    }
-  }, [flights, selectedYear]);
 
   useEffect(() => {
     loadFlights();
@@ -494,20 +465,6 @@ export default function AdvancedStatsPage(): JSX.Element {
   );
 
   // Time-based analytics
-  const flightsPerYear = flights.reduce(
-    (acc, flight) => {
-      if (!flight.departureTime) return acc;
-      const year = new Date(flight.departureTime).getFullYear();
-      acc[year] = (acc[year] || 0) + 1;
-      return acc;
-    },
-    {} as Record<number, number>
-  );
-
-  const availableYears: number[] = Object.keys(flightsPerYear)
-    .map(Number)
-    .sort((a, b) => b - a);
-
   const weekdayNames = [
     t("stats:weekdays.sunday"),
     t("stats:weekdays.monday"),
@@ -635,59 +592,34 @@ export default function AdvancedStatsPage(): JSX.Element {
   return (
     <AppShell width="list">
       <div>
-        {/* Domain top-tab bar — same pattern as SettingsPage / AdminPage.
-            Replaces the earlier display-only chip-row with real content
-            switching: Flug tab keeps the existing flight stats, Kreuzfahrt
-            tab renders CruiseStatsSection, Gesamt shows both. */}
-        <div
-          className="px-4 pt-3"
-          style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
-        >
-          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto overflow-y-hidden">
-            <button
-              type="button"
-              onClick={(): void => setFilter("all")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                filter === "all"
-                  ? "border-(--accent) text-(--accent)"
-                  : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
-              }`}
-            >
-              {t("stats:filter.all")}
-            </button>
-            {visibleStatsTabs(enabled, placesAccess).map((k) => {
-              const d = DOMAINS[k];
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={(): void => setFilter(k)}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    filter === k
-                      ? "border-(--accent) text-(--accent)"
-                      : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
-                  }`}
-                >
-                  <span className="mr-1.5" aria-hidden>
-                    {d.icon}
-                  </span>
-                  {t(`common:${d.i18nKey}`)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <StatsTabStrip
+          tabs={visibleStatsTabs(enabled, placesAccess)}
+          active={filter}
+          onSelect={setFilter}
+        />
 
-        {effectiveFilter === "flight" && (
-          <div className="container mx-auto px-6 pt-4 flex justify-end">
-            <SectionVisibilityMenu options={FLIGHT_SECTIONS(t)} visibility={sections} />
-          </div>
-        )}
+        <div className="container mx-auto px-6 pt-4 flex flex-wrap items-start gap-3">
+          {periodYears.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <StatsPeriodBar years={periodYears} period={period} />
+            </div>
+          )}
+          {effectiveFilter === "flight" && (
+            <div className="ml-auto">
+              <SectionVisibilityMenu options={FLIGHT_SECTIONS(t)} visibility={sections} />
+            </div>
+          )}
+        </div>
 
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
           {effectiveFilter === "all" && (
-            <OverviewTab flights={flights} achievements={achievementSummary} />
+            <OverviewTab
+              stats={domainStats}
+              loading={domainStatsLoading}
+              period={period}
+              achievements={achievementSummary}
+            />
           )}
 
           {/* Cruise tab renders its own stats section. */}
@@ -748,17 +680,12 @@ export default function AdvancedStatsPage(): JSX.Element {
               />
 
               {/* Year Filter + Year-Filtered Summary Cards */}
-              <StatsYearFilter
-                availableYears={availableYears}
+              <FlightYearSummaryCards
                 selectedYear={selectedYear}
                 compareYear={compareYear}
-                compareEnabled={compareEnabled}
                 summaryLoading={summaryLoading}
                 yearSummary={yearSummary}
                 compareSummary={compareSummary}
-                onSelectedYearChange={setSelectedYear}
-                onCompareYearChange={setCompareYear}
-                onCompareEnabledChange={setCompareEnabled}
               />
 
               {/* Overview Stats (all-time) — clearly separated from year-scoped */}

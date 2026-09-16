@@ -4,129 +4,38 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { convertDistance, formatCurrency, getDistanceLabel } from "../../lib/units";
 import TrendDelta from "./TrendDelta";
 
-interface StatsYearFilterProps {
-  availableYears: number[];
+interface FlightYearSummaryCardsProps {
   selectedYear: number | null;
   compareYear: number | null;
-  compareEnabled: boolean;
   summaryLoading: boolean;
   yearSummary: SummaryStats | null;
   compareSummary: SummaryStats | null;
-  onSelectedYearChange: (year: number | null) => void;
-  onCompareYearChange: (year: number | null) => void;
-  onCompareEnabledChange: (enabled: boolean) => void;
 }
 
-export default function StatsYearFilter({
-  availableYears,
+/**
+ * The flight tab's four year-scoped tiles.
+ *
+ * This file was `StatsYearFilter` and carried its own year `<select>` and
+ * compare toggle, separate from the overview's. The period now has one control
+ * for the whole page (`StatsPeriodBar`), so what was left here was the tiles —
+ * and a component named "YearFilter" that no longer filters would be a lie.
+ */
+export default function FlightYearSummaryCards({
   selectedYear,
   compareYear,
-  compareEnabled,
   summaryLoading,
   yearSummary,
   compareSummary,
-  onSelectedYearChange,
-  onCompareYearChange,
-  onCompareEnabledChange,
-}: StatsYearFilterProps): JSX.Element {
+}: FlightYearSummaryCardsProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
 
   return (
     <>
-      {/* Year Filter Controls */}
-      {availableYears.length > 0 && (
-        <div
-          className="rounded-lg shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="year-select"
-              className="text-sm font-medium"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("stats:yearFilter.selectYear")}
-            </label>
-            <select
-              id="year-select"
-              value={selectedYear ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "") {
-                  onSelectedYearChange(null);
-                  onCompareEnabledChange(false);
-                  onCompareYearChange(null);
-                } else {
-                  onSelectedYearChange(Number(val));
-                }
-              }}
-              className="rounded-sm border px-2 py-1 text-sm"
-              style={{
-                background: "var(--bg-elevated)",
-                borderColor: "var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="">{t("stats:yearFilter.allTime")}</option>
-              {availableYears.map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedYear !== null && (
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={compareEnabled}
-                onChange={(e) => {
-                  onCompareEnabledChange(e.target.checked);
-                  if (!e.target.checked) {
-                    onCompareYearChange(null);
-                  }
-                }}
-                className="rounded-sm"
-              />
-              <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-                {t("stats:yearFilter.compareWith")}
-              </span>
-            </label>
-          )}
-
-          {selectedYear !== null && compareEnabled && (
-            <select
-              value={compareYear ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                onCompareYearChange(val === "" ? null : Number(val));
-              }}
-              className="rounded-sm border px-2 py-1 text-sm"
-              style={{
-                background: "var(--bg-elevated)",
-                borderColor: "var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="">—</option>
-              {availableYears
-                .filter((yr) => yr !== selectedYear)
-                .map((yr) => (
-                  <option key={yr} value={yr}>
-                    {yr}
-                  </option>
-                ))}
-            </select>
-          )}
-
-          {summaryLoading && (
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("stats:loading")}
-            </span>
-          )}
-        </div>
+      {summaryLoading && yearSummary === null && (
+        <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+          {t("stats:loading")}
+        </p>
       )}
 
       {/* Year-Filtered Summary Cards */}
@@ -272,7 +181,10 @@ export default function StatsYearFilter({
                 {compareSummary !== null &&
                   yearSummary.totalCost !== null &&
                   compareSummary.totalCost !== null && (
-                    <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
+                    <TrendDelta
+                      current={yearSummary.totalCost}
+                      previous={compareSummary.totalCost}
+                    />
                   )}
               </div>
               {yearSummary.totalCost === null && (

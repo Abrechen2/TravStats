@@ -16,7 +16,7 @@ vi.mock("../../../store/settingsStore", () => ({
   }),
 }));
 
-import StatsYearFilter from "../StatsYearFilter";
+import FlightYearSummaryCards from "../FlightYearSummaryCards";
 
 const summary = (over: Partial<SummaryStats>): SummaryStats => ({
   totalFlights: 3,
@@ -35,24 +35,19 @@ const summary = (over: Partial<SummaryStats>): SummaryStats => ({
 
 const renderWith = (yearSummary: SummaryStats): ReturnType<typeof render> =>
   render(
-    <StatsYearFilter
-      availableYears={[2023, 2024]}
+    <FlightYearSummaryCards
       selectedYear={2023}
       compareYear={null}
-      compareEnabled={false}
       summaryLoading={false}
       yearSummary={yearSummary}
       compareSummary={null}
-      onSelectedYearChange={() => {}}
-      onCompareYearChange={() => {}}
-      onCompareEnabledChange={() => {}}
     />
   );
 
 // forgejo#83 — a year with no priced flight read "Gesamtkosten 0 €": a claim
 // that the flights were free. The server abstains with null; the tile must
 // show a dash and say how many flights had no price.
-describe("StatsYearFilter — total cost", () => {
+describe("FlightYearSummaryCards — total cost", () => {
   it("shows a dash and the unpriced count instead of 0 € when totalCost is null", () => {
     renderWith(summary({ totalCost: null, unpricedFlights: 3 }));
 

@@ -1,29 +1,37 @@
-// Year-scoped filter row above the Gesamt-tab content. Affects the KPI
-// cards, the activity chart highlight, the heatmap year, and the per-
-// domain summary cards' year-scoped subtitle / delta badge.
 import type { JSX } from "react";
-import { useTranslation } from "../../../hooks/useTranslation";
+import { useTranslation } from "../../hooks/useTranslation";
+import type { StatsPeriod } from "./useStatsPeriod";
 
 interface Props {
+  /** Every year any enabled domain has data for, ascending. */
   years: number[];
-  selectedYear: number | null;
-  setSelectedYear: (year: number | null) => void;
-  compareYear: number | null;
-  setCompareYear: (year: number) => void;
-  compareEnabled: boolean;
-  setCompareEnabled: (enabled: boolean) => void;
+  period: StatsPeriod;
 }
 
-export default function CrossDomainYearFilter({
-  years,
-  selectedYear,
-  setSelectedYear,
-  compareYear,
-  setCompareYear,
-  compareEnabled,
-  setCompareEnabled,
-}: Props): JSX.Element {
+/**
+ * The one period control of the statistics page, above every tab.
+ *
+ * There were two, and three tabs without any. The overview drew these pills;
+ * the flight tab drew a `<select>` with its own state; cruises, stays and
+ * places drew nothing and showed lifetime totals. So the overview could say
+ * "no stays in 2026" while the stays tab beside it showed four — both true, and
+ * a reader can only conclude that one of them is broken (owner, 2026-09-15).
+ *
+ * The pills won because they are the newer form and show every year at once.
+ * The year list is the union across domains rather than the flight years: a
+ * year with only a cruise in it is still a year somebody travelled.
+ */
+export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
   const { t } = useTranslation(["stats"]);
+  const {
+    selectedYear,
+    setSelectedYear,
+    compareYear,
+    setCompareYear,
+    compareEnabled,
+    setCompareEnabled,
+  } = period;
+
   return (
     <div
       className="rounded-lg p-4 flex flex-wrap items-center gap-4"
@@ -65,6 +73,7 @@ export default function CrossDomainYearFilter({
           {t("stats:overviewFilter.compareWith")}
         </label>
         <select
+          aria-label={t("stats:overviewFilter.compareWith")}
           className="text-xs rounded-sm border px-2 py-1 font-mono"
           style={{
             background: "var(--bg-elevated)",
@@ -101,6 +110,7 @@ function YearPill({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className="px-3 py-1 rounded-full text-xs font-mono border transition-colors"
       style={{
         background: active ? "var(--accent)" : "var(--bg-elevated)",
