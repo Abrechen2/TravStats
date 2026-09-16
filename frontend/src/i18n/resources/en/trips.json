@@ -405,5 +405,14 @@
       "loadError": "Settings could not be loaded",
       "saveError": "Save failed"
     }
+  },
+  "head": {
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "countries_one": "{{count}} country",
+    "countries_other": "{{count}} countries"
+  },
+  "overview": {
+    "daysAway": "Days away"
   }
 }

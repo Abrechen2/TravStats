@@ -41,7 +41,6 @@
     "components/Trips/DetectReviewModal.tsx",
     "components/Trips/TripCard.tsx",
     "components/Trips/TripGallery.tsx",
-    "components/Trips/TripHero.tsx",
     "components/Trips/TripsTab.tsx",
     "components/UpdateBadge.tsx",
     "components/layers/cruisePortsLayer.ts",

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
-import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { sumByCurrency } from "../lib/bookingCost";
 import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { formatDateTimeInTimezone } from "../lib/dateUtils";
@@ -21,7 +21,10 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
-import TripHero from "../components/Trips/TripHero";
+import TripHead from "../components/Trips/TripHead";
+import Pill from "../components/ui/Pill";
+import { token } from "../components/ui/tokens";
+import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import JournalPreview from "../components/Trips/JournalPreview";
@@ -29,14 +32,8 @@ import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
-import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
 import TourSectionList from "../components/Trips/TourSectionList";
-import {
-  PanelHeader,
-  Placeholder,
-  SidePanel,
-  StatTile,
-} from "../components/Trips/TripDetailPanels";
+import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import {
   compareTimelineEvents,
   formatTimelineDate,
@@ -48,14 +45,6 @@ import type { Place, PlaceVisit } from "../types/place";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "tours"];
-const TAB_ICON: Record<TabKey, string> = {
-  overview: "📋",
-  timeline: "📅",
-  map: "🗺",
-  gallery: "📷",
-  logistics: "🧾",
-  tours: "🛣",
-};
 
 /**
  * Trip detail page with five tabs (Phase-1 iteration 2).
@@ -160,7 +149,7 @@ export default function TripDetailPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <TripHero
+      <TripHead
         trip={shownTrip}
         locale={i18n.language}
         t={t}
@@ -196,7 +185,7 @@ export default function TripDetailPage(): JSX.Element {
           </div>
         )}
         {tab === "overview" && (
-          <OverviewTab
+          <TripOverview
             trip={shownTrip}
             t={t}
             language={i18n.language}
@@ -272,129 +261,36 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
   const { isFeatureVisible } = useBetaFeatures();
   const visibleTabs = TABS.filter((key) => key !== "tours" || isFeatureVisible("tourRoutes"));
 
+  // Round 4: text tabs with the accent underline, like the logbook's. The
+  // emoji in front of each label were the last ones in a tab bar.
   return (
     <div
-      className="sticky top-0 z-30"
-      style={{
-        background: "var(--bg-base)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
+      role="tablist"
+      className="flex overflow-x-auto overflow-y-hidden scrollbar-none"
+      style={{ borderBottom: "1px solid var(--ts-border)" }}
     >
-      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
-        {visibleTabs.map((key) => {
-          const isActive = tab === key;
-          return (
-            <button
-              key={key}
-              onClick={() => onChange(key)}
-              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-(--text-primary)"
-              style={{
-                color: isActive ? "var(--accent)" : "var(--text-secondary)",
-                borderColor: isActive ? "var(--accent)" : "transparent",
-                marginBottom: -1,
-              }}
-            >
-              <span className="mr-1.5">{TAB_ICON[key]}</span>
-              {t(`trips:detail.tabs.${key}`)}
-            </button>
-          );
-        })}
-      </div>
+      {visibleTabs.map((key) => {
+        const isActive = tab === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(key)}
+            className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
+            style={{
+              fontWeight: isActive ? 700 : 500,
+              color: isActive ? "var(--ts-text-bright)" : "var(--ts-muted)",
+              boxShadow: `inset 0 -2px 0 ${isActive ? "var(--ts-accent)" : "transparent"}`,
+            }}
+          >
+            {t(`trips:detail.tabs.${key}`)}
+            {key === "tours" && <Pill color={token("accent")}>Beta</Pill>}
+          </button>
+        );
+      })}
     </div>
-  );
-}
-
-/* ─────────── Tab: Overview ─────────── */
-
-function OverviewTab({
-  trip,
-  t,
-  language,
-  onChanged,
-}: {
-  trip: Trip;
-  t: ReturnType<typeof useTranslation>["t"];
-  language: string | undefined;
-  onChanged: () => void;
-}): JSX.Element {
-  return (
-    <>
-      <TripStatsRow trip={trip} t={t} language={language} />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-        <div className="lg:col-span-2 space-y-4">
-          <TripSummaryPanel trip={trip} t={t} language={language ?? "de"} onChanged={onChanged} />
-          {trip.notes && <NotesPanel notes={trip.notes} t={t} />}
-          {!trip.notes && (
-            <div
-              className="rounded-xl p-4 text-sm"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px dashed var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              {t("trips:modal.notesPlaceholder")}
-            </div>
-          )}
-        </div>
-        <div className="space-y-4">
-          {trip.companions.length > 0 && (
-            <SidePanel title={t("trips:detail.companions")}>
-              <div className="flex flex-wrap gap-2">
-                {trip.companions.map((name) => (
-                  <span
-                    key={name}
-                    className="px-2 py-1 rounded-full text-xs"
-                    style={{
-                      background: "var(--bg-muted)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
-            </SidePanel>
-          )}
-          {trip.tags.length > 0 && (
-            <SidePanel title={t("trips:detail.tags")}>
-              <div className="flex flex-wrap gap-1">
-                {trip.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-0.5 rounded-sm text-xs"
-                    style={{
-                      background: "var(--bg-muted)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </SidePanel>
-          )}
-          {trip.countries.length > 0 && (
-            <SidePanel title={t("trips:detail.countries")}>
-              <div className="flex flex-wrap gap-1 font-mono text-xs">
-                {trip.countries.map((cc) => (
-                  <span
-                    key={cc}
-                    className="px-2 py-0.5 rounded-sm"
-                    style={{
-                      background: "var(--bg-muted)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    {cc}
-                  </span>
-                ))}
-              </div>
-            </SidePanel>
-          )}
-        </div>
-      </div>
-    </>
   );
 }
 
@@ -1503,78 +1399,3 @@ function LogisticsTab({
 }
 
 /* ─────────── Shared bits ─────────── */
-
-function TripStatsRow({
-  trip,
-  t,
-  language,
-}: {
-  trip: Trip;
-  t: ReturnType<typeof useTranslation>["t"];
-  language: string | undefined;
-}): JSX.Element {
-  // Domain-gating: the cruise/lodging tile disappears entirely when that
-  // domain is disabled (a "0" tile would still advertise the domain).
-  const { isEnabled } = useEnabledDomains();
-  const cruiseEnabled = isEnabled("cruise");
-  const lodgingEnabled = isEnabled("lodging");
-  const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
-  const lodgingCount = trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0;
-  // Cruises and lodging stays count towards the total exactly as flights do —
-  // but only while their domain is on, matching the tiles above.
-  const costTotals = sumByCurrency(
-    tripCostSources(
-      trip.bookings ?? [],
-      trip.flights ?? [],
-      cruiseEnabled ? (trip.cruises ?? []) : [],
-      lodgingEnabled ? (trip.lodgingStays ?? []) : []
-    )
-  );
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-      <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
-      {cruiseEnabled && <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />}
-      {lodgingEnabled && <StatTile value={lodgingCount} label={t("trips:detail.stats.lodging")} />}
-      <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
-      <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
-      {/* Through `formatCurrency`, like the trip card: the tile wrote
-          "EUR 40206" while the card beside it wrote "40.206 €" (forgejo#86). */}
-      <StatTile
-        value={
-          costTotals.length > 0
-            ? costTotals
-                .map((c) => formatCurrency(c.total, c.currency, { compact: true, language }))
-                .join(" + ")
-            : "—"
-        }
-        label={t("trips:totalCost")}
-      />
-      <StatTile value={trip.tags.length} label={t("trips:detail.stats.tags")} />
-    </div>
-  );
-}
-
-function NotesPanel({
-  notes,
-  t,
-}: {
-  notes: string;
-  t: ReturnType<typeof useTranslation>["t"];
-}): JSX.Element {
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div
-        className="text-[10px] uppercase tracking-wide mb-2"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {t("trips:detail.notes")}
-      </div>
-      <div className="text-sm whitespace-pre-wrap leading-relaxed">{notes}</div>
-    </div>
-  );
-}
