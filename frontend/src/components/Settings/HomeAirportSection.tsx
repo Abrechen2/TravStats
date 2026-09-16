@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
 import AirportAutocomplete from "../AirportAutocomplete";
 import { useTranslation } from "../../hooks/useTranslation";
 import { settingsApi, type HomeAirportEntry } from "../../lib/api";
@@ -88,21 +89,21 @@ export default function HomeAirportSection(): JSX.Element {
         description={t("settings:homeAirport.description")}
       />
 
-
       {loading ? (
-        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
+        <p className="t-caption">{t("common:loading.default")}</p>
       ) : (
         <>
-          {/* Current home airport */}
-          <div>
-            <label className="label">{t("settings:homeAirport.currentLabel")}</label>
+          <SettingRows>
             {current ? (
-              <div className="flex items-center gap-3 p-3 rounded-sm border border-border">
-                <span className="font-semibold text-lg">{current.iata}</span>
-                <span className="text-sm text-(--text-muted)">
-                  {t("settings:homeAirport.since", { date: current.fromDate })}
-                </span>
-                <div className="ml-auto">
+              <SettingRow
+                title={t("settings:homeAirport.currentLabel")}
+                sub={
+                  <span style={{ fontFamily: "var(--ts-font-mono)" }}>
+                    <strong style={{ color: "var(--ts-text-bright)" }}>{current.iata}</strong> ·{" "}
+                    {t("settings:homeAirport.since", { date: current.fromDate })}
+                  </span>
+                }
+                control={
                   <button
                     type="button"
                     className="btn-secondary"
@@ -113,59 +114,67 @@ export default function HomeAirportSection(): JSX.Element {
                   >
                     {t("settings:homeAirport.iMoved")}
                   </button>
-                </div>
-              </div>
+                }
+              />
             ) : (
-              <div className="p-3 rounded-sm border border-dashed border-border text-sm text-(--text-muted) flex items-center justify-between gap-3">
-                <span>{t("settings:homeAirport.notSet")}</span>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    setPickerOpen(true);
-                    setPickerFromDate(todayIso());
-                  }}
-                >
-                  {t("settings:homeAirport.setNow")}
-                </button>
+              <SettingRow
+                title={t("settings:homeAirport.currentLabel")}
+                sub={t("settings:homeAirport.notSet")}
+                control={
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => {
+                      setPickerOpen(true);
+                      setPickerFromDate(todayIso());
+                    }}
+                  >
+                    {t("settings:homeAirport.setNow")}
+                  </button>
+                }
+              />
+            )}
+
+            {past.length > 0 && (
+              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                <FieldLabel help={t("settings:homeAirport.help.historyExplained")}>
+                  {t("settings:homeAirport.historyLabel")}
+                </FieldLabel>
+                <SettingRows>
+                  {past.map((entry) => {
+                    const trueIndex = history.indexOf(entry);
+                    return (
+                      <SettingRow
+                        key={`${entry.iata}-${entry.fromDate}`}
+                        title={entry.iata}
+                        sub={
+                          <span style={{ fontFamily: "var(--ts-font-mono)" }}>
+                            {entry.fromDate} →{" "}
+                            {entry.toDate ?? t("settings:homeAirport.stillActive")}
+                          </span>
+                        }
+                        control={
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ color: "var(--ts-bad)" }}
+                            onClick={() => void handleDelete(trueIndex)}
+                            disabled={saving}
+                          >
+                            {t("common:buttons.delete")}
+                          </button>
+                        }
+                      />
+                    );
+                  })}
+                </SettingRows>
               </div>
             )}
-          </div>
-
-          {/* History */}
-          {past.length > 0 && (
-            <div>
-              <FieldLabel help={t("settings:homeAirport.help.historyExplained")}>{t("settings:homeAirport.historyLabel")}</FieldLabel>
-              <ul className="space-y-1">
-                {past.map((entry) => {
-                  const trueIndex = history.indexOf(entry);
-                  return (
-                    <li
-                      key={`${entry.iata}-${entry.fromDate}`}
-                      className="flex items-center gap-3 p-2 text-sm rounded-sm border border-border"
-                    >
-                      <span className="font-semibold">{entry.iata}</span>
-                      <span className="text-(--text-muted)">
-                        {entry.fromDate} → {entry.toDate ?? t("settings:homeAirport.stillActive")}
-                      </span>
-                      <button
-                        type="button"
-                        className="ml-auto text-xs text-red-600 hover:underline disabled:opacity-50"
-                        onClick={() => void handleDelete(trueIndex)}
-                        disabled={saving}
-                      >
-                        {t("common:buttons.delete")}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+          </SettingRows>
 
           {/* Picker */}
           {pickerOpen && (
-            <div className="p-4 rounded-sm border border-border space-y-3">
+            <div className="space-y-3">
               <h4 className="font-semibold">
                 {current
                   ? t("settings:homeAirport.newHomeHeading")
@@ -189,9 +198,7 @@ export default function HomeAirportSection(): JSX.Element {
                   onChange={(e) => setPickerFromDate(e.target.value)}
                   max={todayIso()}
                 />
-                <p className="text-xs text-(--text-muted) mt-1">
-                  {t("settings:homeAirport.fromDateHint")}
-                </p>
+                <p className="t-caption mt-1">{t("settings:homeAirport.fromDateHint")}</p>
               </div>
               <div className="flex gap-2">
                 <button

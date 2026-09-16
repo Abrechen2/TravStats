@@ -212,7 +212,8 @@
       "business": "Business",
       "first": "First",
       "private": "Privat",
-      "vacation": "Urlaub"
+      "vacation": "Urlaub",
+      "noneShort": "Keine"
     },
     "help": {
       "status": "\"Geplant\" ist sinnvoll für zukünftige Flüge; \"Geflogen\" für den Schnelleintrag vergangener Flüge.",

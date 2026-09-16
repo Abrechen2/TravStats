@@ -107,8 +107,6 @@
     "components/PendingUpdateCard.tsx",
     "components/PendingUpdateEditor.tsx",
     "components/ReceiptUpload.tsx",
-    "components/Settings/FeaturesSection.tsx",
-    "components/Settings/HomeAirportSection.tsx",
     "components/Settings/PasskeySection.tsx",
     "components/Settings/SecuritySection.tsx",
     "components/SimplifiedFlightFormV2.tsx",

@@ -212,7 +212,8 @@
       "business": "Business",
       "first": "First",
       "private": "Private",
-      "vacation": "Vacation"
+      "vacation": "Vacation",
+      "noneShort": "None"
     },
     "help": {
       "status": "\"Scheduled\" makes sense for upcoming flights; \"Flown\" is convenient when quickly entering past flights.",

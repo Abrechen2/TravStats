@@ -137,7 +137,7 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
   return (
     <label
       htmlFor={id}
-      className="flex items-start justify-between"
+      className="flex items-center justify-between"
       style={{
         gap: "var(--ts-space-lg)",
         minHeight: "var(--ts-size-touch-min)",

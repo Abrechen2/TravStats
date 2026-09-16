@@ -341,36 +341,39 @@ export function useSettingsPage() {
     }
   };
 
-  const saveAutoUpdateSettings = async () => {
+  // Saved as they change (round 4, E10): the section passes the value it just
+  // set, because the state update has not landed when the save runs. A success
+  // says nothing — the switch already shows it; a failure says so and puts the
+  // server's value back, so the screen never shows a state that is not stored.
+  const saveAutoUpdateSettings = async (next: AutoUpdateSettings = autoUpdateSettings) => {
     try {
       setLoadingAutoUpdateSettings(true);
-      await settingsApi.update({ autoUpdate: autoUpdateSettings });
-      const reloaded = await settingsApi.get();
-      if (reloaded.autoUpdate) setAutoUpdateSettings(reloaded.autoUpdate);
-      addToast(
-        "success",
-        t("settings:autoUpdate.saved") || "Auto-Update-Einstellungen gespeichert"
-      );
+      setAutoUpdateSettings(next);
+      await settingsApi.update({ autoUpdate: next });
     } catch (error) {
       logger.error("Failed to save auto-update settings:", error);
       addToast("error", t("settings:autoUpdate.saveFailed") || "Fehler beim Speichern");
+      const reloaded = await settingsApi.get().catch(() => null);
+      if (reloaded?.autoUpdate) setAutoUpdateSettings(reloaded.autoUpdate);
     } finally {
       setLoadingAutoUpdateSettings(false);
     }
   };
 
-  const saveHistoricalEnrichmentSettings = async () => {
+  const saveHistoricalEnrichmentSettings = async (
+    next: HistoricalEnrichmentSettings = historicalEnrichmentSettings
+  ) => {
     try {
       setLoadingHistoricalEnrichmentSettings(true);
-      await settingsApi.update({ historicalEnrichment: historicalEnrichmentSettings });
-      const reloaded = await settingsApi.get();
-      if (reloaded.historicalEnrichment) {
-        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
-      }
-      addToast("success", t("settings:historicalEnrichment.saved") || "Einstellungen gespeichert");
+      setHistoricalEnrichmentSettings(next);
+      await settingsApi.update({ historicalEnrichment: next });
     } catch (error) {
       logger.error("Failed to save historical enrichment settings:", error);
       addToast("error", t("settings:historicalEnrichment.saveFailed") || "Fehler beim Speichern");
+      const reloaded = await settingsApi.get().catch(() => null);
+      if (reloaded?.historicalEnrichment) {
+        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
+      }
     } finally {
       setLoadingHistoricalEnrichmentSettings(false);
     }
