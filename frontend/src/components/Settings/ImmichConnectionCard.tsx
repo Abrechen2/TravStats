@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import type { ImmichConnectionStatus, ImmichMode, ImmichTestResult } from "../../types/immich";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
+import { Segmented } from "../ui/Segmented";
 
 /**
  * User-facing Immich connection settings.
@@ -101,39 +105,39 @@ export default function ImmichConnectionCard(): JSX.Element {
   };
 
   return (
-    <section className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-      <header className="mb-3">
-        <h3 className="text-lg font-semibold">{t("title")}</h3>
-        <p className="text-sm text-slate-400">{t("subtitle")}</p>
-        {status?.isShared && <span className="text-xs text-amber-400">{t("shared")}</span>}
-      </header>
+    <SectionCard>
+      <SectionTitle
+        title={t("title")}
+        description={t("subtitle")}
+        badge={status?.isShared ? <Pill color={token("accent")}>{t("shared")}</Pill> : undefined}
+      />
 
-      <label className="block text-sm" htmlFor="immich-base-url">
+      <label className="label" htmlFor="immich-base-url">
         {t("baseUrl")}
       </label>
       <input
         id="immich-base-url"
-        className="mb-3 w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
+        className="input"
         placeholder={t("baseUrlPlaceholder")}
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
       />
 
-      <label className="block text-sm" htmlFor="immich-api-key">
+      <label className="label" htmlFor="immich-api-key">
         {t("apiKey")}
       </label>
       <input
         id="immich-api-key"
         type="password"
         autoComplete="off"
-        className="w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
+        className="input"
         placeholder={t("apiKeyPlaceholder")}
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
       />
-      <p className="mt-1 text-xs text-slate-400">{t("apiKeyScopes")}</p>
+      <p className="t-caption">{t("apiKeyScopes")}</p>
       {status?.hasKey && (
-        <div className="mb-3 mt-1 flex items-center gap-2 text-xs text-slate-400">
+        <div className="t-caption flex items-center gap-2">
           <span>{t("apiKeyStored")}</span>
           <button type="button" className="underline" onClick={() => void handleClearKey()}>
             {t("clearKey")}
@@ -141,29 +145,27 @@ export default function ImmichConnectionCard(): JSX.Element {
         </div>
       )}
 
-      <fieldset className="my-3">
-        <legend className="text-sm">{t("defaultMode")}</legend>
-        {(["link", "import"] as const).map((mode) => (
-          <label key={mode} className="mr-4 inline-flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="immich-default-mode"
-              checked={defaultMode === mode}
-              onChange={() => setDefaultMode(mode)}
-            />
-            {mode === "link" ? t("modeLink") : t("modeImport")}
-          </label>
-        ))}
-        <p className="text-xs text-slate-400">
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+        <span className="label">{t("defaultMode")}</span>
+        <Segmented
+          label={t("defaultMode")}
+          value={defaultMode}
+          options={[
+            { value: "link", label: t("modeLink") },
+            { value: "import", label: t("modeImport") },
+          ]}
+          onChange={setDefaultMode}
+        />
+        <p className="t-caption">
           {defaultMode === "link" ? t("modeLinkHint") : t("modeImportHint")}
         </p>
-      </fieldset>
+      </div>
 
       <div className="flex gap-2">
         <button
           type="button"
           disabled={saving}
-          className="btn-primary px-3 py-1.5 text-sm"
+          className="btn-primary"
           onClick={() => void handleSave()}
         >
           {saving ? t("saving") : t("save")}
@@ -171,7 +173,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         <button
           type="button"
           disabled={testing}
-          className="btn-secondary px-3 py-1.5 text-sm"
+          className="btn-secondary"
           onClick={() => void handleTest()}
         >
           {testing ? t("testing") : t("test")}
@@ -179,13 +181,21 @@ export default function ImmichConnectionCard(): JSX.Element {
       </div>
 
       {testResult && (
-        <p className={`mt-2 text-sm ${testResult.success ? "text-emerald-400" : "text-rose-400"}`}>
+        <p
+          role="status"
+          className="text-sm"
+          style={{ color: token(testResult.success ? "good" : "bad") }}
+        >
           {testResult.success
             ? t("connected", { version: testResult.details?.version ?? "?" })
             : t(failureKey(testResult.kind))}
         </p>
       )}
-      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
-    </section>
+      {error && (
+        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+          {error}
+        </p>
+      )}
+    </SectionCard>
   );
 }
