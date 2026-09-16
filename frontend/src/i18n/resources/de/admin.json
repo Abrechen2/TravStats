@@ -295,7 +295,11 @@
       "message": "Zwei-Faktor-Anmeldung für „{{username}}“ ausschalten? Die nächste Anmeldung braucht dann nur noch das Passwort. Das ist der Weg zurück ins Konto, wenn Telefon UND Wiederherstellungscodes weg sind.",
       "confirm": "Zurücksetzen"
     },
-    "description": "Alle Benutzer dieser Instanz — Rollen ändern und Konten deaktivieren. Ein deaktiviertes Konto kann sich nicht mehr anmelden, seine Daten bleiben erhalten."
+    "description": "Alle Benutzer dieser Instanz — Rollen ändern und Konten deaktivieren. Ein deaktiviertes Konto kann sich nicht mehr anmelden, seine Daten bleiben erhalten.",
+    "twoFactor": {
+      "on": "Aktiv",
+      "off": "Aus"
+    }
   },
   "invitations": {
     "title": "Einladungen verwalten",

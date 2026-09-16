@@ -1,11 +1,14 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, type ReactNode } from "react";
+import { formatIsoDate } from "../../lib/dateUtils";
+import { statusPillStyle } from "../table/statusPillStyle";
+import { Icon } from "../ui/Icon";
 import { AnimatePresence } from "framer-motion";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import type { AdminUser } from "./SystemInfo";
 import AdminPasswordResetModal from "./AdminPasswordResetModal";
 import ConfirmModal from "../Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 
 interface UserManagementProps {
   users: AdminUser[];
@@ -39,119 +42,146 @@ export default function UserManagement({
       {/* Was the collapsed help box. The sentence that matters is the one about
           deactivation keeping the data — an admin should not have to open
           anything to learn that. */}
-      <p className="text-sm text-(--text-muted)">{t("admin:users.description")}</p>
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[720px]">
-          <thead className="bg-(--bg-base)">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:users.table.username")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:users.table.flights")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+      <p className="t-caption">{t("admin:users.description")}</p>
+      {/* Round 4 ("Admin v2"): initials, role and 2FA as pills, figures in
+          mono, and the row's actions behind "…" — four text links in a row
+          pushed the table past its card at every width. */}
+      {/* Scrolls sideways only on a phone: a scroll box would clip the row
+          menu of the last rows, and from md up the table fits. */}
+      <div
+        className="overflow-x-auto md:overflow-visible"
+        style={{
+          background: "var(--ts-surface)",
+          border: "1px solid var(--ts-border)",
+          borderRadius: "var(--ts-radius-card)",
+        }}
+      >
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr
+              className="t-label-mono text-left"
+              style={{ borderBottom: "1px solid var(--ts-border)" }}
+            >
+              <th className="px-5 py-3 font-normal">{t("admin:users.table.username")}</th>
+              <th className="px-3 py-3 font-normal">{t("admin:users.table.role")}</th>
+              <th className="px-3 py-3 text-right font-normal">{t("admin:users.table.flights")}</th>
+              <th className="px-3 py-3 text-right font-normal">
                 {t("admin:users.table.achievements")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:users.table.role")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:users.table.status")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:users.table.actions")}
+              <th className="px-3 py-3 font-normal">2FA</th>
+              <th className="px-3 py-3 font-normal">{t("admin:users.table.status")}</th>
+              <th className="w-12 px-3 py-3">
+                <span className="sr-only">{t("admin:users.table.actions")}</span>
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+          <tbody className="divide-y divide-[var(--ts-border)]">
             {users.map((user) => (
               <tr key={user.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-(--text-primary)">{user.username}</div>
-                  <div className="text-xs text-(--text-muted)">
-                    {format(new Date(user.createdAt), "MMM d, yyyy")}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
-                  {user._count.flights}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
-                  {user._count.userAchievements}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {user.isAdmin ? (
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-3">
                     <span
-                      className="px-2 py-1 text-xs font-semibold rounded-full"
+                      aria-hidden="true"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                       style={{
-                        background: "var(--accent-soft)",
-                        color: "var(--accent)",
-                        border: "1px solid var(--accent)",
+                        background: "var(--ts-surface2)",
+                        color: "var(--ts-text-bright)",
+                        fontFamily: "var(--ts-font-mono)",
                       }}
                     >
-                      {t("admin:users.role.admin")}
+                      {user.username.slice(0, 2).toUpperCase()}
                     </span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--bg-elevated) text-(--text-primary)">
-                      {t("admin:users.role.user")}
+                    <span className="flex flex-col">
+                      <span style={{ fontWeight: 700, color: "var(--ts-text-bright)" }}>
+                        {user.username}
+                      </span>
+                      <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+                        {formatIsoDate(user.createdAt)}
+                      </span>
                     </span>
-                  )}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {user.isActive ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--success)/15 text-(--success)">
-                      {t("admin:users.status.active")}
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--danger)/15 text-(--danger)">
-                      {t("admin:users.status.inactive")}
-                    </span>
-                  )}
+                <td className="px-3 py-3">
+                  <span
+                    className="ts-status-pill"
+                    style={statusPillStyle(user.isAdmin ? "in_progress" : "historical")}
+                  >
+                    {user.isAdmin ? t("admin:users.role.admin") : t("admin:users.role.user")}
+                  </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    onClick={() => onToggleUserActive(user.id)}
-                    className="text-(--accent) hover:text-(--accent)"
+                <td className="px-3 py-3 text-right" style={MONO}>
+                  {user._count.flights}
+                </td>
+                <td className="px-3 py-3 text-right" style={MONO}>
+                  {user._count.userAchievements}
+                </td>
+                <td className="px-3 py-3">
+                  <span
+                    className="ts-status-pill"
+                    style={statusPillStyle(user.twoFactorEnabledAt ? "completed" : "historical")}
+                  >
+                    {user.twoFactorEnabledAt
+                      ? t("admin:users.twoFactor.on")
+                      : t("admin:users.twoFactor.off")}
+                  </span>
+                </td>
+                <td className="px-3 py-3">
+                  <span
+                    className="ts-status-pill"
+                    style={statusPillStyle(user.isActive ? "completed" : "cancelled")}
                   >
                     {user.isActive
-                      ? t("admin:users.actions.deactivate")
-                      : t("admin:users.actions.activate")}
-                  </button>
-                  {" · "}
-                  <button
-                    onClick={() => setResetModalUser({ id: user.id, username: user.username })}
-                    className="text-orange-500 hover:text-orange-400"
-                  >
-                    {t("admin:users.actions.resetPassword")}
-                  </button>
-                  {/* Only offered while 2FA is actually on — its presence IS
-                      the indicator, no extra badge column needed. */}
-                  {user.twoFactorEnabledAt !== null && (
-                    <>
-                      {" · "}
-                      <button
-                        onClick={() =>
-                          setResetTwoFactorConfirm({ id: user.id, username: user.username })
-                        }
-                        className="text-orange-500 hover:text-orange-400"
-                      >
-                        {t("admin:users.actions.resetTwoFactor")}
-                      </button>
-                    </>
-                  )}
-                  {user.id !== currentUserId && (
-                    <>
-                      {" · "}
-                      <button
-                        onClick={() =>
-                          setDeleteUserConfirm({ id: user.id, username: user.username })
-                        }
-                        className="text-(--danger) hover:text-(--danger)"
-                      >
-                        {t("admin:users.actions.delete")}
-                      </button>
-                    </>
-                  )}
+                      ? t("admin:users.status.active")
+                      : t("admin:users.status.inactive")}
+                  </span>
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <RowMenu label={t("common:buttons.moreActions")}>
+                    {(close) => (
+                      <>
+                        <MenuItem
+                          onClick={() => {
+                            close();
+                            onToggleUserActive(user.id);
+                          }}
+                        >
+                          {user.isActive
+                            ? t("admin:users.actions.deactivate")
+                            : t("admin:users.actions.activate")}
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => {
+                            close();
+                            setResetModalUser({ id: user.id, username: user.username });
+                          }}
+                        >
+                          {t("admin:users.actions.resetPassword")}
+                        </MenuItem>
+                        {/* Only offered while 2FA is actually on. */}
+                        {user.twoFactorEnabledAt !== null && (
+                          <MenuItem
+                            onClick={() => {
+                              close();
+                              setResetTwoFactorConfirm({ id: user.id, username: user.username });
+                            }}
+                          >
+                            {t("admin:users.actions.resetTwoFactor")}
+                          </MenuItem>
+                        )}
+                        {user.id !== currentUserId && (
+                          <MenuItem
+                            danger
+                            onClick={() => {
+                              close();
+                              setDeleteUserConfirm({ id: user.id, username: user.username });
+                            }}
+                          >
+                            {t("admin:users.actions.delete")}
+                          </MenuItem>
+                        )}
+                      </>
+                    )}
+                  </RowMenu>
                 </td>
               </tr>
             ))}
@@ -199,8 +229,79 @@ export default function UserManagement({
         })}
         confirmText={t("admin:users.deleteConfirm.confirm")}
         cancelText={t("common:buttons.cancel")}
-        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white"
+        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </div>
+  );
+}
+
+const MONO = { fontFamily: "var(--ts-font-mono)", color: "var(--ts-text-bright)" } as const;
+
+/** A row's "…" menu: rare and destructive actions stay one click away, not in the row. */
+function RowMenu({
+  label,
+  children,
+}: {
+  label: string;
+  children: (close: () => void) => ReactNode;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="relative inline-block"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--ts-radius-button)]"
+        style={{ color: "var(--ts-muted)" }}
+      >
+        <Icon name="ellipsis" size={16} />
+      </button>
+      {open && (
+        <span
+          role="menu"
+          className="absolute right-0 z-30 mt-1 flex min-w-48 flex-col p-1 text-left shadow-xl"
+          style={{
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+            borderRadius: "var(--ts-radius-button)",
+          }}
+        >
+          {children(() => setOpen(false))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function MenuItem({
+  onClick,
+  danger,
+  children,
+}: {
+  onClick: () => void;
+  danger?: boolean;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="whitespace-nowrap rounded-[var(--ts-radius-button)] px-3 py-2 text-left text-sm hover:bg-[var(--ts-surface2)]"
+      style={{ color: danger ? "var(--ts-bad)" : "var(--ts-text-bright)" }}
+    >
+      {children}
+    </button>
   );
 }

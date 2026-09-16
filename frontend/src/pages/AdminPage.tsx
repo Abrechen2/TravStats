@@ -5,6 +5,8 @@ import { adminApi } from "../lib/api";
 import axios from "axios";
 import { logger } from "../lib/logger";
 import AppShell from "../components/ui/AppShell";
+import PageHeader from "../components/ui/PageHeader";
+import AdminIndex from "../components/Admin/AdminIndex";
 import { useDomainTabs } from "../hooks/useDomainTabs";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOMAINS } from "../shared/domains";
@@ -607,113 +609,69 @@ export default function AdminPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      {/* Top tab bar — same pattern as SettingsPage (commit fbbcd13) */}
       <div
-        className="px-4 pt-3"
-        style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
+        className="grid md:grid-cols-[240px_minmax(0,1fr)]"
+        style={{ gap: "var(--ts-space-xxl)" }}
       >
-        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={(): void => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "border-(--accent) text-(--accent)"
-                  : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
-              }`}
-            >
-              {tab.icon && (
-                <span className="mr-1.5" aria-hidden>
-                  {tab.icon}
-                </span>
-              )}
-              {tab.label}
-            </button>
-          ))}
+        <div className="hidden md:block">
+          <AdminIndex
+            tabs={tabs}
+            activeTab={activeTab}
+            onTab={(id) => setActiveTab(id as TabId)}
+            sections={sections}
+            activeSection={activeSection}
+            onSection={(id) => setActiveSection(id as ActiveSection)}
+          />
         </div>
-      </div>
 
-      {/* Mobile section picker — mirrors SettingsPage; the desktop
-          sidebar takes over from md upward. */}
-      <div
-        className="md:hidden px-4 py-2 sticky top-0 z-10"
-        style={{
-          background: "var(--bg-base)",
-          borderBottom: "1px solid var(--color-border)",
-        }}
-      >
-        <label htmlFor="admin-section-picker" className="sr-only">
-          {t("admin:sectionPicker", { defaultValue: "Bereich" })}
-        </label>
-        <select
-          id="admin-section-picker"
-          value={activeSection}
-          onChange={(e): void => setActiveSection(e.target.value as ActiveSection)}
-          className="input w-full"
-        >
-          {sections.map((section) => (
-            <option key={section.id} value={section.id}>
-              {section.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <main className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+          {/* The scope line is the counterpart of the one in user settings:
+              everything here is instance-wide. */}
+          <PageHeader
+            title={`${t("admin:title")} · ${sections.find((s) => s.id === activeSection)?.label ?? ""}`}
+            meta={t("admin:scopeHint")}
+          />
 
-      <div className="flex md:h-[calc(100vh-3.5rem-2.75rem)]">
-        {/* Sidebar */}
-        <aside
-          className="w-52 shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
-          style={{
-            background: "var(--bg-surface)",
-            borderRight: "1px solid var(--color-border)",
-          }}
-        >
-          <div className="px-4 pb-3 mb-1" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            <h1 className="t-screen-title">{t("admin:title")}</h1>
-            {/* The counterpart of the scope line in user settings. Everything on
-                this surface is instance-wide; saying so is what distinguishes
-                "Externe Dienste (Instanz)" here from "Meine externen Dienste"
-                over there. */}
-            <p className="mt-1 text-xs normal-case" style={{ color: "var(--text-muted)" }}>
-              {t("admin:scopeHint")}
-            </p>
-          </div>
-          <nav className="space-y-0.5 px-2 mt-2">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between"
-                style={{
-                  background: activeSection === section.id ? "var(--bg-elevated)" : "transparent",
-                  color: activeSection === section.id ? "var(--accent)" : "var(--text-secondary)",
-                  borderLeft:
-                    activeSection === section.id
-                      ? "2px solid var(--accent)"
-                      : "2px solid transparent",
-                }}
-              >
-                <span>{section.label}</span>
-                {section.badge !== undefined && (
-                  <span
-                    className="ml-1 px-1.5 py-0.5 text-xs rounded-full font-medium"
+          {/* Phone: the area tabs and a section picker in place of the column. */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {tabs.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto scrollbar-none">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    aria-pressed={activeTab === tab.id}
+                    onClick={(): void => setActiveTab(tab.id)}
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold"
                     style={{
-                      background: "var(--bg-base)",
-                      color: "var(--text-muted)",
+                      background: activeTab === tab.id ? "var(--ts-accent)" : "transparent",
+                      color:
+                        activeTab === tab.id ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
+                      border: `1px solid ${activeTab === tab.id ? "var(--ts-accent)" : "var(--ts-border)"}`,
                     }}
                   >
-                    {section.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </aside>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <label htmlFor="admin-section-picker" className="sr-only">
+              {t("admin:sectionPicker", { defaultValue: "Bereich" })}
+            </label>
+            <select
+              id="admin-section-picker"
+              value={activeSection}
+              onChange={(e): void => setActiveSection(e.target.value as ActiveSection)}
+              className="input w-full"
+            >
+              {sections.map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {activeSection === "shipsMasterData" && <ShipsSection />}
 
           {activeSection === "portsMasterData" && <PortsSection />}
@@ -836,18 +794,18 @@ export default function AdminPage(): JSX.Element {
             <div className="space-y-6">
               <div
                 style={{
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
+                  background: "var(--ts-surface)",
+                  border: "1px solid var(--ts-border)",
+                  borderRadius: "var(--ts-radius-card)",
                 }}
               >
                 <InstanceSettings />
               </div>
               <div
                 style={{
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
+                  background: "var(--ts-surface)",
+                  border: "1px solid var(--ts-border)",
+                  borderRadius: "var(--ts-radius-card)",
                 }}
               >
                 <UsageStatsSettings />
@@ -860,9 +818,9 @@ export default function AdminPage(): JSX.Element {
               <BackupManagement />
               <div
                 style={{
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
+                  background: "var(--ts-surface)",
+                  border: "1px solid var(--ts-border)",
+                  borderRadius: "var(--ts-radius-card)",
                 }}
               >
                 <WebDAVSettings />
@@ -873,9 +831,9 @@ export default function AdminPage(): JSX.Element {
           {activeSection === "smtp" && (
             <div
               style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 12,
+                background: "var(--ts-surface)",
+                border: "1px solid var(--ts-border)",
+                borderRadius: "var(--ts-radius-card)",
                 padding: 24,
               }}
             >

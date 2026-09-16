@@ -46,12 +46,16 @@ describe("UserManagement — reset 2FA", () => {
   // without 2FA would suggest a state that does not exist.
   it("offers no reset action while 2FA is off", () => {
     renderWith(user({ twoFactorEnabledAt: null }));
+    // Open the row menu first, or the absence would be vacuous.
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.moreActions" }));
+    expect(screen.getByText("admin:users.actions.resetPassword")).toBeTruthy();
     expect(screen.queryByText("admin:users.actions.resetTwoFactor")).toBeNull();
   });
 
   it("offers the action when 2FA is on, and asks before acting", () => {
     renderWith(user({ twoFactorEnabledAt: "2026-08-09T12:00:00.000Z" }));
 
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.moreActions" }));
     fireEvent.click(screen.getByText("admin:users.actions.resetTwoFactor"));
     // Confirm dialog open, nothing has happened yet.
     expect(onResetTwoFactor).not.toHaveBeenCalled();
@@ -63,6 +67,7 @@ describe("UserManagement — reset 2FA", () => {
   it("does nothing when the dialog is cancelled", () => {
     renderWith(user({ twoFactorEnabledAt: "2026-08-09T12:00:00.000Z" }));
 
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.moreActions" }));
     fireEvent.click(screen.getByText("admin:users.actions.resetTwoFactor"));
     fireEvent.click(screen.getByText("common:buttons.cancel"));
     expect(onResetTwoFactor).not.toHaveBeenCalled();
