@@ -5,12 +5,14 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import type { IconName } from "../ui/Icon";
 
 export interface NavLeaf {
   kind: "leaf";
   id: string;
   path: string;
   label: string;
+  icon?: IconName;
   badge?: number;
   warn?: boolean;
   betaBadge?: boolean;
@@ -26,9 +28,16 @@ export interface NavGroup {
 
 export type NavNode = NavLeaf | NavGroup;
 
+/** One labelled block of the "Mehr" menu: Sammlungen, Werkzeuge. */
+export interface NavSection {
+  id: string;
+  label: string;
+  items: NavLeaf[];
+}
+
 export function isPathActive(path: string, pathname: string): boolean {
   if (path === "/") return pathname === "/";
-  return pathname.startsWith(path);
+  return pathname === path || pathname.startsWith(`${path}/`);
 }
 
 export function isNodeActive(node: NavNode, pathname: string): boolean {
@@ -44,15 +53,26 @@ function collapseSingleChild(group: NavGroup): NavNode {
 }
 
 /**
- * Pure nav model for NavigationBar (desktop + mobile render the same tree).
- * It reads no router state, so the model stays testable without a router.
+ * The header's navigation model, round 4 (decision E1).
+ *
+ * Four primary destinations — Dashboard, Logbuch, Reisen, Statistik — and
+ * everything else in "Mehr", in two sections: Sammlungen (Erfolge, Reisepass,
+ * Ortslisten) and Werkzeuge (Posteingang, Parser, Admin). Settings and logout
+ * live behind the avatar. The old header carried seven top-level entries plus
+ * Support and System chips, and wrapped into a hamburger below 1280px.
+ *
+ * The model draws only what the product has. The design's Schnellsuche,
+ * Import-Logbuch page and Mitreisende page do not exist yet, so they are not
+ * here — an entry that leads nowhere is worse than none.
  *
  * `inboxCount` is the WHOLE Posteingang — pending flight updates plus open
- * data-quality questions. Two tables, one badge: the user is being told there
- * is something to answer, and splitting that into two numbers would make them
- * open the page twice to find out which. `NavigationBar` sums it.
+ * data-quality questions, summed by `NavigationBar`. It reads no router state,
+ * so the model stays testable without a router.
  */
-export function useNavItems(inboxCount: number): { center: NavNode[]; system: NavNode } {
+export function useNavItems(inboxCount: number): {
+  primary: NavNode[];
+  more: NavSection[];
+} {
   const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -62,9 +82,6 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
 
   return useMemo(() => {
     // `poi` asks through `usePlacesVisible`, the one home of the places rule.
-    // It used to combine the user's domain choice with the instance beta flag;
-    // since 2026-09-05 it is the domain choice alone, and the call site stays
-    // the same so the rule keeps one home. See hooks/usePlacesVisible.ts.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
       key === "poi" ? placesVisible : isEnabled(key)
     ).map((key) => ({
@@ -74,8 +91,10 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
       label: t(`common:${DOMAINS[key].i18nKey}`),
     }));
 
-    const center: NavNode[] = [
-      { kind: "leaf", id: "dashboard", path: "/", label: t("dashboard:title") },
+    const primary: NavNode[] = [
+      // `/dashboard`, not `/`: the root only redirects, so an entry pointing at
+      // `/` was never marked active on the page it leads to.
+      { kind: "leaf", id: "dashboard", path: "/dashboard", label: t("dashboard:title") },
       ...(domainChildren.length > 0
         ? [
             collapseSingleChild({
@@ -88,16 +107,19 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
         : []),
       { kind: "leaf", id: "trips", path: "/trips", label: t("trips:tab") },
       { kind: "leaf", id: "stats", path: "/stats", label: t("dashboard:stats") },
+    ];
+
+    const collections: NavLeaf[] = [
       {
         kind: "leaf",
         id: "achievements",
         path: "/achievements",
         label: t("dashboard:achievements"),
+        icon: "trophy",
       },
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than
-      // no entry. It sat behind the beta gate while 2.6.0 was a candidate; the
-      // gate's own condition ("or 2.7.0 opens") came true on 2026-09-05.
+      // no entry.
       ...(isEnabled("flight")
         ? [
             {
@@ -105,37 +127,43 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
               id: "passport",
               path: "/passport",
               label: t("passport:title"),
+              icon: "book-open" as const,
+            },
+          ]
+        : []),
+      ...(placesVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "place-lists",
+              path: "/places/lists",
+              label: t("dashboard:nav.placeLists"),
+              icon: "list" as const,
             },
           ]
         : []),
     ];
 
-    // The path stays `/pending-updates` although the page is now the
-    // Posteingang: it is bookmarked, and `Settings/AutoUpdateSection` links to
-    // it. Only the label changed.
+    // The path stays `/pending-updates` although the page is the Posteingang:
+    // it is bookmarked, and `Settings/AutoUpdateSection` links to it.
     //
-    // The entry is ALWAYS there. Until 2026-09-05 it appeared only while
-    // something was open (or while already on the page), so an empty inbox had
-    // no way in from the UI at all — the owner's rule is that the Posteingang
-    // is reachable from the menu, and the badge alone says whether it is
-    // empty. A dropdown with two entries is the price, and it is the right one.
+    // The entry is ALWAYS there (owner rule 2026-09-05): an empty inbox must
+    // still be reachable from the menu, and the badge alone says whether it
+    // is empty.
     const hasOpenItems = inboxCount > 0;
-    const systemChildren: NavLeaf[] = [
-      { kind: "leaf", id: "settings", path: "/settings", label: t("dashboard:settings") },
+    const tools: NavLeaf[] = [
       {
         kind: "leaf",
-        id: "pending-updates",
+        id: "inbox",
         path: "/pending-updates",
         label: t("dataQuality:inbox.nav"),
+        icon: "inbox",
         ...(hasOpenItems ? { badge: inboxCount, warn: true } : {}),
       },
       ...(isAdmin
         ? [
-            { kind: "leaf" as const, id: "admin", path: "/admin", label: t("dashboard:admin") },
-            // The badge and the gate now agree: the page is offered only while
-            // the instance beta switch is on (owner decision 2026-09-05, see
-            // `parserTemplates` in config/betaFeatures.ts). Before that the
-            // badge was a label with nothing behind it.
+            // The badge and the gate agree: offered only while the instance
+            // beta switch is on (see `parserTemplates` in config/betaFeatures.ts).
             ...(isFeatureVisible("parserTemplates")
               ? [
                   {
@@ -143,22 +171,27 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
                     id: "parser",
                     path: "/parser",
                     label: t("dashboard:parser"),
+                    icon: "mail" as const,
                     betaBadge: true,
                   },
                 ]
               : []),
+            {
+              kind: "leaf" as const,
+              id: "admin",
+              path: "/admin",
+              label: t("dashboard:admin"),
+              icon: "shield" as const,
+            },
           ]
         : []),
     ];
 
-    const system = collapseSingleChild({
-      kind: "group",
-      id: "system",
-      label: t("dashboard:nav.system"),
-      badge: inboxCount > 0 ? inboxCount : undefined,
-      children: systemChildren,
-    });
+    const more: NavSection[] = [
+      { id: "collections", label: t("dashboard:nav.collections"), items: collections },
+      { id: "tools", label: t("dashboard:nav.tools"), items: tools },
+    ];
 
-    return { center, system };
-  }, [t, isEnabled, placesVisible, isAdmin, inboxCount]);
+    return { primary, more };
+  }, [t, isEnabled, isFeatureVisible, placesVisible, isAdmin, inboxCount]);
 }

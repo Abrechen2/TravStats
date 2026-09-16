@@ -128,7 +128,13 @@
   "nav": {
     "logbook": "Logbuch",
     "support": "Support",
-    "system": "System"
+    "system": "System",
+    "more": "Mehr",
+    "collections": "Sammlungen",
+    "tools": "Werkzeuge",
+    "destinations": "Ziele",
+    "placeLists": "Ortslisten",
+    "main": "Hauptnavigation"
   },
   "welcome": "Willkommen, {{username}}!",
   "pendingUpdates": "Ausstehende Updates",

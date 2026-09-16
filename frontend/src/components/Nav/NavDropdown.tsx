@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { isNodeActive, isPathActive, type NavGroup } from "./useNavItems";
+import { Icon } from "../ui/Icon";
 
 export interface ExternalLink {
   id: string;
@@ -31,7 +32,7 @@ function badgeText(badge: number): string {
 }
 
 /**
- * One dropdown for every nav submenu (Logbuch, Support, System). Click
+ * The Logbuch dropdown (and any other plain submenu). Click
  * toggles, Escape / outside click / navigating a child closes. Hover-only
  * menus are deliberately avoided (touch + a11y).
  */
@@ -59,7 +60,7 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
   const triggerClass =
     variant === "chip"
       ? "flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
-      : "relative px-3 py-1.5 text-sm transition-colors duration-200 rounded-md flex items-center gap-1";
+      : "relative px-3 text-sm flex items-center gap-1";
 
   return (
     <div ref={rootRef} className="relative">
@@ -73,16 +74,17 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
           variant === "chip"
             ? { color: "var(--text-muted)", border: "1px solid var(--color-border)" }
             : {
-                fontWeight: active ? 600 : 500,
-                color: active ? "var(--accent)" : "var(--text-muted)",
-                background: active || open ? "var(--bg-elevated)" : "transparent",
+                // Same marker as a primary link: bright, bold, an accent bar on
+                // the header's bottom edge.
+                height: "var(--ts-size-web-header)",
+                fontWeight: active ? 700 : 500,
+                color: active || open ? "var(--ts-text-bright)" : "var(--ts-muted)",
+                boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
               }
         }
       >
         {label}
-        <span aria-hidden="true" className="text-[9px] opacity-70">
-          ▼
-        </span>
+        <Icon name="chevron-down" size={14} />
         {typeof badge === "number" && badge > 0 && (
           <span
             className="absolute -top-1 -right-1 text-xs font-bold rounded-full h-4 min-w-4 px-0.5 flex items-center justify-center"
@@ -91,21 +93,15 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
             {badgeText(badge)}
           </span>
         )}
-        {variant === "nav" && active && (
-          <span
-            className="absolute -bottom-px left-2 right-2 h-[3px] rounded-full"
-            style={{ background: "var(--accent)" }}
-          />
-        )}
       </button>
 
       {open && (
         <div
           role="menu"
-          className={`absolute top-full mt-1.5 min-w-[176px] z-70 rounded-lg p-1 shadow-xl ${
+          className={`absolute top-full min-w-[176px] z-70 rounded-lg p-1 shadow-xl ${
             align === "right" ? "right-0" : "left-0"
           }`}
-          style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
+          style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
         >
           {props.group
             ? props.group.children.map((child) => {
@@ -120,11 +116,12 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
                     className="flex items-center justify-between gap-2.5 px-2.5 py-1.5 rounded-md text-sm"
                     style={{
                       color: childActive
-                        ? "var(--accent)"
+                        ? "var(--ts-text-bright)"
                         : child.warn
-                          ? "var(--warning)"
-                          : "var(--text-muted)",
-                      fontWeight: childActive ? 600 : 500,
+                          ? "var(--ts-warn)"
+                          : "var(--ts-text)",
+                      fontWeight: childActive ? 700 : 500,
+                      background: childActive ? "var(--ts-tile)" : "transparent",
                     }}
                   >
                     <span className="flex items-center gap-1.5">

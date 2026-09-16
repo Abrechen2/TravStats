@@ -18,7 +18,7 @@ function renderMenu(props: Partial<React.ComponentProps<typeof UserMenu>> = {}) 
   render(
     <MemoryRouter>
       <UserMenu user={user} onLogout={onLogout} {...props} />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { onLogout };
 }
@@ -42,17 +42,29 @@ describe("UserMenu", () => {
     expect(screen.getByRole("button")).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("opens with an edit-profile link and a logout entry", () => {
+  it("opens with settings, support links and a logout entry", () => {
     renderMenu();
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByRole("menu")).toBeInTheDocument();
     // The anchor carries role="menuitem" (correct inside role="menu"), which
     // overrides its implicit "link" role — so query the menu role, not the link.
-    expect(screen.getByRole("menuitem", { name: "Profil bearbeiten" })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: "dashboard:settings" })).toHaveAttribute(
       "href",
-      "/settings?tab=general&section=profile",
+      "/settings/account"
     );
+    expect(screen.getByRole("menuitem", { name: "common:support.donate" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Discord" })).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("menuitem", { name: "dashboard:logout" })).toBeInTheDocument();
+  });
+
+  // Round 4 moved the Bug button from the header row into this menu.
+  it("offers the bug report when the header passes a handler, and only then", () => {
+    const onReportBug = vi.fn();
+    renderMenu({ onReportBug });
+    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "common:diagnostic.reportBug" }));
+    expect(onReportBug).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   // The whole point of hiding logout in here: it must take a deliberate click,
@@ -87,7 +99,7 @@ describe("UserMenu", () => {
     render(
       <MemoryRouter>
         <UserMenu user={{ username: "akuenzel" }} onLogout={vi.fn()} />
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(screen.getByText("akuenzel")).toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();

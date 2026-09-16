@@ -68,14 +68,14 @@ import { useSettingsStore } from "../../store/settingsStore";
 // of the localized "Logbuch"/"Einstellungen" strings a real i18n run would
 // produce. Donate/Star route through t() since UAT finding C13 (the support
 // menu spoke English in the German UI), so they match raw keys now too.
-describe("NavigationBar grouped navigation", () => {
+describe("NavigationBar — round-4 header", () => {
   beforeEach(() => {
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
   });
 
-  function renderNav() {
+  function renderNav(path = "/dashboard") {
     return render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <NavigationBar />
       </MemoryRouter>
     );
@@ -83,8 +83,7 @@ describe("NavigationBar grouped navigation", () => {
 
   it("renders a Logbuch dropdown with both domains when two are enabled", () => {
     renderNav();
-    const trigger = screen.getAllByRole("button", { name: /nav\.logbook/i })[0];
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getAllByRole("button", { name: /nav\.logbook/i })[0]);
     expect(screen.getByRole("menuitem", { name: /domain\.flight/i })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /domain\.cruise/i })).toBeTruthy();
   });
@@ -96,66 +95,40 @@ describe("NavigationBar grouped navigation", () => {
     expect(screen.getAllByRole("link", { name: /domain\.flight/i }).length).toBeGreaterThan(0);
   });
 
-  // Owner rule 2026-09-05: the Posteingang is reachable from the menu at all
-  // times, so System is a dropdown even for a non-admin with nothing open.
-  it("offers Einstellungen and the Posteingang under System with nothing open", () => {
-    renderNav();
-    fireEvent.click(screen.getAllByRole("button", { name: /nav\.system/i })[0]);
-    expect(screen.getByRole("menuitem", { name: /dashboard:settings/i })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/i })).toBeTruthy();
+  it("marks the current primary destination", () => {
+    renderNav("/trips");
+    const trips = screen.getByRole("link", { name: "trips:tab" });
+    expect(trips.getAttribute("aria-current")).toBe("page");
   });
 
-  it("keeps the Bug button visible and groups support links in a dropdown", () => {
+  it("keeps Erfolge and the Posteingang under Mehr", () => {
     renderNav();
-    expect(screen.getByRole("button", { name: /Bug/ })).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("button", { name: /nav\.support/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /nav\.more/i })[0]);
+    expect(screen.getByRole("menuitem", { name: /dashboard:achievements/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/ })).toBeTruthy();
+  });
+
+  // Owner rule 2026-09-05: the Posteingang is reachable at all times — as an
+  // icon in the row as well, even with nothing open.
+  it("shows the Posteingang icon with no dot when nothing is open", () => {
+    renderNav();
+    const inbox = screen.getByRole("link", { name: "dataQuality:inbox.nav" });
+    expect(inbox.getAttribute("href")).toBe("/pending-updates");
+    expect(screen.queryByTestId("inbox-dot")).toBeNull();
+  });
+
+  it("no longer draws Bug, Support or System in the row", () => {
+    renderNav();
+    expect(screen.queryByRole("button", { name: /^Bug$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /nav\.support/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /nav\.system/i })).toBeNull();
+  });
+
+  it("reaches settings, the bug report and support through the account menu", () => {
+    renderNav();
+    fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
+    expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /support\.donate/ })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /support\.star/ })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /Discord/ })).toBeTruthy();
-  });
-
-  it("marks the Einstellungen entry of the System group active on /settings", () => {
-    render(
-      <MemoryRouter initialEntries={["/settings"]}>
-        <NavigationBar />
-      </MemoryRouter>
-    );
-    fireEvent.click(screen.getAllByRole("button", { name: /nav\.system/i })[0]);
-    const settings = screen.getByRole("menuitem", { name: /dashboard:settings/i });
-    expect(settings.getAttribute("aria-current")).toBe("page");
-    const inbox = screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/i });
-    expect(inbox.getAttribute("aria-current")).toBeNull();
-  });
-});
-
-describe("NavigationBar mobile panel", () => {
-  beforeEach(() => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
-  });
-
-  it("renders Logbuch as a labelled group with indented domain links", () => {
-    render(
-      <MemoryRouter>
-        <NavigationBar />
-      </MemoryRouter>
-    );
-    fireEvent.click(screen.getByLabelText(/toggleMenu/i));
-    // group label is plain text (not a button) in the panel; the desktop
-    // NavDropdown trigger also matches the raw key, so assert at least one hit
-    expect(screen.getAllByText(/nav\.logbook/i).length).toBeGreaterThan(0);
-    const panelFlights = screen
-      .getAllByRole("link", { name: /domain\.flight/i })
-      .find((el) => el.className.includes("pl-"));
-    expect(panelFlights).toBeTruthy();
-  });
-
-  it("renders the System group with Einstellungen in the panel", () => {
-    render(
-      <MemoryRouter>
-        <NavigationBar />
-      </MemoryRouter>
-    );
-    fireEvent.click(screen.getByLabelText(/toggleMenu/i));
-    expect(screen.getAllByRole("link", { name: /dashboard:settings/i }).length).toBeGreaterThan(0);
   });
 });
