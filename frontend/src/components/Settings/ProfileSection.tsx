@@ -15,10 +15,8 @@ interface ProfileSectionProps {
     firstName?: string | null;
     lastName?: string | null;
   };
-  savingProfile: boolean;
   uploadingProfilePicture: boolean;
   removingProfilePicture: boolean;
-  onSaveProfile: () => void;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
   onSetProfile: (partial: {
@@ -32,10 +30,8 @@ interface ProfileSectionProps {
 
 export default function ProfileSection({
   profile,
-  savingProfile,
   uploadingProfilePicture,
   removingProfilePicture,
-  onSaveProfile,
   onAvatarUpload,
   onAvatarDelete,
   onSetProfile,
@@ -217,19 +213,6 @@ export default function ProfileSection({
             {t("settings:profile.birthdateHint")}
           </p>
         </div>
-      </div>
-
-      <div className="flex justify-end pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <button
-          onClick={onSaveProfile}
-          disabled={savingProfile}
-          className="btn-primary"
-          style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
-        >
-          {savingProfile
-            ? t("common:buttons.saving") || "Speichern..."
-            : t("settings:profile.save") || "Profil speichern"}
-        </button>
       </div>
     </SectionCard>
   );

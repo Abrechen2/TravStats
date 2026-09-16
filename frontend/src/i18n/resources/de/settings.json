@@ -377,7 +377,9 @@
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
     "saving": "Wird gespeichert …",
-    "saved": "Gespeichert"
+    "saved": "Gespeichert",
+    "pending": "Änderungen vorhanden",
+    "failed": "Speichern fehlgeschlagen"
   },
   "scrollToTop": "Nach oben",
   "sectionPicker": "Bereich",

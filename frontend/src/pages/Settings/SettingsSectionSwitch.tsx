@@ -53,10 +53,8 @@ export default function SettingsSectionSwitch({
       return (
         <ProfileSection
           profile={page.profile}
-          savingProfile={page.savingProfile}
           uploadingProfilePicture={page.uploadingProfilePicture}
           removingProfilePicture={page.removingProfilePicture}
-          onSaveProfile={page.saveProfileSettings}
           onAvatarUpload={page.handleAvatarUpload}
           onAvatarDelete={page.handleAvatarDelete}
           onSetProfile={page.setProfile}

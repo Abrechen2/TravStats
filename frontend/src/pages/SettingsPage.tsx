@@ -3,7 +3,7 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { useTranslation } from "../hooks/useTranslation";
-import { useSettingsPage } from "../components/Settings/useSettingsPage";
+import { useSettingsPage, type AutoSaveState } from "../components/Settings/useSettingsPage";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -36,6 +36,15 @@ import {
  * all, and the strip would promise something that never happens (UAT B8).
  */
 const AUTO_SAVED_ROUTES = new Set(["account", "flight", "cruise", "lodging"]);
+
+/** A landed write reads good, a failed one bad; waiting and writing stay quiet. */
+const AUTO_SAVE_COLOR: Record<AutoSaveState, string> = {
+  idle: "var(--ts-muted)",
+  pending: "var(--ts-muted)",
+  saving: "var(--ts-muted)",
+  saved: "var(--ts-good)",
+  failed: "var(--ts-bad)",
+};
 
 /** The one place that knows a section is only reachable by naming it. */
 function useDeepLinkedSection(): string | null {
@@ -224,15 +233,10 @@ export default function SettingsPage(): JSX.Element {
                       aria-live="polite"
                       style={{
                         fontFamily: "var(--ts-font-mono)",
-                        color:
-                          page.autoSaveState === "saved" ? "var(--ts-good)" : "var(--ts-muted)",
+                        color: AUTO_SAVE_COLOR[page.autoSaveState],
                       }}
                     >
-                      {page.autoSaveState === "saved"
-                        ? t("settings:autoSave.saved")
-                        : page.autoSaveState === "saving"
-                          ? t("settings:autoSave.saving")
-                          : t("settings:autoSave.idle")}
+                      {t(`settings:autoSave.${page.autoSaveState}`)}
                     </span>
                   </>
                 )}

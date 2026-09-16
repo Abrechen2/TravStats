@@ -6,6 +6,8 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 
+export type AutoSaveState = "idle" | "pending" | "saving" | "saved" | "failed";
+
 interface AutoUpdateSettings {
   enabled: boolean;
   requireApproval: boolean;
@@ -56,11 +58,15 @@ export function useSettingsPage() {
 
   const addToast = useToastStore((state) => state.addToast);
 
-  /** What the auto-save banner is allowed to claim right now. */
-  const [autoSaveState, setAutoSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  /**
+   * What the status line is allowed to claim right now — the four states of
+   * round 4 (E10): an edit waiting for its debounce, the write in flight, the
+   * write landed, the write failed. "failed" stays until the next edit, so a
+   * change that did not stick cannot scroll out of view as a vanished toast.
+   */
+  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>("idle");
 
   // Profile
-  const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
   const [removingProfilePicture, setRemovingProfilePicture] = useState(false);
 
@@ -183,6 +189,7 @@ export function useSettingsPage() {
       return;
     }
     if (!hasPendingChanges()) return;
+    setAutoSaveState("pending");
     const saveSettings = async () => {
       // Re-check at FIRE time, not just schedule time. Hydration
       // (`loadRemoteSettings`) mutates the settings slices and updates the
@@ -202,7 +209,7 @@ export function useSettingsPage() {
         setAutoSaveState("saved");
       } catch (error) {
         logger.error("Failed to save settings:", error);
-        setAutoSaveState("idle");
+        setAutoSaveState("failed");
         addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
       }
     };
@@ -328,19 +335,6 @@ export function useSettingsPage() {
     }
   };
 
-  const saveProfileSettings = async () => {
-    try {
-      setSavingProfile(true);
-      await saveRemoteSettings();
-      addToast("success", t("settings:profile.saved") || "Profil gespeichert");
-    } catch (error) {
-      logger.error("Failed to save profile settings:", error);
-      addToast("error", t("settings:profile.saveFailed") || "Fehler beim Speichern des Profils");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
   // Saved as they change (round 4, E10): the section passes the value it just
   // set, because the state update has not landed when the save runs. A success
   // says nothing — the switch already shows it; a failure says so and puts the
@@ -432,10 +426,8 @@ export function useSettingsPage() {
     // Derived
     hasParserAccess,
     // Profile
-    savingProfile,
     uploadingProfilePicture,
     removingProfilePicture,
-    saveProfileSettings,
     handleAvatarUpload,
     handleAvatarDelete,
     // Password modal

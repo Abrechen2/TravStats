@@ -377,7 +377,9 @@
   "autoSave": {
     "idle": "Changes are saved automatically",
     "saving": "Saving …",
-    "saved": "Saved"
+    "saved": "Saved",
+    "pending": "Unsaved changes",
+    "failed": "Saving failed"
   },
   "scrollToTop": "Scroll to top",
   "sectionPicker": "Section",
