@@ -409,3 +409,32 @@ darf (sonst wirkt jede gemerkte Wahl veraltet und wird gelöscht).
    (`AdvancedStatsPage.tsx:681`). Der Haken `useSectionVisibility(filter)` ist
    bereits bereichsweise — es fehlt je Domäne eine Abschnittsliste wie
    `FLIGHT_SECTIONS`.
+
+## Statistik — alle fünf Schritte erledigt, auf der Beta abgenommen (16.09.2026)
+
+| Schritt | Commit |
+|---|---|
+| `stats.ts` wieder unter seiner eingefrorenen Größe (23b2736e hatte sie um 85 Zeilen gesprengt, unbemerkt) | `e61c568b` |
+| 1–3: **eine** Zeitraumleiste für alle Reiter, Jahresliste = Vereinigung über die Domänen, `StatsYearFilter` → `FlightYearSummaryCards` | `3eb82851` |
+| 4: Kreuzfahrten, Unterkünfte, Orte antworten für das Jahr; ein gemeinsamer Vergleichsstreifen | `f491048c` |
+| 5: Abschnitte-Menü auf allen Reitern, `StatsToolbar` | `883eeafb` |
+| Label folgt den **geladenen** Zahlen, nicht dem angefragten Jahr | `25fc5380` |
+
+Beta CT106 fährt `2.7.0-design.5`. Gemessen dort, angemeldet mit echtem
+Beta-Konto: eine Leiste auf allen vier Reitern, 2026 bleibt beim Reiterwechsel
+gewählt, Vergleich gegen 2025 auf Kreuzfahrten und Unterkünften, Seitenüberlauf 0.
+Abschnitt „Was eine Nacht kostet" aus: 47 → 38 Überschriften, Knopf „1 aus",
+danach exakt zurück.
+
+**Der Befund der Sichtprüfung** (behoben in `25fc5380`): 2026 → 2015 schrieb
+sofort „Jahr 2015" über die noch geladenen Zahlen von 2026 — im LAN unter 50 ms,
+über Tunnel oder Handy so lange wie die Anfrage. Nachgemessen mit auf 1,5 s
+gehaltener Anfrage: das Label bleibt bei 2026 neben 2026er Zahlen, `aria-busy`,
+dann wechseln beide gemeinsam.
+
+**Falle beim Nachmessen:** der MCP-Tab ist verborgen, und verborgene Tabs
+spielen keine CSS-Übergänge ab — `opacity` blieb rechnerisch bei 1, obwohl der
+Inline-Stil 0.55 trug. Gegenprobe: dasselbe ohne `transition` liefert 0.55.
+
+Offen aus diesem Auftrag: Block D (Rest), E–J. Und `main` in diesen Zweig holen —
+119 Commits voraus, 8 Konflikte.
