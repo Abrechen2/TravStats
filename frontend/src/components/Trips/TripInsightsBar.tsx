@@ -36,8 +36,10 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
   // The width budget itself is the other half of #271: without it these tiles
   // were the only thing on the page running to the browser edge.
   return (
-    <div className="px-4">
-      <div className={`max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-6`}>
+    // No gutter of its own: AppShell draws it, and a second one narrowed the
+    // page on a phone.
+    <div>
+      <div className={`ts-insight-strip max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-4 sm:mb-6`}>
         {tiles.map(({ key, label, win }) =>
           win ? (
             <button

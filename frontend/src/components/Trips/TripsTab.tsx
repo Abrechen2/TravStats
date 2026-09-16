@@ -145,7 +145,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   const showFilters = trips.length >= 4;
 
   return (
-    <div className="px-4 pb-12">
+    <div className="pb-12">
       <div className="max-w-7xl mx-auto">
         <DetectTripsBanner onChange={onTripsChange} />
 
@@ -158,26 +158,19 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
           </p>
           <div className="flex items-center gap-2">
             {trips.length >= 2 && !mergeMode && (
-              <>
-                <button
-                  onClick={() => setShowCleanup(true)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-                  style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-                >
-                  {t("trips:cleanup.button")}
-                </button>
-                <button
-                  onClick={() => setMergeMode(true)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-                  style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-                >
-                  ⇶ {t("trips:merge.button")}
-                </button>
-              </>
+              // Clean-up and merge are rare housekeeping. On a phone they sit
+              // behind "…", so the list starts sooner (CT106 audit B10).
+              <RareActions
+                onCleanup={() => setShowCleanup(true)}
+                onMerge={() => setMergeMode(true)}
+                cleanupLabel={t("trips:cleanup.button")}
+                mergeLabel={`⇶ ${t("trips:merge.button")}`}
+                moreLabel={t("common:buttons.moreActions")}
+              />
             )}
             <button
               onClick={() => setShowAddPanel(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-(--accent) hover:text-(--accent)"
+              className="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-(--accent) hover:text-(--accent)"
               style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
             >
               ＋ {t("import:trip.triggerLabel")}
@@ -467,7 +460,7 @@ function MergeConfirmModal({
 function FilterGroup({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <div
-      className="flex gap-1 rounded-lg p-1 max-w-full overflow-x-auto"
+      className="flex gap-1 rounded-lg p-1 max-w-full overflow-x-auto scrollbar-none"
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       {children}
@@ -495,5 +488,81 @@ function FilterButton({
     >
       {children}
     </button>
+  );
+}
+
+const RARE_ACTION_CLASS =
+  "whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)";
+
+/** Clean-up and merge: buttons from 640px, a "…" menu below. */
+function RareActions({
+  onCleanup,
+  onMerge,
+  cleanupLabel,
+  mergeLabel,
+  moreLabel,
+}: {
+  onCleanup: () => void;
+  onMerge: () => void;
+  cleanupLabel: string;
+  mergeLabel: string;
+  moreLabel: string;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const style = { borderColor: "var(--color-border)", color: "var(--text-muted)" };
+  return (
+    <>
+      <span className="hidden sm:contents">
+        <button type="button" onClick={onCleanup} className={RARE_ACTION_CLASS} style={style}>
+          {cleanupLabel}
+        </button>
+        <button type="button" onClick={onMerge} className={RARE_ACTION_CLASS} style={style}>
+          {mergeLabel}
+        </button>
+      </span>
+      <span className="relative sm:hidden">
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={moreLabel}
+          onClick={() => setOpen((v) => !v)}
+          className={RARE_ACTION_CLASS}
+          style={style}
+        >
+          …
+        </button>
+        {open && (
+          <span
+            role="menu"
+            className="absolute right-0 z-30 mt-1 flex flex-col rounded-lg p-1 shadow-xl"
+            style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm"
+              onClick={() => {
+                setOpen(false);
+                onCleanup();
+              }}
+            >
+              {cleanupLabel}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm"
+              onClick={() => {
+                setOpen(false);
+                onMerge();
+              }}
+            >
+              {mergeLabel}
+            </button>
+          </span>
+        )}
+      </span>
+    </>
   );
 }

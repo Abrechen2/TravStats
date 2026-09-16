@@ -257,7 +257,13 @@
     "linkAll": "Link all",
     "review": "Review",
     "success": "Created {{trips}} journeys, linked {{flights}} flights, removed {{orphans}} orphans",
-    "error": "Journey detection failed"
+    "error": "Journey detection failed",
+    "sources": {
+      "pnr": "same booking reference",
+      "homeLoop": "from home and back",
+      "continuity": "consecutive travel days",
+      "other": "other signals"
+    }
   },
   "detectReview": {
     "title": "Review journeys",

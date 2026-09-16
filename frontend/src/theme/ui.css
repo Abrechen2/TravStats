@@ -181,6 +181,24 @@
   }
 }
 
+/*
+ * Summary tiles above a list, on a phone: one row that scrolls sideways
+ * instead of three stacked cards that pushed the first trip below the fold
+ * (CT106 audit B10). Above 640px the grid classes on the same element apply.
+ */
+@media (max-width: 639px) {
+  .ts-insight-strip {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: var(--ts-space-sm);
+  }
+  .ts-insight-strip > * {
+    flex: 0 0 68%;
+    padding: var(--ts-space-md);
+  }
+}
+
 /* ─── Status pill ───────────────────────────────────────────────────────── */
 /*
  * The geometry half of the recipe, for the four call sites that take a style

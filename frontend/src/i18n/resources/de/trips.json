@@ -257,7 +257,13 @@
     "linkAll": "Alle verknüpfen",
     "review": "Prüfen",
     "success": "{{trips}} Reisen erstellt, {{flights}} Flüge zugeordnet, {{orphans}} verwaiste Reisen entfernt",
-    "error": "Reise-Erkennung fehlgeschlagen"
+    "error": "Reise-Erkennung fehlgeschlagen",
+    "sources": {
+      "pnr": "gleiche Buchungsnummer",
+      "homeLoop": "von zu Hause und zurück",
+      "continuity": "zusammenhängende Reisetage",
+      "other": "sonstige Hinweise"
+    }
   },
   "detectReview": {
     "title": "Reisen erkennen",

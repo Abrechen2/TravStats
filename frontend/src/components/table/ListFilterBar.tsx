@@ -115,72 +115,81 @@ export default function ListFilterBar({
             placeholder={search.placeholder}
             className={`w-full ${CONTROL_CLASS} placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none md:max-w-xs`}
           />
-          {status && <FilterSelect config={status} />}
-          {year && <FilterSelect config={year} />}
+          {/* On a phone the controls share ONE row that scrolls sideways; they
+              used to wrap into two, pushing the first entry further down
+              (CT106 audit B10). From md they sit inline as before. */}
+          <div className="flex w-full min-w-0 items-center gap-2 md:contents">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-none md:contents">
+              {status && <FilterSelect config={status} />}
+              {year && <FilterSelect config={year} />}
+            </div>
+            {/* Outside the scrolling part: an overflow container clips the
+                panel this button opens. */}
 
-          {extra && (
-            <div className="relative" ref={panelRef}>
+            {extra && (
+              <div className="relative" ref={panelRef}>
+                <button
+                  type="button"
+                  onClick={(): void => setOpen((v) => !v)}
+                  aria-expanded={open}
+                  aria-haspopup="dialog"
+                  data-testid="list-filter-more"
+                  className={`inline-flex items-center gap-2 ${CONTROL_CLASS} ${
+                    extraActiveCount > 0 ? "border-[var(--accent)]" : ""
+                  }`}
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    />
+                  </svg>
+                  <span>{t("common:filters.more")}</span>
+                  {extraActiveCount > 0 && (
+                    <span
+                      data-testid="list-filter-badge"
+                      className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs"
+                      style={{ background: "var(--accent)", color: "var(--bg-base)" }}
+                    >
+                      {extraActiveCount}
+                    </span>
+                  )}
+                </button>
+
+                {open && (
+                  <div
+                    role="dialog"
+                    aria-label={t("common:filters.more")}
+                    className="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-lg p-4 shadow-xl md:left-0 md:right-auto"
+                    style={{
+                      background: "var(--bg-surface)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <div className="flex flex-col gap-4">{extra}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hasActiveFilter && (
               <button
                 type="button"
-                onClick={(): void => setOpen((v) => !v)}
-                aria-expanded={open}
-                aria-haspopup="dialog"
-                data-testid="list-filter-more"
-                className={`inline-flex items-center gap-2 ${CONTROL_CLASS} ${
-                  extraActiveCount > 0 ? "border-[var(--accent)]" : ""
-                }`}
+                onClick={onReset}
+                className="shrink-0 whitespace-nowrap rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                  />
-                </svg>
-                <span>{t("common:filters.more")}</span>
-                {extraActiveCount > 0 && (
-                  <span
-                    data-testid="list-filter-badge"
-                    className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs"
-                    style={{ background: "var(--accent)", color: "var(--bg-base)" }}
-                  >
-                    {extraActiveCount}
-                  </span>
-                )}
+                {t("common:filters.reset")}
               </button>
-
-              {open && (
-                <div
-                  role="dialog"
-                  aria-label={t("common:filters.more")}
-                  className="absolute left-0 z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg p-4 shadow-xl"
-                  style={{
-                    background: "var(--bg-surface)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <div className="flex flex-col gap-4">{extra}</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {hasActiveFilter && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              {t("common:filters.reset")}
-            </button>
-          )}
+            )}
+          </div>
         </div>
         <div className="text-xs text-[var(--text-muted)]">{resultLabel}</div>
       </div>
