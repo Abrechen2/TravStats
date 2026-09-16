@@ -12,6 +12,7 @@ import TemplateStatusView from "../components/TemplateStatusView";
 import MyTemplates from "../components/Parser/MyTemplates";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { Icon } from "../components/ui/Icon";
 
 type Tab = "annotate" | "my-templates" | "community" | "parse-logs";
 
@@ -63,41 +64,65 @@ export default function ParserPage(): JSX.Element {
       />
       <div>
         {/* Beta notice */}
-        <div className="mb-4 rounded-lg border p-3 border-(--warning)/30 bg-(--warning)/10">
-          <p className="text-sm text-(--warning)">{t("parser:betaNotice")}</p>
+        <div
+          className="mb-4 rounded-[var(--ts-radius-card)] px-4 py-3"
+          style={{
+            border: "1px solid color-mix(in srgb, var(--ts-warn) 35%, transparent)",
+            background: "color-mix(in srgb, var(--ts-warn) 8%, transparent)",
+          }}
+        >
+          <p className="text-sm" style={{ color: "var(--ts-warn)" }}>
+            {t("parser:betaNotice")}
+          </p>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-(--color-border)">
-          <nav className="flex gap-6 sm:gap-8 overflow-x-auto overflow-y-hidden whitespace-nowrap">
-            {tabs.map((tab) => (
+        <div
+          role="tablist"
+          className="mb-6 flex overflow-x-auto scrollbar-none"
+          style={{ borderBottom: "1px solid var(--ts-border)" }}
+        >
+          {tabs.map((tab) => {
+            const active = activeTab === tab.id;
+            return (
               <button
                 key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setActiveTab(tab.id)}
-                className="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-                style={
-                  activeTab === tab.id
-                    ? { borderColor: "var(--accent)", color: "var(--accent)" }
-                    : { borderColor: "transparent", color: "var(--text-muted)" }
-                }
+                className="shrink-0 whitespace-nowrap px-4 py-3 text-sm"
+                style={{
+                  fontWeight: active ? 700 : 500,
+                  color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
+                  boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
+                }}
               >
                 {tab.label}
               </button>
-            ))}
-          </nav>
+            );
+          })}
         </div>
 
         {/* Tab: Annotieren */}
         {activeTab === "annotate" && (
           <div className="space-y-6">
             {!uploadedFile ? (
-              <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-(--text-primary) mb-2">
+              <div
+                className="p-6"
+                style={{
+                  background: "var(--ts-surface)",
+                  border: "1px solid var(--ts-border)",
+                  borderRadius: "var(--ts-radius-card)",
+                }}
+              >
+                <h2
+                  className="mb-1"
+                  style={{ fontSize: 17, fontWeight: 700, color: "var(--ts-text-bright)" }}
+                >
                   {t("parser:annotate.title")}
                 </h2>
-                <p className="text-sm text-(--text-muted) mb-6">
-                  {t("parser:annotate.description")}
-                </p>
+                <p className="t-caption mb-5">{t("parser:annotate.description")}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <input
@@ -112,13 +137,15 @@ export default function ParserPage(): JSX.Element {
                     />
                     <button
                       onClick={() => emailFileInputRef.current?.click()}
-                      className="w-full p-6 border-2 border-dashed border-(--color-border) rounded-lg hover:border-(--accent) transition-colors text-center"
+                      className="flex w-full flex-col items-center gap-2 rounded-[var(--ts-radius-card)] border border-dashed border-[var(--ts-border)] p-6 text-center transition-colors hover:border-[var(--ts-accent)]"
                     >
-                      <div className="text-4xl mb-2">📧</div>
-                      <div className="font-semibold text-(--text-primary)">
+                      <span style={{ color: "var(--ts-accent)" }}>
+                        <Icon name="mail" size={24} />
+                      </span>
+                      <div style={{ fontWeight: 700, color: "var(--ts-text-bright)" }}>
                         {t("parser:annotate.emailButton")}
                       </div>
-                      <div className="text-sm text-(--text-muted)">
+                      <div className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                         {t("parser:annotate.emailFormats")}
                       </div>
                     </button>
@@ -136,13 +163,15 @@ export default function ParserPage(): JSX.Element {
                     />
                     <button
                       onClick={() => boardingPassFileInputRef.current?.click()}
-                      className="w-full p-6 border-2 border-dashed border-(--color-border) rounded-lg hover:border-(--accent) transition-colors text-center"
+                      className="flex w-full flex-col items-center gap-2 rounded-[var(--ts-radius-card)] border border-dashed border-[var(--ts-border)] p-6 text-center transition-colors hover:border-[var(--ts-accent)]"
                     >
-                      <div className="text-4xl mb-2">🎫</div>
-                      <div className="font-semibold text-(--text-primary)">
+                      <span style={{ color: "var(--ts-accent)" }}>
+                        <Icon name="image" size={24} />
+                      </span>
+                      <div style={{ fontWeight: 700, color: "var(--ts-text-bright)" }}>
                         {t("parser:annotate.boardingPassButton")}
                       </div>
-                      <div className="text-sm text-(--text-muted)">
+                      <div className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                         {t("parser:annotate.boardingPassFormats")}
                       </div>
                     </button>
@@ -179,13 +208,18 @@ export default function ParserPage(): JSX.Element {
 
         {/* Tab: Community Templates */}
         {activeTab === "community" && (
-          <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
+          <div
+            className="p-6"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+            }}
+          >
             <h2 className="text-xl font-semibold text-(--text-primary) mb-1">
               {t("parser:communityTemplates.title")}
             </h2>
-            <p className="text-sm text-(--text-muted) mb-6">
-              {t("parser:communityTemplates.description")}
-            </p>
+            <p className="t-caption mb-5">{t("parser:communityTemplates.description")}</p>
             <TemplateStatusView />
           </div>
         )}
