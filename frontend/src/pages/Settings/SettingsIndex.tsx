@@ -117,17 +117,22 @@ export function SettingsIndexColumn({ tabs, categories, active, onJump }: Props)
       <nav
         aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
         className="flex overflow-x-auto scrollbar-none"
-        style={{ borderBottom: "1px solid var(--ts-border)", gap: "var(--ts-space-xs)" }}
+        style={{ borderBottom: "1px solid var(--ts-border)" }}
       >
+        {/* Four routes (Allgemein, Flug, Kreuzfahrt, Unterkünfte) must fit the
+            240px column: measured, their labels alone take ~200px at 13px, so
+            at the old padding "Unterkünfte" was cut to "Un". The tabs share
+            the width and keep a small inset instead. */}
         {tabs.map((tab) => (
           <Link
             key={tab.id}
             to={tab.to}
             aria-current={tab.active ? "page" : undefined}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap text-center"
             style={{
-              padding: "var(--ts-space-sm) var(--ts-space-md)",
-              fontSize: 13,
+              flex: "1 1 auto",
+              padding: "var(--ts-space-sm) 4px",
+              fontSize: 12,
               fontWeight: tab.active ? 700 : 500,
               color: tab.active ? "var(--ts-text-bright)" : "var(--ts-muted)",
               boxShadow: `inset 0 -2px 0 ${tab.active ? "var(--ts-accent)" : "transparent"}`,
