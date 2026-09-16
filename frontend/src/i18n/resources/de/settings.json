@@ -739,6 +739,11 @@
       "create": "Token konnte nicht erstellt werden",
       "revoke": "Token konnte nicht widerrufen werden",
       "labelRequired": "Beschreibung ist erforderlich"
+    },
+    "scopesShort": {
+      "read": "Lesen",
+      "write": "Schreiben",
+      "admin": "Admin"
     }
   },
   "security": {

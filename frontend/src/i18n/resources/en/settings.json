@@ -739,6 +739,11 @@
       "create": "Failed to create token",
       "revoke": "Failed to revoke token",
       "labelRequired": "Label is required"
+    },
+    "scopesShort": {
+      "read": "Read",
+      "write": "Write",
+      "admin": "Admin"
     }
   },
   "security": {

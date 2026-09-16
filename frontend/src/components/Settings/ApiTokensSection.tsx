@@ -14,6 +14,10 @@ import Modal from "../Modal";
 import { useCallback, useEffect, useState } from "react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
+import { Segmented } from "../ui/Segmented";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   apiTokensApi,
@@ -30,6 +34,9 @@ export default function ApiTokensSection(): JSX.Element {
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  // The form is folded behind one button, as round 4 draws it: most visits
+  // are to read or revoke, and a standing form made the list scroll away.
+  const [formOpen, setFormOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newScope, setNewScope] = useState<ApiTokenScope>("read");
   const [justCreated, setJustCreated] = useState<CreatedApiToken | null>(null);
@@ -71,6 +78,7 @@ export default function ApiTokensSection(): JSX.Element {
       setJustCreated(created);
       setNewLabel("");
       setNewScope("read");
+      setFormOpen(false);
       void reload();
     } catch (err) {
       logger.error("Failed to create API token", err);
@@ -114,147 +122,131 @@ export default function ApiTokensSection(): JSX.Element {
         description={t("settings:apiTokens.description")}
       />
 
-      <div
-        className="rounded-lg p-4 text-sm"
-        style={{
-          background: "var(--bg-muted)",
-          border: "1px solid var(--color-border)",
-          color: "var(--text-muted)",
-        }}
-      >
-        <div className="font-medium mb-2" style={{ color: "var(--text-primary)" }}>
-          {t("settings:apiTokens.docsTitle")}
-        </div>
-        <p className="mb-2">{t("settings:apiTokens.docsBody")}</p>
-        <a
-          href="/api/v1/docs"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-          style={{ color: "var(--accent)" }}
-        >
-          {t("settings:apiTokens.docsLink")}
-        </a>
-      </div>
-
-      {/* Create form */}
-      <div className="space-y-3">
-        <label className="block text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-          {t("settings:apiTokens.newLabel")}
-          <input
-            type="text"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            placeholder={t("settings:apiTokens.newLabelPlaceholder")}
-            className="mt-1 block w-full rounded-md px-3 py-2 text-sm"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-primary)",
-            }}
-            disabled={creating}
-            maxLength={80}
-          />
-        </label>
-
-        <label className="block text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-          {t("settings:apiTokens.scope")}
-          <select
-            value={newScope}
-            onChange={(e) => setNewScope(e.target.value as ApiTokenScope)}
-            className="mt-1 block w-full rounded-md px-3 py-2 text-sm"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-primary)",
-            }}
-            disabled={creating}
-          >
-            {SCOPES.map((s) => (
-              <option key={s} value={s}>
-                {t(`settings:apiTokens.scopes.${s}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={creating || !newLabel.trim()}
-          className="px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-          style={{ background: "var(--accent)", color: "white" }}
-        >
-          {creating ? t("common:loading.title") : t("settings:apiTokens.create")}
-        </button>
-
-        {error && (
-          <div className="text-sm" style={{ color: "var(--danger)" }}>
-            {error}
-          </div>
-        )}
-      </div>
-
-      {/* Token list */}
-      <div>
-        <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-          {t("settings:apiTokens.existingTitle")}
-        </h3>
+      <SettingRows>
         {loading ? (
-          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("common:loading.title")}
-          </div>
+          <p className="t-caption">{t("common:loading.title")}</p>
         ) : tokens.length === 0 ? (
-          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("settings:apiTokens.empty")}
-          </div>
+          <p className="t-caption">{t("settings:apiTokens.empty")}</p>
         ) : (
-          <ul className="space-y-2">
-            {tokens.map((tok) => (
-              <li
-                key={tok.id}
-                className="flex items-center justify-between rounded-md p-3"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  opacity: tok.revokedAt ? 0.5 : 1,
-                }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                    {tok.label}
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {t(`settings:apiTokens.scopes.${tok.scope}`)} · {tok.prefix}…
+          tokens.map((tok) => (
+            <div key={tok.id} style={{ opacity: tok.revokedAt ? 0.55 : 1 }}>
+              <SettingRow
+                title={tok.label}
+                sub={
+                  <span style={{ fontFamily: "var(--ts-font-mono)" }}>
+                    {tok.prefix}…
                     {tok.lastUsedAt
                       ? ` · ${t("settings:apiTokens.lastUsed", {
                           when: new Date(tok.lastUsedAt).toLocaleString(),
                         })}`
                       : ` · ${t("settings:apiTokens.neverUsed")}`}
-                    {tok.revokedAt && ` · ${t("settings:apiTokens.revoked")}`}
-                  </div>
-                </div>
-                {!tok.revokedAt && (
-                  <button
-                    type="button"
-                    onClick={() => handleRevoke(tok.id)}
-                    className="ml-3 px-3 py-1.5 text-xs rounded-md"
-                    style={{
-                      background: "transparent",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--danger)",
-                    }}
-                  >
-                    {t("settings:apiTokens.revokeButton")}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+                  </span>
+                }
+                control={
+                  tok.revokedAt ? (
+                    <Pill color={token("muted")} dashed>
+                      {t("settings:apiTokens.revoked")}
+                    </Pill>
+                  ) : (
+                    <>
+                      <Pill color={tok.scope === "read" ? token("good") : token("accent")}>
+                        {t(`settings:apiTokens.scopesShort.${tok.scope}`)}
+                      </Pill>
+                      <button
+                        type="button"
+                        onClick={() => handleRevoke(tok.id)}
+                        className="btn-secondary"
+                        style={{ color: "var(--ts-bad)" }}
+                      >
+                        {t("settings:apiTokens.revokeButton")}
+                      </button>
+                    </>
+                  )
+                }
+              />
+            </div>
+          ))
         )}
-      </div>
 
-      {/* Just-created modal — plaintext shown ONCE */}
+        {formOpen ? (
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+            <label className="label" htmlFor="api-token-label">
+              {t("settings:apiTokens.newLabel")}
+            </label>
+            <input
+              id="api-token-label"
+              type="text"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder={t("settings:apiTokens.newLabelPlaceholder")}
+              className="input"
+              disabled={creating}
+              maxLength={80}
+            />
+            <span className="label">{t("settings:apiTokens.scope")}</span>
+            <Segmented
+              label={t("settings:apiTokens.scope")}
+              value={newScope}
+              options={SCOPES.map((scope) => ({
+                value: scope,
+                label: t(`settings:apiTokens.scopesShort.${scope}`),
+                name: t(`settings:apiTokens.scopes.${scope}`),
+              }))}
+              onChange={setNewScope}
+              disabled={creating}
+            />
+            <p className="t-caption">{t(`settings:apiTokens.scopes.${newScope}`)}</p>
+            <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={creating || !newLabel.trim()}
+                className="btn-primary"
+              >
+                {creating ? t("common:loading.title") : t("settings:apiTokens.create")}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setFormOpen(false);
+                  setError(null);
+                }}
+              >
+                {t("common:buttons.cancel")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <button type="button" className="btn-primary" onClick={() => setFormOpen(true)}>
+              {t("settings:apiTokens.create")}
+            </button>
+          </div>
+        )}
+
+        <SettingRow
+          title={t("settings:apiTokens.docsTitle")}
+          sub={t("settings:apiTokens.docsBody")}
+          control={
+            <a
+              href="/api/v1/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--ts-accent)", fontWeight: 600 }}
+            >
+              {t("settings:apiTokens.docsLink")}
+            </a>
+          }
+        />
+      </SettingRows>
+
+      {error && (
+        <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
+          {error}
+        </p>
+      )}
+
       {/* Just-created dialog — plaintext shown ONCE */}
       <Modal
         open={justCreated !== null}
