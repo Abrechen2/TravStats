@@ -197,7 +197,10 @@ jobs:
         run: node scripts/check-coverage.mjs frontend
 
   # ---------------------------------------------------------------------
-  # ADVISORY — DO NOT MARK REQUIRED YET.
+  # REQUIRED since 2026-09-16 (owner decision). Until then this job was
+  # advisory; the history below is why, and what changed.
+  #
+  # (Historical) ADVISORY — DO NOT MARK REQUIRED YET.
   #
   # The reason is the sharpest possible illustration of why "green" and
   # "checked" are different words. Measured on main @ 80ca3061 (2026-08-30)
@@ -277,9 +280,8 @@ jobs:
   # already-chosen limit, which makes the intent visible at the call site.
   # ---------------------------------------------------------------------
   backend-tests:
-    name: Backend tests (Jest, advisory)
+    name: Backend tests (Jest)
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     services:
       postgres:
@@ -348,27 +350,14 @@ jobs:
           cd backend && npx jest --ci --forceExit --coverage
           --coverageReporters=json-summary --coverageReporters=text-summary
 
-      # Advisory like the job it sits in. The baseline was recorded from a
-      # green local run; if the first CI figure differs by more than the
-      # tolerance for an environment reason (a test that skips here), record
-      # CI's figure rather than widening the tolerance.
+      # The baseline was recorded from a green local run and CI's figures
+      # matched it within the tolerance (2026-09-16). If a later CI figure
+      # differs for an environment reason (a test that skips here), record
+      # CI's figure rather than widening the tolerance. Runs after a red Jest
+      # too, like the frontend ratchet, so the number is never missing.
       - name: Coverage ratchet
-        if: steps.jest.outcome == 'success'
+        if: success() || failure()
         run: node scripts/check-coverage.mjs backend
-
-      # Without this, `continue-on-error` above would render a failing run
-      # as a green tick and the whole job would become decoration.
-      - name: Report outcome
-        if: always()
-        run: |
-          if [ "${{ steps.jest.outcome }}" = "success" ]; then
-            echo "Backend suite passed." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "### Backend suite FAILED (advisory job)" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "This job does not block merges yet. As of 2026-09-16 the suite was green on" >> "$GITHUB_STEP_SUMMARY"
-            echo "main apart from a geocoder timeout since fixed, so treat a red run as a finding." >> "$GITHUB_STEP_SUMMARY"
-          fi
 
   # ---------------------------------------------------------------------
   # SAFE TO REQUIRE — but note it only checks files the change touched.

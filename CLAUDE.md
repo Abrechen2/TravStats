@@ -159,12 +159,12 @@ This list is the real gate, and since 2026-09-15 CI runs almost all of it.
 `ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on changed
 frontend files, the **file-size ratchet** and the **schema-drift check** — the
 last two wired on 2026-09-15 (forgejo#60), having been runnable and unwired
-since 2026-09-01. The backend Jest job is there too but **advisory**
-(`continue-on-error`, for three named reasons in the workflow's comment
-block).
+since 2026-09-01. The backend Jest job is **required** since 2026-09-16: it
+was advisory for a fortnight, then its first run that reached the suite at all
+went 524 of 524 on main, and the owner promoted it.
 
-So what a green badge still does NOT cover is the backend suite. That one is
-yours to run. See **Rules** below for what is machine-enforced and what is not.
+A green badge therefore covers the backend suite too. See **Rules** below for
+what is machine-enforced and what is not.
 
 ## Docker & Deployment
 
@@ -520,7 +520,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Frontend formatting | `prettier --check` on changed files (`.github/workflows/ci.yml`) plus a `prettier --write` pre-commit hook |
 | DE and EN move together | `frontend/src/i18n/__tests__/localeKeyParity.test.ts` — reads the namespace list from the filesystem, so a new namespace is covered the day it is added, and keeps no allow-list |
 | No source file over 800 lines | `scripts/check-file-size.mjs` (`npm run check:size`) |
-| Coverage does not fall below its recorded figure | `scripts/check-coverage.mjs` vs `scripts/coverage-baseline.json` — required in the Vitest job, advisory in the Jest job. Recorded 2026-09-16: frontend 56.21 % lines, backend 76.35 % (forgejo#62) |
+| Coverage does not fall below its recorded figure | `scripts/check-coverage.mjs` vs `scripts/coverage-baseline.json` — required in both the Vitest and the Jest job. Recorded 2026-09-16: frontend 56.21 % lines, backend 76.35 % (forgejo#62) |
 | `schema.prisma` agrees with `prisma/migrations` | `backend/scripts/check-schema-drift.ts` (`npm run check:drift`, root or backend) — replays the migrations into a shadow DB (`--from-migrations`), so the answer does not depend on which branch your dev database last saw |
 | Every served endpoint appears in the OpenAPI spec | `backend/src/__tests__/openapi.coverage.test.ts` vs `services/openapi/pending.ts` |
 | Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
@@ -545,9 +545,9 @@ denominator and reported 65.81 % instead of 56.21 %.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
 `ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
-Prettier on changed frontend files as required jobs, and the backend Jest
-suite as an advisory one — it is allowed to fail, and its comment block names
-the three things that must be fixed before that changes. `security.yml` runs
+Prettier on changed frontend files as required jobs, and — since 2026-09-16 —
+the backend Jest suite as a required one too; its comment block keeps the
+history of why it was advisory until then. `security.yml` runs
 `npm audit` on production deps, Trivy and CodeQL on every push to `main` and
 weekly. CodeQL is NOT in that file, on purpose: the repository has GitHub's
 default code-scanning setup switched on (since 2026-08-01), and a
@@ -561,7 +561,7 @@ switch off first if it ever comes back.
 size in the `static` job, drift in a `schema-drift` job of its own, because it
 is the only static check that needs a database. The four Jest/Vitest ratchets
 ride along with whichever suite owns them, which means the OpenAPI pair is
-still only as binding as the advisory backend job.
+exactly as binding as the backend job, which is required since 2026-09-16.
 
 **"Run in CI" was, until 2026-09-16, "is red in CI".** Both database jobs
 failed on every run from the day they were wired: the service image was
