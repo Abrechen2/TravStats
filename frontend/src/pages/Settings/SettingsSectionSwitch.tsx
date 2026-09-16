@@ -60,11 +60,10 @@ export default function SettingsSectionSwitch({
           onAvatarUpload={page.handleAvatarUpload}
           onAvatarDelete={page.handleAvatarDelete}
           onSetProfile={page.setProfile}
-          onShowPasswordModal={() => page.setShowPasswordModal(true)}
         />
       );
     case "security":
-      return <SecuritySection />;
+      return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;
     case "apitokens":
       return <ApiTokensSection />;
     case "devices":

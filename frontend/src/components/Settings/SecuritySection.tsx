@@ -10,6 +10,9 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
 import PasskeySection from "./PasskeySection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { twoFactorApi } from "../../lib/api";
@@ -22,7 +25,17 @@ type Stage = "loading" | "off" | "setup" | "codes" | "on";
 /** Which password-gated action the prompt is currently collecting for. */
 type PasswordIntent = "disable" | "regenerate" | null;
 
-export default function SecuritySection(): JSX.Element {
+interface SecuritySectionProps {
+  /**
+   * Opens the password dialog the settings page owns. Round 4 moved "change
+   * password" here from the profile header: it is a sign-in protection like
+   * the two below it, not a profile field. Optional so the section still
+   * renders on its own in tests.
+   */
+  onChangePassword?: () => void;
+}
+
+export default function SecuritySection({ onChangePassword }: SecuritySectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const [stage, setStage] = useState<Stage>("loading");
   const [secret, setSecret] = useState("");
@@ -120,149 +133,176 @@ export default function SecuritySection(): JSX.Element {
     <SectionCard>
       <SectionTitle
         title={t("settings:security.title")}
-        description={t("settings:security.description")}
+        description={t("settings:security.sectionDescription")}
       />
+      <SettingRows>
+        {onChangePassword && (
+          <SettingRow
+            title={t("settings:security.passwordTitle")}
+            sub={t("settings:security.passwordSub")}
+            control={
+              <button type="button" className="btn-secondary" onClick={onChangePassword}>
+                {t("settings:security.passwordChange")}
+              </button>
+            }
+          />
+        )}
 
-      {stage === "on" && (
-        <div className="space-y-3">
-          <p className="text-sm">{t("settings:security.enabled", { count: codesLeft })}</p>
-          {/* Stated plainly rather than hidden: a token bypasses this entirely. */}
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("settings:security.tokenWarning")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => openPrompt("regenerate")}
-            >
-              {t("settings:security.regenerate")}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => openPrompt("disable")}>
-              {t("settings:security.disable")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {stage === "off" && (
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={busy}
-          onClick={() => void startSetup()}
-        >
-          {t("settings:security.enable")}
-        </button>
-      )}
-
-      {stage === "setup" && (
-        <div className="space-y-3">
-          <p className="text-sm">{t("settings:security.scanHint")}</p>
-          <QRCodeSVG value={otpauthUrl} size={168} />
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("settings:security.manualHint")}
-          </p>
-          <p className="text-xs font-mono">{secret}</p>
-
-          <label
-            className="block text-sm font-medium mb-1.5"
-            style={{ color: "var(--text-secondary)" }}
-            htmlFor="activate-code"
-          >
-            {t("settings:security.codeLabel")}
-          </label>
-          <input
-            id="activate-code"
-            className="input w-full"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            inputMode="numeric"
-            autoComplete="one-time-code"
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+          <SettingRow
+            title={t("settings:security.twoFactorTitle")}
+            sub={t("settings:security.description")}
+            control={
+              stage === "on" ? (
+                <>
+                  <Pill color={token("good")}>{t("settings:security.active")}</Pill>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => openPrompt("disable")}
+                  >
+                    {t("settings:security.disable")}
+                  </button>
+                </>
+              ) : stage === "off" ? (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy}
+                  onClick={() => void startSetup()}
+                >
+                  {t("settings:security.enable")}
+                </button>
+              ) : null
+            }
           />
 
-          {error && (
-            <div role="alert" className="text-sm text-red-400">
-              {error}
+          {stage === "on" && (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              <p className="t-caption">{t("settings:security.enabled", { count: codesLeft })}</p>
+              {/* Stated plainly rather than hidden: a token bypasses this entirely. */}
+              <p className="t-caption">{t("settings:security.tokenWarning")}</p>
+              <div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => openPrompt("regenerate")}
+                >
+                  {t("settings:security.regenerate")}
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy}
-              onClick={() => void activate()}
-            >
-              {t("settings:security.activate")}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setStage("off")}>
-              {t("common:buttons.cancel")}
-            </button>
-          </div>
-        </div>
-      )}
+          {stage === "setup" && (
+            <div className="space-y-3">
+              <p className="text-sm">{t("settings:security.scanHint")}</p>
+              <QRCodeSVG value={otpauthUrl} size={168} />
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("settings:security.manualHint")}
+              </p>
+              <p className="text-xs font-mono">{secret}</p>
 
-      {stage === "codes" && (
-        <div className="space-y-2">
-          <p className="text-sm">{t("settings:security.saveCodes")}</p>
-          <ul className="font-mono text-sm">
-            {recoveryCodes.map((entry) => (
-              <li key={entry}>{entry}</li>
-            ))}
-          </ul>
-          <button type="button" className="btn-secondary" onClick={() => setStage("on")}>
-            {t("common:buttons.done")}
-          </button>
-        </div>
-      )}
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+                htmlFor="activate-code"
+              >
+                {t("settings:security.codeLabel")}
+              </label>
+              <input
+                id="activate-code"
+                className="input w-full"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+              />
 
-      {intent !== null && (
-        <div className="mt-4 space-y-2">
-          <label
-            className="block text-sm font-medium mb-1.5"
-            style={{ color: "var(--text-secondary)" }}
-            htmlFor="twofa-password"
-          >
-            {t("settings:security.passwordLabel")}
-          </label>
-          <input
-            id="twofa-password"
-            type="password"
-            className="input w-full"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
+              {error && (
+                <div role="alert" className="text-sm text-red-400">
+                  {error}
+                </div>
+              )}
 
-          {error && (
-            <div role="alert" className="text-sm text-red-400">
-              {error}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy}
+                  onClick={() => void activate()}
+                >
+                  {t("settings:security.activate")}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setStage("off")}>
+                  {t("common:buttons.cancel")}
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy}
-              onClick={() => void submitPassword()}
-            >
-              {intent === "disable"
-                ? t("settings:security.confirmDisable")
-                : t("settings:security.confirmRegenerate")}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setIntent(null)}>
-              {t("common:buttons.cancel")}
-            </button>
-          </div>
-        </div>
-      )}
+          {stage === "codes" && (
+            <div className="space-y-2">
+              <p className="text-sm">{t("settings:security.saveCodes")}</p>
+              <ul className="font-mono text-sm">
+                {recoveryCodes.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+              <button type="button" className="btn-secondary" onClick={() => setStage("on")}>
+                {t("common:buttons.done")}
+              </button>
+            </div>
+          )}
 
-      {/* Passkeys sit under the TOTP block: same section, independent feature.
-          A passkey replaces the password rather than adding to it, so neither
-          switch depends on the other. */}
-      <PasskeySection />
+          {intent !== null && (
+            <div className="space-y-2">
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+                htmlFor="twofa-password"
+              >
+                {t("settings:security.passwordLabel")}
+              </label>
+              <input
+                id="twofa-password"
+                type="password"
+                className="input w-full"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+
+              {error && (
+                <div role="alert" className="text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy}
+                  onClick={() => void submitPassword()}
+                >
+                  {intent === "disable"
+                    ? t("settings:security.confirmDisable")
+                    : t("settings:security.confirmRegenerate")}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setIntent(null)}>
+                  {t("common:buttons.cancel")}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Passkeys sit under the TOTP block: same section, independent feature.
+            A passkey replaces the password rather than adding to it, so neither
+            switch depends on the other. */}
+        <PasskeySection />
+      </SettingRows>
     </SectionCard>
   );
 }

@@ -116,4 +116,14 @@ describe("SecuritySection", () => {
 
     await waitFor(() => expect(screen.getByText("ccccc-33333")).toBeInTheDocument());
   });
+
+  // Round 4 moved "change password" here from the profile header.
+  it("offers the password change as a row of its own", async () => {
+    const onChangePassword = vi.fn();
+    render(<SecuritySection onChangePassword={onChangePassword} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "settings:security.passwordChange" })
+    );
+    expect(onChangePassword).toHaveBeenCalledTimes(1);
+  });
 });

@@ -13,11 +13,14 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { useTranslation } from "../../hooks/useTranslation";
 import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { SettingRow } from "../ui/SettingRow";
 
 /** Cancelling the OS or password-manager dialog rejects with this. It is a
  *  normal user action, not an error worth showing. */
 function isUserCancellation(error: unknown): boolean {
-  return error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError");
+  return (
+    error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError")
+  );
 }
 
 export default function PasskeySection(): JSX.Element {
@@ -98,14 +101,21 @@ export default function PasskeySection(): JSX.Element {
   if (available === null) return <div />;
 
   return (
-    <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--color-border)" }}>
-      <h3 className="text-base font-semibold mb-1">{t("settings:passkeys.title")}</h3>
-      <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-        {t("settings:passkeys.description")}
-      </p>
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      <SettingRow
+        title={t("settings:passkeys.title")}
+        sub={t("settings:passkeys.description")}
+        control={
+          available && !adding ? (
+            <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
+              {t("settings:passkeys.add")}
+            </button>
+          ) : null
+        }
+      />
 
       {!available && (
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+        <p className="t-caption">
           {reason === "insecureOrigin"
             ? t("settings:passkeys.insecureOrigin")
             : t("settings:passkeys.notConfigured")}
@@ -114,11 +124,7 @@ export default function PasskeySection(): JSX.Element {
 
       {available && (
         <div className="space-y-4">
-          {passkeys.length === 0 && (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("settings:passkeys.none")}
-            </p>
-          )}
+          {passkeys.length === 0 && <p className="t-caption">{t("settings:passkeys.none")}</p>}
 
           {passkeys.length > 0 && (
             <ul className="space-y-2">
@@ -149,12 +155,6 @@ export default function PasskeySection(): JSX.Element {
                 </li>
               ))}
             </ul>
-          )}
-
-          {!adding && (
-            <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
-              {t("settings:passkeys.add")}
-            </button>
           )}
 
           {adding && (

@@ -37,7 +37,6 @@ function renderSection(overrides: Record<string, unknown> = {}) {
     onAvatarUpload: vi.fn(),
     onAvatarDelete: vi.fn(),
     onSetProfile: vi.fn(),
-    onShowPasswordModal: vi.fn(),
     ...overrides,
   };
   const rendered = render(

@@ -1,5 +1,7 @@
 import React from "react";
-import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import HelpIcon from "../Help/HelpIcon";
+import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ProfileSectionProps {
@@ -26,7 +28,6 @@ interface ProfileSectionProps {
     firstName?: string | null;
     lastName?: string | null;
   }) => void;
-  onShowPasswordModal: () => void;
 }
 
 export default function ProfileSection({
@@ -38,9 +39,9 @@ export default function ProfileSection({
   onAvatarUpload,
   onAvatarDelete,
   onSetProfile,
-  onShowPasswordModal,
 }: ProfileSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
 
   return (
     <SectionCard>
@@ -48,60 +49,59 @@ export default function ProfileSection({
         title={t("settings:profile.title")}
         description={t("settings:profile.description")}
       />
-      <div className="flex justify-end">
-        <button onClick={onShowPasswordModal} className="btn-secondary">
-          {t("settings:profile.changePassword")}
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4">
+      {/* The head of the card: who this is. Round 4 draws a square tile with
+          the initial (or the picture), the name, one meta line and the one
+          action on the picture; "change password" moved to Sicherheit. */}
+      <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-lg)" }}>
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-          style={{ background: "linear-gradient(135deg, var(--accent), #c27a1a)" }}
+          className="flex items-center justify-center overflow-hidden shrink-0"
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "var(--ts-radius-card)",
+            background: "var(--ts-tile)",
+            border: "1px solid var(--ts-border)",
+            color: "var(--ts-accent)",
+            fontSize: 24,
+            fontWeight: 700,
+          }}
         >
           {profile.profilePicture ? (
             <img
               src={profile.profilePicture}
               alt={t("settings:profile.title")}
-              className="w-full h-full object-cover rounded-full"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
-            profile.username.charAt(0).toUpperCase()
+            (profile.firstName || profile.username).charAt(0).toUpperCase()
           )}
         </div>
-        <div>
-          <FieldLabel help={t("settings:profile.help.avatar")}>
-            {t("settings:profile.uploadAvatar")}
-          </FieldLabel>
+        <div className="flex min-w-0 flex-col" style={{ gap: 2, flex: "1 1 200px" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}>
+            {fullName || profile.username}
+          </span>
+          <span className="t-caption inline-flex items-center gap-1.5">
+            @{profile.username}
+            {profile.email ? ` · ${profile.email}` : ""}
+            <HelpIcon content={t("settings:profile.help.avatar")} position="top" />
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
           {/* Native <input type=file> shows the browser-locale "Choose File"
               label which conflicts with the app i18n. Hide it visually and
               drive it from a labelled button so the copy stays under our
               translation control. */}
           <label
-            className="btn-secondary inline-flex items-center gap-2 cursor-pointer text-sm"
+            className="btn-secondary inline-flex items-center gap-2 cursor-pointer"
             style={{
               opacity: uploadingProfilePicture ? 0.6 : 1,
               pointerEvents: uploadingProfilePicture ? "none" : "auto",
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
+            <Icon name="upload" size={14} />
             {uploadingProfilePicture
               ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
-              : t("settings:profile.chooseFile", { defaultValue: "Choose file" })}
+              : t("settings:profile.changePicture")}
             <input
               type="file"
               accept="image/*"
@@ -115,26 +115,10 @@ export default function ProfileSection({
               type="button"
               onClick={onAvatarDelete}
               disabled={removingProfilePicture || uploadingProfilePicture}
-              className="btn-secondary inline-flex items-center gap-2 text-sm ml-2"
-              style={{
-                color: "var(--color-danger, #ef4444)",
-                opacity: removingProfilePicture ? 0.6 : 1,
-              }}
+              className="btn-secondary inline-flex items-center gap-2"
+              style={{ color: "var(--ts-bad)", opacity: removingProfilePicture ? 0.6 : 1 }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
+              <Icon name="trash-2" size={14} />
               {removingProfilePicture
                 ? t("common:buttons.removing", { defaultValue: "Removing..." })
                 : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
@@ -143,7 +127,7 @@ export default function ProfileSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           {/*
            * The username is shown, not edited. It used to be a plain input whose

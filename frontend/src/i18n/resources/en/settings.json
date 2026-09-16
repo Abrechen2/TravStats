@@ -92,7 +92,8 @@
     "help": {
       "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service."
     },
-    "editProfile": "Edit profile"
+    "editProfile": "Edit profile",
+    "changePicture": "Change picture"
   },
   "homeAirport": {
     "title": "Home airport",
@@ -758,7 +759,13 @@
     "disable": "Disable two-factor",
     "confirmDisable": "Disable",
     "passwordLabel": "Password to confirm",
-    "wrongPassword": "That password is not right."
+    "wrongPassword": "That password is not right.",
+    "sectionDescription": "How your sign-in is protected.",
+    "passwordTitle": "Password",
+    "passwordSub": "For signing in with your username",
+    "passwordChange": "Change",
+    "twoFactorTitle": "Two-factor authentication",
+    "active": "Active"
   },
   "scopeHint": "Applies to your account only.",
   "passkeys": {

@@ -182,7 +182,7 @@
 .ts-setting-rows > *:last-child {
   padding-bottom: 0;
 }
-.ts-setting-rows > * + .ts-setting-row {
+.ts-setting-rows > * + * {
   border-top: 1px solid var(--ts-border);
 }
 

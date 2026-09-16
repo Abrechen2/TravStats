@@ -92,7 +92,8 @@
     "help": {
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet."
     },
-    "editProfile": "Profil bearbeiten"
+    "editProfile": "Profil bearbeiten",
+    "changePicture": "Bild ändern"
   },
   "homeAirport": {
     "title": "Heimatflughafen",
@@ -758,7 +759,13 @@
     "disable": "Zwei-Faktor deaktivieren",
     "confirmDisable": "Deaktivieren",
     "passwordLabel": "Passwort zur Bestätigung",
-    "wrongPassword": "Das Passwort stimmt nicht."
+    "wrongPassword": "Das Passwort stimmt nicht.",
+    "sectionDescription": "Wie deine Anmeldung geschützt ist.",
+    "passwordTitle": "Passwort",
+    "passwordSub": "Für die Anmeldung mit deinem Benutzernamen",
+    "passwordChange": "Ändern",
+    "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
+    "active": "Aktiv"
   },
   "scopeHint": "Gilt nur für dein Konto.",
   "passkeys": {
