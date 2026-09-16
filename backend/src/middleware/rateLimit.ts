@@ -203,6 +203,19 @@ export const generalLimiter = rateLimit({
 });
 
 /**
+ * The bypass the pre-auth limiters share in development and test.
+ *
+ * Production is unaffected: it requires NODE_ENV to be explicitly
+ * 'development' or 'test', which the Docker image never sets. Without it an
+ * E2E run trips the ceilings on its own: the auth-ladder spec sends two
+ * `force-change-password` requests per browser, and the third browser met a
+ * 429 from a limiter of five (forgejo#56).
+ */
+export function skipOutsideProduction(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+}
+
+/**
  * Rate limiter for authentication endpoints (login, register)
  * Protects against brute-force attacks and mass registration
  * Allows 10 attempts per 15 minutes per IP
@@ -214,12 +227,8 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Bypass in dev/test envs so Playwright e2e suites that loop through
-  // login don't trip the 10/15min ceiling. Production unaffected — the
-  // bypass requires NODE_ENV to be explicitly 'development' or 'test',
-  // which the Docker image never sets.
-  skip: () =>
-    process.env.NODE_ENV === 'development' ||
-    process.env.NODE_ENV === 'test',
+  // login don't trip the 10/15min ceiling — see skipOutsideProduction.
+  skip: skipOutsideProduction,
   // All attempts count — skipSuccessfulRequests was removed to prevent brute-force bypass
 });
 
@@ -448,6 +457,7 @@ export const passwordResetLimiter = rateLimit({
   message: 'Too many password reset attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipOutsideProduction,
 });
 
 /**
