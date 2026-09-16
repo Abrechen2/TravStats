@@ -64,12 +64,16 @@
     "templateStatus.ts",
     "training.ts",
     "trips.ts",
+    "trips/photoDto.ts",
+    "trips/resolveTrip.ts",
     "trips/tourIndex.ts",
     "trips/tourLegs.ts",
     "trips/tourRoutes.ts",
     "trips/tourRouting.ts",
     "trips/tourTracks.ts",
-    "trips/tripCountries.ts"
+    "trips/tripCountries.ts",
+    "trips/tripPhotos.ts",
+    "trips/tripStops.ts"
   ],
   "enveloped": [
     "aircraft.ts",

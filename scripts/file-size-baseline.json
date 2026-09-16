@@ -6,7 +6,6 @@
     "frontend/src/components/GlobeView.tsx": 1672,
     "frontend/src/pages/TripDetailPage.tsx": 1589,
     "backend/src/routes/flights.ts": 1491,
-    "backend/src/routes/trips.ts": 1217,
     "backend/src/services/schematicRouter.ts": 1114,
     "frontend/src/components/FlightForm/useFlightForm.ts": 1075,
     "backend/src/services/flightLookup.ts": 1073,
