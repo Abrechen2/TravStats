@@ -4,11 +4,21 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { changeLanguage } from "../../i18n/config";
 import type { DisplaySettings } from "../../store/settingsStore";
 import { groupTimeZones } from "../../lib/timezones";
+import { Segmented } from "../ui/Segmented";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
 
 interface DisplaySectionProps {
   display: DisplaySettings;
   onSetDisplay: (partial: Partial<DisplaySettings>) => void;
 }
+
+// i18next splits keys on ".", so the stored values cannot be keys themselves.
+const DATE_FORMATS = [
+  { value: "DD.MM.YYYY", key: "dmy" },
+  { value: "YYYY-MM-DD", key: "iso" },
+  { value: "MM/DD/YYYY", key: "mdy" },
+] as const;
+const TIME_FORMATS = ["24h", "12h"] as const;
 
 export default function DisplaySection({
   display,
@@ -26,76 +36,78 @@ export default function DisplaySection({
         title={t("settings:display.title")}
         description={t("settings:display.description")}
       />
-
-      {/* Form fields are constrained to a readable max-width so dropdowns
-          like "Time format" / "Language" don't stretch across the full
-          card on wide screens — they always have a fixed handful of
-          options, so a 320 px field reads cleaner than a 900 px one. */}
-      <div className="space-y-4 max-w-md">
-        <div>
-          <label className="label">{t("settings:display.language")}</label>
-          <select
-            value={display.language}
-            onChange={(e) => {
-              const newLang = e.target.value as "de" | "en";
-              void changeLanguage(newLang);
-            }}
-            className="input"
-          >
-            <option value="de">{t("settings:display.languages.de")}</option>
-            <option value="en">{t("settings:display.languages.en")}</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="label">{t("settings:display.timezone")}</label>
-          <select
-            value={display.timezone}
-            onChange={(e) => onSetDisplay({ timezone: e.target.value })}
-            className="input"
-          >
-            {timezoneGroups.map((group) => (
-              <optgroup key={group.region} label={group.region}>
-                {group.zones.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="label">{t("settings:display.dateFormat")}</label>
+      <SettingRows>
+        <SettingRow
+          title={t("settings:display.language")}
+          sub={t("settings:display.languageSub")}
+          control={
+            <Segmented
+              label={t("settings:display.language")}
+              value={display.language}
+              options={[
+                { value: "de", label: t("settings:display.languages.de") },
+                { value: "en", label: t("settings:display.languages.en") },
+              ]}
+              onChange={(lang) => void changeLanguage(lang)}
+            />
+          }
+        />
+        {/* ~450 zones: a pill row cannot hold that, the select stays. */}
+        <SettingRow
+          title={t("settings:display.timezone")}
+          sub={t("settings:display.timezoneSub")}
+          htmlFor="display-timezone"
+          control={
             <select
+              id="display-timezone"
+              value={display.timezone}
+              onChange={(e) => onSetDisplay({ timezone: e.target.value })}
+              className="input"
+              style={{ minWidth: 220 }}
+            >
+              {timezoneGroups.map((group) => (
+                <optgroup key={group.region} label={group.region}>
+                  {group.zones.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          }
+        />
+        <SettingRow
+          title={t("settings:display.dateFormat")}
+          sub={t("settings:display.dateFormatSub")}
+          control={
+            <Segmented
+              label={t("settings:display.dateFormat")}
               value={display.dateFormat}
-              onChange={(e) =>
-                onSetDisplay({ dateFormat: e.target.value as typeof display.dateFormat })
-              }
-              className="input"
-            >
-              <option value="DD.MM.YYYY">DD.MM.YYYY</option>
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">{t("settings:display.timeFormat")}</label>
-            <select
+              options={DATE_FORMATS.map(({ value, key }) => ({
+                value,
+                label: t(`settings:display.dateFormats.${key}`),
+              }))}
+              onChange={(dateFormat) => onSetDisplay({ dateFormat })}
+            />
+          }
+        />
+        <SettingRow
+          title={t("settings:display.timeFormat")}
+          sub={t("settings:display.timeFormatSub")}
+          control={
+            <Segmented
+              label={t("settings:display.timeFormat")}
               value={display.timeFormat}
-              onChange={(e) =>
-                onSetDisplay({ timeFormat: e.target.value as typeof display.timeFormat })
-              }
-              className="input"
-            >
-              <option value="24h">24h</option>
-              <option value="12h">12h AM/PM</option>
-            </select>
-          </div>
-        </div>
-      </div>
+              options={TIME_FORMATS.map((value) => ({
+                value,
+                label: t(`settings:display.timeFormats.${value}`),
+              }))}
+              onChange={(timeFormat) => onSetDisplay({ timeFormat })}
+            />
+          }
+        />
+      </SettingRows>
     </SectionCard>
   );
 }

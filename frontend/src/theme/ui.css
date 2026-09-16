@@ -171,6 +171,21 @@
   cursor: pointer;
 }
 
+/* ─── Settings rows ─────────────────────────────────────────────────────── */
+/* A card of settings: rows divided by hairlines, the card padding outside. */
+.ts-setting-rows > .ts-setting-row {
+  padding: var(--ts-space-lg) 0;
+}
+.ts-setting-rows > .ts-setting-row:first-child {
+  padding-top: 0;
+}
+.ts-setting-rows > .ts-setting-row:last-child {
+  padding-bottom: 0;
+}
+.ts-setting-rows > .ts-setting-row + .ts-setting-row {
+  border-top: 1px solid var(--ts-border);
+}
+
 /* ─── Table ─────────────────────────────────────────────────────────────── */
 .ts-table {
   /*

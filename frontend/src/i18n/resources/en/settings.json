@@ -132,7 +132,20 @@
     },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
-    "timeFormat": "Time Format"
+    "timeFormat": "Time Format",
+    "languageSub": "Interface and date formats",
+    "timezoneSub": "For showing local times",
+    "dateFormatSub": "In prose and forms; tables show ISO",
+    "timeFormatSub": "Departure, arrival and check-in times",
+    "dateFormats": {
+      "dmy": "DD.MM.YYYY",
+      "iso": "YYYY-MM-DD",
+      "mdy": "MM/DD/YYYY"
+    },
+    "timeFormats": {
+      "24h": "24 h",
+      "12h": "12 h"
+    }
   },
   "domainColors": {
     "title": "Domain colours",
@@ -162,7 +175,14 @@
       "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
       "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
     },
-    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were."
+    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were.",
+    "distanceSub": "For distances and statistics",
+    "currencySub": "For spending totals; exchange rates from the ECB",
+    "short": {
+      "kilometers": "km",
+      "miles": "mi",
+      "nautical_miles": "nmi"
+    }
   },
   "defaults": {
     "title": "Default Values",
