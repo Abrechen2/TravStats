@@ -16,6 +16,7 @@ import type {
 } from "../../schemas/lodgingImport";
 import { normalizeLodgingName } from "./lodgingImportPreview";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
+import { minorUnits } from "../../shared/currencies";
 
 /**
  * A small, STABLE set of client-safe failure codes (finding: raw exception
@@ -232,10 +233,19 @@ async function resolveFxOutcomes(
 
 /** Look up the pre-resolved outcome for one row's stay. A priceless stay
  *  never had a key to begin with — resolve it to `priceRemoved` directly,
- *  matching exactly what `applyFxSnapshot` itself would have returned. */
+ *  matching exactly what `applyFxSnapshot` itself would have returned.
+ *
+ *  What is shared between rows is the RATE, never the amount. The cache
+ *  holds the whole outcome of the first row that asked for a (currency, day)
+ *  pair — including that row's converted amount — and every later row of the
+ *  same pair took it verbatim: two hotels on the same check-in day at 100 and
+ *  500 EUR both stored a base amount of 100 (AUD-043). The row's own price is
+ *  multiplied through the cached rate here, rounded to the base currency's
+ *  minor units exactly as `convertToBase` does it. */
 function fxOutcomeForStay(
   fields: StayCandidateFields,
   outcomes: ReadonlyMap<string, FxSnapshotOutcome>,
+  baseCurrency: string,
 ): FxSnapshotOutcome {
   if (fields.totalPrice == null) return { status: "priceRemoved" };
   if (!fields.currency) return { status: "missingCurrency" };
@@ -243,11 +253,18 @@ function fxOutcomeForStay(
   // Absent from the map only if the pre-resolve pass's lookup for this exact
   // pair itself failed — same non-blocking contract as a live failed lookup:
   // never fail the row, just omit the snapshot.
-  return (
-    outcomes.get(fxOutcomeKey(currency, fields.checkIn)) ?? {
-      status: "lookupFailed",
-    }
-  );
+  const cached = outcomes.get(fxOutcomeKey(currency, fields.checkIn));
+  if (!cached) return { status: "lookupFailed" };
+  if (cached.status !== "snapshotted") return cached;
+  if (cached.fields.fxRate == null) return { status: "lookupFailed" };
+  const factor = 10 ** minorUnits(baseCurrency);
+  return {
+    status: "snapshotted",
+    fields: {
+      ...cached.fields,
+      totalPriceBase: Math.round(fields.totalPrice * cached.fields.fxRate * factor) / factor,
+    },
+  };
 }
 
 async function createStay(
@@ -264,8 +281,11 @@ async function createStay(
   // against the column default ('EUR') would state a currency the source never
   // said — the same invention the LLM parser's `asCurrency` guard refuses one
   // layer up. The stay imports; only the unusable number stays out, and the
-  // user can type it in with its currency.
-  const priceHasNoCurrency = fields.totalPrice != null && !fields.currency;
+  // user can type it in with its currency. Both amounts are checked: a rate
+  // per night with no total slipped past a guard that looked at the total
+  // only, and was stored as 50 EUR (AUD-048).
+  const priceHasNoCurrency =
+    (fields.totalPrice != null || fields.pricePerNight != null) && !fields.currency;
   if (priceHasNoCurrency) {
     // The row index is the only handle an operator has back to the
     // spreadsheet — without it the warning names no row. The amount itself
@@ -327,6 +347,45 @@ async function createStay(
   });
 }
 
+/** A house this run created, with what identifies it beyond its name. */
+interface CreatedHouse {
+  id: string;
+  cityKey: string;
+  externalRef: string | null;
+}
+
+/**
+ * Whether a row naming the same house as an earlier one of THIS run means the
+ * same building. The rules mirror the preview's: an external reference is a
+ * proven identity, so two rows carrying DIFFERENT ones are two houses whatever
+ * their names; otherwise a row that names a city matches only a house in that
+ * city. A row with no city at all can only be matched on the name. The name
+ * alone used to be the whole rule, which folded "Hotel Central, Berlin" and
+ * "Hotel Central, Paris" — two rows with two distinct references — into one
+ * house with two stays (AUD-044).
+ */
+function sameHouseInBatch(created: CreatedHouse, incoming: LodgingCandidateFields): boolean {
+  const incomingRef = incoming.externalRef ?? null;
+  if (created.externalRef && incomingRef) return created.externalRef === incomingRef;
+  const incomingCity = incoming.city ? normalizeLodgingName(incoming.city) : "";
+  if (incomingCity && created.cityKey) return created.cityKey === incomingCity;
+  return true;
+}
+
+/**
+ * Rows in the order their dependencies allow. The only dependency inside a
+ * payload is a stays-only row joining, by `lodgingName`, a house another row
+ * of the same payload creates. The preview resolves that against ALL
+ * candidates; the commit resolved it against the rows already written, so
+ * the same two rows imported cleanly in one order and lost the stay in the
+ * other (AUD-055). Creating rows go first; everything else keeps its place.
+ */
+function inDependencyOrder(rows: readonly CommitRowInput[]): CommitRowInput[] {
+  const creating = rows.filter((r) => r.action !== "skip" && r.lodging !== null);
+  const rest = rows.filter((r) => !(r.action !== "skip" && r.lodging !== null));
+  return [...creating, ...rest];
+}
+
 /**
  * Commit an import as one revertible batch.
  *
@@ -351,9 +410,13 @@ export async function commitLodgingImport(
   // across the WHOLE batch, resolved before any row is written.
   const fxOutcomes = await resolveFxOutcomes(rows, baseCurrency);
 
-  // Lodgings created by THIS run, so a later row naming the same hotel attaches
-  // to it instead of creating a second copy.
-  const createdByName = new Map<string, string>();
+  // Lodgings created by THIS run, keyed by normalised name, so a later row
+  // naming the same hotel attaches to it instead of creating a second copy.
+  // Several houses can share a name (see `sameHouseInBatch`).
+  const createdByName = new Map<string, CreatedHouse[]>();
+  const remember = (nameKey: string, house: CreatedHouse): void => {
+    createdByName.set(nameKey, [...(createdByName.get(nameKey) ?? []), house]);
+  };
 
   let createdLodgings = 0;
   let createdStays = 0;
@@ -364,7 +427,7 @@ export async function commitLodgingImport(
     error: string;
   }[] = [];
 
-  for (const row of rows) {
+  for (const row of inDependencyOrder(rows)) {
     if (row.action === "skip") {
       skipped++;
       continue;
@@ -395,26 +458,36 @@ export async function commitLodgingImport(
       }
 
       if (!lodgingId && row.lodging) {
-        const nameKey = normalizeLodgingName(row.lodging.name);
-        const already = createdByName.get(nameKey);
-        if (already) {
-          lodgingId = already;
+        const fields = row.lodging;
+        const nameKey = normalizeLodgingName(fields.name);
+        const house: Omit<CreatedHouse, "id"> = {
+          cityKey: fields.city ? normalizeLodgingName(fields.city) : "",
+          externalRef: fields.externalRef ?? null,
+        };
+        // An empty key identifies nothing (AUD-054); only a single candidate
+        // is an identity — two same-named houses this run already made are
+        // an ambiguity, and a third row is a third house, not a coin toss.
+        const already = nameKey
+          ? (createdByName.get(nameKey) ?? []).filter((c) => sameHouseInBatch(c, fields))
+          : [];
+        if (already.length === 1) {
+          lodgingId = already[0].id;
         } else {
           try {
-            lodgingId = await createLodging(userId, batch.id, row.lodging);
-            createdByName.set(nameKey, lodgingId);
+            lodgingId = await createLodging(userId, batch.id, fields);
+            remember(nameKey, { ...house, id: lodgingId });
             createdLodgings++;
           } catch (err) {
-            if (!isUniqueViolation(err) || !row.lodging.externalRef) throw err;
+            if (!isUniqueViolation(err) || !fields.externalRef) throw err;
             // Someone (or an earlier run) already owns this externalRef: the row
             // is a duplicate, which is a skip, not a failure.
             const existing = await prisma.lodging.findFirst({
-              where: { userId, externalRef: row.lodging.externalRef },
+              where: { userId, externalRef: fields.externalRef },
               select: { id: true },
             });
             if (!existing) throw err;
             lodgingId = existing.id;
-            createdByName.set(nameKey, existing.id);
+            remember(nameKey, { ...house, id: existing.id });
             skipped++;
             if (!row.stay) continue;
           }
@@ -428,12 +501,14 @@ export async function commitLodgingImport(
       // since the lodging doesn't exist yet at preview time). If this row
       // never got a `lodging` object of its own either, its only remaining
       // handle is `lodgingName` — resolve it against the lodgings created
-      // earlier in THIS run, same normalization as the `createdByName` keys
-      // above. Order-dependent by design (mirrors the same-batch dedupe a
-      // few lines up): the creating row must come before this one.
+      // in THIS run, same normalization as the `createdByName` keys above.
+      // `inDependencyOrder` has already written every creating row, so the
+      // source file's order no longer decides whether this resolves. A name
+      // this run gave to two houses is an ambiguity, not a match.
       if (!lodgingId && !row.lodging && row.lodgingName) {
-        lodgingId =
-          createdByName.get(normalizeLodgingName(row.lodgingName)) ?? null;
+        const joinKey = normalizeLodgingName(row.lodgingName);
+        const houses = joinKey ? (createdByName.get(joinKey) ?? []) : [];
+        lodgingId = houses.length === 1 ? houses[0].id : null;
       }
 
       if (!lodgingId) {
@@ -442,7 +517,7 @@ export async function commitLodgingImport(
 
       if (row.stay) {
         try {
-          const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes);
+          const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes, baseCurrency);
           await createStay(userId, batch.id, lodgingId, row.stay, fxOutcome, row.sourceRowIndex);
           createdStays++;
         } catch (err) {

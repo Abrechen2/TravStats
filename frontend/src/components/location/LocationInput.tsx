@@ -142,6 +142,28 @@ export function LocationInput({
 
   const hasPosition = value !== null;
 
+  /**
+   * The ONE way a position is accepted.
+   *
+   * Every successful pick has to clear the range error and report validity
+   * upward, and only the advanced number fields did. So after a rejected
+   * 999/8, pasting "52.52, 13.405" into the search box — or confirming a pick
+   * on the map — filled the numbers in correctly while the error message and
+   * the disabled Save button stayed exactly where they were, with nothing left
+   * on screen that was actually wrong (AUD-068).
+   *
+   * Routing all four paths through here is the fix: a new path cannot forget
+   * to do it, because there is nothing to forget.
+   */
+  const applySelection = useCallback(
+    (selection: LocationSelection): void => {
+      setRangeError(null);
+      onValidityChange?.(true);
+      onChange(selection);
+    },
+    [onChange, onValidityChange]
+  );
+
   const handleQueryChange = useCallback(
     (raw: string): void => {
       setQuery(raw);
@@ -149,23 +171,23 @@ export function LocationInput({
       if (parsed) {
         setCoordsDetected(true);
         setDropdownOpen(false);
-        onChange({ lat: parsed.lat, lon: parsed.lon });
+        applySelection({ lat: parsed.lat, lon: parsed.lon });
       } else {
         setCoordsDetected(false);
       }
     },
-    [onChange]
+    [applySelection]
   );
 
   const handleSelectResult = useCallback(
     (hit: PlaceSearchResult): void => {
-      onChange(placeToSelection(hit));
+      applySelection(placeToSelection(hit));
       setQuery("");
       setCoordsDetected(false);
       setDropdownOpen(false);
       reset();
     },
-    [onChange, reset]
+    [applySelection, reset]
   );
 
   /** A coordinate typed or pasted into the advanced fields. */
@@ -197,19 +219,17 @@ export function LocationInput({
         onValidityChange?.(false);
         return;
       }
-      setRangeError(null);
-      onValidityChange?.(true);
-      onChange({ lat, lon });
+      applySelection({ lat, lon });
     },
-    [onChange, onValidityChange]
+    [applySelection]
   );
 
   const handleModalConfirm = useCallback(
     (selection: LocationSelection): void => {
-      onChange(selection);
+      applySelection(selection);
       setModalOpen(false);
     },
-    [onChange]
+    [applySelection]
   );
 
   const handleAdvancedLatChange = useCallback(

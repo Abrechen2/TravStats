@@ -61,6 +61,7 @@
     "notFound": "Album nicht gefunden — wurde es in Immich gelöscht?",
     "protocol": "Unerwartete Antwort von Immich. Passt die Server-Version?",
     "invalidUrl": "Die Server-URL ist ungültig.",
+    "keyRequired": "Für eine andere Server-Adresse wird ein eigener API-Schlüssel benötigt. Der instanzweit hinterlegte Schlüssel gilt nur für den dort eingetragenen Server.",
     "retry": "Erneut versuchen"
   },
   "admin": {

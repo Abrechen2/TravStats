@@ -152,7 +152,6 @@
   ],
   "darkVariants": [],
   "overlays": [
-    "components/Admin/BackupManagement.tsx",
     "components/BoardingPassScanner.tsx",
     "components/Cruise/CruiseImportPreviewModal.tsx",
     "components/FlightReviewModal.tsx",

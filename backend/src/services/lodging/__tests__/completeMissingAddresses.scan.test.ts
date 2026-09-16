@@ -77,5 +77,10 @@ describe("completeMissingAddresses — the limit bounds the work, not the scan",
 
     expect(result.attempted).toBe(MAX_BACKFILL_ROWS);
     expect(reverseGeocode).toHaveBeenCalledTimes(MAX_BACKFILL_ROWS);
-  });
+    // 503 inserted rows and 500 sequential updates against a containerised
+    // Postgres do not fit Jest's 5 s default on every machine — this one takes
+    // just over it, and the failure then arrives as a timeout plus a wall of
+    // "Record to update not found" from the loop still running after teardown.
+    // The test measures a LIMIT, never a duration, so the clock gets room.
+  }, 30_000);
 });

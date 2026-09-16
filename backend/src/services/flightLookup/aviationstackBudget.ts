@@ -123,6 +123,7 @@ async function resolveAviationstackBudget(): Promise<number> {
   // to 3 so we don't accidentally hammer the API.
   try {
     const settings = await prisma.adminSettings.findFirst({
+      orderBy: { id: "asc" },
       select: { aviationstackDailyBudget: true },
     });
     return settings?.aviationstackDailyBudget ?? 3;

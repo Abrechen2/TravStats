@@ -326,7 +326,26 @@ export function validateBoardingPassImage(filePath: string, declaredMimeType: st
  * @param imageBase64 Base64-encoded image string (with or without data URI prefix)
  * @returns Validation result with detected MIME type
  */
-export function validateBoardingPassImageBase64(imageBase64: string): { valid: boolean; mimeType?: string; reason?: string } {
+/**
+ * The result carries `base64` — the payload with any data-URI prefix removed.
+ *
+ * Every caller must OCR THAT, not the string it passed in. This function has
+ * always stripped `data:image/jpeg;base64,` before sniffing, so a data URI
+ * validated cleanly; the routes then handed the ORIGINAL string to Tesseract,
+ * where `Buffer.from(…, "base64")` skipped the prefix's invalid characters and
+ * produced a few bytes of rubble in front of the image. Tesseract could not
+ * decode it — and until forgejo#117's other half, that ended the process.
+ *
+ * Normalising in one place and returning the result is what stops the
+ * validator and its consumer from disagreeing about what was validated.
+ */
+export function validateBoardingPassImageBase64(imageBase64: string): {
+  valid: boolean;
+  mimeType?: string;
+  reason?: string;
+  /** The bytes that were actually validated, ready to decode. */
+  base64?: string;
+} {
   try {
     // Remove data URI prefix if present (e.g., "data:image/png;base64,")
     let base64Data = imageBase64;
@@ -385,7 +404,7 @@ export function validateBoardingPassImageBase64(imageBase64: string): { valid: b
       }
     }
 
-    return { valid: true, mimeType: detectedType };
+    return { valid: true, mimeType: detectedType, base64: base64Data };
   } catch (error) {
     return {
       valid: false,
@@ -393,4 +412,3 @@ export function validateBoardingPassImageBase64(imageBase64: string): { valid: b
     };
   }
 }
-

@@ -259,9 +259,13 @@
       "needsInputLabel": "need you",
       "needsInputHint": "Please review and decide these rows before committing.",
       "commit": "Commit",
-      "commitError": "Could not commit the import"
+      "commitError": "Could not commit the import",
+      "chooseCurrency": "— currency —",
+      "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported."
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
+    "matchedAs": "Matched to:",
+    "rejectMatch": "Not the same hotel — create new",
     "fields": {
       "name": "Name",
       "type": "Type",
@@ -323,7 +327,9 @@
       "rowReasons": {
         "missing_name": "{{count}}× no hotel name",
         "unreadable_date": "{{count}}× unreadable date (expected 2026-03-07, 07.03.2026 or 07.03.26)",
-        "unreadable_number": "{{count}}× unreadable number"
+        "unreadable_number": "{{count}}× unreadable number",
+        "out_of_range": "{{count}}× value out of range",
+        "ambiguous_amount": "{{count}}× ambiguous amount (thousands or three decimals?)"
       },
       "rowSample": " (e.g. \"{{sample}}\" in row {{row}})",
       "skippedRows": "{{count}} rows were skipped due to invalid values.",

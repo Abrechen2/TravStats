@@ -65,6 +65,19 @@ vi.mock("../../components/Dashboard/tabs/TourTab", () => ({
   TourTab: () => <div data-testid="tour-tab" />,
 }));
 
+// NavigationBar/DashboardPage ask for the running version on mount; the request
+// escaped the test and failed silently (forgejo#110).
+vi.mock("@/lib/api/version", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/version")>();
+  return {
+    ...actual,
+    versionApi: {
+      ...actual.versionApi,
+      get: vi.fn().mockResolvedValue({ version: "0.0.0-test", updateAvailable: false }),
+    },
+  };
+});
+
 // The real store -- `betaFeaturesEnabled`/`enabledDomains` drive
 // `useBetaFeatures`/`useEnabledDomains`/`usePlacesAccess` for real, the
 // same way DomainTabStrip.test.tsx exercises this gate.

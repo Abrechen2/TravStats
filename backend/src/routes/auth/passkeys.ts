@@ -7,7 +7,7 @@ import {
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { prisma } from "../../db";
-import { authenticate, AuthRequest } from "../../middleware/auth";
+import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie } from "../../utils/session";
@@ -42,6 +42,7 @@ const USER_VERIFICATION = "required" as const;
 router.get("/availability", async (_req, res: Response, next: NextFunction) => {
   try {
     const row = await prisma.adminSettings.findFirst({
+      orderBy: { id: "asc" },
       select: { webauthnOrigins: true, publicUrl: true },
     });
     const primary = row?.webauthnOrigins?.[0] ?? row?.publicUrl ?? null;
@@ -63,7 +64,7 @@ async function requireRp(): Promise<NonNullable<Awaited<ReturnType<typeof resolv
   return rp;
 }
 
-router.post("/register/options", authenticate, authLimiter, async (req: AuthRequest, res, next) => {
+router.post("/register/options", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const rp = await requireRp();
     const userId = req.userId!;
@@ -105,7 +106,7 @@ router.post("/register/options", authenticate, authLimiter, async (req: AuthRequ
   }
 });
 
-router.post("/register/verify", authenticate, authLimiter, async (req: AuthRequest, res, next) => {
+router.post("/register/verify", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const rp = await requireRp();
     const userId = req.userId!;
@@ -280,7 +281,7 @@ router.get("/", authenticate, async (req: AuthRequest, res, next) => {
   }
 });
 
-router.patch("/:id", authenticate, authLimiter, async (req: AuthRequest, res, next) => {
+router.patch("/:id", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const { name } = renamePasskeySchema.parse(req.body);
     // Scoped by userId for the same reason as the delete below.
@@ -295,7 +296,7 @@ router.patch("/:id", authenticate, authLimiter, async (req: AuthRequest, res, ne
   }
 });
 
-router.delete("/:id", authenticate, authLimiter, async (req: AuthRequest, res, next) => {
+router.delete("/:id", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     // Scoped by userId, not just id: a foreign key proves the row exists, never
     // that it belongs to the caller.

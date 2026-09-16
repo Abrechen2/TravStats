@@ -14,7 +14,7 @@
  */
 
 import { getCachedAirports } from "../airportCache";
-import type { FlightTimeSemantics } from "../../utils/timezone";
+import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 
 /**
  * A UTC-timezone map for a set of flight rows (mirrors computeSummary).
@@ -70,4 +70,23 @@ export async function withDepartureClock<
       null,
     depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
   }));
+}
+
+/**
+ * The calendar day an instant fell on AT A GIVEN AIRPORT, as UTC midnight.
+ *
+ * The one home for "which day was that, locally". Kept here beside
+ * `buildTzMap` because every caller that needs it has already resolved a
+ * timezone through this module: the timeseries buckets on it, and the travel
+ * account decides on it whether a flight took a night (AUD-079).
+ *
+ * UTC midnight is a carrier, not a claim about the zone — it makes days
+ * comparable and subtractable without a second timezone conversion.
+ */
+export function airportCalendarDay(
+  stored: Date,
+  timezone: string | null,
+  semantics: FlightTimeSemantics,
+): Date {
+  return new Date(`${localWallClockOf(stored, timezone, semantics).date}T00:00:00Z`);
 }

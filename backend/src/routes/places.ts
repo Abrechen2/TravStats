@@ -3,11 +3,16 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+// A visit must never attach itself to someone else's trip by id. The rule
+// lived here first and now serves every domain that links to a trip (AUD-038).
+import { assertTripOwned } from "../utils/ownedReferences";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
 import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
+import { deletePlacePhotoFile } from "../middleware/upload";
+import logger from "../utils/logger";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -149,6 +154,44 @@ const orderByFor = (
   }
 };
 
+/**
+ * The photo filenames hanging off a place or a visit.
+ *
+ * Read BEFORE the parent row is deleted: the cascade takes the photo rows with
+ * it, and afterwards there is nothing left to ask which files they named.
+ */
+async function placePhotoFilenames(
+  scope: { placeId: string } | { placeVisitId: string },
+): Promise<string[]> {
+  const where: Prisma.PlaceVisitPhotoWhereInput =
+    "placeId" in scope ? { visit: { placeId: scope.placeId } } : { placeVisitId: scope.placeVisitId };
+  const rows = await prisma.placeVisitPhoto.findMany({ where, select: { filename: true } });
+  return rows.map((r) => r.filename);
+}
+
+/**
+ * Delete the bytes, after the rows are gone.
+ *
+ * Order matters and is the same one `routes/places/visitPhotos.ts` states for a
+ * single photo: row first, bytes second. The other way round can delete a file
+ * and then fail the row, leaving a photo the UI still lists and can never show.
+ * A file that cannot be removed is logged, not thrown — the delete the user
+ * asked for has already succeeded, and failing it now would be a lie about what
+ * happened.
+ */
+function removePlacePhotoFiles(filenames: readonly string[]): void {
+  for (const filename of filenames) {
+    try {
+      deletePlacePhotoFile(filename);
+    } catch (error) {
+      logger.warn(
+        { operation: "place_photo_file_orphaned", filename, error },
+        "photo row deleted but its file could not be removed",
+      );
+    }
+  }
+}
+
 // ---------------------------------------------------------------- list
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -171,6 +214,35 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     if (tripId) where.visits = { some: { tripId } };
 
+    // `visitCount` and `lastVisit` are derived from each place's visits, not
+    // plain columns. They were paginated in NAME order and only then sorted, so
+    // "most visited" ranked an alphabetical slice rather than the list — page 1
+    // of a sort by visit count showed the most-visited places whose names begin
+    // with A (AUD-072). Same shape, same fix and same reason as
+    // `routes/lodging.ts`: fetch the filtered set, decorate, sort, and ONLY
+    // THEN slice — sort-then-paginate, never the other way around.
+    const now = new Date();
+    if (sortBy === "visitCount" || sortBy === "lastVisit") {
+      const all = await prisma.place.findMany({
+        where,
+        include: PLACE_INCLUDE,
+        // A stable base order so ties do not shuffle between requests.
+        orderBy: { name: "asc" },
+      });
+      const sorted = sortDecorated(
+        all.map((r) => decorate(r, now)),
+        sortBy,
+        sortOrder
+      );
+      res.json({
+        success: true,
+        data: sorted.slice(offset, offset + limit),
+        meta: { total: sorted.length, limit, offset },
+      });
+      return;
+    }
+
+    // A plain column: the database can order it, so the page bounds the work.
     const [rows, total] = await Promise.all([
       prisma.place.findMany({
         where,
@@ -182,14 +254,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       prisma.place.count({ where }),
     ]);
 
-    const now = new Date();
-    const data = sortDecorated(
-      rows.map((r) => decorate(r, now)),
-      sortBy,
-      sortOrder
-    );
-
-    res.json({ success: true, data, meta: { total, limit, offset } });
+    res.json({
+      success: true,
+      data: rows.map((r) => decorate(r, now)),
+      meta: { total, limit, offset },
+    });
   } catch (error) {
     next(error);
   }
@@ -330,7 +399,14 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
 
     // Visits cascade at the DB level; deleting the place deletes its history,
     // which is what "delete this place" means.
+    //
+    // The cascade reaches the photo ROWS and nothing reaches their BYTES, so
+    // every photo of every visit stayed on disk for ever — invisible, since
+    // the row that named it was gone (AUD-073). Filenames are read before the
+    // delete, because afterwards there is nothing left to ask.
+    const orphanedFiles = await placePhotoFilenames({ placeId: existing.id });
     await prisma.place.delete({ where: { id: existing.id } });
+    removePlacePhotoFiles(orphanedFiles);
 
     await recheckAchievements(userId, "place delete");
 
@@ -341,14 +417,6 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // ---------------------------------------------------------------- visits
-
-/** Ownership of the trip is checked separately — a visit must never be able to
- *  attach itself to someone else's trip by id. */
-async function assertTripOwned(tripId: string | null | undefined, userId: string): Promise<void> {
-  if (!tripId) return;
-  const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
-  if (!trip) throw new AppError("Trip not found", 404);
-}
 
 router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -462,7 +530,9 @@ router.delete("/visits/:visitId", async (req: AuthRequest, res: Response, next: 
     // questions (shared/placeCounting.ts): removing a wrong date is not the
     // same statement as "I was never here", and the user can say the latter
     // explicitly on the place itself.
+    const orphanedFiles = await placePhotoFilenames({ placeVisitId: existing.id });
     await prisma.placeVisit.delete({ where: { id: existing.id } });
+    removePlacePhotoFiles(orphanedFiles);
 
     await recheckAchievements(userId, "visit delete");
 

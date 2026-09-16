@@ -19,9 +19,20 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
   let otherUserId: string;
   let otherAuthCookie: string;
 
-  function writeTestReceiptFile(): string {
+  /**
+   * A receipt as an upload actually leaves it: the file on disk AND the row
+   * that says who uploaded it.
+   *
+   * Seeding only the file was enough while ownership was inferred from "some
+   * row references this filename" — which is the rule AUD-019 removed, because
+   * it let account B claim account A's file merely by referencing it. Ownership
+   * is now recorded once, from the session, by the upload route; a test that
+   * skips that step is seeding a state the product cannot produce.
+   */
+  async function writeTestReceiptFile(owner: string = userId): Promise<string> {
     const filename = `test-receipt-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
     fs.writeFileSync(path.join(getUploadDir(), filename), "not-a-real-image-but-good-enough");
+    await prisma.receiptUpload.create({ data: { filename, userId: owner } });
     return filename;
   }
 
@@ -63,7 +74,7 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
     let stayId: string;
 
     beforeEach(async () => {
-      filename = writeTestReceiptFile();
+      filename = await writeTestReceiptFile();
       const lodging = await prisma.lodging.create({
         data: { userId, name: "Receipt Test Hotel" },
       });
@@ -126,7 +137,7 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
     let flightId: string;
 
     beforeEach(async () => {
-      filename = writeTestReceiptFile();
+      filename = await writeTestReceiptFile();
       const flight = await prisma.flight.create({
         data: {
           userId,
@@ -171,11 +182,36 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
     });
   });
 
-  it("returns 404 for a filename with no owning flight or lodging stay at all", async () => {
-    const filename = writeTestReceiptFile();
+  /**
+   * Ownership, not reference.
+   *
+   * This case used to assert the opposite — that a receipt no flight or stay
+   * referenced was a 404. That was the OLD rule, and it was the vulnerability:
+   * deciding ownership from "some row points at this filename" let account B
+   * claim account A's file by referencing it (audit finding AUD-019). It also
+   * made the ordinary state between uploading a receipt and saving the form it
+   * belongs to unreadable to the person who had just uploaded it.
+   */
+  it("lets the uploader read a receipt nothing references yet", async () => {
+    const filename = await writeTestReceiptFile();
+
     const res = await request(app)
       .get(`/api/v1/uploads/receipts/${filename}`)
       .set("Cookie", authCookie);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 404 for a filename nobody uploaded", async () => {
+    // A file on disk with no ownership row — the shape a path-guessing caller
+    // would hit, and the shape a pre-AUD-019 leftover has.
+    const filename = `orphan-${Date.now()}.png`;
+    fs.writeFileSync(path.join(getUploadDir(), filename), "orphaned");
+
+    const res = await request(app)
+      .get(`/api/v1/uploads/receipts/${filename}`)
+      .set("Cookie", authCookie);
+
     expect(res.status).toBe(404);
   });
 });

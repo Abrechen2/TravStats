@@ -19,19 +19,17 @@
  * Usage
  * -----
  *   # Locally (dev DB):
- *   DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \
- *     npx tsx backend/scripts/backfillRouteDistance.ts
+ *   DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev  *     npx tsx backend/src/scripts/backfillRouteDistance.ts --dry-run
  *
- *   # On a host (CT 100, Norberts Unraid-2, …):
- *   docker exec TravStats node -e "
- *     require('child_process').execSync(
- *       'npx tsx /app/backend/scripts/backfillRouteDistance.ts',
- *       { stdio: 'inherit' }
- *     )
- *   "
- *
- *   Or, if the script is shipped into the image (it is, since v1.5.0-rc.3):
- *   docker exec TravStats npx tsx /app/backend/scripts/backfillRouteDistance.ts
+ *   # In the production container — the script is COMPILED into the image
+ *   # (dist/scripts/), because the image carries neither tsx nor the
+ *   # TypeScript sources it would need. Until 2.6.1 this file lived outside
+ *   # src/, was copied into the image as .ts, and the advertised
+ *   # `npx tsx /app/backend/scripts/…` could not resolve its imports
+ *   # (forgejo#108). The container name is whatever your compose says;
+ *   # `travstats-app` is the documented default.
+ *   docker exec travstats-app node /app/backend/dist/scripts/backfillRouteDistance.js --dry-run
+ *   docker exec travstats-app node /app/backend/dist/scripts/backfillRouteDistance.js
  *
  * Env / args
  * ----------
@@ -43,7 +41,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { haversineKm } from "../src/services/co2Calculator";
+import { haversineKm } from "../services/co2Calculator";
 
 interface BackfillArgs {
   dryRun: boolean;

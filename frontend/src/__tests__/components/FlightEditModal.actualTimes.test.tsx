@@ -37,6 +37,19 @@ vi.mock("../../lib/api", () => ({
   companionsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 
+// The airline combobox searches the catalogue as soon as it has a query.
+vi.mock("@/lib/api/catalogue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/catalogue")>();
+  return {
+    ...actual,
+    airlinesApi: {
+      ...actual.airlinesApi,
+      search: vi.fn().mockResolvedValue([]),
+      list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    },
+  };
+});
+
 import FlightEditModal from "../../components/FlightEditModal";
 
 const BASE_FLIGHT: Flight = {

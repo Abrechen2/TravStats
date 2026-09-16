@@ -261,6 +261,10 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         '-p', dbInfo.port.toString(),
         '-U', dbInfo.user,
         '-F', 'p',
+        // See the note above spawnRestore in backupRestore.ts: without --clean a
+        // dump only ever ADDS, so restoring over a live database left it as it
+        // was and reported success (audit finding AUD-007).
+        '--clean', '--if-exists',
         dbInfo.database,
       ], {
         env: {
@@ -351,6 +355,11 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
           'pg_dump',
           '-U', dbInfo.user,
           '-F', 'p',
+          '--clean', '--if-exists',
+        // See the note above spawnRestore in backupRestore.ts: without --clean a
+        // dump only ever ADDS, so restoring over a live database left it as it
+        // was and reported success (audit finding AUD-007).
+        '--clean', '--if-exists',
           dbInfo.database,
         ], {
           env: {
@@ -426,7 +435,7 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         const outputFile = fs.createWriteStream(outputPath);
         const dockerExec = spawn('docker', [
           'exec', '-i', actualContainerName,
-          'pg_dump', '-U', dbInfo.user, '-F', 'p', dbInfo.database,
+          'pg_dump', '-U', dbInfo.user, '-F', 'p', '--clean', '--if-exists', dbInfo.database,
         ], {
           env: { ...process.env, PGPASSWORD: dbInfo.password },
         });
@@ -489,6 +498,10 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         '-p', dbInfo.port.toString(),
         '-U', dbInfo.user,
         '-F', 'p',
+        // See the note above spawnRestore in backupRestore.ts: without --clean a
+        // dump only ever ADDS, so restoring over a live database left it as it
+        // was and reported success (audit finding AUD-007).
+        '--clean', '--if-exists',
         dbInfo.database,
       ], {
         env: { ...process.env, PGPASSWORD: dbInfo.password },

@@ -152,10 +152,6 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
-          "domainColors": {
-            "name": "Custom domain colours",
-            "what": "Makes the per-domain colour a setting rather than a brand constant. Applies to statistics, the trip timeline, the activity rail and the import log."
-          },
           "tourRoutes": {
             "name": "Tours",
             "what": "Route sections inside a trip — the section list, its editor, a dashboard tab of its own, and the lines on the map."
@@ -204,6 +200,8 @@
     "testing": "Testing…",
     "testOk": "WebDAV connection successful",
     "testFailed": "WebDAV connection failed",
+    "testNeedsSave": "The test checks the saved configuration — save first, then test.",
+    "testNeedsEnabled": "The test checks the saved configuration, and WebDAV sync is switched off there.",
     "fields": {
       "enabled": {
         "label": "Enable WebDAV sync",
@@ -559,7 +557,13 @@
     },
     "actions": {
       "download": "Download",
-      "restore": "Restore"
+      "restore": "Restore",
+      "upload": "Upload",
+      "uploading": "Uploading..."
+    },
+    "cloud": {
+      "syncedAt": "Uploaded on {{date}}",
+      "failed": "Failed"
     },
     "restore": {
       "title": "Restore Backup",
@@ -570,9 +574,6 @@
       "scopeDatabase": "Database Only",
       "scopeFiles": "Files Only",
       "createBackupBefore": "Create backup before restore (recommended)",
-      "targetDatabaseUrl": "Target Database URL (optional, for migration)",
-      "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
-      "targetDatabaseUrlHelp": "Leave empty for current instance",
       "confirmLabel": "To confirm, type \"{{text}}\":",
       "confirmText": "Restore",
       "confirmButton": "Restore"
@@ -581,7 +582,7 @@
     "settingsFailed": "Failed to save backup settings",
     "schedule": {
       "title": "Automatic Backup",
-      "description": "Scheduled backups run at 2:00 AM.",
+      "description": "Scheduled backups run at 02:00 UTC – daily, on Sundays or on the 1st of the month, depending on the interval.",
       "enableAutoBackup": "Enable automatic backup",
       "interval": "Interval",
       "retentionDays": "Retention (days)"
@@ -595,7 +596,9 @@
       "restoring": "Backup is being restored",
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
-      "deleteFailed": "Failed to delete backup"
+      "deleteFailed": "Failed to delete backup",
+      "synced": "Backup uploaded",
+      "syncFailed": "Failed to upload backup"
     }
   },
   "feedback": {

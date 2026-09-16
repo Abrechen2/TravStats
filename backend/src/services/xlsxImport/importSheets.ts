@@ -28,6 +28,10 @@ import {
   type RowOutcome,
   type SheetOutcome,
 } from "./types";
+import {
+  collectLodgingPhotoFilenames,
+  removeLodgingPhotoFiles,
+} from "../lodging/deleteLodgingPhotoFiles";
 
 /** Cap per sheet. A spreadsheet is a hand-editing tool; anything larger is an
  *  import job, and one request should not sit in a transaction for minutes. */
@@ -90,7 +94,13 @@ async function pruneMissing(
     if (model === "place") await prisma.place.deleteMany({ where });
     else if (model === "cruise") await prisma.cruise.deleteMany({ where });
     else if (model === "flight") await prisma.flight.deleteMany({ where });
-    else await prisma.lodging.deleteMany({ where });
+    else {
+      // The cascade takes the photo rows and with them the only record of
+      // their filenames, so they are read first (AUD-042).
+      const photoFiles = await collectLodgingPhotoFilenames(where);
+      await prisma.lodging.deleteMany({ where });
+      removeLodgingPhotoFiles(photoFiles);
+    }
   };
 
   const doomed = await count();

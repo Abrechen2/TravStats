@@ -143,6 +143,47 @@ export function tripDateBounds(
   };
 }
 
+/**
+ * The span a trip's STATUS should be derived from.
+ *
+ * `tripDateBounds` answers "when did this trip's segments happen", which is the
+ * right question while filling a trip's dates in and the wrong one for its
+ * status. A trip with no flight and no cruise had no bounds at all, so
+ * derivation returned null and the stored status simply stayed — a manual trip
+ * dated January 2020 and then moved to January 2030 kept saying `completed`,
+ * through the edit, through an explicit recompute and through the nightly
+ * sweep (audit finding AUD-024).
+ *
+ * The rule, stated once so the three callers cannot each invent one:
+ *
+ *  1. **What the trip HOLDS wins.** Flights, cruises and hotel stays are the
+ *     record of what happened, and their span is the trip's span.
+ *  2. **Otherwise the trip's OWN dates.** A trip with nothing dated on it has
+ *     only what the user typed, and that is a complete answer, not a missing
+ *     one.
+ *
+ * The two are never mixed. The own dates are a PLAN and the segments are the
+ * record; unioning them would let a stale plan widen a real journey, which is
+ * the confusion this ordering exists to avoid.
+ */
+export function tripStatusBounds(input: {
+  flights: Array<{ departureTime: Date | null; arrivalTime: Date | null }>;
+  cruises: Array<{ startDate: Date | null; endDate: Date | null }>;
+  /** Hotel stays are dated travel too, and a hotel-only trip has nothing else. */
+  lodgingStays?: Array<{ checkIn: Date | null; checkOut: Date | null }>;
+  ownStartDate: Date | null;
+  ownEndDate: Date | null;
+}): { earliestStart: Date | null; latestEnd: Date | null } {
+  const stays = (input.lodgingStays ?? []).map((s) => ({
+    startDate: s.checkIn,
+    endDate: s.checkOut,
+  }));
+  const held = tripDateBounds(input.flights, [...input.cruises, ...stays]);
+  if (held.earliestStart != null || held.latestEnd != null) return held;
+
+  return { earliestStart: input.ownStartDate, latestEnd: input.ownEndDate };
+}
+
 export function deriveTripStatus(input: {
   earliestStart: Date | null;
   latestEnd: Date | null;

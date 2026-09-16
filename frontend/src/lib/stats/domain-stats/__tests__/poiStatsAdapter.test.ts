@@ -87,7 +87,10 @@ describe("adaptPoi", () => {
     if (!result.hasData) throw new Error("expected data");
     // Three trips to one McDonald's: one place, three events.
     expect(result.totalEvents).toBe(3);
-    expect(result.summary.headlineKpis[0]).toEqual({ label: "Orte besucht", value: 1 });
+    expect(result.summary.headlineKpis[0]).toEqual({
+      labelKey: "overviewCard.kpi.placesVisited",
+      value: 1,
+    });
   });
 
   it("counts an undated visit but marks no day for it", () => {
@@ -105,7 +108,10 @@ describe("adaptPoi", () => {
     const result = adaptPoi({
       places: [
         place({
-          visits: [visit({ id: "past" }), visit({ id: "later", visitedAt: "2999-01-01T00:00:00.000Z" })],
+          visits: [
+            visit({ id: "past" }),
+            visit({ id: "later", visitedAt: "2999-01-01T00:00:00.000Z" }),
+          ],
         }),
       ],
       lists: emptyLists,
@@ -129,7 +135,7 @@ describe("adaptPoi", () => {
     if (!result.hasData) throw new Error("expected data");
     const kpis = result.summary.headlineKpis;
     expect(kpis[kpis.length - 1]).toEqual({
-      label: "Beste Checkliste",
+      labelKey: "overviewCard.kpi.bestChecklist",
       value: "3/7",
     });
   });
@@ -137,10 +143,10 @@ describe("adaptPoi", () => {
   it("omits the checklist tile entirely when nothing is on offer", () => {
     const result = adaptPoi({ places: [place()], lists: emptyLists, curated: [] });
     if (!result.hasData) throw new Error("expected data");
-    expect(result.summary.headlineKpis.map((k) => k.label)).toEqual([
-      "Orte besucht",
-      "Länder",
-      "Listen",
+    expect(result.summary.headlineKpis.map((k) => k.labelKey)).toEqual([
+      "overviewCard.kpi.placesVisited",
+      "overviewCard.kpi.countries",
+      "overviewCard.kpi.lists",
     ]);
   });
 

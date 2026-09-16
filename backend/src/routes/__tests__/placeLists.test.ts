@@ -591,4 +591,95 @@ describe("Place lists API", () => {
     });
   });
 
+  /**
+   * AUD-076. Unsubscribing deletes the list and its membership rows while
+   * deliberately keeping the places — those are visits that happened, with the
+   * user's own dates on them. Re-subscribing then handed back an EMPTY list:
+   * the index and the detail read "0 places, 0 visited" while the progress
+   * endpoint, counting from the places themselves, said "1 of 7 ticked". Both
+   * were describing the same account.
+   */
+  describe("re-subscribing restores what was already ticked", () => {
+    const ROUNDTRIP_USER = "listroundtrip";
+    let cookie: string;
+    let roundtripUserId: string;
+
+    const subscribe = () =>
+      request(app)
+        .post(`/api/v1/place-lists/curated/${NEW7}/subscribe`)
+        .set("Cookie", cookie)
+        .send({});
+    const unsubscribe = () =>
+      request(app).delete(`/api/v1/place-lists/curated/${NEW7}/subscribe`).set("Cookie", cookie);
+    const detail = async () => {
+      const res = await request(app)
+        .get(`/api/v1/place-lists/curated/${NEW7}/progress`)
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      return res.body.data;
+    };
+
+    beforeAll(async () => {
+      await prisma.placeVisit.deleteMany({ where: { user: { username: ROUNDTRIP_USER } } });
+      await prisma.place.deleteMany({ where: { user: { username: ROUNDTRIP_USER } } });
+      await prisma.placeList.deleteMany({ where: { user: { username: ROUNDTRIP_USER } } });
+      await prisma.user.deleteMany({ where: { username: ROUNDTRIP_USER } });
+      const u = await prisma.user.create({
+        data: { username: ROUNDTRIP_USER, passwordHash: await hashPassword("password123") },
+      });
+      roundtripUserId = u.id;
+      cookie = `auth_token=${generateToken(u.id)}`;
+    });
+
+    afterAll(async () => {
+      await prisma.placeVisit.deleteMany({ where: { userId: roundtripUserId } });
+      await prisma.place.deleteMany({ where: { userId: roundtripUserId } });
+      await prisma.placeList.deleteMany({ where: { userId: roundtripUserId } });
+      await prisma.user.deleteMany({ where: { id: roundtripUserId } });
+    });
+
+    it("puts the ticked place back in the list", async () => {
+      const item = await prisma.curatedPlace.findFirstOrThrow({
+        where: { listKey: NEW7 },
+        select: { id: true },
+      });
+
+      await subscribe();
+      await request(app)
+        .post(`/api/v1/place-lists/curated/items/${item.id}/tick`)
+        .set("Cookie", cookie)
+        .send({ visitedAt: "2024-05-01T00:00:00.000Z" });
+
+      expect((await detail()).tickedCount).toBe(1);
+      const list = await prisma.placeList.findFirstOrThrow({ where: { userId: roundtripUserId } });
+      expect(await prisma.placeListEntry.count({ where: { listId: list.id } })).toBe(1);
+
+      // Unsubscribing keeps the place and its visit — that part was always right.
+      await unsubscribe();
+      expect(await prisma.place.count({ where: { userId: roundtripUserId } })).toBe(1);
+      expect(await prisma.placeVisit.count({ where: { userId: roundtripUserId } })).toBe(1);
+
+      await subscribe();
+
+      const restored = await prisma.placeList.findFirstOrThrow({
+        where: { userId: roundtripUserId },
+      });
+      // Zero before the fix: a brand-new, empty list.
+      expect(await prisma.placeListEntry.count({ where: { listId: restored.id } })).toBe(1);
+      // And the two views agree again.
+      expect((await detail()).tickedCount).toBe(1);
+      // No duplicate visit was stacked on by the round trip.
+      expect(await prisma.placeVisit.count({ where: { userId: roundtripUserId } })).toBe(1);
+    });
+
+    it("is a no-op when already subscribed", async () => {
+      const before = await prisma.placeListEntry.count({
+        where: { list: { userId: roundtripUserId } },
+      });
+      await subscribe();
+      expect(
+        await prisma.placeListEntry.count({ where: { list: { userId: roundtripUserId } } }),
+      ).toBe(before);
+    });
+  });
 });

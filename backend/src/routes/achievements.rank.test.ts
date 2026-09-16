@@ -21,11 +21,15 @@ jest.mock('../utils/achievements', () => ({
 import request from 'supertest';
 import express from 'express';
 
+// Real, live catalogue codes: the route leaves rows whose code is no longer
+// defined out of the totals (see achievements.catalogueTotal.test.ts).
+const LIVE_CODES: Record<string, string> = { a1: 'FIRST_FLIGHT', a2: 'FREQUENT_FLYER_10' };
+
 /** One catalogue row plus the user's progress against it. */
 function achievement(id: string, points: number, requirement = 1) {
   return {
     id,
-    code: `A_${id}`,
+    code: LIVE_CODES[id],
     name: id,
     description: '',
     category: 'milestone',

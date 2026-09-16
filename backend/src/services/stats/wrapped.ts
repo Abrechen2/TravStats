@@ -53,6 +53,17 @@ export interface WrappedFlight {
   depIata: string | null;
   arrIata: string | null;
   departureTime: Date | null;
+  /**
+   * The calendar year at the DEPARTURE AIRPORT, resolved by the caller with
+   * `withDepartureClock` — not `departureTime.getUTCFullYear()`.
+   *
+   * This used to be derived here from the stored instant, which put a Bangkok
+   * departure at 01:30 local on 1 January into the previous year and a Los
+   * Angeles departure at 20:30 local on 31 December into the next one, so the
+   * year in review disagreed with the trend chart about which years even
+   * existed (AUD-077). Null when the flight has no departure time.
+   */
+  departureYear: number | null;
   airline: string | null;
   flightNumber: string | null;
   status: string;
@@ -80,36 +91,13 @@ export interface WrappedCountry {
   counted: boolean;
 }
 
-export type WrappedRank = "top" | "second" | "other";
+// Published by GET /stats/wrapped, so the shape is described once in
+// `schemas/statsWrapped.ts` and read here (forgejo#52).
+export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
+import type { Wrapped } from "../../schemas/statsWrapped";
 
-export interface Wrapped {
-  year: number;
-  /**
-   * Every year with countable activity, ascending. Here so a client can offer
-   * a year picker without a second round trip — and so it never offers a year
-   * the story would be empty for.
-   */
-  availableYears: number[];
-  rank: WrappedRank;
-  /** The one year that beat this one, when exactly one did. See rule 2. */
-  comparisonYear: number | null;
-  flights: number;
-  distanceKm: number;
-  /** `distanceKm` in trips around the Earth, one decimal. */
-  earthFactor: number;
-  /**
-   * Countries first evidenced in this year AND reaching the user's counting
-   * threshold. See the header, and `PassportCountry.counted`.
-   */
-  newCountries: number;
-  cruises: number;
-  /** The year's most-flown carrier. Null when no flight named one. */
-  topAirline: { name: string; code: string | null; flights: number } | null;
-  /** The year's most-flown pair, codes sorted. Null when none is derivable. */
-  topRoute: { from: string; to: string; flights: number } | null;
-}
-
-const yearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
+/** Cruises are stored as a calendar start date, so UTC IS their local day. */
+const cruiseYearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
 
 /**
  * The two-letter prefix of a flight number, which is the airline's IATA code
@@ -137,13 +125,13 @@ export function buildWrapped(
 
   const flightsPerYear = new Map<number, number>();
   for (const flight of flown) {
-    const year = yearOf(flight.departureTime);
+    const year = flight.departureYear;
     if (year === null) continue;
     flightsPerYear.set(year, (flightsPerYear.get(year) ?? 0) + 1);
   }
   const cruisesPerYear = new Map<number, number>();
   for (const cruise of sailed) {
-    const year = yearOf(cruise.startDate);
+    const year = cruiseYearOf(cruise.startDate);
     if (year === null) continue;
     cruisesPerYear.set(year, (cruisesPerYear.get(year) ?? 0) + 1);
   }
@@ -158,7 +146,7 @@ export function buildWrapped(
   // question that was asked; picking a different year would not be.
   const year = requestedYear ?? availableYears[availableYears.length - 1];
 
-  const inYear = flown.filter((f) => yearOf(f.departureTime) === year);
+  const inYear = flown.filter((f) => f.departureYear === year);
   const distanceKm = Math.round(
     inYear.reduce((sum, f) => sum + (Number.isFinite(f.distanceKm) ? f.distanceKm : 0), 0)
   );

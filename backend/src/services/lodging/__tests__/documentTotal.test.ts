@@ -1,5 +1,11 @@
 import { describe, it, expect } from "@jest/globals";
-import { parseAmount, findLabelledTotal, reconcileTotalPrice } from "../documentTotal";
+import {
+  parseAmount,
+  findLabelledTotal,
+  findLabelledMoney,
+  documentSectionFor,
+  reconcileTotalPrice,
+} from "../documentTotal";
 
 /**
  * Asking the model for "the total price" is not reliable and cannot be made
@@ -118,6 +124,62 @@ describe("reconcileTotalPrice", () => {
   it("treats a rounding-level difference as agreement", () => {
     // 11662 vs 11662.00 must not read as a conflict.
     expect(reconcileTotalPrice(11662.004, ARMANI).source).toBe("model");
+  });
+});
+
+/**
+ * AUD-050. A Dubai hotel prints its fee in AED and, under it, what that is in
+ * euros. The model read 400 AED; the labelled "Total price: EUR 100.00" then
+ * overruled it — and the result was 100 AED, a number in the wrong unit.
+ */
+describe("reconcileTotalPrice — the document's unit must match", () => {
+  const DUBAI = "Local fee: AED 400.00\nTotal price: EUR 100.00";
+
+  it("reads the unit next to a labelled total", () => {
+    expect(findLabelledMoney(DUBAI)).toEqual({ value: 100, currency: "EUR" });
+    // "$" names no single currency; it stays unknown rather than guessed.
+    expect(findLabelledMoney("Gesamtpreis\t$135,87")?.currency).toBeNull();
+  });
+
+  it("leaves the model's figure alone when the labelled total is in another unit", () => {
+    expect(reconcileTotalPrice(400, DUBAI, "AED")).toEqual({ value: 400, source: "model" });
+    expect(reconcileTotalPrice(null, DUBAI, "AED")).toEqual({ value: null, source: "none" });
+  });
+
+  it("still lets a labelled total in the SAME unit overrule", () => {
+    expect(reconcileTotalPrice(90, DUBAI, "EUR")).toEqual({ value: 100, source: "document" });
+  });
+
+  it("compares an unmarked figure as before", () => {
+    expect(reconcileTotalPrice(90, "Gesamtpreis\t135,87", "USD")).toEqual({
+      value: 135.87,
+      source: "document",
+    });
+  });
+});
+
+/** AUD-050, the other half: one document, two bookings, one total each. */
+describe("documentSectionFor", () => {
+  const TWO = [
+    "Hotel Alpha",
+    "Total price: EUR 100.00",
+    "Hotel Beta",
+    "Total price: EUR 500.00",
+  ].join("\n");
+
+  it("cuts each booking's section at the next hotel's name", () => {
+    expect(findLabelledTotal(documentSectionFor(TWO, "Hotel Alpha", ["Hotel Beta"]))).toBe(100);
+    expect(findLabelledTotal(documentSectionFor(TWO, "Hotel Beta", ["Hotel Alpha"]))).toBe(500);
+  });
+
+  it("gives a lone booking the whole document", () => {
+    expect(documentSectionFor(TWO, "Hotel Beta", [])).toBe(TWO);
+    expect(documentSectionFor(TWO, null, [])).toBe(TWO);
+  });
+
+  it("attributes nothing to a booking the document does not name", () => {
+    expect(documentSectionFor(TWO, "Hotel Gamma", ["Hotel Alpha"])).toBe("");
+    expect(documentSectionFor(TWO, null, ["Hotel Alpha"])).toBe("");
   });
 });
 

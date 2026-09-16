@@ -75,7 +75,41 @@
     "comingSoon": "Coming with V2.X",
     "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} lifetime",
     "lifetimeCount": "{{count}} experiences",
-    "detailLink": "Details →"
+    "detailLink": "Details →",
+    "unit": {
+      "km": "km",
+      "h": "h"
+    },
+    "kpi": {
+      "distance": "Distance",
+      "flightTime": "Flight time",
+      "airlines": "Airlines",
+      "seaDays": "Sea days",
+      "ports": "Ports",
+      "nights": "Nights",
+      "lodgings": "Places to stay",
+      "chains": "Chains",
+      "placesVisited": "Places visited",
+      "countries": "Countries",
+      "lists": "Lists",
+      "bestChecklist": "Best checklist"
+    },
+    "topItems": {
+      "airlines": "Top airlines",
+      "cruiseLines": "Top cruise lines",
+      "chains": "Top chains",
+      "categories": "Top categories"
+    },
+    "badge": {
+      "balconyCabin": "Balcony cabin",
+      "suiteCabin": "Suite",
+      "polar": "Polar region",
+      "coldWater": "Cold-water voyage",
+      "canalTransit": "Canal transit",
+      "dateline": "Crossed the date line",
+      "birthdayAtSea": "Birthday at sea",
+      "newYearAtSea": "New Year at sea"
+    }
   },
   "overview2": {
     "sectionLabel": "Overall summary",

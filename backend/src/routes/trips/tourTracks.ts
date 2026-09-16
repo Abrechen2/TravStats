@@ -104,6 +104,10 @@ export interface TrackMetaRow {
 
 export interface TrackRow extends TrackMetaRow {
   geometry: Prisma.JsonValue;
+  /** Recording-segment starts and the raw running distance, both nullable on
+   *  rows written before they existed. See the schema comments. */
+  segmentStarts: Prisma.JsonValue;
+  cumulativeKm: Prisma.JsonValue;
 }
 
 /**
@@ -205,6 +209,11 @@ router.post(
           startedAt: ingested.startedAt,
           endedAt: ingested.endedAt,
           geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
+          // The two things the geometry alone cannot say: where the recording
+          // stopped, and how far the RAW track had run at each kept vertex
+          // (AUD-033, AUD-034).
+          segmentStarts: ingested.segmentStarts as unknown as Prisma.InputJsonValue,
+          cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
           pointCount: ingested.pointCount,
           distanceKm: ingested.distanceKm,
           // The GPX path refuses an oversized file outright (see
@@ -331,6 +340,11 @@ router.post(
           startedAt: ingested.startedAt,
           endedAt: ingested.endedAt,
           geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
+          // The two things the geometry alone cannot say: where the recording
+          // stopped, and how far the RAW track had run at each kept vertex
+          // (AUD-033, AUD-034).
+          segmentStarts: ingested.segmentStarts as unknown as Prisma.InputJsonValue,
+          cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
           pointCount: ingested.pointCount,
           distanceKm: ingested.distanceKm,
           // Reaches the stored row (and from there the API response and

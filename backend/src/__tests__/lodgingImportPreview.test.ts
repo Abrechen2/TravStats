@@ -207,6 +207,66 @@ describe("buildLodgingPreviewRows", () => {
     expect(stayRow?.action).toBe("create");
   });
 
+  // AUD-054: `[^a-z0-9]` stripped every non-Latin letter, so two different
+  // Japanese names both normalised to "" and one hit on the empty key read
+  // as one identity.
+  describe("names in other scripts", () => {
+    it("keeps the letters of every script in the matching key", () => {
+      expect(normalizeLodgingName("桜旅館")).toBe("桜旅館");
+      expect(normalizeLodgingName("Отель «Москва»")).toBe("отель москва");
+      expect(normalizeLodgingName("ＮＨ Ｌｕｄｗｉｇｓｂｕｒｇ")).toBe("nh ludwigsburg");
+    });
+
+    it("never attaches a stays-only row to a house with a DIFFERENT non-Latin name (AUD-054)", async () => {
+      const sakura = await prisma.lodging.create({
+        data: { userId, name: "桜旅館", city: "京都" },
+      });
+      try {
+        const candidates: LodgingImportCandidate[] = [
+          {
+            sourceRowIndex: 0,
+            lodging: null,
+            lodgingName: "海の宿",
+            stay: { checkIn: "2027-03-01", checkOut: "2027-03-02" },
+          },
+          {
+            sourceRowIndex: 1,
+            lodging: { name: "海の宿", city: "熱海" },
+            stay: null,
+          },
+        ];
+        const { rows } = await buildLodgingPreviewRows(userId, candidates);
+        for (const row of rows) {
+          expect(row.matchedLodgingId).not.toBe(sakura.id);
+        }
+        const house = rows.find((r) => r.sourceRowIndex === 1);
+        expect(house?.action).toBe("create");
+        expect(house?.dedupeHint).toBe("none");
+      } finally {
+        await prisma.lodging.delete({ where: { id: sakura.id } });
+      }
+    });
+
+    it("still recognises the SAME non-Latin name", async () => {
+      const sakura = await prisma.lodging.create({
+        data: { userId, name: "桜旅館", city: "京都" },
+      });
+      try {
+        const { rows } = await buildLodgingPreviewRows(userId, [
+          {
+            sourceRowIndex: 0,
+            lodging: null,
+            lodgingName: "桜旅館",
+            stay: { checkIn: "2027-03-01", checkOut: "2027-03-02" },
+          },
+        ]);
+        expect(rows[0].matchedLodgingId).toBe(sakura.id);
+      } finally {
+        await prisma.lodging.delete({ where: { id: sakura.id } });
+      }
+    });
+  });
+
   it("accepts a row without coordinates and only marks it informationally", async () => {
     const candidates: LodgingImportCandidate[] = [
       {

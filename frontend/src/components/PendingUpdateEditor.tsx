@@ -1,4 +1,3 @@
-import Modal from "./Modal";
 /**
  * Pending Update Editor Component
  *
@@ -10,6 +9,11 @@ import { useTranslation } from "../hooks/useTranslation";
 import { pendingUpdatesApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import StatisticsImpactPreview from "./StatisticsImpactPreview";
+// The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
+// and a panel that scrolls instead of running off a 320px screen. This editor
+// drew its own overlay and had none of it (AUD-096).
+import Modal from "./Modal";
+import { useId } from "react";
 
 interface FlightUpdateData {
   airline?: string;
@@ -36,12 +40,40 @@ interface PendingUpdateEditorProps {
   onCancel: () => void;
 }
 
+/**
+ * A `datetime-local` input has no timezone, so both directions have to agree
+ * on one — and they did not: the value was rendered from `toISOString()` (UTC)
+ * while the typed value was read back with `new Date(...)`, which reads a bare
+ * datetime as the BROWSER's local time. Opening the editor and saving without
+ * touching anything therefore moved every time by the browser's offset
+ * (AUD-095).
+ *
+ * UTC on both sides, and the label says so — a time field whose zone the user
+ * cannot see is a time field they cannot check.
+ */
+function toUtcInputValue(iso: string | number | boolean | null | undefined): string {
+  if (typeof iso !== "string" || iso === "") return "";
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime()) ? "" : at.toISOString().slice(0, 16);
+}
+
+function fromUtcInputValue(value: string): string | null {
+  if (!value) return null;
+  // The same zone the value was rendered in, stated explicitly.
+  const at = new Date(`${value}:00.000Z`);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
 export default function PendingUpdateEditor({
   update,
   onSave,
   onCancel,
 }: PendingUpdateEditorProps): JSX.Element {
   const { t } = useTranslation(["pendingUpdates", "common"]);
+  // One prefix per mounted editor, so two of them on a page cannot hand out
+  // the same input id — an id collision silently breaks `htmlFor`.
+  const fieldIdPrefix = useId();
+
   const [editedData, setEditedData] = useState<FlightUpdateData>(
     update.editedData || update.proposedData
   );
@@ -116,10 +148,14 @@ export default function PendingUpdateEditor({
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-airline`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.airline")}
               </label>
               <input
+                id={`${fieldIdPrefix}-airline`}
                 type="text"
                 value={editedData.airline || ""}
                 onChange={(e) => handleFieldChange("airline", e.target.value)}
@@ -128,10 +164,14 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-aircraft`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.aircraft")}
               </label>
               <input
+                id={`${fieldIdPrefix}-aircraft`}
                 type="text"
                 value={editedData.aircraft || ""}
                 onChange={(e) => handleFieldChange("aircraft", e.target.value)}
@@ -140,10 +180,14 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-gate`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.gate")}
               </label>
               <input
+                id={`${fieldIdPrefix}-gate`}
                 type="text"
                 value={editedData.gate || ""}
                 onChange={(e) => handleFieldChange("gate", e.target.value)}
@@ -152,10 +196,14 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-terminal`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.terminal")}
               </label>
               <input
+                id={`${fieldIdPrefix}-terminal`}
                 type="text"
                 value={editedData.terminal || ""}
                 onChange={(e) => handleFieldChange("terminal", e.target.value)}
@@ -164,10 +212,14 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-depIata`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.depIata")}
               </label>
               <input
+                id={`${fieldIdPrefix}-depIata`}
                 type="text"
                 value={editedData.depIata || ""}
                 onChange={(e) => handleFieldChange("depIata", e.target.value)}
@@ -176,10 +228,14 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
+              <label
+                htmlFor={`${fieldIdPrefix}-arrIata`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
                 {t("pendingUpdates:editor.arrIata")}
               </label>
               <input
+                id={`${fieldIdPrefix}-arrIata`}
                 type="text"
                 value={editedData.arrIata || ""}
                 onChange={(e) => handleFieldChange("arrIata", e.target.value)}
@@ -188,42 +244,42 @@ export default function PendingUpdateEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
-                {t("pendingUpdates:editor.departureTime")}
+              <label
+                htmlFor={`${fieldIdPrefix}-departureTime`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
+                {t("pendingUpdates:editor.departureTime")}{" "}
+                <span className="text-(--text-muted) font-normal">
+                  {t("pendingUpdates:editor.utcSuffix")}
+                </span>
               </label>
               <input
+                id={`${fieldIdPrefix}-departureTime`}
                 type="datetime-local"
-                value={
-                  editedData.departureTime
-                    ? new Date(editedData.departureTime).toISOString().slice(0, 16)
-                    : ""
-                }
+                value={toUtcInputValue(editedData.departureTime)}
                 onChange={(e) =>
-                  handleFieldChange(
-                    "departureTime",
-                    e.target.value ? new Date(e.target.value).toISOString() : null
-                  )
+                  handleFieldChange("departureTime", fromUtcInputValue(e.target.value))
                 }
                 className="input w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
-                {t("pendingUpdates:editor.arrivalTime")}
+              <label
+                htmlFor={`${fieldIdPrefix}-arrivalTime`}
+                className="block text-sm font-medium text-(--text-primary) mb-1"
+              >
+                {t("pendingUpdates:editor.arrivalTime")}{" "}
+                <span className="text-(--text-muted) font-normal">
+                  {t("pendingUpdates:editor.utcSuffix")}
+                </span>
               </label>
               <input
+                id={`${fieldIdPrefix}-arrivalTime`}
                 type="datetime-local"
-                value={
-                  editedData.arrivalTime
-                    ? new Date(editedData.arrivalTime).toISOString().slice(0, 16)
-                    : ""
-                }
+                value={toUtcInputValue(editedData.arrivalTime)}
                 onChange={(e) =>
-                  handleFieldChange(
-                    "arrivalTime",
-                    e.target.value ? new Date(e.target.value).toISOString() : null
-                  )
+                  handleFieldChange("arrivalTime", fromUtcInputValue(e.target.value))
                 }
                 className="input w-full"
               />

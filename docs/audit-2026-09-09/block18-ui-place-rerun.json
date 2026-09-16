@@ -1,0 +1,44 @@
+{
+  "commit": "9678e6cd",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "results": [
+    {
+      "name": "POI create and reload",
+      "passed": true,
+      "status": 201,
+      "reloaded": true,
+      "saved": {
+        "success": true,
+        "data": {
+          "id": "f06b548a-abfd-4cfa-8254-9ed6f7dc46ce",
+          "userId": "7657c970-864c-472e-a4cf-b0326a377ca6",
+          "name": "Audit UI place 1789295910677",
+          "category": "other",
+          "lat": 52.52,
+          "lon": 13.405,
+          "address": null,
+          "city": "Berlin",
+          "country": "Deutschland",
+          "isoCountryCode": "DE",
+          "externalRef": null,
+          "curatedItemId": null,
+          "visited": false,
+          "notes": null,
+          "dataSource": "manual",
+          "batchId": null,
+          "createdAt": "2026-09-13T10:38:33.117Z",
+          "updatedAt": "2026-09-13T10:38:33.117Z",
+          "visits": [],
+          "visitCount": 0,
+          "plannedVisitCount": 0,
+          "lastVisitAt": null,
+          "continent": "Europe"
+        }
+      }
+    }
+  ],
+  "errors": []
+}

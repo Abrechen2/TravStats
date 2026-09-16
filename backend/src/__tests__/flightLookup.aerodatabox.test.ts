@@ -57,6 +57,7 @@ jest.mock("../utils/logger", () => ({
 }));
 
 import { lookupFlightAerodatabox, __resetAerodataboxCacheForTests } from "../services/aerodataboxLookup";
+import logger from "../utils/logger";
 import {
   lookupFlightWithHistorical,
   __resetAviationstackBudgetForTests,
@@ -105,6 +106,31 @@ describe("lookupFlightAerodatabox", () => {
 
     const [url] = mockedAxios.get.mock.calls[0] as [string];
     expect(url).toContain("/flights/number/LH400/2026-04-15");
+  });
+
+  // Seen on prod 2026-09-05: a 2xx whose body was an object, not a list.
+  // `.filter` threw inside the try and the generic catch logged it as
+  // "returned.filter is not a function" — a lookup failure with no cause.
+  it("returns null and names the shape when the body is not a list", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+    mockedAxios.get.mockResolvedValueOnce({ data: { message: "Flight not found" } });
+
+    const result = await lookupFlightAerodatabox("BA2556", "2026-07-30");
+
+    expect(result).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "unexpected_response_shape", receivedType: "object" }),
+      expect.stringContaining("not a flight list"),
+    );
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "api_call_error" }),
+      expect.anything(),
+    );
+
+    // Not cached — the next ask goes back to the provider.
+    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+    await lookupFlightAerodatabox("BA2556", "2026-07-30");
+    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
   });
 
   it("maps a successful response to FlightLookupResult shape", async () => {

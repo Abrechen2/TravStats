@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
-import { authenticate, AuthRequest } from "../../middleware/auth";
+import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { issueAuthCookie } from "../../utils/session";
+import { issueAuthCookie, issuePasswordChangeChallenge } from "../../utils/session";
 import {
   activateTwoFactorSchema,
   verifyTwoFactorSchema,
@@ -54,6 +54,7 @@ router.get("/status", authenticate, async (req: AuthRequest, res: Response, next
 router.post(
   "/setup",
   authenticate,
+  requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -86,6 +87,7 @@ router.post(
 router.post(
   "/activate",
   authenticate,
+  requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -190,6 +192,20 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
     });
     if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);
     res.clearCookie("twofa_token", { path: "/" });
+
+    // A proven second factor is not a licence to skip a due password change.
+    // The login handler asks this question below its two-factor branch, so an
+    // account carrying both flags never reaches it — the challenge is answered
+    // HERE instead, or the forced change silently does not apply to anyone with
+    // two-factor on (AUD-005). `routes/auth/passkeys.ts` refuses the same case;
+    // this hands over the change flow rather than refusing, because unlike a
+    // passkey there is a password to change and the user is already at a prompt.
+    if (user.mustChangePassword) {
+      await issuePasswordChangeChallenge(req, res, user.id);
+      logger.info({ operation: "two_factor_verify_password_change_due", userId: user.id });
+      return res.json({ requiresPasswordChange: true });
+    }
+
     // Through the choke point: a deactivated account must not complete a
     // second factor into a session either (Forgejo #31).
     issueAuthCookie(req, res, user);
@@ -214,6 +230,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
 router.post(
   "/disable",
   authenticate,
+  requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -252,6 +269,7 @@ router.post(
 router.post(
   "/recovery-codes",
   authenticate,
+  requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

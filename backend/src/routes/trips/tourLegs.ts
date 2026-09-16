@@ -118,11 +118,26 @@ router.put(
         const trackGeometry = isCoordinatePolyline(track.geometry) ? track.geometry : [];
         const adoption = adoptSegment(trackGeometry, fromCoord, toCoord, {
           maxAnchorKm: ANCHOR_TOLERANCE_KM,
+          // Measure against the raw track rather than the simplified line it
+          // was stored as — see `adoptTrack` (AUD-034).
+          cumulativeKm: numberArrayOrNull(track.cumulativeKm),
+          segmentStarts: numberArrayOrNull(track.segmentStarts),
         });
         if (!adoption) {
           throw new AppError(
             `This track doesn't come within ${ANCHOR_TOLERANCE_KM} km of both of this leg's ` +
               "stops — it likely covers a different day or place. Not adopted; the leg is unchanged.",
+            409,
+          );
+        }
+        // The recording stopped somewhere between these two stops. The distance
+        // would correctly leave the gap out while the line drawn on the map ran
+        // straight across it — a leg that is part measurement and part guess,
+        // stored as `confidence: high`. Refused instead (AUD-033).
+        if (adoption.spansRecordingGap) {
+          throw new AppError(
+            "The recording stops and restarts between this leg's two stops, so part of the " +
+              "way was never recorded. Not adopted; the leg is unchanged.",
             409,
           );
         }
@@ -251,6 +266,21 @@ router.delete(
  * local here rather than shared because the two domains have no other
  * coupling.
  */
+/**
+ * A stored JSON column read back as a plain number array, or null.
+ *
+ * The column is nullable on purpose — rows written before the raw cumulative
+ * distance existed have nothing there, and those keep measuring the simplified
+ * line exactly as they always did. Anything that is not a clean array of finite
+ * numbers is treated as absent rather than half-trusted.
+ */
+function numberArrayOrNull(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.every((v) => typeof v === "number" && Number.isFinite(v))
+    ? (value as number[])
+    : null;
+}
+
 function isCoordinatePolyline(value: unknown): value is Array<[number, number]> {
   if (!Array.isArray(value)) return false;
   return value.every(

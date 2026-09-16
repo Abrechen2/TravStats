@@ -54,7 +54,6 @@ export default function ProfileSection({
         </button>
       </div>
 
-
       <div className="flex items-center gap-4">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
@@ -71,7 +70,9 @@ export default function ProfileSection({
           )}
         </div>
         <div>
-          <FieldLabel help={t("settings:profile.help.avatar")}>{t("settings:profile.uploadAvatar")}</FieldLabel>
+          <FieldLabel help={t("settings:profile.help.avatar")}>
+            {t("settings:profile.uploadAvatar")}
+          </FieldLabel>
           {/* Native <input type=file> shows the browser-locale "Choose File"
               label which conflicts with the app i18n. Hide it visually and
               drive it from a labelled button so the copy stays under our
@@ -144,17 +145,41 @@ export default function ProfileSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="label">{t("settings:profile.username")}</label>
+          {/*
+           * The username is shown, not edited. It used to be a plain input whose
+           * contents "Save profile" dutifully sent — the server stored it in the
+           * settings blob, answered 200, and the next load replaced it with the
+           * real name from /auth/me again, because the account name is a column
+           * on User and nothing here ever touched it. A rename that survives
+           * would need a uniqueness check and a decision about existing sessions;
+           * until that exists, showing the name is honest and an editable field
+           * is not (audit finding AUD-025).
+           */}
+          <label className="label" htmlFor="profile-username">
+            {t("settings:profile.username")}
+          </label>
           <input
+            id="profile-username"
             type="text"
             value={profile.username}
-            onChange={(e) => onSetProfile({ username: e.target.value })}
-            className="input"
+            readOnly
+            aria-describedby="profile-username-hint"
+            className="input opacity-70 cursor-not-allowed"
           />
+          <p
+            id="profile-username-hint"
+            className="text-xs mt-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {t("settings:profile.usernameHint")}
+          </p>
         </div>
         <div>
-          <label className="label">{t("settings:profile.firstName")}</label>
+          <label className="label" htmlFor="profile-first-name">
+            {t("settings:profile.firstName")}
+          </label>
           <input
+            id="profile-first-name"
             type="text"
             value={profile.firstName ?? ""}
             onChange={(e) => onSetProfile({ firstName: e.target.value })}
@@ -163,8 +188,11 @@ export default function ProfileSection({
           />
         </div>
         <div>
-          <label className="label">{t("settings:profile.lastName")}</label>
+          <label className="label" htmlFor="profile-last-name">
+            {t("settings:profile.lastName")}
+          </label>
           <input
+            id="profile-last-name"
             type="text"
             value={profile.lastName ?? ""}
             onChange={(e) => onSetProfile({ lastName: e.target.value })}
@@ -173,23 +201,35 @@ export default function ProfileSection({
           />
         </div>
         <div>
-          <label className="label">{t("settings:profile.email")}</label>
+          <label className="label" htmlFor="profile-email">
+            {t("settings:profile.email")}
+          </label>
           <input
+            id="profile-email"
             type="email"
             value={profile.email}
             onChange={(e) => onSetProfile({ email: e.target.value })}
             className="input"
+            autoComplete="email"
           />
         </div>
         <div>
-          <label className="label">{t("settings:profile.birthdate")}</label>
+          <label className="label" htmlFor="profile-birthdate">
+            {t("settings:profile.birthdate")}
+          </label>
           <input
+            id="profile-birthdate"
             type="date"
             value={profile.birthdate ?? ""}
             onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
             className="input"
+            aria-describedby="profile-birthdate-hint"
           />
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+          <p
+            id="profile-birthdate-hint"
+            className="text-xs mt-1"
+            style={{ color: "var(--text-muted)" }}
+          >
             {t("settings:profile.birthdateHint")}
           </p>
         </div>

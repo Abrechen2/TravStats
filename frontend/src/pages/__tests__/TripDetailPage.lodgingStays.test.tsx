@@ -20,6 +20,14 @@ vi.mock("../../lib/api", () => ({
 // The global settingsStore mock (src/__tests__/setup.ts) has no
 // `enabledDomains`, which the real useEnabledDomains hook needs — stub the
 // hook directly so every domain reads as enabled for this test.
+// Places left the beta gate with the 2.7 line, so the trip timeline now asks
+// for the trip's place visits unconditionally. Unmocked that went out as a
+// real request, which the suite's network guard fails rather than prints
+// (forgejo#110).
+vi.mock("../../lib/api/places", () => ({
+  listPlaces: () => Promise.resolve([]),
+}));
+
 vi.mock("../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled: ["flight", "cruise", "lodging"], isEnabled: () => true }),
 }));
@@ -69,7 +77,7 @@ async function renderTripDetail(trip: Trip): Promise<void> {
       <Routes>
         <Route path="/trips/:id" element={<TripDetailPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   await waitFor(() => expect(getByIdMock).toHaveBeenCalled());
   // Wait for the loading placeholder to clear before switching tabs.
@@ -90,8 +98,8 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
           userId: "user-1",
           tripId: "trip-1",
           bookingId: null,
-        checkInTime: null,
-        checkOutTime: null,
+          checkInTime: null,
+          checkOutTime: null,
           checkIn: "2024-05-13T15:00:00.000Z",
           checkOut: "2024-05-15T11:00:00.000Z",
           datePrecision: "DAY" as const,
@@ -178,7 +186,7 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
     await userEvent.click(screen.getByText("trips:detail.tabs.timeline"));
 
     expect(
-      screen.queryByRole("link", { name: /trips:detail.timeline.lodgingCheckIn/ }),
+      screen.queryByRole("link", { name: /trips:detail.timeline.lodgingCheckIn/ })
     ).not.toBeInTheDocument();
     expect(screen.getByText("trips:detail.timeline.noEvents")).toBeInTheDocument();
   });

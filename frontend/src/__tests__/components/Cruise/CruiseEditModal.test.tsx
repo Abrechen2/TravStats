@@ -21,6 +21,14 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+// The currency picker asks the server which currencies were used recently. The
+// hook fetches on mount, so it reached the network from every test that renders
+// a price field (forgejo#110); an empty list is the failed request's own result.
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => [] };
+});
+
 describe("CruiseEditModal", () => {
   beforeEach(() => {
     vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);

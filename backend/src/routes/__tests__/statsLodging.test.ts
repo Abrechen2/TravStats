@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { lodgingStatsResponseSchema } from "../../schemas/statsLodging";
 
 describe("GET /api/v1/stats/lodging", () => {
   let authCookie: string;
@@ -332,5 +333,20 @@ describe("GET /api/v1/stats/lodging", () => {
       expect(res.body.data.spendBaseTotal).toBe(300);
       expect(res.body.data.spendBaseByCurrency).toEqual({ EUR: 100, CHF: 300 });
     });
+  });
+
+  /**
+   * forgejo#52. Unlike the other stats endpoints, this one's handler does NOT
+   * infer its type from the published schema — it cannot, because the wire
+   * shape and `LodgingStats` genuinely differ: `countries` is a Set internally
+   * and a sorted array on the way out. So tsc holds nothing here, and the only
+   * thing that can is a parse of the real bytes.
+   */
+  it("answers a body the published schema accepts", async () => {
+    const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", authCookie);
+
+    expect(res.status).toBe(200);
+    const parsed = lodgingStatsResponseSchema.safeParse(res.body);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
   });
 });

@@ -2,7 +2,10 @@ import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import { ECB_CURRENCIES } from "../../shared/currencies";
+import type { LodgingCurrency } from "../../types/lodging";
 import type {
+  LodgingDedupeHint,
   LodgingImportCommitRow,
   LodgingImportPreviewRow,
   LodgingImportSummary,
@@ -38,6 +41,40 @@ interface EditableRow extends LodgingImportPreviewRow {
 
 const INPUT =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
+
+/**
+ * Matches that are GUESSES. A proven identity (an external reference, or a
+ * stay reference) is not up for debate; these three are, and the user could
+ * accept them or skip the whole row — but not say "no, this is a different
+ * house". `create` on such a row carried the guessed id along and attached
+ * the stay to the wrong hotel (AUD-056).
+ */
+const HEURISTIC_MATCH: ReadonlySet<LodgingDedupeHint> = new Set([
+  "lodging_name_city",
+  "lodging_name_similar",
+  "lodging_nearby",
+]);
+
+/**
+ * An amount whose unit is not known. The commit refuses to store such a
+ * price rather than invent a currency, and reported the row as a success
+ * with the price silently gone — because this dialog had a price field and
+ * no currency field (AUD-057). The row is held back until the unit is set.
+ */
+function priceLacksCurrency(row: EditableRow): boolean {
+  return (
+    row.decision === "create" &&
+    row.stay !== null &&
+    (row.stay.totalPrice != null || row.stay.pricePerNight != null) &&
+    !row.stay.currency
+  );
+}
+
+/** The ECB set, plus whatever the row already carries. */
+function currencyOptions(current: string | null | undefined): readonly string[] {
+  const ecb: readonly string[] = ECB_CURRENCIES;
+  return current && !ecb.includes(current) ? [current, ...ecb] : ecb;
+}
 
 function toEditableRow(row: LodgingImportPreviewRow): EditableRow {
   return { ...row, decision: row.action === "needs_input" ? "" : row.action };
@@ -146,7 +183,9 @@ export function LodgingImportPreviewModal({
     return { newRows, alreadyPresent, needsInput };
   }, [edited]);
 
-  const canCommit = counts.needsInput === 0 && !saving;
+  const pricesWithoutCurrency = useMemo(() => edited.filter(priceLacksCurrency).length, [edited]);
+
+  const canCommit = counts.needsInput === 0 && pricesWithoutCurrency === 0 && !saving;
 
   const handleCommit = useCallback(async (): Promise<void> => {
     // The real double-commit guard is the native `disabled` attribute on the
@@ -163,7 +202,7 @@ export function LodgingImportPreviewModal({
     setError(null);
     try {
       const decided = edited.filter(
-        (r): r is EditableRow & { decision: "create" | "skip" } => r.decision !== "",
+        (r): r is EditableRow & { decision: "create" | "skip" } => r.decision !== ""
       );
 
       // Names some OTHER row in this payload will create. Those rows keep the
@@ -176,46 +215,45 @@ export function LodgingImportPreviewModal({
       const createdByPayload = new Set(
         decided
           .filter((r) => r.decision === "create" && r.lodging?.name)
-          .map((r) => r.lodging!.name.trim().toLowerCase()),
+          .map((r) => r.lodging!.name.trim().toLowerCase())
       );
 
-      const payload: LodgingImportCommitRow[] = decided
-        .map((r) => ({
-          sourceRowIndex: r.sourceRowIndex,
-          action: r.decision,
-          matchedLodgingId: r.matchedLodgingId,
-          // `ensureLodging` materialises the lodging object lazily, on the
-          // first EDIT of a lodging field. A stays-only row the user simply
-          // marked "create" — hotel name plus dates, nothing to edit — never
-          // triggered that, so it went out as `lodging: null` and the backend
-          // answered `missing_lodging_reference` and created NOTHING. That is
-          // the whole "0 Hotel(s) und 0 Aufenthalt(e) angelegt" report Alex
-          // hit on 2026-08-09 with a CSV of stays.
-          //
-          // Choosing "create" IS the instruction to create it, and the name is
-          // the one field such a row always carries. Two rows keep `null`: one
-          // the user chose to SKIP (inventing a lodging there would create a
-          // hotel they just declined), and one whose name another row in this
-          // payload already creates (the payload-name join, unchanged).
-          lodging:
-            r.lodging ??
-            (r.decision === "create" &&
-            r.lodgingName &&
-            !createdByPayload.has(r.lodgingName.trim().toLowerCase())
-              ? { name: r.lodgingName }
-              : null),
-          // An UNEDITED stays-only row the preview matched by free-text name
-          // against ANOTHER candidate in this same payload (`lodging` stays
-          // null, no dedupe hint) still needs that name at commit time — the
-          // commit service resolves it against the lodging the other row
-          // creates. Harmless to send even when `lodging` is set: the backend
-          // only consults it when `lodging` is null.
-          lodgingName: r.lodgingName ?? null,
-          // See `isEmptyStay` — fold a touched-then-cleared stay back to null
-          // instead of sending an all-empty stay that fails the backend's
-          // date validation.
-          stay: r.stay && isEmptyStay(r.stay) ? null : r.stay,
-        }));
+      const payload: LodgingImportCommitRow[] = decided.map((r) => ({
+        sourceRowIndex: r.sourceRowIndex,
+        action: r.decision,
+        matchedLodgingId: r.matchedLodgingId,
+        // `ensureLodging` materialises the lodging object lazily, on the
+        // first EDIT of a lodging field. A stays-only row the user simply
+        // marked "create" — hotel name plus dates, nothing to edit — never
+        // triggered that, so it went out as `lodging: null` and the backend
+        // answered `missing_lodging_reference` and created NOTHING. That is
+        // the whole "0 Hotel(s) und 0 Aufenthalt(e) angelegt" report Alex
+        // hit on 2026-08-09 with a CSV of stays.
+        //
+        // Choosing "create" IS the instruction to create it, and the name is
+        // the one field such a row always carries. Two rows keep `null`: one
+        // the user chose to SKIP (inventing a lodging there would create a
+        // hotel they just declined), and one whose name another row in this
+        // payload already creates (the payload-name join, unchanged).
+        lodging:
+          r.lodging ??
+          (r.decision === "create" &&
+          r.lodgingName &&
+          !createdByPayload.has(r.lodgingName.trim().toLowerCase())
+            ? { name: r.lodgingName }
+            : null),
+        // An UNEDITED stays-only row the preview matched by free-text name
+        // against ANOTHER candidate in this same payload (`lodging` stays
+        // null, no dedupe hint) still needs that name at commit time — the
+        // commit service resolves it against the lodging the other row
+        // creates. Harmless to send even when `lodging` is set: the backend
+        // only consults it when `lodging` is null.
+        lodgingName: r.lodgingName ?? null,
+        // See `isEmptyStay` — fold a touched-then-cleared stay back to null
+        // instead of sending an all-empty stay that fails the backend's
+        // date validation.
+        stay: r.stay && isEmptyStay(r.stay) ? null : r.stay,
+      }));
       await onCommit(payload);
     } catch (err) {
       // Log the real error for diagnostics, but never surface the raw
@@ -253,6 +291,11 @@ export function LodgingImportPreviewModal({
             {t("lodging:import.preview.needsInputHint")}
           </p>
         )}
+        {pricesWithoutCurrency > 0 && (
+          <p data-testid="lodging-import-currency-hint" className="mb-3 text-xs text-amber-300/90">
+            {t("lodging:import.preview.currencyMissingHint")}
+          </p>
+        )}
 
         {error !== null && (
           <p
@@ -272,6 +315,7 @@ export function LodgingImportPreviewModal({
                 <th className="p-2 text-left">{t("lodging:import.fields.checkIn")}</th>
                 <th className="p-2 text-left">{t("lodging:import.fields.checkOut")}</th>
                 <th className="p-2 text-left">{t("lodging:import.fields.totalPrice")}</th>
+                <th className="p-2 text-left">{t("lodging:import.fields.currency")}</th>
                 <th className="p-2 text-left">{t("lodging:import.fields.hints")}</th>
                 <th className="p-2 text-left">{t("lodging:import.fields.action")}</th>
               </tr>
@@ -331,11 +375,12 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
   // dedupe hint), so this must be its own check, not derived from
   // `showDedupeHint`.
   const isMatched = row.matchedLodgingId !== null;
+  const needsCurrency = priceLacksCurrency(row);
 
   return (
     <tr
       className={
-        row.decision === ""
+        row.decision === "" || needsCurrency
           ? "border-t border-[var(--color-border)] bg-amber-500/5"
           : "border-t border-[var(--color-border)]"
       }
@@ -351,9 +396,38 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
             >
               {name}
             </div>
+            {/* The house the guess points at — plain JSX, not interpolated,
+                so the test mock (which drops t() options) still shows it. */}
+            {row.matchedLodgingName && (
+              <p
+                data-testid={`lodging-import-matched-name-${sourceRowIndex}`}
+                className="mt-1 text-[10px] text-emerald-300"
+              >
+                {t("lodging:import.matchedAs")} {row.matchedLodgingName}
+              </p>
+            )}
             <p className="mt-1 text-[10px] text-[var(--text-muted)]">
               {t("lodging:import.matchedLodgingHint")}
             </p>
+            {HEURISTIC_MATCH.has(row.dedupeHint) && (
+              <button
+                type="button"
+                data-testid={`lodging-import-reject-match-${sourceRowIndex}`}
+                onClick={(): void =>
+                  // Rejecting the guess makes this an ordinary unmatched row:
+                  // the fields unlock, and `create` then creates a NEW house.
+                  onChange(sourceRowIndex, {
+                    matchedLodgingId: null,
+                    matchedLodgingName: null,
+                    matchedStayId: null,
+                    dedupeHint: "none",
+                  })
+                }
+                className="mt-1 text-[10px] text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                {t("lodging:import.rejectMatch")}
+              </button>
+            )}
           </div>
         ) : (
           <input
@@ -444,6 +518,33 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
           aria-label={t("lodging:import.fields.totalPrice")}
           className={INPUT}
         />
+      </td>
+      <td className="p-2">
+        {/* Only once a stay exists — a currency alone would materialise an
+            all-empty stay (see `isEmptyStay`) that the backend refuses. */}
+        {row.stay !== null && (
+          <select
+            data-testid={`lodging-import-currency-${sourceRowIndex}`}
+            value={row.stay.currency ?? ""}
+            onChange={(e): void =>
+              onChange(sourceRowIndex, {
+                stay: {
+                  ...ensureStay(row),
+                  currency: e.target.value ? (e.target.value as LodgingCurrency) : null,
+                },
+              })
+            }
+            aria-label={t("lodging:import.fields.currency")}
+            className={INPUT}
+          >
+            <option value="">{t("lodging:import.preview.chooseCurrency")}</option>
+            {currencyOptions(row.stay.currency).map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+        )}
       </td>
       <td className="p-2">
         <div className="flex flex-wrap gap-1">

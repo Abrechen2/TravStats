@@ -169,6 +169,28 @@ export function isEncrypted(text: string): boolean {
 }
 
 /**
+ * Marker for values this codebase encrypted, and the whole point of it.
+ *
+ * `isEncrypted` is a guess: it asks whether a string is long enough and
+ * base64-decodes to enough bytes. A 200-character hex API token satisfies both,
+ * so `encryptApiKey` concluded it was already encrypted and STORED THE SECRET
+ * IN THE CLEAR — and `decryptApiKey` then handed the caller null, because the
+ * value was not ciphertext after all. The provider read as unconfigured while
+ * the key sat unprotected in the database (audit finding AUD-014).
+ *
+ * A guess cannot be made reliable by tightening its bounds; some plaintext will
+ * always look like ciphertext. So new values say what they are. Anything
+ * without the marker is decided by the old heuristic, because that is what the
+ * rows written before today look like.
+ */
+const CIPHERTEXT_MARKER = 'tsenc:v1:';
+
+/** Does this value carry our own marker — asked, not guessed. */
+export function isMarkedCiphertext(text: string): boolean {
+  return text.startsWith(CIPHERTEXT_MARKER);
+}
+
+/**
  * Encrypt API key if not already encrypted
  * @param apiKey API key to encrypt
  * @returns Encrypted API key
@@ -178,12 +200,34 @@ export function encryptApiKey(apiKey: string | null | undefined): string | null 
     return null;
   }
 
-  // If already encrypted, return as-is
-  if (isEncrypted(apiKey)) {
+  // Already ours: idempotent, and no guessing involved.
+  if (isMarkedCiphertext(apiKey)) {
     return apiKey;
   }
 
-  return encrypt(apiKey);
+  // Unmarked. It is either a row written before the marker existed, or a
+  // secret that merely looks like one — and the difference is decidable, which
+  // is what the old code missed. AES-GCM carries an authentication tag: if the
+  // value decrypts, it IS our ciphertext, and no plaintext can forge that. The
+  // cheap shape test stays in front of it only to keep a short key from paying
+  // for a PBKDF2 derivation it can never need.
+  if (isEncrypted(apiKey) && looksDecryptable(apiKey)) {
+    // Carry it forward in the new format without re-encrypting: same payload,
+    // now self-describing.
+    return CIPHERTEXT_MARKER + apiKey;
+  }
+
+  return CIPHERTEXT_MARKER + encrypt(apiKey);
+}
+
+/** Does this value actually decrypt? The auth tag answers; nothing else can. */
+function looksDecryptable(value: string): boolean {
+  try {
+    decrypt(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -196,13 +240,17 @@ export function decryptApiKey(encryptedApiKey: string | null | undefined): strin
     return null;
   }
 
-  // If not encrypted, return as-is (for backward compatibility)
-  if (!isEncrypted(encryptedApiKey)) {
+  // Marked values are ours and are decrypted, full stop. For everything older,
+  // the shape test only decides what is worth ATTEMPTING — the auth tag decides
+  // what it is, and a plaintext that merely looks like ciphertext falls through
+  // to the catch below and is returned unchanged, as it always was.
+  const marked = isMarkedCiphertext(encryptedApiKey);
+  if (!marked && !isEncrypted(encryptedApiKey)) {
     return encryptedApiKey;
   }
 
   try {
-    return decrypt(encryptedApiKey);
+    return decrypt(marked ? encryptedApiKey.slice(CIPHERTEXT_MARKER.length) : encryptedApiKey);
   } catch (error) {
     // Only log warning if we haven't seen this specific encrypted value before
     // or if enough time has passed since last warning

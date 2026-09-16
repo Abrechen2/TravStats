@@ -67,6 +67,11 @@ export interface ImportEstimate {
  * our own API; `invalidUrl` is a rejected base URL (the user's typo); the rest
  * are upstream kinds surfaced as 502. `invalidUrl` and `protocol` are kept
  * distinct so a malformed URL is not misreported as a server-version mismatch.
+ *
+ * `keyRequired` is the one kind that is not a failure of the server being
+ * addressed: the caller asked to test a DIFFERENT target while relying on a
+ * key configured for the instance rather than by them. That key stays bound to
+ * its own target, so a new one has to be supplied (AUD-087).
  */
 export type ImmichFailureKind =
-  "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl";
+  "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl" | "keyRequired";

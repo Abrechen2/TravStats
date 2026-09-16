@@ -1,0 +1,30 @@
+{
+  "commit": "9678e6cd",
+  "exitCode": 1,
+  "testFiles": 492,
+  "passedFiles": 476,
+  "failedFiles": 14,
+  "skippedFiles": 2,
+  "totalTests": 4262,
+  "passedTests": 4179,
+  "failedTests": 72,
+  "skippedTests": 11,
+  "durationSeconds": 720.06,
+  "recording": "Console chunks partially captured; no full Jest JSON requested. Failed-test summary preserved.",
+  "failedFilesList": [
+    "src/routes/__tests__/cruises.test.ts",
+    "src/routes/__tests__/cruises.routeOverride.test.ts",
+    "src/__tests__/achievements.revocation.test.ts",
+    "src/__tests__/importPreview.test.ts",
+    "src/routes/__tests__/ports.test.ts",
+    "src/services/cruiseDistance/__tests__/cruiseLegService.override.test.ts",
+    "src/routes/__tests__/cruises.geometryOverride.test.ts",
+    "src/routes/__tests__/flightsBatch.autoTrips.test.ts",
+    "src/routes/__tests__/airlines.route.test.ts",
+    "src/routes/__tests__/ships.test.ts",
+    "src/routes/__tests__/aircraft.route.test.ts",
+    "src/routes/__tests__/flights.timezoneFromAirport.test.ts",
+    "src/routes/__tests__/suggestions.catalogue.test.ts",
+    "src/scripts/__tests__/backfillAirlineCodes.test.ts"
+  ]
+}

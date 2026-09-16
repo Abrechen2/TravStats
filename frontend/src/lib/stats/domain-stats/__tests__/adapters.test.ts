@@ -115,7 +115,7 @@ describe("adaptFlight", () => {
     if (!stats.hasData) throw new Error("expected data");
     expect(stats.totalDistanceKm).toBeGreaterThan(6000);
     expect(stats.totalDurationHours).toBeCloseTo(8, 1);
-    expect(stats.summary.headlineKpis[0].label).toBe("Distanz");
+    expect(stats.summary.headlineKpis[0].labelKey).toBe("overviewCard.kpi.distance");
     expect(stats.summary.topItems?.items[0].label).toBe("Lufthansa");
   });
 
@@ -165,7 +165,9 @@ describe("adaptCruise", () => {
     expect(stats.dailyActiveDays["2024-06-01"]).toBe(1);
     expect(stats.dailyActiveDays["2024-06-02"]).toBe(1);
     expect(stats.dailyActiveDays["2024-06-03"]).toBe(1);
-    expect(stats.summary.badges?.find((b) => b.label === "Polar-Region")).toBeDefined();
+    expect(
+      stats.summary.badges?.find((b) => b.labelKey === "overviewCard.badge.polar")
+    ).toBeDefined();
   });
 
   it("counts in ISO codes while the cruise tab keeps the display names", () => {
@@ -349,7 +351,9 @@ describe("adaptFlight — airlines (forgejo#81)", () => {
       countries: [],
     });
     if (!stats.hasData) throw new Error("expected data");
-    const airlines = stats.summary.headlineKpis.find((k) => k.label === "Airlines");
+    const airlines = stats.summary.headlineKpis.find(
+      (k) => k.labelKey === "overviewCard.kpi.airlines"
+    );
     expect(airlines?.value).toBe(2);
     expect(stats.summary.topItems?.items.map((i) => i.label)).toEqual(["SWISS", "Lufthansa"]);
   });

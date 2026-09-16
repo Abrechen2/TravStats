@@ -1,8 +1,14 @@
 // The flat map's deck.gl overlay — a MapboxOverlay mounted through
 // react-map-gl's `useControl`, which is the only pattern that does not
-// fight MapLibre 5.x for the WebGL context (the `<DeckGL>` React component
+// fight MapLibre for the WebGL context (the `<DeckGL>` React component
 // does). The globe has its own variant in GlobeView (interleaved, no
 // tooltip); this one is the 2D map's.
+//
+// The overlay is `@deck.gl/mapbox`'s MapboxOverlay on deck.gl 9.3, driving a
+// MapLibre 6 map. That pairing needs a bridge, because 9.3 reads
+// `map.transform` every frame and MapLibre 6 removed it — see
+// `lib/maplibreTransformBridge.ts` for what it restores, why we are not on
+// deck.gl 9.4's own `@deck.gl/maplibre` yet, and when to delete it.
 
 import { useControl, useMap } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";

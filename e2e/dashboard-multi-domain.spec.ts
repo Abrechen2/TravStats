@@ -1,17 +1,31 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
-// Auth helper — matches the login form in LoginPage.tsx
-// LoginPage uses input#username (type="text") and input#password.
-// Dev DB credentials: admin / admin123 (see CLAUDE.local.md).
+// The session comes from the `setup` project (AUD-098), so this confirms one
+// exists rather than creating a second. Signing in here broke as soon as the
+// suite gained a shared session: `/login` redirects an authenticated visitor
+// away, so the helper waited for a username field that never rendered.
 // ---------------------------------------------------------------------------
 async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.fill("input#username", "admin");
-  await page.fill("input#password", "admin123");
-  await page.click("button[type='submit']");
-  // Wait until we land on any dashboard route.
-  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
+  await page.goto("/dashboard");
+  await expect(page).not.toHaveURL(/\/login/);
+}
+
+/**
+ * Open the map control panel, which holds the mode selector.
+ *
+ * It starts COLLAPSED (`loadMapAppearance().panelExpanded ?? false`), so the
+ * mode buttons are not in the document at all until it is opened. The tests in
+ * this file were written against a "Modus: …" dropdown that used to sit in the
+ * controls bar; that control is retired, and its replacement lives in here.
+ */
+async function openMapPanel(page: Page): Promise<void> {
+  const header = page.getByRole("button", { name: /^(Karte|Map)$/ });
+  await expect(header).toBeVisible({ timeout: 8_000 });
+  if ((await header.getAttribute("aria-expanded")) !== "true") {
+    await header.click();
+    await expect(header).toHaveAttribute("aria-expanded", "true");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -37,10 +51,13 @@ test.describe("Multi-domain dashboard", () => {
     // URL should be exactly /dashboard (no extra segment).
     await expect(page).toHaveURL(/\/dashboard$/);
 
-    // Default mode for "all" is "overview" — mode button shows "Modus: Übersicht".
-    const modeBtn = page.getByRole("button", { name: /modus/i });
-    await expect(modeBtn).toBeVisible();
-    await expect(modeBtn).toContainText(/übersicht/i);
+    // The mode control is a segmented row of buttons in the map chrome, not the
+    // "Modus: …" dropdown this file was written against — that one is retired.
+    // Which option is chosen is now readable via `aria-pressed`.
+    await openMapPanel(page);
+    await expect(
+      page.getByRole("button", { name: /^Übersicht$/i, pressed: true }),
+    ).toBeVisible({ timeout: 8_000 });
   });
 
   // -------------------------------------------------------------------------
@@ -67,10 +84,12 @@ test.describe("Multi-domain dashboard", () => {
     const cruiseTab = page.getByRole("tab", { name: /kreuzfahrten/i });
     await expect(cruiseTab).toHaveAttribute("aria-selected", "true");
 
-    // Mode button should reflect the active mode.
-    const modeBtn = page.getByRole("button", { name: /modus/i });
-    await expect(modeBtn).toBeVisible();
-    await expect(modeBtn).toContainText(/itinerar/i);
+    // The deep-linked mode is the selected option, and the URL keeps saying so.
+    await openMapPanel(page);
+    await expect(
+      page.getByRole("button", { name: /^Itinerar$/i, pressed: true }),
+    ).toBeVisible({ timeout: 8_000 });
+    await expect(page).toHaveURL(/mode=itinerary/);
   });
 
   // -------------------------------------------------------------------------
@@ -79,14 +98,12 @@ test.describe("Multi-domain dashboard", () => {
   test("mode change updates URL and persists across reload", async ({ page }) => {
     await page.goto("/dashboard/flight");
 
-    // Open the mode dropdown (DashboardControlsBar).
-    const modeBtn = page.getByRole("button", { name: /modus/i });
-    await modeBtn.click();
-
-    // Pick "Heatmap" from the menu (dashboard:modes.heatmap = "Heatmap").
-    const heatmapItem = page.getByRole("menuitem", { name: /heatmap/i });
-    await expect(heatmapItem).toBeVisible({ timeout: 5_000 });
-    await heatmapItem.click();
+    // The segmented control, not a dropdown menu.
+    await openMapPanel(page);
+    const heatmap = page.getByRole("button", { name: /^Heatmap$/i });
+    await expect(heatmap).toBeVisible({ timeout: 8_000 });
+    await heatmap.click();
+    await expect(heatmap).toHaveAttribute("aria-pressed", "true");
 
     // URL should now carry ?mode=heatmap.
     await expect(page).toHaveURL(/mode=heatmap/);
@@ -115,9 +132,22 @@ test.describe("Multi-domain dashboard", () => {
     await flightTab.click();
     await expect(page).toHaveURL(/\/dashboard\/flight/);
 
-    // The mode button should show heatmap (restored from localStorage).
-    const modeBtn = page.getByRole("button", { name: /modus/i });
-    await expect(modeBtn).toContainText(/heatmap/i);
+    // Restored from localStorage: the option is selected again, and the URL
+    // says the same thing — the documented contract is
+    // `/dashboard/<tab>?mode=<mode>` (CLAUDE.md).
+    await openMapPanel(page);
+    await expect(
+      page.getByRole("button", { name: /^Heatmap$/i, pressed: true }),
+    ).toBeVisible({ timeout: 8_000 });
+
+    // NOT asserted: that the URL also says `mode=heatmap`.
+    //
+    // It does not. Coming back to a tab restores the remembered mode in the UI
+    // and leaves the address bar without a mode at all, so copying the link
+    // hands someone else the DEFAULT view rather than the one on screen —
+    // while `CLAUDE.md` describes the URL as carrying tab and mode. Which of
+    // the two is meant to win is a product decision, so it is written up as
+    // CAMP-05 rather than decided here by a test.
   });
 
   // -------------------------------------------------------------------------

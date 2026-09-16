@@ -7,7 +7,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { withYear } from "../../../lib/stats/periodUrl";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
-import type { DomainStats } from "../../../lib/stats/domain-stats";
+import type { DomainKpi, DomainStats } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import { delta, isWithData } from "./aggregate";
@@ -28,7 +28,18 @@ export default function DomainSummaryCard({
   compareYear,
   compareEnabled,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
+  // The reader's language decides the thousands separator, not the machine's:
+  // the adapters used to format with a hardcoded "de-DE", so an English page
+  // showed "12.345 km" (#319).
+  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const formatKpi = (kpi: DomainKpi): string => {
+    const value =
+      typeof kpi.value === "number"
+        ? kpi.value.toLocaleString(locale, { maximumFractionDigits: 0 })
+        : kpi.value;
+    return kpi.unit ? `${value} ${t(`stats:overviewCard.unit.${kpi.unit}`)}` : value;
+  };
   const d = DOMAINS[domain];
   const { colorOf } = useDomainColors();
   const domainHex = colorOf(domain);
@@ -37,10 +48,12 @@ export default function DomainSummaryCard({
     return (
       <div
         className="rounded-lg p-5 flex flex-col gap-3"
+        // The dashed border is what says "nothing here yet". Dimming the whole
+        // card said it a second time and took the caption to 2.82:1
+        // (forgejo#114) — opacity belongs on decoration, not on text.
         style={{
           background: "var(--bg-surface)",
           border: "1px dashed var(--color-border)",
-          opacity: 0.6,
         }}
       >
         <div className="flex items-center gap-2.5">
@@ -48,6 +61,7 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              opacity: 0.6,
             }}
             aria-hidden
           >
@@ -123,18 +137,18 @@ export default function DomainSummaryCard({
         style={{ borderTop: "1px solid var(--color-border)" }}
       >
         {stats.summary.headlineKpis.map((kpi) => (
-          <div key={kpi.label}>
+          <div key={kpi.labelKey}>
             <div
               className="text-[10px] uppercase tracking-wider"
               style={{ color: "var(--text-muted)" }}
             >
-              {kpi.label}
+              {t(`stats:${kpi.labelKey}`)}
             </div>
             <div
               className="text-base font-bold font-mono mt-0.5"
               style={{ color: "var(--text-primary)" }}
             >
-              {typeof kpi.value === "number" ? kpi.value.toLocaleString("de-DE") : kpi.value}
+              {formatKpi(kpi)}
             </div>
           </div>
         ))}
@@ -142,7 +156,9 @@ export default function DomainSummaryCard({
 
       {stats.summary.topItems && stats.summary.topItems.items.length > 0 && (
         <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-          <div style={{ color: "var(--text-muted)" }}>{stats.summary.topItems.title}</div>
+          <div style={{ color: "var(--text-muted)" }}>
+            {t(`stats:${stats.summary.topItems.titleKey}`)}
+          </div>
           <div className="flex gap-1.5 flex-wrap mt-1">
             {stats.summary.topItems.items.slice(0, 5).map((item) => (
               <span
@@ -165,7 +181,7 @@ export default function DomainSummaryCard({
         <div className="flex gap-1.5 flex-wrap">
           {stats.summary.badges.map((b) => (
             <span
-              key={b.label}
+              key={b.labelKey}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs"
               style={{
                 background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
@@ -174,7 +190,7 @@ export default function DomainSummaryCard({
               }}
             >
               <span aria-hidden>{b.emoji}</span>
-              {b.label}
+              {t(`stats:${b.labelKey}`)}
             </span>
           ))}
         </div>

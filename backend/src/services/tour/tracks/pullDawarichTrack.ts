@@ -73,6 +73,10 @@ export class EmptyDawarichWindowError extends Error {}
 function toParsedTrack(points: DawarichPoint[]): ParsedTrack {
   return {
     points: points.map((p): [number, number] => [p.longitude, p.latitude]),
+    // One continuous stretch: Dawarich hands back a time-ordered window with
+    // no notion of the receiver being switched off, so there is no boundary
+    // to carry. A future gap-detection pass would fill this in.
+    segmentStarts: [0],
     startedAt: new Date(points[0].timestampMs),
     endedAt: new Date(points[points.length - 1].timestampMs),
     name: null,

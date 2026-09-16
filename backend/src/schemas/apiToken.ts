@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 
 import { API_TOKEN_SCOPES } from '../utils/apiTokens';
 

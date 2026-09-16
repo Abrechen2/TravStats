@@ -71,7 +71,10 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
       );
     }
     const reading = await readBoardingPass({
-      imageBase64,
+      // The validated bytes when validation ran and passed — see forgejo#117.
+      // A rejected or absent image falls through unchanged; OCR is off for it
+      // anyway and the barcode reader takes the original.
+      imageBase64: validation?.valid ? (validation.base64 ?? imageBase64) : imageBase64,
       barcode,
       userId,
       allowOcr: validation === null ? false : validation.valid,
@@ -103,7 +106,15 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     // the create path stores `departureTime` (local midnight → UTC). Without
     // this, a flight from a UTC+ airport is stored on the previous UTC day and
     // the matcher misses it → false "create" → duplicate on re-scan.
-    const match = await findExistingFlight(userId, flightNumber, date, pnr, departure?.timezone);
+    const match = await findExistingFlight({
+      userId,
+      flightNumber,
+      date,
+      pnr,
+      depTimezone: departure?.timezone,
+      depIata: fromCode,
+      arrIata: toCode,
+    });
     let fillsFields: string[] = [];
     if (match) {
       if (seatNumber && !match.seatNumber) fillsFields.push("seatNumber");
@@ -150,7 +161,7 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: error.errors });
+      return res.status(400).json({ error: "Validation failed", details: error.issues });
     }
     logger.error({ error }, "[BoardingPassPropose] failed");
     res.status(500).json({
@@ -201,42 +212,56 @@ const MATCH_SELECT = {
 } as const;
 
 /**
- * Same match key the /flights create path uses (normalized flight number +
- * same UTC calendar day), so the preview agrees with what ?merge=true will do.
- * PNR is a stronger key, so try it first when present.
+ * Same match keys the /flights create path uses, so the preview agrees with
+ * what ?merge=true will actually do.
  *
- * The day-window MUST be derived the same way the create path stores
- * `departureTime`: local midnight in the departure airport's timezone, then
- * converted to UTC (see flights.ts `toUtcDate` + its dedup window). Building
- * the window from the bare date as UTC midnight instead would, for a UTC+
- * airport, miss the stored flight (which sits on the previous UTC day) and
- * wrongly propose "create" — re-scanning the same pass then duplicates it.
+ * **The booking reference needs the route with it.** One PNR covers every leg
+ * of a through ticket — FRA-JFK and JFK-LAX share it — so a reference-only
+ * match answers "this is your flight" while pointing at a different leg, and
+ * the create path would then merge a connection into one row (forgejo#119).
+ * With the endpoints alongside it, the reference does what it is for: it finds
+ * the same flight after the airline moved it to another day or reissued it
+ * under another number, which no date-and-number key can.
+ *
+ * **The day window is the departure airport's LOCAL day**, expressed as the
+ * UTC interval it occupies. A boarding pass carries a date, not an instant, so
+ * "does a flight exist on this date" is a question about the traveller's day —
+ * and a flight departing 2026-06-14 from Munich is stored anywhere from
+ * 2026-06-13T22:00Z to 2026-06-14T22:00Z depending on the hour.
+ *
+ * The window used to be the single UTC day containing local midnight. That is
+ * correct for a midnight departure and wrong for every daytime one: a MUC
+ * flight at local noon sits at 2026-06-14T10:00Z, outside the 2026-06-13 UTC
+ * day the old window searched, so the preview answered "create" for a flight
+ * the create path would have merged.
  */
-export async function findExistingFlight(
-  userId: string,
-  flightNumber: string | undefined,
-  date: string | undefined,
-  pnr: string | undefined,
-  depTimezone: string | null | undefined
-): Promise<FlightMatch | null> {
-  if (pnr) {
+export async function findExistingFlight(args: {
+  userId: string;
+  flightNumber?: string | undefined;
+  date?: string | undefined;
+  pnr?: string | undefined;
+  depTimezone?: string | null | undefined;
+  depIata?: string | null | undefined;
+  arrIata?: string | null | undefined;
+}): Promise<FlightMatch | null> {
+  const { userId, flightNumber, date, pnr, depTimezone, depIata, arrIata } = args;
+
+  if (pnr && depIata && arrIata) {
     const byPnr = await prisma.flight.findFirst({
-      where: { userId, bookingReference: pnr },
+      where: { userId, bookingReference: pnr, depIata, arrIata },
       select: MATCH_SELECT,
     });
     if (byPnr) return byPnr;
   }
 
   if (flightNumber && date) {
-    const departureUtc = depTimezone
+    const localDayStart = depTimezone
       ? fromZonedTime(`${date}T00:00`, depTimezone)
       : new Date(`${date}T00:00:00.000Z`);
-    if (!Number.isNaN(departureUtc.getTime())) {
-      const dayStart = new Date(departureUtc);
-      dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    if (!Number.isNaN(localDayStart.getTime())) {
+      const localDayEnd = new Date(localDayStart.getTime() + 24 * 60 * 60 * 1000);
       const candidates = await prisma.flight.findMany({
-        where: { userId, departureTime: { gte: dayStart, lt: dayEnd } },
+        where: { userId, departureTime: { gte: localDayStart, lt: localDayEnd } },
         select: MATCH_SELECT,
       });
       const target = normalize(flightNumber);

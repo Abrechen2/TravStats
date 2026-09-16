@@ -22,12 +22,13 @@ import { deriveTripStatus } from "../shared/statusDerivation";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
+import { restatusIfDatesMoved } from "../services/trip/restatusAfterEdit";
 import {
   findMicroTripCandidates,
   dissolveMicroTrips,
   mergeTrips,
 } from "../services/tripCleanupService";
-import { recomputeLegs } from "../services/tour/legRecompute";
+import { updateStopAndLegs, recomputeLegs } from "../services/tour/legRecompute";
 import {
   summariseTrip,
   checkOllamaAvailable,
@@ -569,15 +570,9 @@ router.patch(
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
-      // ignores it — status is derived from segment dates, never set
-      // directly. A stale client sending its own guess must not fight
-      // recomputeTripStatus()/the sweep on every save.
+      // ignores it — a stale client's guess must not fight the derivation.
       if (body.status !== undefined) {
-        logger.debug({
-          operation: "trip_status_field_ignored",
-          message: "PATCH /trips/:id ignored a client-sent status field",
-          context: { tripId: req.params.id, requestedStatus: body.status },
-        });
+        logger.debug({ operation: "trip_status_field_ignored", tripId: req.params.id });
       }
 
       // Replace rather than append — an update always carries the FULL
@@ -640,7 +635,10 @@ router.patch(
         });
       });
 
-      res.json({ trip });
+      // Moving a trip's own dates moves its status, and this handler never
+      // recomputed at all (AUD-024). After the transaction, like every other
+      // caller: the derivation reads the row it is about to judge.
+      res.json({ trip: await restatusIfDatesMoved(trip, body) });
     } catch (error) {
       next(error);
     }
@@ -786,23 +784,7 @@ router.patch(
           400
         );
       }
-      const stop = await prisma.tripStop.update({
-        where: { id: req.params.stopId },
-        data: {
-          ...(body.title !== undefined && { title: body.title }),
-          ...(body.domain !== undefined && { domain: body.domain }),
-          ...(body.sourceId !== undefined && { sourceId: body.sourceId }),
-          ...(body.description !== undefined && {
-            description: body.description,
-          }),
-          ...(body.startDate !== undefined && { startDate: body.startDate }),
-          ...(body.endDate !== undefined && { endDate: body.endDate }),
-          ...(body.lat !== undefined && { lat: body.lat }),
-          ...(body.lon !== undefined && { lon: body.lon }),
-          ...(body.notes !== undefined && { notes: body.notes }),
-          ...(body.orderIdx !== undefined && { orderIdx: body.orderIdx }),
-        },
-      });
+      const stop = await updateStopAndLegs(prisma, req.params.stopId, body, existing);
       res.json({ stop });
     } catch (error) {
       next(error);

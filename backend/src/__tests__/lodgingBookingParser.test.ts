@@ -458,6 +458,165 @@ describe("parseLodgingBookingText", () => {
   });
 });
 
+describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
+  beforeEach(() => {
+    mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
+  });
+
+  const stay = { checkIn: "2026-05-01", checkOut: "2026-05-02", nights: 1 };
+
+  async function withModelAnswer(
+    bookings: Record<string, unknown>[],
+    documentText: string,
+  ): Promise<ParsedLodgingBooking[]> {
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      respondJson(res, { response: JSON.stringify({ bookings }) });
+    });
+    try {
+      const result = await parseLodgingBookingText(documentText, { url: server.url, model: "mock" });
+      return result.bookings;
+    } finally {
+      await server.close();
+    }
+  }
+
+  // Every booking was reconciled against the WHOLE document, so the
+  // document-wide winner overwrote each one: 100 and 500 became 500 and 500.
+  it("reconciles each booking against its own section of the document (AUD-050)", async () => {
+    const document = [
+      "Buchungsnummer: 1",
+      "Hotel Alpha",
+      "Total price: EUR 100.00",
+      "",
+      "Hotel Beta",
+      "Total price: EUR 500.00",
+    ].join("\n");
+    const bookings = await withModelAnswer(
+      [
+        { hotelName: "Hotel Alpha", ...stay, totalPrice: 100, currency: "EUR" },
+        { hotelName: "Hotel Beta", ...stay, totalPrice: 500, currency: "EUR" },
+      ],
+      document,
+    );
+    expect(bookings.map((b) => [b.hotelName, b.totalPrice])).toEqual([
+      ["Hotel Alpha", 100],
+      ["Hotel Beta", 500],
+    ]);
+  });
+
+  // The labelled total was a EUR conversion under an AED fee. It overruled
+  // the model and kept the model's unit: 100 AED.
+  it("does not let a labelled total in another currency overrule the model (AUD-050)", async () => {
+    const document = ["Buchungsnummer: 2", "Hotel Gamma", "Local fee: AED 400.00", "Total price: EUR 100.00"].join("\n");
+    const [booking] = await withModelAnswer(
+      [{ hotelName: "Hotel Gamma", ...stay, totalPrice: 400, currency: "AED" }],
+      document,
+    );
+    expect(booking.totalPrice).toBe(400);
+    expect(booking.currency).toBe("AED");
+  });
+
+  // `Number("")` is 0: textual absence became a free night with nothing missing.
+  it("reads a textual null as no price, not as a free night (AUD-051)", async () => {
+    const [booking] = await withModelAnswer(
+      [{ hotelName: "Hotel Delta", ...stay, totalPrice: "null", pricePerNight: "n/a", currency: "EUR" }],
+      "Buchungsnummer: 3\nHotel Delta",
+    );
+    expect(booking.totalPrice).toBeNull();
+    expect(booking.pricePerNight).toBeNull();
+    expect(booking.missing).toContain("totalPrice");
+  });
+
+  it("reads a string amount in either grouping convention (AUD-051)", async () => {
+    const [booking] = await withModelAnswer(
+      [{ hotelName: "Hotel Epsilon", ...stay, totalPrice: "1,234.50", pricePerNight: "1.234,50", currency: "EUR" }],
+      "Buchungsnummer: 4\nHotel Epsilon",
+    );
+    expect(booking.totalPrice).toBeCloseTo(1234.5, 2);
+    expect(booking.pricePerNight).toBeCloseTo(1234.5, 2);
+  });
+
+  it("keeps a real zero", async () => {
+    const [booking] = await withModelAnswer(
+      [{ hotelName: "Hotel Zeta", ...stay, totalPrice: 0, currency: "EUR" }],
+      "Buchungsnummer: 5\nHotel Zeta",
+    );
+    expect(booking.totalPrice).toBe(0);
+  });
+});
+
+describe("parseLodgingBookingText — the budget is wall-clock (AUD-058)", () => {
+  beforeEach(() => {
+    mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
+  });
+  afterEach(() => {
+    delete process.env.LODGING_OLLAMA_TIMEOUT_MS;
+  });
+
+  // `req.setTimeout` is an inactivity timer: a server sending a byte every
+  // 25 ms reset an 80 ms budget forever and was accepted after 412 ms.
+  it("gives up on a trickling response at the deadline", async () => {
+    process.env.LODGING_OLLAMA_TIMEOUT_MS = "80";
+    const timers: NodeJS.Timeout[] = [];
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      let ticks = 0;
+      const timer = setInterval(() => {
+        ticks += 1;
+        if (ticks < 12) {
+          res.write(" ");
+          return;
+        }
+        clearInterval(timer);
+        res.end(JSON.stringify({ response: JSON.stringify({ bookings: [] }) }));
+      }, 25);
+      timers.push(timer);
+      res.on("close", () => clearInterval(timer));
+    });
+    try {
+      const start = Date.now();
+      const result = await parseLodgingBookingText("Buchungsnummer: 1\nAnreise\nAbreise", {
+        url: server.url,
+        model: "mock",
+      });
+      const elapsedMs = Date.now() - start;
+      expect(result.parserUsed).toBe("none");
+      expect(result.fallbackReason).toMatch(/timeout/i);
+      expect(elapsedMs).toBeLessThan(250);
+    } finally {
+      timers.forEach(clearInterval);
+      await server.close();
+    }
+  });
+
+  // A response cut off mid-body fired neither `end` nor `req.on("error")`,
+  // so the promise was never settled and the manual fallback never came.
+  it("settles when the server cuts the response off mid-body", async () => {
+    process.env.LODGING_OLLAMA_TIMEOUT_MS = "5000";
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.write('{"response": "{\\"book');
+      setTimeout(() => res.destroy(), 10);
+    });
+    try {
+      const start = Date.now();
+      const result = await parseLodgingBookingText("Buchungsnummer: 1\nAnreise\nAbreise", {
+        url: server.url,
+        model: "mock",
+      });
+      expect(result.parserUsed).toBe("none");
+      expect(typeof result.fallbackReason).toBe("string");
+      // Well inside the 5 s budget: settled by the stream ending, not the deadline.
+      expect(Date.now() - start).toBeLessThan(2_000);
+    } finally {
+      await server.close();
+    }
+  });
+});
+
 describe("bookingsToCandidates", () => {
   const booking: ParsedLodgingBooking = {
     hotelName: "Musterhotel",

@@ -34,7 +34,14 @@ export interface PunctualityStats {
   worstRoute: PunctualityGroup | null;
 }
 
-/** Industry convention: a flight is "on time" if it is under 15 minutes late. */
+/**
+ * Industry convention: a flight is "on time" if it is UNDER 15 minutes late —
+ * strictly under, so 15:00 exactly is already late. The comparison below used
+ * `<=` and therefore counted an exactly-15-minute delay as punctual, which
+ * contradicted this comment AND the figure's own label, "On time (< 15 min)"
+ * (AUD-081). Two of the three statements of the rule already said `<`; the
+ * implementation was the outlier.
+ */
 export const ON_TIME_GRACE_MINUTES = 15;
 
 /** Groups smaller than this are noise — one bad day should not crown an airline. */
@@ -75,7 +82,7 @@ export function computePunctuality(rows: PunctualityFlight[]): PunctualityStats 
   if (sample.length === 0) return empty;
 
   const totalDelay = sample.reduce((s, f) => s + (f.delayMinutes as number), 0);
-  const onTime = sample.filter((f) => (f.delayMinutes as number) <= ON_TIME_GRACE_MINUTES).length;
+  const onTime = sample.filter((f) => (f.delayMinutes as number) < ON_TIME_GRACE_MINUTES).length;
 
   const airlines = groupAverages(sample, (f) => f.airlineIata ?? f.airline);
   const routes = groupAverages(sample, (f) =>

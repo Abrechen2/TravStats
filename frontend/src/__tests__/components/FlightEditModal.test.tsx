@@ -17,9 +17,37 @@ vi.mock("../../store/settingsStore", () => ({
     features: { enableCostTracking: false },
   }),
 }));
+// `CatalogueCombobox` reaches for the airline catalogue on its own, from
+// `lib/api/catalogue` — NOT through the `lib/api` barrel this file already
+// mocks. Without this the field fired a real `GET /airlines?q=…` from jsdom,
+// which resolved to nothing and left the combobox empty; the assertions below
+// then passed against that emptiness rather than against a known catalogue
+// (forgejo#110).
+vi.mock("../../lib/api/catalogue", () => ({
+  airlinesApi: {
+    search: vi.fn().mockResolvedValue([]),
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    create: vi.fn(),
+  },
+  aircraftApi: {
+    search: vi.fn().mockResolvedValue([]),
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    create: vi.fn(),
+  },
+}));
+
 vi.mock("../../lib/api", () => ({
   companionsApi: { list: mocks.companionsList },
 }));
+
+// TripSelectField fetches the trip list on mount from `lib/api/trips` — a
+// different module than the `lib/api` barrel, so a barrel mock never covered it
+// and the request escaped to the network (forgejo#110). An empty list is what a
+// failed request already produced, so the assertions below are unchanged.
+vi.mock("@/lib/api/trips", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/trips")>();
+  return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
+});
 
 const mockFlight: Flight = {
   id: "1",

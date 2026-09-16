@@ -36,7 +36,29 @@ export interface AdoptionResult {
   waypoints: Array<[number, number]>;
   /** Measured on the ADOPTED SEGMENT, never inherited from the whole track. */
   distanceKm: number;
+  /** How that number was arrived at — see `AdoptionBasis`. */
+  basis: AdoptionBasis;
+  /**
+   * True when the adopted slice crosses a boundary between two recording
+   * segments — the receiver was off in between, so part of this leg was never
+   * recorded. The distance excludes the gap (it was not travelled), but the
+   * waypoints run straight across it, and presenting that line as a measured
+   * recording would contradict the number beside it. The endpoint refuses
+   * these rather than storing a half-measured leg as `confidence: high`.
+   */
+  spansRecordingGap: boolean;
 }
+
+/**
+ * Where the adopted slice ends up being measured.
+ *
+ * `raw` means the track carried a cumulative raw distance and the answer is a
+ * subtraction against it — exact, and for a full adoption identical to the
+ * track's own `distanceKm`. `simplified` means it did not (a row written
+ * before that column existed) and the stored, simplified line was measured
+ * instead, which is short by however many corners the simplifier cut.
+ */
+export type AdoptionBasis = "raw" | "simplified";
 
 /** The index of `track`'s point nearest `target`, and how far away it is. */
 function nearestPoint(
@@ -81,7 +103,16 @@ export function adoptSegment(
   track: Array<[number, number]>,
   from: Coord,
   to: Coord,
-  opts?: { maxAnchorKm?: number },
+  opts?: {
+    maxAnchorKm?: number;
+    /** The track's raw running distance, one entry per point of `track`.
+     *  A length mismatch is ignored rather than trusted — see below. */
+    cumulativeKm?: number[] | null;
+    /** Index into `track` where each recording segment starts. Absent or
+     *  malformed reads as one continuous recording, which is what every row
+     *  written before the boundaries existed effectively is. */
+    segmentStarts?: number[] | null;
+  },
 ): AdoptionResult | null {
   const maxAnchorKm = opts?.maxAnchorKm ?? ANCHOR_TOLERANCE_KM;
   if (track.length < 2) return null;
@@ -101,10 +132,32 @@ export function adoptSegment(
   // whose two stops are the same coordinate, would otherwise hit.
   if (waypoints.length < 2) return null;
 
+  const lo = Math.min(fromNearest.index, toNearest.index);
+  const hi = Math.max(fromNearest.index, toNearest.index);
+  const cumulative = opts?.cumulativeKm;
+  // A subtraction against the RAW running total, when the track has one. The
+  // stored line is simplified, and measuring it back gives a shorter answer
+  // than the track's own number — a leg adopting the entire track came out
+  // 7% under the figure displayed right beside it (AUD-034). Falls back to
+  // measuring the line for rows written before the column existed.
+  const usable = Array.isArray(cumulative) && cumulative.length === track.length;
+
   return {
     waypoints,
     // Measured on the adopted segment, NOT the whole track — the track
     // may run for hours before and after this leg's two stops.
-    distanceKm: polylineDistanceKm(waypoints),
+    distanceKm: usable ? Math.max(0, cumulative[hi] - cumulative[lo]) : polylineDistanceKm(waypoints),
+    basis: usable ? "raw" : "simplified",
+    spansRecordingGap: crossesSegmentBoundary(opts?.segmentStarts, lo, hi),
   };
+}
+
+/** Whether `[lo, hi]` straddles the start of a later recording segment. */
+function crossesSegmentBoundary(
+  segmentStarts: number[] | null | undefined,
+  lo: number,
+  hi: number,
+): boolean {
+  if (!Array.isArray(segmentStarts)) return false;
+  return segmentStarts.some((start) => start > lo && start <= hi);
 }

@@ -1,5 +1,5 @@
 import request from "supertest";
-import { authenticator } from "otplib";
+import { generateSync } from "otplib";
 import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
@@ -49,7 +49,7 @@ describe("two-factor setup", () => {
 
   it("activates on a correct first code and returns recovery codes", async () => {
     const setup = await request(app).post("/api/v1/auth/2fa/setup").set("Cookie", cookie);
-    const code = authenticator.generate(setup.body.secret);
+    const code = generateSync({ secret: setup.body.secret });
 
     const res = await request(app)
       .post("/api/v1/auth/2fa/activate")

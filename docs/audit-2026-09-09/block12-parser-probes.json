@@ -1,0 +1,131 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "distinct hotels: original AUD-050 control",
+      "elapsedMs": 33,
+      "parserUsed": "ollama",
+      "bookings": [
+        {
+          "name": "Hotel Alpha",
+          "checkIn": "2026-01-01",
+          "totalPrice": 100,
+          "currency": "EUR",
+          "board": "none",
+          "missing": []
+        },
+        {
+          "name": "Hotel Beta",
+          "checkIn": "2026-02-01",
+          "totalPrice": 500,
+          "currency": "EUR",
+          "board": "none",
+          "missing": []
+        }
+      ],
+      "fallback": null
+    },
+    {
+      "name": "same hotel, two date ranges: independent AUD-050 residual",
+      "elapsedMs": 9,
+      "parserUsed": "ollama",
+      "bookings": [
+        {
+          "name": "Hotel Alpha",
+          "checkIn": "2026-01-01",
+          "totalPrice": 100,
+          "currency": "EUR",
+          "board": "none",
+          "missing": []
+        },
+        {
+          "name": "Hotel Alpha",
+          "checkIn": "2026-02-01",
+          "totalPrice": 100,
+          "currency": "EUR",
+          "board": "none",
+          "missing": []
+        }
+      ],
+      "fallback": null
+    },
+    {
+      "name": "known currency conversion: original AUD-050 control",
+      "elapsedMs": 11,
+      "parserUsed": "ollama",
+      "bookings": [
+        {
+          "name": "Hotel Alpha",
+          "checkIn": "2026-01-01",
+          "totalPrice": 400,
+          "currency": "AED",
+          "board": "none",
+          "missing": []
+        }
+      ],
+      "fallback": null
+    },
+    {
+      "name": "string null: AUD-051 control",
+      "elapsedMs": 3,
+      "parserUsed": "ollama",
+      "bookings": [
+        {
+          "name": "Hotel Alpha",
+          "checkIn": "2026-01-01",
+          "totalPrice": null,
+          "currency": "EUR",
+          "board": "none",
+          "missing": [
+            "totalPrice"
+          ]
+        }
+      ],
+      "fallback": null
+    },
+    {
+      "name": "template decimal point: AUD-052 control",
+      "totalPrice": 135.87,
+      "currency": "USD"
+    },
+    {
+      "name": "meal exclusion: AUD-053 controls",
+      "board": [
+        {
+          "input": "No breakfast included",
+          "board": "none"
+        },
+        {
+          "input": "Breakfast not included",
+          "board": "none"
+        },
+        {
+          "input": "Ohne Frühstück",
+          "board": "none"
+        },
+        {
+          "input": "Breakfast included",
+          "board": "breakfast"
+        },
+        {
+          "input": "Breakfast available for an extra charge",
+          "board": null
+        }
+      ]
+    },
+    {
+      "name": "deadline: AUD-058 trickle",
+      "elapsedMs": 126,
+      "parserUsed": "none",
+      "bookings": [],
+      "fallback": "Ollama request timeout after 120ms"
+    },
+    {
+      "name": "deadline: AUD-058 abort",
+      "elapsedMs": 42,
+      "parserUsed": "none",
+      "bookings": [],
+      "fallback": "Ollama request response was aborted"
+    }
+  ]
+}

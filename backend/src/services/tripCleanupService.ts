@@ -20,11 +20,17 @@
  * offered either, since dissolving it cascades that section away.
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
+import {
+  mergeImmichAlbums,
+  mergeTripPhotos,
+  retargetCoverUrl,
+} from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -39,6 +45,82 @@ export interface MicroTripCandidate {
   endDate: string | null;
 }
 
+/**
+ * What "this trip holds nothing" means — the ONE definition, used both to
+ * offer a trip as a candidate and to let the delete through.
+ *
+ * It used to name six relations and two text fields, all of them from before
+ * the app had more than flights. A trip with a hotel stay, a place visit, a
+ * linked Immich album or an AI summary counted as empty, so a deliberately
+ * confirmed cleanup could remove curated non-flight trips — and the dialog
+ * pre-selects everything it is offered (audit finding AUD-031).
+ *
+ * The rule is the trip model's own relation list plus every field a person can
+ * only have filled in by hand. `bookings` is deliberately absent: a legacy
+ * one-booking auto-trip is exactly what this feature exists to clear away.
+ */
+export const EMPTY_TRIP_COUNTS = {
+  flights: true,
+  cruises: true,
+  stops: true,
+  routes: true,
+  journalEntries: true,
+  photos: true,
+  lodgingStays: true,
+  placeVisits: true,
+  immichAlbums: true,
+} as const;
+
+/** The same rule as a Prisma `where` fragment, so a DELETE re-checks it in the
+ *  database rather than trusting a list assembled a moment earlier. */
+export const EMPTY_TRIP_WHERE = {
+  cruises: { none: {} },
+  stops: { none: {} },
+  routes: { none: {} },
+  journalEntries: { none: {} },
+  photos: { none: {} },
+  lodgingStays: { none: {} },
+  placeVisits: { none: {} },
+  immichAlbums: { none: {} },
+  notes: null,
+  description: null,
+  summary: null,
+  category: null,
+  icon: null,
+  coverImageUrl: null,
+  tags: { isEmpty: true },
+  companions: { isEmpty: true },
+} satisfies Prisma.TripWhereInput;
+
+interface EmptinessProbe {
+  notes: string | null;
+  description: string | null;
+  summary: string | null;
+  category: string | null;
+  icon: string | null;
+  coverImageUrl: string | null;
+  tags: string[];
+  companions: string[];
+  _count: Record<keyof typeof EMPTY_TRIP_COUNTS, number>;
+}
+
+function isTripEmpty(t: EmptinessProbe): boolean {
+  const holdsNothing = (Object.keys(EMPTY_TRIP_COUNTS) as Array<keyof typeof EMPTY_TRIP_COUNTS>)
+    .filter((k) => k !== "flights")
+    .every((k) => t._count[k] === 0);
+  return (
+    holdsNothing &&
+    !t.notes &&
+    !t.description &&
+    !t.summary &&
+    !t.category &&
+    !t.icon &&
+    !t.coverImageUrl &&
+    t.tags.length === 0 &&
+    t.companions.length === 0
+  );
+}
+
 /** List the user's trips that qualify for dissolution. */
 export async function findMicroTripCandidates(userId: string): Promise<MicroTripCandidate[]> {
   const trips = await prisma.trip.findMany({
@@ -51,32 +133,19 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
       description: true,
       startDate: true,
       endDate: true,
-      _count: {
-        select: {
-          flights: true,
-          cruises: true,
-          stops: true,
-          routes: true,
-          journalEntries: true,
-          photos: true,
-        },
-      },
+      summary: true,
+      category: true,
+      icon: true,
+      coverImageUrl: true,
+      tags: true,
+      companions: true,
+      _count: { select: EMPTY_TRIP_COUNTS },
     },
     orderBy: { startDate: "desc" },
   });
 
   return trips
-    .filter(
-      (t) =>
-        t._count.flights <= MICRO_TRIP_MAX_FLIGHTS &&
-        t._count.cruises === 0 &&
-        t._count.stops === 0 &&
-        t._count.routes === 0 &&
-        t._count.journalEntries === 0 &&
-        t._count.photos === 0 &&
-        !t.notes &&
-        !t.description
-    )
+    .filter((t) => t._count.flights <= MICRO_TRIP_MAX_FLIGHTS && isTripEmpty(t))
     .map((t) => ({
       id: t.id,
       name: t.name,
@@ -107,8 +176,13 @@ export async function dissolveMicroTrips(
   const allowed = new Set(candidates.map((c) => c.id));
   const ids = tripIds.filter((id) => allowed.has(id));
 
+  // The emptiness rule is re-evaluated by the DELETE itself, so content added
+  // between the candidate scan and this statement keeps the trip alive rather
+  // than racing it. The flight COUNT still comes from the scan — Prisma cannot
+  // express "at most two" in a where clause — and gaining a third flight is not
+  // the loss this guards against: dissolving keeps flights either way.
   const result = await prisma.trip.deleteMany({
-    where: { id: { in: ids }, userId },
+    where: { id: { in: ids }, userId, ...EMPTY_TRIP_WHERE },
   });
 
   logger.info({
@@ -167,6 +241,10 @@ export async function mergeTrips(
   const unionedCompanionNames = union(trips.map((t) => t.companions));
   const resolvedCompanions = await resolveCompanions(userId, unionedCompanionNames);
 
+  // Reported in the merge log — a folded duplicate is a decision, not a
+  // no-op, and the only place it is visible afterwards is this line.
+  let mergedDuplicates = { albums: 0, photos: 0 };
+
   await prisma.$transaction(async (tx) => {
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
@@ -178,9 +256,18 @@ export async function mergeTrips(
     // a route pointing at nothing.
     await tx.tripRoute.updateMany(move);
     await tx.tripJournalEntry.updateMany(move);
+    // Hotel stays and place visits are `SetNull` on the trip, so leaving them
+    // behind does not delete them — it silently unfiles them, which is the
+    // same loss to a user looking for their hotel on the merged trip.
+    await tx.lodgingStay.updateMany(move);
+    await tx.placeVisit.updateMany(move);
+    // Albums BEFORE photos: an album left on a source trip is cascade-deleted
+    // with it, and takes the photos this merge just moved with it (AUD-029).
+    const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
     // Photo files live in a flat directory keyed by filename, so moving
     // the rows does not break file paths.
-    await tx.tripPhoto.updateMany(move);
+    const mergedPhotos = await mergeTripPhotos(tx, sourceIds, targetId);
+    mergedDuplicates = { albums: duplicateAlbums, photos: mergedPhotos.dropped };
 
     await tx.trip.update({
       where: { id: targetId },
@@ -195,7 +282,14 @@ export async function mergeTrips(
         // stores identically (same pattern as routes/trips.ts).
         companions: resolvedCompanions.map((c) => c.displayName),
         countries: union(trips.map((t) => t.countries)),
-        coverImageUrl: target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
+        // An inherited cover URL names the trip it came from, and that trip is
+        // about to be deleted — the string has to follow its photo (AUD-030).
+        coverImageUrl: retargetCoverUrl(
+          target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
+          sourceIds,
+          targetId,
+          mergedPhotos.survivorFor,
+        ),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]
             .filter((n): n is string => !!n)
@@ -232,7 +326,13 @@ export async function mergeTrips(
   logger.info({
     operation: "trips_merge",
     message: `Merged ${sources.length} trips into ${targetId}`,
-    context: { userId, targetId, merged: sources.length },
+    context: {
+      userId,
+      targetId,
+      merged: sources.length,
+      duplicateAlbumsFolded: mergedDuplicates.albums,
+      duplicatePhotosDropped: mergedDuplicates.photos,
+    },
   });
 
   return { tripId: targetId, merged: sources.length };

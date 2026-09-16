@@ -18,6 +18,7 @@ const FAILURE_KINDS: readonly ImmichFailureKind[] = [
   "notFound",
   "protocol",
   "invalidUrl",
+  "keyRequired",
 ];
 
 /** Narrow an arbitrary value to one of the fixed Immich failure kinds. */

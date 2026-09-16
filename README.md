@@ -13,6 +13,11 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 [![Docker Hub](https://img.shields.io/docker/pulls/abrechen2/travstats?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/abrechen2/travstats)
 [![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/CRnjB9f78t)
+[![Documentation](https://img.shields.io/badge/docs-travstats.de-0A7EA4?logo=readthedocs&logoColor=white)](https://travstats.de/docs/)
+
+**[travstats.de](https://travstats.de)** ·
+**[Documentation](https://travstats.de/docs/)** — installation, the parsers,
+the API and day-to-day operation.
 
 </div>
 
@@ -27,7 +32,7 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 ## Why TravStats
 
 Log every flight **and cruise** you take, visualise your routes on
-interactive 2D and 3D maps, collect 140+ achievements, and import flights
+interactive 2D and 3D maps, collect 270+ achievements, and import flights
 from boarding passes (QR / PDF417 / OCR), confirmation emails, or
 Excel/CSV — all on your own server, no cloud, no telemetry.
 
@@ -41,13 +46,13 @@ no ads.
 - 🚢 **Flights *and* cruises** — import a cruise from email or PDF: the ship, every port of call and sea day; fly-and-cruise trips link both
 - 🗺️ **Multi-domain maps** — routes, heatmap, animated trips and a 3D globe for flights and cruises, colour-coded by frequency and status
 - 📊 **Cross-domain statistics** — distance, countries, active days, top airlines and cruise lines, with year and all-time views
-- 🏆 **140+ achievements** across flights, cruises and cross-domain — bronze to diamond
+- 🏆 **270+ achievements** across flights, cruises and cross-domain — bronze to diamond
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
 - 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
 - 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
 - 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
+- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, rate limiting on every sensitive endpoint
 - 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
 
 ## Is TravStats for you?
@@ -92,7 +97,7 @@ imported from files you supply.
   </tr>
   <tr>
     <td align="center"><sub>Cross-domain stats with year and all-time views</sub></td>
-    <td align="center"><sub>140+ achievements, bronze to diamond</sub></td>
+    <td align="center"><sub>270+ achievements, bronze to diamond</sub></td>
   </tr>
 </table>
 
@@ -104,11 +109,15 @@ The only thing you set in a file is a database password. Everything else —
 instance name, user cap, API keys, Ollama model, backup schedule, WebDAV —
 is captured by the first-run setup wizard in the browser.
 
+The same route with screenshots and the per-platform detail:
+[Installation](https://travstats.de/docs/getting-started/installation/) and
+[First run](https://travstats.de/docs/getting-started/first-run/).
+
 ### Option A — Stack (bundled Postgres, recommended)
 
 ```bash
 # 1. Grab the compose file
-curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/Main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/main/docker-compose.prod.yml
 
 # 2. Set one variable
 echo "DB_PASSWORD=$(openssl rand -base64 32)" > .env
@@ -208,6 +217,13 @@ See [`.env.prod.example`](.env.prod.example) for the annotated list.
 TravStats works without any API key; manual flight entry and boarding-pass
 scanning cover the full feature set.
 
+Every field in that panel is documented under
+[Admin panel](https://travstats.de/docs/operations/admin-panel/), the optional
+third-party integrations (flight-data APIs, Ollama, SMTP) under
+[External services](https://travstats.de/docs/external-services/), and the
+backup schedule, retention and WebDAV sync under
+[Backups](https://travstats.de/docs/operations/backups/).
+
 ---
 
 ## What's in a release
@@ -253,6 +269,10 @@ secrets; they are just easier to read here than to discover later.
 - **Solo project.** One maintainer. Issues and fixes move at the pace that
   implies — see the commit history for an honest picture of it.
 
+Symptoms that do have a fix — a container that won't start, a parser that
+returns nothing, a reverse proxy that breaks the login cookie — are collected
+in [Troubleshooting](https://travstats.de/docs/troubleshooting/).
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the hardening summary, audit history, and
@@ -274,7 +294,8 @@ reachable programmatically with the same token.
 **1. Mint a Personal Access Token**: in the app, go to **Settings →
 API Tokens**, give it a label and a scope (`read`, `write`, `admin`),
 and copy the `ts_pat_…` value. The plaintext is shown exactly once —
-only the bcrypt hash is persisted.
+only the bcrypt hash is persisted. Scopes, rotation and revocation:
+[Personal access tokens](https://travstats.de/docs/api/personal-access-tokens/).
 
 **2. Browse the spec**: open `https://<your-host>/api/v1/docs`
 (Swagger UI) or fetch `/api/v1/openapi.json` for the raw OpenAPI 3.0
@@ -283,7 +304,9 @@ the backend validates with, so a documented field cannot describe a
 shape the server rejects. Coverage is enforced separately: a test walks
 the live route table and fails the build when an endpoint ships without
 a spec entry. The admin API and the first-boot wizard are excluded on
-purpose and named as such — they are not integration surfaces.
+purpose and named as such — they are not integration surfaces. A prose
+walk-through of the endpoints, pagination and error shapes is at
+[REST API](https://travstats.de/docs/api/rest-api/).
 
 **3. Call it**: every endpoint accepts the token via the standard
 `Authorization` header.

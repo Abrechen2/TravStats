@@ -4,6 +4,7 @@ import type { Cruise, Port } from "../../types";
 import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import { markerDotRadiusProps } from "./markerDotStyle";
+import { isCountableCruise } from "../../shared/cruiseCounting";
 
 interface PortDatum {
   position: [number, number];
@@ -98,7 +99,7 @@ export interface PortsAppearance {
 }
 
 function isSailedCruise(cruise: Cruise): boolean {
-  return cruise.status === "flown" || cruise.status === "historical";
+  return isCountableCruise(cruise);
 }
 
 export function createCruisePortsLayer(

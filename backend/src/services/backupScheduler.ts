@@ -23,7 +23,7 @@ async function getBackupSettings(): Promise<{
   interval: 'daily' | 'weekly' | 'monthly';
   retentionDays: number;
 }> {
-  const adminSettings = await prisma.adminSettings.findFirst();
+  const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return {
     enabled: adminSettings?.backupEnabled ?? false,
     interval: toBackupInterval(adminSettings?.backupInterval),

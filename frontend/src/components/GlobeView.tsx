@@ -60,6 +60,7 @@ import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
+import { isCountableCruise } from "../shared/cruiseCounting";
 import {
   computeCruiseLegDates,
   computeTimeRange,
@@ -1012,10 +1013,9 @@ export default function GlobeView({
   const portPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<number, PointDatum>();
     for (const c of cruises) {
-      // A scheduled/in-progress/cancelled cruise hasn't (fully) sailed —
-      // only flown/historical port calls count as an actual visit (mirrors
-      // cruisePortsLayer.ts's sailed-only guard).
-      if (c.status !== "flown" && c.status !== "historical") continue;
+      // Only a sailed cruise's port calls count as a visit — the rule lives in
+      // shared/cruiseCounting.ts, so it no longer drifts from the layer's copy.
+      if (!isCountableCruise(c)) continue;
       const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
       // A port is "visited" at the ARRIVAL date of the leg ending there
       // (or at startDate for the first port of the cruise).

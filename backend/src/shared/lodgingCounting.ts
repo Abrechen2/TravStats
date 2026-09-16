@@ -34,6 +34,15 @@ export interface CountableStay {
   status: string;
   checkIn: Date | null;
   checkOut: Date | null;
+  /**
+   * Optional, and only consulted where a caller needs to name DAYS rather than
+   * count stays: a MONTH or YEAR stay stores placeholder dates spanning the
+   * whole period, so walking them invents days nobody recorded (AUD-083).
+   * Absent means "assume DAY", which is what every caller did before.
+   */
+  datePrecision?: string | null;
+  /** Explicit night count, paired with `datePrecision` by `lodgingTiming`. */
+  nights?: number | null;
 }
 
 export interface CountableLodging {

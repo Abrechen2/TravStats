@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { deriveTripStatus, tripDateBounds } from "../shared/statusDerivation";
+import { deriveTripStatus, tripDateBounds, tripStatusBounds } from "../shared/statusDerivation";
 
 /**
  * Recompute a single trip's status from its linked flights/cruises date
@@ -49,13 +49,25 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     where: { id: tripId },
     select: {
       status: true,
+      startDate: true,
+      endDate: true,
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
+      lodgingStays: { select: { checkIn: true, checkOut: true } },
     },
   });
   if (!trip) return;
 
-  const bounds = tripDateBounds(trip.flights, trip.cruises);
+  // Segments first, the trip's own dates as the fallback — see the rule in
+  // `tripStatusBounds`. A trip with neither used to keep whatever status it
+  // was created with, for ever (AUD-024).
+  const bounds = tripStatusBounds({
+    flights: trip.flights,
+    cruises: trip.cruises,
+    lodgingStays: trip.lodgingStays,
+    ownStartDate: trip.startDate,
+    ownEndDate: trip.endDate,
+  });
   const derived = deriveTripStatus(bounds);
   if (derived == null || derived === trip.status) return;
 

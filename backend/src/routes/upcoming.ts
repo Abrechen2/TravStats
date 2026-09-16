@@ -1,8 +1,10 @@
-import { Router, Response, NextFunction } from 'express';
-import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { getCachedAirports } from '../services/airportCache';
-import type { DomainKey } from '../shared/domains';
+import { Router, Response, NextFunction } from "express";
+import { prisma } from "../db";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { getCachedAirports } from "../services/airportCache";
+import { airportDisplayName } from "../utils/airportDisplay";
+import { stayStartsAt } from "../utils/stayInstant";
+import type { DomainKey } from "../shared/domains";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
 // none, arrived at from the other side. This route exists BECAUSE the tab strip
@@ -33,11 +35,20 @@ router.use(authenticate);
 
 /** One upcoming entry. `domain` discriminates what `primary`/`secondary` mean. */
 export interface UpcomingEntry {
-  domain: DomainKey | 'trip';
+  domain: DomainKey | "trip";
   id: string;
   /** ISO instant this starts — departure, embarkation, check-in, trip start. */
   startsAt: string;
-  /** The trip this belongs to, when it has one. Lets the UI link to the trip instead of the item. */
+  /**
+   * The row a click should OPEN, which is not always `id`: a stay has no page
+   * of its own, so its target is the lodging whose page lists it. Always set,
+   * so the strip has one rule (`<domain route>/<detailId>`) rather than a
+   * per-domain special case — the strip used to link to the domain's LIST,
+   * which made the entry a signpost to a page the reader then had to search
+   * (#314).
+   */
+  detailId: string;
+  /** The trip this belongs to, when it has one. Named so the strip can show it. */
   tripId: string | null;
   /**
    * That trip's NAME, so the strip can say which journey the entry is part of.
@@ -58,8 +69,8 @@ function iso(date: Date | null): string | null {
 
 async function nextFlight(userId: string): Promise<UpcomingEntry | null> {
   const flight = await prisma.flight.findFirst({
-    where: { userId, status: { not: 'cancelled' }, departureTime: { gte: new Date() } },
-    orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+    where: { userId, status: { not: "cancelled" }, departureTime: { gte: new Date() } },
+    orderBy: [{ departureTime: "asc" }, { id: "asc" }],
     select: {
       id: true,
       airlineIata: true,
@@ -75,14 +86,16 @@ async function nextFlight(userId: string): Promise<UpcomingEntry | null> {
   const startsAt = iso(flight?.departureTime ?? null);
   if (!flight || !startsAt) return null;
 
-  // City names where we have them, codes otherwise — the same batched lookup
-  // the map overlays use, so the strip reads "München → Wien" rather than two
-  // codes the reader has to decode.
+  // Readable names where we have them, codes otherwise — the same batched
+  // lookup the map overlays use, so the strip reads "München → Wien" rather
+  // than two codes the reader has to decode. NOT `city`: that is OurAirports'
+  // municipality, which put "Ferno" on a Malpensa flight (#332). See
+  // `utils/airportDisplay.ts` for why the field cannot be repaired in place.
   const codes = [flight.depIata, flight.arrIata].filter((c): c is string => !!c);
   const airports = codes.length ? await getCachedAirports(codes) : new Map();
   const end = (code: string | null): string => {
-    if (!code) return '—';
-    return airports.get(code.toUpperCase())?.city ?? code;
+    if (!code) return "—";
+    return airportDisplayName(airports.get(code.toUpperCase())) ?? code;
   };
 
   // "LH" + "LH2280" reads "LH LH2280" if joined blindly — most stored flight
@@ -96,8 +109,9 @@ async function nextFlight(userId: string): Promise<UpcomingEntry | null> {
       : (number ?? carrier ?? null);
 
   return {
-    domain: 'flight',
+    domain: "flight",
     id: flight.id,
+    detailId: flight.id,
     startsAt,
     tripId: flight.tripId,
     tripName: flight.trip?.name ?? null,
@@ -108,8 +122,8 @@ async function nextFlight(userId: string): Promise<UpcomingEntry | null> {
 
 async function nextCruise(userId: string): Promise<UpcomingEntry | null> {
   const cruise = await prisma.cruise.findFirst({
-    where: { userId, status: { not: 'cancelled' }, startDate: { gte: new Date() } },
-    orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+    where: { userId, status: { not: "cancelled" }, startDate: { gte: new Date() } },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
     select: {
       id: true,
       startDate: true,
@@ -125,29 +139,15 @@ async function nextCruise(userId: string): Promise<UpcomingEntry | null> {
   if (!cruise || !startsAt) return null;
 
   return {
-    domain: 'cruise',
+    domain: "cruise",
     id: cruise.id,
+    detailId: cruise.id,
     startsAt,
     tripId: cruise.tripId,
     tripName: cruise.trip?.name ?? null,
-    primary: cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? '—',
+    primary: cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "—",
     secondary: cruise.departurePort?.name ?? cruise.cruiseLine ?? null,
   };
-}
-
-/**
- * A stay's `checkIn` is a UTC-pinned midnight day anchor; the optional
- * `checkInTime` ("HH:mm") refines WHEN on that day the stay actually
- * starts. Combining them here keeps every other reader on the pure day
- * (FX, nights, status) while the countdown stops claiming a 15:00 check-in
- * happens at midnight (#dev-talk 2026-08-18). The combined instant follows
- * the same convention as the anchor itself (wall clock read as UTC) — a
- * lodging has no timezone field, so this is as honest as the data gets.
- */
-function stayStartsAt(checkIn: Date, checkInTime: string | null): Date {
-  if (!checkInTime) return checkIn;
-  const [h, m] = checkInTime.split(':').map(Number);
-  return new Date(checkIn.getTime() + (h * 60 + m) * 60_000);
 }
 
 async function nextStay(userId: string): Promise<UpcomingEntry | null> {
@@ -155,34 +155,60 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   // `checkIn >= now` filter dropped a stay checking in TODAY the moment
   // midnight passed — the exact stay the banner is most useful for. The JS
   // filter below then applies the time-refined instant.
-  const startOfToday = new Date();
-  startOfToday.setUTCHours(0, 0, 0, 0);
+  //
+  // And one day EARLIER than that, because the stored `checkIn` is a day in the
+  // hotel's calendar while this filter counts in UTC, and the conversion only
+  // happens below (AUD-099). A Los Angeles hotel with a check-in stored on the
+  // 1st at 22:30 local begins at 05:30 UTC on the 2nd — so at 02:00 UTC on the
+  // 2nd it is still three and a half hours away, and a filter starting at that
+  // day's UTC midnight had already dropped it. One day covers every zone: the
+  // extremes are UTC-12 and UTC+14, and the eastern side needs no margin
+  // because a later stored day sorts in anyway.
+  const windowStart = new Date();
+  windowStart.setUTCHours(0, 0, 0, 0);
+  windowStart.setUTCDate(windowStart.getUTCDate() - 1);
   const stays = await prisma.lodgingStay.findMany({
-    where: { userId, status: { not: 'cancelled' }, checkIn: { gte: startOfToday } },
-    orderBy: [{ checkIn: 'asc' }, { id: 'asc' }],
-    take: 5,
+    where: { userId, status: { not: "cancelled" }, checkIn: { gte: windowStart } },
+    orderBy: [{ checkIn: "asc" }, { id: "asc" }],
+    // The bound is on CANDIDATES, and the instant filter below discards some of
+    // them, so it has to be wider than the one row this function returns —
+    // a day of already-started stays must not crowd out the next real one.
+    take: 20,
     select: {
       id: true,
       checkIn: true,
       checkInTime: true,
       tripId: true,
       trip: { select: { name: true } },
-      lodging: { select: { name: true, city: true, country: true } },
+      lodging: {
+        select: { id: true, name: true, city: true, country: true, lat: true, lon: true },
+      },
     },
   });
 
   const now = Date.now();
   const upcoming = stays
     .filter((s): s is (typeof stays)[number] & { checkIn: Date } => s.checkIn !== null)
-    .map((s) => ({ stay: s, instant: stayStartsAt(s.checkIn, s.checkInTime) }))
+    .map((s) => ({
+      stay: s,
+      instant: stayStartsAt({
+        checkIn: s.checkIn,
+        checkInTime: s.checkInTime,
+        lat: s.lodging.lat,
+        lon: s.lodging.lon,
+      }),
+    }))
     .filter((s) => s.instant.getTime() >= now)
     .sort((a, b) => a.instant.getTime() - b.instant.getTime())[0];
   if (!upcoming) return null;
 
   const { stay, instant } = upcoming;
   return {
-    domain: 'lodging',
+    domain: "lodging",
     id: stay.id,
+    // The stay's own page does not exist — `/lodging/:id` is the HOUSE, and it
+    // lists the stays. So the target is the lodging, not the stay.
+    detailId: stay.lodging.id,
     startsAt: instant.toISOString(),
     tripId: stay.tripId,
     tripName: stay.trip?.name ?? null,
@@ -193,16 +219,17 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
 
 async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
   const trip = await prisma.trip.findFirst({
-    where: { userId, status: { not: 'cancelled' }, startDate: { gte: new Date() } },
-    orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+    where: { userId, status: { not: "cancelled" }, startDate: { gte: new Date() } },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
     select: { id: true, name: true, startDate: true, destinationLabel: true },
   });
   const startsAt = iso(trip?.startDate ?? null);
   if (!trip || !startsAt) return null;
 
   return {
-    domain: 'trip',
+    domain: "trip",
     id: trip.id,
+    detailId: trip.id,
     startsAt,
     tripId: trip.id,
     // Not repeated: on a trip entry the name IS the headline.
@@ -221,7 +248,7 @@ async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
  * client cannot forget to. Trips are always considered: a trip is the frame
  * around the others, not a domain of its own.
  */
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const settings = await prisma.userSettings.findUnique({
@@ -230,12 +257,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     });
     // No settings row is a fresh account, which the schema defaults to
     // flights — matching the column default rather than guessing "all".
-    const enabled = new Set(settings?.enabledDomains ?? ['flight']);
+    const enabled = new Set(settings?.enabledDomains ?? ["flight"]);
 
     const found = await Promise.all([
-      enabled.has('flight') ? nextFlight(userId) : null,
-      enabled.has('cruise') ? nextCruise(userId) : null,
-      enabled.has('lodging') ? nextStay(userId) : null,
+      enabled.has("flight") ? nextFlight(userId) : null,
+      enabled.has("cruise") ? nextCruise(userId) : null,
+      enabled.has("lodging") ? nextStay(userId) : null,
       nextTrip(userId),
     ]);
 

@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { prisma } from "../../db";
+import { ensureAdminSettingsRow } from "../adminSettingsRow";
 
 export type ConsentState = "unset" | "granted" | "denied";
 
@@ -10,15 +11,8 @@ function isConsentState(value: unknown): value is ConsentState {
   return typeof value === "string" && (VALID_CONSENT as readonly string[]).includes(value);
 }
 
-/** The AdminSettings singleton is the first row — its id is autoincrement, never 1 by contract. */
-async function ensureAdminSettings(): Promise<{ id: number }> {
-  const existing = await prisma.adminSettings.findFirst();
-  if (existing) return existing;
-  return prisma.adminSettings.create({ data: {} });
-}
-
 export async function getConsent(): Promise<ConsentState> {
-  const row = await prisma.adminSettings.findFirst();
+  const row = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return isConsentState(row?.usageStatsConsent) ? row.usageStatsConsent : "unset";
 }
 
@@ -26,15 +20,15 @@ export async function setConsent(value: ConsentState): Promise<void> {
   if (!isConsentState(value)) {
     throw new Error(`invalid consent value: ${String(value)}`);
   }
-  const row = await ensureAdminSettings();
+  const rowId = await ensureAdminSettingsRow();
   await prisma.adminSettings.update({
-    where: { id: row.id },
+    where: { id: rowId },
     data: { usageStatsConsent: value },
   });
 }
 
 export async function getInstallId(): Promise<string | null> {
-  const row = await prisma.adminSettings.findFirst();
+  const row = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return row?.usageStatsInstallId ?? null;
 }
 
@@ -43,13 +37,13 @@ export async function getInstallId(): Promise<string | null> {
  * hostname, MAC, database id, or any filesystem path.
  */
 export async function getOrCreateInstallId(): Promise<string> {
-  const row = await ensureAdminSettings();
-  const existing = await prisma.adminSettings.findFirst();
+  const rowId = await ensureAdminSettingsRow();
+  const existing = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   if (existing?.usageStatsInstallId) return existing.usageStatsInstallId;
 
   const newId = randomUUID().replace(/-/g, "");
   await prisma.adminSettings.update({
-    where: { id: row.id },
+    where: { id: rowId },
     data: { usageStatsInstallId: newId },
   });
   return newId;

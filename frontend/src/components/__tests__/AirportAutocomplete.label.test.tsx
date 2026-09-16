@@ -13,6 +13,20 @@ vi.mock("../../lib/api", async () => {
   return { ...actual, checkSeedingStatus: vi.fn(async () => ({ isSeeding: false })) };
 });
 
+// AirportAutocomplete asks whether the airport catalogue is still seeding.
+vi.mock("@/lib/api/setup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/setup")>();
+  return {
+    ...actual,
+    setupApi: {
+      ...actual.setupApi,
+      getAirportSeedingStatus: vi
+        .fn()
+        .mockResolvedValue({ seeding: false, processedAirports: 0, error: null }),
+    },
+  };
+});
+
 /**
  * Issue #239. Callers that render their own heading pass `label=""` — the
  * flight form's Von/Nach fields do exactly that, with `required`. The

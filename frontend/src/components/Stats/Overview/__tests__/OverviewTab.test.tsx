@@ -10,6 +10,15 @@ import type { SectionVisibility } from "../../../../hooks/useSectionVisibility";
 // setup.ts) so useEnabledDomains() returns real state we control below.
 vi.unmock("../../../../store/settingsStore");
 
+// The overview tab loads the travel account on mount.
+vi.mock("@/lib/api/stats", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/stats")>();
+  return {
+    ...actual,
+    statsApi: { ...actual.statsApi, getTravelAccount: vi.fn().mockResolvedValue(null) },
+  };
+});
+
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { hiding } from "../../__tests__/sectionVisibilityStub";

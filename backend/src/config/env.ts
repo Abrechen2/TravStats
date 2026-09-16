@@ -7,12 +7,22 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 
 // Define environment variable schema
+/**
+ * `.prefault`, not `.default`, wherever a `.transform` precedes it.
+ *
+ * These defaults are raw environment strings — the value the pipeline is meant
+ * to START from. zod 3 treated `.default()` that way; zod 4 made `.default()`
+ * the OUTPUT value instead, so `.default('8000')` on a schema that transforms
+ * to a number stops typechecking, and `.default(8000)` would silently skip the
+ * `/^\d+$/` check and the `Number` conversion the default is supposed to go
+ * through. `prefault` is zod 4's name for the zod 3 behaviour.
+ */
 const envSchema = z.object({
   // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
 
   // Server configuration
-  PORT: z.string().regex(/^\d+$/).transform(Number).default('8000'),
+  PORT: z.string().regex(/^\d+$/).transform(Number).prefault('8000'),
   HOST: z.string().optional().default('0.0.0.0'),
 
   // Database
@@ -27,7 +37,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32).optional(),
   JWT_EXPIRES_IN: z.string().default('7d'),
   ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-fA-F]+$/).optional(),
-  COOKIE_SECURE: z.string().transform((val) => val === 'true').default('true'),
+  COOKIE_SECURE: z.string().transform((val) => val === 'true').prefault('true'),
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
@@ -41,8 +51,8 @@ const envSchema = z.object({
   ALLOW_REGISTRATION: z.string().transform((val) => val === 'true').optional(),
 
   // Seeding
-  SEED_AIRPORTS: z.string().transform((val) => val !== 'false').default('true'),
-  CREATE_DEMO_USER: z.string().transform((val) => val === 'true').default('false'),
+  SEED_AIRPORTS: z.string().transform((val) => val !== 'false').prefault('true'),
+  CREATE_DEMO_USER: z.string().transform((val) => val === 'true').prefault('false'),
 
   // API Keys (optional)
   AIRLABS_API_KEY: z.string().optional(),
@@ -61,8 +71,8 @@ const envSchema = z.object({
   BACKUP_PATH: z.string().default('/app/data/backups'),
   // DEPRECATED: backup toggle/interval/retention now stored in AdminSettings DB.
   // Kept as optional fallback to avoid startup errors on existing deployments.
-  BACKUP_RETENTION_DAYS: z.string().regex(/^\d+$/).transform(Number).default('30'),
-  AUTO_BACKUP_ENABLED: z.string().transform((val) => val === 'true').default('false'),
+  BACKUP_RETENTION_DAYS: z.string().regex(/^\d+$/).transform(Number).prefault('30'),
+  AUTO_BACKUP_ENABLED: z.string().transform((val) => val === 'true').prefault('false'),
   BACKUP_INTERVAL: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
   DOCKER_DB_CONTAINER: z.string().optional(),
 
@@ -111,7 +121,7 @@ export function validateEnv(): EnvConfig {
     return validatedEnv;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map((err) => ({
+      const errorMessages = error.issues.map((err) => ({
         path: err.path.join('.'),
         message: err.message,
       }));

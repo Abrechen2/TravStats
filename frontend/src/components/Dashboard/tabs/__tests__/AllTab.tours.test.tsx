@@ -64,6 +64,17 @@ vi.mock("../../../../lib/api/cruise", () => ({
 vi.mock("../../../../lib/api/lodging", () => ({
   listLodgings: vi.fn().mockResolvedValue([]),
 }));
+// Places left the beta gate with the 2.7 line, so `AllTab` now loads them on
+// every render instead of only behind the switch. Unmocked they went out as
+// real requests, which the suite's network guard fails rather than prints
+// (forgejo#110).
+vi.mock("../../../../lib/api/places", () => ({
+  listPlaces: () => Promise.resolve([]),
+}));
+vi.mock("../../../../lib/api/placeLists", () => ({
+  listPlaceLists: () => Promise.resolve([]),
+}));
+
 vi.mock("../../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
 }));

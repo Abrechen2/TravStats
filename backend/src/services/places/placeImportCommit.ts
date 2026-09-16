@@ -1,3 +1,5 @@
+import { classifyVisit } from "../../shared/placeCounting";
+import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
@@ -77,6 +79,18 @@ export async function commitPlaceImport(
 
       const visitedAt = row.visitedAt ? new Date(row.visitedAt) : null;
       const usableVisitedAt = visitedAt && !Number.isNaN(visitedAt.getTime()) ? visitedAt : null;
+      // Three states, not two. NO date means the user saved the place — that
+      // was always right and stays right. A date that has PASSED means they
+      // were there. A date in the FUTURE is a plan, and the import used to
+      // read it as "has been there" simply because a date was present, so a
+      // row dated 2099 arrived as already visited (AUD-074).
+      //
+      // `classifyVisit` alone cannot answer this: a null date is `visited` to
+      // it, because an undated VISIT ROW is still a visit. An import row
+      // without a date is not a visit row at all.
+      const happened =
+        usableVisitedAt !== null && classifyVisit({ visitedAt: usableVisitedAt }) === "visited";
+      const country = row.country?.trim() || null;
 
       await prisma.place.create({
         data: {
@@ -91,13 +105,24 @@ export async function commitPlaceImport(
           ...(row.category?.trim() ? { category: row.category.trim() } : {}),
           address: row.address?.trim() || null,
           city: row.city?.trim() || null,
-          country: row.country?.trim() || null,
+          country,
+          // Derived exactly as the manual create derives it. Without it the
+          // country was stored as prose only, so `/places?country=DE` found
+          // nothing and the POI statistics counted zero countries for rows
+          // that plainly named one (AUD-075).
+          isoCountryCode: resolveCountryCode(country),
           notes: row.notes?.trim() || null,
           externalRef: row.externalRef?.trim() || null,
-          // A place imported WITH a date is one the user has been to; without
-          // one it is a place they saved. Both are honest, and the difference
-          // is exactly what `visited` means in this domain.
-          visited: usableVisitedAt !== null,
+          // A place imported with a date that has PASSED is one the user has
+          // been to; anything else is a place they saved.
+          visited: happened,
+          // The date is the evidence, so it is kept as a visit instead of being
+          // reduced to a boolean and thrown away. The import used to record
+          // `visited: true` and no `PlaceVisit` at all, which left the place
+          // counted as visited while every visit figure read zero (AUD-074).
+          ...(usableVisitedAt !== null
+            ? { visits: { create: [{ userId, visitedAt: usableVisitedAt, orderIdx: 0 }] } }
+            : {}),
           dataSource: "import",
         },
       });

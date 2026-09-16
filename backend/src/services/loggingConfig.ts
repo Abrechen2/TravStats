@@ -1,6 +1,7 @@
 import { prisma, setDbQueryLoggingEnabled } from '../db';
 import { systemLogger } from '../utils/logger';
 import { CACHE_TTL, LOGGING_DEFAULTS } from '../config/constants';
+import { ensureAdminSettingsRow } from "./adminSettingsRow";
 
 /**
  * Logging Configuration Service
@@ -37,7 +38,7 @@ export async function getLoggingConfig(): Promise<LogConfig> {
   }
 
   try {
-    const settings = await prisma.adminSettings.findFirst();
+    const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const config: LogConfig = {
       logLevel: settings?.logLevel ?? 'info',
@@ -82,23 +83,12 @@ export async function getLoggingConfig(): Promise<LogConfig> {
  */
 export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<LogConfig> {
   try {
-    // Get or create admin settings
-    let settings = await prisma.adminSettings.findFirst();
-
-    if (!settings) {
-      // Create initial admin settings if not exists
-      settings = await prisma.adminSettings.create({
-        data: {
-          ...updates,
-        },
-      });
-    } else {
-      // Update existing settings
-      settings = await prisma.adminSettings.update({
-        where: { id: settings.id },
-        data: updates,
-      });
-    }
+    // One row, created under a lock if the instance has none. This ran at
+    // boot, so it was one of the two racers that could split the singleton.
+    const settings = await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: updates,
+    });
 
     // Invalidate cache
     configCache = null;

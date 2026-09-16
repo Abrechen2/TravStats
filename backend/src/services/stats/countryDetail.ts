@@ -142,80 +142,19 @@ export interface CountryDetailLodging {
   stays: readonly CountableStay[];
 }
 
-export interface CountryAirportUse {
-  iata: string;
-  /** Flights that began or ended here. */
-  visits: number;
-  /** First visit, ISO date. Null when no dated flight used it. */
-  firstDate: string | null;
-}
-
-export type CountryTimelineEntry =
-  | {
-      kind: "flight";
-      date: string | null;
-      flightId: string;
-      flightNumber: string | null;
-      depIata: string | null;
-      arrIata: string | null;
-      /** The end of the leg that lies inside this country. */
-      airportIata: string | null;
-    }
-  | { kind: "port"; date: string | null; cruiseId: string; portName: string | null }
-  | { kind: "place"; date: string | null; placeId: string; name: string }
-  | { kind: "lodging"; date: string | null; lodgingId: string; name: string }
-  /**
-   * Measured presence — ONE entry for the whole country, not one per day.
-   *
-   * The others name a record somebody typed and can go and edit. A country-day
-   * is not that: it is a reduction of a location history that lives on the
-   * user's own server, and there is nothing here to correct except the
-   * connection that produced it. So the entry carries what was observed —
-   * `days` and `points` — and the client links to where that connection is
-   * configured.
-   *
-   * `points` is published RAW and deliberately not turned into a word. Spec
-   * §8.3: the Dawarich payload cannot say whether a fix was measured by GPS or
-   * estimated from a photograph, so a day held up by four hundred fixes and a
-   * day held up by one must be distinguishable by a reader without anyone
-   * deciding on their behalf what the difference means.
-   */
-  | { kind: "track"; date: string | null; days: number; points: number };
-
-export interface CountryDetail {
-  /** ISO-3166 alpha-2. Never a flag: flags are political and age. */
-  code: string;
-  continent: Continent | null;
-  /** The strongest proof, in the passport's own vocabulary. */
-  evidence: PassportEvidence;
-  /** A home airport of the user's is in this country. */
-  isHome: boolean;
-  /** Flights that began or ended here. See rules 2 and 3. */
-  entries: number;
-  firstYear: number | null;
-  lastYear: number | null;
-  /** The airports used here, most-used first. The client groups equal counts. */
-  airports: CountryAirportUse[];
-  /** Port calls of sailed cruises in this country. */
-  portCalls: number;
-  /** Recorded visits to places in this country. */
-  places: number;
-  /** Houses in this country whose record proves presence. See rule 6. */
-  lodgings: number;
-  /** Distinct days a location history placed the traveller here. Zero for an
-   *  account that has none, which is most of them. */
-  trackDays: number;
-  /**
-   * The busiest visited airport that carries coordinates — what a map centres
-   * on. Null when none does, so the client drops its globe control rather than
-   * opening a sphere somewhere else.
-   */
-  anchor: { iata: string; lat: number; lon: number } | null;
-  /** Newest first, undated last. Raw parts, never composed prose. */
-  timeline: CountryTimelineEntry[];
-  /** True when `timeline` was cut, so a client can say it shows the latest N. */
-  timelineTruncated: boolean;
-}
+// Published by GET /stats/countries/{code}, so these shapes are described once
+// in `schemas/statsCountryDetail.ts` and read here (forgejo#52). The prose that
+// used to sit on the fields moved with them, where a consumer of the spec sees
+// it — including why a `track` entry publishes its point count raw.
+export type {
+  CountryAirportUse,
+  CountryTimelineEntry,
+  CountryDetail,
+} from "../../schemas/statsCountryDetail";
+import type {
+  CountryTimelineEntry,
+  CountryDetail,
+} from "../../schemas/statsCountryDetail";
 
 const FLOWN = new Set(["flown", "historical"]);
 

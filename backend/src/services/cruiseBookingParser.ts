@@ -3,6 +3,7 @@ import https from "https";
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import logger from "../utils/logger";
 import { getAdminParserSettings } from "./parserSettings";
+import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 
@@ -67,7 +68,13 @@ export interface ParsedCruise {
 
 export interface CruiseParseResult {
   cruises: ParsedCruise[];
-  parserUsed: "ollama";
+  /**
+   * Which path produced the cruises. `template` means a deterministic reader
+   * recognised the issuer and no model was consulted at all — that path is
+   * tried first, so an instance without Ollama can still import the formats it
+   * covers.
+   */
+  parserUsed: "template" | "ollama";
   ollamaAvailable: boolean;
 }
 
@@ -500,6 +507,16 @@ export async function parseCruiseBookingText(
   // otherwise a correctly configured remote Ollama is silently ignored and every
   // cruise parse falls back to localhost:11434 → ECONNREFUSED. Explicit options
   // (used by tests) still win; env vars remain the final fallback.
+  // A deterministic reader first, exactly as the flight and lodging pipelines
+  // do it. Before this, cruise parsing asked whether Ollama answered and threw
+  // if it did not, so an instance without a local model could not import a
+  // cruise booking at all — measured on the sample set, every TUI confirmation
+  // failed for that reason alone.
+  const templated = parseTuiCruisesConfirmation(text);
+  if (templated.length > 0) {
+    return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+  }
+
   const resolved = await resolveCruiseParserOptions(options);
   const parser = getCruiseBookingParser(resolved);
   const ollamaAvailable = await parser.checkAvailability();

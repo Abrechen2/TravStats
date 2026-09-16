@@ -3,6 +3,31 @@
  */
 
 import { z } from "zod";
+import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
+import { lodgingStatsResponseSchema } from "../../../schemas/statsLodging";
+import { wrappedSchema } from "../../../schemas/statsWrapped";
+import { cruiseStatsResponseSchema } from "../../../schemas/statsCruise";
+import {
+  travelRecordsResponseSchema,
+  travelAccountResponseSchema,
+} from "../../../schemas/statsDomains";
+import {
+  timeseriesResponseSchema,
+  funStatsSchema,
+  routeRankingResponseSchema,
+  businessStatsSchema,
+  uniqueStatsSchema,
+  airportStatsSchema,
+  punctualityStatsSchema,
+  seatStatsSchema,
+  airlineRankingResponseSchema,
+  countryStatsResponseSchema,
+} from "../../../schemas/statsFlights";
+import {
+  aircraftRankingResponseSchema,
+  aircraftTypesResponseSchema,
+  aircraftProfileResponseSchema,
+} from "../../../schemas/statsAircraft";
 
 import { registry } from "../registry";
 
@@ -166,32 +191,11 @@ registry.registerPath({
  */
 const statsTag = ["Stats"];
 
-function readOnlyStat(path: string, summary: string, description?: string): void {
-  registry.registerPath({
-    method: "get",
-    path,
-    summary,
-    ...(description ? { description } : {}),
-    tags: statsTag,
-    responses: { 200: { description: summary } },
-  });
-}
+// `readOnlyStat` used to live here: a helper that registered a 200 carrying a
+// description and nothing else. Every /stats endpoint now publishes a schema
+// (forgejo#52), so it has no callers — and leaving it would be leaving the
+// easy way to add another shapeless endpoint.
 
-readOnlyStat("/stats/timeseries", "Flights and distance over time", "Grouped by the departure airport's calendar day.");
-readOnlyStat("/stats/routes", "Most-flown routes");
-readOnlyStat("/stats/airlines", "Airlines, by flights and distance");
-readOnlyStat("/stats/airports", "Airports, by visits and by role as origin or destination");
-readOnlyStat("/stats/countries", "Countries reached", "Counted by country CODE, not by the spelling a geocoder returned — the same country arriving as \"Egypt\" and as its own-language name is one country here.");
-readOnlyStat("/stats/aircraft", "Individual aircraft flown, by registration");
-readOnlyStat("/stats/aircraft-types", "Aircraft types flown");
-readOnlyStat("/stats/seats", "Seats and cabin classes");
-readOnlyStat("/stats/punctuality", "Delays, where actual times are known", "Only flights carrying an actual departure or arrival contribute; a flight with scheduled times alone is not counted as on time.");
-readOnlyStat("/stats/business", "Business travel");
-readOnlyStat("/stats/fun", "The playful figures", "Time-of-day buckets, weekend warrior, fastest day, most countries in one day and the rest. All of them read the clock at the airport.");
-readOnlyStat("/stats/unique", "Firsts and unique counts");
-readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
-readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
-readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
 const continentSchema = z.enum([
   "Africa",
   "Antarctica",
@@ -325,17 +329,82 @@ registry.registerPath({
     "when no house proves the country.",
 });
 
-readOnlyStat(
-  "/stats/records",
-  "The seven travel records",
-  "Longest and shortest flight, busiest day, longest aloft, biggest delay, " +
+const lodgingStats = registry.register(
+  "LodgingStats",
+  lodgingStatsResponseSchema.openapi("LodgingStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/lodging",
+  summary: "Lodging statistics",
+  description:
+    "A stay counts as nights only after its CHECK-OUT, so a stay in progress is " +
+    "not yet in the totals; what is booked ahead is reported separately as " +
+    "`plannedNights`. Money is only summed for stays whose FX snapshot matches " +
+    "the current base currency — the rest are counted, not converted.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Lodging aggregates, with price, ratings, geography, rhythm and loyalty",
+      content: { "application/json": { schema: lodgingStats } },
+    },
+  },
+});
+
+const countryDetail = registry.register(
+  "CountryDetail",
+  countryDetailSchema.openapi("CountryDetail")
+);
+const cruiseStats = registry.register(
+  "CruiseStats",
+  cruiseStatsResponseSchema.openapi("CruiseStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/cruise",
+  summary: "Cruise statistics",
+  description:
+    "Distance comes from the computed sea legs; a cruise the router never ran " +
+    "for contributes 0 rather than a straight-line guess. Two country " +
+    "vocabularies in one answer: `countries` is English names for display, " +
+    "`countriesIso` is alpha-2 for counting, and a port whose name does not " +
+    "resolve is dropped from the count rather than counted under its raw name.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Cruise aggregates",
+      content: { "application/json": { schema: cruiseStats } },
+    },
+  },
+});
+
+const travelRecords = registry.register(
+  "TravelRecords",
+  travelRecordsResponseSchema.openapi("TravelRecords")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/records",
+  summary: "The seven travel records",
+  description:
+    "Longest and shortest flight, busiest day, longest aloft, biggest delay, " +
     "northernmost airport and longest streak. Numbers, not sentences: each record " +
     "carries a value, a unit and the raw parts of its detail, because a formatted " +
     '"12.345 km" would fix the decimal separator and the unit for every client. A ' +
     "record that cannot be derived is OMITTED rather than zeroed — a shortest " +
     "flight of 0 km would win forever, and a missing delay means \"not recorded\", " +
-    "which is a different fact from \"on time\"."
-);
+    "which is a different fact from \"on time\".",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The records that could be derived",
+      content: { "application/json": { schema: travelRecords } },
+    },
+  },
+});
 
 registry.registerPath({
   method: "get",
@@ -361,10 +430,15 @@ registry.registerPath({
   tags: statsTag,
   request: { params: z.object({ code: z.string() }) },
   responses: {
-    200: { description: "Country detail" },
+    200: {
+      description: "Country detail",
+      content: { "application/json": { schema: countryDetail } },
+    },
     404: { description: "Nothing evidences that country" },
   },
 });
+
+const wrapped = registry.register("Wrapped", wrappedSchema.openapi("Wrapped"));
 
 registry.registerPath({
   method: "get",
@@ -382,8 +456,261 @@ registry.registerPath({
   tags: statsTag,
   request: { query: z.object({ year: z.coerce.number().int().optional() }) },
   responses: {
-    200: { description: "The year in review" },
+    200: {
+      description: "The year in review",
+      content: { "application/json": { schema: wrapped } },
+    },
     404: { description: "No countable activity in any year" },
+  },
+});
+
+const travelAccount = registry.register(
+  "TravelAccount",
+  travelAccountResponseSchema.openapi("TravelAccount")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/travel-account",
+  summary: "Everything, across all domains",
+  description:
+    "The cross-domain rollup the overview tab draws: flights, cruises, lodging " +
+    "and places in one answer. Amounts are grouped by their original currency " +
+    "and never summed across them.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Years, trips and their coverage",
+      content: { "application/json": { schema: travelAccount } },
+    },
+  },
+});
+
+const timeseries = registry.register(
+  "Timeseries",
+  timeseriesResponseSchema.openapi("Timeseries")
+);
+const funStats = registry.register("FunStats", funStatsSchema.openapi("FunStats"));
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/timeseries",
+  summary: "Flights and distance over time",
+  description:
+    "Grouped by the DEPARTURE AIRPORT's calendar day. This description was once " +
+    "a promise the code did not keep — an evening departure east of UTC landed " +
+    "in the previous period — and was deleted rather than left standing. It is " +
+    "back because forgejo#46 made it true and a test pins it.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Buckets plus this window's totals and the one before it",
+      content: { "application/json": { schema: timeseries } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/fun",
+  summary: "The playful figures",
+  description:
+    "Time-of-day buckets, weekend warrior, fastest day and the rest. All read " +
+    "the clock at the airport, never UTC.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The playful figures",
+      content: { "application/json": { schema: funStats } },
+    },
+  },
+});
+
+const routeRanking = registry.register(
+  "RouteRanking",
+  routeRankingResponseSchema.openapi("RouteRanking")
+);
+const businessStats = registry.register(
+  "BusinessStats",
+  businessStatsSchema.openapi("BusinessStats")
+);
+const uniqueStats = registry.register("UniqueStats", uniqueStatsSchema.openapi("UniqueStats"));
+const airportStats = registry.register("AirportStats", airportStatsSchema.openapi("AirportStats"));
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/routes",
+  summary: "Most-flown routes",
+  description:
+    "A pair of airports is ONE route whichever way it was flown, so the two " +
+    "ends are simply the ends and the distance is the same either way.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Routes, most-flown first",
+      content: { "application/json": { schema: routeRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/airports",
+  summary: "Airports, by visits and by role as origin or destination",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Airport, country and continent aggregates",
+      content: { "application/json": { schema: airportStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/business",
+  summary: "Business travel",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Cost and category aggregates",
+      content: { "application/json": { schema: businessStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/unique",
+  summary: "Firsts and unique counts",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "The one-off figures",
+      content: { "application/json": { schema: uniqueStats } },
+    },
+  },
+});
+
+const punctuality = registry.register(
+  "Punctuality",
+  punctualityStatsSchema.openapi("Punctuality")
+);
+const seatStats = registry.register("SeatStats", seatStatsSchema.openapi("SeatStats"));
+const airlineRanking = registry.register(
+  "AirlineRanking",
+  airlineRankingResponseSchema.openapi("AirlineRanking")
+);
+const countryStats = registry.register(
+  "CountryStats",
+  countryStatsResponseSchema.openapi("CountryStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/airlines",
+  summary: "Airlines, by flights and distance",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Carriers, most-flown first",
+      content: { "application/json": { schema: airlineRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/countries",
+  summary: "Countries reached",
+  description:
+    "Counted by country CODE, not by the spelling a geocoder returned — the same " +
+    "country arriving as \"Egypt\" and as its own-language name is one country here.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Countries, and the ISO sets the cross-domain figures union",
+      content: { "application/json": { schema: countryStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/seats",
+  summary: "Seats and cabin classes",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Seat positions, zones and classes",
+      content: { "application/json": { schema: seatStats } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/punctuality",
+  summary: "Delays, where actual times are known",
+  description:
+    "Only flights carrying an actual departure or arrival contribute. A flight " +
+    "with scheduled times alone is not counted as on time — it is outside the " +
+    "sample entirely.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Delay aggregates over the flights that carry one",
+      content: { "application/json": { schema: punctuality } },
+    },
+  },
+});
+
+// The three aircraft rankings carry their shapes, from the schemas the route
+// itself infers from (forgejo#52). The rest of this file still answers with a
+// description alone, which is what the response-schema ratchet records.
+const aircraftRanking = registry.register(
+  "AircraftRanking",
+  aircraftRankingResponseSchema.openapi("AircraftRanking")
+);
+const aircraftTypes = registry.register(
+  "AircraftTypes",
+  aircraftTypesResponseSchema.openapi("AircraftTypes")
+);
+const aircraftProfile = registry.register(
+  "AircraftProfile",
+  aircraftProfileResponseSchema.openapi("AircraftProfile")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/aircraft",
+  summary: "Individual aircraft flown, by registration",
+  description:
+    "Only flights carrying a registration appear, so this reflects the " +
+    "AeroDataBox-enriched rows rather than the whole logbook.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Airframes, most-flown first",
+      content: { "application/json": { schema: aircraftRanking } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/aircraft-types",
+  summary: "Aircraft types flown",
+  description:
+    "Ranked by TYPE (\"Airbus A320neo\"), unlike /stats/aircraft which ranks tail " +
+    "numbers. `total` is the user's whole flight count, so percentages need not " +
+    "sum to 100 — the gap is the flights with no type recorded.",
+  tags: statsTag,
+  responses: {
+    200: {
+      description: "Types, most-flown first",
+      content: { "application/json": { schema: aircraftTypes } },
+    },
   },
 });
 
@@ -395,7 +722,10 @@ registry.registerPath({
   tags: statsTag,
   request: { params: z.object({ registration: z.string() }) },
   responses: {
-    200: { description: "Aircraft history" },
+    200: {
+      description: "Aircraft history",
+      content: { "application/json": { schema: aircraftProfile } },
+    },
     404: { description: "No flights on that registration" },
   },
 });

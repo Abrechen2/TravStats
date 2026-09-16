@@ -15,6 +15,7 @@ const rows: LodgingImportPreviewRow[] = [
     flags: ["unresolvable_lodging_name"],
     dedupeHint: "none",
     matchedLodgingId: null,
+    matchedLodgingName: null,
     matchedStayId: null,
     action: "needs_input",
   },
@@ -25,6 +26,7 @@ const rows: LodgingImportPreviewRow[] = [
     flags: ["missing_coordinates"],
     dedupeHint: "none",
     matchedLodgingId: null,
+    matchedLodgingName: null,
     matchedStayId: null,
     action: "create",
   },
@@ -35,6 +37,7 @@ const rows: LodgingImportPreviewRow[] = [
     flags: [],
     dedupeHint: "lodging_exact_ref",
     matchedLodgingId: "existing-id",
+    matchedLodgingName: null,
     matchedStayId: null,
     action: "skip",
   },
@@ -198,6 +201,7 @@ describe("LodgingImportPreviewModal", () => {
         flags: [],
         dedupeHint: "lodging_name_city",
         matchedLodgingId: "guessed-lodging-id",
+        matchedLodgingName: null,
         matchedStayId: null,
         action: "needs_input",
       },
@@ -306,6 +310,7 @@ describe("LodgingImportPreviewModal", () => {
         flags: ["missing_coordinates"],
         dedupeHint: "none",
         matchedLodgingId: null,
+        matchedLodgingName: null,
         matchedStayId: null,
         action: "create",
       },
@@ -395,6 +400,7 @@ describe("LodgingImportPreviewModal", () => {
         flags: [],
         dedupeHint: "none",
         matchedLodgingId: null,
+        matchedLodgingName: null,
         matchedStayId: null,
         action: "create",
       },
@@ -406,6 +412,7 @@ describe("LodgingImportPreviewModal", () => {
         flags: [],
         dedupeHint: "none",
         matchedLodgingId: null,
+        matchedLodgingName: null,
         matchedStayId: null,
         action: "create",
       },
@@ -437,6 +444,154 @@ describe("LodgingImportPreviewModal", () => {
     const staysOnlyRow = committed.find((r) => r.sourceRowIndex === 1);
     expect(staysOnlyRow?.lodging).toBeNull();
     expect(staysOnlyRow?.lodgingName).toBe("Payload Hotel");
+  });
+});
+
+// AUD-056: a guessed match could be accepted or the row skipped — never
+// rejected. `create` carried the guessed id along and attached the stay to
+// the wrong house, and the dialog never even said which house that was.
+describe("LodgingImportPreviewModal — rejecting a guessed match", () => {
+  const guessed: LodgingImportPreviewRow[] = [
+    {
+      sourceRowIndex: 4,
+      lodging: { name: "Synthetic Other Building", city: "Synthetic City" },
+      stay: { checkIn: "2026-05-01", checkOut: "2026-05-03" },
+      flags: [],
+      dedupeHint: "lodging_name_city",
+      matchedLodgingId: "annex-one-id",
+      matchedLodgingName: "Synthetic Annex One",
+      matchedStayId: null,
+      action: "needs_input",
+    },
+  ];
+  const guessedSummary: LodgingImportSummary = { newRows: 0, alreadyPresent: 0, needsInput: 1 };
+
+  it("names the house the guess points at", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={guessed}
+        summary={guessedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("lodging-import-matched-name-4")).toHaveTextContent(
+      "Synthetic Annex One"
+    );
+  });
+
+  it("lets the user reject the guess and create a NEW house instead", async () => {
+    const onCommit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LodgingImportPreviewModal
+        rows={guessed}
+        summary={guessedSummary}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("lodging-import-reject-match-4"));
+
+    // The fields unlock — this is an ordinary unmatched row now.
+    const nameField = screen.getByTestId("lodging-import-name-4");
+    expect(nameField.tagName).toBe("INPUT");
+    expect(nameField).toHaveValue("Synthetic Other Building");
+    expect(screen.queryByTestId("lodging-import-matched-name-4")).toBeNull();
+
+    fireEvent.change(screen.getByTestId("lodging-import-action-4"), {
+      target: { value: "create" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+
+    const committed = onCommit.mock.calls[0][0] as {
+      matchedLodgingId?: string | null;
+      lodging: { name?: string } | null;
+    }[];
+    expect(committed[0].matchedLodgingId).toBeNull();
+    expect(committed[0].lodging?.name).toBe("Synthetic Other Building");
+  });
+
+  it("offers no rejection for a PROVEN match", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={rows}
+        summary={summary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    // Row 2 is an exact-reference hit — an identity, not a guess.
+    expect(screen.queryByTestId("lodging-import-reject-match-2")).toBeNull();
+  });
+});
+
+// AUD-057: the dialog had a price field and no currency field. A price
+// typed here went out with `currency: null`; the backend refused to store
+// an amount with no unit and reported the row as a success anyway.
+describe("LodgingImportPreviewModal — a price needs a currency", () => {
+  const priced: LodgingImportPreviewRow[] = [
+    {
+      sourceRowIndex: 7,
+      lodging: { name: "Priced Hotel" },
+      stay: { checkIn: "2026-06-01", checkOut: "2026-06-02", totalPrice: null, currency: null },
+      flags: [],
+      dedupeHint: "none",
+      matchedLodgingId: null,
+      matchedLodgingName: null,
+      matchedStayId: null,
+      action: "create",
+    },
+  ];
+  const pricedSummary: LodgingImportSummary = { newRows: 1, alreadyPresent: 0, needsInput: 0 };
+
+  it("holds the commit until the typed price has a currency, then sends both", async () => {
+    const onCommit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LodgingImportPreviewModal
+        rows={priced}
+        summary={pricedSummary}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("lodging-import-commit")).toBeEnabled();
+    fireEvent.change(screen.getByTestId("lodging-import-price-7"), { target: { value: "100" } });
+
+    expect(screen.getByTestId("lodging-import-commit")).toBeDisabled();
+    expect(screen.getByTestId("lodging-import-currency-hint")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("lodging-import-currency-7"), {
+      target: { value: "EUR" },
+    });
+    expect(screen.getByTestId("lodging-import-commit")).toBeEnabled();
+    expect(screen.queryByTestId("lodging-import-currency-hint")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+    const committed = onCommit.mock.calls[0][0] as {
+      stay: { totalPrice?: number | null; currency?: string | null } | null;
+    }[];
+    expect(committed[0].stay?.totalPrice).toBe(100);
+    expect(committed[0].stay?.currency).toBe("EUR");
+  });
+
+  it("shows the currency the source already carried", () => {
+    const withCurrency: LodgingImportPreviewRow[] = [
+      { ...priced[0], stay: { ...priced[0].stay!, totalPrice: 250, currency: "CHF" } },
+    ];
+    render(
+      <LodgingImportPreviewModal
+        rows={withCurrency}
+        summary={pricedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("lodging-import-currency-7")).toHaveValue("CHF");
+    expect(screen.getByTestId("lodging-import-commit")).toBeEnabled();
   });
 });
 

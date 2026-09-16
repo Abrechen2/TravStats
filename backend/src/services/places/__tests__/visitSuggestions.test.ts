@@ -331,4 +331,54 @@ describe("suggestVisits", () => {
     });
   });
 
+  /**
+   * AUD-082. The grid was built on the assumption that one degree is ≈ 111 km.
+   * That holds for latitude and fails for longitude, which shrinks with
+   * cos(latitude): at 69.65°N a degree is ≈ 38.6 km, less than the 40 km
+   * cruise-port radius. Two points inside the radius therefore landed in
+   * non-adjacent cells and produced nothing — while the same pair shifted a
+   * tenth of a degree west, at the identical distance, produced a suggestion.
+   *
+   * The pair below is the one Codex measured: 39.441 km apart.
+   */
+  describe("a high-latitude pair inside the radius is not lost by the grid", () => {
+    const TROMSO_TARGET = {
+      itemId: "world-heritage:tromso",
+      name: "Nordlicht-Ziel",
+      lat: 69.65,
+      lon: 18.99,
+    };
+    const TROMSO_ANCHOR = anchor({
+      kind: "cruise_port" as const,
+      label: "Tromsø",
+      lat: 69.65,
+      lon: 20.01,
+    });
+
+    it("suggests across a longitude cell boundary at 69.65°N", () => {
+      const hits = suggestVisits([TROMSO_TARGET], [TROMSO_ANCHOR]);
+      expect(hits).toHaveLength(1);
+      expect(hits[0]!.distanceKm).toBeLessThan(40);
+    });
+
+    it("gives the same answer when the identical pair is shifted 0.1° west", () => {
+      // The control that exposed the bug: same distance, cells now adjacent.
+      const shifted = suggestVisits(
+        [{ ...TROMSO_TARGET, lon: TROMSO_TARGET.lon - 0.1 }],
+        [anchor({ ...TROMSO_ANCHOR, lon: TROMSO_ANCHOR.lon - 0.1 })],
+      );
+      const direct = suggestVisits([TROMSO_TARGET], [TROMSO_ANCHOR]);
+      expect(shifted).toHaveLength(direct.length);
+    });
+
+    it("still rejects a high-latitude pair OUTSIDE the radius", () => {
+      // Widening the scan must not turn into "everything matches" — the
+      // distance check is still what decides.
+      const far = suggestVisits(
+        [TROMSO_TARGET],
+        [anchor({ ...TROMSO_ANCHOR, lon: 22.5 })],
+      );
+      expect(far).toEqual([]);
+    });
+  });
 });

@@ -184,7 +184,7 @@ const geometry = z
           type: z.literal("LineString"),
           coordinates: z.array(z.tuple([z.number(), z.number()])),
         }),
-        properties: z.record(z.unknown()),
+        properties: z.record(z.string(), z.unknown()),
       })
     ),
   })
@@ -228,7 +228,7 @@ registry.registerPath({
   responses: {
     200: {
       description: "Geometry per cruise id",
-      content: { "application/json": { schema: envelope(z.record(geometry)) } },
+      content: { "application/json": { schema: envelope(z.record(z.string(), geometry)) } },
     },
     400: { description: "Validation failed", content: errorContent },
   },

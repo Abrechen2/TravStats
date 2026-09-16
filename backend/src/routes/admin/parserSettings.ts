@@ -4,6 +4,7 @@ import http from 'http';
 import { z } from 'zod';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
+import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
@@ -32,18 +33,12 @@ const router = Router();
 // Get admin parser settings
 router.get('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    let adminSettings = await prisma.adminSettings.findFirst();
-
-    if (!adminSettings) {
-      adminSettings = await prisma.adminSettings.create({
-        data: {
-          allowUserApiKeys: true,
-          allowUserFlightApiKeys: true,
-          defaultVisionParser: 'tesseract',
-          defaultTextParser: 'regex',
-        },
-      });
-    }
+    // The row's own column defaults decide what a fresh instance gets — this
+    // handler used to insert 'tesseract'/'regex', so which parser an instance
+    // defaulted to depended on which page an admin opened first.
+    const adminSettings = await prisma.adminSettings.findUniqueOrThrow({
+      where: { id: await ensureAdminSettingsRow() },
+    });
 
     res.json({
       allowUserApiKeys: adminSettings.allowUserApiKeys,
@@ -71,7 +66,7 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       ollamaModel,
     } = parserSettingsSchema.parse(req.body);
 
-    let adminSettings = await prisma.adminSettings.findFirst();
+    let adminSettings;
 
     const updateData: ParserSettingsUpdateData = {};
 
@@ -94,21 +89,13 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       updateData.ollamaModel = ollamaModel;
     }
 
-    if (adminSettings) {
-      adminSettings = await prisma.adminSettings.update({
-        where: { id: adminSettings.id },
-        data: updateData,
-      });
-    } else {
-      adminSettings = await prisma.adminSettings.create({
-        data: {
-          allowUserApiKeys: allowUserApiKeys ?? true,
-          allowUserFlightApiKeys: true,
-          defaultVisionParser: 'tesseract',
-          defaultTextParser: 'regex',
-        },
-      });
-    }
+    // Always an update against the one row. The create branch this replaces
+    // dropped `updateData` on the floor, so a PUT that happened to be the
+    // first write to a fresh instance saved nothing the admin had typed.
+    adminSettings = await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: updateData,
+    });
 
     res.json({
       message: 'Parser settings updated successfully',

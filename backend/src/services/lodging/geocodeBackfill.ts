@@ -1,3 +1,5 @@
+import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
+import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
 import type { Prisma } from "@prisma/client";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
@@ -48,19 +50,54 @@ const OSM_LODGING_VALUES = new Set([
   "wilderness_hut",
 ]);
 
-/** Compare two place words the way a human would — case, accents and punctuation are noise. */
+/**
+ * Normalize a place word: case, accents and punctuation are noise.
+ *
+ * Keeps every LETTER and DIGIT, not just the ASCII ones. Stripping to `[a-z0-9]`
+ * turned every non-Latin name into the empty string, and two empty strings
+ * compare equal — so Tokyo (東京) "agreed with" Osaka (大阪) and any hit in the
+ * wrong Japanese city was accepted (AUD-063). Returns null when nothing is left,
+ * which the caller must not read as agreement.
+ */
+function normalizeWord(value: string): string | null {
+  const out = value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]/gu, "");
+  return out.length > 0 ? out : null;
+}
+
+/** Compare two place words the way a human would. */
 function sameWord(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a?.trim() || !b?.trim()) return true; // Nothing to contradict.
-  const norm = (v: string): string =>
-    v
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-  const x = norm(a);
-  const y = norm(b);
+  const x = normalizeWord(a);
+  const y = normalizeWord(b);
+  // Normalization that consumed everything is not evidence of anything. It used
+  // to be: two empty results compared equal and waved the hit through.
+  if (x === null || y === null) return false;
   // One containing the other covers "Rom"/"Roma" and "Frankfurt"/"Frankfurt am Main".
   return x === y || x.includes(y) || y.includes(x);
+}
+
+/**
+ * Do these two name the same country?
+ *
+ * Through `resolveCountryCode`, the module that already knows a country by its
+ * ISO code, its English name, its native name and its multilingual forms.
+ * Comparing the two as WORDS rejected a perfectly good hit: a row storing `CN`
+ * against a provider answering "China" shares no substring, so a valid Beijing
+ * result was discarded and the hotel stayed unlocated (AUD-063).
+ *
+ * Falls back to the word comparison only when neither side resolves — then a
+ * name is all there is.
+ */
+function sameCountry(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a?.trim() || !b?.trim()) return true; // Nothing to contradict.
+  const codeA = resolveCountryCode(a);
+  const codeB = resolveCountryCode(b);
+  if (codeA && codeB) return codeA === codeB;
+  return sameWord(a, b);
 }
 
 /**
@@ -77,7 +114,7 @@ function sameWord(a: string | null | undefined, b: string | null | undefined): b
  * is accepted, which is the case this whole tier exists for.
  */
 export function agreesWithRow(row: GeocodeSubject, found: ResolvedCoordinates): boolean {
-  return sameWord(row.country, found.countryName) && sameWord(row.city, found.city);
+  return sameCountry(row.country, found.countryName) && sameWord(row.city, found.city);
 }
 
 /** Where a resolved position came from, so the caller can log it honestly. */
@@ -123,7 +160,28 @@ async function resolveCoordinates(
   // A hit is only usable when it IS a lodging. Photon does not always report a
   // type; an unknown one is treated as unusable rather than assumed good.
   if (best && best.type && OSM_LODGING_VALUES.has(best.type)) {
-    return { lat: best.lat, lon: best.lon, source: "photon" };
+    // Photon already normalized a city and a country for this hit, and both
+    // used to be dropped on the way into `ResolvedCoordinates` — so the guard
+    // against a same-named hotel in the wrong town, added for the Google tier,
+    // never ran for the PREFERRED provider. A Berlin row took a pin in Rome and
+    // kept its German address, so the card read Germany and the map showed
+    // Italy with nothing marked as wrong (AUD-061).
+    const candidate: ResolvedCoordinates = {
+      lat: best.lat,
+      lon: best.lon,
+      source: "photon",
+      city: best.city,
+      countryName: best.country,
+    };
+    if (agreesWithRow(row, candidate)) return candidate;
+    logger.info(
+      {
+        operation: "lodging_geocode_contradicted",
+        name: row.name,
+        source: "photon",
+      },
+      "photon hit contradicts the row's own city/country — falling through",
+    );
   }
 
   const nominatim = await geocodeAddress({
@@ -204,24 +262,65 @@ export async function backfillMissingCoordinates(
         city: true,
         country: true,
         chainId: true,
+        geocodeAttemptedAt: true,
       },
-      orderBy: { createdAt: "asc" },
+      // LEAST RECENTLY TRIED first, never-tried before ever-tried. Ordering by
+      // `createdAt` handed the geocoder the same oldest 500 rows on every run,
+      // so once 500 permanently unresolvable ones sat at the front, a hotel
+      // added afterwards was never reached — not slowly, never (AUD-070).
+      // Stamping the attempt below rotates the queue, so the pass works
+      // through the whole backlog and then cycles.
+      orderBy: [{ geocodeAttemptedAt: { sort: "asc", nulls: "first" } }, { createdAt: "asc" }],
       take: MAX_BACKFILL_ROWS,
     });
 
     for (const row of rows) {
       attempted++;
+      // Stamped BEFORE the lookup and regardless of its outcome: the point is
+      // "this row had its turn", not "this row succeeded". A failure that did
+      // not move the row would leave it at the head of the queue for ever,
+      // which is the bug.
+      await prisma.lodging
+        .update({ where: { id: row.id }, data: { geocodeAttemptedAt: new Date() } })
+        .catch(() => undefined);
       try {
         const coords = await resolveCoordinates(row);
         if (!coords) continue;
-        await prisma.lodging.update({
-          where: { id: row.id },
+        // A provider answer is not a position until it is inside the world.
+        // `Number(null)` is 0, and 0/0 is a real point in the Atlantic, so an
+        // unusable answer used to be stored as a successful geocode (AUD-071).
+        if (!isPlausibleCoordinate(coords.lat, coords.lon)) {
+          logger.warn(
+            {
+              operation: "lodging_geocode_backfill_implausible",
+              lodgingId: row.id,
+              source: coords.source,
+            },
+            "geocoder returned coordinates outside the world — treated as no result",
+          );
+          continue;
+        }
+        // CONDITIONAL on the row still lacking a position. A geocode takes
+        // seconds; in that window the user may have dropped a pin themselves,
+        // and writing over it would lose a deliberate choice to a lookup that
+        // started before it (AUD-062). `updateMany` matches nothing when the
+        // row has moved on, which is exactly the wanted outcome.
+        const written = await prisma.lodging.updateMany({
+          where: { id: row.id, lat: null, lon: null },
           data: {
             lat: coords.lat,
             lon: coords.lon,
             // Only ever FILLS gaps: a value the user typed is never overwritten
             // by a lookup, and only Google reports a kind at all.
-            ...(coords.type && coords.type !== row.type ? { type: coords.type } : {}),
+            //
+            // `type` is `String @default("hotel")` and therefore never null, so
+            // "the user chose nothing" and "the user chose hotel" are the same
+            // value in this schema. The default is treated as unset, which errs
+            // toward not overwriting a deliberate choice; distinguishing the two
+            // properly needs a column that records where the value came from.
+            ...(coords.type && coords.type !== row.type && row.type === "hotel"
+              ? { type: coords.type }
+              : {}),
             ...(coords.city && !row.city ? { city: coords.city } : {}),
             ...(coords.country && !row.country ? { country: coords.country } : {}),
             ...(coords.address && !row.address ? { address: coords.address } : {}),
@@ -232,6 +331,13 @@ export async function backfillMissingCoordinates(
               : {}),
           },
         });
+        if (written.count === 0) {
+          logger.info(
+            { operation: "lodging_geocode_backfill_superseded", lodgingId: row.id },
+            "row gained a position while the geocoder was working — left alone",
+          );
+          continue;
+        }
         filled++;
       } catch (err) {
         logger.warn(

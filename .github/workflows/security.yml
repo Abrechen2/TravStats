@@ -182,47 +182,80 @@ jobs:
           category: trivy-fs
 
   # ---------------------------------------------------------------------
-  # CodeQL — static analysis of the TypeScript on both sides.
+  # Trivy, against the IMAGE this time (forgejo#28).
   #
-  # Also not a gate. CodeQL reports into the Security tab; the job fails
-  # only if the analysis itself breaks, which is a real failure worth
-  # seeing. `security-and-quality` is the wider query pack — on a codebase
-  # this size the extra queries cost minutes, not hours, and this repo has
-  # never had static analysis run over it, so the wider net is worth it on
-  # the first pass. Narrow to `security-extended` if run time becomes a
-  # problem.
+  # The filesystem scan above reads this repository. It cannot see the base
+  # image, the OS packages in it, or anything `npm ci` resolved at build
+  # time — and those are what a user actually runs. TravStats publishes to
+  # GHCR and Docker Hub, so an unscanned image is the one artifact that
+  # reaches other people's servers.
+  #
+  # Scheduled and manual only, deliberately. The image is built locally and
+  # pushed by `/deploy`, not by CI, so there is nothing new to scan on a
+  # push — running it there would report last week's image as if the commit
+  # had produced it.
+  #
+  # `:latest` is the tag a user gets by default, which is the one worth
+  # watching. It can be absent on a fresh registry; the job says so and
+  # stops rather than failing, because "no image published yet" is not a
+  # security finding.
   # ---------------------------------------------------------------------
-  codeql:
-    name: CodeQL (TypeScript)
+  trivy-image:
+    name: Trivy image scan (published :latest)
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
+      packages: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - name: Check the tag exists before scanning it
+        id: probe
+        run: |
+          if docker manifest inspect ghcr.io/abrechen2/travstats:latest >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No :latest on GHCR yet — nothing to scan." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+      - name: Run Trivy
+        if: steps.probe.outputs.found == 'true'
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          languages: javascript-typescript
-          queries: security-and-quality
+          scan-type: image
+          image-ref: ghcr.io/abrechen2/travstats:latest
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          # Same two details as the filesystem job: the tag carries a
+          # leading `v`, and without `limit-severities-for-sarif` the
+          # `severity` filter does not reach the report.
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          # Reporting job: the alerts are the output, not the exit status.
+          exit-code: "0"
 
-      # No build step: `javascript-typescript` analyses source directly.
-      # Adding one would only slow the job down.
-      - name: Analyze
-        uses: github/codeql-action/analyze@v4
+      - name: Upload SARIF
+        if: steps.probe.outputs.found == 'true'
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          category: codeql-js
+          sarif_file: trivy-image.sarif
+          # A category of its own, so an image finding and a source finding
+          # do not overwrite each other in the Security tab.
+          category: trivy-image
 
-# Deliberately NOT here, so nobody adds them by reflex:
-#
-#   * bandit / pip-audit. Python tooling. The only Python in this repo is
-#     backend/src/scripts/*.py, developer-side helpers that are not part of
-#     the shipped runtime. `ruff` already covers them via pre-commit. A
-#     Python security stack here would scan code no user ever executes.
-#   * Trivy image scan. The release image is built on the maintainer's
-#     machine at deploy time, not in CI, so there is no image here to scan
-#     without duplicating the entire multi-stage build on every push. The
-#     filesystem scan already covers the dependency manifests that image is
-#     built from. Wire an image scan into the deploy path, not into this
-#     file, if it is wanted.
+  # ---------------------------------------------------------------------
+  # CodeQL — deliberately NOT here.
+  #
+  # The repository has GitHub's default code-scanning setup switched on
+  # (since 2026-08-01: actions, javascript-typescript and python, weekly).
+  # A CodeQL job in a workflow is the "advanced" configuration, and GitHub
+  # refuses to accept both: every run of the job this file used to carry
+  # ended in "CodeQL analyses from advanced configurations cannot be
+  # processed when the default setup is enabled" — a red Security badge on
+  # every push to main for a week, saying nothing about the code. Trivy's
+  # SARIF upload above is not affected; the restriction is CodeQL-only.
+  # If CodeQL ever needs a custom query pack, switch the default setup off
+  # in the repository settings FIRST, then bring the job back.
+  # ---------------------------------------------------------------------

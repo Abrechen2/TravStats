@@ -91,7 +91,7 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation failed', details: error.errors });
+      return res.status(400).json({ error: 'Validation failed', details: error.issues });
     }
     logger.error({ error }, '[PDF Parse] Unexpected error');
     const described = describeParserError(error);

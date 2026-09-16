@@ -30,6 +30,16 @@ vi.mock("../../import/ImportLogSection", () => ({
     <div data-testid="import-log">{String(reloadKey)}</div>
   ),
 }));
+
+// Touching the settings store makes it auto-save, and that PUT escaped the test
+// to the real network (forgejo#110) — a WRITE, not merely a read.
+vi.mock("@/lib/api/settings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/settings")>();
+  return {
+    ...actual,
+    settingsApi: { ...actual.settingsApi, update: vi.fn().mockResolvedValue({}) },
+  };
+});
 vi.unmock("../../../store/settingsStore");
 
 import ImportSection from "../ImportSection";

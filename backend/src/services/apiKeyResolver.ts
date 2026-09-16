@@ -88,7 +88,7 @@ export async function getApiKey(
     }
 
     // 2. Try global admin key
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     if (adminSettings) {
       let globalKey: string | null = null;
 
@@ -216,7 +216,7 @@ export async function getOpenSkyCredentials(
     }
 
     // 2. Try global admin credentials
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     if (adminSettings) {
       const hasGlobalCredentials =
         adminSettings.globalOpenskyClientId ||
@@ -341,7 +341,7 @@ export async function hasApiKeyAccess(
     }
 
     // Check global key
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     if (adminSettings) {
       let hasGlobalKey = false;
       try {

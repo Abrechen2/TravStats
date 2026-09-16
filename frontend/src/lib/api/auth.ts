@@ -3,9 +3,19 @@ import type { User } from "../../types";
 import { api } from "./client";
 
 export type LoginResult =
-  | { user: User }
-  | { requiresPasswordChange: true }
-  | { requiresTwoFactor: true };
+  { user: User } | { requiresPasswordChange: true } | { requiresTwoFactor: true };
+
+/**
+ * A correct second factor does not always end in a session.
+ *
+ * The login handler asks for the second factor ABOVE its password-change
+ * branch, so an account carrying both flags never meets that branch — the
+ * server therefore answers the redeemed challenge with the change flow
+ * instead. Typed as a union so the caller has to decide; when this was
+ * `Promise<{ user: User }>` the page would have read `result.user` off a body
+ * that has none.
+ */
+export type TwoFactorResult = { user: User } | { requiresPasswordChange: true };
 
 // Auth API
 export const authApi = {
@@ -37,8 +47,8 @@ export const authApi = {
    */
   verifyTwoFactor: async (
     body: { code: string } | { recoveryCode: string }
-  ): Promise<{ user: User }> => {
-    const { data } = await api.post<{ user: User }>("/auth/2fa/verify", body);
+  ): Promise<TwoFactorResult> => {
+    const { data } = await api.post<TwoFactorResult>("/auth/2fa/verify", body);
     return data;
   },
 

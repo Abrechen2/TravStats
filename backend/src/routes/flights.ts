@@ -6,6 +6,7 @@ import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../sc
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
+import { applyDepartureTimesAndDelay, applyExtendedFlightFields, type ExtendedFlightInput } from '../services/flights/extendedFlightFields';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
@@ -35,11 +36,12 @@ import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
 } from '../services/airportCoordinates';
-import { fromZonedTime } from 'date-fns-tz';
+import { assertMergedChronology, toUtcDate } from '../services/flights/mergedChronology';
+import { sharedFlightCreateFields } from '../services/flights/flightCreateFields';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
-import { buildFlightMergePatch } from '../utils/flightMerge';
+import { resolveDuplicateFlight } from '../services/flights/duplicateResolution';
 import batchRouter from './flightsBatch';
 import { flightExternalRef, isDocumentImport } from '../services/importProvenance';
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
@@ -49,7 +51,7 @@ import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from '../services/fx/s
 const router = Router();
 
 // Interface for flight update data
-interface FlightUpdateData {
+interface FlightUpdateData extends ExtendedFlightInput {
   // FX snapshot columns (#267) — written together by `fxColumnsFor`, never
   // individually, so a rate can never end up belonging to a different amount.
   priceBase?: number | null;
@@ -122,14 +124,6 @@ interface FlightUpdateData {
   bookingClassLetter?: string | null;
   coPassengers?: string[];
   dataSource?: string;
-}
-
-// Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
-// instant. Returns null when either side is missing — schema validation has
-// already enforced that a present local string requires a timezone.
-function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
-  if (!local || !tz) return null;
-  return fromZonedTime(local, tz);
 }
 
 // All routes require authentication.
@@ -338,107 +332,36 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       }
     }
 
-    // Duplicate check (#84): pre-existing rows can hold non-canonical
-    // flightNumber strings ("LH 123", "lh123") from before the schema-level
-    // normalization landed, so fetch the day's candidates and compare
-    // normalized in JS rather than relying on a direct WHERE.
+    // ?force=true → bypass the duplicate check and create a real second row
+    //   (user opt-in). ?merge=true → fold the incoming data into the flight
+    //   the user already has. force wins if both are set.
     //
-    // ?force=true → bypass and create a real duplicate row (user opt-in).
-    // ?merge=true → fill missing fields on the existing flight from
-    //   incoming data without ever overwriting curated values; lets a
-    //   second source (boarding pass, email confirmation) enrich a
-    //   manually-entered flight in place. force wins if both are set.
+    // The decision itself, and the merge, live in `resolveDuplicateFlight` —
+    // two lookups, a merge patch, a companion resolution and a transaction are
+    // database choreography, not routing.
     const forceCreate = req.query['force'] === 'true';
     const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
-    if (data.flightNumber && !forceCreate && departureUtc) {
-      const dayStart = new Date(departureUtc);
-      dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(departureUtc);
-      dayEnd.setUTCHours(23, 59, 59, 999);
-
-      const dayCandidates = await prisma.flight.findMany({
-        where: {
-          userId,
-          departureTime: { gte: dayStart, lte: dayEnd },
-        },
-        select: {
-          id: true,
-          flightNumber: true,
-          airline: true,
-          depIata: true,
-          arrIata: true,
-          departureTime: true,
-        },
+    if (!forceCreate) {
+      const outcome = await resolveDuplicateFlight({
+        userId,
+        data,
+        departureUtc,
+        merge: mergeIntoExisting,
       });
 
-      const normalize = (s: string | null): string =>
-        (s ?? '').replace(/\s+/g, '').toUpperCase();
-      const wantFlightNumber = data.flightNumber; // already normalized by schema
-      const existing = dayCandidates.find(
-        (c) => normalize(c.flightNumber) === wantFlightNumber
-      );
+      if (outcome.kind === 'merged') {
+        res.status(200).json({
+          flight: await withAirportFacts(outcome.flight),
+          mergedFields: outcome.mergedFields,
+        });
+        return;
+      }
 
-      if (existing) {
-        if (mergeIntoExisting) {
-          const existingFull = await prisma.flight.findUnique({
-            where: { id: existing.id },
-          });
-          if (!existingFull) {
-            res.status(409).json({
-              error: 'DUPLICATE_FLIGHT',
-              message: `Flight ${data.flightNumber} on this day already exists`,
-              existingFlight: existing,
-            });
-            return;
-          }
-          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
-
-          // Companions are resolved to Companion entities up front — same
-          // reasoning as the create/update handlers, resolveCompanions uses
-          // the top-level client and cannot join a passed `tx`. Only resolve
-          // (and only touch companionLinks below) when the merge actually
-          // adopted companions (mergedFields includes "companions", i.e. the
-          // existing flight had none). If the merge left companions alone,
-          // `resolvedMergeCompanions` stays undefined and the existing links
-          // are left completely untouched, preserving fill-if-empty merge
-          // semantics.
-          let resolvedMergeCompanions: { id: string; displayName: string }[] | undefined;
-          if (mergedFields.includes('companions')) {
-            resolvedMergeCompanions = await resolveCompanions(userId, data.companions ?? []);
-            patch.companions = resolvedMergeCompanions.map((c) => c.displayName);
-          }
-
-          const merged = mergedFields.length === 0
-            ? existingFull
-            : await prisma.$transaction(async (tx) => {
-                if (resolvedMergeCompanions !== undefined) {
-                  await tx.flightCompanion.deleteMany({ where: { flightId: existing.id } });
-                  if (resolvedMergeCompanions.length > 0) {
-                    await tx.flightCompanion.createMany({
-                      data: linkRowsFor(resolvedMergeCompanions.map((c) => c.id)).map((row) => ({
-                        ...row,
-                        flightId: existing.id,
-                      })),
-                      skipDuplicates: true,
-                    });
-                  }
-                }
-                return tx.flight.update({
-                  where: { id: existing.id },
-                  data: { ...patch, lastModifiedBy: 'user' },
-                });
-              });
-          res.status(200).json({
-            flight: await withAirportFacts(merged),
-            mergedFields,
-          });
-          return;
-        }
-
+      if (outcome.kind === 'duplicate') {
         res.status(409).json({
           error: 'DUPLICATE_FLIGHT',
-          message: `Flight ${data.flightNumber} on this day already exists`,
-          existingFlight: existing,
+          message: outcome.message,
+          existingFlight: outcome.existing,
         });
         return;
       }
@@ -495,8 +418,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           flightNumber: data.flightNumber,
           callsign: data.callsign,
           aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-          aircraftRegistration: data.aircraftRegistration,
-          aircraftModeS: data.aircraftModeS,
           // Use enriched departure data (fills in missing IATA/ICAO/names)
           depIcao: enriched.departure.icao,
           depIata: enriched.departure.iata,
@@ -548,12 +469,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           // this amount in its own currency rather than folding it into a sum.
           ...fxColumns,
           category: data.category,
-          // Persist the cabin, do not merely price its CO2. This column was
-          // missing here while `toSeatClass(data.seatClass)` fed calculateCo2Kg
-          // above, so a flight created as First Class stored a first-class CO2
-          // figure against a blank seat class. The update path always wrote it,
-          // which is why every round-trip test stayed green.
-          seatClass: data.seatClass,
           tags: data.tags ?? [],
           // Dual write: resolved display names keep this legacy array in
           // agreement with `companionLinks` below (trimmed, blanks dropped,
@@ -571,6 +486,10 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           frequentFlyerNumber: data.frequentFlyerNumber,
           bookingClassLetter: data.bookingClassLetter,
           coPassengers: data.coPassengers ?? [],
+          // The columns both create paths must write — see the module. The
+          // cabin is one of them: it was missing from the batch while its own
+          // CO2 was priced from it (AUD-022).
+          ...sharedFlightCreateFields(data),
           // Data source tracking
           dataSource: data.dataSource ?? 'manual',
           lastModifiedBy: 'user',
@@ -580,18 +499,6 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             effectiveStatus,
             data.flightNumber,
           ),
-          // Special flights (Sonder-Flüge) — non-null specialType marks
-          // this flight as a sub-type. See schemas/flight.ts for the union.
-          specialType: data.specialType ?? null,
-          eventLat: data.eventLat ?? null,
-          eventLon: data.eventLon ?? null,
-          eventLabel: data.eventLabel ?? null,
-          patternLat: data.patternLat ?? null,
-          patternLon: data.patternLon ?? null,
-          specialData:
-            data.specialData === null || data.specialData === undefined
-              ? Prisma.JsonNull
-              : (data.specialData as unknown as Prisma.InputJsonValue),
         },
       });
 
@@ -1098,6 +1005,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       throw new AppError('Flight not found', 404);
     }
 
+    // The schema can only see the BODY. A PUT that moves only the departure
+    // has to be checked against the arrival that stays behind — sending a
+    // departure a day later used to answer 200 and leave the arrival in the
+    // past (AUD-018). So the merged end state is checked here, on the real
+    // instants, which is what the row actually stores.
+    assertMergedChronology(data, existingFlight);
+
     // Enrich airport data if departure or arrival is being updated.
     // Use immutable references — never mutate the Zod-parsed `data` object.
     let enrichedDeparture = data.departure ?? null;
@@ -1152,7 +1066,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         updateData.airlineIcao = null;
       }
     }
-    
+
     // Resolve airline codes if name provided but IATA/ICAO missing
     let airlineIata = data.airlineIata;
     let airlineIcao = data.airlineIcao;
@@ -1238,6 +1152,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.frequentFlyerNumber !== undefined) updateData.frequentFlyerNumber = data.frequentFlyerNumber;
     if (data.bookingClassLetter !== undefined) updateData.bookingClassLetter = data.bookingClassLetter;
     if (data.coPassengers !== undefined) updateData.coPassengers = data.coPassengers;
+    applyExtendedFlightFields(data, updateData);
     if (data.dataSource !== undefined) updateData.dataSource = data.dataSource;
     // Direct override for time semantics. The localTime branch below sets
     // 'UTC' implicitly when a localTime is supplied; this lets bulk-import
@@ -1313,14 +1228,9 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       });
     }
 
-    // Actual times and delay
-    if (data.actualDepartureLocal !== undefined) {
-      updateData.actualDeparture = incomingActualDepUtc;
-      const scheduledDep: Date | null = incomingDepUtc ?? existingFlight.departureTime;
-      updateData.delayMinutes = incomingActualDepUtc && scheduledDep
-        ? Math.round((incomingActualDepUtc.getTime() - scheduledDep.getTime()) / 60000)
-        : null;
-    }
+    // Actual times and delay — one call, because either time changes the delay (AUD-021).
+    const sentTimes = { actualDepartureSent: data.actualDepartureLocal !== undefined, scheduledSent: data.departureLocal !== undefined };
+    applyDepartureTimesAndDelay(sentTimes, { incomingActualDep: incomingActualDepUtc, incomingScheduledDep: incomingDepUtc, existing: existingFlight }, updateData);
     if (data.actualArrivalLocal !== undefined) {
       updateData.actualArrival = incomingActualArrUtc;
     }

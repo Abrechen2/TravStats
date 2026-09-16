@@ -1,12 +1,20 @@
 import request from "supertest";
-import { authenticator } from "otplib";
+import { createGuardrails, generateSync } from "otplib";
 import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { encryptSecret } from "../../services/twoFactor/totpService";
 import { generateRecoveryCodes } from "../../services/twoFactor/recoveryCodeService";
 
+// Sixteen base32 characters = 10 bytes: the size otplib 12's generateSecret()
+// wrote for every account enrolled before the otplib 13 upgrade. Keep it this
+// short on purpose — 13's default floor is 16 bytes, and this fixture is what
+// proves those accounts still get in (see LEGACY_SECRET_BYTES in totpService).
 const SECRET = "JBSWY3DPEHPK3PXP";
+// otplib 13 applies the same floor when GENERATING, so the test's own code
+// generator has to be told; the server under test must not need to be.
+const legacyGuardrails = createGuardrails({ MIN_SECRET_BYTES: 10 });
+const codeFor = (secret: string): string => generateSync({ secret, guardrails: legacyGuardrails });
 
 async function makeUserWithTwoFactor(username: string): Promise<string> {
   await prisma.user.deleteMany({ where: { username } });
@@ -81,7 +89,7 @@ describe("login with two-factor", () => {
     const res = await request(app)
       .post("/api/v1/auth/2fa/verify")
       .set("Cookie", cookiesOf(login))
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
 
     expect(res.status).toBe(200);
     expect(res.body.user.username).toBe("twoFactorLogin");
@@ -105,7 +113,7 @@ describe("login with two-factor", () => {
   it("refuses without the challenge cookie, even with a correct code", async () => {
     const res = await request(app)
       .post("/api/v1/auth/2fa/verify")
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
     expect(res.status).toBe(401);
   });
 
@@ -144,7 +152,7 @@ describe("login with two-factor", () => {
     const res = await request(app)
       .post("/api/v1/auth/2fa/verify")
       .set("Cookie", cookiesOf(login))
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
     expect(res.status).toBe(401);
   });
 
@@ -170,6 +178,42 @@ describe("login with two-factor", () => {
     expect(cookies).not.toContain("change_token=");
   });
 
+  // The ordering test above stops at the login answer. This one follows the
+  // challenge through, because that is where the forced change was lost: the
+  // login handler asks for the second factor ABOVE its mustChangePassword
+  // branch, so an account with both flags never reaches that branch, and
+  // /2fa/verify used to issue a full session without ever asking (AUD-005).
+  // A guard on the branch order alone does not see this.
+  it("still demands the password change after a correct code", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: true },
+    });
+
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+
+    const res = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookiesOf(login))
+      .send({ code: codeFor(SECRET) });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ requiresPasswordChange: true });
+    expect(res.body.user).toBeUndefined();
+
+    const cookies = cookiesOf(res).join(";");
+    expect(cookies).toContain("change_token=");
+    // The session is the thing that must NOT be handed over here.
+    expect(cookies).not.toContain("auth_token=");
+
+    // And the flag stands until the password is actually replaced.
+    const after = await prisma.user.findUnique({ where: { id: userId } });
+    expect(after?.mustChangePassword).toBe(true);
+    expect(after?.changeToken).toBeTruthy();
+  });
+
   // The challenge is one login or five failures, not a reusable pass.
   it("burns the challenge once it has been redeemed", async () => {
     const login = await request(app)
@@ -180,12 +224,12 @@ describe("login with two-factor", () => {
     await request(app)
       .post("/api/v1/auth/2fa/verify")
       .set("Cookie", cookies)
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
 
     const again = await request(app)
       .post("/api/v1/auth/2fa/verify")
       .set("Cookie", cookies)
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
     expect(again.status).toBe(401);
   });
 
@@ -209,7 +253,7 @@ describe("login with two-factor", () => {
     const res = await request(app)
       .post("/api/v1/auth/2fa/verify")
       .set("Cookie", cookies)
-      .send({ code: authenticator.generate(SECRET) });
+      .send({ code: codeFor(SECRET) });
     expect(res.status).toBe(401);
 
     const row = await prisma.user.findUnique({ where: { id: userId } });

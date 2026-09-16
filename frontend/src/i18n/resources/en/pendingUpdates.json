@@ -115,6 +115,7 @@
       "arrIcao": "Arrival Airport (ICAO)",
       "departureTime": "Departure Time",
       "arrivalTime": "Arrival Time",
+      "utcSuffix": "(UTC)",
       "depLat": "Departure Latitude",
       "depLon": "Departure Longitude",
       "arrLat": "Arrival Latitude",

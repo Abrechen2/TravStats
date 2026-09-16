@@ -63,7 +63,7 @@ async function seedDevAdminKeys(): Promise<void> {
     return;
   }
 
-  const existing = await prisma.adminSettings.findFirst();
+  const existing = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
   if (existing) {
     await prisma.adminSettings.update({

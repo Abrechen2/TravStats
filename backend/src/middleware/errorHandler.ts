@@ -99,7 +99,7 @@ export const errorHandler = async (
       stack: (debugEnabled || process.env.NODE_ENV === 'development') ? err.stack : undefined,
       // Include Zod validation details if applicable
       ...(err instanceof ZodError && {
-        validationErrors: err.errors.map(e => ({
+        validationErrors: err.issues.map(e => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,
@@ -118,7 +118,7 @@ export const errorHandler = async (
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: 'Validation error',
-      details: err.errors.map(e => ({
+      details: err.issues.map(e => ({
         field: e.path.join('.'),
         message: e.message,
       })),

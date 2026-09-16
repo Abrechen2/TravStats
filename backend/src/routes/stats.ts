@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
+import aircraftStatsRouter from "./stats/aircraft";
 import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -7,6 +8,16 @@ import { getCachedAirports } from '../services/airportCache';
 import type { AirportData } from '../services/airportLookup';
 import { buildFlightNetwork } from '../services/stats/network';
 import { computePunctuality } from '../services/punctualityStats';
+// Response shapes: the spec and these handlers describe one thing, not two
+// (forgejo#52). The prose that used to sit on these interfaces moved with them,
+// so a consumer reading the spec gets the same caveats.
+import type {
+  SeatStats,
+  AirlineRankingItem,
+  AirlineRankingResponse,
+  CountryStat,
+  CountryStatsResponse,
+} from '../schemas/statsFlights';
 import { Prisma } from '@prisma/client';
 import {
   calculateFunStats,
@@ -24,15 +35,10 @@ import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
-import { measuredDurationMinutes } from '../utils/flightDurationColumn';
-import {
-  addFlightDuration,
-  averageDurationMinutes,
-  emptyDurationTotals,
-} from '../shared/flightDuration';
 import { normalizeCountrySet } from '../shared/countryEvidence';
-import { withDepartureClock } from '../services/stats/departureClock';
+import { airportCalendarDay, buildTzMap, withDepartureClock } from '../services/stats/departureClock';
 import { loadPassport } from '../services/stats/passportLoader';
+import { buildWhere, computeSummary } from '../services/stats/summary';
 import { loadDaysAway } from '../services/stats/daysAwayLoader';
 import { loadCountryDetail } from '../services/stats/countryDetailLoader';
 import { buildWrapped } from '../services/stats/wrapped';
@@ -40,7 +46,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from '../services/stats/ti
 import { buildTravelRecords } from '../services/stats/records';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
 import { countableFlightWhere } from '../shared/flightCounting';
-import { mergeAirlineCounts, airlineResolvers } from '../utils/airlineNormalize';
+import { airlineResolvers } from '../utils/airlineNormalize';
 import { groupAirlines } from '../shared/airlineNormalize';
 import {
   resolveWindow,
@@ -50,7 +56,6 @@ import {
   withinWindow,
   type DatedRow,
 } from '../utils/stats/timeseries';
-import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
 import { readYearQuery, scopeLodgingsToStays, startedIn } from '../utils/stats/domainYear';
 import { lodgingCountryKey } from '../utils/stats/lodgingCountryKey';
 import { buildTravelAccount } from '../services/stats/travelAccount';
@@ -105,273 +110,6 @@ const TimeseriesQuerySchema = z.object({
   toDate: z.string().optional(),
 });
 
-interface SummaryStats {
-  totalFlights: number;
-  /** Booked but not yet flown — reported beside the total, never inside it. */
-  plannedFlights: number;
-  totalDistance: number;
-  /**
-   * Minutes in the air: measured where the row carries times, estimated from
-   * the airport coordinates where it does not (#268). Used to be measured-only,
-   * which reported 0 for every DATE_ONLY row while the overview card — showing
-   * the SAME label on the SAME screen — estimated them.
-   */
-  totalFlightTime: number;
-  /** The measured part of `totalFlightTime`. */
-  flightTimeMeasured: number;
-  /** The estimated part. Shown so a total can say how much of it is guessed. */
-  flightTimeEstimated: number;
-  /** How many flights contributed an estimate rather than a measurement. */
-  flightTimeEstimatedCount: number;
-  /**
-   * Average minutes per flight that CONTRIBUTED a duration — not per flight.
-   * Dividing by every flight is what made the overview's average too low.
-   * Null when nothing contributed, so the caller renders a dash, not a zero.
-   */
-  avgFlightTime: number | null;
-  avgDistance: number;
-  byStatus: Record<string, number>;
-  byAirline: Record<string, number>;
-  /**
-   * Total in `totalCostCurrency`. Contains ONLY amounts that carry an FX
-   * snapshot in that currency (#267) — this used to add every price together
-   * regardless of currency and was then rendered with the user's display
-   * symbol, so 300 USD + 300 EUR read as "600 €".
-   *
-   * Null when no amount reached it (forgejo#83) — a year with no priced
-   * flight is not a free year. `unpricedFlights` says how many had none.
-   */
-  totalCost: number | null;
-  totalCostCurrency: string;
-  /** Countable flights in the window that carry neither a price nor a priced booking. */
-  unpricedFlights: number;
-  /**
-   * What could not be converted, in the currency it was paid in. Reported
-   * BESIDE the total, never folded into it. Lodging reports the same way.
-   */
-  totalCostUnconverted: Record<string, number>;
-  byCategory: Record<string, number>;
-}
-
-function buildWhere(
-  userId: string,
-  fromDate: string | undefined,
-  toDate: string | undefined,
-  filterYear?: number,
-): Prisma.FlightWhereInput {
-  const where: Prisma.FlightWhereInput = { userId };
-
-  if (filterYear !== undefined) {
-    where.departureTime = {
-      gte: new Date(Date.UTC(filterYear, 0, 1)),
-      lt: new Date(Date.UTC(filterYear + 1, 0, 1)),
-    };
-  } else if (fromDate || toDate) {
-    where.departureTime = {};
-    if (fromDate) {
-      (where.departureTime as Prisma.DateTimeFilter).gte = new Date(fromDate);
-    }
-    if (toDate) {
-      (where.departureTime as Prisma.DateTimeFilter).lte = new Date(toDate);
-    }
-  }
-
-  return where;
-}
-
-async function computeSummary(
-  where: Prisma.FlightWhereInput,
-  baseCurrency: string,
-): Promise<SummaryStats> {
-  // EVERY headline figure describes the same population: flights that actually
-  // happened. `totalFlights` and `totalCost` used to run on the unfiltered
-  // `where`, so the year card put "14 flights" next to a distance covering ten
-  // of them, and /hero answered "1 flight, 0 km, 0 airports" for an account
-  // holding a single BOOKED flight.
-  //
-  // The old design justified that by a `byStatus` breakdown shown next to the
-  // number — but its only renderer is imported nowhere, and /hero never
-  // carried it. The context was gone; the bare number stayed.
-  //
-  // `byStatus`/`byAirline`/`byCategory` still run on the unfiltered `where`:
-  // a breakdown BY status that hid statuses would be pointless. What is merely
-  // booked is reported as `plannedFlights` instead of being folded in.
-  const geoWhere: Prisma.FlightWhereInput = { ...where, ...countableFlightWhere() };
-
-  const [
-    flownFlights,
-    totalFlights,
-    plannedFlights,
-    statusCounts,
-    airlineCounts,
-    categoryCounts,
-    costFlights,
-  ] = await Promise.all([
-    prisma.flight.findMany({
-      where: geoWhere,
-      select: {
-        depIata: true,
-        depIcao: true,
-        depLat: true,
-        depLon: true,
-        arrIata: true,
-        arrIcao: true,
-        arrLat: true,
-        arrLon: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        arrTimeSemantics: true,
-        // The stored measurement (forgejo#45). The semantics columns above
-        // stay selected because they decide whether it can be trusted.
-        durationMinutes: true,
-        status: true,
-      },
-    }),
-    prisma.flight.count({ where: geoWhere }),
-    prisma.flight.count({ where: { ...where, status: 'scheduled' } }),
-    prisma.flight.groupBy({
-      by: ['status'],
-      where,
-      _count: true,
-    }),
-    prisma.flight.groupBy({
-      by: ['airline'],
-      where,
-      _count: true,
-    }),
-    prisma.flight.groupBy({
-      by: ['category'],
-      where,
-      _count: true,
-    }),
-    prisma.flight.findMany({
-      // Same population as the count above: a cost total that included flights
-      // still to come could not be read next to "flights" or "distance".
-      where: geoWhere,
-      select: {
-        price: true,
-        taxes: true,
-        fees: true,
-        currency: true,
-        priceBase: true,
-        fxBaseCurrency: true,
-        bookingId: true,
-        booking: {
-          select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
-        },
-      },
-    }),
-  ]);
-
-  let totalDistance = 0;
-  let distanceFlightCount = 0;
-  let durationTotals = emptyDurationTotals();
-
-  // Build timezone map for all airports referenced in flown flights
-  const allCodes = new Set<string>();
-  for (const f of flownFlights) {
-    if (f.depIata) allCodes.add(f.depIata);
-    if (f.depIcao) allCodes.add(f.depIcao);
-    if (f.arrIata) allCodes.add(f.arrIata);
-    if (f.arrIcao) allCodes.add(f.arrIcao);
-  }
-  let tzMap = new Map<string, string>();
-  try {
-    const airports = await getCachedAirports(Array.from(allCodes));
-    for (const [code, data] of airports.entries()) {
-      if (data?.timezone) tzMap.set(code, data.timezone);
-    }
-  } catch {
-    // timezone lookup failed — durations will use naïve diff
-  }
-
-  flownFlights.forEach(flight => {
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
-    totalDistance += distance;
-    if (distance > 0) distanceFlightCount += 1;
-
-    const depTz = (flight.depIata && tzMap.get(flight.depIata))
-      || (flight.depIcao && tzMap.get(flight.depIcao))
-      || null;
-    const arrTz = (flight.arrIata && tzMap.get(flight.arrIata))
-      || (flight.arrIcao && tzMap.get(flight.arrIcao))
-      || null;
-    // A `historical` row's clocks are placeholders, not evidence — see
-    // `businessStats.ts` for the same guard and the reason. It contributes a
-    // coordinate estimate below instead.
-    const flightTime = flight.status === 'flown'
-      ? measuredDurationMinutes(flight, depTz, arrTz)
-      : null;
-    // #106A still holds: a DATE_ONLY row must never contribute its placeholder
-    // times, so `flightTime` stays null for it and no fiction is measured. What
-    // changed in #268 is what happens NEXT — instead of silently adding 0, the
-    // row contributes a coordinate-derived estimate that is counted separately
-    // and labelled as such. A guess the reader can see beats a zero they cannot.
-    durationTotals = addFlightDuration(durationTotals, {
-      measuredMinutes: flightTime,
-      depLat: flight.depLat,
-      depLon: flight.depLon,
-      arrLat: flight.arrLat,
-      arrLon: flight.arrLon,
-    });
-  });
-
-  // Divided by flights that HAVE a distance. A row without coordinates
-  // contributes no kilometres, so counting it in the denominator only drags the
-  // average down — the client already divided this way, the server did not.
-  const avgDistance = distanceFlightCount > 0 ? totalDistance / distanceFlightCount : 0;
-
-  const byStatus = statusCounts.reduce((acc, item) => {
-    acc[item.status] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const rawByAirline = airlineCounts.reduce((acc, item) => {
-    const airline = item.airline || 'Unknown';
-    acc[airline] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
-  const byAirline = mergeAirlineCounts(rawByAirline);
-
-  const byCategory = categoryCounts.reduce((acc, item) => {
-    const cat = item.category || 'unassigned';
-    acc[cat] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Booking-aware: a booking's price counts once, not once per segment —
-  // and grouped segments (price nulled by the import) still contribute
-  // their booking's total (spec 2026-07-17-cost-booking-price §4).
-  const cost = computeDedupedTotalCost(costFlights, baseCurrency);
-
-  return {
-    totalFlights,
-    plannedFlights,
-    totalDistance: Math.round(totalDistance),
-    totalFlightTime: Math.round(durationTotals.totalMinutes),
-    flightTimeMeasured: Math.round(durationTotals.measuredMinutes),
-    flightTimeEstimated: Math.round(durationTotals.estimatedMinutes),
-    flightTimeEstimatedCount: durationTotals.estimatedCount,
-    avgFlightTime: (() => {
-      const avg = averageDurationMinutes(durationTotals);
-      return avg === null ? null : Math.round(avg);
-    })(),
-    avgDistance: Math.round(avgDistance),
-    byStatus,
-    byAirline,
-    totalCost: cost.base,
-    totalCostCurrency: baseCurrency,
-    unpricedFlights: cost.unpricedFlights,
-    totalCostUnconverted: cost.unconvertedByCurrency,
-    byCategory,
-  };
-}
 
 // Schema for routes query parameters
 const RoutesQuerySchema = z.object({
@@ -385,7 +123,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     const parsed = SummaryQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate, year, compareYear } = parsed.data;
@@ -393,7 +131,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
     const summarize = async (scopeYear: number | undefined) => ({
-      ...(await computeSummary(buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
+      ...(await computeSummary(await buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
       daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
     });
     if (year !== undefined && compareYear !== undefined) {
@@ -433,9 +171,14 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
     };
     const baseCurrency = await getBaseCurrency(userId);
 
-    const [summary, passport, flights] = await Promise.all([
-      computeSummary(buildWhere(userId, undefined, undefined), baseCurrency),
-      loadPassport(userId),
+    // Read the flight table THREE times per request until forgejo#49: in
+    // computeSummary, inside loadPassport, and here. `arrTimeSemantics` is the
+    // one column below the passport needed and this did not have, so the same
+    // rows now serve both. The cost is the parallelism between this scan and
+    // the passport — the smaller price, since a full per-user scan is not
+    // worth running twice concurrently to save the latency of running it once.
+    const [summary, flights] = await Promise.all([
+      buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
       prisma.flight.findMany({
         where: flightsWhere,
         select: {
@@ -453,6 +196,7 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
           departureTime: true,
           arrivalTime: true,
           depTimeSemantics: true,
+          arrTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -463,6 +207,7 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
         },
       }),
     ]);
+    const passport = await loadPassport(userId, flights);
     const datedFlights = await withDepartureClock(flights);
 
     // homeAirportHistory=[] is deliberate: this endpoint only reads
@@ -513,7 +258,7 @@ router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunc
     const userId = req.userId!;
     const parsed = TimeseriesQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
@@ -560,7 +305,7 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
 
     const parsed = RoutesQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const limit = parsed.data.limit ?? 10;
@@ -732,7 +477,7 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -827,7 +572,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -930,7 +675,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -1044,7 +789,7 @@ router.get(
 
       const parsed = DateRangeQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
         return;
       }
       const { fromDate, toDate } = parsed.data;
@@ -1200,7 +945,7 @@ router.get(
       const userId = req.userId!;
       const parsed = CountryCodeParamSchema.safeParse(req.params);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid country', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid country', details: parsed.error.issues });
         return;
       }
 
@@ -1237,21 +982,29 @@ router.get(
       const userId = req.userId!;
       const parsed = WrappedQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
         return;
       }
 
-      const [flights, cruises, passport] = await Promise.all([
+      // One scan, not two: `loadPassport` reads the same countable flights of
+      // the same user and is handed these rows (forgejo#49). `arrivalTime` and
+      // `arrTimeSemantics` are here only because it needs them.
+      const [flights, cruises] = await Promise.all([
         prisma.flight.findMany({
           where: { userId, ...countableFlightWhere() },
           select: {
             depIata: true,
+            depIcao: true,
             depLat: true,
             depLon: true,
             arrIata: true,
+            arrIcao: true,
             arrLat: true,
             arrLon: true,
             departureTime: true,
+            arrivalTime: true,
+            depTimeSemantics: true,
+            arrTimeSemantics: true,
             airline: true,
             flightNumber: true,
             status: true,
@@ -1261,17 +1014,29 @@ router.get(
           where: { userId, ...countableFlightWhere() },
           select: { startDate: true, status: true },
         }),
-        // For `newCountries` only — the passport already decides what counts as
-        // a country and when it was first reached.
-        loadPassport(userId),
       ]);
+
+      // For `newCountries` only — the passport already decides what counts as
+      // a country and when it was first reached.
+      const passport = await loadPassport(userId, flights);
+
+      // Which YEAR a flight belongs to is read on the departure airport's
+      // clock, not on the stored instant — the rule `departureClock.ts` states
+      // and `/stats/timeseries` already follows. Resolved here, at the load,
+      // so `buildWrapped` stays a pure function over rows that carry their own
+      // answer rather than resolving timezones itself (AUD-077).
+      const flightsWithClock = await withDepartureClock(flights);
 
       const wrapped = buildWrapped(
         // Great-circle from the coordinates, the same measure
         // `/stats/timeseries` buckets — so the year's distance agrees with the
         // year's bar on the trend chart.
-        flights.map((f) => ({
+        flightsWithClock.map((f) => ({
           ...f,
+          departureYear:
+            f.departureTime === null
+              ? null
+              : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
           distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
         })),
         cruises,
@@ -1294,27 +1059,13 @@ router.get(
 );
 
 // Seat position statistics
-interface SeatStats {
-  windowCount: number;
-  middleCount: number;
-  aisleCount: number;
-  unknownCount: number;
-  noSeatCount: number;
-  frontCount: number;
-  middleZoneCount: number;
-  backCount: number;
-  mostCommonSeat: string | null;
-  seatClassDistribution: Record<string, number>;
-  avgRowNumber: number | null;
-}
-
 router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -1441,23 +1192,6 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
 
 // ─── Airline Ranking ─────────────────────────────────────────────────────────
 
-interface AirlineRankingItem {
-  airline: string;
-  count: number;
-  percentage: number;
-  /** IATA code via strict exact lookup; omitted when nothing matches. */
-  iata?: string;
-}
-
-interface AirlineRankingResponse {
-  airlines: AirlineRankingItem[];
-  total: number;
-  /** Flights carrying no airline — excluded from the ranking and from the
-   *  percentage denominator, reported so the gap is visible rather than
-   *  ranked as a carrier called "Unknown". */
-  flightsWithoutAirline: number;
-}
-
 // GET /api/v1/stats/airlines — loyalty ranking by flight count.
 // Scoped to flown + historical like every other aggregate in this file. It used
 // to count every row, so a cancelled or still-scheduled booking inflated the
@@ -1539,38 +1273,6 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
  */
 function isoCodes(values: Iterable<string>): string[] {
   return [...normalizeCountrySet(values)].sort();
-}
-
-interface CountryStat {
-  country: string;
-  count: number;
-}
-
-interface CountryStatsResponse {
-  /** Display vocabulary, ranked by flight count. Rendered as-is. */
-  countries: CountryStat[];
-  total: number;
-  /**
-   * Counting vocabulary: lifetime countries VISITED as ISO alpha-2 — every
-   * country either end of a flight touched, not just departures (#233) — with
-   * `Unknown` and the catalogue's placeholders dropped. The cross-domain KPI
-   * unions this with the port catalogue's equivalent; keeping unresolvable
-   * entries would mean counting things that cannot be deduplicated.
-   */
-  countriesIso: string[];
-  /**
-   * Visited countries keyed by year, same ISO vocabulary. Both ends of a
-   * flight land in its DEPARTURE year, so a red-eye is one journey rather
-   * than a country visited in a year the traveller never flew. The cross-domain
-   * overview used to render the lifetime set for whichever year was selected
-   * and stack a year-over-year delta on top of it that could only ever read
-   * zero — a comparison that could not exist, presented as data.
-   *
-   * The year is the one on the clock at the DEPARTURE airport (see
-   * localWallClockOf), not the UTC instant. A flight without a departure time
-   * still counts towards `countries` but belongs to no year.
-   */
-  byYear: Record<string, string[]>;
 }
 
 // GET /api/v1/stats/countries — visited-country distribution (both flight ends)
@@ -1954,247 +1656,9 @@ router.get(
   },
 );
 
-// ─── Aircraft type ranking ──────────────────────────────────────────────────
-
-interface AircraftTypeItem {
-  aircraft: string;
-  count: number;
-  percentage: number;
-}
-
-interface AircraftTypesResponse {
-  aircraftTypes: AircraftTypeItem[];
-  total: number;
-}
-
-// GET /api/v1/stats/aircraft-types — ranking by aircraft TYPE ("Airbus A320neo").
-// Distinct from /stats/aircraft, which ranks tail numbers and only sees
-// registration-bearing (AeroDataBox-enriched) rows. `total` is the user's total
-// flight count so this shares a denominator with /stats/airlines — and
-// therefore that endpoint's flown + historical scope; flights with no
-// `aircraft` value produce no row, so percentages need not sum to 100.
-router.get(
-  '/aircraft-types',
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
-
-      const [total, typeCounts] = await Promise.all([
-        prisma.flight.count({ where }),
-        prisma.flight.groupBy({
-          by: ['aircraft'],
-          where: { ...where, aircraft: { not: null } },
-          _count: true,
-        }),
-      ]);
-
-      const aircraftTypes: AircraftTypeItem[] = typeCounts
-        .map((row) => ({
-          aircraft: row.aircraft!,
-          count: row._count,
-          percentage:
-            total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
-        }))
-        .sort((a, b) => b.count - a.count);
-
-      const response: AircraftTypesResponse = { aircraftTypes, total };
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-// ─── Aircraft (tail number) ─────────────────────────────────────────────────
-
-interface AircraftRankingItem {
-  registration: string;
-  count: number;
-  airline: string | null;
-  aircraft: string | null;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-}
-
-interface AircraftRankingResponse {
-  aircraft: AircraftRankingItem[];
-  total: number;
-}
-
-// GET /api/v1/stats/aircraft — top tail numbers ("Hulls" tab).
-// Excludes flights without registration so the ranking only reflects
-// AeroDataBox-enriched rows. The per-user index on
-// (user_id, aircraft_registration) makes this cheap.
-router.get(
-  '/aircraft',
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const flights = await prisma.flight.findMany({
-        where: {
-          userId,
-          ...countableFlightWhere(),
-          aircraftRegistration: { not: null },
-        },
-        select: {
-          aircraftRegistration: true,
-          airline: true,
-          aircraft: true,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-        },
-      });
-
-      const buckets = new Map<string, AircraftRankingItem>();
-      for (const f of flights) {
-        const reg = f.aircraftRegistration!;
-        const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-        const isoDate = f.departureTime ? f.departureTime.toISOString() : null;
-        const existing = buckets.get(reg);
-        if (existing) {
-          existing.count += 1;
-          existing.totalDistanceKm += dist;
-          if (!existing.airline && f.airline) existing.airline = f.airline;
-          if (!existing.aircraft && f.aircraft) existing.aircraft = f.aircraft;
-          if (isoDate) {
-            if (!existing.firstFlightDate || isoDate < existing.firstFlightDate) {
-              existing.firstFlightDate = isoDate;
-            }
-            if (!existing.lastFlightDate || isoDate > existing.lastFlightDate) {
-              existing.lastFlightDate = isoDate;
-            }
-          }
-        } else {
-          buckets.set(reg, {
-            registration: reg,
-            count: 1,
-            airline: f.airline ?? null,
-            aircraft: f.aircraft ?? null,
-            totalDistanceKm: dist,
-            firstFlightDate: isoDate,
-            lastFlightDate: isoDate,
-          });
-        }
-      }
-
-      const aircraft = Array.from(buckets.values()).sort((a, b) => b.count - a.count);
-      const response: AircraftRankingResponse = { aircraft, total: aircraft.length };
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-interface AircraftProfileFlight {
-  id: string;
-  flightNumber: string | null;
-  airline: string | null;
-  depIata: string | null;
-  arrIata: string | null;
-  depName: string | null;
-  arrName: string | null;
-  departureTime: string | null;
-  arrivalTime: string | null;
-  distanceKm: number;
-  status: string;
-}
-
-interface AircraftProfileResponse {
-  registration: string;
-  modeS: string | null;
-  airline: string | null;
-  aircraft: string | null;
-  flightCount: number;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-  uniqueAirports: number;
-  flights: AircraftProfileFlight[];
-}
-
-// GET /api/v1/stats/aircraft/:registration — per-tail profile.
-// Returns aggregate stats plus the user's flights on that hull, newest
-// first. 404 if the user has no flights with that registration.
-router.get(
-  '/aircraft/:registration',
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const registration = req.params['registration'];
-      if (!registration || registration.length > 20) {
-        res.status(400).json({ error: 'Invalid registration' });
-        return;
-      }
-      const flights = await prisma.flight.findMany({
-        where: { userId, aircraftRegistration: registration },
-        orderBy: { departureTime: 'desc' },
-      });
-
-      if (flights.length === 0) {
-        res.status(404).json({ error: 'NO_FLIGHTS_FOR_AIRCRAFT' });
-        return;
-      }
-
-      const airports = new Set<string>();
-      let totalDistanceKm = 0;
-      let firstDate: string | null = null;
-      let lastDate: string | null = null;
-      let modeS: string | null = null;
-      let airline: string | null = null;
-      let aircraft: string | null = null;
-
-      const flightItems: AircraftProfileFlight[] = flights.map((f) => {
-        const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-        totalDistanceKm += dist;
-        if (f.depIata) airports.add(f.depIata);
-        if (f.arrIata) airports.add(f.arrIata);
-        const iso = f.departureTime ? f.departureTime.toISOString() : null;
-        if (iso) {
-          if (!firstDate || iso < firstDate) firstDate = iso;
-          if (!lastDate || iso > lastDate) lastDate = iso;
-        }
-        if (!modeS && f.aircraftModeS) modeS = f.aircraftModeS;
-        if (!airline && f.airline) airline = f.airline;
-        if (!aircraft && f.aircraft) aircraft = f.aircraft;
-        return {
-          id: f.id,
-          flightNumber: f.flightNumber ?? null,
-          airline: f.airline ?? null,
-          depIata: f.depIata ?? null,
-          arrIata: f.arrIata ?? null,
-          depName: f.depName ?? null,
-          arrName: f.arrName ?? null,
-          departureTime: iso,
-          arrivalTime: f.arrivalTime ? f.arrivalTime.toISOString() : null,
-          distanceKm: dist,
-          status: f.status,
-        };
-      });
-
-      const response: AircraftProfileResponse = {
-        registration,
-        modeS,
-        airline,
-        aircraft,
-        flightCount: flights.length,
-        totalDistanceKm,
-        firstFlightDate: firstDate,
-        lastFlightDate: lastDate,
-        uniqueAirports: airports.size,
-        flights: flightItems,
-      };
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+// The three aircraft rankings live in `stats/aircraft` — mounted HERE rather
+// than at the end of the file so route-matching order is exactly what it was.
+router.use(aircraftStatsRouter);
 
 // GET /api/v1/stats/punctuality — actual-vs-scheduled aggregates (#2).
 // Reads the stored per-flight delayMinutes captured since 2.5; no new lookups.
@@ -2203,7 +1667,7 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
     const userId = req.userId!;
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -2271,7 +1735,19 @@ router.get(
         }),
         prisma.flight.findMany({
           where: { userId },
-          select: { status: true, departureTime: true, arrivalTime: true },
+          select: {
+            status: true,
+            departureTime: true,
+            arrivalTime: true,
+            // Needed to decide whether a flight took a NIGHT, which is a
+            // question about the clocks at either end rather than about UTC.
+            depIata: true,
+            depIcao: true,
+            arrIata: true,
+            arrIcao: true,
+            depTimeSemantics: true,
+            arrTimeSemantics: true,
+          },
         }),
         prisma.trip.findMany({
           where: { userId },
@@ -2312,8 +1788,24 @@ router.get(
                 status: true,
                 departureTime: true,
                 arrivalTime: true,
+                // The full cost shape `flightCostShare` needs: a flight's own
+                // cost is price PLUS taxes and fees, and a booking shared by
+                // several segments is counted once (AUD-080).
                 price: true,
+                taxes: true,
+                fees: true,
                 currency: true,
+                priceBase: true,
+                fxBaseCurrency: true,
+                bookingId: true,
+                booking: {
+                  select: {
+                    price: true,
+                    currency: true,
+                    priceBase: true,
+                    fxBaseCurrency: true,
+                  },
+                },
               },
             },
           },
@@ -2321,7 +1813,27 @@ router.get(
       ]);
 
       const now = new Date();
-      const account = buildTravelAccount({ stays, cruises, flights, now });
+
+      // Resolve both ends' calendar days here, at the load, so the account
+      // stays a pure function over rows that carry their own answer (AUD-079).
+      const tzMap = await buildTzMap(flights);
+      const flightsWithLocalDays = flights.map((f) => {
+        const depTz = (f.depIata ? tzMap.get(f.depIata) : undefined) ?? (f.depIcao ? tzMap.get(f.depIcao) : undefined) ?? null;
+        const arrTz = (f.arrIata ? tzMap.get(f.arrIata) : undefined) ?? (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ?? null;
+        return {
+          ...f,
+          depLocalDay:
+            f.departureTime && depTz
+              ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
+              : null,
+          arrLocalDay:
+            f.arrivalTime && arrTz
+              ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
+              : null,
+        };
+      });
+
+      const account = buildTravelAccount({ stays, cruises, flights: flightsWithLocalDays, now });
       const tripAccount = buildTripAccount(
         trips.map((t) => ({
           id: t.id,

@@ -12,10 +12,11 @@
  * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
+import { createHash } from 'crypto';
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
-import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import { getApiKey, getOpenSkyCredentials, OpenSkyCredentials } from './apiKeyResolver';
 import { lookupFlightAerodatabox } from './aerodataboxLookup';
 import {
   convertAviationstackTimeToUtc,
@@ -23,7 +24,7 @@ import {
   getAirportTimezone,
   toLocalDateString,
 } from '../utils/timezone';
-import { resolveAirlineCodes } from '../utils/airlineNormalize';
+import { dayDiff, getAirlineName, markUtc, parseFlightNumber } from './flightLookup/fieldReaders';
 import { toProviderFlightNumber } from '../schemas/flight';
 import logger from '../utils/logger';
 import {
@@ -136,26 +137,24 @@ const RECENT_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes for recent/future flight
 const MAX_CACHE_KEYS = 500;
 const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACHE_KEYS, checkperiod: 600 });
 
-// OpenSky token cache
-let openSkyTokenCache: { token: string; expiresAt: number } | null = null;
-
 /**
- * Tag an AirLabs `*_utc` value as UTC.
+ * OpenSky OAuth tokens, keyed by the credential that minted them.
  *
- * AirLabs returns BOTH a local (`dep_time`) and a UTC (`dep_time_utc`)
- * field, and BOTH in the bare form "YYYY-MM-DD HH:mm" — no `Z`, no offset.
- * `convertAirlabsTimeToUtc` decides by that missing marker and re-interprets
- * the value as airport-local, so preferring `*_utc` silently subtracted the
- * airport's offset a second time (EK51 DXB→MUC 15:55 local / 11:55Z came out
- * as 07:55Z; measured 2026-08-11). Marking the value keeps the converter's
- * existing already-has-a-zone branch, and the local fallback still converts.
+ * This used to be a single process-wide slot. A token is bound to ONE OpenSky
+ * account, so the first caller's token was then handed to every other user:
+ * their lookups ran against a stranger's account and burned that account's
+ * quota, and a credential change was ignored until the old token expired
+ * (AUD-102).
+ *
+ * The key is a hash, not the credential — a cache key ends up in heap dumps and
+ * debugger views, and a client secret has no business in either. The secret is
+ * part of the hash so that rotating it invalidates the entry rather than
+ * silently reusing a token minted with the old one.
  */
-function markUtc(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const v = value.trim();
-  if (!v) return undefined;
-  if (/[zZ]$/.test(v) || /[+-]\d{2}:?\d{2}$/.test(v)) return v;
-  return `${v.replace(' ', 'T')}Z`;
+const openSkyTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+function openSkyTokenKey(clientId: string, clientSecret: string): string {
+  return createHash("sha256").update(`${clientId.length}:${clientId}:${clientSecret}`).digest("hex");
 }
 
 export interface FlightData {
@@ -369,17 +368,16 @@ export interface FlightLookupResult {
 /**
  * Resolve OpenSky auth headers (prefers OAuth2 client credentials, falls back to basic)
  */
-async function getOpenSkyAuthHeaders(opts: {
-  clientId?: string;
-  clientSecret?: string;
-  user?: string;
-  pass?: string;
-}): Promise<Record<string, string> | null> {
+async function getOpenSkyAuthHeaders(
+  opts: OpenSkyCredentials,
+): Promise<Record<string, string> | null> {
   // OAuth2 client credentials
   if (opts.clientId && opts.clientSecret) {
     const now = Date.now();
-    if (openSkyTokenCache && openSkyTokenCache.expiresAt > now + 30_000) {
-      return { Authorization: `Bearer ${openSkyTokenCache.token}` };
+    const cacheKey = openSkyTokenKey(opts.clientId, opts.clientSecret);
+    const cached = openSkyTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > now + 30_000) {
+      return { Authorization: `Bearer ${cached.token}` };
     }
 
     try {
@@ -402,7 +400,7 @@ async function getOpenSkyAuthHeaders(opts: {
       const expiresIn = response.data?.expires_in as number | undefined;
       if (token) {
         const ttl = expiresIn ? expiresIn * 1000 : 30 * 60 * 1000; // default 30min
-        openSkyTokenCache = { token, expiresAt: Date.now() + ttl };
+        openSkyTokenCache.set(cacheKey, { token, expiresAt: Date.now() + ttl });
         return { Authorization: `Bearer ${token}` };
       }
     } catch (err) {
@@ -411,9 +409,14 @@ async function getOpenSkyAuthHeaders(opts: {
     }
   }
 
-  // Basic auth fallback
-  if (opts.user && opts.pass) {
-    const pair = `${opts.user}:${opts.pass}`;
+  // Basic auth fallback. The field names are `username`/`password` because that
+  // is what `getOpenSkyCredentials` returns; this used to read `user`/`pass`,
+  // which are never set, so a fully configured basic credential produced no
+  // header and the lookup returned null without ever calling OpenSky
+  // (AUD-101). Typing the parameter as `OpenSkyCredentials` is the actual fix:
+  // an all-optional inline literal let the mismatch compile.
+  if (opts.username && opts.password) {
+    const pair = `${opts.username}:${opts.password}`;
     const b64 = Buffer.from(pair).toString('base64');
     return { Authorization: `Basic ${b64}` };
   }
@@ -709,7 +712,11 @@ export async function lookupFlightDetails(
   logger.info({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
     `Falling back to AirLabs for ${trimmedNumber}`);
   const fallbackDate = date ? new Date(date) : undefined;
-  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate);
+  // `userId` is not optional decoration here: `lookupFlightByNumber` resolves
+  // its own key with `getApiKey('airlabs', userId)`, so dropping it silently
+  // demotes a user's personal key to the global one — or, where only a personal
+  // key exists, to no key at all and a null result (AUD-100).
+  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId);
 
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
@@ -1061,51 +1068,6 @@ export async function lookupFlightWithHistorical(
   return { flights: [flightLookupResultToFlightData(result, trimmed)] };
 }
 
-/** Absolute day difference between two YYYY-MM-DD strings (positive when a > b). */
-function dayDiff(a: string, b: string): number {
-  const aMs = Date.UTC(
-    Number(a.slice(0, 4)),
-    Number(a.slice(5, 7)) - 1,
-    Number(a.slice(8, 10)),
-  );
-  const bMs = Date.UTC(
-    Number(b.slice(0, 4)),
-    Number(b.slice(5, 7)) - 1,
-    Number(b.slice(8, 10)),
-  );
-  return Math.round((aMs - bMs) / (24 * 60 * 60 * 1000));
-}
-
-/**
- * Fallback: Try to lookup flight using flight number patterns
- * Extracts airline from flight number (e.g., "LH400" -> "LH")
- */
-export function parseFlightNumber(flightNumber: string): {
-  airlineCode: string | null;
-  flightNum: string | null;
-} {
-  const match = flightNumber.match(/^([A-Z]{2,3})\s*(\d{1,4})$/i);
-
-  if (match) {
-    return {
-      airlineCode: match[1].toUpperCase(),
-      flightNum: match[2],
-    };
-  }
-
-  return {
-    airlineCode: null,
-    flightNum: null,
-  };
-}
-
-/**
- * Get airline name from IATA code. Resolves via the DB-backed airline
- * catalogue cache (with the curated cold-start fallback baked into
- * `resolveAirlineCodes` for use before the cache is warm) — a superset of
- * the old static 147-entry map, and correct even on a fresh boot.
- */
-export function getAirlineName(iataCode: string): string | null {
-  if (!iataCode) return null;
-  return resolveAirlineCodes(iataCode)?.name ?? null;
-}
+// The pure field readers live in `flightLookup/fieldReaders` — see its header.
+// Re-exported so every existing importer of this module is untouched.
+export { getAirlineName, parseFlightNumber };

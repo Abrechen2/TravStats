@@ -93,7 +93,12 @@ describe("legOverrideSchema", () => {
       error = e;
     }
     expect(error).toBeDefined();
-    expect(String(error)).toMatch(/route/i);
+    // Not just "it threw": the whole point of the union's error map is to say
+    // WHERE routing is done instead. `/route/i` alone matched the word inside
+    // the input as well, so it would have stayed green on zod's own default
+    // message — and the map is the part that has to survive a zod major.
+    expect(String(error)).toContain("route-all");
+    expect(String(error)).toContain("/legs/{fromStopId}/{toStopId}/route");
   });
 
   it("accepts source \"track\" with a trackId — the geometry comes from the referenced track, not this body", () => {

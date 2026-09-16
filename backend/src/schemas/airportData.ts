@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 
 /**
  * Manual airport creation (#191) — the flight-side mirror of

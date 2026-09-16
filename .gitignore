@@ -162,6 +162,8 @@ brand-smoke-shots/
 # Playwright test artifacts (never commit)
 /playwright-report/
 /test-results/
+# The signed-in session the E2E setup project writes.
+/e2e/.auth/
 
 # Private memory archive + backups (owner-local, never committed)
 memory-archive/
@@ -188,3 +190,12 @@ test-samples/boarding-passes/
 # wrong folder drops them anywhere in the tree — a real secret nearly landed in
 # a commit this way.
 .travstats-data/
+
+# Playwright artefacts from an audit round. The findings, their probe scripts,
+# the measured JSON and the screenshots ARE versioned (docs/audit-*/), because
+# they are the evidence a finding rests on. Traces are not: the 2026-09-09 round
+# produced 134 MB of trace.zip across two directories, every byte of it
+# regenerable by re-running the spec, and none of it readable without the
+# viewer. Keep the evidence, drop the byproduct.
+docs/audit-*/block*-e2e-artifacts/
+docs/audit-*/block*-e2e-production-artifacts/

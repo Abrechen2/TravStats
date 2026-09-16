@@ -8,6 +8,7 @@
 
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
+import { isCountableCruise } from "../../shared/cruiseCounting";
 
 export interface AirportCardStats {
   totalVisits: number;
@@ -119,7 +120,7 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   // Only sailed cruises (flown/historical) contribute an actual port call —
   // a scheduled cruise is a future plan, not a visit yet.
   const stops = cruises
-    .filter((c) => c.status === "flown" || c.status === "historical")
+    .filter(isCountableCruise)
     .flatMap((c) =>
       c.stops
         .filter(

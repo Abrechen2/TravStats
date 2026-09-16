@@ -1,4 +1,5 @@
 import { buildWrapped, type WrappedFlight } from "../wrapped";
+import { wrappedSchema } from "../../../schemas/statsWrapped";
 
 /**
  * Forgejo #42, the last of the four pieces: the year in review is derived on
@@ -9,22 +10,62 @@ import { buildWrapped, type WrappedFlight } from "../wrapped";
  * top route and the evidence-based country count — because both are invisible
  * on a simple account and would otherwise be "fixed" back by the next reader.
  */
-const flight = (over: Partial<WrappedFlight> = {}): WrappedFlight => ({
-  depIata: "MUC",
-  arrIata: "FRA",
-  departureTime: new Date("2024-04-12T08:00:00Z"),
-  airline: "Lufthansa",
-  flightNumber: "LH123",
-  status: "flown",
-  distanceKm: 300,
-  ...over,
-});
+/**
+ * `departureYear` defaults to the UTC year of `departureTime`, which is what
+ * the caller resolves for a flight whose departure airport sits in UTC — and
+ * keeps every case below reading as it did. The two deliberately differ only
+ * where a test says so, which is the point of the field: the year is the
+ * DEPARTURE AIRPORT's, and the caller supplies it (AUD-077).
+ */
+const flight = (over: Partial<WrappedFlight> = {}): WrappedFlight => {
+  const departureTime = over.departureTime ?? new Date("2024-04-12T08:00:00Z");
+  return {
+    depIata: "MUC",
+    arrIata: "FRA",
+    departureTime,
+    departureYear: departureTime === null ? null : departureTime.getUTCFullYear(),
+    airline: "Lufthansa",
+    flightNumber: "LH123",
+    status: "flown",
+    distanceKm: 300,
+    ...over,
+  };
+};
 
 describe("buildWrapped", () => {
   it("returns null when there is nothing to look back on", () => {
     expect(buildWrapped([], [], [])).toBeNull();
     // A booking is not a memory.
     expect(buildWrapped([flight({ status: "scheduled" })], [], [])).toBeNull();
+  });
+
+  /**
+   * AUD-077. The stored instant and the departure airport's calendar day
+   * disagree by up to fourteen hours, so a year boundary falls between them.
+   * `/stats/timeseries` has always bucketed on the local day; the year in
+   * review read `getUTCFullYear()` and therefore offered a different set of
+   * years for the same account.
+   */
+  it("belongs to the year the flight departed in LOCALLY, not in UTC", () => {
+    // Bangkok, 01:30 local on 1 January 2025 — stored as 18:30Z on 31 Dec 2024.
+    const bangkok = flight({
+      depIata: "BKK",
+      departureTime: new Date("2024-12-31T18:30:00Z"),
+      departureYear: 2025,
+    });
+    // Los Angeles, 20:30 local on 31 December 2024 — stored as 04:30Z on 1 Jan.
+    const losAngeles = flight({
+      depIata: "LAX",
+      departureTime: new Date("2025-01-01T04:30:00Z"),
+      departureYear: 2024,
+    });
+
+    const wrapped = buildWrapped([bangkok, losAngeles], [], [], 2025);
+
+    // Reading the stored instant would put exactly the wrong one in each year.
+    expect(wrapped?.year).toBe(2025);
+    expect(wrapped?.flights).toBe(1);
+    expect(wrapped?.availableYears).toEqual([2024, 2025]);
   });
 
   it("takes the year from the data, not the wall clock", () => {
@@ -200,5 +241,31 @@ describe("buildWrapped", () => {
 
     expect(wrapped?.cruises).toBe(1);
     expect(wrapped?.availableYears).toEqual([2019, 2024]);
+  });
+
+  /**
+   * `/stats/wrapped` publishes this shape and the function infers its type from
+   * the schema, which tsc checks — but a type is not a value. This parses the
+   * real result, including the case where every nullable field is null, because
+   * that is the shape a thin year actually produces (forgejo#52).
+   */
+  it("produces a body the published schema accepts, rich and thin", () => {
+    const rich = buildWrapped(
+      [flight({ departureYear: 2024, flightNumber: "LH400", airline: "Lufthansa" })],
+      [],
+      []
+    );
+    expect(wrappedSchema.safeParse(rich).success).toBe(true);
+
+    // A year with a flight that names no carrier and no derivable pair: every
+    // nullable field is null at once, which no other case here exercises.
+    const thin = buildWrapped(
+      [flight({ departureYear: 2024, flightNumber: null, airline: null })],
+      [],
+      []
+    );
+    const parsed = wrappedSchema.safeParse(thin);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
+    expect(thin?.topAirline).toBeNull();
   });
 });

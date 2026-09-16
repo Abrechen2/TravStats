@@ -65,6 +65,12 @@ vi.mock("../../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
 }));
 
+// The places legend resolves curated lists on mount.
+vi.mock("@/lib/api/placeLists", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/placeLists")>();
+  return { ...actual, listPlaceLists: vi.fn().mockResolvedValue([]) };
+});
+
 // Imported after the mocks above so the module graph picks them up.
 import { AllTab } from "../AllTab";
 

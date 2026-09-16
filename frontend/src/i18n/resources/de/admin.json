@@ -152,10 +152,6 @@
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
           },
-          "domainColors": {
-            "name": "Eigene Bereichsfarben",
-            "what": "Die Farbe je Bereich wird einstellbar, statt fest aus der Marke zu kommen. Wirkt in Statistiken, Zeitleiste, Aktivitätsleiste und Import-Protokoll."
-          },
           "tourRoutes": {
             "name": "Touren",
             "what": "Routenabschnitte innerhalb einer Reise — Abschnittsliste, Editor, ein eigener Dashboard-Reiter und die Linien auf der Karte."
@@ -204,6 +200,8 @@
     "testing": "Teste...",
     "testOk": "WebDAV-Verbindung erfolgreich",
     "testFailed": "WebDAV-Verbindung fehlgeschlagen",
+    "testNeedsSave": "Der Test prüft die gespeicherte Konfiguration — erst speichern, dann testen.",
+    "testNeedsEnabled": "Der Test prüft die gespeicherte Konfiguration, und dort ist WebDAV-Sync ausgeschaltet.",
     "fields": {
       "enabled": {
         "label": "WebDAV-Sync aktivieren",
@@ -559,7 +557,13 @@
     },
     "actions": {
       "download": "Download",
-      "restore": "Wiederherstellen"
+      "restore": "Wiederherstellen",
+      "upload": "Hochladen",
+      "uploading": "Lädt hoch..."
+    },
+    "cloud": {
+      "syncedAt": "Hochgeladen am {{date}}",
+      "failed": "Fehlgeschlagen"
     },
     "restore": {
       "title": "Backup wiederherstellen",
@@ -570,9 +574,6 @@
       "scopeDatabase": "Nur Datenbank",
       "scopeFiles": "Nur Dateien",
       "createBackupBefore": "Backup vor Wiederherstellung erstellen (empfohlen)",
-      "targetDatabaseUrl": "Ziel-Datenbank-URL (optional, für Migration)",
-      "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
-      "targetDatabaseUrlHelp": "Leer lassen für aktuelle Instanz",
       "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
       "confirmText": "Wiederherstellen",
       "confirmButton": "Wiederherstellen"
@@ -581,7 +582,7 @@
     "settingsFailed": "Fehler beim Speichern der Einstellungen",
     "schedule": {
       "title": "Automatisches Backup",
-      "description": "Geplante Backups werden täglich um 2:00 Uhr ausgeführt.",
+      "description": "Geplante Backups laufen um 2:00 UTC – je nach Intervall täglich, sonntags oder am 1. des Monats.",
       "enableAutoBackup": "Automatisches Backup aktivieren",
       "interval": "Intervall",
       "retentionDays": "Aufbewahrung (Tage)"
@@ -595,7 +596,9 @@
       "restoring": "Backup wird wiederhergestellt",
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
-      "deleteFailed": "Fehler beim Löschen des Backups"
+      "deleteFailed": "Fehler beim Löschen des Backups",
+      "synced": "Backup hochgeladen",
+      "syncFailed": "Hochladen des Backups fehlgeschlagen"
     }
   },
   "feedback": {

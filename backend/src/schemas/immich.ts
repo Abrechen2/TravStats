@@ -2,7 +2,7 @@
  * Zod schemas for every Immich system boundary: settings writes, connection
  * tests, album linking, and the proxy's path/query parameters.
  */
-import { z } from "zod";
+import { z } from "./zod";
 
 export const immichModeSchema = z.enum(["link", "import"]);
 

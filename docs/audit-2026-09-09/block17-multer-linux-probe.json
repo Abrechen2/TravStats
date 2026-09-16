@@ -1,0 +1,53 @@
+{
+  "commit": "9678e6cd",
+  "multerVersion": "2.2.0",
+  "unauthenticated": {
+    "status": 401
+  },
+  "uncaught": {
+    "name": "RangeError",
+    "message": "Invalid array length"
+  },
+  "authenticated": {
+    "connectionClosed": true
+  },
+  "errorKinds": [
+    {
+      "name": "AppError",
+      "message": "No token provided",
+      "stack": [
+        "AppError: No token provided",
+        "    at authenticate (/app/backend/dist/middleware/auth.js:49:19)",
+        "    at Layer.handle [as handle_request] (/app/backend/node_modules/express/lib/router/layer.js:95:5)",
+        "    at next (/app/backend/node_modules/express/lib/router/route.js:149:13)",
+        "    at Route.dispatch (/app/backend/node_modules/express/lib/router/route.js:119:3)",
+        "    at Layer.handle [as handle_request] (/app/backend/node_modules/express/lib/router/layer.js:95:5)",
+        "    at /app/backend/node_modules/express/lib/router/index.js:284:15",
+        "    at Function.process_params (/app/backend/node_modules/express/lib/router/index.js:346:12)",
+        "    at next (/app/backend/node_modules/express/lib/router/index.js:280:10)",
+        "    at Function.handle (/app/backend/node_modules/express/lib/router/index.js:175:3)",
+        "    at router (/app/backend/node_modules/express/lib/router/index.js:47:12)"
+      ]
+    },
+    {
+      "name": "Error",
+      "message": "Request aborted",
+      "stack": [
+        "Error: Request aborted",
+        "    at IncomingMessage.<anonymous> (/app/backend/node_modules/multer/lib/make-middleware.js:124:28)",
+        "    at IncomingMessage.emit (node:events:519:28)",
+        "    at IncomingMessage._destroy (node:_http_incoming:221:10)",
+        "    at _destroy (node:internal/streams/destroy:122:10)",
+        "    at IncomingMessage.destroy (node:internal/streams/destroy:84:5)",
+        "    at abortIncoming (node:_http_server:838:9)",
+        "    at socketOnClose (node:_http_server:832:3)",
+        "    at Socket.emit (node:events:531:35)",
+        "    at TCP.<anonymous> (node:net:347:12)"
+      ]
+    }
+  ],
+  "routedErrorsAfterAuthControl": 0,
+  "requestBytes": 202,
+  "crashReproduced": true,
+  "runtime": "v22.23.2"
+}

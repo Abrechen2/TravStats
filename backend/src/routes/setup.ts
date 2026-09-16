@@ -6,6 +6,7 @@ import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
 import { issueAuthCookie } from '../utils/session';
 import { AppError } from '../middleware/errorHandler';
+import { takeUserCountLock } from '../utils/userCountLock';
 import { getSeedingStatus } from '../services/airportSeedingService';
 import { updateInstanceSettings } from '../services/instanceSettingsService';
 import { authLimiter } from '../middleware/rateLimit';
@@ -68,22 +69,33 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
       usageStatsConsent,
     } = validated;
 
-    // Check if setup already completed (admin exists)
-    const adminCount = await prisma.user.count({
-      where: { isAdmin: true },
-    });
-    if (adminCount > 0) {
-      throw new AppError('Setup already completed - admin user exists', 400);
-    }
-
-    // Create first admin user
+    // Hashing stays outside the lock: it is the slow part and it needs nothing
+    // from the count.
     const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        username,
-        passwordHash,
-        isAdmin: true,
-      },
+
+    // "Is setup already done" and "create the admin" have to be one decision.
+    // Read and write used to sit apart with nothing between them, so two setup
+    // requests arriving together could both find no admin and both create one
+    // (audit finding AUD-004, same shape as self-registration). The lock is the
+    // same one registration takes — a second key would mean the two paths could
+    // not see each other.
+    const user = await prisma.$transaction(async (tx) => {
+      await takeUserCountLock(tx);
+
+      const adminCount = await tx.user.count({
+        where: { isAdmin: true },
+      });
+      if (adminCount > 0) {
+        throw new AppError('Setup already completed - admin user exists', 400);
+      }
+
+      return tx.user.create({
+        data: {
+          username,
+          passwordHash,
+          isAdmin: true,
+        },
+      });
     });
 
     // Persist the admin's domain selection so the UI filters modules

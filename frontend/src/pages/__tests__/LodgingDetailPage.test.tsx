@@ -13,10 +13,17 @@ vi.mock("../../lib/api/lodging", () => ({
   getLodging: (...args: unknown[]) => getLodgingMock(...args),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
   listMemberships: () => listMembershipsMock(),
+  // The photo section asks for the house's photographs on mount. Without
+  // this the mock module has no such export, vitest prints an error per
+  // render and the section is never exercised (forgejo#110).
+  listLodgingPhotos: () => Promise.resolve([]),
 }));
 
 vi.mock("../../lib/api", () => ({
   tripsApi: { getAll: () => tripsGetAllMock() },
+  // CompanionPicker loads suggestions on mount; unmocked, it went to the
+  // network through jsdom's XMLHttpRequest and logged an AggregateError.
+  companionsApi: { list: () => Promise.resolve([]) },
 }));
 
 vi.mock("../../components/NavigationBar", () => ({

@@ -117,3 +117,20 @@ export function resolveStayTiming(stay: TimedStay): StayTiming {
     canBucketByMonth: (precision === "DAY" || precision === "MONTH") && anchor !== null,
   };
 }
+
+/**
+ * Can this stay name specific calendar DAYS at all?
+ *
+ * Distinct from `walkable`, and the difference is the whole point: `walkable`
+ * additionally requires both ends, because it answers "can I count the nights
+ * between them". Naming days needs only day-level precision — a DAY-precision
+ * stay with one end names that one day, which is what the record says.
+ *
+ * A MONTH, YEAR or NONE stay names none. Its stored check-in and check-out are
+ * placeholders spanning the whole period, and walking them produced 32 exact
+ * days of presence out of a stay the same record says was three nights long
+ * (AUD-083). The nights are known; which days they fell on is not.
+ */
+export function stayNamesExactDays(stay: TimedStay): boolean {
+  return resolveStayTiming(stay).precision === "DAY";
+}

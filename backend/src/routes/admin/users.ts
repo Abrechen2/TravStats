@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { AppError } from '../../middleware/errorHandler';
+import { takeUserCountLock } from '../../utils/userCountLock';
 import { hashPassword } from '../../utils/password';
 import { adminCreateUserSchema, adminResetPasswordSchema } from '../../schemas/auth';
 import { sendAdminPasswordResetEmail } from '../../services/emailService';
@@ -25,19 +26,27 @@ router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction
     if (existing) throw new AppError('Username already exists', 400);
 
     const { maxUsers } = await getInstanceSettings();
-    const userCount = await prisma.user.count();
-    if (userCount >= maxUsers) throw new AppError('User limit reached', 409);
-
     const passwordHash = await hashPassword(payload.password);
-    const created = await prisma.user.create({
-      data: {
-        username: payload.username,
-        passwordHash,
-        isAdmin: payload.isAdmin,
-        notificationEmail: payload.notificationEmail,
-        invitedBy: req.userId,
-      },
-      select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },
+
+    // Counting and creating are one decision — see utils/userCountLock. Without
+    // it, two administrators adding a user at the same moment can both see room
+    // for one and take the instance past its own limit (audit finding AUD-004).
+    const created = await prisma.$transaction(async (tx) => {
+      await takeUserCountLock(tx);
+
+      const userCount = await tx.user.count();
+      if (userCount >= maxUsers) throw new AppError('User limit reached', 409);
+
+      return tx.user.create({
+        data: {
+          username: payload.username,
+          passwordHash,
+          isAdmin: payload.isAdmin,
+          notificationEmail: payload.notificationEmail,
+          invitedBy: req.userId,
+        },
+        select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },
+      });
     });
 
     // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
@@ -213,6 +222,9 @@ router.post(
           resetTokenExpiry: null,
           changeToken: null,
           changeTokenExpiry: null,
+          // An administrator resetting a password expects the account to be
+          // out of anyone else's hands from that moment.
+          sessionEpoch: { increment: 1 },
         },
       });
 

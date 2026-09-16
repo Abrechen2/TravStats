@@ -82,6 +82,30 @@ describe("normalizeBoard", () => {
   });
 });
 
+// AUD-053: a printed EXCLUSION contains the very word the positive pattern
+// keys on, so "No breakfast included" came back as `breakfast`.
+describe("normalizeBoard — a mention is not an inclusion", () => {
+  it("reads an excluded breakfast as no meals", () => {
+    expect(normalizeBoard("No breakfast included")).toBe("none");
+    expect(normalizeBoard("Breakfast not included")).toBe("none");
+    expect(normalizeBoard("Ohne Frühstück")).toBe("none");
+    expect(normalizeBoard("Frühstück nicht inbegriffen")).toBe("none");
+    expect(normalizeBoard("Rate excludes breakfast")).toBe("none");
+  });
+
+  it("does not claim a meal the document only offers", () => {
+    expect(normalizeBoard("Breakfast available for a surcharge")).toBeNull();
+    expect(normalizeBoard("Frühstück gegen Aufpreis")).toBeNull();
+    expect(normalizeBoard("Breakfast optional")).toBeNull();
+  });
+
+  it("still reads a plan whose negation is about something else", () => {
+    expect(normalizeBoard("Halbpension ohne Getränke")).toBe("half");
+    expect(normalizeBoard("Bed & Breakfast, not refundable")).toBe("breakfast");
+    expect(normalizeBoard("All inclusive (no alcohol)")).toBe("all_inclusive");
+  });
+});
+
 describe("normalizeGuestCount", () => {
   it("adds adults and children", () => {
     expect(normalizeGuestCount(2, 0)).toBe(2);

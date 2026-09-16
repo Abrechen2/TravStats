@@ -11,6 +11,7 @@ import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import { completePlaceAddress } from "../../services/places/addressBackfill";
 import logger from "../../utils/logger";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /**
  * Shipped checklists — the New 7 Wonders and friends.
@@ -116,16 +117,57 @@ router.post("/:key/subscribe", async (req: AuthRequest, res: Response, next: Nex
     const curated = await prisma.curatedList.findUnique({ where: { key: req.params.key } });
     if (!curated) throw new AppError("Checklist not found", 404);
 
-    const list = await prisma.placeList.upsert({
-      where: { userId_curatedKey: { userId, curatedKey: curated.key } },
-      create: {
-        userId,
-        curatedKey: curated.key,
-        name: curated.name,
-        description: curated.description,
-        icon: curated.icon,
-      },
-      update: {},
+    // Subscribing has to RESTORE, not just create. Unsubscribing deletes the
+    // list and its membership rows while deliberately keeping the places —
+    // those are visits that happened. Re-subscribing therefore used to hand
+    // back an empty list: the index and the detail read "0 places, 0 visited"
+    // while the progress endpoint, which counts from the places themselves,
+    // said "1 of 1 ticked" (AUD-076). Both were reading the same account.
+    //
+    // In one transaction, so a list can never exist without the memberships it
+    // is supposed to carry.
+    const [list] = await prisma.$transaction(async (tx) => {
+      const created = await tx.placeList.upsert({
+        where: { userId_curatedKey: { userId, curatedKey: curated.key } },
+        create: {
+          userId,
+          curatedKey: curated.key,
+          name: curated.name,
+          description: curated.description,
+          icon: curated.icon,
+        },
+        update: {},
+      });
+
+      // `Place` carries the catalogue item as a bare foreign key with no
+      // relation field, so the catalogue is read first and the places matched
+      // against it — rather than joining through something that is not there.
+      const catalogue = await tx.curatedPlace.findMany({
+        where: { listKey: curated.key },
+        select: { id: true, sortIdx: true },
+      });
+      const sortIdxByItem = new Map(catalogue.map((item) => [item.id, item.sortIdx]));
+
+      // Every place this user already materialized from THIS catalogue.
+      const materialized = await tx.place.findMany({
+        where: { userId, curatedItemId: { in: [...sortIdxByItem.keys()] } },
+        select: { id: true, curatedItemId: true },
+      });
+
+      if (materialized.length > 0) {
+        await tx.placeListEntry.createMany({
+          data: materialized.map((place) => ({
+            listId: created.id,
+            placeId: place.id,
+            // The catalogue's own ordering, carried back onto the membership.
+            sortIdx: sortIdxByItem.get(place.curatedItemId ?? "") ?? 0,
+          })),
+          // An already-subscribed caller is an ordinary no-op, not an error.
+          skipDuplicates: true,
+        });
+      }
+
+      return [created, materialized.length] as const;
     });
 
     logger.info(
@@ -297,7 +339,7 @@ router.get("/:key/suggestions", statsLimiter, async (req: AuthRequest, res: Resp
         },
       }),
       prisma.cruiseStop.findMany({
-        where: { cruise: { userId, status: { in: ["flown", "historical"] } }, isAtSea: false },
+        where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
         select: {
           date: true,
           arrivalTime: true,

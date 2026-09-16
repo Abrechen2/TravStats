@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { achievementsApi } from "../lib/api";
 import AppShell from "../components/ui/AppShell";
@@ -55,6 +55,11 @@ export default function AchievementsPage(): JSX.Element {
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  // Both filters printed their label as bare text next to an unnamed control,
+  // so axe reported the selects as critical `select-name` failures and a
+  // screen reader announced two nameless combo boxes (forgejo#113).
+  const categoryFilterId = useId();
+  const tierFilterId = useId();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
   // Domain filter chip row. `all` shows everything the user's enabled domains
@@ -373,7 +378,9 @@ export default function AchievementsPage(): JSX.Element {
                 className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 style={{
                   background: selectedDomain === chip.id ? "var(--accent)" : "var(--bg-elevated)",
-                  color: selectedDomain === chip.id ? "#fff" : "var(--text-muted)",
+                  // Not #fff: white on the amber accent measures 2.00:1, below AA on a
+                  // control whose whole job is to show which filter is active (forgejo#114).
+                  color: selectedDomain === chip.id ? "var(--bg-base)" : "var(--text-muted)",
                   borderColor: selectedDomain === chip.id ? "var(--accent)" : "var(--color-border)",
                 }}
               >
@@ -384,10 +391,15 @@ export default function AchievementsPage(): JSX.Element {
         </div>
         <div className="flex flex-wrap gap-4">
           <div>
-            <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+            <label
+              className="block text-sm mb-2"
+              style={{ color: "var(--text-muted)" }}
+              htmlFor={categoryFilterId}
+            >
               {t("achievements:filters.category")}
             </label>
             <select
+              id={categoryFilterId}
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-4 py-2 rounded-lg"
@@ -406,10 +418,15 @@ export default function AchievementsPage(): JSX.Element {
             </select>
           </div>
           <div>
-            <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+            <label
+              className="block text-sm mb-2"
+              style={{ color: "var(--text-muted)" }}
+              htmlFor={tierFilterId}
+            >
               {t("achievements:filters.tier")}
             </label>
             <select
+              id={tierFilterId}
               value={selectedTier}
               onChange={(e) => setSelectedTier(e.target.value)}
               className="px-4 py-2 rounded-lg"

@@ -3,6 +3,7 @@ import { minorUnits } from "../../shared/currencies";
 import logger from "../../utils/logger";
 import { getCdnRate } from "./currencyApiCdn";
 import { getRate, type FxRate, type RateSource } from "./frankfurter";
+import { FX_CHAIN_BUDGET_MS } from "./fxGuards";
 
 // Re-exported so a consumer of the CHAIN never has to reach past it into one
 // individual provider just to name the type of its answer.
@@ -21,6 +22,14 @@ export type { FxRate, RateSource };
  * amount in its own currency and says plainly that it could not be converted.
  */
 export async function resolveRate(from: string, to: string, date: string): Promise<FxRate | null> {
+  // A budget for the WHOLE chain, not just per provider. The chain is serial,
+  // so two providers each inside their own timeout can still add up past the
+  // caller's patience — and this runs inside a write the browser is waiting
+  // on. Past the budget the answer is "no rate", which is a state every
+  // caller already renders (AUD-065).
+  const deadline = Date.now() + FX_CHAIN_BUDGET_MS;
+  const budgetSpent = (): boolean => Date.now() >= deadline;
+
   try {
     const ecb = await getRate(from, to, date);
     if (ecb) return ecb;
@@ -28,6 +37,11 @@ export async function resolveRate(from: string, to: string, date: string): Promi
     // `getRate` documents itself as never throwing, but that promise lives in
     // another module — a broken provider must not take the chain down with it.
     logger.warn({ error, from, to, date }, "ECB FX lookup threw");
+  }
+
+  if (budgetSpent()) {
+    logger.warn({ from, to, date }, "FX chain budget spent after the ECB provider");
+    return null;
   }
 
   const settings = await getAdminFxSettings().catch((error) => {
@@ -38,6 +52,11 @@ export async function resolveRate(from: string, to: string, date: string): Promi
   // default: a database hiccup should not silently narrow what can be
   // converted, which would look to the user like currencies going missing.
   if (settings && !settings.cdnFallbackEnabled) return null;
+
+  if (budgetSpent()) {
+    logger.warn({ from, to, date }, "FX chain budget spent before the CDN provider");
+    return null;
+  }
 
   try {
     return await getCdnRate(from, to, date);

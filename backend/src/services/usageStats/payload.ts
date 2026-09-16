@@ -84,7 +84,7 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
     allUserSettings,
   ] = await Promise.all([
     getOrCreateInstallId(),
-    prisma.adminSettings.findFirst(),
+    prisma.adminSettings.findFirst({ orderBy: { id: "asc" } }),
     prisma.user.count(),
     prisma.flight.count(),
     prisma.cruise.count(),

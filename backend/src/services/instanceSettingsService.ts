@@ -17,6 +17,7 @@ import {
 } from "../shared/countryEvidence";
 import { encryptApiKey, decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
+import { ensureAdminSettingsRow } from "./adminSettingsRow";
 
 // Public geocoder instances used when neither the DB column nor the
 // matching ENV var is set. See `resolveGeocoderUrls()`.
@@ -79,11 +80,16 @@ export interface WebDAVSettings {
   backupPath: string;
 }
 
-/** Single row — ensure it exists and return it. */
+/** Single row — ensure it exists and return it.
+ *
+ *  The read comes first and answers on its own in every case but a genuinely
+ *  fresh instance: this runs on ordinary requests, and taking a lock to learn
+ *  that a row has existed for months would be a transaction per page load. */
 async function ensureAdminSettings() {
-  const existing = await prisma.adminSettings.findFirst();
+  const existing = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   if (existing) return existing;
-  return prisma.adminSettings.create({ data: {} });
+  await ensureAdminSettingsRow();
+  return prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
 }
 
 /**

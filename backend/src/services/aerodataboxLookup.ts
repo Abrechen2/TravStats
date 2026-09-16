@@ -274,6 +274,27 @@ export async function lookupFlightAerodatabox(
 
     captureRateLimit(response.headers as Record<string, unknown>, userId);
 
+    // A 2xx is not proof of a list. On 2026-09-05 the endpoint answered with
+    // an object (a message body, not an array) and `.filter` threw inside
+    // the try — logged as "returned.filter is not a function", caught by the
+    // generic branch below and passed off as a lookup failure. A shape the
+    // client did not expect is its own outcome and gets its own line.
+    if (response.data != null && !Array.isArray(response.data)) {
+      logger.warn(
+        {
+          flightNumber: normalized,
+          date,
+          api: "aerodatabox",
+          receivedType: typeof response.data,
+          operation: "unexpected_response_shape",
+        },
+        `AeroDataBox answered ${normalized} on ${date} with a ${typeof response.data}, not a flight list`,
+      );
+      // Not cached: a message body is the provider's moment, not the
+      // flight's absence, and a historical date would otherwise pin the
+      // miss for CACHE_TTL_HISTORICAL_SECONDS.
+      return null;
+    }
     const returned: AerodataboxFlight[] = response.data ?? [];
     const departingToday = returned.filter((f) => departsOnLocalDate(f, date));
     if (returned.length > 0 && departingToday.length === 0) {

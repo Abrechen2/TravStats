@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * Parser-output schema for cruise bookings. Mirrors the shape of FlightData

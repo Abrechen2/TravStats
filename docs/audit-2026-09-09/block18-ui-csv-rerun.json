@@ -1,0 +1,23 @@
+{
+  "commit": "9678e6cd",
+  "results": [
+    {
+      "name": "Hotel CSV explicit new match decision and reload",
+      "passed": true,
+      "status": 201,
+      "result": {
+        "success": true,
+        "data": {
+          "batchId": "012da0f7-f3ae-4d28-a731-5e62df90d36b",
+          "createdLodgings": 1,
+          "createdStays": 1,
+          "skipped": 0,
+          "failed": []
+        }
+      },
+      "reloaded": true,
+      "title": "Audit CSV UI 1789297536675"
+    }
+  ],
+  "errors": []
+}

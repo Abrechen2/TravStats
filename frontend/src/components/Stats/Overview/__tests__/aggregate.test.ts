@@ -23,7 +23,7 @@ const flightStats = {
   dailyActiveDays: { "2023-06-01": 1, "2024-03-15": 1 },
   weekdayEvents: {},
   summary: {
-    headlineKpis: [{ label: "Distanz", value: "12k km" }],
+    headlineKpis: [{ labelKey: "overviewCard.kpi.distance", value: 12_000, unit: "km" as const }],
     detailRoute: "/stats?tab=flight",
   },
 };
@@ -41,7 +41,7 @@ const cruiseStats = {
   dailyActiveDays: { "2024-06-10": 1, "2024-06-11": 1 },
   weekdayEvents: {},
   summary: {
-    headlineKpis: [{ label: "Distanz", value: "5k km" }],
+    headlineKpis: [{ labelKey: "overviewCard.kpi.distance", value: 5_000, unit: "km" as const }],
     detailRoute: "/stats?tab=cruise",
   },
 };

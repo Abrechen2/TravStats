@@ -89,7 +89,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
       if (user) return user;
     }
 
-    const admin = await prisma.adminSettings.findFirst();
+    const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     const global = buildConnection(
       admin?.globalDawarichBaseUrl,
       admin?.globalDawarichApiKey,

@@ -1,5 +1,6 @@
 import logger from "../../utils/logger";
 import type { FxRate } from "./frankfurter";
+import { fetchWithTimeout, isSettledRateDate, isUsableRate } from "./fxGuards";
 
 /**
  * Keyless daily rates from the @fawazahmed0/currency-api dataset on jsDelivr —
@@ -17,8 +18,9 @@ import type { FxRate } from "./frankfurter";
  */
 const BASE_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api";
 
-// Same reasoning as frankfurter.ts: a historical daily rate never changes, so
-// a process-lifetime map keyed by the tuple is safe and small.
+// Same reasoning as frankfurter.ts, and the same limit: a SETTLED daily rate
+// never changes, so a process-lifetime map keyed by the tuple is safe and
+// small. Today's is not settled and is not cached.
 const rateCache = new Map<string, number>();
 
 /** Units of `to` per 1 `from` on `date` (YYYY-MM-DD). null on any miss. */
@@ -31,7 +33,7 @@ export async function getCdnRate(from: string, to: string, date: string): Promis
   const lowerFrom = from.toLowerCase();
   const lowerTo = to.toLowerCase();
   try {
-    const res = await fetch(`${BASE_URL}@${date}/v1/currencies/${lowerFrom}.json`);
+    const res = await fetchWithTimeout(`${BASE_URL}@${date}/v1/currencies/${lowerFrom}.json`);
     if (!res.ok) {
       // A 404 is the ordinary answer for a date before the dataset begins or a
       // code it does not carry — an expected miss, not an incident. Logging it
@@ -46,11 +48,11 @@ export async function getCdnRate(from: string, to: string, date: string): Promis
       typeof table === "object" && table !== null
         ? (table as Record<string, unknown>)[lowerTo]
         : undefined;
-    if (typeof rate !== "number" || !Number.isFinite(rate)) {
-      logger.warn({ from, to, date }, "CDN FX rate missing in response");
+    if (!isUsableRate(rate)) {
+      logger.warn({ from, to, date, rate }, "CDN FX rate missing or not usable in response");
       return null;
     }
-    rateCache.set(key, rate);
+    if (isSettledRateDate(date)) rateCache.set(key, rate);
     return { rate, source: "cdn" };
   } catch (error) {
     logger.warn({ error, from, to, date }, "CDN FX rate lookup failed");

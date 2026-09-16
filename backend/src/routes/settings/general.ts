@@ -113,6 +113,21 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  // Feature toggles the settings page shows and the client autosaves.
+  //
+  // Absent from this schema until 2026-09-10, so Zod stripped them silently:
+  // the PUT answered 200, the block never reached the database, and a fresh
+  // browser had cost tracking off and tail-number recording on again — the
+  // second of those being a privacy choice the user had deliberately made
+  // (audit finding AUD-017). A visible switch has to survive save → GET →
+  // fresh client, or it is not a setting.
+  features: z
+    .object({
+      enableCostTracking: z.boolean().optional(),
+      trackAircraftRegistration: z.boolean().optional(),
+    })
+    .partial()
+    .optional(),
   // Cruise-domain preferences. Own slice so the pattern stays clean when
   // hotel / POI domains add their own slices later.
   cruise: z

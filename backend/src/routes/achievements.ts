@@ -4,6 +4,7 @@ import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth
 import { statsLimiter } from '../middleware/rateLimit';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { resolveRank } from '../utils/achievementRank';
+import { achievements as catalogueDefinitions } from '../data/achievements';
 
 const router = Router();
 
@@ -11,6 +12,14 @@ const router = Router();
 // (`achievements.scheduledLeak.test.ts`) uses this prefix. These rows
 // are not user-facing — filter them out of every list endpoint.
 const TEST_ACHIEVEMENT_PREFIX = "TEST_";
+
+// A definition removed from the seeds stays in older databases on purpose
+// (ensureAchievements never deletes), so an unlock already earned survives —
+// FOUR_SEASONS_YEAR is one. Counting such a row in the total made an older
+// instance read "83 of 276" against a 275-entry catalogue, a badge nobody can
+// earn any more. The fraction counts live definitions; a legacy unlock stays
+// listed and keeps its points.
+const LIVE_ACHIEVEMENT_CODES = new Set(catalogueDefinitions.map(a => a.code));
 
 // All routes require authentication; PATs need write scope to mutate
 // (POST /check recomputes + persists user achievement state).
@@ -45,8 +54,15 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       userAchievements.map(ua => [ua.achievementId, ua])
     );
 
-    // Combine data
-    const achievementsWithProgress = achievements.map(achievement => {
+    const isLive = (code: string) => LIVE_ACHIEVEMENT_CODES.has(code);
+    const liveAchievements = achievements.filter(a => isLive(a.code));
+
+    // Combine data — an orphaned row is shown only to a user who unlocked it
+    const achievementsWithProgress = achievements.filter(achievement => {
+      if (isLive(achievement.code)) return true;
+      const ua = userAchievementMap.get(achievement.id);
+      return !!ua && ua.progress >= achievement.requirement;
+    }).map(achievement => {
       const userAchievement = userAchievementMap.get(achievement.id);
       const progress = userAchievement?.progress || 0;
       const isUnlocked = !!userAchievement && progress >= achievement.requirement;
@@ -69,9 +85,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     );
 
     const totalPoints = unlocked.reduce((sum, ua) => sum + ua.achievement.points, 0);
+    const unlockedLive = unlocked.filter(ua => isLive(ua.achievement.code));
 
     // Calculate achievements by category
-    const categories = achievements.reduce((acc, ach) => {
+    const categories = liveAchievements.reduce((acc, ach) => {
       if (!acc[ach.category]) {
         acc[ach.category] = { total: 0, unlocked: 0 };
       }
@@ -89,8 +106,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     res.json({
       achievements: achievementsWithProgress,
       summary: {
-        totalAchievements: achievements.length,
-        unlockedAchievements: unlocked.length,
+        totalAchievements: liveAchievements.length,
+        unlockedAchievements: unlockedLive.length,
         totalPoints,
         categories,
         rank,

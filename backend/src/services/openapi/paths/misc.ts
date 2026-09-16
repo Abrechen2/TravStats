@@ -45,7 +45,7 @@ registry.registerPath({
               totalAchievements: z.number().int(),
               unlockedAchievements: z.number().int(),
               totalPoints: z.number().int(),
-              categories: z.record(z.number().int()),
+              categories: z.record(z.string(), z.number().int()),
               rank: z.string().describe("Stable slug, not display copy"),
               nextRankPoints: z.number().int().nullable(),
             }),
@@ -137,6 +137,12 @@ registry.registerPath({
                 z.object({
                   domain: z.enum(["flight", "cruise", "lodging", "place", "trip"]),
                   id: z.string(),
+                  detailId: z
+                    .string()
+                    .describe(
+                      "The row a client should open. Equal to `id` except for a stay, " +
+                        "whose page is its lodging's."
+                    ),
                   startsAt: z.string().datetime(),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),

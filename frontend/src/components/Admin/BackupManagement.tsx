@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { backupApi } from "../../lib/api";
+import { backupApi, adminApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
+import { extractApiErrorMessage } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
+// The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
+// and a panel that scrolls instead of running off a 320px screen (AUD-037).
+import Modal from "../Modal";
 
 interface Backup {
   id: string;
@@ -19,6 +23,7 @@ interface Backup {
   metadata: Record<string, unknown> | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
+  cloudSyncError: string | null;
   createdAt: string;
   fileExists?: boolean;
 }
@@ -26,18 +31,16 @@ interface Backup {
 interface RestoreModalProps {
   backup: Backup;
   onClose: () => void;
-  onConfirm: (
-    scope: "full" | "database" | "files",
-    createBackupBefore: boolean,
-    targetDatabaseUrl?: string
-  ) => void;
+  onConfirm: (scope: "full" | "database" | "files", createBackupBefore: boolean) => void;
 }
 
-function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
+/** Exported for its own test — the dialog contract is worth holding on its
+ *  own, without driving the whole backup page to reach it. */
+export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
   const [createBackupBefore, setCreateBackupBefore] = useState(true);
-  const [targetDatabaseUrl, setTargetDatabaseUrl] = useState("");
+
   const [confirmText, setConfirmText] = useState("");
 
   const formatDate = (dateString: string | null | undefined): string => {
@@ -57,99 +60,18 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
     if (confirmText !== t("admin:backup.restore.confirmText")) {
       return;
     }
-    onConfirm(scope, createBackupBefore, targetDatabaseUrl || undefined);
+    onConfirm(scope, createBackupBefore);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
-        <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--danger)" }}>
-          ⚠️ {t("admin:backup.restore.title")}
-        </h2>
-
-        <div className="space-y-4 mb-6">
-          <div
-            className="border rounded-lg p-4"
-            style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
-          >
-            <p className="font-semibold" style={{ color: "var(--danger)" }}>
-              {t("admin:backup.restore.warning")}
-            </p>
-            <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
-              {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
-            </p>
-          </div>
-
-          <div>
-            <label className="label">{t("admin:backup.restore.scope")}</label>
-            <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value as "full" | "database" | "files")}
-              className="input"
-            >
-              <option value="full">{t("admin:backup.restore.scopeFull")}</option>
-              <option value="database">{t("admin:backup.restore.scopeDatabase")}</option>
-              <option value="files">{t("admin:backup.restore.scopeFiles")}</option>
-            </select>
-          </div>
-
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={createBackupBefore}
-              onChange={(e) => setCreateBackupBefore(e.target.checked)}
-              className="checkbox"
-            />
-            <span>{t("admin:backup.restore.createBackupBefore")}</span>
-          </label>
-
-          <div>
-            <label className="label">{t("admin:backup.restore.targetDatabaseUrl")}</label>
-            <input
-              type="text"
-              value={targetDatabaseUrl}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Validate URL format if provided
-                if (value) {
-                  try {
-                    // Use URL class for robust validation
-                    const testUrl = value.replace(/^postgresql:\/\//, "http://");
-                    new URL(testUrl);
-                    setTargetDatabaseUrl(value);
-                  } catch {
-                    // Invalid URL format - don't update
-                    return;
-                  }
-                } else {
-                  setTargetDatabaseUrl(value);
-                }
-              }}
-              placeholder={t("admin:backup.restore.targetDatabaseUrlPlaceholder")}
-              className="input"
-            />
-            <p className="text-sm text-(--text-muted) mt-1">
-              {t("admin:backup.restore.targetDatabaseUrlHelp")}
-            </p>
-          </div>
-
-          <div>
-            <label className="label">
-              {t("admin:backup.restore.confirmLabel", {
-                text: t("admin:backup.restore.confirmText"),
-              })}
-            </label>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              className="input"
-              placeholder={t("admin:backup.restore.confirmText")}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 justify-end">
+    <Modal
+      open
+      onClose={onClose}
+      title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
+      maxWidth={672}
+      closeLabel={t("common:buttons.cancel")}
+      footer={
+        <>
           <button onClick={onClose} className="btn-secondary">
             {t("common:buttons.cancel")}
           </button>
@@ -160,9 +82,65 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
           >
             {t("admin:backup.restore.confirmButton")}
           </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
+        >
+          <p className="font-semibold" style={{ color: "var(--danger)" }}>
+            {t("admin:backup.restore.warning")}
+          </p>
+          <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
+            {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="restore-scope">
+            {t("admin:backup.restore.scope")}
+          </label>
+          <select
+            id="restore-scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as "full" | "database" | "files")}
+            className="input"
+          >
+            <option value="full">{t("admin:backup.restore.scopeFull")}</option>
+            <option value="database">{t("admin:backup.restore.scopeDatabase")}</option>
+            <option value="files">{t("admin:backup.restore.scopeFiles")}</option>
+          </select>
+        </div>
+
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={createBackupBefore}
+            onChange={(e) => setCreateBackupBefore(e.target.checked)}
+            className="checkbox"
+          />
+          <span>{t("admin:backup.restore.createBackupBefore")}</span>
+        </label>
+
+        <div>
+          <label className="label" htmlFor="restore-confirm">
+            {t("admin:backup.restore.confirmLabel", {
+              text: t("admin:backup.restore.confirmText"),
+            })}
+          </label>
+          <input
+            id="restore-confirm"
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="input"
+            placeholder={t("admin:backup.restore.confirmText")}
+          />
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -173,6 +151,8 @@ export default function BackupManagement(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [webdavEnabled, setWebdavEnabled] = useState(false);
   const [status, setStatus] = useState<{
     running: boolean;
     currentBackup: { id: string; status: string; startedAt: string | null } | null;
@@ -227,6 +207,17 @@ export default function BackupManagement(): JSX.Element {
       .catch((err: unknown) => logger.error("Failed to load backup settings", err));
   }, []);
 
+  // Whether an upload is even possible here. Without this the retry button
+  // would sit on every row of every instance that never configured WebDAV —
+  // most of them — and answer 409 to each click. An action that can only fail
+  // is not an action.
+  useEffect(() => {
+    adminApi
+      .getWebDAVSettings()
+      .then(({ settings }) => setWebdavEnabled(settings.enabled))
+      .catch((err: unknown) => logger.error("Failed to load WebDAV settings", err));
+  }, []);
+
   const handleCreateBackup = async () => {
     try {
       setCreating(true);
@@ -278,8 +269,7 @@ export default function BackupManagement(): JSX.Element {
 
   const handleRestore = async (
     scope: "full" | "database" | "files",
-    createBackupBefore: boolean,
-    targetDatabaseUrl?: string
+    createBackupBefore: boolean
   ) => {
     if (!restoreModal) return;
 
@@ -287,7 +277,6 @@ export default function BackupManagement(): JSX.Element {
       await backupApi.restore(restoreModal.id, {
         scope,
         createBackupBefore,
-        targetDatabaseUrl,
       });
       addToast("success", t("admin:backup.toasts.restoring"));
       setRestoreModal(null);
@@ -298,6 +287,31 @@ export default function BackupManagement(): JSX.Element {
     } catch (error) {
       logger.error("Failed to restore backup:", error);
       addToast("error", t("admin:backup.toasts.restoreFailed"));
+    }
+  };
+
+  /**
+   * Retry the upload for one backup.
+   *
+   * The failure toast carries the SHARE'S OWN WORDS rather than a generic
+   * "upload failed": the two states an admin has to tell apart here —
+   * "507 Insufficient Storage" and "401 Unauthorized" — are the same sentence
+   * otherwise, and this button exists because a tester could not find out why
+   * a green connection test produced an empty Nextcloud.
+   */
+  const handleSync = async (backup: Backup) => {
+    setSyncingId(backup.id);
+    try {
+      await backupApi.syncToCloud(backup.id);
+      addToast("success", t("admin:backup.toasts.synced"));
+      loadBackups();
+    } catch (error) {
+      logger.error("Failed to sync backup to cloud:", error);
+      addToast("error", extractApiErrorMessage(error, t("admin:backup.toasts.syncFailed")));
+      // The row now carries a reason from the server — show it.
+      loadBackups();
+    } finally {
+      setSyncingId(null);
     }
   };
 
@@ -550,7 +564,20 @@ export default function BackupManagement(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.syncedToCloud ? (
-                      <span style={{ color: "var(--success)" }}>✓</span>
+                      <span
+                        style={{ color: "var(--success)" }}
+                        title={t("admin:backup.cloud.syncedAt", {
+                          date: formatDate(backup.cloudSyncAt),
+                        })}
+                      >
+                        ✓
+                      </span>
+                    ) : backup.cloudSyncError ? (
+                      // A failed upload says why. The plain "-" next to a green
+                      // connection test is what made this bug unfindable.
+                      <span style={{ color: "var(--danger)" }} title={backup.cloudSyncError}>
+                        ⚠ {t("admin:backup.cloud.failed")}
+                      </span>
                     ) : (
                       <span className="text-(--text-muted)">-</span>
                     )}
@@ -573,6 +600,18 @@ export default function BackupManagement(): JSX.Element {
                           >
                             {t("admin:backup.actions.restore")}
                           </button>
+                          {webdavEnabled && !backup.syncedToCloud && (
+                            <button
+                              onClick={() => handleSync(backup)}
+                              disabled={syncingId === backup.id}
+                              className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                              style={{ color: "var(--accent)" }}
+                            >
+                              {syncingId === backup.id
+                                ? t("admin:backup.actions.uploading")
+                                : t("admin:backup.actions.upload")}
+                            </button>
+                          )}
                         </>
                       )}
                       {backup.status !== "running" && (

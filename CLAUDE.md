@@ -149,14 +149,16 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 DATABASE_URL="postgresql://…" npm run check
 ```
 
-This list is the real gate. CI (`ci.yml`, since 2026-08-30) runs the first
-two lines of it on every push and PR — typecheck and lint in both trees, and
-Vitest — plus Prettier on changed frontend files. The backend Jest job is
-there too but **advisory** (`continue-on-error`, for three named reasons in
-the workflow's comment block), and nothing in CI runs `npm run check`. So a
-green badge covers the frontend and the static half of the backend; the
-backend suite and the repo-level checks are still yours to run. See
-**Rules** below for what is machine-enforced and what is not.
+This list is the real gate, and since 2026-09-15 CI runs almost all of it.
+`ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on changed
+frontend files, the **file-size ratchet** and the **schema-drift check** — the
+last two wired on 2026-09-15 (forgejo#60), having been runnable and unwired
+since 2026-09-01. The backend Jest job is there too but **advisory**
+(`continue-on-error`, for three named reasons in the workflow's comment
+block).
+
+So what a green badge still does NOT cover is the backend suite. That one is
+yours to run. See **Rules** below for what is machine-enforced and what is not.
 
 ## Docker & Deployment
 
@@ -517,6 +519,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
 | Every beta gate key is registered, with a reason and an un-gating condition | `frontend/src/__tests__/config/betaFeatures.test.ts` — source-scans for `isFeatureVisible("…")` |
 | `/api` answers `no-store` unless a handler opts into `private` | `backend/src/__tests__/apiNoStore.test.ts` |
+| A frontend test reaches no network, and renders no NEW `act(...)` warning | `frontend/src/__tests__/setup.ts` — the network half fails outright; the act half is a ratchet against `consoleActBaseline.json` (34 files frozen 2026-09-15). It does not fail on a stale entry, on purpose: an act warning is timing-dependent, so that half would be flaky. |
 | 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
 | A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
@@ -524,7 +527,9 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 Four of these are **ratchets** carrying a list of today's offenders — file
 size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
-shrink.
+shrink. The act ratchet is a fifth and the one exception: it fails on a new
+offender but only PRINTS on a stale entry, because the thing it measures is
+timing-dependent and a flaky guard is worse than a weak one.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
 `ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
@@ -532,16 +537,26 @@ Prettier on changed frontend files as required jobs, and the backend Jest
 suite as an advisory one — it is allowed to fail, and its comment block names
 the three things that must be fixed before that changes. `security.yml` runs
 `npm audit` on production deps, Trivy and CodeQL on every push to `main` and
-weekly. CodeQL has been red on every run since it landed — not a finding,
-a rejection: "CodeQL analyses from advanced configurations cannot be
-processed when the default setup is enabled". The repository has GitHub's
-default code-scanning setup switched on, and that refuses the SARIF our own
-job uploads. One of the two has to go (repo settings, owner's call), and
-until then the red Security badge says nothing. None of the four ratchets, `check:size` or `check:drift` run
-in CI (forgejo#60); the drift script has said so since 2026-09-01, and the
-two plan docs that called it "CI-guarded" were corrected on 2026-09-04. This
-paragraph itself claimed "only Prettier" for a week after `ci.yml` landed —
-corrected 2026-09-06.
+weekly. CodeQL is NOT in that file, on purpose: the repository has GitHub's
+default code-scanning setup switched on (since 2026-08-01), and a
+workflow-defined CodeQL job is refused by it — "CodeQL analyses from
+advanced configurations cannot be processed when the default setup is
+enabled" — which kept the Security badge red for a week for no finding at
+all. The job was removed on 2026-09-06; its comment block says what to
+switch off first if it ever comes back.
+
+`check:size` and `check:drift` DO run in CI since 2026-09-15 (forgejo#60) —
+size in the `static` job, drift in a `schema-drift` job of its own, because it
+is the only static check that needs a database. The four Jest/Vitest ratchets
+ride along with whichever suite owns them, which means the OpenAPI pair is
+still only as binding as the advisory backend job.
+
+The delay cost exactly what the ratchet exists to prevent: on 2026-09-15 a
+branch landed on main with four files grown past their frozen size, and nobody
+saw it, because nothing asked. This paragraph has a history of being wrong in
+the other direction too — it claimed "only Prettier" for a week after `ci.yml`
+landed (corrected 2026-09-06), and the two plan docs that called drift
+"CI-guarded" before it was were corrected on 2026-09-04.
 
 **One drift script, since 2026-09-01.** There were two, and they disagreed:
 `scripts/check-schema-drift.mjs` at the root replayed the migrations into a
@@ -603,13 +618,20 @@ check.
   the wild at 57 rows"). A comment restating the line below it is noise.
 - **Never document an invariant you do not test.** The OpenAPI description of
   `/stats/timeseries` claimed it grouped by "the departure airport's calendar
-  day". `utils/stats/timeseries.ts` buckets on `getUTCFullYear` /
-  `getUTCMonth` and never consults the timezone map the same route builds for
-  durations. No test could have caught it: `stats.timeseries.test.ts` stubs
-  the airport cache empty, so the zone is structurally unobservable. The claim
-  was deleted rather than left standing, and the endpoint sits on the OpenAPI
-  ratchet until it can be described truthfully. An empty spec beats a
-  confident one.
+  day" while `utils/stats/timeseries.ts` bucketed on `getUTCFullYear` /
+  `getUTCMonth` and never consulted the timezone map the same route built for
+  durations. No test could have caught it: `stats.timeseries.test.ts` stubs the
+  airport cache empty, so the zone was structurally unobservable. The claim was
+  deleted rather than left standing — an empty spec beats a confident one.
+
+  **The sentence is back, because the code caught up.** forgejo#46 made
+  `timeseriesRows.ts` resolve `airportCalendarDay(...)`, and
+  `stats.timeseriesLocalTime.test.ts` pins it with real catalogue airports, so
+  the zone is now observable. The endpoint left the OpenAPI ratchet on
+  2026-09-15 with a schema and that description. The order is the point: the
+  claim followed the test, not the other way round. This paragraph itself
+  described the old state for however long the fix had been in — corrected
+  2026-09-15, which is the same failure mode one level up.
 - **A visible change goes in the changelog, even when it is a fix.** `Fixed`
   is the largest section of 2.6.0; 2.5.1 and 2.5.2 are fix-only releases. Each
   entry is a sentence a user would recognise, then the cause — "**A backup no
@@ -666,10 +688,13 @@ Nothing at the moment. The 800-line number was the last entry and was
 ratified on 2026-09-05. Thirteen design-system decisions from the same day
 are recorded, with the owner's answer to each, in
 `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
-that table before re-opening any of them (dashboard tabs stay; `domainColors`
-stays as the beta override; tours are ONE domain colour; the parser goes into
-the beta registry; settings become one route per group; companions and tags
-extend to all four domains).
+that table before re-opening any of them (dashboard tabs stay; tours are ONE
+domain colour; the parser goes into the beta registry; settings become one
+route per group; companions and tags extend to all four domains). One of the
+thirteen has since been reversed by the owner and the table says so: no. 4,
+`domainColors`, was ruled to stay behind the beta badge on 2026-09-05 and
+ruled out from behind it on 2026-09-09, because the goal for 2.7 is that
+nothing is left in the beta registry at all.
 
 ## Version
 
@@ -725,7 +750,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (8925 symbols, 23607 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (8944 symbols, 23647 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

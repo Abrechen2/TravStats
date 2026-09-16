@@ -1,4 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import type { User } from '@prisma/client';
+import { takeUserCountLock } from '../utils/userCountLock';
 import crypto from 'crypto';
 import { prisma } from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
@@ -9,7 +11,12 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
-import { getAuthCookieOptions, getCookieSecure, issueAuthCookie } from '../utils/session';
+import {
+  getAuthCookieOptions,
+  getCookieSecure,
+  issueAuthCookie,
+  issuePasswordChangeChallenge,
+} from '../utils/session';
 
 const router = Router();
 
@@ -21,6 +28,7 @@ const DUMMY_BCRYPT_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWX
 // Re-exported here because passkeys.ts, twoFactor.ts and setup.ts import it
 // from this module.
 export { getAuthCookieOptions };
+
 
 // Register
 router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
@@ -40,28 +48,54 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
       throw new AppError('Username already exists', 400);
     }
 
-    // Check registration permissions
-    const userCount = await prisma.user.count();
-    const isFirstUser = userCount === 0;
-    const instanceSettings = await getInstanceSettings();
-    const { allowRegistration, maxUsers } = instanceSettings;
-
-    // Enforce MAX_USERS hard limit regardless of registration mode
-    if (!isFirstUser && userCount >= maxUsers) {
-      throw new AppError('User limit reached', 409);
-    }
-
-    // Validate registration is allowed
-    if (!isFirstUser && !allowRegistration && !invitationToken) {
-      throw new AppError('Registration is disabled. Please use an invitation link.', 403);
-    }
+    // Instance policy is read out here on purpose: the value that races is the
+    // user COUNT, and that is now read inside the transaction below.
+    const { allowRegistration, maxUsers } = await getInstanceSettings();
 
     // Hash password before the transaction to keep the critical section short
     const passwordHash = await hashPassword(password);
 
     // Use a serializable transaction to prevent race conditions with
     // invitation tokens (double-use) and user limit enforcement.
-    const user = await prisma.$transaction(async (tx) => {
+    //
+    // The COUNT belongs in here. It used to be read before the transaction
+    // opened, and Serializable cannot protect a read it never saw: four
+    // parallel registrations against an empty instance with maxUsers=1 each
+    // read zero, each concluded "first user", and the instance ended up with
+    // two administrators and a limit of one (audit finding AUD-004). Reading it
+    // here means two racing registrations touch the same rows and one of them
+    // loses, which is the outcome the isolation level exists to produce.
+    const runRegistration = (): Promise<{ created: User; isFirstUser: boolean }> =>
+      prisma.$transaction(async (tx) => {
+      // Serialise the decision, do not merely hope the isolation level does.
+      //
+      // Measured on 2026-09-09 against a real PostgreSQL: four registrations
+      // racing on an empty instance ALL read zero inside their own Serializable
+      // transactions, and two of them committed as admin. An isolated probe with
+      // longer-running transactions DID produce one winner and three P2034s — so
+      // the protection is real, but it depends on how the transactions happen to
+      // overlap, and "usually aborts" is not a property to hand the bootstrap
+      // administrator of an instance (audit finding AUD-004).
+      //
+      // The advisory lock makes it exact and cheap: it is held to the end of THIS
+      // transaction, so between the count and the insert no other registration
+      // can slip in. It costs one round trip on a path that runs a handful of
+      // times in an instance's whole life.
+      await takeUserCountLock(tx);
+
+      const userCount = await tx.user.count();
+      const isFirstUser = userCount === 0;
+
+      // Enforce MAX_USERS hard limit regardless of registration mode
+      if (!isFirstUser && userCount >= maxUsers) {
+        throw new AppError('User limit reached', 409);
+      }
+
+      // Validate registration is allowed
+      if (!isFirstUser && !allowRegistration && !invitationToken) {
+        throw new AppError('Registration is disabled. Please use an invitation link.', 403);
+      }
+
       // Validate invitation token if provided
       let invitedBy: string | undefined;
       let invitationEmail: string | undefined;
@@ -111,10 +145,27 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         });
       }
 
-      return created;
-    }, {
-      isolationLevel: 'Serializable',
-    });
+      return { created, isFirstUser };
+      }, {
+        isolationLevel: 'Serializable',
+      });
+
+    // A serialization conflict here is the guard WORKING — two registrations
+    // met on the same rows and one had to lose. The loser deserves the real
+    // answer ("limit reached", or a session of their own if there was room
+    // after all), not a 500, so the transaction is simply run again.
+    let outcome: { created: User; isFirstUser: boolean } | undefined;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        outcome = await runRegistration();
+        break;
+      } catch (error) {
+        const code = (error as { code?: string }).code;
+        const retryable = code === 'P2034' || code === '40001';
+        if (!retryable || attempt === 3) throw error;
+      }
+    }
+    const { created: user, isFirstUser } = outcome!;
 
     // HttpOnly cookie (XSS protection). Goes through issueAuthCookie like every
     // other session, even though a freshly registered account is active by
@@ -192,27 +243,10 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       return res.json({ requiresTwoFactor: true });
     }
 
-    // Check if user must change password before allowing login
+    // Check if user must change password before allowing login. The same
+    // question is asked again after a second factor — see issuePasswordChangeChallenge.
     if (user.mustChangePassword) {
-      const plainChangeToken = crypto.randomBytes(32).toString('hex');
-      const hashedChangeToken = crypto.createHash('sha256').update(plainChangeToken).digest('hex');
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          changeToken: hashedChangeToken,
-          changeTokenExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-        },
-      });
-
-      // Deliver changeToken via HttpOnly cookie (not response body) to prevent XSS extraction
-      res.cookie('change_token', plainChangeToken, {
-        httpOnly: true,
-        secure: getCookieSecure(req),
-        sameSite: 'strict',
-        maxAge: 10 * 60 * 1000, // 10 minutes
-        path: '/',
-      });
+      await issuePasswordChangeChallenge(req, res, user.id);
       return res.json({ requiresPasswordChange: true });
     }
 
@@ -357,11 +391,18 @@ router.post('/change-password', authenticate, authLimiter, async (req: AuthReque
     // Hash new password
     const newPasswordHash = await hashPassword(newPassword);
 
-    // Update password
-    await prisma.user.update({
+    // Update password AND close every session that predates it. A password
+    // change that leaves old cookies working is not a change anybody can rely
+    // on (audit finding AUD-003).
+    const updated = await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: newPasswordHash },
+      data: { passwordHash: newPasswordHash, sessionEpoch: { increment: 1 } },
     });
+
+    // The caller keeps theirs: they just proved the old password and are sitting
+    // in front of the app. A fresh cookie is minted AFTER the cutoff, so the
+    // revocation applies to everyone else.
+    issueAuthCookie(req, res, updated);
 
     logger.info({
       operation: 'password_changed',

@@ -1,4 +1,4 @@
-import { authenticator } from "otplib";
+import { createGuardrails, generateSync } from "otplib";
 import {
   generateSecret,
   buildOtpauthUrl,
@@ -15,7 +15,7 @@ describe("totpService", () => {
 
   it("accepts the code the algorithm currently produces", () => {
     const secret = generateSecret();
-    expect(verifyCode(secret, authenticator.generate(secret))).toBe(true);
+    expect(verifyCode(secret, generateSync({ secret }))).toBe(true);
   });
 
   it("rejects a wrong code", () => {
@@ -26,22 +26,14 @@ describe("totpService", () => {
   // A phone clock is never exactly the server's. One step either side is the
   // usual tolerance; more than that widens the window an attacker can guess in.
   //
-  // otplib takes the time from `authenticator.options.epoch`, NOT from a second
-  // argument to generate() — passing one there is silently ignored and the test
-  // would prove nothing. Setting `authenticator.options.epoch` directly does not
-  // work either: the setter MERGES into the shared singleton's options rather
-  // than replacing them, so an `epoch` written there can never be "unset" again
-  // by assigning back an object that lacks the key — it stays pinned for the
-  // rest of the process, silently judging every later `verifyCode` call in this
-  // file against a frozen clock instead of `Date.now()`. `.clone(options)`
-  // returns an independent instance with the override applied, touching nothing
-  // on `authenticator` itself, so the singleton (and its `{ window: 1 }` from
-  // totpService) stays untouched.
+  // otplib 13 takes the clock as `epoch` in SECONDS on each call — there is no
+  // shared singleton to pin any more (otplib 12 merged an epoch into one and
+  // could never unset it again, which is why this file once went through
+  // `.clone()`).
   it("accepts the previous and next step, but not two steps away", () => {
     const secret = generateSecret();
-    const now = Date.now();
-    const at = (offsetSeconds: number): string =>
-      authenticator.clone({ epoch: now + offsetSeconds * 1000 }).generate(secret);
+    const now = Math.floor(Date.now() / 1000);
+    const at = (offsetSeconds: number): string => generateSync({ secret, epoch: now + offsetSeconds });
     expect(verifyCode(secret, at(-30))).toBe(true);
     expect(verifyCode(secret, at(30))).toBe(true);
     expect(verifyCode(secret, at(-120))).toBe(false);
@@ -49,7 +41,7 @@ describe("totpService", () => {
 
   it("survives a code with spaces, which is how people copy it", () => {
     const secret = generateSecret();
-    const code = authenticator.generate(secret);
+    const code = generateSync({ secret });
     expect(verifyCode(secret, `${code.slice(0, 3)} ${code.slice(3)}`)).toBe(true);
   });
 
@@ -65,5 +57,22 @@ describe("totpService", () => {
     expect(url.startsWith("otpauth://totp/")).toBe(true);
     expect(url).toContain("issuer=TravStats");
     expect(url).toContain("alex");
+  });
+
+  // Secrets enrolled under otplib 12 are RFC 4648 base32 and must keep
+  // verifying after the 13 rewrite. RFC 6238's SHA-1 vector pins the decoder
+  // and the HMAC path: ASCII "12345678901234567890" in base32, at epoch 59.
+  // …and 12 wrote SHORT ones: 10 bytes, under 13's default 16-byte floor.
+  it("still accepts the 10-byte secrets otplib 12 enrolled", () => {
+    const legacy = "JBSWY3DPEHPK3PXP";
+    // The generator side has the same floor, so the test must lower it too;
+    // the service under test must NOT need telling.
+    const code = generateSync({ secret: legacy, guardrails: createGuardrails({ MIN_SECRET_BYTES: 10 }) });
+    expect(verifyCode(legacy, code)).toBe(true);
+  });
+
+  it("still reads an RFC 4648 base32 secret the way otplib 12 wrote it", () => {
+    const rfc6238 = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+    expect(generateSync({ secret: rfc6238, epoch: 59 })).toBe("287082");
   });
 });

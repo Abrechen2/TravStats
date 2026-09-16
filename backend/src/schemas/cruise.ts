@@ -1,5 +1,6 @@
-import { z } from 'zod';
+import { z } from './zod';
 import { currencyField } from './lodging';
+import { partialForUpdate } from "./partialUpdate";
 
 const CABIN_TYPES = ['inside', 'oceanview', 'balcony', 'suite'] as const;
 const STATUSES = ['scheduled', 'flown', 'cancelled', 'historical'] as const;
@@ -20,7 +21,14 @@ const emptyToNull = z
 // ISO string; genuinely invalid strings fall through to the strict check.
 const isoDateTime = z.preprocess(
   (v) => {
-    if (typeof v !== 'string' || v === '') return undefined;
+    // An OMITTED field and an explicit "clear this" are different requests, and
+    // collapsing both to `undefined` made the second impossible: a PATCH with
+    // `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
+    // `null` and the empty string both mean the user removed the value — an
+    // emptied input arrives as "" — so both become an explicit null, and only a
+    // genuinely absent key stays `undefined`.
+    if (v === null || v === '') return null;
+    if (typeof v !== 'string') return undefined;
     const d = new Date(v);
     return Number.isNaN(d.getTime()) ? v : d.toISOString();
   },
@@ -133,8 +141,7 @@ export const createCruiseSchema = baseCruiseSchema.refine(
   { message: 'endDate must not precede startDate', path: ['endDate'] },
 );
 
-export const updateCruiseSchema = baseCruiseSchema
-  .partial()
+export const updateCruiseSchema = partialForUpdate(baseCruiseSchema)
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
   });

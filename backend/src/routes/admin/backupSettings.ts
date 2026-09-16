@@ -4,6 +4,7 @@ import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { updateSchedule } from '../../services/backupScheduler';
 import logger from '../../utils/logger';
+import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 const backupSettingsSchema = z.object({
   backupEnabled: z.boolean().optional(),
@@ -15,7 +16,7 @@ const router = Router();
 
 router.get('/backup-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const adminSettings = await prisma.adminSettings.findFirst();
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       backupEnabled: adminSettings?.backupEnabled ?? false,
       backupInterval: adminSettings?.backupInterval ?? 'weekly',
@@ -30,7 +31,7 @@ router.put('/backup-settings', async (req: AuthRequest, res: Response, next: Nex
   try {
     const { backupEnabled, backupInterval, backupRetentionDays } = backupSettingsSchema.parse(req.body);
 
-    let adminSettings = await prisma.adminSettings.findFirst();
+    let adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const updateData: {
       backupEnabled?: boolean;
@@ -42,22 +43,10 @@ router.put('/backup-settings', async (req: AuthRequest, res: Response, next: Nex
     if (backupInterval !== undefined) updateData.backupInterval = backupInterval;
     if (backupRetentionDays !== undefined) updateData.backupRetentionDays = backupRetentionDays;
 
-    if (adminSettings) {
-      adminSettings = await prisma.adminSettings.update({
-        where: { id: adminSettings.id },
-        data: updateData,
-      });
-    } else {
-      adminSettings = await prisma.adminSettings.create({
-        data: {
-          allowUserApiKeys: true,
-          allowUserFlightApiKeys: true,
-          defaultVisionParser: 'auto',
-          defaultTextParser: 'auto',
-          ...updateData,
-        },
-      });
-    }
+    adminSettings = await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: updateData,
+    });
 
     await updateSchedule();
 

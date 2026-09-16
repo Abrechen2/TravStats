@@ -86,14 +86,27 @@ export function useDialogChrome({ open, onClose, panelRef, busy = false }: Optio
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
-      const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (items.length === 0) return;
+      const panel = panelRef.current;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      // Three cases the first trap let through, each measured as Tab walking
+      // out into the page behind (AUD-037, ported from main's Modal): nothing
+      // focusable inside, focus already outside the panel, and Shift+Tab from
+      // the panel itself — which holds focus right after the dialog opens.
+      if (items.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      const active = document.activeElement;
+      const outside = !(active instanceof Node) || !panel.contains(active);
+      if (event.shiftKey) {
+        if (outside || active === first || active === panel) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (outside || active === last) {
         event.preventDefault();
         first.focus();
       }

@@ -52,10 +52,10 @@ registry.registerPath({
             travstatsVersion: z.string(),
             schemaVersion: z.string(),
             redacted: z.array(z.string()),
-            flights: z.array(z.record(z.unknown())),
-            trips: z.array(z.record(z.unknown())),
+            flights: z.array(z.record(z.string(), z.unknown())),
+            trips: z.array(z.record(z.string(), z.unknown())),
             recentErrors: z.array(z.unknown()),
-            filters: z.record(z.unknown()),
+            filters: z.record(z.string(), z.unknown()),
             counts: z.object({
               flights: z.number().int(),
               trips: z.number().int(),

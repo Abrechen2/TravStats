@@ -7,7 +7,11 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "../db";
-import { backfillRouteDistance } from "../../scripts/backfillRouteDistance";
+// `../scripts/`, not `../../scripts/`: c1df7528 moved the script into `src/`
+// so it compiles into the image, and this import kept pointing at the old
+// location — the suite has failed to even load since. The backend Jest job is
+// advisory in CI, so nothing went red.
+import { backfillRouteDistance } from "../scripts/backfillRouteDistance";
 
 describe("backfillRouteDistance", () => {
   let userId: string;

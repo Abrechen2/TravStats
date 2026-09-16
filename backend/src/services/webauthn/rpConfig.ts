@@ -59,6 +59,7 @@ export function isValidRpId(rpId: string): boolean {
  */
 export async function resolveRpConfig(): Promise<RpConfig | null> {
   const row = await prisma.adminSettings.findFirst({
+    orderBy: { id: "asc" },
     select: {
       webauthnRpId: true,
       webauthnOrigins: true,

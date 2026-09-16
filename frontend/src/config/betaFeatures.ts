@@ -4,8 +4,19 @@
  * The gate itself is a single boolean on the AdminSettings row
  * (`betaFeaturesEnabled`), flipped by an admin via
  * `PUT /api/v1/admin/instance-settings` and read back — read-only — by every
- * logged-in user from `GET /api/v1/settings`. It is ON on the RC/Beta servers
- * and OFF on production.
+ * logged-in user from `GET /api/v1/settings`. A fresh install has it OFF, which
+ * is what makes this registry worth keeping.
+ *
+ * It is ON on the RC and Beta servers AND on the owner's own production
+ * instance — measured on all three on 2026-09-09, and deliberate: the owner
+ * runs his own instance with everything switched on. This file said "OFF on
+ * production" until then, which had stopped being true on 2026-09-05 when a
+ * dump from the RC carried the flag across.
+ *
+ * The consequence is worth stating once, because it is easy to be surprised by
+ * it: putting a feature BACK behind this gate — as happened on 2026-09-05 with
+ * tours, Companion pairing and Dawarich — changes nothing on an instance whose
+ * flag is on. It protects everybody else's install, not the owner's.
  *
  * Why a registry instead of scattered `if (betaEnabled)` checks: a bare
  * boolean sprinkled across the codebase decays. Six months from now nobody
@@ -82,28 +93,6 @@ export const BETA_FEATURES = Object.freeze({
     why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. Only the LLM parser (Ollama) is fully tested; the template and regex parsers this page manages are experimental.",
     returnsWhen:
       "The template and regex parsers are tested against the sample set under test-samples/ and the owner accepts the page for release.",
-  }),
-
-  /**
-   * User-chosen colour per domain, applied to every surface outside the map.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
-   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
-   * everyone gets the brand set from BRAND.md §3, so an instance that turns
-   * the flag back off does not keep rendering colours nobody can reach a
-   * control for.
-   *
-   * The open question it is waiting on is not technical. BRAND.md §3 names the
-   * four hexes as canonical and the backend mirrors the same table; letting a
-   * user override them turns a brand constant into a default, which affects
-   * screenshots, the wiki and the marketing site as much as the app.
-   */
-  domainColors: Object.freeze({
-    reason: "advanced",
-    why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
-    returnsWhen:
-      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
-    issue: "#270",
   }),
 
   /**
