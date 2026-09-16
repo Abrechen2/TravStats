@@ -147,6 +147,12 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 # Repo-level checks (file-size ratchet + Prisma schema drift).
 # check:drift needs a reachable Postgres and does not read backend/.env.
 DATABASE_URL="postgresql://…" npm run check
+
+# Coverage ratchet — after a run with coverage and the json-summary reporter
+# (`npx vitest --run --coverage --coverage.reporter=json-summary`,
+#  `npx jest --forceExit --coverage --coverageReporters=json-summary`).
+npm run check:coverage -- frontend
+npm run check:coverage -- backend
 ```
 
 This list is the real gate, and since 2026-09-15 CI runs almost all of it.
@@ -514,6 +520,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Frontend formatting | `prettier --check` on changed files (`.github/workflows/ci.yml`) plus a `prettier --write` pre-commit hook |
 | DE and EN move together | `frontend/src/i18n/__tests__/localeKeyParity.test.ts` — reads the namespace list from the filesystem, so a new namespace is covered the day it is added, and keeps no allow-list |
 | No source file over 800 lines | `scripts/check-file-size.mjs` (`npm run check:size`) |
+| Coverage does not fall below its recorded figure | `scripts/check-coverage.mjs` vs `scripts/coverage-baseline.json` — required in the Vitest job, advisory in the Jest job. Recorded 2026-09-16: frontend 56.21 % lines, backend 76.35 % (forgejo#62) |
 | `schema.prisma` agrees with `prisma/migrations` | `backend/scripts/check-schema-drift.ts` (`npm run check:drift`, root or backend) — replays the migrations into a shadow DB (`--from-migrations`), so the answer does not depend on which branch your dev database last saw |
 | Every served endpoint appears in the OpenAPI spec | `backend/src/__tests__/openapi.coverage.test.ts` vs `services/openapi/pending.ts` |
 | Every documented 200 carries a JSON schema | `backend/src/__tests__/openapi.responseSchema.test.ts` vs `openapi.responseSchema.baseline.json` |
@@ -529,7 +536,12 @@ size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
 shrink. The act ratchet is a fifth and the one exception: it fails on a new
 offender but only PRINTS on a stale entry, because the thing it measures is
-timing-dependent and a flaky guard is worse than a weak one.
+timing-dependent and a flaky guard is worse than a weak one. The coverage
+ratchet is a sixth and holds a number rather than a list: a fall of more than
+0.25 pp fails, a rise only prints a request to `--update`, and `--update`
+refuses to lower. The frontend figure counts EVERY source file
+(`coverage.include`); without that, v8 left the 93 untested modules out of the
+denominator and reported 65.81 % instead of 56.21 %.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
 `ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
@@ -680,7 +692,11 @@ from it, so the divergence is recorded here.
 - **"TDD is MANDATORY, write the test first"** — replaced by the weaker, truer
   rule above: every behaviour change ships with a test that fails without it.
   Order is not the point.
-- **80% minimum coverage** — not measured here, so not claimed.
+- **80% minimum coverage** — measured since 2026-09-16 (forgejo#62), and it is
+  not 80: backend 76 % lines, frontend 56 %. The floor is the ratchet at the
+  real figure, not a target — a fixed 80 would reward tests written to move a
+  number. Both configs' old hard thresholds (50 and 30/20/20, never checked
+  against a run) were removed in the same change.
 
 ### Open — do not settle these in passing
 

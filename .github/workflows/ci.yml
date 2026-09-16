@@ -175,8 +175,20 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
+      # Coverage rides along with the same run (forgejo#62). `reportOnFailure`
+      # so a red run still publishes its figure; the step is red either way.
       - name: Vitest
-        run: cd frontend && npx vitest --run
+        run: >-
+          cd frontend && npx vitest --run --coverage
+          --coverage.reporter=json-summary --coverage.reporter=text-summary
+          --coverage.reportOnFailure
+
+      # Not below scripts/coverage-baseline.json, and the figure goes to the
+      # job summary. Runs after a red Vitest too, so the number is never
+      # missing from a failed run — but it cannot turn that run green.
+      - name: Coverage ratchet
+        if: success() || failure()
+        run: node scripts/check-coverage.mjs frontend
 
   # ---------------------------------------------------------------------
   # ADVISORY — DO NOT MARK REQUIRED YET.
@@ -305,7 +317,17 @@ jobs:
 
       - name: Jest
         id: jest
-        run: cd backend && npx jest --ci --forceExit
+        run: >-
+          cd backend && npx jest --ci --forceExit --coverage
+          --coverageReporters=json-summary --coverageReporters=text-summary
+
+      # Advisory like the job it sits in. The baseline was recorded from a
+      # green local run; if the first CI figure differs by more than the
+      # tolerance for an environment reason (a test that skips here), record
+      # CI's figure rather than widening the tolerance.
+      - name: Coverage ratchet
+        if: steps.jest.outcome == 'success'
+        run: node scripts/check-coverage.mjs backend
 
       # Without this, `continue-on-error` above would render a failing run
       # as a green tick and the whole job would become decoration.
