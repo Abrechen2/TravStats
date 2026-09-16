@@ -14,7 +14,8 @@ vi.mock("../../lib/api", () => ({
 
 // Mirrors the real matcher: newest entry that is not in the future.
 const ENTRY = { version: "2.3.0", highlights: [{ icon: "X", titleKey: "a", bodyKey: "b" }] };
-vi.mock("../../content/whatsNew", () => ({
+vi.mock("../../content/whatsNew", async (importActual) => ({
+  compareVersions: (await importActual<typeof import("../../content/whatsNew")>()).compareVersions,
   findEntryForVersion: (v: string) => {
     const [maj, min] = v.split(".").map(Number);
     return maj > 2 || (maj === 2 && min >= 3) ? ENTRY : undefined;
@@ -65,6 +66,30 @@ describe("useWhatsNew", () => {
     expect(result.current.entry?.version).toBe("2.3.0");
   });
 
+  /**
+   * A NEW account is stamped server-side with the RUNNING version
+   * (`services/whatsNewStamp.ts`: "nothing is new to an account created a
+   * moment ago"), while a dismissal stores the ENTRY's version. On a patch past
+   * the entry the two differ — 2.6.3 against 2.6.0 — and an exact comparison
+   * showed "Neu in TravStats 2.6.0" to every account created on 2.6.1 or later.
+   * Found by the auth-ladder E2E spec, whose freshly created user met the modal
+   * over the settings page.
+   */
+  it("stays hidden for a fresh account stamped with a later running version", async () => {
+    mocks.getVersion.mockResolvedValue({ version: "2.3.1" });
+    mocks.getSettings.mockResolvedValue({ whatsNewSeenVersion: "2.3.1" });
+    const { result } = renderHook(() => useWhatsNew(true));
+    await waitFor(() => expect(mocks.getSettings).toHaveBeenCalled());
+    expect(result.current.shouldShow).toBe(false);
+  });
+
+  it("still shows when the seen version is OLDER than the entry", async () => {
+    mocks.getVersion.mockResolvedValue({ version: "2.3.1" });
+    mocks.getSettings.mockResolvedValue({ whatsNewSeenVersion: "2.2.9" });
+    const { result } = renderHook(() => useWhatsNew(true));
+    await waitFor(() => expect(result.current.shouldShow).toBe(true));
+  });
+
   it("hides when no entry exists for the running version", async () => {
     mocks.getVersion.mockResolvedValue({ version: "2.2.2" });
     const { result } = renderHook(() => useWhatsNew(true));
@@ -82,7 +107,9 @@ describe("useWhatsNew", () => {
   it("dismiss persists the version and hides the modal", async () => {
     const { result } = renderHook(() => useWhatsNew(true));
     await waitFor(() => expect(result.current.shouldShow).toBe(true));
-    await act(async () => { await result.current.dismiss(); });
+    await act(async () => {
+      await result.current.dismiss();
+    });
     expect(mocks.updateSettings).toHaveBeenCalledWith({ whatsNewSeenVersion: "2.3.0" });
     expect(result.current.shouldShow).toBe(false);
   });
@@ -91,7 +118,9 @@ describe("useWhatsNew", () => {
     mocks.updateSettings.mockRejectedValue(new Error("network"));
     const { result } = renderHook(() => useWhatsNew(true));
     await waitFor(() => expect(result.current.shouldShow).toBe(true));
-    await act(async () => { await result.current.dismiss(); });
+    await act(async () => {
+      await result.current.dismiss();
+    });
     expect(result.current.shouldShow).toBe(false);
   });
 
