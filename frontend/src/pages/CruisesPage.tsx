@@ -28,6 +28,7 @@ import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey } from "../components/Cruise/sortCruises";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { useTableHints } from "../components/ui/useTableHints";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -81,6 +82,7 @@ const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortKey>> 
 
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation(["cruise", "common", "settings"]);
+  const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -404,12 +406,7 @@ export default function CruisesPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <Table
-              columns={visibleColumns}
-              label={t("list.title")}
-              hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
-              scrollHint={t("common:table.scrollHint")}
-            >
+            <Table columns={visibleColumns} label={t("list.title")} {...tableHints}>
               {sorted.map((c) => (
                 <CruiseRow
                   key={c.id}

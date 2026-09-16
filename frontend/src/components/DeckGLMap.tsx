@@ -836,14 +836,9 @@ export function DeckGLMap({
         )}
       </MapGL>
 
-      {/* Consolidated map control panel — same design + kit as the globe.
-          Layers (place names / relief) + appearance (route + airport
-          marker colour / width / size), so the port/airport look is
-          adjustable from the individual tab views too. */}
-      {/* `ts-map-panel-dock` (theme/ui.css) lifts the panel above the map
-          credit on a phone, where MapLibre's attribution bar runs along the
-          whole bottom edge and the collapsed panel sat on "© CARTO,
-          © OpenStreetMap" (CT106 audit B02). */}
+      {/* Consolidated map control panel — same design + kit as the globe:
+          layers + appearance, adjustable from the tab views too. Docked
+          above the map credit on phones — `ts-map-panel-dock` (B02). */}
       <div className="ts-map-panel-dock absolute left-4 z-20" style={{ pointerEvents: "auto" }}>
         <FlatMapControlPanel
           showPlaceLabels={showPlaceLabels}

@@ -36,6 +36,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { useTableHints } from "../components/ui/useTableHints";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -83,6 +84,7 @@ function columnLabel(t: Translate, id: LodgingColumnId): string {
 
 export default function LodgingListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common", "settings", "import"]);
+  const tableHints = useTableHints();
   const navigate = useNavigate();
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
@@ -467,12 +469,7 @@ export default function LodgingListPage(): JSX.Element {
               </div>
             ) : (
               <>
-                <Table
-                  columns={visibleColumns}
-                  label={t("lodging:list.title")}
-                  hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
-                  scrollHint={t("common:table.scrollHint")}
-                >
+                <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
                   {filtered.map((l) => (
                     <LodgingRow
                       key={l.id}

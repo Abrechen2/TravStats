@@ -606,7 +606,6 @@ export default function AdvancedStatsPage(): JSX.Element {
           visibility={sections}
         />
 
-        {/* No horizontal padding here: AppShell draws the gutter (B05). */}
         <div className="py-6 sm:py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
           {effectiveFilter === "all" && (

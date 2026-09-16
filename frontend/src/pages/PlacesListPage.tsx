@@ -37,6 +37,7 @@ import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { formatIsoDate } from "../lib/dateUtils";
+import { useTableHints } from "../components/ui/useTableHints";
 
 type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
@@ -132,6 +133,7 @@ function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: T
 
 export default function PlacesListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
+  const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const access = usePlacesAccess();
@@ -514,12 +516,7 @@ export default function PlacesListPage(): JSX.Element {
               />
             </div>
           ) : (
-            <Table
-              columns={visibleColumns}
-              label={t("places:list.title")}
-              hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
-              scrollHint={t("common:table.scrollHint")}
-            >
+            <Table columns={visibleColumns} label={t("places:list.title")} {...tableHints}>
               {filtered.map((p) => (
                 <PlaceRow
                   key={p.id}

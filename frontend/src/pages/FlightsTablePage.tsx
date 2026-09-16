@@ -49,6 +49,7 @@ import {
   flightColumnLabel,
   type FlightStatusFilter,
 } from "../components/flightsTable/flightColumns";
+import { useTableHints } from "../components/ui/useTableHints";
 
 // Trips moved to their own /trips top-level page (Phase-1 redesign).
 // This page now focuses purely on the flight table; the trip badge in
@@ -63,6 +64,7 @@ export default function FlightsTablePage(): JSX.Element {
     "specialFlights",
     "settings",
   ]);
+  const tableHints = useTableHints();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
@@ -662,12 +664,7 @@ export default function FlightsTablePage(): JSX.Element {
                 />
               </div>
             ) : (
-              <Table
-                columns={visibleColumns}
-                label={t("flights:table.title")}
-                hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
-                scrollHint={t("common:table.scrollHint")}
-              >
+              <Table columns={visibleColumns} label={t("flights:table.title")} {...tableHints}>
                 {displayedFlights.map((flight) => (
                   <FlightRow
                     key={flight.id}
