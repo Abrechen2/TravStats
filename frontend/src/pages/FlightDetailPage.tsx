@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import type { JSX, ReactNode } from "react";
+import type { JSX } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
+import DetailSection from "../components/ui/DetailSection";
+import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
+import { resolveAirlineIata } from "../lib/airlineUtils";
+import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
 import Button from "../components/ui/Button";
-import RouteCell from "../components/flightsTable/RouteCell";
-import TimeCell from "../components/flightsTable/TimeCell";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
@@ -41,44 +43,6 @@ import type { Flight, FlightInput, Trip } from "../types";
  * labelled cards. Editing still happens in the modal; it is opened from here
  * rather than instead of here.
  */
-
-function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="shrink-0">{label}</dt>
-      <dd className="text-right text-[var(--text-primary)]">{children}</dd>
-    </div>
-  );
-}
-
-/** A card renders only when it has something to say. */
-function Card({
-  title,
-  fields,
-}: {
-  title: string;
-  fields: ReadonlyArray<{ label: string; value: string | null | undefined }>;
-}): JSX.Element | null {
-  const filled = fields.filter((f) => f.value !== null && f.value !== undefined && f.value !== "");
-  if (filled.length === 0) return null;
-  return (
-    <div
-      className="rounded-md p-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-        {title}
-      </h3>
-      <dl className="mt-2 space-y-1 text-xs" style={{ color: "var(--text-muted)" }}>
-        {filled.map((f) => (
-          <Field key={f.label} label={f.label}>
-            {f.value}
-          </Field>
-        ))}
-      </dl>
-    </div>
-  );
-}
 
 export default function FlightDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -193,25 +157,47 @@ export default function FlightDetailPage(): JSX.Element {
       ? null
       : formatAmount(value, flight.currency, { language: i18n.language });
   const people = [...(flight.companions ?? []), ...(flight.coPassengers ?? [])];
+  const distance =
+    flight.routeDistance != null
+      ? `${Math.round(convertDistance(flight.routeDistance, distanceUnit)).toLocaleString(
+          i18n.language
+        )} ${getDistanceLabel(distanceUnit, t)}`
+      : null;
+  /** A time in prose and a detail grid: DD.MM.YYYY, HH:MM on the airport's clock (E7). */
+  const when = (iso: string | null | undefined, tz: string | null | undefined): string | null =>
+    iso ? formatDateTimeInTimezone(iso, tz || "UTC", flight.depTimeSemantics) : null;
 
   return (
     <AppShell width="list">
       <DetailHeader
         backTo="/flights"
-        backLabel={t("flights:table.title")}
+        backLabel={t("flights:detail.backToLogbook")}
         domain="flight"
-        icon="✈"
+        icon={
+          <span style={{ fontFamily: "var(--ts-font-mono)", fontSize: 15, fontWeight: 800 }}>
+            {resolveAirlineIata(flight) || "✈"}
+          </span>
+        }
         title={
-          [flight.airline, flight.flightNumber].filter(Boolean).join(" ") ||
+          [flight.flightNumber, flight.airline].filter(Boolean).join(" · ") ||
           t("common:labels.unknown")
         }
-        subtitle={<RouteCell flight={flight} />}
         status={
           <>
             {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
             <FlightStatusCell flight={flight} />
           </>
         }
+        meta={[
+          flight.departureTime
+            ? formatDateInTimezone(flight.departureTime, flight.depTimezone || "UTC")
+            : null,
+          flight.aircraft,
+          flight.aircraftRegistration,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        hero={<FlightRouteHero flight={flight} distance={distance} />}
         actions={
           <>
             <Button
@@ -219,104 +205,64 @@ export default function FlightDetailPage(): JSX.Element {
             >
               {t("common:buttons.edit")}
             </Button>
-            <Button onClick={() => setConfirmingDelete(true)}>{t("common:buttons.delete")}</Button>
+            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+              {t("common:buttons.delete")}
+            </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div className="space-y-3 md:col-span-3">
-          <div
-            className="rounded-md p-4"
-            style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t("flights:detail.times")}
-            </h3>
-            <div className="mt-3 text-sm">
-              <TimeCell flight={flight} />
-            </div>
-            <dl className="mt-3 space-y-1 text-xs" style={{ color: "var(--text-muted)" }}>
-              <Field label={t("flights:table.flightTime")}>
-                {formatDurationWithEstimate(
-                  duration?.minutes ?? null,
-                  duration?.estimated ?? false
-                )}
-              </Field>
-            </dl>
-          </div>
-
-          <Card
-            title={t("flights:detail.booking")}
-            fields={[
-              { label: t("flights:form.bookingReference"), value: flight.bookingReference },
-              { label: t("flights:form.ticketNumber"), value: flight.ticketNumber },
-              { label: t("flights:form.seat"), value: flight.seatNumber },
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="flex flex-col gap-6 md:col-span-3">
+          <DetailSection
+            title={t("flights:detail.times")}
+            facts={[
               {
-                label: t("flights:form.seatClass"),
-                value: flight.seatClass
-                  ? t(`flights:seatClass.${flight.seatClass}`, {
-                      defaultValue: flight.seatClass,
-                    })
-                  : null,
+                label: t("flights:detail.departurePlanned"),
+                value: when(flight.departureTime, flight.depTimezone),
+                mono: true,
               },
-              { label: t("flights:form.bookingClassLetter"), value: flight.bookingClassLetter },
-              { label: t("flights:form.boardingGroup"), value: flight.boardingGroup },
-              { label: t("flights:form.terminal"), value: flight.terminal },
-              { label: t("flights:form.gate"), value: flight.gate },
-              { label: t("flights:form.baggageAllowance"), value: flight.baggageAllowance },
               {
-                label: t("flights:form.frequentFlyerNumber"),
-                value: flight.frequentFlyerNumber,
+                label: t("flights:detail.departureActual"),
+                value: when(flight.actualDeparture, flight.depTimezone),
+                mono: true,
+              },
+              {
+                label: t("flights:detail.arrivalPlanned"),
+                value: when(flight.arrivalTime, flight.arrTimezone),
+                mono: true,
+              },
+              {
+                label: t("flights:detail.arrivalActual"),
+                value: when(flight.actualArrival, flight.arrTimezone),
+                mono: true,
+              },
+              {
+                label: t("flights:detail.flightTime"),
+                value: duration
+                  ? formatDurationWithEstimate(duration.minutes, duration.estimated)
+                  : null,
+                mono: true,
+              },
+              {
+                label: t("flights:detail.timezones"),
+                value:
+                  flight.depTimezone && flight.arrTimezone
+                    ? `${flight.depTimezone} → ${flight.arrTimezone}`
+                    : null,
               },
             ]}
           />
 
-          <Card
-            title={t("flights:detail.costs")}
-            fields={[
-              { label: t("flights:form.price"), value: money(flight.price) },
-              { label: t("flights:form.taxes"), value: money(flight.taxes) },
-              { label: t("flights:form.fees"), value: money(flight.fees) },
+          <DetailSection
+            title={t("flights:detail.route")}
+            facts={[
+              { label: t("flights:detail.distance"), value: distance, mono: true },
               {
                 label: t("flights:form.category"),
                 value: flight.category
-                  ? t(`flights:category.${flight.category}`, {
-                      defaultValue: flight.category,
-                    })
+                  ? t(`flights:category.${flight.category}`, { defaultValue: flight.category })
                   : null,
-              },
-            ]}
-          />
-        </div>
-
-        <aside className="space-y-3 md:col-span-2">
-          <Card
-            title={t("flights:form.aircraft")}
-            fields={[
-              { label: t("flights:form.aircraft"), value: flight.aircraft },
-              {
-                label: t("flights:detail.registration"),
-                value: flight.aircraftRegistration,
-              },
-              { label: t("flights:form.operatingAirline"), value: flight.operatingAirline },
-            ]}
-          />
-
-          <Card
-            title={t("flights:detail.route")}
-            fields={[
-              {
-                label: t("flights:detail.distance"),
-                value:
-                  flight.routeDistance != null
-                    ? `${Math.round(
-                        convertDistance(flight.routeDistance, distanceUnit)
-                      ).toLocaleString()} ${getDistanceLabel(distanceUnit, t)}`
-                    : null,
               },
               {
                 label: t("flights:detail.overflownCountries"),
@@ -328,27 +274,82 @@ export default function FlightDetailPage(): JSX.Element {
             ]}
           />
 
+          <DetailSection
+            title={t("flights:detail.booking")}
+            facts={[
+              {
+                label: t("flights:form.bookingReference"),
+                value: flight.bookingReference,
+                mono: true,
+              },
+              { label: t("flights:form.ticketNumber"), value: flight.ticketNumber, mono: true },
+              { label: t("flights:form.seat"), value: flight.seatNumber, mono: true },
+              {
+                label: t("flights:form.seatClass"),
+                value: flight.seatClass
+                  ? t(`flights:seatClass.${flight.seatClass}`, { defaultValue: flight.seatClass })
+                  : null,
+              },
+              {
+                label: t("flights:form.bookingClassLetter"),
+                value: flight.bookingClassLetter,
+                mono: true,
+              },
+              { label: t("flights:form.boardingGroup"), value: flight.boardingGroup },
+              { label: t("flights:form.terminal"), value: flight.terminal },
+              { label: t("flights:form.gate"), value: flight.gate, mono: true },
+              { label: t("flights:form.baggageAllowance"), value: flight.baggageAllowance },
+              {
+                label: t("flights:form.frequentFlyerNumber"),
+                value: flight.frequentFlyerNumber,
+                mono: true,
+              },
+            ]}
+          />
+
+          <DetailSection
+            title={t("flights:detail.costs")}
+            facts={[
+              { label: t("flights:form.price"), value: money(flight.price), mono: true },
+              { label: t("flights:form.taxes"), value: money(flight.taxes), mono: true },
+              { label: t("flights:form.fees"), value: money(flight.fees), mono: true },
+            ]}
+          />
+        </div>
+
+        <aside className="flex flex-col gap-6 md:col-span-2">
           {flight.tripId && (
-            <div
-              className="rounded-md p-4"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t("trips:tab")}</h3>
+            <DetailSection title={t("trips:tab")}>
               <Link
                 to={`/trips/${flight.tripId}`}
-                className="mt-2 inline-block text-sm text-[var(--accent)] hover:underline"
+                className="flex items-center justify-between gap-3 text-sm"
               >
-                {trip?.name ?? t("flights:detail.openTrip")}
+                <span style={{ fontWeight: 600, color: "var(--ts-text-bright)" }}>
+                  {trip?.name ?? t("flights:detail.openTrip")}
+                </span>
+                <span style={{ color: "var(--ts-accent)", fontWeight: 600 }}>
+                  {t("flights:detail.openTrip")}
+                </span>
               </Link>
-            </div>
+            </DetailSection>
           )}
 
-          <Card
+          <DetailSection
+            title={t("flights:form.aircraft")}
+            facts={[
+              { label: t("flights:form.aircraft"), value: flight.aircraft },
+              {
+                label: t("flights:detail.registration"),
+                value: flight.aircraftRegistration,
+                mono: true,
+              },
+              { label: t("flights:form.operatingAirline"), value: flight.operatingAirline },
+            ]}
+          />
+
+          <DetailSection
             title={t("flights:form.companions")}
-            fields={[
+            facts={[
               {
                 label: t("flights:form.companions"),
                 value: people.length > 0 ? people.join(", ") : null,
@@ -357,20 +358,11 @@ export default function FlightDetailPage(): JSX.Element {
           />
 
           {flight.notes && (
-            <div
-              className="rounded-md p-4"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                {t("common:labels.notes")}
-              </h3>
-              <p className="mt-2 whitespace-pre-line text-xs text-[var(--text-muted)]">
+            <DetailSection title={t("common:labels.notes")}>
+              <p className="whitespace-pre-line text-sm" style={{ color: "var(--ts-text)" }}>
                 {flight.notes}
               </p>
-            </div>
+            </DetailSection>
           )}
         </aside>
       </div>

@@ -25,6 +25,13 @@ interface DetailHeaderProps {
   facts?: ReactNode[];
   /** The entry's own actions. Two is the norm, three the maximum. */
   actions?: ReactNode;
+  /** One muted line of facts under the subtitle: a date, a type, a code. */
+  meta?: ReactNode;
+  /**
+   * The entry at a glance, under a hairline inside the same card — a
+   * flight's route strip. Round 4 (E6) calls it the Kennzahlen-Streifen.
+   */
+  hero?: ReactNode;
 }
 
 const factStyle: CSSProperties = {
@@ -72,6 +79,8 @@ export default function DetailHeader({
   status,
   facts,
   actions,
+  meta,
+  hero,
 }: DetailHeaderProps): JSX.Element {
   const hue = token(DOMAIN_TOKEN[domain]);
 
@@ -98,56 +107,75 @@ export default function DetailHeader({
       </Link>
 
       <div
-        className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+        className="flex flex-col"
         style={{
+          gap: "var(--ts-space-lg)",
           background: "var(--ts-surface)",
           border: "1px solid var(--ts-border)",
           borderRadius: "var(--ts-radius-card)",
           padding: "var(--ts-space-lg)",
         }}
       >
-        <div className="flex min-w-0 items-start" style={{ gap: "var(--ts-space-lg)" }}>
-          <span
-            aria-hidden
-            className="flex items-center justify-center"
-            style={{
-              flexShrink: 0,
-              width: 48,
-              height: 48,
-              borderRadius: "var(--ts-radius-tile)",
-              background: alpha(hue, 12),
-              color: hue,
-              fontSize: 22,
-              lineHeight: 1,
-            }}
-          >
-            {icon}
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-screen-title">{title}</h1>
-            {subtitle ? (
-              <div
-                style={{ marginTop: 2, fontSize: 14, color: "var(--ts-muted)" }}
-                className="flex flex-col gap-0.5"
-              >
-                {subtitle}
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex min-w-0 items-start" style={{ gap: "var(--ts-space-lg)" }}>
+            <span
+              aria-hidden
+              className="flex items-center justify-center"
+              style={{
+                flexShrink: 0,
+                width: 48,
+                height: 48,
+                borderRadius: "var(--ts-radius-tile)",
+                background: alpha(hue, 12),
+                color: hue,
+                fontSize: 22,
+                lineHeight: 1,
+              }}
+            >
+              {icon}
+            </span>
+            <div className="min-w-0">
+              {/* The status beside the title, as round 4 draws the head: what
+                this is and what state it is in are read together. */}
+              <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+                <h1 className="t-screen-title">{title}</h1>
+                {status}
               </div>
-            ) : null}
+              {subtitle ? (
+                <div
+                  style={{ marginTop: 2, fontSize: 14, color: "var(--ts-muted)" }}
+                  className="flex flex-col gap-0.5"
+                >
+                  {subtitle}
+                </div>
+              ) : null}
+              {meta ? (
+                <div className="t-caption" style={{ marginTop: 4 }}>
+                  {meta}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className="flex flex-wrap items-center md:justify-end"
+            style={{ gap: "var(--ts-space-sm)" }}
+          >
+            {facts?.map((fact, index) => (
+              <span key={index} style={factStyle}>
+                {fact}
+              </span>
+            ))}
+            {actions}
           </div>
         </div>
-
-        <div
-          className="flex flex-wrap items-center md:justify-end"
-          style={{ gap: "var(--ts-space-sm)" }}
-        >
-          {facts?.map((fact, index) => (
-            <span key={index} style={factStyle}>
-              {fact}
-            </span>
-          ))}
-          {status}
-          {actions}
-        </div>
+        {hero ? (
+          <div
+            style={{ borderTop: "1px solid var(--ts-border)", paddingTop: "var(--ts-space-lg)" }}
+          >
+            {hero}
+          </div>
+        ) : null}
       </div>
     </div>
   );
