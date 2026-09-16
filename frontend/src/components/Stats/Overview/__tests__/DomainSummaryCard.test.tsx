@@ -12,6 +12,19 @@ const render = (ui: ReactElement): ReturnType<typeof rtlRender> =>
 const cruiseStats: DomainStats = {
   domain: "cruise",
   hasData: true,
+  summaryByYear: {
+    2023: {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.cruiseNights", value: 21 },
+        { labelKey: "overviewCard.kpi.seaDays", value: 9 },
+        { labelKey: "overviewCard.kpi.ports", value: 11 },
+      ],
+      topItems: {
+        titleKey: "overviewCard.topItems.cruiseLines",
+        items: [{ label: "TUI", value: 4 }],
+      },
+    },
+  },
   totalEvents: 12,
   totalDistanceKm: 28_400,
   countries: ["IT", "ES", "FR"],
@@ -178,5 +191,40 @@ describe("DomainSummaryCard", () => {
       />
     );
     expect(screen.getByText(/yearFilter\.vs/)).toBeInTheDocument();
+  });
+
+  // CT106 audit B03: "Scope: 2005 · 1 flight" over the lifetime distance.
+  describe("under a selected year", () => {
+    const renderYear = (year: number): void => {
+      render(
+        <DomainSummaryCard
+          domain="cruise"
+          stats={cruiseStats}
+          selectedYear={year}
+          compareYear={null}
+          compareEnabled={false}
+        />
+      );
+    };
+
+    it("shows that year's figures and top items, not the lifetime ones", () => {
+      renderYear(2023);
+      expect(screen.getByText("21")).toBeInTheDocument();
+      expect(screen.getByText("9")).toBeInTheDocument();
+      expect(screen.getByText("TUI")).toBeInTheDocument();
+      expect(screen.queryByText("28,400 stats:overviewCard.unit.km")).toBeNull();
+      expect(screen.queryByText("AIDA")).toBeNull();
+    });
+
+    it("says there is nothing in a year without events instead of printing zeros", () => {
+      renderYear(2024);
+      expect(screen.getByText("stats:overviewCard.noEventsInYear")).toBeInTheDocument();
+      expect(screen.queryByText("84")).toBeNull();
+    });
+
+    it("labels all-years badges as all-years", () => {
+      renderYear(2023);
+      expect(screen.getByText(/stats:overviewCard\.allYearsOnly/)).toBeInTheDocument();
+    });
   });
 });

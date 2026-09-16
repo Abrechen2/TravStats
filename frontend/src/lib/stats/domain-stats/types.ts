@@ -32,6 +32,24 @@ export interface DomainSummary {
 }
 
 /**
+ * The same card figures, for one year only.
+ *
+ * CT106 audit B03: the overview filtered the event COUNT by the selected year
+ * and then printed the lifetime KPIs under it — "Scope: 2005 · 1 flight" over
+ * 387,859 km, the same number as for 2026. Every figure on a year-scoped card
+ * now comes from here; what only exists for all years (badges, the lists a
+ * user keeps) is shown apart and labelled as such.
+ *
+ * Keyed by the year the adapter already uses for `yearlyEvents`, so the count
+ * and the figures under it can never disagree about which year an event is in.
+ * A year with no events has no entry.
+ */
+export interface YearSummary {
+  headlineKpis: DomainKpi[];
+  topItems?: DomainSummary["topItems"];
+}
+
+/**
  * Cross-domain adapter output. Discriminated by `hasData`:
  *  - `hasData: false` is the resting state for not-yet-implemented domains
  *    (hotel, poi) so they can be wired into the overview without writing
@@ -60,6 +78,8 @@ export type DomainStats =
        * harder to spot than over-reporting it.
        */
       countriesByYear?: Record<number, string[]>;
+      /** Card figures per year — see `YearSummary`. */
+      summaryByYear: Record<number, YearSummary>;
       yearlyEvents: Record<number, number>;
       yearlyActiveDays: Record<number, number>;
       monthlyActiveDays: Record<string, number>;

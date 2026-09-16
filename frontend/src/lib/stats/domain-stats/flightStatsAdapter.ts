@@ -4,7 +4,8 @@ import { airlineResolvers } from "../../airlineUtils";
 import type { Flight } from "../../../types";
 import { getFlightDuration } from "../../flightDuration";
 import { localWallClockOf } from "../../../shared/localWallClock";
-import type { DomainStats } from "./types";
+import type { DomainStats, YearSummary } from "./types";
+import { bucket } from "./yearSummary";
 
 export interface FlightAdapterInput {
   /** Already filtered to status === "flown" || "historical" by the caller. */
@@ -36,8 +37,10 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
 
   let totalDistanceKm = 0;
   let totalDurationHours = 0;
+  const perYear = new Map<number, { flights: Flight[]; distanceKm: number; hours: number }>();
 
   for (const f of flights) {
+    let flightYear: number | null = null;
     if (f.departureTime !== null) {
       const d = new Date(f.departureTime);
       if (!Number.isNaN(d.getTime())) {
@@ -46,6 +49,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
         // and disagrees with the year index the backend sends (#266).
         const clock = localWallClockOf(d, f.depTimezone, f.depTimeSemantics);
         const year = clock.year;
+        flightYear = year;
         const ymKey = clock.date.slice(0, 7);
         const ymdKey = clock.date;
         yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
@@ -60,14 +64,44 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
       }
     }
 
-    totalDistanceKm += haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    const distanceKm = haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    totalDistanceKm += distanceKm;
 
+    let hours = 0;
     if (f.durationMinutes != null && f.durationMinutes > 0) {
-      totalDurationHours += f.durationMinutes / 60;
+      hours = f.durationMinutes / 60;
     } else {
       const dur = getFlightDuration(f);
-      if (dur && dur.minutes > 0) totalDurationHours += dur.minutes / 60;
+      if (dur && dur.minutes > 0) hours = dur.minutes / 60;
     }
+    totalDurationHours += hours;
+
+    // An undated flight counts for all years and for no single one.
+    if (flightYear !== null) {
+      const y = bucket(perYear, flightYear, () => ({ flights: [], distanceKm: 0, hours: 0 }));
+      y.flights.push(f);
+      y.distanceKm += distanceKm;
+      y.hours += hours;
+    }
+  }
+
+  const summaryByYear: Record<number, YearSummary> = {};
+  for (const [year, y] of perYear) {
+    const { groups } = groupAirlines(
+      y.flights.map((f) => ({ ...f, count: 1 })),
+      airlineResolvers
+    );
+    summaryByYear[year] = {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.distance", value: Math.round(y.distanceKm), unit: "km" },
+        { labelKey: "overviewCard.kpi.flightTime", value: Math.round(y.hours), unit: "h" },
+        { labelKey: "overviewCard.kpi.airlines", value: groups.length },
+      ],
+      topItems: {
+        titleKey: "overviewCard.topItems.airlines",
+        items: groups.slice(0, 5).map((g) => ({ label: g.label, value: g.count })),
+      },
+    };
   }
 
   const topAirlines = airlineGroups.slice(0, 5).map((g) => ({ label: g.label, value: g.count }));
@@ -80,6 +114,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     totalDurationHours,
     countries,
     countriesByYear,
+    summaryByYear,
     yearlyEvents,
     yearlyActiveDays,
     monthlyActiveDays,

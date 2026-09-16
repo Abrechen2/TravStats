@@ -33,6 +33,7 @@ function flightStats(yearlyEvents: Record<number, number>): DomainStatsMap {
     flight: {
       domain: "flight",
       hasData: true,
+      summaryByYear: {},
       totalEvents: Object.values(yearlyEvents).reduce((a, b) => a + b, 0),
       countries: ["DE"],
       yearlyEvents,

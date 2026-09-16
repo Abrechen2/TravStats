@@ -12,6 +12,7 @@ import {
 const flightStats = {
   domain: "flight" as const,
   hasData: true as const,
+  summaryByYear: {},
   totalEvents: 10,
   totalDistanceKm: 12_000,
   totalDurationHours: 24,
@@ -31,6 +32,7 @@ const flightStats = {
 const cruiseStats = {
   domain: "cruise" as const,
   hasData: true as const,
+  summaryByYear: {},
   totalEvents: 3,
   totalDistanceKm: 5_000,
   countries: ["IT", "ES", "DE"],

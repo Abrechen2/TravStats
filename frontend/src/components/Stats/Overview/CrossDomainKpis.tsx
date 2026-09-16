@@ -25,7 +25,9 @@ export default function CrossDomainKpis({
   compareEnabled,
   achievements,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
+  // The reader's language decides the thousands separator (#319).
+  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const showDelta = compareEnabled && prevAgg !== null && selectedYear !== null;
 
   const breakdown = (Object.entries(agg.perDomainEvents) as Array<[DomainKey, number]>)
@@ -59,10 +61,18 @@ export default function CrossDomainKpis({
     {
       label: t("stats:overviewKpis.achievements"),
       value: achievements?.unlockedAchievements ?? 0,
+      // Unlocks carry no year here, so under a year heading the tile says it
+      // counts all years rather than implying they were earned in this one
+      // (CT106 audit B03).
       hint:
-        achievements && achievements.totalPoints > 0
-          ? t("stats:overviewKpis.achievementsHint", { points: achievements.totalPoints })
-          : undefined,
+        [
+          achievements && achievements.totalPoints > 0
+            ? t("stats:overviewKpis.achievementsHint", { points: achievements.totalPoints })
+            : null,
+          selectedYear !== null ? t("stats:overviewCard.allYearsOnly") : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined,
     },
   ];
 
@@ -78,7 +88,7 @@ export default function CrossDomainKpis({
             {c.label}
           </h3>
           <p className="text-3xl font-bold mt-2 font-mono" style={{ color: "var(--text-primary)" }}>
-            {typeof c.value === "number" ? c.value.toLocaleString("de-DE") : c.value}
+            {typeof c.value === "number" ? c.value.toLocaleString(locale) : c.value}
           </p>
           {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} />}
           {c.hint && (

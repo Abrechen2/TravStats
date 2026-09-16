@@ -73,7 +73,7 @@
   "overviewCard": {
     "noDataYet": "Noch keine Daten",
     "comingSoon": "Kommt mit V2.X",
-    "yearScopedCount": "{{count}} {{year}} · {{lifetime}} lifetime",
+    "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} insgesamt",
     "lifetimeCount": "{{count}} Erlebnisse",
     "detailLink": "Details →",
     "unit": {
@@ -92,7 +92,8 @@
       "placesVisited": "Orte besucht",
       "countries": "Länder",
       "lists": "Listen",
-      "bestChecklist": "Beste Checkliste"
+      "bestChecklist": "Beste Checkliste",
+      "cruiseNights": "Nächte an Bord"
     },
     "topItems": {
       "airlines": "Top-Airlines",
@@ -109,7 +110,9 @@
       "dateline": "Datumsgrenze überquert",
       "birthdayAtSea": "Geburtstag auf See",
       "newYearAtSea": "Silvester auf See"
-    }
+    },
+    "noEventsInYear": "Keine Einträge in {{year}}.",
+    "allYearsOnly": "Gesamt, alle Jahre"
   },
   "overview2": {
     "sectionLabel": "Gesamt-Übersicht",

@@ -86,6 +86,15 @@ export default function DomainSummaryCard({
   const cardDelta =
     yearScopedCount !== null && compareCount !== null ? delta(yearScopedCount, compareCount) : null;
 
+  // Under a year heading, only that year's figures (CT106 audit B03). The
+  // lifetime KPIs used to stand here whatever year was chosen. A year without
+  // events has no summary, and the card says so instead of printing zeros
+  // that would read as measurements.
+  const yearSummary = selectedYear !== null ? stats.summaryByYear[selectedYear] : undefined;
+  const headlineKpis =
+    selectedYear === null ? stats.summary.headlineKpis : (yearSummary?.headlineKpis ?? []);
+  const topItems = selectedYear === null ? stats.summary.topItems : yearSummary?.topItems;
+
   return (
     <div
       className="rounded-lg p-5 flex flex-col gap-3.5 transition-colors"
@@ -132,35 +141,39 @@ export default function DomainSummaryCard({
         </Link>
       </div>
 
-      <div
-        className="grid grid-cols-3 gap-3 pt-3"
-        style={{ borderTop: "1px solid var(--color-border)" }}
-      >
-        {stats.summary.headlineKpis.map((kpi) => (
-          <div key={kpi.labelKey}>
-            <div
-              className="text-[10px] uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t(`stats:${kpi.labelKey}`)}
+      {selectedYear !== null && !yearSummary ? (
+        <p className="t-caption pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          {t("stats:overviewCard.noEventsInYear", { year: selectedYear })}
+        </p>
+      ) : (
+        <div
+          className="grid grid-cols-3 gap-3 pt-3"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
+          {headlineKpis.map((kpi) => (
+            <div key={kpi.labelKey}>
+              <div
+                className="text-[10px] uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t(`stats:${kpi.labelKey}`)}
+              </div>
+              <div
+                className="text-base font-bold font-mono mt-0.5"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {formatKpi(kpi)}
+              </div>
             </div>
-            <div
-              className="text-base font-bold font-mono mt-0.5"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {formatKpi(kpi)}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {stats.summary.topItems && stats.summary.topItems.items.length > 0 && (
+      {topItems && topItems.items.length > 0 && (
         <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-          <div style={{ color: "var(--text-muted)" }}>
-            {t(`stats:${stats.summary.topItems.titleKey}`)}
-          </div>
+          <div style={{ color: "var(--text-muted)" }}>{t(`stats:${topItems.titleKey}`)}</div>
           <div className="flex gap-1.5 flex-wrap mt-1">
-            {stats.summary.topItems.items.slice(0, 5).map((item) => (
+            {topItems.items.slice(0, 5).map((item) => (
               <span
                 key={item.label}
                 className="px-2 py-0.5 rounded-full text-xs"
@@ -178,7 +191,13 @@ export default function DomainSummaryCard({
       )}
 
       {stats.summary.badges && stats.summary.badges.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {/* Badges are facts about all years ("crossed the dateline"). Under a
+              year heading they are labelled as such rather than implied to
+              belong to that year. */}
+          {selectedYear !== null && (
+            <span className="t-caption">{t("stats:overviewCard.allYearsOnly")}:</span>
+          )}
           {stats.summary.badges.map((b) => (
             <span
               key={b.labelKey}

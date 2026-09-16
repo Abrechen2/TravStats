@@ -16,7 +16,8 @@
 import type { Place } from "../../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../../types/placeList";
 import { classifyPlace, classifyVisit } from "../../../shared/placeCounting";
-import type { DomainStats } from "./types";
+import type { DomainStats, YearSummary } from "./types";
+import { bucket, topFive } from "./yearSummary";
 
 export interface PoiAdapterInput {
   places: Place[];
@@ -42,6 +43,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   const countriesByYear: Record<number, Set<string>> = {};
+  const placesByYear = new Map<number, Map<string, string>>();
 
   let totalVisits = 0;
 
@@ -67,6 +69,8 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
       const ymd = `${year}-${month}-${day}`;
 
       yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
+      // A place visited twice in a year is one place of that year.
+      bucket(placesByYear, year, () => new Map<string, string>()).set(place.id, place.category);
       weekdayEvents[at.getUTCDay()] = (weekdayEvents[at.getUTCDay()] ?? 0) + 1;
       if (place.isoCountryCode) {
         (countriesByYear[year] ??= new Set()).add(place.isoCountryCode.toUpperCase());
@@ -77,6 +81,23 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
         monthlyActiveDays[`${year}-${month}`] = (monthlyActiveDays[`${year}-${month}`] ?? 0) + 1;
       }
     }
+  }
+
+  // Lists and the best checklist are what the user KEEPS, not what happened in
+  // a year — they stay on the all-years card and are not invented per year.
+  const summaryByYear: Record<number, YearSummary> = {};
+  for (const [year, placesInYear] of placesByYear) {
+    const categories = new Map<string, number>();
+    for (const category of placesInYear.values()) {
+      categories.set(category, (categories.get(category) ?? 0) + 1);
+    }
+    summaryByYear[year] = {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.placesVisited", value: placesInYear.size },
+        { labelKey: "overviewCard.kpi.countries", value: countriesByYear[year]?.size ?? 0 },
+      ],
+      topItems: { titleKey: "overviewCard.topItems.categories", items: topFive(categories) },
+    };
   }
 
   const topCategories = [...categoryCounts.entries()]
@@ -102,6 +123,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
     countriesByYear: Object.fromEntries(
       Object.entries(countriesByYear).map(([year, set]) => [Number(year), [...set]])
     ),
+    summaryByYear,
     yearlyEvents,
     yearlyActiveDays,
     monthlyActiveDays,

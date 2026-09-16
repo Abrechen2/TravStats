@@ -443,3 +443,110 @@ describe("stub adapters", () => {
     expect(adaptPoi()).toEqual({ domain: "poi", hasData: false });
   });
 });
+
+// CT106 audit B03: a year-scoped card printed the lifetime KPIs under the year.
+describe("summaryByYear", () => {
+  it("flights: distance, time and airlines of that year only; undated flights in no year", () => {
+    const stats = adaptFlight({
+      flights: [
+        makeFlight({ id: "a", departureTime: "2005-05-01T10:00:00Z", durationMinutes: 60 }),
+        makeFlight({
+          id: "b",
+          departureTime: "2026-02-01T10:00:00Z",
+          durationMinutes: 600,
+          airline: "SWISS",
+          flightNumber: "LX16",
+        }),
+        makeFlight({ id: "c", departureTime: "2026-03-01T10:00:00Z", durationMinutes: 600 }),
+        makeFlight({ id: "d", departureTime: null, durationMinutes: 120 }),
+      ],
+      countries: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(Object.keys(stats.summaryByYear).sort()).toEqual(["2005", "2026"]);
+    const kpi = (year: number, key: string): unknown =>
+      stats.summaryByYear[year].headlineKpis.find((k) => k.labelKey === key)?.value;
+    expect(kpi(2005, "overviewCard.kpi.flightTime")).toBe(1);
+    expect(kpi(2026, "overviewCard.kpi.flightTime")).toBe(20);
+    expect(kpi(2005, "overviewCard.kpi.airlines")).toBe(1);
+    expect(kpi(2026, "overviewCard.kpi.airlines")).toBe(2);
+    // The lifetime KPI still carries all four, including the undated one.
+    expect(
+      stats.summary.headlineKpis.find((k) => k.labelKey === "overviewCard.kpi.flightTime")?.value
+    ).toBe(23);
+  });
+
+  it("cruises: nights, sea days and ports per start year", () => {
+    const stats = adaptCruise({
+      stats: { ...baseStats, cruisesCount: 2 },
+      cruises: [
+        makeCruise({
+          id: "c1",
+          startDate: "2023-06-01",
+          endDate: "2023-06-08",
+          stops: [
+            {
+              id: "s1",
+              cruiseId: "c1",
+              portId: 1,
+              dayNumber: 1,
+              date: null,
+              isAtSea: false,
+              unresolvedPortName: null,
+            },
+            {
+              id: "s2",
+              cruiseId: "c1",
+              portId: null,
+              dayNumber: 2,
+              date: null,
+              isAtSea: true,
+              unresolvedPortName: null,
+            },
+            {
+              id: "s3",
+              cruiseId: "c1",
+              portId: 1,
+              dayNumber: 3,
+              date: null,
+              isAtSea: false,
+              unresolvedPortName: null,
+            },
+          ] as unknown as Cruise["stops"],
+        }),
+        makeCruise({ id: "c2", startDate: "2024-01-10", endDate: "2024-01-12", cruiseLine: "TUI" }),
+      ],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    const y2023 = stats.summaryByYear[2023].headlineKpis.map((k) => k.value);
+    expect(y2023).toEqual([7, 1, 1]);
+    expect(stats.summaryByYear[2024].topItems?.items[0].label).toBe("TUI");
+  });
+
+  it("lodging: nights and lodgings of stays checked in that year", () => {
+    const stats = adaptLodging({
+      stats: { ...EMPTY_LODGING_STATS_BLOCKS, staysCount: 2 } as unknown as LodgingStats,
+      lodgings: [
+        makeLodging({
+          id: "l1",
+          stays: [
+            makeLodgingStay({
+              id: "s1",
+              checkIn: "2024-06-01T00:00:00.000Z",
+              checkOut: "2024-06-03T00:00:00.000Z",
+            }),
+            makeLodgingStay({
+              id: "s2",
+              checkIn: "2025-01-01T00:00:00.000Z",
+              checkOut: "2025-01-06T00:00:00.000Z",
+            }),
+          ],
+        }),
+      ],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.summaryByYear[2024].headlineKpis[0].value).toBe(2);
+    expect(stats.summaryByYear[2025].headlineKpis[0].value).toBe(5);
+    expect(stats.summaryByYear[2025].headlineKpis[1].value).toBe(1);
+  });
+});
