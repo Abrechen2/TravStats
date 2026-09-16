@@ -6,6 +6,7 @@ const getLodgingStats = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/api/lodging", () => ({ getLodgingStats }));
 
 import LodgingStatsSection from "../LodgingStatsSection";
+import { ALL_VISIBLE } from "./sectionVisibilityStub";
 
 /**
  * Owner review 2026-09-15: the overview said "no stays in 2026" while this tab
@@ -26,7 +27,9 @@ describe("LodgingStatsSection under the page's period", () => {
 
   it("asks the server for the chosen year", async () => {
     getLodgingStats.mockResolvedValue(empty());
-    render(<LodgingStatsSection scope={{ year: 2026, compareYear: null }} />);
+    render(
+      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+    );
     await screen.findByText("stats:period.emptyYear");
     expect(getLodgingStats).toHaveBeenCalledTimes(1);
     expect(getLodgingStats).toHaveBeenCalledWith({ year: 2026 });
@@ -34,7 +37,9 @@ describe("LodgingStatsSection under the page's period", () => {
 
   it("asks for the lifetime view when no year is chosen", async () => {
     getLodgingStats.mockResolvedValue(empty());
-    render(<LodgingStatsSection scope={{ year: null, compareYear: null }} />);
+    render(
+      <LodgingStatsSection scope={{ year: null, compareYear: null }} visibility={ALL_VISIBLE} />
+    );
     await screen.findByText("lodging:list.empty");
     expect(getLodgingStats).toHaveBeenCalledWith(undefined);
   });
@@ -43,7 +48,9 @@ describe("LodgingStatsSection under the page's period", () => {
     // Four houses in the lifetime view, none slept in this year: "no stays yet"
     // would be false, and going by the house count would draw an empty tab.
     getLodgingStats.mockResolvedValue(empty({ lodgingsCount: 4 }));
-    render(<LodgingStatsSection scope={{ year: 2026, compareYear: null }} />);
+    render(
+      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+    );
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
   });
@@ -52,7 +59,9 @@ describe("LodgingStatsSection under the page's period", () => {
     getLodgingStats.mockImplementation(async (params?: { year?: number }) =>
       params?.year === 2025 ? empty({ staysCount: 3, totalNights: 9 }) : empty()
     );
-    render(<LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} />);
+    render(
+      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+    );
     expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
     expect(getLodgingStats).toHaveBeenCalledWith({ year: 2025 });
     expect(screen.getByText("stats:period.emptyYear")).toBeInTheDocument();

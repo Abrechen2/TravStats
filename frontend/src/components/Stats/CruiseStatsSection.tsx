@@ -16,6 +16,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { cruisesStartedIn } from "../../lib/stats/periodScope";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { PeriodScope } from "./useStatsPeriod";
+import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
@@ -34,7 +35,13 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
  * rollup by the server (`?year=`), the rows behind the rhythm, money and fun
  * blocks by `cruisesStartedIn` — the year a cruise sailed from.
  */
-export default function CruiseStatsSection({ scope }: { scope: PeriodScope }): JSX.Element {
+export default function CruiseStatsSection({
+  scope,
+  visibility,
+}: {
+  scope: PeriodScope;
+  visibility: SectionVisibility;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "cruise", "common"]);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const distanceLabel = getDistanceLabel(distanceUnit, t);
@@ -237,72 +244,81 @@ export default function CruiseStatsSection({ scope }: { scope: PeriodScope }): J
   const detail = deriveCruiseStats(year === null ? cruises : cruisesStartedIn(cruises, year));
   const accent = colorOf("cruise");
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const show = visibility.isVisible;
 
   return (
     <div className="space-y-6">
       {comparison}
 
       {/* 1) Hero KPI grid */}
-      <KpiGrid kpis={heroKpis} />
+      {show("kpis") && <KpiGrid kpis={heroKpis} />}
 
       {/* 2) Region bar chart + sea/port donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <RegionBars
-            regionVisitCounts={stats.regionVisitCounts}
-            title={t("stats:cruiseSection.regionsHeading")}
-            emptyHint={t("stats:cruiseSection.noRegions")}
-            t={t}
+      {show("regions") && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <RegionBars
+              regionVisitCounts={stats.regionVisitCounts}
+              title={t("stats:cruiseSection.regionsHeading")}
+              emptyHint={t("stats:cruiseSection.noRegions")}
+              t={t}
+            />
+          </div>
+          <SeaDayDonut
+            seaDays={stats.seaDays}
+            totalDays={stats.totalCruiseDays}
+            pct={seaDayRatioPct}
+            label={t("stats:cruiseSection.seaDayShare")}
           />
         </div>
-        <SeaDayDonut
-          seaDays={stats.seaDays}
-          totalDays={stats.totalCruiseDays}
-          pct={seaDayRatioPct}
-          label={t("stats:cruiseSection.seaDayShare")}
-        />
-      </div>
+      )}
 
       {/* 3) Depth & loyalty */}
-      <KpiGrid kpis={depthKpis} compact />
+      {show("depth") && <KpiGrid kpis={depthKpis} compact />}
 
       {/* 4) Tag clouds */}
-      {stats.cruiseLines.length > 0 && (
+      {show("tags") && stats.cruiseLines.length > 0 && (
         <TagCloud title={t("stats:cruiseSection.linesLabel")} items={stats.cruiseLines} />
       )}
-      {stats.regions.length > 0 && (
+      {show("tags") && stats.regions.length > 0 && (
         <TagCloud
           title={t("stats:cruiseSection.regionsLabel")}
           items={stats.regions.map((r) => prettyRegion(r, t))}
         />
       )}
-      {stats.countries.length > 0 && (
+      {show("tags") && stats.countries.length > 0 && (
         <TagCloud title={t("stats:cruiseSection.countriesLabel")} items={stats.countries} />
       )}
 
       {/* 5) Achievement-style flag strip */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {stats.hasBalconyCabin && (
-          <Flag label={t("stats:cruiseSection.flags.balcony")} emoji="🏝️" />
-        )}
-        {stats.hasSuiteCabin && <Flag label={t("stats:cruiseSection.flags.suite")} emoji="👑" />}
-        {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} emoji="🧊" />}
-        {stats.hasColdWater && <Flag label={t("stats:cruiseSection.flags.coldWater")} emoji="❄️" />}
-        {stats.hasCanalTransit && <Flag label={t("stats:cruiseSection.flags.canal")} emoji="⛴️" />}
-        {stats.hasDatelineCrossing && (
-          <Flag label={t("stats:cruiseSection.flags.dateline")} emoji="🌐" />
-        )}
-        {stats.hasBirthdayAtSea && (
-          <Flag label={t("stats:cruiseSection.flags.birthday")} emoji="🎂" />
-        )}
-        {stats.hasNewYearsAtSea && (
-          <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
-        )}
-      </div>
+      {show("flags") && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {stats.hasBalconyCabin && (
+            <Flag label={t("stats:cruiseSection.flags.balcony")} emoji="🏝️" />
+          )}
+          {stats.hasSuiteCabin && <Flag label={t("stats:cruiseSection.flags.suite")} emoji="👑" />}
+          {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} emoji="🧊" />}
+          {stats.hasColdWater && (
+            <Flag label={t("stats:cruiseSection.flags.coldWater")} emoji="❄️" />
+          )}
+          {stats.hasCanalTransit && (
+            <Flag label={t("stats:cruiseSection.flags.canal")} emoji="⛴️" />
+          )}
+          {stats.hasDatelineCrossing && (
+            <Flag label={t("stats:cruiseSection.flags.dateline")} emoji="🌐" />
+          )}
+          {stats.hasBirthdayAtSea && (
+            <Flag label={t("stats:cruiseSection.flags.birthday")} emoji="🎂" />
+          )}
+          {stats.hasNewYearsAtSea && (
+            <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
+          )}
+        </div>
+      )}
 
-      <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />
-      <CruiseMoneySection detail={detail} accent={accent} locale={locale} />
-      <CruiseFunSection detail={detail} accent={accent} locale={locale} />
+      {show("rhythm") && <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />}
+      {show("money") && <CruiseMoneySection detail={detail} accent={accent} locale={locale} />}
+      {show("fun") && <CruiseFunSection detail={detail} accent={accent} locale={locale} />}
     </div>
   );
 }

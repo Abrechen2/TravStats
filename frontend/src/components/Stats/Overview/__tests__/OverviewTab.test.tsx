@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { DomainStatsMap } from "../../../../lib/stats/domain-stats";
 import type { StatsPeriod } from "../../useStatsPeriod";
+import type { SectionVisibility } from "../../../../hooks/useSectionVisibility";
 
 // Use the real settingsStore (not the global selector-only mock from
 // setup.ts) so useEnabledDomains() returns real state we control below.
@@ -9,6 +10,7 @@ vi.unmock("../../../../store/settingsStore");
 
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
+import { hiding } from "../../__tests__/sectionVisibilityStub";
 
 function flightStats(yearlyEvents: Record<number, number>): DomainStatsMap {
   const yearlyActiveDays = { ...yearlyEvents };
@@ -43,12 +45,13 @@ const period: StatsPeriod = {
   scope: { year: 2024, compareYear: null },
 };
 
-function renderOverview(): void {
+function renderOverview(visibility: SectionVisibility = hiding()): void {
   render(
     <OverviewTab
       stats={flightStats({ 2024: 6 })}
       loading={false}
       period={period}
+      visibility={visibility}
       achievements={null}
     />
   );
@@ -77,5 +80,18 @@ describe("OverviewTab — the POI domain follows the user's domain choice", () =
     useSettingsStore.setState({ enabledDomains: ["flight", "poi"], betaFeaturesEnabled: flag });
     renderOverview();
     expect(screen.queryAllByText("common:domain.poi").length).toBeGreaterThan(0);
+  });
+});
+
+describe("OverviewTab hides the blocks the reader switched off", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+  });
+
+  it("drops the key figures and keeps the per-domain cards", () => {
+    renderOverview(hiding("kpis"));
+    expect(screen.queryByText("stats:overview.kpisLabel")).not.toBeInTheDocument();
+    expect(screen.getByText("stats:overview.perDomainLabel")).toBeInTheDocument();
   });
 });

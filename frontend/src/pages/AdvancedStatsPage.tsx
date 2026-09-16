@@ -31,10 +31,9 @@ import AirlineRankingCard from "../components/Stats/AirlineRankingCard";
 import AircraftRankingCard from "../components/Stats/AircraftRankingCard";
 import CountryDistributionCard from "../components/Stats/CountryDistributionCard";
 import FlightYearSummaryCards from "../components/Stats/FlightYearSummaryCards";
-import StatsPeriodBar from "../components/Stats/StatsPeriodBar";
+import StatsToolbar from "../components/Stats/StatsToolbar";
 import StatsTabStrip from "../components/Stats/StatsTabStrip";
 import { useStatsPeriod } from "../components/Stats/useStatsPeriod";
-import { FLIGHT_SECTIONS } from "../components/Stats/statsSections";
 import { collectYears } from "../components/Stats/Overview/aggregate";
 import { useDomainStats } from "../lib/stats/domain-stats";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
@@ -43,7 +42,6 @@ import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
-import SectionVisibilityMenu from "../components/Stats/SectionVisibilityMenu";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
@@ -106,10 +104,6 @@ export default function AdvancedStatsPage(): JSX.Element {
     return "all";
   });
 
-  // Which blocks this tab draws. Per tab, because hiding costs on flights says
-  // nothing about cruises — and everything is visible until someone says
-  // otherwise, so a section added later still appears for existing readers.
-  const sections = useSectionVisibility(filter);
   const setFilter = useCallback(
     (next: DomainKey | "all") => {
       setFilterState(next);
@@ -150,6 +144,13 @@ export default function AdvancedStatsPage(): JSX.Element {
    */
   const placesAccess = usePlacesAccess();
   const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
+
+  // Which blocks this tab draws. Per tab, because hiding costs on flights says
+  // nothing about cruises — and everything is visible until someone says
+  // otherwise, so a section added later still appears for existing readers.
+  // Keyed on the tab actually DRAWN: a refused `?tab=poi` shows the overview,
+  // and its switches must not be filed under "poi".
+  const sections = useSectionVisibility(effectiveFilter);
 
   // Year filter + comparison state
   // ONE period for every tab (owner review, 2026-09-15). The year list is the
@@ -598,18 +599,12 @@ export default function AdvancedStatsPage(): JSX.Element {
           onSelect={setFilter}
         />
 
-        <div className="container mx-auto px-6 pt-4 flex flex-wrap items-start gap-3">
-          {periodYears.length > 0 && (
-            <div className="min-w-0 flex-1">
-              <StatsPeriodBar years={periodYears} period={period} />
-            </div>
-          )}
-          {effectiveFilter === "flight" && (
-            <div className="ml-auto">
-              <SectionVisibilityMenu options={FLIGHT_SECTIONS(t)} visibility={sections} />
-            </div>
-          )}
-        </div>
+        <StatsToolbar
+          tab={effectiveFilter}
+          years={periodYears}
+          period={period}
+          visibility={sections}
+        />
 
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
@@ -618,20 +613,25 @@ export default function AdvancedStatsPage(): JSX.Element {
               stats={domainStats}
               loading={domainStatsLoading}
               period={period}
+              visibility={sections}
               achievements={achievementSummary}
             />
           )}
 
           {/* Cruise tab renders its own stats section. */}
-          {effectiveFilter === "cruise" && <CruiseStatsSection scope={scope} />}
+          {effectiveFilter === "cruise" && (
+            <CruiseStatsSection scope={scope} visibility={sections} />
+          )}
           {/* Moved off the dashboard map, where these numbers floated on top of
               the world the user came to look at. */}
-          {effectiveFilter === "lodging" && <LodgingStatsSection scope={scope} />}
+          {effectiveFilter === "lodging" && (
+            <LodgingStatsSection scope={scope} visibility={sections} />
+          )}
           {/* `allowed`, not "not denied": while the instance flag is still
               unknown this renders nothing rather than drawing the section and
               tearing it away a moment later. */}
           {effectiveFilter === "poi" && placesAccess === "allowed" && (
-            <PoiStatsSection scope={scope} />
+            <PoiStatsSection scope={scope} visibility={sections} />
           )}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}

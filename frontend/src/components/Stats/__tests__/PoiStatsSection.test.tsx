@@ -16,6 +16,7 @@ vi.mock("../../../lib/api/placeLists", () => ({
 }));
 
 import PoiStatsSection from "../PoiStatsSection";
+import { ALL_VISIBLE, hiding } from "./sectionVisibilityStub";
 
 const LIFETIME = { year: null, compareYear: null };
 
@@ -56,7 +57,7 @@ describe("PoiStatsSection", () => {
       place({ id: "p2", name: "Sagrada Família", visited: false, visits: [] as never }),
     ]);
 
-    render(<PoiStatsSection scope={LIFETIME} />);
+    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.visitedPlaces")).toBeInTheDocument();
@@ -76,7 +77,7 @@ describe("PoiStatsSection", () => {
       }),
     ]);
 
-    render(<PoiStatsSection scope={LIFETIME} />);
+    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.visits")).toBeInTheDocument();
@@ -91,7 +92,7 @@ describe("PoiStatsSection", () => {
   it("says it could not load rather than showing zeros", async () => {
     listPlacesMock.mockRejectedValue(new Error("network"));
 
-    render(<PoiStatsSection scope={LIFETIME} />);
+    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
 
     await waitFor(() => {
       expect(screen.getByText("places:list.loadError")).toBeInTheDocument();
@@ -102,7 +103,7 @@ describe("PoiStatsSection", () => {
   it("invites a first visit when there is nothing yet", async () => {
     listPlacesMock.mockResolvedValue([]);
 
-    render(<PoiStatsSection scope={LIFETIME} />);
+    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.empty")).toBeInTheDocument();
@@ -125,7 +126,7 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("counts only the places visited in the chosen year", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2023, compareYear: null }} />);
+    render(<PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />);
     const title = await screen.findByText("places:stats.visitedPlaces");
     // The value itself, not the card's container: that is the whole grid, and
     // "1" is also the country count — this assertion passed with no scoping.
@@ -134,7 +135,7 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("leaves lists and the wishlist line out of a year, since they have no date", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2024, compareYear: null }} />);
+    render(<PoiStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />);
     await screen.findByText("places:stats.visitedPlaces");
     expect(screen.queryByText("places:stats.lists")).not.toBeInTheDocument();
     expect(screen.queryByText(/places:stats.visitedPlacesDesc/)).not.toBeInTheDocument();
@@ -142,14 +143,40 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("sets the year against the compare year", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2024, compareYear: 2023 }} />);
+    render(<PoiStatsSection scope={{ year: 2024, compareYear: 2023 }} visibility={ALL_VISIBLE} />);
     expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
   });
 
   it("names the year when nothing was visited in it", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2019, compareYear: null }} />);
+    render(<PoiStatsSection scope={{ year: 2019, compareYear: null }} visibility={ALL_VISIBLE} />);
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("places:stats.empty")).not.toBeInTheDocument();
+  });
+});
+
+describe("PoiStatsSection hides the blocks the reader switched off", () => {
+  beforeEach(() => {
+    listPlacesMock.mockReset();
+    listPlaceListsMock.mockReset().mockResolvedValue([]);
+    listCuratedMock.mockReset().mockResolvedValue([]);
+  });
+
+  it("drops the rankings and keeps the key figures", async () => {
+    listPlacesMock.mockResolvedValue([
+      place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
+    ]);
+    render(<PoiStatsSection scope={LIFETIME} visibility={hiding("rankings")} />);
+    expect(await screen.findByText("places:stats.visitedPlaces")).toBeInTheDocument();
+    expect(screen.queryByText("places:stats.byCategory")).not.toBeInTheDocument();
+  });
+
+  it("drops the key figures and keeps the rankings", async () => {
+    listPlacesMock.mockResolvedValue([
+      place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
+    ]);
+    render(<PoiStatsSection scope={LIFETIME} visibility={hiding("kpis")} />);
+    expect(await screen.findByText("places:stats.byCategory")).toBeInTheDocument();
+    expect(screen.queryByText("places:stats.visitedPlaces")).not.toBeInTheDocument();
   });
 });

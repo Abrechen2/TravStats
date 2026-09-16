@@ -18,6 +18,7 @@ import PoiFunSection from "./poi/PoiFunSection";
 import PoiQualitySection from "./poi/PoiQualitySection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { PeriodScope } from "./useStatsPeriod";
+import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 import { placesVisitedIn } from "../../lib/stats/periodScope";
 
 /**
@@ -39,7 +40,13 @@ import { placesVisitedIn } from "../../lib/stats/periodScope";
  * of those modules sees them. Lists and checklists have no date at all, so a
  * year leaves them out rather than showing a lifetime figure under its label.
  */
-export default function PoiStatsSection({ scope }: { scope: PeriodScope }): JSX.Element {
+export default function PoiStatsSection({
+  scope,
+  visibility,
+}: {
+  scope: PeriodScope;
+  visibility: SectionVisibility;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["places", "stats", "common"]);
   const { colorOf } = useDomainColors();
   const accent = colorOf("poi");
@@ -199,100 +206,105 @@ export default function PoiStatsSection({ scope }: { scope: PeriodScope }): JSX.
     .sort((a, b) => b.weight - a.weight);
 
   const ownLists = lists.filter((l) => l.curatedKey === null);
+  const show = visibility.isVisible;
 
   return (
     <section>
       {comparison && <div className="mb-8">{comparison}</div>}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          accent={accent}
-          valueSize="md"
-          title={t("places:stats.visitedPlaces")}
-          value={detail.visitedPlaces.length}
-          // A year holds no wishlist — it would always read "0 more".
-          description={
-            year === null
-              ? t("places:stats.visitedPlacesDesc", { wishlist: detail.wishlistCount })
-              : undefined
-          }
-        />
-        <StatCard
-          accent={accent}
-          valueSize="md"
-          title={t("places:stats.visits")}
-          value={stats.totalEvents ?? 0}
-          description={
-            // Three states, because two of them read wrong as one. A place can
-            // be marked visited without a dated visit — the detail page says so
-            // in as many words — so "all dated" over a total of zero would be a
-            // true sentence that means nothing. And an undated visit is counted
-            // in the total but cannot be placed on a day, which is worth saying
-            // rather than leaving the chart below to look incomplete.
-            detail.visitsTotal === 0
-              ? t("places:stats.noVisitsYet")
-              : detail.visitsUndated > 0
-                ? t("places:stats.visitsDesc", {
-                    dated: detail.visitsDated,
-                    undated: detail.visitsUndated,
-                  })
-                : t("places:stats.visitsAllDated")
-          }
-        />
-        <StatCard
-          accent={accent}
-          valueSize="md"
-          title={t("places:stats.countries")}
-          value={detail.countries.size}
-          description={t("places:stats.citiesDesc", { count: detail.cities.size })}
-        />
-        {year === null && (
+      {show("kpis") && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             accent={accent}
             valueSize="md"
-            title={t("places:stats.lists")}
-            value={lists.length}
-            description={t("places:stats.listsDesc", {
-              own: ownLists.length,
-              checklists: lists.length - ownLists.length,
-            })}
+            title={t("places:stats.visitedPlaces")}
+            value={detail.visitedPlaces.length}
+            // A year holds no wishlist — it would always read "0 more".
+            description={
+              year === null
+                ? t("places:stats.visitedPlacesDesc", { wishlist: detail.wishlistCount })
+                : undefined
+            }
           />
-        )}
-      </div>
+          <StatCard
+            accent={accent}
+            valueSize="md"
+            title={t("places:stats.visits")}
+            value={stats.totalEvents ?? 0}
+            description={
+              // Three states, because two of them read wrong as one. A place can
+              // be marked visited without a dated visit — the detail page says so
+              // in as many words — so "all dated" over a total of zero would be a
+              // true sentence that means nothing. And an undated visit is counted
+              // in the total but cannot be placed on a day, which is worth saying
+              // rather than leaving the chart below to look incomplete.
+              detail.visitsTotal === 0
+                ? t("places:stats.noVisitsYet")
+                : detail.visitsUndated > 0
+                  ? t("places:stats.visitsDesc", {
+                      dated: detail.visitsDated,
+                      undated: detail.visitsUndated,
+                    })
+                  : t("places:stats.visitsAllDated")
+            }
+          />
+          <StatCard
+            accent={accent}
+            valueSize="md"
+            title={t("places:stats.countries")}
+            value={detail.countries.size}
+            description={t("places:stats.citiesDesc", { count: detail.cities.size })}
+          />
+          {year === null && (
+            <StatCard
+              accent={accent}
+              valueSize="md"
+              title={t("places:stats.lists")}
+              value={lists.length}
+              description={t("places:stats.listsDesc", {
+                own: ownLists.length,
+                checklists: lists.length - ownLists.length,
+              })}
+            />
+          )}
+        </div>
+      )}
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <RankedBarList
-          title={t("places:stats.byCategory")}
-          rows={categoryRows}
-          accent={accent}
-          emptyLabel={t("places:stats.empty")}
-        />
-        <RankedBarList
-          title={t("places:stats.mostVisited")}
-          rows={placeRows}
-          accent={accent}
-          emptyLabel={t("places:stats.noVisitsYet")}
-          limit={8}
-          moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
-        />
-        <RankedBarList
-          title={t("places:stats.byCountry")}
-          rows={countryRows}
-          accent={accent}
-          emptyLabel={t("places:stats.empty")}
-          limit={8}
-          moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
-        />
-        <RankedBarList
-          title={t("places:stats.byCity")}
-          rows={cityRows}
-          accent={accent}
-          emptyLabel={t("places:stats.noCities")}
-          limit={8}
-          moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
-        />
-      </div>
+      {show("rankings") && (
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <RankedBarList
+            title={t("places:stats.byCategory")}
+            rows={categoryRows}
+            accent={accent}
+            emptyLabel={t("places:stats.empty")}
+          />
+          <RankedBarList
+            title={t("places:stats.mostVisited")}
+            rows={placeRows}
+            accent={accent}
+            emptyLabel={t("places:stats.noVisitsYet")}
+            limit={8}
+            moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
+          />
+          <RankedBarList
+            title={t("places:stats.byCountry")}
+            rows={countryRows}
+            accent={accent}
+            emptyLabel={t("places:stats.empty")}
+            limit={8}
+            moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
+          />
+          <RankedBarList
+            title={t("places:stats.byCity")}
+            rows={cityRows}
+            accent={accent}
+            emptyLabel={t("places:stats.noCities")}
+            limit={8}
+            moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
+          />
+        </div>
+      )}
 
-      {year === null && checklistRows.length > 0 && (
+      {show("checklists") && year === null && checklistRows.length > 0 && (
         <div className="mt-6">
           <RankedBarList
             title={t("places:stats.checklists")}
@@ -303,9 +315,9 @@ export default function PoiStatsSection({ scope }: { scope: PeriodScope }): JSX.
         </div>
       )}
 
-      <PoiRhythmSection detail={detail} accent={accent} locale={locale} />
-      <PoiQualitySection detail={detail} accent={accent} />
-      <PoiFunSection detail={detail} accent={accent} locale={locale} />
+      {show("rhythm") && <PoiRhythmSection detail={detail} accent={accent} locale={locale} />}
+      {show("quality") && <PoiQualitySection detail={detail} accent={accent} />}
+      {show("fun") && <PoiFunSection detail={detail} accent={accent} locale={locale} />}
     </section>
   );
 }

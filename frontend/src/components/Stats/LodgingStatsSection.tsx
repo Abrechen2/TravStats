@@ -14,6 +14,7 @@ import LodgingLoyaltySection from "./lodging/LodgingLoyaltySection";
 import LodgingRecordsSection from "./lodging/LodgingRecordsSection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { PeriodScope } from "./useStatsPeriod";
+import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 /**
  * The lodging numbers, on the statistics page where numbers belong.
@@ -30,7 +31,13 @@ import type { PeriodScope } from "./useStatsPeriod";
  * block below answers for the same year without knowing there is one. A
  * comparison is a second request rather than a second shape (ADR 0001).
  */
-export default function LodgingStatsSection({ scope }: { scope: PeriodScope }): JSX.Element {
+export default function LodgingStatsSection({
+  scope,
+  visibility,
+}: {
+  scope: PeriodScope;
+  visibility: SectionVisibility;
+}): JSX.Element {
   const { t } = useTranslation(["dashboard", "lodging", "stats", "common"]);
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<LodgingStats | null>(null);
@@ -118,6 +125,8 @@ export default function LodgingStatsSection({ scope }: { scope: PeriodScope }): 
     );
   }
 
+  const show = visibility.isVisible;
+
   return (
     <div className="relative flex flex-col gap-4">
       {comparison}
@@ -127,14 +136,14 @@ export default function LodgingStatsSection({ scope }: { scope: PeriodScope }): 
           the currency card is translucent, so the hotel names showed through
           it. The list page always passed "inline"; this one passed nothing and
           got the overlay default. */}
-      <LodgingStatStrip stats={stats} variant="inline" />
-      <LodgingCurrencyBreakdown stats={stats} variant="inline" />
-      <LodgingMoneySection stats={stats} />
-      <LodgingQualitySection stats={stats} />
-      <LodgingGeoSection stats={stats} />
-      <LodgingRhythmSection stats={stats} />
-      <LodgingLoyaltySection stats={stats} />
-      <LodgingRecordsSection stats={stats} />
+      {show("kpis") && <LodgingStatStrip stats={stats} variant="inline" />}
+      {show("money") && <LodgingCurrencyBreakdown stats={stats} variant="inline" />}
+      {show("money") && <LodgingMoneySection stats={stats} />}
+      {show("quality") && <LodgingQualitySection stats={stats} />}
+      {show("geo") && <LodgingGeoSection stats={stats} />}
+      {show("rhythm") && <LodgingRhythmSection stats={stats} />}
+      {show("loyalty") && <LodgingLoyaltySection stats={stats} />}
+      {show("records") && <LodgingRecordsSection stats={stats} />}
     </div>
   );
 }

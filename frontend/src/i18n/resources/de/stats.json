@@ -604,7 +604,13 @@
     "seats": "Sitzplätze",
     "airlines": "Airlines",
     "aircraft": "Flugzeuge",
-    "countries": "Länder"
+    "countries": "Länder",
+    "heatmap": "Aktive Tage",
+    "keyFigures": "Kennzahlen",
+    "cruiseDepth": "Tiefe & Treue",
+    "cruiseTags": "Reedereien, Regionen, Länder",
+    "cruiseFlags": "Besonderheiten",
+    "rankings": "Ranglisten"
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."

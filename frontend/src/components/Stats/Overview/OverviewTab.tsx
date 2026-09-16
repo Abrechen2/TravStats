@@ -12,6 +12,7 @@ import { usePlacesAccess } from "../../../hooks/usePlacesVisible";
 import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { StatsPeriod } from "../useStatsPeriod";
+import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import { aggregate, collectYears } from "./aggregate";
 import CrossDomainKpis from "./CrossDomainKpis";
 import CrossDomainActivityChart from "./CrossDomainActivityChart";
@@ -25,10 +26,17 @@ interface Props {
   stats: DomainStatsMap;
   loading: boolean;
   period: StatsPeriod;
+  visibility: SectionVisibility;
   achievements: AchievementSummary | null;
 }
 
-export default function OverviewTab({ stats, loading, period, achievements }: Props): JSX.Element {
+export default function OverviewTab({
+  stats,
+  loading,
+  period,
+  visibility,
+  achievements,
+}: Props): JSX.Element {
   const { t } = useTranslation(["stats"]);
   // Domain-gating: the overview only ever renders the user's enabled
   // domains — toggle chips, summary cards, and aggregate inputs alike.
@@ -46,6 +54,7 @@ export default function OverviewTab({ stats, loading, period, achievements }: Pr
     [enabledDomains, placesAccess]
   );
   const { selectedYear, compareYear, compareEnabled } = period;
+  const show = visibility.isVisible;
 
   const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(() =>
     Object.fromEntries(enabled.map((k) => [k, true]))
@@ -72,74 +81,82 @@ export default function OverviewTab({ stats, loading, period, achievements }: Pr
 
   return (
     <div className="space-y-8">
-      <section>
-        <SectionHeader
-          label={t("stats:overview.kpisLabel")}
-          hint={kpiScopeHint(selectedYear, compareYear, compareEnabled, t)}
-        />
-        <CrossDomainKpis
-          agg={agg}
-          prevAgg={prevAgg}
-          selectedYear={selectedYear}
-          compareYear={compareYear}
-          compareEnabled={compareEnabled}
-          achievements={achievements}
-        />
-      </section>
+      {show("kpis") && (
+        <section>
+          <SectionHeader
+            label={t("stats:overview.kpisLabel")}
+            hint={kpiScopeHint(selectedYear, compareYear, compareEnabled, t)}
+          />
+          <CrossDomainKpis
+            agg={agg}
+            prevAgg={prevAgg}
+            selectedYear={selectedYear}
+            compareYear={compareYear}
+            compareEnabled={compareEnabled}
+            achievements={achievements}
+          />
+        </section>
+      )}
 
-      <section>
-        <SectionHeader
-          label={t("stats:overview.activityLabel")}
-          hint={t("stats:overview.activityHint")}
-        />
-        <DomainToggleChips
-          domains={enabled}
-          visible={visible}
-          setVisible={setVisible}
-          statsMap={stats}
-        />
-        <CrossDomainActivityChart
-          statsMap={stats}
-          visible={visible}
-          years={years}
-          selectedYear={selectedYear}
-          compareYear={compareYear}
-          compareEnabled={compareEnabled}
-        />
-      </section>
+      {show("activity") && (
+        <section>
+          <SectionHeader
+            label={t("stats:overview.activityLabel")}
+            hint={t("stats:overview.activityHint")}
+          />
+          <DomainToggleChips
+            domains={enabled}
+            visible={visible}
+            setVisible={setVisible}
+            statsMap={stats}
+          />
+          <CrossDomainActivityChart
+            statsMap={stats}
+            visible={visible}
+            years={years}
+            selectedYear={selectedYear}
+            compareYear={compareYear}
+            compareEnabled={compareEnabled}
+          />
+        </section>
+      )}
 
-      <section>
-        <CrossDomainHeatmap statsMap={stats} visible={visible} year={heatmapYear} />
-      </section>
+      {show("heatmap") && (
+        <section>
+          <CrossDomainHeatmap statsMap={stats} visible={visible} year={heatmapYear} />
+        </section>
+      )}
 
-      <section>
-        <SectionHeader
-          label={t("stats:overview.perDomainLabel")}
-          hint={
-            selectedYear !== null
-              ? t("stats:overview.perDomainHintScoped", { year: selectedYear })
-              : t("stats:overview.perDomainHint")
-          }
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {enabled.map((key) => (
-            <DomainSummaryCard
-              key={key}
-              domain={key}
-              stats={stats[key]}
-              selectedYear={selectedYear}
-              compareYear={compareYear}
-              compareEnabled={compareEnabled}
-            />
-          ))}
-        </div>
-      </section>
+      {show("perDomain") && (
+        <section>
+          <SectionHeader
+            label={t("stats:overview.perDomainLabel")}
+            hint={
+              selectedYear !== null
+                ? t("stats:overview.perDomainHintScoped", { year: selectedYear })
+                : t("stats:overview.perDomainHint")
+            }
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {enabled.map((key) => (
+              <DomainSummaryCard
+                key={key}
+                domain={key}
+                stats={stats[key]}
+                selectedYear={selectedYear}
+                compareYear={compareYear}
+                compareEnabled={compareEnabled}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* The cross-domain night account. Fetches on its own rather than
           joining useDomainStats: it is one request answering a question none
           of the per-domain adapters can, and a failure in it must not take
           the rest of the overview down. */}
-      <TravelAccountSection />
+      {show("travelAccount") && <TravelAccountSection />}
     </div>
   );
 }
