@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
+import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
 import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
@@ -347,15 +348,11 @@ export default function FlightDetailPage(): JSX.Element {
             ]}
           />
 
-          <DetailSection
-            title={t("flights:form.companions")}
-            facts={[
-              {
-                label: t("flights:form.companions"),
-                value: people.length > 0 ? people.join(", ") : null,
-              },
-            ]}
-          />
+          {people.length > 0 && (
+            <DetailSection title={t("flights:form.companions")}>
+              <PeopleList names={people} />
+            </DetailSection>
+          )}
 
           {flight.notes && (
             <DetailSection title={t("common:labels.notes")}>

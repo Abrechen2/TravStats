@@ -11,10 +11,14 @@ import {
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
-import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
+import CruiseItinerary from "../components/Cruise/CruiseItinerary";
 import TripPill from "../components/Trips/TripPill";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
+import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
+import DetailSection from "../components/ui/DetailSection";
+import PeopleList from "../components/ui/PeopleList";
+import { Icon } from "../components/ui/Icon";
 import Button from "../components/ui/Button";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
@@ -118,66 +122,78 @@ export default function CruiseDetailPage(): JSX.Element {
     );
   }
 
-  // Effective itinerary includes departure/arrival ports so the route list
-  // never reads emptier than the list page's port count for the same cruise.
-  const events: TimelineEvent[] = buildEffectiveTimeline(cruise).map((entry) => ({
-    id: entry.key,
-    domain: "cruise",
-    date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
-    title: entry.isAtSea
-      ? t("stops.at_sea")
-      : (entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—")),
-    subtitle: entry.isAtSea
-      ? undefined
-      : entry.port
-        ? [entry.port.city, entry.port.country].filter(Boolean).join(", ") || undefined
-        : entry.unresolvedPortName
-          ? t("stops.unresolved")
-          : undefined,
-    meta: entry.excursionNote ?? undefined,
-  }));
-
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
+
+  const shipName = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
+  const nights =
+    cruise.startDate && cruise.endDate
+      ? Math.round(
+          (Date.parse(cruise.endDate.slice(0, 10)) - Date.parse(cruise.startDate.slice(0, 10))) /
+            86_400_000
+        )
+      : null;
+  const countries = new Set(
+    buildEffectiveTimeline(cruise)
+      .map((entry) => entry.port?.country)
+      .filter((c): c is string => Boolean(c))
+  ).size;
+  const price =
+    cruise.price !== null
+      ? formatAmount(cruise.price, cruise.currency, { language: i18n.language })
+      : null;
+
+  const kpis: DetailKpi[] = [
+    ...(nights !== null && nights >= 0
+      ? [{ key: "nights", value: nights, label: t("detail.nights", { count: nights }) }]
+      : []),
+    {
+      key: "ports",
+      value: (
+        <>
+          {portsCount}
+          {unresolvedCount > 0 && (
+            <span
+              className="t-caption"
+              style={{ marginLeft: 4 }}
+              title={t("list.unresolvedPorts", { count: unresolvedCount })}
+              aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
+            >
+              +{unresolvedCount}
+            </span>
+          )}
+        </>
+      ),
+      label: `${t("field.ports", { count: portsCount })} · ${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+    },
+    ...(countries > 0
+      ? [{ key: "countries", value: countries, label: t("detail.countries", { count: countries }) }]
+      : []),
+    ...(price ? [{ key: "price", value: price, label: t("detail.priceKpi") }] : []),
+  ];
 
   return (
     <AppShell width="list">
       <DetailHeader
         backTo="/cruises"
-        backLabel={t("list.title")}
+        backLabel={t("detail.backToLogbook")}
         domain="cruise"
-        icon="🚢"
-        title={cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
-        subtitle={
-          <>
-            <span>{cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}</span>
-            {cruise.routeName && (
-              <span style={{ color: "var(--ts-text)" }}>{cruise.routeName}</span>
-            )}
-            {cruise.trip && (
-              <span data-testid="cruise-detail-trip">
-                <TripPill trip={cruise.trip} />
-              </span>
-            )}
-          </>
-        }
-        facts={[
-          `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`,
-          <>
-            {portsCount} {t("field.ports", { count: portsCount })}
-            {unresolvedCount > 0 && (
-              <span
-                className="ml-1"
-                title={t("list.unresolvedPorts", { count: unresolvedCount })}
-                aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
-              >
-                (+{unresolvedCount})
-              </span>
-            )}
-          </>,
-          `${seaDays} ${t("field.sea_days", { count: seaDays })}`,
-        ]}
+        icon={<Icon name="ship" size={24} />}
+        title={[shipName, cruise.routeName].filter(Boolean).join(" · ")}
+        meta={[
+          cruise.cruiseLine ?? cruise.ship?.cruiseLine,
+          cruise.startDate && cruise.endDate
+            ? `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`
+            : null,
+          cruise.departurePort && cruise.arrivalPort
+            ? `${cruise.departurePort.name} → ${cruise.arrivalPort.name}`
+            : null,
+          cruise.ship?.imo ? `IMO ${cruise.ship.imo}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}
         status={
           <span className="ts-status-pill" style={cruiseStatusPillStyle(cruise.status)}>
             {t(`status.${cruise.status}`)}
@@ -186,94 +202,87 @@ export default function CruiseDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
-            <Button onClick={() => setConfirmingDelete(true)}>{t("detail.delete")}</Button>
+            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+              {t("detail.delete")}
+            </Button>
           </>
         }
       />
 
-      {/* Two-column body */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div className="md:col-span-3">
-          <h2 className="mb-2 text-sm font-semibold text-(--text-muted)">{t("detail.route")}</h2>
-          {events.length > 0 ? (
-            <TripTimeline events={events} />
-          ) : (
-            <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-6 text-center text-sm text-(--text-muted)">
-              {t("detail.stopsEmpty")}
-            </div>
-          )}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="flex flex-col gap-6 md:col-span-3">
+          <DetailSection title={t("detail.itinerary")}>
+            {cruise.stops.length > 0 || cruise.departurePort ? (
+              <CruiseItinerary cruise={cruise} />
+            ) : (
+              <p className="t-caption">{t("detail.stopsEmpty")}</p>
+            )}
+          </DetailSection>
+
+          <DetailSection
+            title={t("detail.cabin")}
+            facts={[
+              { label: t("field.cabinNumber"), value: cruise.cabinNumber, mono: true },
+              {
+                label: t("field.cabinType"),
+                value: cruise.cabinType
+                  ? t(`cabinType.${cruise.cabinType}`, { defaultValue: cruise.cabinType })
+                  : null,
+              },
+              { label: t("field.deck"), value: cruise.deck, mono: true },
+            ]}
+          />
+
+          <DetailSection
+            title={t("detail.costs")}
+            facts={[
+              { label: t("field.price"), value: price, mono: true },
+              { label: t("field.bookingReference"), value: cruise.bookingReference, mono: true },
+            ]}
+          />
         </div>
 
-        <aside className="space-y-3 md:col-span-2">
-          <div className="rounded-md border border-border bg-(--bg-surface) p-3">
-            <p className="mb-2 text-xs uppercase text-(--text-muted)">{t("detail.route")}</p>
+        <aside className="flex flex-col gap-6 md:col-span-2">
+          {cruise.trip && (
+            <DetailSection title={t("trips:tab")}>
+              <span data-testid="cruise-detail-trip">
+                <TripPill trip={cruise.trip} />
+              </span>
+            </DetailSection>
+          )}
+
+          <DetailSection title={t("detail.route")}>
             <CruiseRouteMap cruise={cruise} />
-          </div>
+          </DetailSection>
 
-          <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-            <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.cabin")}</h3>
-            <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
-              <div className="flex justify-between">
-                <dt>{t("field.cabin")}</dt>
-                <dd>{cruise.cabinNumber ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.cabinType")}</dt>
-                <dd>
-                  {cruise.cabinType
-                    ? t(`cabinType.${cruise.cabinType}`, { defaultValue: cruise.cabinType })
-                    : "—"}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.deck")}</dt>
-                <dd>{cruise.deck ?? "—"}</dd>
-              </div>
-            </dl>
-          </div>
+          {cruise.companions.length > 0 && (
+            <DetailSection title={t("field.companions")}>
+              <PeopleList names={cruise.companions} />
+            </DetailSection>
+          )}
 
-          <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-            <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.costs")}</h3>
-            <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
-              <div className="flex justify-between">
-                <dt>{t("field.bookingReference")}</dt>
-                <dd>{cruise.bookingReference ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.price")}</dt>
-                <dd>
-                  {cruise.price !== null
-                    ? formatAmount(cruise.price, cruise.currency, { language: i18n.language })
-                    : "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-            <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.meta")}</h3>
-            {cruise.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {cruise.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-md border border-border px-2 py-0.5 text-xs text-(--text-muted)"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            {cruise.companions.length > 0 && (
-              <p className="mt-2 text-xs text-(--text-muted)">
-                <span className="text-(--text-muted)">{t("field.companions")}:</span>{" "}
-                {cruise.companions.join(", ")}
-              </p>
-            )}
-            {cruise.notes !== null && cruise.notes.length > 0 && (
-              <p className="mt-2 whitespace-pre-wrap text-xs text-(--text-muted)">{cruise.notes}</p>
-            )}
-          </div>
+          {(cruise.tags.length > 0 || (cruise.notes !== null && cruise.notes.length > 0)) && (
+            <DetailSection title={t("detail.meta")}>
+              {cruise.notes !== null && cruise.notes.length > 0 && (
+                <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--ts-text)" }}>
+                  {cruise.notes}
+                </p>
+              )}
+              {cruise.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {cruise.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border px-2.5 py-0.5 text-xs"
+                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </DetailSection>
+          )}
         </aside>
       </div>
 

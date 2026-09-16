@@ -57,7 +57,13 @@
     "loadError": "Die Kreuzfahrt konnte nicht geladen werden.",
     "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
     "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten."
+    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "backToLogbook": "Logbuch · Kreuzfahrten",
+    "itinerary": "Hafenfolge",
+    "nights": "Nächte",
+    "countries": "Länder",
+    "priceKpi": "Preis",
+    "day": "Tag"
   },
   "field": {
     "ship": "Schiff",
