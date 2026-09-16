@@ -563,6 +563,16 @@ is the only static check that needs a database. The four Jest/Vitest ratchets
 ride along with whichever suite owns them, which means the OpenAPI pair is
 still only as binding as the advisory backend job.
 
+**"Run in CI" was, until 2026-09-16, "is red in CI".** Both database jobs
+failed on every run from the day they were wired: the service image was
+`postgres:16-alpine`, which has no PostGIS, so `migrate deploy` in the Jest job
+and the migration replay in the drift job died on `CREATE EXTENSION postgis`;
+and `prisma migrate diff` does not create the shadow database it is pointed at
+(P1003), which every developer running `check:drift` the documented way met
+too. The images are `postgis/postgis:16-3.4` now and the script creates its
+shadow. Nobody noticed for a day because both jobs looked like the known
+advisory red — which is the argument for a red job never being normal.
+
 The delay cost exactly what the ratchet exists to prevent: on 2026-09-15 a
 branch landed on main with four files grown past their frozen size, and nobody
 saw it, because nothing asked. This paragraph has a history of being wrong in

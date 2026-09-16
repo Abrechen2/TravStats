@@ -121,7 +121,13 @@ jobs:
         # credentials. The user owns the container, so it may CREATE DATABASE
         # for the shadow — a restricted role would need SHADOW_DATABASE_URL
         # set explicitly instead.
-        image: postgres:16-alpine
+        #
+        # PostGIS, not plain postgres: the migrations CREATE EXTENSION postgis,
+        # and on postgres:16-alpine the replay died on it. This job and the
+        # Jest one were red on EVERY run from the day they were wired
+        # (2026-09-15, forgejo#60) until 2026-09-16 — the other half was the
+        # shadow database, which check-schema-drift.ts now creates itself.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
@@ -266,8 +272,10 @@ jobs:
     services:
       postgres:
         # Values are CI-local throwaways and intentionally unrelated to any
-        # developer or deployment credentials.
-        image: postgres:16-alpine
+        # developer or deployment credentials. PostGIS for the same reason as
+        # the drift job: `prisma migrate deploy` below failed on
+        # CREATE EXTENSION postgis, so the suite never ran at all.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
