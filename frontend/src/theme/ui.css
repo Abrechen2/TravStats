@@ -171,6 +171,24 @@
   cursor: pointer;
 }
 
+/* ─── Dashboard map overlays ────────────────────────────────────────────── */
+.ts-activity-panel {
+  width: 320px;
+}
+.ts-map-panel-dock {
+  bottom: 16px;
+}
+@media (max-width: 639px) {
+  .ts-activity-panel {
+    width: 100%;
+  }
+  /* = ATTRIBUTION_CLEARANCE (components/map/attributionClearance.ts); a test
+     holds the two together. */
+  .ts-map-panel-dock {
+    bottom: 52px;
+  }
+}
+
 /* ─── Settings rows ─────────────────────────────────────────────────────── */
 /* A card of settings: rows divided by hairlines, the card padding outside. */
 .ts-setting-rows > * {

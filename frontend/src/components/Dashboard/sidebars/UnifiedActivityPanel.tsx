@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { DOMAINS } from "../../../shared/domains";
@@ -16,6 +16,7 @@ import {
   type ActivityKind,
 } from "./activityItems";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { Icon } from "../../ui/Icon";
 
 interface UnifiedActivityPanelProps {
   flights?: GeoJSONFeature[];
@@ -97,6 +98,22 @@ export function UnifiedActivityPanel({
     return { all: allItems.length, ...byKind };
   }, [allItems]);
 
+  // Escape closes it, as every other panel on the page does. The listener
+  // exists only while the panel is open (CT106 audit B02: Escape did nothing).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      // A dialog on top owns Escape (useDialogChrome). Without this check one
+      // keypress in the flight editor opened from this list closed the list
+      // behind it as well — measured on the dashboard at 390px.
+      if (document.querySelector(".ts-dialog-scrim")) return;
+      onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // Only offer a chip for a domain that actually has rows — a permanently
@@ -104,16 +121,22 @@ export function UnifiedActivityPanel({
   const chips = CHIP_ORDER.filter((kind) => counts[kind] > 0);
 
   return (
+    // `ts-activity-panel` (theme/ui.css): 320px beside the map, the whole
+    // width below 640px. z-index above the floating "Hinzufügen" and the map
+    // key (both 30) — at 20 the add button sat on this panel's close button,
+    // and a real tap there opened the add menu (CT106 audit B02).
     <div
+      className="ts-activity-panel"
+      role="region"
+      aria-label={title ?? t("dashboard:sidebar.activity")}
       style={{
         position: "absolute",
         top: 0,
         left: 0,
         bottom: 0,
-        width: 320,
-        background: "rgba(22,27,34,0.95)",
-        borderRight: "1px solid var(--color-border)",
-        zIndex: 20,
+        background: "var(--ts-surface)",
+        borderRight: "1px solid var(--ts-border)",
+        zIndex: 40,
         overflowY: "auto",
       }}
     >
@@ -131,15 +154,19 @@ export function UnifiedActivityPanel({
           type="button"
           onClick={onClose}
           aria-label={t("common:accessibility.close")}
+          // 44px: the old "×" was a 10×26px glyph.
+          className="flex items-center justify-center rounded-md"
           style={{
+            width: 44,
+            height: 44,
+            marginRight: -10,
             background: "none",
             border: "none",
             color: "inherit",
             cursor: "pointer",
-            fontSize: 18,
           }}
         >
-          ×
+          <Icon name="x" size={20} />
         </button>
       </div>
 
@@ -218,18 +245,30 @@ export function UnifiedActivityPanel({
                 }}
                 aria-label={t("common:buttons.details", { defaultValue: "Details" })}
                 title={t("common:buttons.details", { defaultValue: "Details" })}
+                // A 44px hit area around a small visible arrow: the bordered
+                // "→" alone measured 23×17px on a phone (CT106 audit B02).
+                className="flex shrink-0 items-center justify-center"
                 style={{
+                  width: 44,
+                  height: 44,
+                  margin: "-12px -10px -12px 0",
                   background: "none",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 4,
-                  padding: "2px 6px",
-                  color: "var(--text-muted)",
+                  border: "none",
+                  color: "var(--ts-muted)",
                   cursor: "pointer",
-                  fontSize: 11,
-                  lineHeight: 1,
                 }}
               >
-                →
+                <span
+                  className="flex items-center justify-center"
+                  style={{
+                    width: 26,
+                    height: 22,
+                    border: "1px solid var(--ts-border)",
+                    borderRadius: 6,
+                  }}
+                >
+                  <Icon name="chevron-right" size={14} />
+                </span>
               </button>
             </div>
             {(item.sublabel !== null || item.meta !== null || !item.mappable) && (
