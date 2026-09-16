@@ -70,6 +70,7 @@ export const airportSearchLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   keyGenerator: userOrIpKey,
+  skip: skipInDevelopment,
 });
 
 export const airportSearchBurstLimiter = rateLimit({
@@ -79,6 +80,7 @@ export const airportSearchBurstLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  skip: skipInDevelopment,
 });
 
 /**
@@ -201,6 +203,20 @@ export const generalLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * A narrower bypass, for development only, for the anonymous airport search.
+ *
+ * `/airports/search` is unauthenticated by design, so its buckets are keyed by
+ * address, and a Playwright run is one address: three browsers typing airports
+ * into review forms spent the 100-per-15-minutes bucket and WebKit, running
+ * last, got a 429 and an empty airport field (forgejo#56). Not 'test': the
+ * limiter's own suites (rateLimit.ipv6, rateLimit.airportSearchBypass) run
+ * under NODE_ENV=test and must see it bite.
+ */
+export function skipInDevelopment(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
 
 /**
  * The bypass the pre-auth limiters share in development and test.
