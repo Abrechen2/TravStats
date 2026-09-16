@@ -255,6 +255,18 @@ jobs:
   # only after re-measuring. Then delete `continue-on-error` below in one
   # deliberate move.
   #
+  # RE-MEASURED 2026-09-16 — the first run that reached the suite at all.
+  # Until that day the job died in `migrate deploy` (no PostGIS in the service
+  # image) and then in jest.globalSetup (the destructive-test guard), so the
+  # figures above were measured locally and nothing here had ever run. On
+  # main @ 77b56258: 522 of 523 suites green. Neither the missing fixture nor
+  # the chain seed failed — both had been addressed since. The single red
+  # suite was lodging.test.ts, and not with 40P01: two CRUD cases timed out
+  # at 5 s because they reached the real geocoder (Photon / Nominatim) from
+  # the runner. That test now stubs the geocoder by default. What remains
+  # before promotion is one more green run on main to confirm, and the
+  # owner's decision.
+  #
   # On the environment: main now carries jest.globalSetup.ts (fails fast
   # with one clear sentence when Postgres is unreachable, instead of a
   # four-figure failure count) and jest.setup.ts + workerIdleMemoryLimit
@@ -354,8 +366,8 @@ jobs:
           else
             echo "### Backend suite FAILED (advisory job)" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "This job does not block merges yet. Check whether this is the known" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`lodging.test.ts\` 40P01 deadlock or a genuine regression you introduced." >> "$GITHUB_STEP_SUMMARY"
+            echo "This job does not block merges yet. As of 2026-09-16 the suite was green on" >> "$GITHUB_STEP_SUMMARY"
+            echo "main apart from a geocoder timeout since fixed, so treat a red run as a finding." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # ---------------------------------------------------------------------
