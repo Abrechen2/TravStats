@@ -50,6 +50,7 @@ import {
   type FlightStatusFilter,
 } from "../components/flightsTable/flightColumns";
 import { useTableHints } from "../components/ui/useTableHints";
+import LogbookTabs from "../components/table/LogbookTabs";
 
 // Trips moved to their own /trips top-level page (Phase-1 redesign).
 // This page now focuses purely on the flight table; the trip badge in
@@ -490,108 +491,7 @@ export default function FlightsTablePage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <ListFilterBar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t("flights:filter.searchPlaceholder"),
-        }}
-        status={{
-          label: t("flights:table.status"),
-          value: statusFilter,
-          onChange: (v): void => setStatusFilter(v as FlightStatusFilter),
-          allLabel: t("flights:filter.allStatuses"),
-          options: FLIGHT_STATUSES.map((st) => ({
-            value: st,
-            label: t(`flights:status.${st}`),
-          })),
-        }}
-        year={{
-          label: t("flights:filter.year"),
-          value: yearFilter,
-          onChange: setYearFilter,
-          allLabel: t("flights:filter.allYears"),
-          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
-        }}
-        extraActiveCount={extraActiveCount}
-        extra={
-          <>
-            <FilterField label={t("flights:filter.month")}>
-              <select
-                value={monthFilter}
-                onChange={(e): void => setMonthFilter(e.target.value)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("flights:filter.allMonths")}</option>
-                {MONTH_KEYS.map((key, i) => (
-                  <option key={key} value={String(i + 1)}>
-                    {t(`stats:months.${key}`)}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-            <FilterField label={t("flights:table.airline")}>
-              <select
-                value={airlineFilter}
-                onChange={(e): void => setAirlineFilter(e.target.value)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("flights:filter.allAirlines")}</option>
-                {availableAirlines.map((a) => (
-                  <option key={a.name} value={a.name}>
-                    {a.name} ({a.count})
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-            <FilterField label={t("trips:tab")}>
-              <select
-                value={tripFilter}
-                onChange={(e): void => setTripFilter(e.target.value)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("flights:filter.allTrips")}</option>
-                <option value="with">{t("flights:filter.withTrip")}</option>
-                <option value="without">{t("flights:filter.withoutTrip")}</option>
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.name}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-            {/* Special flights used to be a row of pills above the table —
-                  the only place in the app where a filter was a pill. */}
-            <FilterField label={t("specialFlights:filter.label")}>
-              <select
-                value={specialFilter}
-                onChange={(e): void => setSpecialFilter(e.target.value as SpecialTypeFilter)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("specialFlights:filter.all")}</option>
-                <option value="standard">{t("specialFlights:filter.standardOnly")}</option>
-                <option value="special">{t("specialFlights:filter.allSpecial")}</option>
-                {SPECIAL_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {t(`specialFlights:specialType.${type}`)}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-          </>
-        }
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-        // Silent while nothing is known: "0 angezeigt" over a failed load is
-        // a count of a list nobody could read.
-        resultLabel={
-          loading || loadError
-            ? ""
-            : t("common:filters.showing", { count: displayedFlights.length })
-        }
-      />
-
-      {/* The width is the shell's now — `list`, 1200px, asked for by name. */}
+      <LogbookTabs />
       <div className="w-full">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h1 className="t-screen-title">{t("dashboard:flightsTitle")}</h1>
@@ -639,7 +539,107 @@ export default function FlightsTablePage(): JSX.Element {
           </Link>
         </p>
 
-        {/* Table */}
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("flights:filter.searchPlaceholder"),
+          }}
+          status={{
+            label: t("flights:table.status"),
+            value: statusFilter,
+            onChange: (v): void => setStatusFilter(v as FlightStatusFilter),
+            allLabel: t("flights:filter.allStatuses"),
+            options: FLIGHT_STATUSES.map((st) => ({
+              value: st,
+              label: t(`flights:status.${st}`),
+            })),
+          }}
+          year={{
+            label: t("flights:filter.year"),
+            value: yearFilter,
+            onChange: setYearFilter,
+            allLabel: t("flights:filter.allYears"),
+            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+          }}
+          extraActiveCount={extraActiveCount}
+          extra={
+            <>
+              <FilterField label={t("flights:filter.month")}>
+                <select
+                  value={monthFilter}
+                  onChange={(e): void => setMonthFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allMonths")}</option>
+                  {MONTH_KEYS.map((key, i) => (
+                    <option key={key} value={String(i + 1)}>
+                      {t(`stats:months.${key}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField label={t("flights:table.airline")}>
+                <select
+                  value={airlineFilter}
+                  onChange={(e): void => setAirlineFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allAirlines")}</option>
+                  {availableAirlines.map((a) => (
+                    <option key={a.name} value={a.name}>
+                      {a.name} ({a.count})
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField label={t("trips:tab")}>
+                <select
+                  value={tripFilter}
+                  onChange={(e): void => setTripFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allTrips")}</option>
+                  <option value="with">{t("flights:filter.withTrip")}</option>
+                  <option value="without">{t("flights:filter.withoutTrip")}</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              {/* Special flights used to be a row of pills above the table —
+                    the only place in the app where a filter was a pill. */}
+              <FilterField label={t("specialFlights:filter.label")}>
+                <select
+                  value={specialFilter}
+                  onChange={(e): void => setSpecialFilter(e.target.value as SpecialTypeFilter)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("specialFlights:filter.all")}</option>
+                  <option value="standard">{t("specialFlights:filter.standardOnly")}</option>
+                  <option value="special">{t("specialFlights:filter.allSpecial")}</option>
+                  {SPECIAL_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`specialFlights:specialType.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            </>
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          // Silent while nothing is known: "0 angezeigt" over a failed load is
+          // a count of a list nobody could read.
+          resultLabel={
+            loading || loadError
+              ? ""
+              : t("common:filters.showing", { count: displayedFlights.length })
+          }
+        />
+
         {loadError ? (
           <div
             role="alert"

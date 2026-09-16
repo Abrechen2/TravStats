@@ -99,13 +99,10 @@ export default function ListFilterBar({
   }, [open]);
 
   return (
-    <div
-      className="sticky top-14 z-20 px-4 py-3 backdrop-blur-md"
-      style={{
-        background: "rgba(13,17,23,0.85)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
-    >
+    // A row under the page title (round 4), no longer a sticky tinted panel
+    // above it: the title and the main action came first in the export, and
+    // the translucent panel was one of the last hard-coded dark colours.
+    <div className="mb-4">
       <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <input

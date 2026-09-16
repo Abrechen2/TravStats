@@ -37,6 +37,7 @@ import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { useTableHints } from "../components/ui/useTableHints";
+import LogbookTabs from "../components/table/LogbookTabs";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -326,69 +327,7 @@ export default function LodgingListPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <ListFilterBar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t("lodging:filter.searchPlaceholder"),
-        }}
-        status={{
-          label: t("lodging:list.status.label"),
-          value: statusFilter,
-          onChange: (v): void => setStatusFilter(v as StatusFilter),
-          allLabel: t("lodging:filter.allStatuses"),
-          options: STATUSES.map((st) => ({
-            value: st,
-            label: t(`lodging:stayStatus.${st}`),
-          })),
-        }}
-        year={{
-          label: t("lodging:filter.year"),
-          value: yearFilter === "all" ? "all" : String(yearFilter),
-          onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
-          allLabel: t("lodging:filter.allYears"),
-          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
-        }}
-        extraActiveCount={extraActiveCount}
-        extra={
-          <>
-            <FilterField label={t("lodging:filter.type")}>
-              <select
-                value={typeFilter}
-                onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("lodging:filter.allTypes")}</option>
-                {TYPES.map((ty) => (
-                  <option key={ty} value={ty}>
-                    {t(`lodging:type.${ty}`)}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-            <FilterField label={t("lodging:filter.country")}>
-              <select
-                value={countryFilter}
-                onChange={(e): void => setCountryFilter(e.target.value)}
-                className={PANEL_SELECT_CLASS}
-              >
-                <option value="all">{t("lodging:filter.allCountries")}</option>
-                {availableCountries.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-          </>
-        }
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-        resultLabel={
-          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
-        }
-      />
-
+      <LogbookTabs />
       {/* The width is the shell's now — `list`, 1200px, asked for by name. */}
       <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -442,6 +381,69 @@ export default function LodgingListPage(): JSX.Element {
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
           unknown={loading || loadError}
+        />
+
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("lodging:filter.searchPlaceholder"),
+          }}
+          status={{
+            label: t("lodging:list.status.label"),
+            value: statusFilter,
+            onChange: (v): void => setStatusFilter(v as StatusFilter),
+            allLabel: t("lodging:filter.allStatuses"),
+            options: STATUSES.map((st) => ({
+              value: st,
+              label: t(`lodging:stayStatus.${st}`),
+            })),
+          }}
+          year={{
+            label: t("lodging:filter.year"),
+            value: yearFilter === "all" ? "all" : String(yearFilter),
+            onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+            allLabel: t("lodging:filter.allYears"),
+            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+          }}
+          extraActiveCount={extraActiveCount}
+          extra={
+            <>
+              <FilterField label={t("lodging:filter.type")}>
+                <select
+                  value={typeFilter}
+                  onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("lodging:filter.allTypes")}</option>
+                  {TYPES.map((ty) => (
+                    <option key={ty} value={ty}>
+                      {t(`lodging:type.${ty}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField label={t("lodging:filter.country")}>
+                <select
+                  value={countryFilter}
+                  onChange={(e): void => setCountryFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("lodging:filter.allCountries")}</option>
+                  {availableCountries.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            </>
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={
+            loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+          }
         />
 
         {loadError ? (

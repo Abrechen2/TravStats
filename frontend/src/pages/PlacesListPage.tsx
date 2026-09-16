@@ -38,6 +38,7 @@ import type { Place } from "../types/place";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { formatIsoDate } from "../lib/dateUtils";
 import { useTableHints } from "../components/ui/useTableHints";
+import LogbookTabs from "../components/table/LogbookTabs";
 
 type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
@@ -359,87 +360,12 @@ export default function PlacesListPage(): JSX.Element {
 
   return (
     <AppShell width="list">
+      <LogbookTabs />
       {/* The shared filter bar sits directly under the navigation, the way
           it does on the other three domain lists — it is `sticky top-14`, so
           its place in the flow is what the page reads like before you scroll.
           Search and status stay open because every domain has them; category
           and country sit behind "Filter". */}
-      <ListFilterBar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t("places:list.searchPlaceholder"),
-        }}
-        status={{
-          label: t("places:list.filters.status"),
-          value: visited,
-          onChange: (v) => setVisited(v as VisitedFilter),
-          allLabel: t("places:filter.allStatuses"),
-          options: [
-            { value: "visited", label: t("places:list.status.visited") },
-            { value: "planned", label: t("places:list.status.planned") },
-            { value: "wishlist", label: t("places:list.status.wishlist") },
-          ],
-        }}
-        extra={
-          <>
-            <FilterField label={t("places:list.filters.category")}>
-              <select
-                className={PANEL_SELECT_CLASS}
-                value={category}
-                onChange={(e) => setCategory(e.target.value as CategoryFilter)}
-              >
-                <option value="all">{t("places:filter.allCategories")}</option>
-                {PLACE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {t(`places:categories.${c}`)}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-            {/* Only shown when there is something to filter BY. An empty
-                dropdown is a control that cannot do anything. */}
-            {lists.length > 0 && (
-              <FilterField label={t("places:list.filters.list")}>
-                <select
-                  className={PANEL_SELECT_CLASS}
-                  value={listId}
-                  onChange={(e) => setListId(e.target.value)}
-                >
-                  <option value="all">{t("places:list.filters.allLists")}</option>
-                  {lists.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-            )}
-            <FilterField label={t("places:list.filters.country")}>
-              <select
-                className={PANEL_SELECT_CLASS}
-                value={country}
-                onChange={(e) => setCountry(e.target.value as CountryFilter)}
-              >
-                <option value="all">{t("places:filter.allCountries")}</option>
-                {countryOptions.map(([code, label]) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-          </>
-        }
-        extraActiveCount={(category !== "all" ? 1 : 0) + (country !== "all" ? 1 : 0)}
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-        resultLabel={
-          loading || loadError
-            ? ""
-            : t("places:list.resultCount", { shown: filtered.length, total: rows.length })
-        }
-      />
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
@@ -480,6 +406,83 @@ export default function PlacesListPage(): JSX.Element {
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
           unknown={loading || loadError}
+        />
+
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("places:list.searchPlaceholder"),
+          }}
+          status={{
+            label: t("places:list.filters.status"),
+            value: visited,
+            onChange: (v) => setVisited(v as VisitedFilter),
+            allLabel: t("places:filter.allStatuses"),
+            options: [
+              { value: "visited", label: t("places:list.status.visited") },
+              { value: "planned", label: t("places:list.status.planned") },
+              { value: "wishlist", label: t("places:list.status.wishlist") },
+            ],
+          }}
+          extra={
+            <>
+              <FilterField label={t("places:list.filters.category")}>
+                <select
+                  className={PANEL_SELECT_CLASS}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as CategoryFilter)}
+                >
+                  <option value="all">{t("places:filter.allCategories")}</option>
+                  {PLACE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {t(`places:categories.${c}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              {/* Only shown when there is something to filter BY. An empty
+                  dropdown is a control that cannot do anything. */}
+              {lists.length > 0 && (
+                <FilterField label={t("places:list.filters.list")}>
+                  <select
+                    className={PANEL_SELECT_CLASS}
+                    value={listId}
+                    onChange={(e) => setListId(e.target.value)}
+                  >
+                    <option value="all">{t("places:list.filters.allLists")}</option>
+                    {lists.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </FilterField>
+              )}
+              <FilterField label={t("places:list.filters.country")}>
+                <select
+                  className={PANEL_SELECT_CLASS}
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value as CountryFilter)}
+                >
+                  <option value="all">{t("places:filter.allCountries")}</option>
+                  {countryOptions.map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            </>
+          }
+          extraActiveCount={(category !== "all" ? 1 : 0) + (country !== "all" ? 1 : 0)}
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={
+            loading || loadError
+              ? ""
+              : t("places:list.resultCount", { shown: filtered.length, total: rows.length })
+          }
         />
 
         <>

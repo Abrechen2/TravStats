@@ -39,7 +39,7 @@ function PrimaryLink({ node, pathname }: { node: NavLeaf; pathname: string }): J
 /**
  * The app header, round 4 (decision E1).
  *
- * Wordmark left; the four primary destinations and "Mehr" in the middle; the
+ * Wordmark and, beside it, the four primary destinations and "Mehr"; the
  * Posteingang icon and the account menu right. Below `md` the destinations
  * fold into "Mehr" as a first section — the phone row keeps logo, Mehr, inbox
  * and avatar, and nothing scrolls sideways.
@@ -124,22 +124,21 @@ export default function NavigationBar(): JSX.Element {
               </span>
             </Link>
             <UpdateBadge />
+            <nav
+              aria-label={t("dashboard:nav.main")}
+              className="ml-4 hidden md:flex items-center gap-1"
+              style={{ height: "var(--ts-size-web-header)" }}
+            >
+              {primary.map((node) =>
+                node.kind === "group" ? (
+                  <NavDropdown key={node.id} group={node} />
+                ) : (
+                  <PrimaryLink key={node.id} node={node} pathname={location.pathname} />
+                )
+              )}
+              <MoreMenu sections={more} />
+            </nav>
           </div>
-
-          <nav
-            aria-label={t("dashboard:nav.main")}
-            className="hidden md:flex items-center gap-1"
-            style={{ height: "var(--ts-size-web-header)" }}
-          >
-            {primary.map((node) =>
-              node.kind === "group" ? (
-                <NavDropdown key={node.id} group={node} />
-              ) : (
-                <PrimaryLink key={node.id} node={node} pathname={location.pathname} />
-              )
-            )}
-            <MoreMenu sections={more} />
-          </nav>
 
           <div className="flex shrink-0 items-center gap-1">
             <div className="md:hidden">

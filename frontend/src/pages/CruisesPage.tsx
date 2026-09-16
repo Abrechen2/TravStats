@@ -29,6 +29,7 @@ import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey } from "../components/Cruise/sortCruises";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { useTableHints } from "../components/ui/useTableHints";
+import LogbookTabs from "../components/table/LogbookTabs";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -297,50 +298,7 @@ export default function CruisesPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <ListFilterBar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t("filter.searchPlaceholder"),
-        }}
-        status={{
-          label: t("filter.status"),
-          value: statusFilter,
-          onChange: (v): void => setStatusFilter(v as StatusFilter),
-          allLabel: t("filter.allStatuses"),
-          options: STATUSES.map((st) => ({ value: st, label: t(`status.${st}`) })),
-        }}
-        year={{
-          label: t("filter.year"),
-          value: yearFilter === "all" ? "all" : String(yearFilter),
-          onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
-          allLabel: t("filter.allYears"),
-          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
-        }}
-        extraActiveCount={extraActiveCount}
-        extra={
-          <FilterField label={t("filter.line")}>
-            <select
-              value={lineFilter}
-              onChange={(e): void => setLineFilter(e.target.value)}
-              className={PANEL_SELECT_CLASS}
-            >
-              <option value="all">{t("filter.allLines")}</option>
-              {availableLines.map((line) => (
-                <option key={line} value={line}>
-                  {line}
-                </option>
-              ))}
-            </select>
-          </FilterField>
-        }
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-        resultLabel={
-          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
-        }
-      />
-
+      <LogbookTabs />
       {/* The width is the shell's now — `list`, 1200px, the same one every
           logbook page asks for by name. */}
       <div className="w-full">
@@ -382,6 +340,50 @@ export default function CruisesPage(): JSX.Element {
             {t("settings:import.openHub")}
           </Link>
         </p>
+
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("filter.searchPlaceholder"),
+          }}
+          status={{
+            label: t("filter.status"),
+            value: statusFilter,
+            onChange: (v): void => setStatusFilter(v as StatusFilter),
+            allLabel: t("filter.allStatuses"),
+            options: STATUSES.map((st) => ({ value: st, label: t(`status.${st}`) })),
+          }}
+          year={{
+            label: t("filter.year"),
+            value: yearFilter === "all" ? "all" : String(yearFilter),
+            onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+            allLabel: t("filter.allYears"),
+            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+          }}
+          extraActiveCount={extraActiveCount}
+          extra={
+            <FilterField label={t("filter.line")}>
+              <select
+                value={lineFilter}
+                onChange={(e): void => setLineFilter(e.target.value)}
+                className={PANEL_SELECT_CLASS}
+              >
+                <option value="all">{t("filter.allLines")}</option>
+                {availableLines.map((line) => (
+                  <option key={line} value={line}>
+                    {line}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={
+            loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+          }
+        />
 
         {loadError ? (
           <div
