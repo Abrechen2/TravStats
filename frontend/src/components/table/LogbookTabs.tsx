@@ -3,16 +3,10 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
-import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
-import { Icon, type IconName } from "../ui/Icon";
+import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
+import { Icon } from "../ui/Icon";
+import { DOMAIN_ICON } from "../ui/domainIcons";
 import { isPathActive } from "../Nav/useNavItems";
-
-const DOMAIN_ICON: Record<DomainKey, IconName> = {
-  flight: "plane",
-  cruise: "ship",
-  lodging: "bed",
-  poi: "map-pin",
-};
 
 /**
  * The logbook's own tabs: one per enabled area, directly under the header.

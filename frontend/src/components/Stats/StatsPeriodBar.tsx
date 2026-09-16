@@ -39,10 +39,8 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
   useRevealActive(yearsRef, '[aria-pressed="true"]', [selectedYear, years.join(",")]);
 
   return (
-    <div
-      className="rounded-lg p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
-      style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
-    >
+    // A row of pills on the page, no box around it (round 4).
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
       <span className="t-label-mono sm:hidden">{t("stats:overviewFilter.range")}</span>
       {/* One row that scrolls sideways on a phone, and wraps where there is
           room. Wrapping on a phone was the long narrow column of B05. */}
@@ -50,7 +48,6 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
         ref={yearsRef}
         className="flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-none sm:flex-wrap sm:overflow-visible"
       >
-        <span className="t-label-mono hidden sm:inline">{t("stats:overviewFilter.range")}</span>
         <YearPill
           label={t("stats:overviewFilter.allYears")}
           active={selectedYear === null}
@@ -68,8 +65,8 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
 
       <div className="flex items-center gap-2 sm:ml-auto">
         <label
-          className="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none"
-          style={{ color: "var(--text-secondary)" }}
+          className="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none"
+          style={{ color: "var(--ts-text)" }}
         >
           <input
             type="checkbox"
@@ -81,11 +78,11 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
         </label>
         <select
           aria-label={t("stats:overviewFilter.compareWith")}
-          className="text-xs rounded-sm border px-2 py-1 font-mono"
+          className="rounded-full border px-3 py-1.5 text-sm font-semibold"
           style={{
-            background: "var(--bg-elevated)",
-            borderColor: "var(--color-border)",
-            color: "var(--text-primary)",
+            background: "var(--ts-surface)",
+            borderColor: "var(--ts-border)",
+            color: "var(--ts-text-bright)",
           }}
           value={compareYear ?? ""}
           disabled={!compareEnabled || selectedYear === null}
@@ -118,12 +115,11 @@ function YearPill({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="shrink-0 px-3 py-1 rounded-full text-xs font-mono border transition-colors"
+      className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors"
       style={{
-        background: active ? "var(--accent)" : "var(--bg-elevated)",
-        color: active ? "var(--bg-base)" : "var(--text-secondary)",
-        borderColor: active ? "var(--accent)" : "var(--color-border)",
-        fontWeight: active ? 600 : 400,
+        background: active ? "var(--ts-accent)" : "transparent",
+        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
+        borderColor: active ? "var(--ts-accent)" : "var(--ts-border)",
       }}
     >
       {label}

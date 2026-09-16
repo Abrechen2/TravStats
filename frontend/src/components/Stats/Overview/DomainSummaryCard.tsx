@@ -12,6 +12,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import { delta, isWithData } from "./aggregate";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { Icon } from "../../ui/Icon";
+import { DOMAIN_ICON } from "../../ui/domainIcons";
 
 interface Props {
   domain: DomainKey;
@@ -61,11 +63,12 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              color: domainHex,
               opacity: 0.6,
             }}
             aria-hidden
           >
-            {d.icon}
+            <Icon name={DOMAIN_ICON[domain]} size={18} />
           </div>
           <div>
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -109,10 +112,11 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              color: domainHex,
             }}
             aria-hidden
           >
-            {d.icon}
+            <Icon name={DOMAIN_ICON[domain]} size={18} />
           </div>
           <div>
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>

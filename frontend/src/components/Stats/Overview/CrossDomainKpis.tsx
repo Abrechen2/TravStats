@@ -77,25 +77,35 @@ export default function CrossDomainKpis({
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    // Round 4: the figure first and large, then what it counts — the label
+    // used to stand above in the same weight as the hint below.
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => (
         <div
           key={c.label}
-          className="rounded-lg shadow-sm p-6"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          className="flex min-w-0 flex-col"
+          style={{
+            gap: 4,
+            padding: "var(--ts-space-lg) var(--ts-space-xl)",
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+            borderRadius: "var(--ts-radius-card)",
+          }}
         >
-          <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-            {c.label}
-          </h3>
-          <p className="text-3xl font-bold mt-2 font-mono" style={{ color: "var(--text-primary)" }}>
+          <p
+            style={{
+              fontSize: 30,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: "var(--ts-text-bright)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
             {typeof c.value === "number" ? c.value.toLocaleString(locale) : c.value}
           </p>
+          <h3 className="t-caption">{c.label}</h3>
           {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} />}
-          {c.hint && (
-            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-              {c.hint}
-            </p>
-          )}
+          {c.hint && <p className="t-caption">{c.hint}</p>}
         </div>
       ))}
     </div>
