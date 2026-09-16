@@ -160,7 +160,13 @@
     "modules": {
       "title": "Modules",
       "desc": "Enabled modules show up in navigation, dashboards, map, achievements and stats. Disabled modules are hidden — your data is preserved.",
-      "comingSoon": "soon"
+      "comingSoon": "soon",
+      "sub": {
+        "flight": "Navigation, statistics, map",
+        "cruise": "Navigation, statistics, map",
+        "lodging": "Navigation, statistics, days away",
+        "poi": "Places, visits and place lists"
+      }
     }
   },
   "setup": {

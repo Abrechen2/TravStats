@@ -249,7 +249,11 @@
       "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
-    }
+    },
+    "emailSub": "Wohin Erinnerungen gehen; leer = keine",
+    "before24hSub": "Erinnerung einen Tag vor dem Abflug",
+    "before2hSub": "Erinnerung kurz vor dem Abflug",
+    "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
     "title": "Datenschutz & Sicherheit",
@@ -779,7 +783,8 @@
     "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
     "label": "Ein Land zählt ab …",
     "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
-    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})"
+    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})",
+    "instanceShort": "Instanz ({{tier}})"
   },
   "groups": {
     "account": "Konto",

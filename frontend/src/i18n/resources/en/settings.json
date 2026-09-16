@@ -249,7 +249,11 @@
       "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
-    }
+    },
+    "emailSub": "Where reminders go; empty = none",
+    "before24hSub": "A reminder one day before departure",
+    "before2hSub": "A reminder shortly before departure",
+    "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {
     "title": "Privacy & Security",
@@ -779,7 +783,8 @@
     "description": "Which kind of evidence makes a country count towards your total.",
     "label": "A country counts from …",
     "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
-    "useInstanceDefault": "Use this instance's default ({{tier}})"
+    "useInstanceDefault": "Use this instance's default ({{tier}})",
+    "instanceShort": "Instance ({{tier}})"
   },
   "groups": {
     "account": "Account",

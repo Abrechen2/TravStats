@@ -1,4 +1,6 @@
-import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import HelpIcon from "../Help/HelpIcon";
+import { Segmented } from "../ui/Segmented";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import {
@@ -42,12 +44,14 @@ import {
  * always returns nothing"*. A control with two settings that do the same thing
  * does not read as an empty set; it reads as broken. So it appears only for an
  * account that has track evidence — or one that already chose it, because a
- * `<select>` whose value is absent from its options shows the wrong one.
+ * choice whose current value is not drawn shows nothing selected at all.
+ *
+ * Round 4 draws the choice as pills (short tier names); the long option text
+ * stays each pill's spoken name, and the effect sentence stays underneath.
  */
 
-/** The sentinel the `<select>` uses for "no choice of my own". A select cannot
- *  carry a null value, and an empty string would be indistinguishable from an
- *  unset control. */
+/** The sentinel for "no choice of my own". A radio value cannot be null, and an
+ *  empty string would be indistinguishable from an unset control. */
 const FOLLOW_INSTANCE = "__instance__";
 
 export default function CountryCountingCard(): JSX.Element {
@@ -71,39 +75,41 @@ export default function CountryCountingCard(): JSX.Element {
         title={t("settings:countryCounting.title")}
         description={t("settings:countryCounting.description")}
       />
-      <div>
-        <FieldLabel htmlFor="country-threshold" help={t("settings:countryCounting.help")}>
-          {t("settings:countryCounting.label")}
-        </FieldLabel>
-        <select
-          id="country-threshold"
-          value={countryThreshold ?? FOLLOW_INSTANCE}
-          onChange={(e) =>
-            setCountryThreshold(
-              e.target.value === FOLLOW_INSTANCE ? null : (e.target.value as CountryTier)
-            )
-          }
-          className="input"
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+        <span
+          className="inline-flex items-center gap-1.5"
+          style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
         >
-          <option value={FOLLOW_INSTANCE}>
-            {t("settings:countryCounting.useInstanceDefault", {
-              tier: t(`passport:thresholdChoice.options.${instanceTier}`),
-            })}
-          </option>
-          {countryTierChoicesFor(hasCountryTracks, countryThreshold).map((tier) => (
-            <option key={tier} value={tier}>
-              {t(`passport:thresholdChoice.options.${tier}`)}
-            </option>
-          ))}
-        </select>
-        {/* What this choice does to the number, said before it happens. */}
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
-          {t(`passport:thresholdChoice.effect.${effective}`)}
-        </p>
-        {/* And what it does NOT do — the list. */}
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
-          {t("passport:thresholdChoice.listUnchanged")}
-        </p>
+          {t("settings:countryCounting.label")}
+          <HelpIcon content={t("settings:countryCounting.help")} position="top" />
+        </span>
+        <Segmented
+          label={t("settings:countryCounting.label")}
+          value={countryThreshold ?? FOLLOW_INSTANCE}
+          onChange={(value) =>
+            setCountryThreshold(value === FOLLOW_INSTANCE ? null : (value as CountryTier))
+          }
+          options={[
+            {
+              value: FOLLOW_INSTANCE,
+              label: t("settings:countryCounting.instanceShort", {
+                tier: t(`passport:thresholdChoice.short.${instanceTier}`),
+              }),
+              name: t("settings:countryCounting.useInstanceDefault", {
+                tier: t(`passport:thresholdChoice.options.${instanceTier}`),
+              }),
+            },
+            ...countryTierChoicesFor(hasCountryTracks, countryThreshold).map((tier) => ({
+              value: tier,
+              label: t(`passport:thresholdChoice.short.${tier}`),
+              name: t(`passport:thresholdChoice.options.${tier}`),
+            })),
+          ]}
+        />
+        {/* What this choice does to the number, said before it happens —
+            and what it does NOT do: the list. */}
+        <p className="t-caption">{t(`passport:thresholdChoice.effect.${effective}`)}</p>
+        <p className="t-caption">{t("passport:thresholdChoice.listUnchanged")}</p>
       </div>
     </SectionCard>
   );

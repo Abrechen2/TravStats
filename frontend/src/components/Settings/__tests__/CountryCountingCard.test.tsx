@@ -47,9 +47,9 @@ describe("CountryCountingCard", () => {
     // option rather than an untouched control — and it says which tier that is,
     // read from the server rather than guessed.
     expect(
-      screen.getByText(
-        "settings:countryCounting.useInstanceDefault:passport:thresholdChoice.options.slept"
-      )
+      screen.getByRole("radio", {
+        name: "settings:countryCounting.useInstanceDefault:passport:thresholdChoice.options.slept",
+      })
     ).toBeTruthy();
   });
 
@@ -71,7 +71,7 @@ describe("CountryCountingCard", () => {
     const user = userEvent.setup();
     render(<CountryCountingCard />);
 
-    await user.selectOptions(screen.getByRole("combobox"), "slept");
+    await user.click(screen.getByRole("radio", { name: "passport:thresholdChoice.options.slept" }));
 
     expect(useSettingsStore.getState().countryThreshold).toBe("slept");
     expect(update).toHaveBeenCalledWith({ countryThreshold: "slept" });
@@ -82,7 +82,7 @@ describe("CountryCountingCard", () => {
     useSettingsStore.setState({ countryThreshold: "slept" });
     render(<CountryCountingCard />);
 
-    await user.selectOptions(screen.getByRole("combobox"), "__instance__");
+    await user.click(screen.getByRole("radio", { name: /useInstanceDefault/ }));
 
     // Omitting the key would mean "leave my choice alone"; this has to mean
     // "I no longer have one".
@@ -90,12 +90,14 @@ describe("CountryCountingCard", () => {
     expect(update).toHaveBeenCalledWith({ countryThreshold: null });
   });
 
-  /** Every value the `<select>` currently offers, in order. */
+  /** Every choice currently offered, in order, as its tier ("__instance__" first). */
   const optionValues = (): string[] =>
-    Array.from(
-      screen.getByRole("combobox").querySelectorAll("option"),
-      (o) => (o as HTMLOptionElement).value
-    );
+    screen
+      .getAllByRole("radio")
+      .map((r) => r.getAttribute("aria-label") ?? "")
+      .map((name) =>
+        /useInstanceDefault/.test(name) ? "__instance__" : name.replace(/^.*options\./, "")
+      );
 
   it("offers the tiers lowest bar first, and no hours-based option", () => {
     useSettingsStore.setState({ hasCountryTracks: true });
@@ -119,13 +121,14 @@ describe("CountryCountingCard", () => {
   });
 
   it("still shows `transited` to somebody who already chose it", () => {
-    // A `<select>` whose current value is missing from its options silently
-    // displays a different one. Their choice stays theirs to see and to change,
+    // A choice whose current value is not drawn shows nothing selected. Their choice stays theirs to see and to change,
     // whatever the sweep has found so far.
     useSettingsStore.setState({ hasCountryTracks: false, countryThreshold: "transited" });
     render(<CountryCountingCard />);
 
     expect(optionValues()).toContain("transited");
-    expect(screen.getByRole("combobox")).toHaveValue("transited");
+    expect(
+      screen.getByRole("radio", { name: "passport:thresholdChoice.options.transited" })
+    ).toHaveAttribute("aria-checked", "true");
   });
 });

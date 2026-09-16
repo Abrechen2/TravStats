@@ -4,6 +4,8 @@ import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { Switch } from "../ui/Field";
+import { SettingRows } from "../ui/SettingRow";
 
 export default function ModuleSection(): JSX.Element {
   const { t } = useTranslation("common");
@@ -27,76 +29,41 @@ export default function ModuleSection(): JSX.Element {
   return (
     <SectionCard>
       <SectionTitle title={t("settings.modules.title")} description={t("settings.modules.desc")} />
-      <ul className="space-y-2">
+      {/* One switch row per domain. The Switch is a label around its input, so
+          the whole row toggles — the finding UAT B9 asked for — without a
+          second click handler that could fire twice. */}
+      <SettingRows>
         {visibleKeys.map((key) => {
           const d = DOMAINS[key];
-          const enabled = enabledDomains.includes(key);
           return (
-            <li
-              key={key}
-              // The whole tile toggles, not just the small switch (UAT
-              // finding B9). The switch stays the accessible control and
-              // stops propagation so its own click doesn't toggle twice.
-              onClick={() => toggle(key)}
-              className={`rounded-lg p-4 flex items-center gap-4 ${
-                d.available ? "cursor-pointer" : ""
-              }`}
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
-                style={{ backgroundColor: `${colorOf(d.key)}22` }}
-                aria-hidden
-              >
-                {d.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div
-                  className="font-medium flex items-center gap-2"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  <span>{t(d.i18nKey)}</span>
-                  {!d.available && (
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full"
-                      style={{
-                        background: "var(--bg-elevated)",
-                        color: "var(--text-muted)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    >
-                      {t("settings.modules.comingSoon")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={enabled}
-                aria-label={t(d.i18nKey)}
+            <div key={key} className="ts-setting-row">
+              <Switch
+                id={`module-${key}`}
+                checked={enabledDomains.includes(key)}
                 disabled={!d.available}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(key);
-                }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden shrink-0 ${
-                  enabled ? "bg-(--accent)" : "bg-gray-600"
-                } ${d.available ? "" : "opacity-50 cursor-not-allowed"}`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    enabled ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </li>
+                onChange={() => toggle(key)}
+                label={t(d.i18nKey)}
+                sub={
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "var(--ts-radius-pill)",
+                        background: colorOf(d.key),
+                      }}
+                    />
+                    {d.available
+                      ? t(`settings.modules.sub.${key}`)
+                      : t("settings.modules.comingSoon")}
+                  </span>
+                }
+              />
+            </div>
           );
         })}
-      </ul>
+      </SettingRows>
     </SectionCard>
   );
 }

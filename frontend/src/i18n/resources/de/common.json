@@ -160,7 +160,13 @@
     "modules": {
       "title": "Bereiche",
       "desc": "Aktivierte Bereiche erscheinen in Navigation, Dashboard, Karte, Achievements und Statistiken. Deaktivierte Bereiche verstecken sich komplett — deine Daten bleiben erhalten.",
-      "comingSoon": "bald"
+      "comingSoon": "bald",
+      "sub": {
+        "flight": "Navigation, Statistik, Karte",
+        "cruise": "Navigation, Statistik, Karte",
+        "lodging": "Navigation, Statistik, Reisetage",
+        "poi": "Orte, Besuche und Ortslisten"
+      }
     }
   },
   "setup": {
