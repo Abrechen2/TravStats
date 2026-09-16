@@ -165,16 +165,31 @@ describe("SettingsPage — one route per group", () => {
     });
   });
 
-  it("renders the whole group at its own route, not one section at a time", async () => {
-    renderAt("/settings/data");
-    await screen.findByRole("region", { name: SECTION_LABEL_KEY.backup });
+  // Round 4 (design export, 2026-09-15) made the four general groups anchors on
+  // one page: the settings routes are account, flight, cruise and lodging.
+  it("draws every general group on the account route, with the domain ones kept apart", async () => {
+    renderAt("/settings/account");
+    await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile });
 
-    // All four of the group's sections are on the page together.
+    // Konto, Darstellung, Daten and Dienste share one page now.
+    expect(sectionShown("profile")).toBe(true);
+    expect(sectionShown("units")).toBe(true);
     expect(sectionShown("backup")).toBe(true);
-    expect(sectionShown("import")).toBe(true);
-    expect(sectionShown("notifications")).toBe(true);
-    expect(sectionShown("about")).toBe(true);
-    // And nothing from a neighbouring group leaks in.
+    expect(sectionShown("externalServices")).toBe(true);
+    // A domain group is still its own route.
+    expect(sectionShown("homeAirport")).toBe(false);
+  });
+
+  it("lands a pre-round-4 group route on its anchor on the account page", async () => {
+    // /settings/data was a page of its own; a bookmark to it still arrives.
+    renderAt("/settings/data");
+    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.backup })).toBeTruthy();
+    expect(sectionShown("profile")).toBe(true);
+  });
+
+  it("keeps a domain group's own sections on its own route", async () => {
+    renderAt("/settings/cruise");
+    await screen.findByRole("region", { name: SECTION_LABEL_KEY.cruisePreferences });
     expect(sectionShown("profile")).toBe(false);
   });
 

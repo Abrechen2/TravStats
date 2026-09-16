@@ -44,11 +44,11 @@ export default function ProfileSection({
 
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          title={t("settings:profile.title")}
-          description={t("settings:profile.description")}
-        />
+      <SectionTitle
+        title={t("settings:profile.title")}
+        description={t("settings:profile.description")}
+      />
+      <div className="flex justify-end">
         <button onClick={onShowPasswordModal} className="btn-secondary">
           {t("settings:profile.changePassword")}
         </button>

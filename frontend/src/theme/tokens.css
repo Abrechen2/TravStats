@@ -131,6 +131,7 @@
   --ts-size-tab-icon: 22px;
   --ts-size-fab: 48px;
   --ts-size-airline-monogram: 34px;
+  --ts-size-web-header: 56px;
 
   /* Motion — four numbers, decided once (tokens.json → motion) */
   --ts-motion-fast: 120ms;

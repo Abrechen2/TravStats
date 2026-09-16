@@ -27,19 +27,15 @@ export default function AutoUpdateSection({
 
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          title={t("settings:autoUpdate.title")}
-          description={t("settings:autoUpdate.description")}
-        />
-        <Link
-          to="/pending-updates"
-          className="text-sm font-medium"
-          style={{ color: "var(--accent)" }}
-        >
-          {t("settings:autoUpdate.viewPending")} →
-        </Link>
-      </div>
+      <SectionTitle
+        title={t("settings:autoUpdate.title")}
+        description={t("settings:autoUpdate.description")}
+        aside={
+          <Link to="/pending-updates" className="font-medium" style={{ color: "var(--accent)" }}>
+            {t("settings:autoUpdate.viewPending")} →
+          </Link>
+        }
+      />
       <div className="space-y-4">
         <label className="flex items-center gap-3">
           <AmberToggle

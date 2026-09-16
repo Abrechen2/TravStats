@@ -1,4 +1,4 @@
-import { SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -7,7 +7,7 @@ export default function FeaturesSection(): JSX.Element {
   const { features, setFeatures } = useSettingsStore();
 
   return (
-    <div className="space-y-4">
+    <SectionCard>
       <SectionTitle
         title={t("settings:features.title")}
         description={t("settings:features.description")}
@@ -70,6 +70,6 @@ export default function FeaturesSection(): JSX.Element {
           />
         </button>
       </div>
-    </div>
+    </SectionCard>
   );
 }

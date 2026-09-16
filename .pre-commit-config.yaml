@@ -36,7 +36,12 @@ repos:
       - id: prettier-frontend
         name: Prettier (frontend)
         language: node
-        entry: npx --prefix frontend prettier --write
+        # Prettier reads .prettierignore from the directory it runs in, and
+        # pre-commit runs from the repository root — so frontend/.prettierignore,
+        # which exists to keep the GENERATED theme files untouched, was never
+        # read. The hook reformatted tokens.css and the generator warden
+        # (tokens.generated.test.ts) failed on the next run. Name the file.
+        entry: npx --prefix frontend prettier --write --ignore-path frontend/.prettierignore
         files: ^frontend/src/.*\.(ts|tsx|css)$
         pass_filenames: true
 

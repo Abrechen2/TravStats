@@ -66,7 +66,8 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
   {
     id: "account",
     labelKey: "settings:groups.account",
-    sections: ["profile", "security", "apitokens", "devices"],
+    // Index order of the round-4 export: profile, security, devices, tokens.
+    sections: ["profile", "security", "devices", "apitokens"],
     gatedSections: { devices: "devicePairing" },
   },
   {
@@ -113,6 +114,50 @@ export const GENERAL_GROUP_IDS: readonly SettingsGroupId[] = [
 ];
 
 export const DEFAULT_GROUP: SettingsGroupId = "account";
+
+/**
+ * The page behind the "Allgemein" tab, and the order its sections are drawn in.
+ *
+ * Round 4 settled four settings ROUTES — account, flight, cruise, lodging —
+ * with the general groups (Konto · Darstellung · Daten · Dienste) as anchors
+ * on ONE page rather than four pages (design export, decision 2 of
+ * 2026-09-15). The index lists them by kind; the page reads everyday first
+ * (E10): profile and how the app looks, then notifications, and only then
+ * security, devices, tokens, data and services — the things a reader visits
+ * once and then leaves alone.
+ */
+export const GENERAL_ROUTE: SettingsGroupId = "account";
+
+export const GENERAL_CONTENT_ORDER: readonly SettingsSectionId[] = [
+  "profile",
+  "display",
+  "units",
+  "domainColors",
+  "modules",
+  "countryCounting",
+  "notifications",
+  "security",
+  "devices",
+  "apitokens",
+  "backup",
+  "import",
+  "externalServices",
+  "about",
+];
+
+/** The general groups that are anchors on the account page, not routes. */
+export function isGeneralGroup(id: SettingsGroupId): boolean {
+  return (GENERAL_GROUP_IDS as readonly string[]).includes(id);
+}
+
+/** The beta key hiding a section, whichever group declares it. */
+export function gateOfSection(section: SettingsSectionId): BetaFeatureKey | undefined {
+  for (const group of SETTINGS_GROUPS) {
+    const gate = group.gatedSections?.[section];
+    if (gate) return gate;
+  }
+  return undefined;
+}
 
 export function findGroup(id: string | undefined): SettingsGroup | undefined {
   return SETTINGS_GROUPS.find((g) => g.id === id);

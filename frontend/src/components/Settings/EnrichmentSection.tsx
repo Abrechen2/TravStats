@@ -1,5 +1,7 @@
 import { AmberToggle, SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
 
 interface HistoricalEnrichmentSettings {
   enabled: boolean;
@@ -24,19 +26,11 @@ export default function EnrichmentSection({
 
   return (
     <SectionCard>
-      <div className="flex items-center gap-2">
-        <SectionTitle
-          title={t("settings:historicalEnrichment.title")}
-          description={t("settings:historicalEnrichment.description")}
-        />
-        <span
-          className="px-2 py-0.5 text-xs font-semibold rounded-full self-start mt-1"
-          style={{ background: "rgba(240,169,71,0.15)", color: "var(--accent)" }}
-        >
-          Beta
-        </span>
-      </div>
-
+      <SectionTitle
+        title={t("settings:historicalEnrichment.title")}
+        description={t("settings:historicalEnrichment.description")}
+        badge={<Pill color={token("accent")}>Beta</Pill>}
+      />
 
       <div className="space-y-4">
         <label className="flex items-center gap-3">

@@ -32,24 +32,40 @@ export default function AboutSection(): JSX.Element {
 
   return (
     <SectionCard>
-      <div className="flex items-baseline gap-3 mb-1 flex-wrap">
-        <SectionTitle title="About TravStats" />
-        <span
-          className="text-sm font-mono px-2 py-0.5 rounded-sm"
-          style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
-        >
-          v{appVersion}
-        </span>
-        {showBuild && (
-          <span
-            className="text-xs font-mono px-2 py-0.5 rounded-sm"
-            style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
-            title={t("settings:about.buildVersionHint")}
-          >
-            {t("settings:about.buildLabel")}: {buildVersion}
-          </span>
-        )}
-      </div>
+      <SectionTitle
+        title={t("settings:about.title")}
+        badge={
+          <>
+            <span
+              className="font-mono"
+              style={{
+                fontSize: 12,
+                padding: "2px 8px",
+                borderRadius: 6,
+                background: "var(--ts-tile)",
+                color: "var(--ts-muted)",
+              }}
+            >
+              v{appVersion}
+            </span>
+            {showBuild && (
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: 11,
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  background: "var(--ts-tile)",
+                  color: "var(--ts-muted)",
+                }}
+                title={t("settings:about.buildVersionHint")}
+              >
+                {t("settings:about.buildLabel")}: {buildVersion}
+              </span>
+            )}
+          </>
+        }
+      />
       <p className="text-sm" style={{ color: "var(--text-muted)" }}>
         TravStats - Flight Statistics Tracking Application
       </p>

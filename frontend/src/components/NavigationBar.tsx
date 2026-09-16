@@ -191,7 +191,12 @@ export default function NavigationBar(): JSX.Element {
         }}
       >
         <div className="px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14">
+          <div
+            className="flex items-center justify-between"
+            // The height other surfaces offset by (sticky settings index):
+            // one token, so the two cannot drift.
+            style={{ height: "var(--ts-size-web-header)" }}
+          >
             {/*
               Left: Hamburger + Wordmark.
 
