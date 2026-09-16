@@ -4,8 +4,8 @@ interface SettingRowProps {
   title: ReactNode;
   /** One line saying what the setting does. */
   sub?: ReactNode;
-  /** The control: pills, a switch, a select, a button. */
-  control: ReactNode;
+  /** The control: pills, a switch, a select, a button. Absent for a row that only informs. */
+  control?: ReactNode;
   /** Ties the title to a form control that has an id. */
   htmlFor?: string;
 }
@@ -33,9 +33,11 @@ export function SettingRow({ title, sub, control, htmlFor }: SettingRowProps): J
         </Title>
         {sub ? <span className="t-caption">{sub}</span> : null}
       </span>
-      <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
-        {control}
-      </span>
+      {control ? (
+        <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+          {control}
+        </span>
+      ) : null}
     </div>
   );
 }

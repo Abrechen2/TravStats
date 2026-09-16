@@ -58,9 +58,20 @@
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
     "dataSources": {
       "title": "Datenquellen & Attribution",
-      "fullList": "Vollständige Liste mit Lizenzen"
+      "fullList": "Vollständige Liste mit Lizenzen",
+      "osm": "Kartenkacheln (ODbL 1.0)",
+      "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)"
     },
-    "title": "Über TravStats"
+    "title": "Über TravStats",
+    "tagline": "Selbst gehostetes Reise-Logbuch",
+    "licenseTitle": "Lizenz",
+    "licenseSub": "GNU Affero General Public License v3.0 (AGPL-3.0) · © 2025 Dennis Wittke",
+    "licenseBody": "Freie Software: Du darfst sie unter den Bedingungen der AGPL weitergeben und verändern. Wer sie als Webdienst betreibt, muss den vollständigen Quellcode unter AGPL-3.0 bereitstellen.",
+    "sourceCode": "Quellcode",
+    "supportTitle": "Unterstützen",
+    "supportSub": "Ein Stern auf GitHub oder eine Spende hilft beim Weiterbauen.",
+    "star": "Stern auf GitHub",
+    "donate": "Spenden via PayPal"
   },
   "profile": {
     "title": "Benutzer-Profil",

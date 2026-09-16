@@ -29,7 +29,6 @@
     "components/GlobeView.tsx",
     "components/NativeRoutesLayer.tsx",
     "components/NavigationBar.tsx",
-    "components/Settings/AboutSection.tsx",
     "components/Settings/SpreadsheetSection.tsx",
     "components/Stats/Overview/TravelAccountSection.tsx",
     "components/Stats/lodging/LodgingGeoSection.tsx",
