@@ -34,11 +34,22 @@ vi.mock("../../hooks/useTranslation", () => ({
 
 // The aircraft suggestion list loads on mount; an empty list is what the failed
 // request already produced (forgejo#110).
+//
+// Airlines TOO. `useSuggestions` fetches them after a 300 ms debounce, so a
+// test that finishes quickly never sees the request and a slow one does: the
+// click test takes ~500 ms under coverage instrumentation, and CI's Vitest job
+// went red on "reached the network once: GET /suggestions/airlines" as soon as
+// it started collecting coverage (forgejo#62). Mocking only `aircraft` was a
+// guard that held by timing, not by construction.
 vi.mock("@/lib/api/suggestions", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/suggestions")>();
   return {
     ...actual,
-    suggestionsApi: { ...actual.suggestionsApi, aircraft: vi.fn().mockResolvedValue([]) },
+    suggestionsApi: {
+      ...actual.suggestionsApi,
+      aircraft: vi.fn().mockResolvedValue([]),
+      airlines: vi.fn().mockResolvedValue([]),
+    },
   };
 });
 
