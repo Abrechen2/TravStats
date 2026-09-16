@@ -300,6 +300,13 @@ jobs:
       # throwaway CI literals with no relationship to any real key.
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      # jest.globalSetup.ts refuses to empty a database whose name does not
+      # mark it as disposable. This one is a service container that exists
+      # for this job only, so the permission is given on purpose rather than
+      # by renaming the database to slip past the check. Once PostGIS let the
+      # migrations through on 2026-09-16, this refusal was the next thing
+      # standing between the job and its first actual test.
+      TRAVSTATS_ALLOW_DESTRUCTIVE_TESTS: "1"
 
     steps:
       - uses: actions/checkout@v7
