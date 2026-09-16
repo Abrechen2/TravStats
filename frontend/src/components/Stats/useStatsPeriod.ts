@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { YEAR_PARAM, formatYearParam, parseYearParam } from "../../lib/stats/periodUrl";
 import { useStatsCompareStore } from "../../store/statsCompareStore";
 import { resolveStaleCompareYear } from "./Overview/aggregate";
 
@@ -77,9 +79,48 @@ export function dimWhile(refreshing: boolean): CSSProperties {
  * and would wipe the reader's saved preference before it was ever judged
  * against a real year list.
  */
-export function useStatsPeriod(years: number[], loading: boolean): StatsPeriod {
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [didAutoPick, setDidAutoPick] = useState(false);
+export interface ChosenYear {
+  /** `undefined` = the reader has not chosen; `null` = all years. */
+  year: number | null | undefined;
+  onChange: (year: number | null) => void;
+}
+
+export function useStatsPeriod(
+  years: number[],
+  loading: boolean,
+  chosen?: ChosenYear
+): StatsPeriod {
+  // A year the reader chose — in a link, a shared URL, the back button — is
+  // never replaced by the newest year. Only an unchosen period is auto-picked.
+  const [selectedYear, setSelectedYearState] = useState<number | null>(
+    chosen?.year === undefined ? null : chosen.year
+  );
+  const [didAutoPick, setDidAutoPick] = useState(chosen?.year !== undefined);
+  const chosenYear = chosen?.year;
+  const onChosenChange = chosen?.onChange;
+
+  // Back and forward move the URL without a click on a pill.
+  useEffect(() => {
+    if (chosenYear === undefined) return;
+    setSelectedYearState(chosenYear);
+    setDidAutoPick(true);
+  }, [chosenYear]);
+
+  const setSelectedYear = useCallback(
+    (year: number | null): void => {
+      setSelectedYearState(year);
+      onChosenChange?.(year);
+    },
+    [onChosenChange]
+  );
+
+  // A chosen year the data does not have (an old link, a deleted trip) falls
+  // back to the newest year rather than drawing an empty page under a pill
+  // that does not exist.
+  useEffect(() => {
+    if (loading || years.length === 0 || selectedYear === null) return;
+    if (!years.includes(selectedYear)) setSelectedYearState(years[years.length - 1]);
+  }, [loading, years, selectedYear]);
 
   const compareYear = useStatsCompareStore((s) => s.compareYear);
   const compareEnabled = useStatsCompareStore((s) => s.compareEnabled);
@@ -90,7 +131,7 @@ export function useStatsPeriod(years: number[], loading: boolean): StatsPeriod {
 
   useEffect(() => {
     if (didAutoPick || years.length === 0) return;
-    setSelectedYear(years[years.length - 1]);
+    setSelectedYearState(years[years.length - 1]);
     if (!hasSetComparePreference && years.length >= 2) {
       setCompare(true, years[years.length - 2]);
     }
@@ -117,4 +158,33 @@ export function useStatsPeriod(years: number[], loading: boolean): StatsPeriod {
       compareYear: compareEnabled && selectedYear !== null ? compareYear : null,
     },
   };
+}
+
+/**
+ * The page's period, with the year in the address bar (`?year=`).
+ *
+ * CT106 audit, B04: "Details →" from year 2005 opened the flights tab on 2026,
+ * because the year lived only in state. Picking a year replaces the history
+ * entry rather than adding one — a row of pill clicks is not a trail the back
+ * button should walk — while a link to another tab carries the year along.
+ */
+export function useUrlStatsPeriod(years: number[], loading: boolean): StatsPeriod {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onChange = useCallback(
+    (year: number | null): void => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set(YEAR_PARAM, formatYearParam(year));
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+  return useStatsPeriod(years, loading, {
+    year: parseYearParam(searchParams.get(YEAR_PARAM)),
+    onChange,
+  });
 }

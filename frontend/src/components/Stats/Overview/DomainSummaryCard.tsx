@@ -4,6 +4,8 @@
 //   - hasData=true: header (icon + label + count + delta) over the
 //     domain summary's headline KPIs / top-items / badges.
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
+import { withYear } from "../../../lib/stats/periodUrl";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStats } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -105,13 +107,15 @@ export default function DomainSummaryCard({
             {cardDelta && <DeltaBadge d={cardDelta} compareYear={compareYear} />}
           </div>
         </div>
-        <a
-          href={stats.summary.detailRoute}
+        {/* A router link carrying the year: a plain href reloaded the page and
+            the tab it opened showed the newest year, not this one (B04). */}
+        <Link
+          to={withYear(stats.summary.detailRoute, selectedYear)}
           className="text-xs font-medium hover:underline whitespace-nowrap"
           style={{ color: domainHex }}
         >
           {t("stats:overviewCard.detailLink")}
-        </a>
+        </Link>
       </div>
 
       <div

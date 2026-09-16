@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import type { DomainStatsMap } from "../../../../lib/stats/domain-stats";
 import type { StatsPeriod } from "../../useStatsPeriod";
 import type { SectionVisibility } from "../../../../hooks/useSectionVisibility";
@@ -11,6 +13,10 @@ vi.unmock("../../../../store/settingsStore");
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { hiding } from "../../__tests__/sectionVisibilityStub";
+
+// The card's "Details" is a router link now (B04), so it needs a router.
+const render = (ui: ReactElement): ReturnType<typeof rtlRender> =>
+  rtlRender(ui, { wrapper: MemoryRouter });
 
 function flightStats(yearlyEvents: Record<number, number>): DomainStatsMap {
   const yearlyActiveDays = { ...yearlyEvents };

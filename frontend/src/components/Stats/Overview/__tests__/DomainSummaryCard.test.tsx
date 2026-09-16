@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import DomainSummaryCard from "../DomainSummaryCard";
 import type { DomainStats } from "../../../../lib/stats/domain-stats";
+
+// The card's "Details" is a router link now (B04), so it needs a router.
+const render = (ui: ReactElement): ReturnType<typeof rtlRender> =>
+  rtlRender(ui, { wrapper: MemoryRouter });
 
 const cruiseStats: DomainStats = {
   domain: "cruise",
@@ -77,7 +83,22 @@ describe("DomainSummaryCard", () => {
     expect(screen.getByText("84")).toBeInTheDocument();
     expect(screen.getByText("47")).toBeInTheDocument();
     const detailsLink = screen.getByRole("link");
-    expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise");
+    // No year chosen is "all years", said out loud so the tab it opens agrees.
+    expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise&year=all");
+  });
+
+  // CT106 audit, B04: year 2005 → "Details" opened the tab on 2026.
+  it("carries the selected year into the tab it opens", () => {
+    render(
+      <DomainSummaryCard
+        domain="cruise"
+        stats={cruiseStats}
+        selectedYear={2005}
+        compareYear={null}
+        compareEnabled={false}
+      />
+    );
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/stats?tab=cruise&year=2005");
   });
 
   it("renders top-items chips", () => {

@@ -33,7 +33,7 @@ import CountryDistributionCard from "../components/Stats/CountryDistributionCard
 import FlightYearSummaryCards from "../components/Stats/FlightYearSummaryCards";
 import StatsToolbar from "../components/Stats/StatsToolbar";
 import StatsTabStrip from "../components/Stats/StatsTabStrip";
-import { useStatsPeriod } from "../components/Stats/useStatsPeriod";
+import { useUrlStatsPeriod } from "../components/Stats/useStatsPeriod";
 import { collectYears } from "../components/Stats/Overview/aggregate";
 import { useDomainStats } from "../lib/stats/domain-stats";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
@@ -161,7 +161,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     ready: !loading,
   });
   const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
-  const period = useStatsPeriod(periodYears, domainStatsLoading);
+  const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
   const [compareSummary, setCompareSummary] = useState<SummaryStats | null>(null);

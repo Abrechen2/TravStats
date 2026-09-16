@@ -126,7 +126,9 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
           : []),
       ],
       topItems: { title: "Top-Kategorien", items: topCategories },
-      detailRoute: "/places",
+      // The POI statistics tab, like every other card — not the places list,
+      // which is the one destination that could not carry the year (B04).
+      detailRoute: "/stats?tab=poi",
     },
   };
 }
