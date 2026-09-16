@@ -295,11 +295,24 @@ describe("the index", () => {
     // narrowest measured margin, and losing either acceleration fails it.
     const points = balticDrive(20_000);
 
-    const indexed = throughput((lat, lon) => countryCodeAt(index, lat, lon), points);
-    const reference = throughput(
-      (lat, lon) => referenceCountryAt(index, lat, lon),
-      points.slice(0, 4_000)
-    );
+    // Interleaved, best of five. A ratio only cancels the machine out if both
+    // loops see the same load, and two sequential measurements do not: on
+    // 2026-09-16, with two other suites running on the box, one pass measured
+    // 2.94 and failed while the next three passed. Alternating the two loops
+    // puts them under the same conditions, and the best round of each is the
+    // one least disturbed by whatever else ran.
+    let indexed = 0;
+    let reference = 0;
+    for (let round = 0; round < 5; round++) {
+      indexed = Math.max(
+        indexed,
+        throughput((lat, lon) => countryCodeAt(index, lat, lon), points)
+      );
+      reference = Math.max(
+        reference,
+        throughput((lat, lon) => referenceCountryAt(index, lat, lon), points.slice(0, 4_000))
+      );
+    }
 
     // Every point of the simulated drive is on land in EE, LV or LT.
     expect(points.every(([lat, lon]) => countryCodeAt(index, lat, lon) !== null)).toBe(true);
