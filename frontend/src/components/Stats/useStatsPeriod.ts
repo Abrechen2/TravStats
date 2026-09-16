@@ -19,9 +19,36 @@ export interface StatsPeriod {
  * store keeps a remembered compare year while the toggle is off (#188), and a
  * tab reading that raw value would draw a comparison nobody asked for.
  */
+import type { CSSProperties } from "react";
+
 export interface PeriodScope {
   year: number | null;
   compareYear: number | null;
+}
+
+/**
+ * Whether figures loaded for `loaded` still describe `wanted`.
+ *
+ * A tab keeps its previous figures on screen while the next year loads, so a
+ * pill click does not blank it. That is only honest if everything on screen —
+ * the "Year 2026 vs 2025" label, an empty-year sentence — names the year the
+ * figures were LOADED for, and the tab says it is refreshing. Measured on the
+ * beta, 2026-09-16: the label switched to 2015 while the tiles still showed
+ * 2026, for as long as the request took.
+ */
+export function sameScope(loaded: PeriodScope | null, wanted: PeriodScope): boolean {
+  return (
+    loaded !== null && loaded.year === wanted.year && loaded.compareYear === wanted.compareYear
+  );
+}
+
+/**
+ * Figures from the previous year, still on screen while the next one loads,
+ * are dimmed rather than removed: blanking the tab on every pill click would
+ * read as "nothing there" for a moment. Pair with `aria-busy`.
+ */
+export function dimWhile(refreshing: boolean): CSSProperties {
+  return { opacity: refreshing ? 0.55 : 1, transition: "opacity 120ms ease-out" };
 }
 
 /**

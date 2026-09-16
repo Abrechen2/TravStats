@@ -13,7 +13,7 @@ import LodgingRhythmSection from "./lodging/LodgingRhythmSection";
 import LodgingLoyaltySection from "./lodging/LodgingLoyaltySection";
 import LodgingRecordsSection from "./lodging/LodgingRecordsSection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
-import type { PeriodScope } from "./useStatsPeriod";
+import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 /**
@@ -42,6 +42,7 @@ export default function LodgingStatsSection({
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<LodgingStats | null>(null);
   const [previous, setPrevious] = useState<LodgingStats | null>(null);
+  const [loadedFor, setLoadedFor] = useState<PeriodScope | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export default function LodgingStatsSection({
         if (cancelled) return;
         setStats(data);
         setPrevious(before);
+        setLoadedFor({ year, compareYear });
         setError(null);
       } catch (err) {
         logger.error("LodgingStatsSection: stats fetch failed", err);
@@ -78,11 +80,16 @@ export default function LodgingStatsSection({
     return <p className="text-sm text-(--text-muted)">{error}</p>;
   }
 
+  // What is on screen was loaded for `shown`, which lags `scope` while the next
+  // year is on its way. Every label below reads `shown`; see `sameScope`.
+  const shown = loadedFor ?? scope;
+  const refreshing = !sameScope(loadedFor, scope);
+
   const comparison =
-    stats && previous && year !== null && compareYear !== null ? (
+    stats && previous && shown.year !== null && shown.compareYear !== null ? (
       <PeriodComparisonStrip
-        year={year}
-        compareYear={compareYear}
+        year={shown.year}
+        compareYear={shown.compareYear}
         rows={[
           {
             key: "stays",
@@ -114,12 +121,14 @@ export default function LodgingStatsSection({
 
   // Under a year the house list follows the stays, so "no stays" is the test —
   // and the sentence must name the year, not claim there are no stays at all.
-  if (!stats || (year === null ? stats.lodgingsCount === 0 : stats.staysCount === 0)) {
+  if (!stats || (shown.year === null ? stats.lodgingsCount === 0 : stats.staysCount === 0)) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4" aria-busy={refreshing} style={dimWhile(refreshing)}>
         {comparison}
         <p className="text-sm text-(--text-muted)">
-          {year === null ? t("lodging:list.empty") : t("stats:period.emptyYear", { year })}
+          {shown.year === null
+            ? t("lodging:list.empty")
+            : t("stats:period.emptyYear", { year: shown.year })}
         </p>
       </div>
     );
@@ -128,7 +137,11 @@ export default function LodgingStatsSection({
   const show = visibility.isVisible;
 
   return (
-    <div className="relative flex flex-col gap-4">
+    <div
+      className="relative flex flex-col gap-4"
+      aria-busy={refreshing}
+      style={dimWhile(refreshing)}
+    >
       {comparison}
       {/* Both of these were built to float over the Dashboard MAP, where a
           card sitting on top is the point. On a page that flows top to bottom

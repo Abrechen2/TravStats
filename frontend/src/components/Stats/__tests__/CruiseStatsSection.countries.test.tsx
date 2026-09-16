@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { CruiseStatsResponse } from "../../../lib/api/stats";
 
 /**
@@ -146,5 +146,36 @@ describe("CruiseStatsSection hides the blocks the reader switched off", () => {
     expect(await screen.findByText("stats:cruiseSection.countries")).toBeInTheDocument();
     expect(screen.queryByText("stats:cruiseSection.regionsHeading")).not.toBeInTheDocument();
     expect(screen.queryByText("United States of America")).not.toBeInTheDocument();
+  });
+});
+
+// Measured on the beta, 2026-09-16: the strip was relabelled before the new
+// year's figures arrived. It must name the year its figures belong to.
+describe("CruiseStatsSection while the next year loads", () => {
+  it("keeps naming the year its figures belong to, marked busy, until the new ones land", async () => {
+    let resolve2024: (value: CruiseStatsResponse) => void = () => {};
+    api.getCruiseStats.mockReset();
+    api.getCruiseStats.mockImplementation((params?: { year?: number }) =>
+      params?.year === 2024
+        ? new Promise<CruiseStatsResponse>((r) => {
+            resolve2024 = r;
+          })
+        : Promise.resolve(base)
+    );
+
+    const { rerender, container } = render(
+      <CruiseStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+    );
+    expect((await screen.findAllByText(/\(2025\)/)).length).toBeGreaterThan(0);
+
+    rerender(
+      <CruiseStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+    );
+    expect(screen.queryAllByText(/\(2024\)/)).toHaveLength(0);
+    expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
+
+    resolve2024(base);
+    await waitFor(() => expect(screen.getAllByText(/\(2024\)/).length).toBeGreaterThan(0));
+    expect(container.querySelector("[aria-busy='true']")).toBeNull();
   });
 });

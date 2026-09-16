@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { LodgingStats } from "../../../types/lodging";
 
 const getLodgingStats = vi.hoisted(() => vi.fn());
@@ -65,5 +65,41 @@ describe("LodgingStatsSection under the page's period", () => {
     expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
     expect(getLodgingStats).toHaveBeenCalledWith({ year: 2025 });
     expect(screen.getByText("stats:period.emptyYear")).toBeInTheDocument();
+  });
+});
+
+// Measured on the beta, 2026-09-16: switching from 2026 to 2015 relabelled the
+// strip "Year 2015" at once while the tiles still showed 2026 — for exactly as
+// long as the request took. A label must name the year its figures belong to.
+describe("LodgingStatsSection while the next year loads", () => {
+  it("keeps naming the year its figures belong to, marked busy, until the new ones land", async () => {
+    let resolve2024: (value: LodgingStats) => void = () => {};
+    getLodgingStats.mockImplementation((params?: { year?: number }) => {
+      if (params?.year === 2024) {
+        return new Promise<LodgingStats>((r) => {
+          resolve2024 = r;
+        });
+      }
+      return Promise.resolve(empty());
+    });
+
+    const { rerender, container } = render(
+      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+    );
+    // The strip prints the compare year raw beside each previous figure.
+    expect((await screen.findAllByText(/\(2025\)/)).length).toBeGreaterThan(0);
+    expect(container.querySelector("[aria-busy='true']")).toBeNull();
+
+    rerender(
+      <LodgingStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+    );
+    // 2025's figures are still on screen, so the strip must still say 2025.
+    expect(screen.queryAllByText(/\(2024\)/)).toHaveLength(0);
+    expect(screen.getAllByText(/\(2025\)/).length).toBeGreaterThan(0);
+    expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
+
+    resolve2024(empty({ totalNights: 4 }));
+    await waitFor(() => expect(screen.getAllByText(/\(2024\)/).length).toBeGreaterThan(0));
+    expect(container.querySelector("[aria-busy='true']")).toBeNull();
   });
 });

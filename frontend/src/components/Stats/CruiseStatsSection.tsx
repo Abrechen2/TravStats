@@ -15,7 +15,7 @@ import { convertDistance, getDistanceLabel } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
 import { cruisesStartedIn } from "../../lib/stats/periodScope";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
-import type { PeriodScope } from "./useStatsPeriod";
+import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
@@ -48,6 +48,7 @@ export default function CruiseStatsSection({
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<CruiseStatsResponse | null>(null);
   const [previous, setPrevious] = useState<CruiseStatsResponse | null>(null);
+  const [loadedFor, setLoadedFor] = useState<PeriodScope | null>(null);
   // The rollup answers the collection questions and carries no calendar, no
   // money and no firsts — those live on the rows.
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -71,6 +72,7 @@ export default function CruiseStatsSection({
         setStats(data);
         setPrevious(before);
         setCruises(rows);
+        setLoadedFor({ year, compareYear });
         setError(null);
       } catch (err) {
         logger.error("Failed to load cruise stats:", err);
@@ -112,11 +114,16 @@ export default function CruiseStatsSection({
     );
   }
 
+  // What is on screen was loaded for `shown`, which lags `scope` while the next
+  // year is on its way. Every label below reads `shown`; see `sameScope`.
+  const shown = loadedFor ?? scope;
+  const refreshing = !sameScope(loadedFor, scope);
+
   const comparison =
-    previous && year !== null && compareYear !== null ? (
+    previous && shown.year !== null && shown.compareYear !== null ? (
       <PeriodComparisonStrip
-        year={year}
-        compareYear={compareYear}
+        year={shown.year}
+        compareYear={shown.compareYear}
         rows={[
           {
             key: "cruises",
@@ -149,12 +156,12 @@ export default function CruiseStatsSection({
 
   // A year with no cruise names the year. The lifetime empty state invites the
   // first cruise, which is the wrong thing to say to someone with twenty.
-  if (stats.cruisesCount === 0 && year !== null) {
+  if (stats.cruisesCount === 0 && shown.year !== null) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" aria-busy={refreshing} style={dimWhile(refreshing)}>
         {comparison}
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {t("stats:period.emptyYear", { year })}
+          {t("stats:period.emptyYear", { year: shown.year })}
         </p>
       </div>
     );
@@ -241,13 +248,15 @@ export default function CruiseStatsSection({
     },
   ];
 
-  const detail = deriveCruiseStats(year === null ? cruises : cruisesStartedIn(cruises, year));
+  const detail = deriveCruiseStats(
+    shown.year === null ? cruises : cruisesStartedIn(cruises, shown.year)
+  );
   const accent = colorOf("cruise");
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const show = visibility.isVisible;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={refreshing} style={dimWhile(refreshing)}>
       {comparison}
 
       {/* 1) Hero KPI grid */}
