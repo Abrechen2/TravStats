@@ -302,6 +302,9 @@ model Flight {
   receiptUrl           String?   @map("receipt_url")
   ticketPrice          Float?    @map("ticket_price")
   createdAt            DateTime  @default(now()) @map("created_at")
+  /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
+  /// without it an edited flight could not be told apart from an unchanged one.
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
   // Route tracking
   actualRoute          Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
   overflownCountries   String[]  @default([]) @map("overflown_countries")
@@ -493,6 +496,8 @@ model Achievement {
 model UserAchievement {
   id            String    @id @default(uuid())
   userId        String    @map("user_id")
+  /// Read by the statistics ETag (forgejo#50).
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
   achievementId String    @map("achievement_id")
   /// When the badge was EARNED, and null while it is not held.
   ///
@@ -1701,6 +1706,8 @@ model CruiseStop {
   isAtSea            Boolean   @default(false) @map("is_at_sea")
   arrivalTime        DateTime? @map("arrival_time")
   departureTime      DateTime? @map("departure_time")
+  /// Read by the statistics ETag (forgejo#50).
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
   excursionNote      String?   @map("excursion_note")
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
