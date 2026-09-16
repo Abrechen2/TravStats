@@ -1,3 +1,4 @@
+import DetailSection from "../ui/DetailSection";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
@@ -52,10 +53,7 @@ export function LodgingPhotoSection({ lodgingId }: Props): JSX.Element | null {
   if (failed || photos === null) return null;
 
   return (
-    <section className="mb-4">
-      <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
-        {t("lodging:photos.title")}
-      </h2>
+    <DetailSection title={t("lodging:photos.title")}>
       <PhotoStrip<LodgingPhoto>
         photos={photos}
         context={`lodging:${lodgingId}`}
@@ -63,6 +61,6 @@ export function LodgingPhotoSection({ lodgingId }: Props): JSX.Element | null {
         onDelete={(photoId) => deleteLodgingPhoto(lodgingId, photoId)}
         onCaption={(photoId, caption) => updateLodgingPhoto(lodgingId, photoId, { caption })}
       />
-    </section>
+    </DetailSection>
   );
 }

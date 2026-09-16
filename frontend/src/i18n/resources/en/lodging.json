@@ -94,7 +94,10 @@
     "deleteSuccess": "Lodging deleted",
     "deleteError": "Could not delete lodging",
     "loadError": "The stay could not be loaded.",
-    "deleteConfirmMessageNoStays": "“{{name}}” will be permanently deleted."
+    "deleteConfirmMessageNoStays": "“{{name}}” will be permanently deleted.",
+    "backToLogbook": "Logbook · Stays",
+    "location": "Location",
+    "nights": "Nights"
   },
   "field": {
     "name": "Name",

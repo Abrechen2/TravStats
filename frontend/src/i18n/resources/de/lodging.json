@@ -94,7 +94,10 @@
     "deleteSuccess": "Unterkunft gelöscht",
     "deleteError": "Unterkunft konnte nicht gelöscht werden",
     "loadError": "Die Unterkunft konnte nicht geladen werden.",
-    "deleteConfirmMessageNoStays": "„{{name}}“ wird dauerhaft gelöscht."
+    "deleteConfirmMessageNoStays": "„{{name}}“ wird dauerhaft gelöscht.",
+    "backToLogbook": "Logbuch · Unterkünfte",
+    "location": "Standort",
+    "nights": "Nächte"
   },
   "field": {
     "name": "Name",

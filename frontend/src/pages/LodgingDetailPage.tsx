@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
+import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
+import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
 import { StayStatusPill } from "../components/lodging/StayStatusPill";
 import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
@@ -196,214 +198,247 @@ export default function LodgingDetailPage(): JSX.Element {
   const counted = countedStays(lodging.stays);
   const priced = hasAnyPrice(counted);
   const unconvertedCount = countUnconvertedStays(counted);
+  // Every priced stay unconverted means the base-currency sum is empty, not
+  // zero: "0 €" beside a stay that cost 780 $ is the B12 defect again.
+  const baseKnown =
+    priced && unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
+
+  const metaParts: ReactNode[] = [
+    addressLine || null,
+    lodging.chain ? (
+      <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
+    ) : (
+      t("lodging:field.independent")
+    ),
+  ].filter(Boolean);
+  const kpis: DetailKpi[] = [
+    { key: "stays", value: lodging.stayCount, label: t("lodging:detail.stays") },
+    { key: "nights", value: lodging.nights, label: t("lodging:detail.nights") },
+    ...(lodging.overallRating !== null
+      ? [
+          {
+            key: "rating",
+            value: formatRatingText(lodging.overallRating),
+            label: t("lodging:detail.avgRating"),
+          },
+        ]
+      : []),
+    ...(baseKnown
+      ? [
+          {
+            key: "spend",
+            value: formatCurrency(lodging.totalSpendBase, baseCurrency),
+            label: t("lodging:detail.spend"),
+          },
+        ]
+      : []),
+    ...(baseKnown && avgPerNight !== null
+      ? [
+          {
+            key: "perNight",
+            value: formatCurrency(avgPerNight, baseCurrency),
+            label: t("lodging:detail.spendPerNight"),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <AppShell width="list">
       <DetailHeader
         backTo={backTo}
-        backLabel={backLabel}
+        backLabel={fromChain ? backLabel : t("lodging:detail.backToLogbook")}
         domain="lodging"
         icon={typeIcon}
         title={lodging.name}
-        subtitle={
+        meta={metaParts.map((part, index) => (
+          <span key={index}>
+            {index > 0 && " · "}
+            {part}
+          </span>
+        ))}
+        hero={<DetailKpis items={kpis} />}
+        status={
           <>
-            <span>
-              {lodging.chain ? (
-                <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
-              ) : (
-                t("lodging:field.independent")
-              )}
-              {lodging.stars !== null ? ` · ${"★".repeat(lodging.stars)} ${lodging.stars}` : ""}
-            </span>
-            {addressLine.length > 0 && (
-              <span style={{ color: "var(--ts-text)" }}>{addressLine}</span>
+            {lifecycle ? (
+              <StayStatusPill status={lifecycle} testId="lodging-detail-lifecycle" />
+            ) : null}
+            {lodging.stars !== null && (
+              <span
+                aria-label={`${lodging.stars} ★`}
+                style={{ color: "var(--ts-accent)", fontSize: 13, letterSpacing: 1 }}
+              >
+                {"★".repeat(lodging.stars)}
+              </span>
             )}
           </>
-        }
-        facts={[
-          <>
-            {t("lodging:detail.avgRating")} <b>{formatRatingText(lodging.overallRating)}</b>
-          </>,
-          t("lodging:field.staysCount", { count: lodging.stayCount }),
-        ]}
-        status={
-          lifecycle ? <StayStatusPill status={lifecycle} testId="lodging-detail-lifecycle" /> : null
         }
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
-            <Button data-testid="lodging-delete-button" onClick={() => setConfirmingDelete(true)}>
+            <Button
+              variant="danger"
+              data-testid="lodging-delete-button"
+              onClick={() => setConfirmingDelete(true)}
+            >
               {t("common:buttons.delete")}
             </Button>
           </>
         }
       />
 
-      {lodging.amenities.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-1">
-          {lodging.amenities.map((a) => (
-            <span
-              key={a}
-              className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
-            >
-              {a}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {id && <LodgingPhotoSection lodgingId={id} />}
-
-      {/* The notes, under the same name the form gives them.
-            They were stored and never shown, so anything typed there
-            disappeared on save. Rendered only when there are some: an empty
-            heading over blank space is its own small untruth. */}
-      {lodging.notes !== null && lodging.notes.trim().length > 0 && (
-        <section className="mb-4">
-          <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
-            {t("lodging:field.notes")}
-          </h2>
-          <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">{lodging.notes}</p>
-        </section>
-      )}
-
-      {/* Two-column body */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div className="md:col-span-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-[var(--text-muted)]">
-              {t("lodging:detail.stays")}
-            </h2>
-            <button
-              type="button"
-              data-testid="lodging-add-stay-button"
-              onClick={() => setEditingStay("new")}
-              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-            >
-              {t("lodging:stayEditor.addStay")}
-            </button>
-          </div>
-          {lodging.stays.length > 0 ? (
-            // A scroll box of its own rather than the page: a house with
-            // dozens of stays pushed the map and the spend card off screen
-            // (owner, 2026-09-05). Bounded only from md up, where the
-            // sidebar sits beside it — a nested scroll area inside a
-            // single-column page is a scroll trap on a phone.
-            <div
-              data-testid="lodging-stays-scroll"
-              className="flex flex-col gap-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1"
-            >
-              {lodging.stays.map((stay) => {
-                // The SAME function the server resolves with
-                // (shared/membershipDerivation.ts) and the stay editor
-                // already uses — so the list gives the same answer as the
-                // editor for the same stay, instead of two different ones.
-                const resolvedMembership = deriveStayMembership({
-                  overrideId: stay.membershipId,
-                  optOut: stay.membershipOptOut,
-                  lodgingId: lodging.id,
-                  lodgingChainId: lodging.chainId,
-                  memberships: memberships.map((m) => ({
-                    id: m.id,
-                    createdAt: m.createdAt,
-                    chainIds: m.chainIds,
-                    lodgingIds: m.lodgingIds,
-                  })),
-                });
-                const membershipName =
-                  resolvedMembership.membershipId !== null
-                    ? memberships.find((m) => m.id === resolvedMembership.membershipId)?.programName
-                    : undefined;
-                return (
-                  <LodgingStayCard
-                    key={stay.id}
-                    stay={stay}
-                    onEdit={setEditingStay}
-                    tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
-                    membershipName={membershipName}
-                    membershipSource={resolvedMembership.source}
-                  />
-                );
-              })}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="flex flex-col gap-6 md:col-span-3">
+          <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="t-label-mono">
+                {t("lodging:detail.stays")} · {lodging.stays.length}
+              </h2>
+              <Button data-testid="lodging-add-stay-button" onClick={() => setEditingStay("new")}>
+                {t("lodging:stayEditor.addStay")}
+              </Button>
             </div>
-          ) : (
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-              {t("lodging:detail.staysEmpty")}
-            </div>
-          )}
-        </div>
-
-        <aside className="space-y-3 md:col-span-2">
-          <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
-
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t("lodging:detail.spend")}
-            </h3>
-            <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
-              {originalSpend && (
-                <div className="flex justify-between">
-                  <dt>{t("lodging:detail.spendOriginal")}</dt>
-                  <dd className="text-[var(--text-primary)]">
-                    {formatCurrency(originalSpend.amount, originalSpend.currency)}
-                  </dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt>{t("lodging:detail.spendBase")}</dt>
-                <dd style={originalSpend ? { color: "var(--fx, #6ab7d8)" } : undefined}>
-                  {priced ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—"}
-                </dd>
+            {lodging.stays.length > 0 ? (
+              // A scroll box of its own rather than the page: a house with
+              // dozens of stays pushed the map and the spend card off screen
+              // (owner, 2026-09-05). Bounded only from md up, where the
+              // sidebar sits beside it — a nested scroll area inside a
+              // single-column page is a scroll trap on a phone.
+              <div
+                data-testid="lodging-stays-scroll"
+                className="flex flex-col gap-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1"
+              >
+                {lodging.stays.map((stay) => {
+                  // The SAME function the server resolves with
+                  // (shared/membershipDerivation.ts) and the stay editor
+                  // already uses — so the list gives the same answer as the
+                  // editor for the same stay, instead of two different ones.
+                  const resolvedMembership = deriveStayMembership({
+                    overrideId: stay.membershipId,
+                    optOut: stay.membershipOptOut,
+                    lodgingId: lodging.id,
+                    lodgingChainId: lodging.chainId,
+                    memberships: memberships.map((m) => ({
+                      id: m.id,
+                      createdAt: m.createdAt,
+                      chainIds: m.chainIds,
+                      lodgingIds: m.lodgingIds,
+                    })),
+                  });
+                  const membershipName =
+                    resolvedMembership.membershipId !== null
+                      ? memberships.find((m) => m.id === resolvedMembership.membershipId)
+                          ?.programName
+                      : undefined;
+                  return (
+                    <LodgingStayCard
+                      key={stay.id}
+                      stay={stay}
+                      onEdit={setEditingStay}
+                      tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
+                      membershipName={membershipName}
+                      membershipSource={resolvedMembership.source}
+                    />
+                  );
+                })}
               </div>
-              <div className="flex justify-between">
-                <dt>{t("lodging:detail.spendPerNight")}</dt>
-                <dd>
-                  {priced && avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}
-                </dd>
-              </div>
-            </dl>
+            ) : (
+              <p className="t-caption">{t("lodging:detail.staysEmpty")}</p>
+            )}
+          </section>
+
+          <DetailSection
+            title={t("lodging:detail.spend")}
+            facts={[
+              {
+                label: t("lodging:detail.spendOriginal"),
+                value: originalSpend
+                  ? formatCurrency(originalSpend.amount, originalSpend.currency)
+                  : null,
+                mono: true,
+              },
+              {
+                label: t("lodging:detail.spendBase"),
+                value: baseKnown ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—",
+                mono: true,
+              },
+              {
+                label: t("lodging:detail.spendPerNight"),
+                value:
+                  baseKnown && avgPerNight !== null
+                    ? formatCurrency(avgPerNight, baseCurrency)
+                    : "—",
+                mono: true,
+              },
+            ]}
+          >
             <PlannedSpendNote stays={lodging.stays} />
             {/* A total that left rows out must say so. Silence here reads as
-                  "this is everything", which is exactly the lie the marker on
-                  each stay exists to prevent. */}
+                "this is everything", which is exactly the lie the marker on
+                each stay exists to prevent. */}
             {unconvertedCount > 0 && (
-              <p
-                data-testid="lodging-omitted-from-total"
-                className="mt-1 text-xs text-[var(--text-muted)]"
-              >
+              <p data-testid="lodging-omitted-from-total" className="t-caption">
                 {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
               </p>
             )}
-          </div>
+          </DetailSection>
+        </div>
 
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t("lodging:detail.avgRating")}
-            </h3>
-            <dl className="mt-2 space-y-1.5 text-xs text-[var(--text-muted)]">
-              <div className="flex items-center justify-between">
-                <dt>{t("lodging:field.ratingRoom")}</dt>
-                <dd>
-                  <StarRating value={categoryRatings.room} />
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>{t("lodging:field.ratingBreakfast")}</dt>
-                <dd>
-                  <StarRating value={categoryRatings.breakfast} />
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>{t("lodging:field.ratingService")}</dt>
-                <dd>
-                  <StarRating value={categoryRatings.service} />
-                </dd>
-              </div>
+        <aside className="flex flex-col gap-6 md:col-span-2">
+          <DetailSection title={t("lodging:detail.location")}>
+            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+          </DetailSection>
+
+          <DetailSection title={t("lodging:detail.avgRating")}>
+            <dl className="flex flex-col gap-2 text-sm">
+              {(
+                [
+                  ["ratingRoom", categoryRatings.room],
+                  ["ratingBreakfast", categoryRatings.breakfast],
+                  ["ratingService", categoryRatings.service],
+                ] as const
+              ).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <dt className="t-caption">{t(`lodging:field.${key}`)}</dt>
+                  <dd>
+                    <StarRating value={value} />
+                  </dd>
+                </div>
+              ))}
             </dl>
-          </div>
+          </DetailSection>
+
+          {lodging.amenities.length > 0 && (
+            <DetailSection title={t("lodging:field.amenities")}>
+              <div className="flex flex-wrap gap-1.5">
+                {lodging.amenities.map((a) => (
+                  <span
+                    key={a}
+                    className="rounded-full border px-2.5 py-0.5 text-xs"
+                    style={{ borderColor: "var(--ts-border)", color: "var(--ts-text)" }}
+                  >
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+
+          {id && <LodgingPhotoSection lodgingId={id} />}
+
+          {/* The notes, under the same name the form gives them. They were
+              stored and never shown, so anything typed there disappeared on
+              save. Rendered only when there are some. */}
+          {lodging.notes !== null && lodging.notes.trim().length > 0 && (
+            <DetailSection title={t("lodging:field.notes")}>
+              <p className="whitespace-pre-line text-sm" style={{ color: "var(--ts-text)" }}>
+                {lodging.notes}
+              </p>
+            </DetailSection>
+          )}
         </aside>
       </div>
 
