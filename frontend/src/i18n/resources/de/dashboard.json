@@ -191,7 +191,7 @@
       "flight": "Flüge",
       "cruise": "Kreuzfahrten",
       "lodging": "Unterkünfte",
-      "poi": "POIs",
+      "poi": "Orte",
       "tour": "Touren"
     }
   },
@@ -199,7 +199,7 @@
     "button": "Hinzufügen",
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
-    "poi": "POI",
+    "poi": "Ort",
     "lodging": "Unterkunft"
   },
   "controls": {
@@ -208,17 +208,17 @@
     "addPerTab": {
       "flight": "Flug hinzufügen",
       "cruise": "Kreuzfahrt hinzufügen",
-      "lodging": "Hotel hinzufügen",
-      "poi": "POI hinzufügen"
+      "lodging": "Unterkunft anlegen",
+      "poi": "Ort anlegen"
     }
   },
   "filter": {
     "title": "Filter",
     "year": "Jahr",
     "allYears": "Alle Jahre",
-    "domains": "Domains",
+    "domains": "Bereiche",
     "reset": "Filter zurücksetzen",
-    "activeDomainCount": "{{count}} von {{total}} Domains aktiv",
+    "activeDomainCount": "{{count}} von {{total}} Bereichen aktiv",
     "timeFrom": "Von",
     "timeTo": "Bis",
     "airline": "Airline",
@@ -258,14 +258,14 @@
       "wishlist": "Merkliste",
       "unlisted": "In keiner Liste"
     },
-    "disabled": "Die POI-Domain ist noch nicht aktiviert. Schalte sie unter Einstellungen → Domains frei.",
+    "disabled": "Der Bereich Orte ist noch nicht aktiviert. Schalte ihn unter Einstellungen → Bereiche frei.",
     "goToSettings": "Zu den Einstellungen",
     "listFilter": "Nach Liste filtern",
     "allLists": "Alle Orte"
   },
   "tabDisabled": {
     "title": "Bereich deaktiviert",
-    "body": "Der Bereich „{{domain}}“ ist deaktiviert. Schalte ihn unter Einstellungen → Domains frei, um Inhalte zu sehen.",
+    "body": "Der Bereich „{{domain}}“ ist deaktiviert. Schalte ihn unter Einstellungen → Bereiche frei, um Inhalte zu sehen.",
     "goToSettings": "Zu den Einstellungen"
   },
   "sidebar": {

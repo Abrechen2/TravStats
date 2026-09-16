@@ -28,7 +28,7 @@ export default function DomainSummaryCard({
   compareYear,
   compareEnabled,
 }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common", "places"]);
   // The reader's language decides the thousands separator, not the machine's:
   // the adapters used to format with a hardcoded "de-DE", so an English page
   // showed "12.345 km" (#319).
@@ -183,7 +183,9 @@ export default function DomainSummaryCard({
                   color: "var(--text-primary)",
                 }}
               >
-                {item.label}
+                {topItems.labelKeyPrefix
+                  ? t(`${topItems.labelKeyPrefix}.${item.label}`, { defaultValue: item.label })
+                  : item.label}
               </span>
             ))}
           </div>

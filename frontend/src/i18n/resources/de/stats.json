@@ -11,11 +11,11 @@
   },
   "overviewKpis": {
     "experiences": "Erlebnisse gesamt",
-    "noEnabledDomains": "Keine Domain aktiviert",
+    "noEnabledDomains": "Kein Bereich aktiviert",
     "countries": "Länder besucht",
     "activeDays": "Aktive Reisetage",
     "activeDaysHint": "Tage mit mind. einer Aktivität",
-    "achievements": "Errungenschaften",
+    "achievements": "Erfolge",
     "achievementsHint": "{{points}} Punkte"
   },
   "overviewToggle": {
@@ -41,7 +41,7 @@
   },
   "overviewChart": {
     "title": "Aktivität pro Jahr",
-    "subtitleStacked": "gestapelt nach Domain",
+    "subtitleStacked": "gestapelt nach Bereich",
     "subtitleHighlight": "{{year}} hervorgehoben",
     "subtitleCompare": "{{year}} vs. {{compare}} hervorgehoben",
     "measureLabel": "Was gezählt wird",
@@ -116,13 +116,13 @@
   },
   "overview2": {
     "sectionLabel": "Gesamt-Übersicht",
-    "sectionHint": "Alle Domains zusammengefasst",
+    "sectionHint": "Alle Bereiche zusammengefasst",
     "loadError": "Gesamt-Übersicht konnte nicht geladen werden — bitte erneut einloggen oder Seite neu laden.",
     "experiences": "Erlebnisse gesamt",
     "experiencesHint": "{{flights}} Flüge, {{cruises}} Kreuzfahrten",
     "countries": "Länder gesamt",
     "points": "Punkte",
-    "pointsHint": "{{count}} freigeschaltete Errungenschaften",
+    "pointsHint": "{{count}} freigeschaltete Erfolge",
     "cruiseSeaDays": "Seetage"
   },
   "cruiseSection": {
@@ -226,16 +226,16 @@
     "linkText": "Zurück zum Dashboard"
   },
   "overview": {
-    "loading": "Lade Multi-Domain-Statistiken …",
+    "loading": "Statistiken werden geladen …",
     "kpisLabel": "Gesamt-Übersicht",
-    "scopeLifetime": "Lifetime · alle Jahre",
+    "scopeLifetime": "Alle Jahre",
     "scopeYear": "Jahr {{year}}",
     "scopeCompare": "Jahr {{year}} vs. {{compare}}",
     "activityLabel": "Aktivität & Verteilung",
-    "activityHint": "Toggle: welche Domains sollen einfließen?",
-    "perDomainLabel": "Pro Domain",
-    "perDomainHint": "Kompakt-Zusammenfassung — voller Drill-Down im Domain-Tab",
-    "perDomainHintScoped": "Scope: {{year}} · voller Drill-Down im Domain-Tab",
+    "activityHint": "Welche Bereiche einfließen, wählst du hier.",
+    "perDomainLabel": "Pro Bereich",
+    "perDomainHint": "Kurzüberblick — alle Details im Reiter des Bereichs",
+    "perDomainHintScoped": "{{year}} · alle Details im Reiter des Bereichs",
     "totalFlights": "Gesamt Flüge",
     "totalDistance": "Gesamt-Distanz",
     "avgDistance": "Durchschn. Distanz",

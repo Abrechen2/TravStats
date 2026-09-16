@@ -227,4 +227,31 @@ describe("DomainSummaryCard", () => {
       expect(screen.getByText(/stats:overviewCard\.allYearsOnly/)).toBeInTheDocument();
     });
   });
+
+  // CT106 audit B11: the places card printed "viewpoint".
+  it("translates top items that are codes, not names", () => {
+    const poiStats: DomainStats = {
+      ...cruiseStats,
+      domain: "poi",
+      summary: {
+        headlineKpis: [],
+        topItems: {
+          titleKey: "overviewCard.topItems.categories",
+          items: [{ label: "viewpoint", value: 2 }],
+          labelKeyPrefix: "places:categories",
+        },
+        detailRoute: "/stats?tab=poi",
+      },
+    } as DomainStats;
+    render(
+      <DomainSummaryCard
+        domain="poi"
+        stats={poiStats}
+        selectedYear={null}
+        compareYear={null}
+        compareEnabled={false}
+      />
+    );
+    expect(screen.getByText("places:categories.viewpoint")).toBeInTheDocument();
+  });
 });

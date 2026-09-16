@@ -96,7 +96,11 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
         { labelKey: "overviewCard.kpi.placesVisited", value: placesInYear.size },
         { labelKey: "overviewCard.kpi.countries", value: countriesByYear[year]?.size ?? 0 },
       ],
-      topItems: { titleKey: "overviewCard.topItems.categories", items: topFive(categories) },
+      topItems: {
+        titleKey: "overviewCard.topItems.categories",
+        items: topFive(categories),
+        labelKeyPrefix: "places:categories",
+      },
     };
   }
 
@@ -149,7 +153,11 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
             ]
           : []),
       ],
-      topItems: { titleKey: "overviewCard.topItems.categories", items: topCategories },
+      topItems: {
+        titleKey: "overviewCard.topItems.categories",
+        items: topCategories,
+        labelKeyPrefix: "places:categories",
+      },
       // The POI statistics tab, like every other card — not the places list,
       // which is the one destination that could not carry the year (B04).
       detailRoute: "/stats?tab=poi",

@@ -10,7 +10,7 @@ import { lodgingLifecycleStatus } from "./lodgingLifecycle";
 import { hasOtherBaseCurrencySpend, LodgingSpendCell } from "./LodgingSpendCell";
 import { lodgingTypeIcon } from "../../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../../lib/countryFlag";
-import { formatDateInTimezone } from "../../lib/dateUtils";
+import { formatIsoDate } from "../../lib/dateUtils";
 import { latestStayDayOf } from "../../lib/lodgingLatestStay";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { TableRow, type TableColumn } from "../ui/Table";
@@ -128,7 +128,7 @@ export function LodgingRow({
         <LodgingStatusTag lodging={l} />
       </span>
     ),
-    lastStay: day ? formatDateInTimezone(day, "UTC") : "—",
+    lastStay: day ? formatIsoDate(day, "UTC") : "—",
     stays: l.stayCount,
     nights: l.nights,
     rating: <StarRating value={l.overallRating} />,

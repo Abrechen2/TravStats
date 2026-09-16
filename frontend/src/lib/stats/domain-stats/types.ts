@@ -24,7 +24,16 @@ export interface DomainSummary {
   headlineKpis: DomainKpi[];
   /** Optional ranked list (top airlines / cruise lines / hotel chains). The
    *  item labels are data — airline and chain names — and stay untranslated. */
-  topItems?: { titleKey: string; items: Array<{ label: string; value: number }> };
+  topItems?: {
+    titleKey: string;
+    items: Array<{ label: string; value: number }>;
+    /**
+     * Set when the labels are CODES rather than names — place categories
+     * ("viewpoint") — so the card translates them under this key prefix.
+     * The overview printed the raw code on a German page (CT106 audit B11).
+     */
+    labelKeyPrefix?: string;
+  };
   /** Achievement-style boolean flags rendered as small pills. */
   badges?: Array<{ labelKey: string; emoji: string }>;
   /** URL the "Details →" link on the summary card points to. */
