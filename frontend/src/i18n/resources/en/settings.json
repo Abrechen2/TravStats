@@ -283,7 +283,9 @@
       "lastBackup": "Last backup: {{date}}",
       "size": "Size: {{size}} MB",
       "noBackup": "No backup created yet",
-      "path": "Backup path: {{path}}"
+      "path": "Backup path: {{path}}",
+      "runningShort": "Running",
+      "noneShort": "None"
     },
     "intervals": {
       "daily": "Daily",
@@ -294,7 +296,8 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
-    }
+    },
+    "lastInstanceBackup": "Last instance backup"
   },
   "password": {
     "title": "Change Password",

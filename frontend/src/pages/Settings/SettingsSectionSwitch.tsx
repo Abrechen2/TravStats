@@ -90,17 +90,16 @@ export default function SettingsSectionSwitch({
       return <CountryCountingCard />;
     case "backup":
       return (
-        <div className="space-y-4">
-          <BackupSection
-            lastBackup={page.lastBackup}
-            backupStatus={page.backupStatus}
-            isAdmin={isAdmin}
-          />
-          {/* Next to the backup, because both answer "get my data out" — but
-              they are not the same thing: a backup restores an instance, this
-              one is for reading and editing. */}
+        <BackupSection
+          lastBackup={page.lastBackup}
+          backupStatus={page.backupStatus}
+          isAdmin={isAdmin}
+        >
+          {/* In the same card as the backup, because both answer "get my data
+              out" — but they are not the same thing: a backup restores an
+              instance, the spreadsheet is for reading and editing. */}
           <SpreadsheetSection />
-        </div>
+        </BackupSection>
       );
     case "import":
       return <ImportSection />;
