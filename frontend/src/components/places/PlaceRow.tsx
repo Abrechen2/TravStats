@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { JSX } from "react";
 import { TableRow, type TableColumn } from "../ui/Table";
-import type { NarrowPlace } from "../table/narrowColumns";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 
 export type PlaceSortKey =
@@ -29,17 +28,17 @@ export const PLACE_COLUMN_IDS: readonly PlaceColumnId[] = [
  */
 export const PLACE_COLUMN_LAYOUT: Record<
   PlaceColumnId,
-  { width: string; align?: "end"; mono?: boolean; onNarrow?: NarrowPlace }
+  Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
 > = {
-  name: { width: "minmax(0,1.6fr)", onNarrow: "title" },
-  category: { width: "minmax(0,1fr)" },
-  location: { width: "minmax(0,1fr)" },
-  country: { width: "minmax(0,1fr)" },
-  continent: { width: "140px" },
-  visits: { width: "96px", align: "end", mono: true },
-  lastVisit: { width: "130px", mono: true, onNarrow: "subtitle" },
-  status: { width: "140px", onNarrow: "trailing" },
-  actions: { width: "96px", align: "end" },
+  name: { min: 160, grow: 2, onNarrow: "title" },
+  category: { min: 110, grow: 1, priority: 2 },
+  location: { min: 110, grow: 1, priority: 2 },
+  country: { min: 100, grow: 1, priority: 3 },
+  continent: { min: 100, priority: 3 },
+  visits: { min: 64, align: "end", mono: true, priority: 3 },
+  lastVisit: { min: 100, mono: true, onNarrow: "subtitle" },
+  status: { min: 110, onNarrow: "trailing" },
+  actions: { min: 80, align: "end" },
 };
 
 interface Props {

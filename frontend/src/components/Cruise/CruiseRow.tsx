@@ -6,7 +6,6 @@ import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
 import { TableRow, type TableColumn } from "../ui/Table";
-import type { NarrowPlace } from "../table/narrowColumns";
 
 export type CruiseColumnId =
   "ship" | "line" | "dates" | "ports" | "status" | "cabin" | "price" | "trip" | "actions";
@@ -29,17 +28,17 @@ interface Props {
  */
 export const CRUISE_COLUMN_LAYOUT: Record<
   CruiseColumnId,
-  { width: string; align?: "end"; mono?: boolean; onNarrow?: NarrowPlace }
+  Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
 > = {
-  ship: { width: "minmax(0,1.4fr)", onNarrow: "title" },
-  line: { width: "minmax(0,1fr)" },
-  dates: { width: "190px", mono: true, onNarrow: "subtitle" },
-  ports: { width: "90px", align: "end" },
-  status: { width: "132px", onNarrow: "trailing" },
-  cabin: { width: "110px", mono: true },
-  price: { width: "120px", align: "end", mono: true },
-  trip: { width: "150px" },
-  actions: { width: "110px", align: "end" },
+  ship: { min: 160, grow: 2, onNarrow: "title" },
+  line: { min: 110, grow: 1, priority: 2 },
+  dates: { min: 176, mono: true, onNarrow: "subtitle" },
+  ports: { min: 64, align: "end", priority: 3 },
+  status: { min: 110, onNarrow: "trailing" },
+  cabin: { min: 90, mono: true, priority: 3 },
+  price: { min: 84, align: "end", mono: true, priority: 3 },
+  trip: { min: 110, grow: 1, priority: 2 },
+  actions: { min: 88, align: "end" },
 };
 
 const fmtDate = (iso: string | null): string => {

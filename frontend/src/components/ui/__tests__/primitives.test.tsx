@@ -123,9 +123,9 @@ describe("Dialog", () => {
 
 describe("Table", () => {
   const columns: readonly TableColumn[] = [
-    { key: "date", label: "Datum", width: "88px", mono: true, onNarrow: "subtitle" },
-    { key: "route", label: "Strecke", width: "minmax(0,1fr)", onNarrow: "title" },
-    { key: "code", label: "Flug", width: "120px", mono: true, onNarrow: "hide" },
+    { key: "date", label: "Datum", min: 88, mono: true, onNarrow: "subtitle" },
+    { key: "route", label: "Strecke", min: 140, grow: 1, onNarrow: "title" },
+    { key: "code", label: "Flug", min: 100, mono: true, onNarrow: "hide" },
   ];
 
   it("carries the table roles a grid does not get for free", () => {

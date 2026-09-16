@@ -239,7 +239,9 @@ export default function CruisesPage(): JSX.Element {
         const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
         return {
           key: id,
-          width: layout.width,
+          min: layout.min,
+          grow: layout.grow,
+          priority: layout.priority,
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,

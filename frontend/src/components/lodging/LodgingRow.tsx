@@ -14,7 +14,6 @@ import { formatDateInTimezone } from "../../lib/dateUtils";
 import { latestStayDayOf } from "../../lib/lodgingLatestStay";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { TableRow, type TableColumn } from "../ui/Table";
-import type { NarrowPlace } from "../table/narrowColumns";
 import { useTranslation } from "../../hooks/useTranslation";
 
 /** Every column, sortable or not. `actions` carries no value to sort by. */
@@ -43,18 +42,18 @@ export const LODGING_COLUMN_IDS: readonly LodgingColumnId[] = [
  */
 export const LODGING_COLUMN_LAYOUT: Record<
   LodgingColumnId,
-  { width: string; align?: "end"; mono?: boolean; onNarrow?: NarrowPlace }
+  Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
 > = {
-  name: { width: "minmax(0,1.6fr)", onNarrow: "title" },
-  chain: { width: "minmax(0,1fr)" },
-  location: { width: "minmax(0,1fr)" },
-  status: { width: "190px", onNarrow: "trailing" },
-  lastStay: { width: "130px", mono: true, onNarrow: "subtitle" },
-  stays: { width: "84px", align: "end", mono: true },
-  nights: { width: "84px", align: "end", mono: true },
-  rating: { width: "112px" },
-  spend: { width: "132px", align: "end", mono: true },
-  actions: { width: "96px", align: "end" },
+  name: { min: 160, grow: 2, onNarrow: "title" },
+  chain: { min: 100, grow: 1, priority: 3 },
+  location: { min: 110, grow: 1, priority: 2 },
+  status: { min: 130, onNarrow: "trailing" },
+  lastStay: { min: 100, mono: true, onNarrow: "subtitle" },
+  stays: { min: 56, align: "end", mono: true, priority: 3 },
+  nights: { min: 56, align: "end", mono: true, priority: 2 },
+  rating: { min: 96, priority: 3 },
+  spend: { min: 96, align: "end", mono: true, priority: 2 },
+  actions: { min: 80, align: "end" },
 };
 
 interface Props {

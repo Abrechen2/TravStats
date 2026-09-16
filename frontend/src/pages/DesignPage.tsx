@@ -126,11 +126,11 @@ const STATUSES: [string, string][] = [
 ];
 
 const COLUMNS: readonly TableColumn[] = [
-  { key: "date", label: "Datum", width: "88px", mono: true, onNarrow: "subtitle" },
-  { key: "route", label: "Strecke", width: "minmax(0,1fr)", onNarrow: "title" },
-  { key: "code", label: "Flug", width: "120px", mono: true, onNarrow: "hide" },
-  { key: "dist", label: "Distanz", width: "96px", mono: true, align: "end", onNarrow: "hide" },
-  { key: "status", label: "Status", width: "120px", align: "end", onNarrow: "trailing" },
+  { key: "date", label: "Datum", min: 88, mono: true, onNarrow: "subtitle" },
+  { key: "route", label: "Strecke", min: 140, grow: 1, onNarrow: "title" },
+  { key: "code", label: "Flug", min: 100, mono: true, onNarrow: "hide" },
+  { key: "dist", label: "Distanz", min: 80, mono: true, align: "end", onNarrow: "hide" },
+  { key: "status", label: "Status", min: 100, align: "end", onNarrow: "trailing" },
 ];
 
 const ROWS = [

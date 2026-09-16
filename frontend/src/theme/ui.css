@@ -172,6 +172,16 @@
 }
 
 /* ─── Table ─────────────────────────────────────────────────────────────── */
+.ts-table {
+  /*
+   * Visible sideways scroll, never clipping. `overflow: hidden` on the table
+   * is what let the flights table cut off its actions column while the page
+   * itself reported no overflow at all (CT106 audit, B01).
+   */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
 .ts-table-head,
 .ts-table-row {
   display: grid;
@@ -179,6 +189,30 @@
   gap: var(--ts-space-lg);
   align-items: center;
   padding: 0 var(--ts-space-xl);
+  /*
+   * The row is never narrower than its columns' minimums, so a table that does
+   * not fit scrolls as one piece — head and rows together — instead of each
+   * row squeezing its cells over each other.
+   */
+  min-width: calc(
+    var(--ts-table-columns-min) + (var(--ts-table-column-count) - 1) * var(--ts-space-lg) + 2 *
+      var(--ts-space-xl)
+  );
+}
+
+/* Columns that stepped aside for lack of width — see `pickTier`. */
+@media (min-width: 640px) {
+  .ts-table[data-tier="2"] [data-priority="3"],
+  .ts-table[data-tier="1"] [data-priority="2"],
+  .ts-table[data-tier="1"] [data-priority="3"] {
+    display: none;
+  }
+}
+
+.ts-table-hint {
+  margin: 0;
+  padding: var(--ts-space-sm) var(--ts-space-xl);
+  border-top: 1px solid var(--ts-border);
 }
 
 .ts-table-head {
@@ -209,6 +243,7 @@
   }
 
   .ts-table-row {
+    min-width: 0;
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "mark title trailing" "mark subtitle trailing";
     gap: 2px var(--ts-space-lg);

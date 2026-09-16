@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 interface ListRowProps {
@@ -99,8 +100,24 @@ export function ListRow({
 export interface TableColumn {
   key: string;
   label: ReactNode;
-  /** Grid track. `minmax(0,1fr)` for the one column that may shrink. */
-  width: string;
+  /**
+   * The narrowest this column can be and still say what it says, in CSS px.
+   *
+   * A real number, never 0. Until 2026-09-16 columns declared a grid track
+   * instead — `200px`, or `minmax(0,1.6fr)` for the one that may shrink — and
+   * the flights table on a 1440px screen summed its fixed tracks past the
+   * table's width. The one shrinkable column, the ROUTE, got 0px; route and
+   * time were drawn on top of each other, and the actions sat outside a frame
+   * that clipped them without a trace (CT106 audit, B01).
+   */
+  min: number;
+  /** A share of the spare width. Omitted: the column stays at `min`. */
+  grow?: number;
+  /**
+   * Who steps aside when the table is too narrow for every column. 1 never
+   * does; 3 goes before 2. Only above 640px — below it the row layout decides.
+   */
+  priority?: 1 | 2 | 3;
   align?: "start" | "end";
   /** Codes, identifiers and measurements. Never names or categories. */
   mono?: boolean;
@@ -113,11 +130,60 @@ export interface TableColumn {
   onNarrow?: "mark" | "title" | "subtitle" | "trailing" | "hide";
 }
 
+export type TableTier = 1 | 2 | 3;
+
+export function inTier(column: TableColumn, tier: TableTier): boolean {
+  return (column.priority ?? 1) <= tier;
+}
+
+function trackOf(column: TableColumn): string {
+  return column.grow ? `minmax(${column.min}px, ${column.grow}fr)` : `${column.min}px`;
+}
+
+/** Columns plus the gaps and padding between them, as the grid lays them out. */
+export function tableMinWidth(
+  columns: readonly TableColumn[],
+  gap: number,
+  padding: number
+): number {
+  const sum = columns.reduce((total, column) => total + column.min, 0);
+  return sum + gap * Math.max(0, columns.length - 1) + padding;
+}
+
+/**
+ * The richest set of columns whose minimum fits `available`.
+ *
+ * Derived from the columns' own numbers rather than from breakpoints, because
+ * the same table sits in a 1150px shell, on a tablet, and behind a column
+ * picker that adds or removes any of them. When even the essential columns do
+ * not fit, the answer is still tier 1, and the table scrolls — visibly.
+ */
+export function pickTier(
+  columns: readonly TableColumn[],
+  available: number,
+  gap: number,
+  padding: number
+): TableTier {
+  for (const tier of [3, 2] as const) {
+    const shown = columns.filter((column) => inTier(column, tier));
+    if (tableMinWidth(shown, gap, padding) <= available) return tier;
+  }
+  return 1;
+}
+
 interface TableProps {
   columns: readonly TableColumn[];
   children: ReactNode;
   /** Names what the table is, for a screen reader. */
   label: string;
+  /**
+   * Said under the table when columns stepped aside for lack of width. The
+   * reader picked those columns; a table that silently drops them reads as a
+   * broken picker. Primitives carry no copy, so the page says it.
+   */
+  hiddenColumnsHint?: (hidden: number) => ReactNode;
+  /** Said when even the essential columns need a horizontal scroll. */
+  scrollHint?: ReactNode;
 }
 
 /**
@@ -129,41 +195,94 @@ interface TableProps {
  * takes the place its `onNarrow` names; the visual reordering is CSS, and the
  * reading order in the markup is unchanged, so a screen reader is unaffected.
  *
+ * Above 640px the table measures itself and shows the richest set of columns
+ * whose minimum widths fit (`pickTier`). If the essential columns alone are
+ * wider than the table, it scrolls sideways where the scrollbar can be seen —
+ * never `overflow: hidden`, which is how a column disappears without a trace.
+ *
  * Grid rather than `<table>`, with the ARIA roles written out. The export drew
  * grid rows and left the roles off, which reads to a screen reader as a stack
  * of unrelated divs.
  */
-export function Table({ columns, children, label }: TableProps): JSX.Element {
-  const template = columns.map((c) => c.width).join(" ");
+export function Table({
+  columns,
+  children,
+  label,
+  hiddenColumnsHint,
+  scrollHint,
+}: TableProps): JSX.Element {
+  const tableRef = useRef<HTMLDivElement | null>(null);
+  const [tier, setTier] = useState<TableTier>(3);
+  const [scrolls, setScrolls] = useState(false);
+
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table || typeof ResizeObserver === "undefined") return;
+    const measure = (): void => {
+      const head = table.firstElementChild;
+      if (!(head instanceof HTMLElement)) return;
+      const style = getComputedStyle(head);
+      const gap = parseFloat(style.columnGap) || 0;
+      const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      const next = pickTier(columns, table.clientWidth, gap, padding);
+      const shown = columns.filter((column) => inTier(column, next));
+      setTier(next);
+      setScrolls(tableMinWidth(shown, gap, padding) > table.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(table);
+    return (): void => observer.disconnect();
+  }, [columns]);
+
+  const shown = columns.filter((column) => inTier(column, tier));
+  const hidden = columns.length - shown.length;
+
   return (
     <div
-      role="table"
-      aria-label={label}
-      className="ts-table"
-      style={
-        {
-          "--ts-table-template": template,
-          background: "var(--ts-surface)",
-          border: "1px solid var(--ts-border)",
-          borderRadius: "var(--ts-radius-card)",
-          overflow: "hidden",
-        } as CSSProperties
-      }
+      className="ts-table-frame"
+      style={{
+        background: "var(--ts-surface)",
+        border: "1px solid var(--ts-border)",
+        borderRadius: "var(--ts-radius-card)",
+        overflow: "hidden",
+      }}
     >
-      <div role="row" className="ts-table-head">
-        {columns.map((column) => (
-          <span
-            key={column.key}
-            role="columnheader"
-            className="t-label-mono"
-            data-narrow={column.onNarrow ?? "hide"}
-            style={{ textAlign: column.align === "end" ? "right" : "left" }}
-          >
-            {column.label}
-          </span>
-        ))}
+      <div
+        ref={tableRef}
+        role="table"
+        aria-label={label}
+        className="ts-table"
+        data-tier={tier}
+        data-scrolls={scrolls ? "yes" : "no"}
+        style={
+          {
+            "--ts-table-template": shown.map(trackOf).join(" "),
+            "--ts-table-columns-min": `${shown.reduce((sum, column) => sum + column.min, 0)}px`,
+            "--ts-table-column-count": shown.length,
+          } as CSSProperties
+        }
+      >
+        <div role="row" className="ts-table-head">
+          {columns.map((column) => (
+            <span
+              key={column.key}
+              role="columnheader"
+              className="t-label-mono"
+              data-narrow={column.onNarrow ?? "hide"}
+              data-priority={column.priority ?? 1}
+              style={{ textAlign: column.align === "end" ? "right" : "left", minWidth: 0 }}
+            >
+              {column.label}
+            </span>
+          ))}
+        </div>
+        {children}
       </div>
-      {children}
+      {hidden > 0 && hiddenColumnsHint ? (
+        <p className="ts-table-hint t-caption">{hiddenColumnsHint(hidden)}</p>
+      ) : null}
+      {scrolls && scrollHint ? <p className="ts-table-hint t-caption">{scrollHint}</p> : null}
     </div>
   );
 }
@@ -236,6 +355,7 @@ export function TableRow({
             key={column?.key ?? index}
             role="cell"
             data-narrow={column?.onNarrow ?? "hide"}
+            data-priority={column?.priority ?? 1}
             style={{
               fontFamily: column?.mono ? "var(--ts-font-mono)" : undefined,
               fontVariantNumeric: column?.mono ? "tabular-nums" : undefined,

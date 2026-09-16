@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { JSX } from "react";
 import type { Flight, Trip } from "../../types";
 import { TableRow, type TableColumn } from "../ui/Table";
-import type { NarrowPlace } from "../table/narrowColumns";
 import AirlineWordmarkCell from "./AirlineWordmarkCell";
 import RouteCell from "./RouteCell";
 import TimeCell from "./TimeCell";
@@ -26,18 +25,18 @@ import type { FlightColumnId } from "./flightColumns";
  */
 export const FLIGHT_COLUMN_LAYOUT: Record<
   FlightColumnId,
-  { width: string; align?: "end"; mono?: boolean; onNarrow?: NarrowPlace }
+  Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
 > = {
-  airline: { width: "200px", onNarrow: "mark" },
-  flightNumber: { width: "120px", mono: true },
-  route: { width: "minmax(0,1.6fr)", onNarrow: "title" },
-  time: { width: "210px" },
-  status: { width: "140px", onNarrow: "trailing" },
-  duration: { width: "110px", align: "end", mono: true },
-  aircraft: { width: "130px", mono: true },
-  price: { width: "120px", align: "end", mono: true },
-  trip: { width: "150px" },
-  actions: { width: "120px", align: "end" },
+  airline: { min: 48, onNarrow: "mark" },
+  flightNumber: { min: 72, mono: true, priority: 2 },
+  route: { min: 140, grow: 2, onNarrow: "title" },
+  time: { min: 170 },
+  status: { min: 100, onNarrow: "trailing" },
+  duration: { min: 72, align: "end", mono: true, priority: 3 },
+  aircraft: { min: 104, grow: 1, mono: true, priority: 3 },
+  price: { min: 80, align: "end", mono: true, priority: 3 },
+  trip: { min: 100, grow: 1, priority: 2 },
+  actions: { min: 84, align: "end" },
 };
 
 interface Props {
