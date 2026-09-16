@@ -4,6 +4,7 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
+import { useId } from "react";
 
 const CONTROL_STYLE = {
   minHeight: "var(--ts-size-touch-min)",
@@ -127,6 +128,12 @@ interface SwitchProps {
  * second kind, and the app draws the first.
  */
 export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchProps): JSX.Element {
+  // The label names the switch; the sub line describes it. Wrapped in one
+  // <label>, both would be read as the name — "Unterkünfte Navigation,
+  // Statistik, Reisetage" — so the two are tied to the input separately.
+  const uid = useId();
+  const labelId = `${uid}-label`;
+  const subId = `${uid}-sub`;
   return (
     <label
       htmlFor={id}
@@ -139,8 +146,14 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
       }}
     >
       <span className="flex min-w-0 flex-col" style={{ gap: 2 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text)" }}>{label}</span>
-        {sub ? <span className="t-caption">{sub}</span> : null}
+        <span id={labelId} style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text)" }}>
+          {label}
+        </span>
+        {sub ? (
+          <span id={subId} className="t-caption">
+            {sub}
+          </span>
+        ) : null}
       </span>
       <span
         style={{
@@ -158,6 +171,8 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
           id={id}
           type="checkbox"
           role="switch"
+          aria-labelledby={labelId}
+          aria-describedby={sub ? subId : undefined}
           checked={checked}
           disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
