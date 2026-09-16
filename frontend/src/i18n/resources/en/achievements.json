@@ -41,7 +41,13 @@
     "domainLodging": "Lodging",
     "domainPoi": "Places",
     "domainShared": "Shared",
-    "showUnlockedOnly": "Show unlocked only"
+    "showUnlockedOnly": "Show unlocked only",
+    "state": "Status",
+    "states": {
+      "all": "All",
+      "unlocked": "Unlocked",
+      "open": "Open"
+    }
   },
   "progress": {
     "label": "Progress",
@@ -1179,5 +1185,8 @@
       "name": "End of the world",
       "description": "Visited a place south of the 54th parallel — Tierra del Fuego and beyond"
     }
+  },
+  "header": {
+    "meta": "{{unlocked}} of {{total}} unlocked · {{points}} points"
   }
 }

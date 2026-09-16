@@ -41,7 +41,13 @@
     "domainLodging": "Unterkunft",
     "domainPoi": "Orte",
     "domainShared": "Übergreifend",
-    "showUnlockedOnly": "Nur freigeschaltete anzeigen"
+    "showUnlockedOnly": "Nur freigeschaltete anzeigen",
+    "state": "Status",
+    "states": {
+      "all": "Alle",
+      "unlocked": "Erreicht",
+      "open": "Offen"
+    }
   },
   "progress": {
     "label": "Fortschritt",
@@ -1179,5 +1185,8 @@
       "name": "Ende der Welt",
       "description": "Einen Ort südlich des 54. Breitengrads besucht — Feuerland und weiter"
     }
+  },
+  "header": {
+    "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte"
   }
 }

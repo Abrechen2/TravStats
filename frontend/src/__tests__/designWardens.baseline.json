@@ -62,7 +62,6 @@
     "lib/lodgingColor.test.ts",
     "lib/statusColors.ts",
     "lib/tripColors.ts",
-    "pages/AchievementsPage.tsx",
     "pages/AdvancedStatsPage.tsx",
     "pages/CuratedChecklistPage.tsx",
     "pages/LodgingChainDetailPage.tsx",

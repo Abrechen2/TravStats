@@ -26,7 +26,8 @@ export default function PageHeader({ title, meta, actions }: PageHeaderProps): J
         {meta ? <div className="t-caption">{meta}</div> : null}
       </div>
       {actions ? (
-        <div className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
+        // Wraps: two labelled buttons are wider than a 390px phone.
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
           {actions}
         </div>
       ) : null}
