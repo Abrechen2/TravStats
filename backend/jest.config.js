@@ -39,14 +39,8 @@ module.exports = {
     '!src/index.ts',
     '!src/init.ts',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50,
-    },
-  },
+  // No fixed threshold: the floor is scripts/coverage-baseline.json, checked by
+  // scripts/check-coverage.mjs, which only ever tightens (forgejo#62).
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   // otplib 13 pulls in @scure/base, which ships ONLY as ESM (no `require`
   // export). Node itself is fine with that — `require(esm)` has been

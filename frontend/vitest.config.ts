@@ -11,6 +11,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html", "json-summary"],
+      // Without `include`, v8 coverage only counts files some test imported, so
+      // a module with no test at all is missing from the denominator and the
+      // figure flatters. Measured 2026-09-16: 554 files reported of 647 — the
+      // 93 absent ones were exactly the untested ones (forgejo#62).
+      include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "node_modules/**",
         "dist/**",
@@ -23,13 +28,8 @@ export default defineConfig({
         "**/*.config.*",
         "src/i18n/resources/**",
       ],
-      thresholds: {
-        global: {
-          lines: 30,
-          functions: 20,
-          branches: 20,
-        },
-      },
+      // No fixed thresholds: the floor is scripts/coverage-baseline.json, checked
+      // by scripts/check-coverage.mjs, which only ever tightens.
     },
   },
   resolve: {

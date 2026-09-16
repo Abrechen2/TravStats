@@ -121,7 +121,13 @@ jobs:
         # credentials. The user owns the container, so it may CREATE DATABASE
         # for the shadow — a restricted role would need SHADOW_DATABASE_URL
         # set explicitly instead.
-        image: postgres:16-alpine
+        #
+        # PostGIS, not plain postgres: the migrations CREATE EXTENSION postgis,
+        # and on postgres:16-alpine the replay died on it. This job and the
+        # Jest one were red on EVERY run from the day they were wired
+        # (2026-09-15, forgejo#60) until 2026-09-16 — the other half was the
+        # shadow database, which check-schema-drift.ts now creates itself.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
@@ -175,8 +181,20 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
+      # Coverage rides along with the same run (forgejo#62). `reportOnFailure`
+      # so a red run still publishes its figure; the step is red either way.
       - name: Vitest
-        run: cd frontend && npx vitest --run
+        run: >-
+          cd frontend && npx vitest --run --coverage
+          --coverage.reporter=json-summary --coverage.reporter=text-summary
+          --coverage.reportOnFailure
+
+      # Not below scripts/coverage-baseline.json, and the figure goes to the
+      # job summary. Runs after a red Vitest too, so the number is never
+      # missing from a failed run — but it cannot turn that run green.
+      - name: Coverage ratchet
+        if: success() || failure()
+        run: node scripts/check-coverage.mjs frontend
 
   # ---------------------------------------------------------------------
   # ADVISORY — DO NOT MARK REQUIRED YET.
@@ -254,8 +272,10 @@ jobs:
     services:
       postgres:
         # Values are CI-local throwaways and intentionally unrelated to any
-        # developer or deployment credentials.
-        image: postgres:16-alpine
+        # developer or deployment credentials. PostGIS for the same reason as
+        # the drift job: `prisma migrate deploy` below failed on
+        # CREATE EXTENSION postgis, so the suite never ran at all.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
@@ -280,6 +300,13 @@ jobs:
       # throwaway CI literals with no relationship to any real key.
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      # jest.globalSetup.ts refuses to empty a database whose name does not
+      # mark it as disposable. This one is a service container that exists
+      # for this job only, so the permission is given on purpose rather than
+      # by renaming the database to slip past the check. Once PostGIS let the
+      # migrations through on 2026-09-16, this refusal was the next thing
+      # standing between the job and its first actual test.
+      TRAVSTATS_ALLOW_DESTRUCTIVE_TESTS: "1"
 
     steps:
       - uses: actions/checkout@v7
@@ -305,7 +332,17 @@ jobs:
 
       - name: Jest
         id: jest
-        run: cd backend && npx jest --ci --forceExit
+        run: >-
+          cd backend && npx jest --ci --forceExit --coverage
+          --coverageReporters=json-summary --coverageReporters=text-summary
+
+      # Advisory like the job it sits in. The baseline was recorded from a
+      # green local run; if the first CI figure differs by more than the
+      # tolerance for an environment reason (a test that skips here), record
+      # CI's figure rather than widening the tolerance.
+      - name: Coverage ratchet
+        if: steps.jest.outcome == 'success'
+        run: node scripts/check-coverage.mjs backend
 
       # Without this, `continue-on-error` above would render a failing run
       # as a green tick and the whole job would become decoration.
