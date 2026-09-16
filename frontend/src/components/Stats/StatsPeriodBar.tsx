@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import type { JSX } from "react";
+import { useRevealActive } from "../../lib/ui/revealInRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { StatsPeriod } from "./useStatsPeriod";
 
@@ -31,19 +33,24 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
     compareEnabled,
     setCompareEnabled,
   } = period;
+  const yearsRef = useRef<HTMLDivElement | null>(null);
+
+  // The chosen year stays in view in the scrolling row — the row only.
+  useRevealActive(yearsRef, '[aria-pressed="true"]', [selectedYear, years.join(",")]);
 
   return (
     <div
-      className="rounded-lg p-4 flex flex-wrap items-center gap-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      className="rounded-lg p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
+      style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="text-xs uppercase tracking-widest font-semibold"
-          style={{ color: "var(--text-muted)" }}
-        >
-          {t("stats:overviewFilter.range")}
-        </span>
+      <span className="t-label-mono sm:hidden">{t("stats:overviewFilter.range")}</span>
+      {/* One row that scrolls sideways on a phone, and wraps where there is
+          room. Wrapping on a phone was the long narrow column of B05. */}
+      <div
+        ref={yearsRef}
+        className="flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-none sm:flex-wrap sm:overflow-visible"
+      >
+        <span className="t-label-mono hidden sm:inline">{t("stats:overviewFilter.range")}</span>
         <YearPill
           label={t("stats:overviewFilter.allYears")}
           active={selectedYear === null}
@@ -59,7 +66,7 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
         ))}
       </div>
 
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-2 sm:ml-auto">
         <label
           className="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none"
           style={{ color: "var(--text-secondary)" }}
@@ -111,7 +118,7 @@ function YearPill({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="px-3 py-1 rounded-full text-xs font-mono border transition-colors"
+      className="shrink-0 px-3 py-1 rounded-full text-xs font-mono border transition-colors"
       style={{
         background: active ? "var(--accent)" : "var(--bg-elevated)",
         color: active ? "var(--bg-base)" : "var(--text-secondary)",
