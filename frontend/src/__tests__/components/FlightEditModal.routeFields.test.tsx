@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fromZonedTime } from "date-fns-tz";
 import type { Flight } from "../../types";
@@ -116,6 +116,7 @@ vi.mock("@/lib/api/catalogue", async (importOriginal) => {
 });
 
 import FlightEditModal from "../../components/FlightEditModal";
+import { airlinesApi } from "@/lib/api/catalogue";
 
 // A flight stored at 12:35/16:50 UTC, departing Tokyo (UTC+9), arriving New
 // York (UTC-4 in August). Browser (mocked above) runs in Berlin. All three
@@ -160,6 +161,19 @@ async function waitForHydration(): Promise<void> {
     const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
     expect(dateInput.value).toBe("2026-08-14");
     expect(timeInput.value).toBe("21:35");
+  });
+
+  // The fixture's airline ("ANA") is long enough for CatalogueCombobox to
+  // search the catalogue — 300 ms after mount. Its empty answer lands in
+  // component state, and if the test is between `waitFor`s at that moment
+  // (a plain setTimeout, a click) the update happens outside act and the
+  // act ratchet fails the file. How fast the test ran decided it: green
+  // alone, red twice under coverage on 2026-09-16, and red every time with a
+  // 400 ms pause forced here. So hydration now includes that search settling.
+  await waitFor(() => expect(airlinesApi.search).toHaveBeenCalled());
+  await act(async () => {
+    const { results } = vi.mocked(airlinesApi.search).mock;
+    await results[results.length - 1]?.value;
   });
 }
 
