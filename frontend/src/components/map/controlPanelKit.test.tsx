@@ -27,7 +27,8 @@ describe("PanelHeader", () => {
     const { container, rerender } = render(
       <PanelHeader title="Karte" expanded={true} onToggle={() => {}} />
     );
-    const chevron = (): SVGElement => container.querySelector("svg") as SVGElement;
+    // The chevron is the header's last svg; the first is the panel's map icon.
+    const chevron = (): SVGElement => [...container.querySelectorAll("svg")].pop() as SVGElement;
     expect(chevron().style.transform).toBe("none");
 
     rerender(<PanelHeader title="Karte" expanded={false} onToggle={() => {}} />);

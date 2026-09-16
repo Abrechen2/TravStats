@@ -185,7 +185,7 @@
   "flightsOnRoute": "Flüge auf dieser Route",
   "tabStrip": {
     "label": "Bereichswahl",
-    "scheduledHint": "({{count}} geplant)",
+    "scheduledHint": "· {{count}} geplant",
     "tabs": {
       "all": "Alle",
       "flight": "Flüge",

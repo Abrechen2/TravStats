@@ -185,7 +185,7 @@
   "flightsOnRoute": "Flights on this route",
   "tabStrip": {
     "label": "Area switcher",
-    "scheduledHint": "({{count}} planned)",
+    "scheduledHint": "· {{count}} planned",
     "tabs": {
       "all": "All",
       "flight": "Flights",

@@ -21,6 +21,7 @@ import SpecialFlightModal from "../../SpecialFlightModal";
 import type { FlightSubmitOptions } from "../../FlightForm/useFlightForm";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
+import { SidebarToggle } from "../SidebarToggle";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
 // "stats-map" is delivered via extraLayers — the map itself renders in "routes" mode.
@@ -268,26 +269,11 @@ export function FlightsTab(): JSX.Element {
         }}
         hideInfoPill
       />
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          position: "absolute",
-          top: 12,
-          // Shift out of the way when the list panel (320px) is open so it
-          // doesn't overlap — matches the Alle tab's toggle behaviour.
-          left: sidebarOpen ? 340 : 12,
-          zIndex: 30,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
-          cursor: "pointer",
-        }}
-      >
-        ☰ {t("dashboard:sidebar.flights")}
-      </button>
+      <SidebarToggle
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        label={t("dashboard:sidebar.flights")}
+      />
       <FlightPanel
         flights={structuredFlights}
         totalCount={structuredTotal}

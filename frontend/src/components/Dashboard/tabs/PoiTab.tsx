@@ -20,6 +20,7 @@ import { classifyPlace } from "../../../shared/placeCounting";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
+import { SidebarToggle } from "../SidebarToggle";
 
 interface HeatDatum {
   position: [number, number];
@@ -169,25 +170,11 @@ export function PoiTab(): JSX.Element {
         hideInfoPill
       />
 
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          position: "absolute",
-          top: 12,
-          left: sidebarOpen ? 340 : 12,
-          zIndex: 30,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          border: "1px solid var(--color-border)",
-          color: "var(--text-primary)",
-          cursor: "pointer",
-          fontSize: 13,
-        }}
-      >
-        ☰ {t("dashboard:sidebar.places")}
-      </button>
+      <SidebarToggle
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        label={t("dashboard:sidebar.places")}
+      />
       <UnifiedActivityPanel
         places={visiblePlaces}
         lockedKind="poi"

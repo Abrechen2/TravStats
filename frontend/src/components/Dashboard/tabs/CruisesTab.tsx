@@ -19,6 +19,7 @@ import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { ActivityItem } from "../sidebars/activityItems";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
+import { SidebarToggle } from "../SidebarToggle";
 
 interface ItineraryDot {
   lat: number;
@@ -163,26 +164,11 @@ export function CruisesTab(): JSX.Element {
         cruisesOverride={visibleCruises}
         appearanceDomains={["cruise"]}
       />
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          position: "absolute",
-          top: 12,
-          // Shift out of the way when the list panel (320px) is open so it
-          // doesn't overlap — matches the Alle tab's toggle behaviour.
-          left: sidebarOpen ? 340 : 12,
-          zIndex: 30,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
-          cursor: "pointer",
-        }}
-      >
-        ☰ {t("dashboard:sidebar.cruises")}
-      </button>
+      <SidebarToggle
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        label={t("dashboard:sidebar.cruises")}
+      />
       {/* Same sidebar as every other tab, pinned to this domain. The bespoke
           CruiseListPanel is gone: it never sorted at all and only looked right
           because the API happened to return startDate desc. */}
