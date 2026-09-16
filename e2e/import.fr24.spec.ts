@@ -6,7 +6,7 @@
  *  2. Re-upload dedup: same file twice → preview shows duplicate hints
  *
  * Prerequisites (handled by Task 13 manual setup):
- *  - Dev server running on http://localhost:5173 (frontend) + http://localhost:8000 (backend)
+ *  - Dev server running on http://localhost:3000 (frontend) + http://localhost:8000 (backend)
  *  - Dev DB seeded with admin:admin123 via `npm run seed:dev-admin`
  *
  * Selector strategy (adapted from actual component source):
