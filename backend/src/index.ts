@@ -11,6 +11,7 @@ import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
 import { appVersion, buildVersion } from './utils/version';
+import { resolveTrustProxy } from './utils/trustProxy';
 import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
@@ -45,8 +46,11 @@ if (!process.env.DATABASE_URL) {
 const app = express();
 const PORT = parseInt(process.env.PORT || '8000', 10);
 
-// Trust proxy - we're behind exactly 1 proxy (nginx)
-app.set('trust proxy', 1);
+// Whose X-Forwarded-For to believe. Default: the container's own nginx only.
+// A further reverse proxy (NPM, Traefik, Caddy) must be NAMED in TRUST_PROXY,
+// or every visitor shares its address and its rate-limit buckets — see
+// utils/trustProxy.ts for the prod measurement and why `true` is refused.
+app.set('trust proxy', resolveTrustProxy(process.env.TRUST_PROXY));
 
 // Security middleware with CSP configuration
 app.use(helmet({

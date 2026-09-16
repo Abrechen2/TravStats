@@ -108,6 +108,10 @@ services:
       # CORS stays disabled (same-origin) unless an override is provided.
       CORS_ORIGIN: ${CORS_ORIGIN:-}
 
+      # Name any reverse proxy in front of this stack (see .env.prod.example),
+      # or all visitors share its address and one login rate limit.
+      TRUST_PROXY: ${TRUST_PROXY:-}
+
       # Default Ollama endpoint inside the stack. Admin can change model
       # (and disable entirely) via the UI.
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}

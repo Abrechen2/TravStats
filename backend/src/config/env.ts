@@ -38,6 +38,8 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-fA-F]+$/).optional(),
   COOKIE_SECURE: z.string().transform((val) => val === 'true').prefault('true'),
+  // Parsed and validated by utils/trustProxy.ts at app construction.
+  TRUST_PROXY: z.string().optional(),
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),

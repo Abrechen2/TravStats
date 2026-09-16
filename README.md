@@ -200,6 +200,7 @@ schedule and WebDAV sync.
 | `DATABASE_URL` | External Postgres instead of the bundled service | *(derived from `DB_PASSWORD`)* |
 | `COOKIE_SECURE` | Reverse proxy doesn't send `X-Forwarded-Proto` | *(auto-detected)* |
 | `CORS_ORIGIN` | Frontend lives on a different hostname than the API | *(same-origin only)* |
+| `TRUST_PROXY` | Another reverse proxy (NPM, Traefik, Caddy …) sits in front — name its address, e.g. `loopback, 192.168.1.10`, or every visitor shares one login rate limit | `loopback` |
 | `TZ` | Non-UTC container clock (not recommended) | `UTC` |
 
 See [`.env.prod.example`](.env.prod.example) for the annotated list.
