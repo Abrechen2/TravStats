@@ -207,7 +207,9 @@
     "all": "All currencies"
   },
   "table": {
-    "columns": "Columns"
+    "columns": "Columns",
+    "scrollHint": "The table is wider than the view — scroll sideways for more columns.",
+    "hiddenColumns": "Columns hidden for lack of width: {{count}}. A wider window shows them all; “Columns” changes the selection."
   },
   "support": {
     "donate": "Donate",

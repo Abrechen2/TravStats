@@ -27,16 +27,23 @@ export const FLIGHT_COLUMN_LAYOUT: Record<
   FlightColumnId,
   Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
 > = {
-  airline: { min: 48, onNarrow: "mark" },
-  flightNumber: { min: 72, mono: true, priority: 2 },
-  route: { min: 140, grow: 2, onNarrow: "title" },
+  // Minimums are what the cells measured in a browser with 124 real rows
+  // (2026-09-16): the actions need 124px for three 32px buttons, the flight
+  // number 80px. The first guesses (84 and 72) summed to a table that "fit"
+  // on paper and then pushed itself 20px past its frame. Honestly, all ten
+  // columns need ~1200px, the list shell gives 1150 — so the price, the column
+  // most often empty, is the one that steps aside first, and the table says so.
+  // The airline takes 64: the logo tile is 44, its header and sort arrow 62.
+  airline: { min: 64, onNarrow: "mark" },
+  flightNumber: { min: 80, mono: true, priority: 2 },
+  route: { min: 156, grow: 2, onNarrow: "title" },
   time: { min: 170 },
   status: { min: 100, onNarrow: "trailing" },
-  duration: { min: 72, align: "end", mono: true, priority: 3 },
-  aircraft: { min: 104, grow: 1, mono: true, priority: 3 },
+  duration: { min: 72, align: "end", mono: true, priority: 2 },
+  aircraft: { min: 104, grow: 1, mono: true, priority: 2 },
   price: { min: 80, align: "end", mono: true, priority: 3 },
   trip: { min: 100, grow: 1, priority: 2 },
-  actions: { min: 84, align: "end" },
+  actions: { min: 124, align: "end" },
 };
 
 interface Props {

@@ -49,8 +49,11 @@ export const LODGING_COLUMN_LAYOUT: Record<
   location: { min: 110, grow: 1, priority: 2 },
   status: { min: 130, onNarrow: "trailing" },
   lastStay: { min: 100, mono: true, onNarrow: "subtitle" },
-  stays: { min: 56, align: "end", mono: true, priority: 3 },
-  nights: { min: 56, align: "end", mono: true, priority: 2 },
+  // Header labels need the room, not the numbers: "Aufenthalte" and its sort
+  // arrow measured ~100px and ran past a 56px column. "Nächte" is the
+  // round-4 label for the other one.
+  stays: { min: 104, align: "end", mono: true, priority: 3 },
+  nights: { min: 80, align: "end", mono: true, priority: 2 },
   rating: { min: 96, priority: 3 },
   spend: { min: 96, align: "end", mono: true, priority: 2 },
   actions: { min: 80, align: "end" },

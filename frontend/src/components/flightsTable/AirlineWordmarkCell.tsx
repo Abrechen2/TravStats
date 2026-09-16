@@ -29,9 +29,27 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
   const name = resolveAirlineDisplay(flight);
   const iata = resolveAirlineIata(flight);
 
+  // A tile the size of a logo, with the code in it. The name used to stand
+  // here as text, and in a 48px column "Lufthansa" ran straight into the
+  // flight number next to it ("LufthansaLH2462", CT106 audit B01). The name
+  // stays for a screen reader and in the tooltip.
+  const code = (iata || name || flight.flightNumber || "").slice(0, 3).toUpperCase();
   const fallback = (
-    <span className="font-medium" style={{ color: "var(--text-primary)" }}>
-      {name || flight.flightNumber || "—"}
+    <span
+      className="inline-flex items-center justify-center"
+      style={{
+        width: TILE_PX,
+        height: TILE_PX,
+        borderRadius: "var(--ts-radius-button)",
+        background: "var(--ts-tile)",
+        color: "var(--ts-text-bright)",
+        fontFamily: "var(--ts-font-mono)",
+        fontSize: 12,
+        fontWeight: 700,
+      }}
+    >
+      <span aria-hidden="true">{code || "—"}</span>
+      <span className="sr-only">{name || flight.flightNumber || "—"}</span>
     </span>
   );
 

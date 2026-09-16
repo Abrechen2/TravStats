@@ -34,7 +34,8 @@ export const CRUISE_COLUMN_LAYOUT: Record<
   line: { min: 110, grow: 1, priority: 2 },
   dates: { min: 176, mono: true, onNarrow: "subtitle" },
   ports: { min: 64, align: "end", priority: 3 },
-  status: { min: 110, onNarrow: "trailing" },
+  // 128: the "Abgeschlossen" pill measured 124px and ran past a 110px column.
+  status: { min: 128, onNarrow: "trailing" },
   cabin: { min: 90, mono: true, priority: 3 },
   price: { min: 84, align: "end", mono: true, priority: 3 },
   trip: { min: 110, grow: 1, priority: 2 },

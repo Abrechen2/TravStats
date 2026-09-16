@@ -662,7 +662,12 @@ export default function FlightsTablePage(): JSX.Element {
                 />
               </div>
             ) : (
-              <Table columns={visibleColumns} label={t("flights:table.title")}>
+              <Table
+                columns={visibleColumns}
+                label={t("flights:table.title")}
+                hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
+                scrollHint={t("common:table.scrollHint")}
+              >
                 {displayedFlights.map((flight) => (
                   <FlightRow
                     key={flight.id}

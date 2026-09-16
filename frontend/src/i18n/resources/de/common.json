@@ -207,7 +207,9 @@
     "all": "Alle Währungen"
   },
   "table": {
-    "columns": "Spalten"
+    "columns": "Spalten",
+    "scrollHint": "Die Tabelle ist breiter als die Ansicht — zur Seite scrollen für weitere Spalten.",
+    "hiddenColumns": "Aus Platzgründen ausgeblendete Spalten: {{count}}. Ein breiteres Fenster zeigt alle; unter „Spalten“ lässt sich die Auswahl ändern."
   },
   "support": {
     "donate": "Spenden",

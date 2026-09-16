@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickTier, tableMinWidth, type TableColumn } from "../Table";
+import { pickHidden, tableMinWidth, type TableColumn } from "../Table";
 import { FLIGHT_COLUMN_LAYOUT } from "../../flightsTable/FlightRow";
 import { LODGING_COLUMN_LAYOUT } from "../../lodging/LodgingRow";
 import { PLACE_COLUMN_LAYOUT } from "../../places/PlaceRow";
@@ -40,18 +40,20 @@ describe("table width model", () => {
     expect(tableMinWidth(cols, GAP, PADDING)).toBe(100 + 50 + GAP + PADDING);
   });
 
-  it("drops priority 3 before priority 2, and never priority 1", () => {
+  it("steps aside priority 3 before priority 2, rightmost first, and never priority 1", () => {
     const cols: TableColumn[] = [
       { key: "core", label: "core", min: 300 },
-      { key: "extra", label: "extra", min: 200, priority: 2 },
+      { key: "extraA", label: "extraA", min: 100, priority: 2 },
+      { key: "extraB", label: "extraB", min: 100, priority: 2 },
       { key: "luxury", label: "luxury", min: 200, priority: 3 },
     ];
     const all = tableMinWidth(cols, GAP, PADDING);
-    expect(pickTier(cols, all, GAP, PADDING)).toBe(3);
-    expect(pickTier(cols, all - 1, GAP, PADDING)).toBe(2);
-    expect(pickTier(cols, 300 + PADDING, GAP, PADDING)).toBe(1);
-    // Too narrow even for the core: tier 1 still, and the table scrolls.
-    expect(pickTier(cols, 10, GAP, PADDING)).toBe(1);
+    expect([...pickHidden(cols, all, GAP, PADDING)]).toEqual([]);
+    expect([...pickHidden(cols, all - 1, GAP, PADDING)]).toEqual(["luxury"]);
+    // One more column's worth short: the RIGHTMOST priority-2 goes, not both.
+    expect([...pickHidden(cols, all - 200 - GAP - 1, GAP, PADDING)]).toEqual(["luxury", "extraB"]);
+    // Too narrow even for the core: everything optional is gone, the core stays.
+    expect([...pickHidden(cols, 10, GAP, PADDING)].sort()).toEqual(["extraA", "extraB", "luxury"]);
   });
 
   describe.each(Object.entries(LOGBOOKS))("the %s logbook", (_name, columns) => {
@@ -59,8 +61,11 @@ describe("table width model", () => {
       for (const column of columns) expect(column.min, column.key).toBeGreaterThan(0);
     });
 
-    it("fits every column into the list shell at 1440px", () => {
-      expect(tableMinWidth(columns, GAP, PADDING)).toBeLessThanOrEqual(TABLE_AT_1440);
+    it("keeps every priority-1 and priority-2 column in the list shell at 1440px", () => {
+      const hidden = pickHidden(columns, TABLE_AT_1440, GAP, PADDING);
+      for (const column of columns) {
+        if ((column.priority ?? 1) < 3) expect(hidden.has(column.key), column.key).toBe(false);
+      }
     });
 
     it("keeps the columns a phone row needs out of the ones that step aside", () => {
@@ -70,5 +75,12 @@ describe("table width model", () => {
         }
       }
     });
+  });
+
+  // Measured, not assumed: ten flight columns need more than the shell, and the
+  // price is the one that gives way — not the route, not the actions.
+  it("lets only the price step aside in the flights logbook at 1440px", () => {
+    const flights = LOGBOOKS.flights;
+    expect([...pickHidden(flights, TABLE_AT_1440, GAP, PADDING)]).toEqual(["price"]);
   });
 });

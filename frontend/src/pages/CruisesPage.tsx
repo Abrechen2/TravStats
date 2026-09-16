@@ -404,7 +404,12 @@ export default function CruisesPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <Table columns={visibleColumns} label={t("list.title")}>
+            <Table
+              columns={visibleColumns}
+              label={t("list.title")}
+              hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
+              scrollHint={t("common:table.scrollHint")}
+            >
               {sorted.map((c) => (
                 <CruiseRow
                   key={c.id}

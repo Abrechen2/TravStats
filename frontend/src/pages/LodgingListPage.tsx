@@ -467,7 +467,12 @@ export default function LodgingListPage(): JSX.Element {
               </div>
             ) : (
               <>
-                <Table columns={visibleColumns} label={t("lodging:list.title")}>
+                <Table
+                  columns={visibleColumns}
+                  label={t("lodging:list.title")}
+                  hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
+                  scrollHint={t("common:table.scrollHint")}
+                >
                   {filtered.map((l) => (
                     <LodgingRow
                       key={l.id}

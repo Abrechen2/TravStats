@@ -215,11 +215,9 @@
   );
 }
 
-/* Columns that stepped aside for lack of width — see `pickTier`. */
+/* Columns that stepped aside for lack of width — see `pickHidden`. */
 @media (min-width: 640px) {
-  .ts-table[data-tier="2"] [data-priority="3"],
-  .ts-table[data-tier="1"] [data-priority="2"],
-  .ts-table[data-tier="1"] [data-priority="3"] {
+  .ts-table [data-stepped-aside="yes"] {
     display: none;
   }
 }

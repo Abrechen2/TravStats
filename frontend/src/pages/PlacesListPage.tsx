@@ -512,7 +512,12 @@ export default function PlacesListPage(): JSX.Element {
               />
             </div>
           ) : (
-            <Table columns={visibleColumns} label={t("places:list.title")}>
+            <Table
+              columns={visibleColumns}
+              label={t("places:list.title")}
+              hiddenColumnsHint={(count) => t("common:table.hiddenColumns", { count })}
+              scrollHint={t("common:table.scrollHint")}
+            >
               {filtered.map((p) => (
                 <PlaceRow
                   key={p.id}
@@ -531,9 +536,16 @@ export default function PlacesListPage(): JSX.Element {
                     ),
                     category: t(`places:categories.${p.category}`),
                     location: (
-                      <span className="flex items-center gap-2">
-                        {p.city ?? "—"}
-                        {p.country && <FlagImg country={p.country} />}
+                      // min-w-0 + shrink-0: a long city ("Sassnitz-Stubbenkammer")
+                      // wraps inside the cell instead of pushing the flag into
+                      // the next column.
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="min-w-0 break-words">{p.city ?? "—"}</span>
+                        {p.country && (
+                          <span className="shrink-0">
+                            <FlagImg country={p.country} />
+                          </span>
+                        )}
                       </span>
                     ),
                     country: placeCountryLabel(p, i18n.language) || "—",

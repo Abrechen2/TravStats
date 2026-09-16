@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 interface ListRowProps {
@@ -130,12 +130,6 @@ export interface TableColumn {
   onNarrow?: "mark" | "title" | "subtitle" | "trailing" | "hide";
 }
 
-export type TableTier = 1 | 2 | 3;
-
-export function inTier(column: TableColumn, tier: TableTier): boolean {
-  return (column.priority ?? 1) <= tier;
-}
-
 function trackOf(column: TableColumn): string {
   return column.grow ? `minmax(${column.min}px, ${column.grow}fr)` : `${column.min}px`;
 }
@@ -151,25 +145,40 @@ export function tableMinWidth(
 }
 
 /**
- * The richest set of columns whose minimum fits `available`.
+ * The columns that step aside so the rest fit `available`.
+ *
+ * One at a time, not in tiers: priority 3 before priority 2, and within a
+ * priority the rightmost first, until the minimums fit. Priority 1 never
+ * steps aside. The first version dropped whole tiers, and a 1024px window lost
+ * five flight columns at once while the route stretched to 431px — room for
+ * two of them left unused.
  *
  * Derived from the columns' own numbers rather than from breakpoints, because
  * the same table sits in a 1150px shell, on a tablet, and behind a column
  * picker that adds or removes any of them. When even the essential columns do
- * not fit, the answer is still tier 1, and the table scrolls — visibly.
+ * not fit, the table scrolls — visibly.
  */
-export function pickTier(
+export function pickHidden(
   columns: readonly TableColumn[],
   available: number,
   gap: number,
   padding: number
-): TableTier {
-  for (const tier of [3, 2] as const) {
-    const shown = columns.filter((column) => inTier(column, tier));
-    if (tableMinWidth(shown, gap, padding) <= available) return tier;
+): Set<string> {
+  const hidden = new Set<string>();
+  const candidates = columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => (column.priority ?? 1) > 1)
+    .sort((a, b) => (b.column.priority ?? 1) - (a.column.priority ?? 1) || b.index - a.index);
+  for (const { column } of candidates) {
+    const shown = columns.filter((c) => !hidden.has(c.key));
+    if (tableMinWidth(shown, gap, padding) <= available) break;
+    hidden.add(column.key);
   }
-  return 1;
+  return hidden;
 }
+
+/** The keys of the columns that stepped aside, for the rows to follow. */
+const HiddenColumns = createContext<ReadonlySet<string>>(new Set());
 
 interface TableProps {
   columns: readonly TableColumn[];
@@ -195,8 +204,8 @@ interface TableProps {
  * takes the place its `onNarrow` names; the visual reordering is CSS, and the
  * reading order in the markup is unchanged, so a screen reader is unaffected.
  *
- * Above 640px the table measures itself and shows the richest set of columns
- * whose minimum widths fit (`pickTier`). If the essential columns alone are
+ * Above 640px the table measures itself and lets low-priority columns step
+ * aside one at a time until the rest fit (`pickHidden`). If the essential columns alone are
  * wider than the table, it scrolls sideways where the scrollbar can be seen —
  * never `overflow: hidden`, which is how a column disappears without a trace.
  *
@@ -212,7 +221,7 @@ export function Table({
   scrollHint,
 }: TableProps): JSX.Element {
   const tableRef = useRef<HTMLDivElement | null>(null);
-  const [tier, setTier] = useState<TableTier>(3);
+  const [hiddenKeys, setHiddenKeys] = useState<ReadonlySet<string>>(new Set());
   const [scrolls, setScrolls] = useState(false);
 
   useLayoutEffect(() => {
@@ -224,9 +233,12 @@ export function Table({
       const style = getComputedStyle(head);
       const gap = parseFloat(style.columnGap) || 0;
       const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
-      const next = pickTier(columns, table.clientWidth, gap, padding);
-      const shown = columns.filter((column) => inTier(column, next));
-      setTier(next);
+      const next = pickHidden(columns, table.clientWidth, gap, padding);
+      const shown = columns.filter((column) => !next.has(column.key));
+      // A new Set every measure would re-render every row on every resize tick.
+      setHiddenKeys((current) =>
+        current.size === next.size && [...next].every((key) => current.has(key)) ? current : next
+      );
       setScrolls(tableMinWidth(shown, gap, padding) > table.clientWidth);
     };
     measure();
@@ -235,7 +247,7 @@ export function Table({
     return (): void => observer.disconnect();
   }, [columns]);
 
-  const shown = columns.filter((column) => inTier(column, tier));
+  const shown = columns.filter((column) => !hiddenKeys.has(column.key));
   const hidden = columns.length - shown.length;
 
   return (
@@ -253,7 +265,6 @@ export function Table({
         role="table"
         aria-label={label}
         className="ts-table"
-        data-tier={tier}
         data-scrolls={scrolls ? "yes" : "no"}
         style={
           {
@@ -270,14 +281,14 @@ export function Table({
               role="columnheader"
               className="t-label-mono"
               data-narrow={column.onNarrow ?? "hide"}
-              data-priority={column.priority ?? 1}
+              data-stepped-aside={hiddenKeys.has(column.key) ? "yes" : undefined}
               style={{ textAlign: column.align === "end" ? "right" : "left", minWidth: 0 }}
             >
               {column.label}
             </span>
           ))}
         </div>
-        {children}
+        <HiddenColumns.Provider value={hiddenKeys}>{children}</HiddenColumns.Provider>
       </div>
       {hidden > 0 && hiddenColumnsHint ? (
         <p className="ts-table-hint t-caption">{hiddenColumnsHint(hidden)}</p>
@@ -326,6 +337,7 @@ export function TableRow({
   dense = false,
   narrowSubtitle,
 }: TableRowProps): JSX.Element {
+  const hiddenKeys = useContext(HiddenColumns);
   return (
     <div
       role="row"
@@ -355,7 +367,7 @@ export function TableRow({
             key={column?.key ?? index}
             role="cell"
             data-narrow={column?.onNarrow ?? "hide"}
-            data-priority={column?.priority ?? 1}
+            data-stepped-aside={column && hiddenKeys.has(column.key) ? "yes" : undefined}
             style={{
               fontFamily: column?.mono ? "var(--ts-font-mono)" : undefined,
               fontVariantNumeric: column?.mono ? "tabular-nums" : undefined,
