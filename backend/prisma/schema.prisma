@@ -90,6 +90,7 @@ model User {
   countryDays            CountryDay[]
   dawarichSweepState     DawarichSweepState?
 
+  documents Document[]
   @@map("users")
 }
 
@@ -427,6 +428,7 @@ model Flight {
   pendingUpdates PendingFlightUpdate[]
   companionLinks FlightCompanion[]
 
+  documents Document[]
   @@unique([userId, externalRef])
   // Composite indexes for the two shapes that actually dominate reads.
   // Everything else below is a single-column index kept for a single,
@@ -1275,6 +1277,7 @@ model Trip {
   immichAlbums   TripImmichAlbum[]
   companionLinks TripCompanion[]
 
+  documents Document[]
   @@index([userId])
   @@index([userId, status])
   @@map("trips")
@@ -1614,6 +1617,7 @@ model Cruise {
   companionLinks CruiseCompanion[]
   importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  documents Document[]
   @@unique([userId, externalRef])
   @@index([userId])
   @@index([startDate])
@@ -1903,6 +1907,7 @@ model LodgingStay {
   membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
+  documents Document[]
   @@unique([userId, externalRef])
   @@index([lodgingId])
   @@index([userId, checkIn])
@@ -2111,6 +2116,7 @@ model PlaceVisit {
 
   photos PlaceVisitPhoto[]
 
+  documents Document[]
   @@index([userId])
   @@index([placeId])
   @@index([tripId])
@@ -2523,4 +2529,73 @@ model ReceiptUpload {
 
   @@index([userId])
   @@map("receipt_uploads")
+}
+
+/// A kept original — the photographed bill, the PDF, the mail, the Wallet pass —
+/// filed with the entry it produced (forgejo#116).
+///
+/// The parsed fields are a summary of the document; the document is the record.
+/// Two readings of one hotel bill (accommodation 123.25, total paid 162.75) were
+/// both defensible, so no parser tuning settles which is right — keeping the
+/// bill does, for good.
+///
+/// Owner decisions (2026-09-16): the ORIGINAL at full size is what is kept;
+/// keeping is opt-in per capture; deleting an entry deletes its documents, row
+/// and file; offline captures arrive late, so an upload is idempotent per
+/// sha256 and target, and linking works after the entry exists.
+///
+/// At most ONE owner is set (CHECK in the migration). None set means "uploaded,
+/// not yet filed": such a row expires with the nightly sweep.
+model Document {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// Stored name on disk under uploads/documents — generated, never the client's.
+  storedName   String  @map("stored_name")
+  /// The client's file name, sanitised. Shown to the user, never used as a path
+  /// and never written to a log.
+  originalName String? @map("original_name")
+  mimetype     String
+  sizeBytes    Int     @map("size_bytes")
+  /// SHA-256 of the stored bytes, hex, computed by the server.
+  sha256       String
+
+  /// The FILE: image | pdf | eml | emailText | pkpass.
+  format        String
+  /// What the document IS: invoice | booking | boardingPass | ticket | other.
+  /// The parser's guess or the user's statement; null until one of them says.
+  kind          String?
+  /// The date printed ON the document, when known.
+  issuedOn      DateTime? @map("issued_on") @db.Date
+  /// How the row came to be: upload | parse.
+  source        String    @default("upload")
+  /// What the parse decided and extracted, kept for a later diff.
+  parsedDomain  String?   @map("parsed_domain")
+  parsedPayload Json?     @map("parsed_payload")
+
+  flightId      String? @map("flight_id")
+  cruiseId      String? @map("cruise_id")
+  lodgingStayId String? @map("lodging_stay_id")
+  tripId        String? @map("trip_id")
+  placeVisitId  String? @map("place_visit_id")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  /// When it was filed with an entry; null while unlinked.
+  linkedAt  DateTime? @map("linked_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight      Flight?      @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  cruise      Cruise?      @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay LodgingStay? @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  placeVisit  PlaceVisit?  @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sha256])
+  @@index([flightId])
+  @@index([cruiseId])
+  @@index([lodgingStayId])
+  @@index([tripId])
+  @@index([placeVisitId])
+  @@index([userId, linkedAt])
+  @@map("documents")
 }
