@@ -44,7 +44,7 @@ describe("ApiKeyCard — logostream", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     const button = await screen.findByRole("button", { name: "settings:apiKeys.test" });
@@ -62,7 +62,7 @@ describe("ApiKeyCard — logostream", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     await userEvent.click(await screen.findByRole("button", { name: "settings:apiKeys.test" }));
@@ -85,7 +85,7 @@ describe("ApiKeyCard — googlePlaces", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     const button = await screen.findByRole("button", { name: "settings:apiKeys.test" });
@@ -96,5 +96,29 @@ describe("ApiKeyCard — googlePlaces", () => {
     await waitFor(() => expect(adminTestApiKey).toHaveBeenCalledTimes(1));
     expect(adminTestApiKey).toHaveBeenCalledWith("googlePlaces", "abcd****wxyz");
     expect(settingsTestApiKey).not.toHaveBeenCalled();
+  });
+});
+
+describe("ApiKeyCard — row layout", () => {
+  it("shows name and status on one row and folds the key field behind edit", async () => {
+    render(
+      <ApiKeyCard
+        layout="row"
+        provider="airlabs"
+        label="AirLabs"
+        description="flight data"
+        getKeyUrl="https://airlabs.co/account"
+        isShared={false}
+        hasAccess={false}
+        hasOwnKey={false}
+      />
+    );
+
+    expect(screen.getByText("settings:apiKeys.notConfigured")).toBeInTheDocument();
+    expect(screen.queryByLabelText("AirLabs")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.edit" }));
+    expect(screen.getByLabelText("AirLabs")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "settings:apiKeys.test" })).toBeInTheDocument();
   });
 });

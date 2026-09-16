@@ -108,8 +108,6 @@
     "components/PendingUpdateCard.tsx",
     "components/PendingUpdateEditor.tsx",
     "components/ReceiptUpload.tsx",
-    "components/Settings/ApiKeyCard.tsx",
-    "components/Settings/BulkRefreshCard.tsx",
     "components/Settings/DawarichConnectionCard.tsx",
     "components/Settings/FeaturesSection.tsx",
     "components/Settings/HomeAirportSection.tsx",

@@ -109,16 +109,12 @@ export default function BulkRefreshCard(): JSX.Element | null {
     demoBlocked || running || !hasProvider || remaining === null || remaining === 0;
 
   return (
-    <div className="border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-(--text-primary)">
-            {t("settings:apiKeys.bulkRefresh.title")}
-          </h3>
-          <p className="text-sm text-(--text-muted) mt-1">
-            {t("settings:apiKeys.bulkRefresh.description")}
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-col" style={{ gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
+          {t("settings:apiKeys.bulkRefresh.title")}
+        </span>
+        <span className="t-caption">{t("settings:apiKeys.bulkRefresh.description")}</span>
       </div>
 
       {demoBlocked && (
@@ -140,7 +136,15 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {previewError && !demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-red-100 text-red-700">{previewError}</div>
+        <div
+          className="text-sm p-2 rounded-md"
+          style={{
+            background: "color-mix(in srgb, var(--ts-bad) 12%, transparent)",
+            color: "var(--ts-bad)",
+          }}
+        >
+          {previewError}
+        </div>
       )}
 
       {remaining !== null && remaining > 0 && (
@@ -163,7 +167,13 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {remaining === 0 && !demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-green-100 text-green-700">
+        <div
+          className="text-sm p-2 rounded-md"
+          style={{
+            background: "color-mix(in srgb, var(--ts-good) 12%, transparent)",
+            color: "var(--ts-good)",
+          }}
+        >
           {t("settings:apiKeys.bulkRefresh.allUpToDate")}
         </div>
       )}
@@ -191,7 +201,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
             <li>
               {t("settings:apiKeys.bulkRefresh.summaryScanned", { count: lastSummary.scanned })}
             </li>
-            <li className="text-green-700">
+            <li style={{ color: "var(--ts-good)" }}>
               {t("settings:apiKeys.bulkRefresh.summaryUpdated", { count: lastSummary.updated })}
             </li>
             <li>
@@ -209,7 +219,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
               </li>
             )}
             {lastSummary.failed > 0 && (
-              <li className="text-red-700">
+              <li style={{ color: "var(--ts-bad)" }}>
                 {t("settings:apiKeys.bulkRefresh.summaryFailed", { count: lastSummary.failed })}
               </li>
             )}
