@@ -47,6 +47,8 @@ import templateStatusRoutes from './templateStatus';
 import parserTemplatesRoutes from './parserTemplates';
 import trainingRoutes from './training';
 import tripsRoutes from './trips';
+import tripStopRoutes from './trips/tripStops';
+import tripPhotoRoutes from './trips/tripPhotos';
 import tourRouteRoutes from './trips/tourRoutes';
 import tourLegRoutes from './trips/tourLegs';
 import tourRoutingRoutes from './trips/tourRouting';
@@ -138,6 +140,11 @@ export const apiMounts: ApiMount[] = [
   { id: 'templateStatus', base: '/api/v1/template-status', router: templateStatusRoutes },
   { id: 'training', base: '/api/v1/training', router: trainingRoutes },
   { id: 'trips', base: '/api/v1', router: tripsRoutes },
+  // Stops + journal, and photos + cover: split out of trips.ts (forgejo#59).
+  // Mounted directly after `trips`, before every other satellite, so Express
+  // meets these routes in exactly the order it did when they lived in trips.ts.
+  { id: 'tripStops', base: '/api/v1', router: tripStopRoutes },
+  { id: 'tripPhotos', base: '/api/v1', router: tripPhotoRoutes },
   // Tour route sections — same-prefix satellite router, same pattern as
   // cruises.routeOverride above — split out of trips.ts once that file
   // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`
