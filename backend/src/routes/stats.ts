@@ -30,7 +30,7 @@ import {
   averageDurationMinutes,
   emptyDurationTotals,
 } from '../shared/flightDuration';
-import { normalizeCountrySet, toCountryCode } from '../shared/countryEvidence';
+import { normalizeCountrySet } from '../shared/countryEvidence';
 import { withDepartureClock } from '../services/stats/departureClock';
 import { loadPassport } from '../services/stats/passportLoader';
 import { loadDaysAway } from '../services/stats/daysAwayLoader';
@@ -51,6 +51,8 @@ import {
   type DatedRow,
 } from '../utils/stats/timeseries';
 import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
+import { readYearQuery, scopeLodgingsToStays, startedIn } from '../utils/stats/domainYear';
+import { lodgingCountryKey } from '../utils/stats/lodgingCountryKey';
 import { buildTravelAccount } from '../services/stats/travelAccount';
 import { buildTripAccount } from '../services/stats/tripAccount';
 import { getBaseCurrency } from '../services/fx/snapshot';
@@ -149,42 +151,6 @@ interface SummaryStats {
    */
   totalCostUnconverted: Record<string, number>;
   byCategory: Record<string, number>;
-}
-
-/**
- * The calendar year as a half-open UTC window, for the domains whose events
- * are dated by when they BEGIN.
- *
- * That rule is not a choice made here — `Overview/aggregate.ts` already states
- * it for the cross-domain overview: "count the event once, in the year it
- * started. A cruise that spans 2023-12-30 → 2024-01-02 contributes 1 to year
- * 2023 only." The domain tabs have to answer the same question the same way,
- * or the overview and the tab it links to disagree about the same cruise.
- *
- * Half-open (`gte` / `lt`) rather than a 31 December end: an inclusive upper
- * bound built from a date literal silently drops everything after midnight on
- * the last day.
- */
-/**
- * `?year=` for the domain rollups.
- *
- * Deliberately NOT `SummaryQuerySchema`: that one also carries `fromDate`,
- * `toDate` and `compareYear`, and a schema is a promise. These two endpoints
- * honour a year and nothing else, so advertising the rest would be a contract
- * they do not keep.
- *
- * Comparison is two requests rather than a `{ current, compare }` body. The
- * flights summary answers both years at once because it already had that
- * shape; giving these two a second shape would put a router that speaks the
- * enveloped family into two answers for one route, which
- * `docs/adr/0001-api-response-shape.md` is there to prevent.
- */
-const YearQuerySchema = z.object({
-  year: z.coerce.number().int().min(1900).max(2100).optional(),
-});
-
-function yearWindow(year: number): { gte: Date; lt: Date } {
-  return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
 }
 
 function buildWhere(
@@ -1720,24 +1686,13 @@ router.get(
         return;
       }
 
-      const parsed = YearQuerySchema.safeParse(req.query);
-      if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
-        return;
-      }
-      const { year } = parsed.data;
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
 
       const [user, cruises] = await Promise.all([
         prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
         prisma.cruise.findMany({
-          // A cruise with no start date cannot be placed in a year at all, so
-          // a year request drops it rather than guessing. The lifetime view
-          // (no `year`) still counts it.
-          where: {
-            userId,
-            ...countableFlightWhere(),
-            ...(year === undefined ? {} : { startDate: yearWindow(year) }),
-          },
+          where: { userId, ...countableFlightWhere(), ...startedIn('startDate', year) },
           include: {
             stops: { include: { port: true } },
             legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
@@ -1893,24 +1848,12 @@ router.get(
         return;
       }
 
-      const parsed = YearQuerySchema.safeParse(req.query);
-      if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
-        return;
-      }
-      const { year } = parsed.data;
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
 
       const [stays, lodgings, settings, memberships] = await Promise.all([
         prisma.lodgingStay.findMany({
-          // Dated by CHECK-IN, the night the stay began — the same rule the
-          // cross-domain overview applies to every domain, so a stay over New
-          // Year belongs to the year it started in both places. A stay with no
-          // check-in cannot be placed in a year and drops out of a year
-          // request; the lifetime view still counts it.
-          where: {
-            userId,
-            ...(year === undefined ? {} : { checkIn: yearWindow(year) }),
-          },
+          where: { userId, ...startedIn('checkIn', year) },
           // The chain is joined for its NAME: the price and rating rankings
           // are read by a human, and a chain id is not a label.
           include: { lodging: { include: { chain: true } } },
@@ -1941,57 +1884,11 @@ router.get(
       ]);
       const baseCurrency = settings?.baseCurrency ?? 'EUR';
       const membershipContext = buildMembershipContext(memberships);
-      /**
-       * The key everything GROUPS or COUNTS on — never the free text.
-       *
-       * `schema.prisma` states this at `Lodging.isoCountryCode`: the text
-       * field keeps whatever the source wrote ("Deutschland", "Germany",
-       * "Schweiz/Suisse/Svizzera/Svizra"); grouping joins on the code. The
-       * write paths obeyed it, this one did not, and the statistics page
-       * listed "Deutschland" and "Germany" as two countries with the nights
-       * and money split between them.
-       *
-       * The stored column wins. When it is empty the text is resolved on the
-       * fly — through `shared/countryEvidence.ts`, the one home for that join,
-       * rather than through one of the two resolvers behind it: a bucket keyed
-       * differently here than the passport counts is a second opinion about
-       * what a country is. When nothing resolves, the text survives as its own
-       * key: "Dubai" is a city, and a row that names no country is a finding
-       * worth seeing, not one to drop.
-       *
-       * It also repairs the continents: `continentForCountry` understands ISO
-       * codes and English names, so German text used to fall through to the
-       * deliberately coarse coordinate guess — and a house without
-       * coordinates lost its continent altogether.
-       */
-      const countryKey = (l: { country: string | null; isoCountryCode: string | null }): string | null =>
-        l.isoCountryCode ?? toCountryCode(l.country) ?? l.country;
-
-      /**
-       * Under a year filter the house list follows the stays.
-       *
-       * A house has no date — only a stay does. Left unfiltered, a year
-       * request would answer "3 nights in 2024" beside "4 houses, 2 of them
-       * merely bookmarked", and the second half would be a lifetime figure
-       * wearing a year's label. That mixed answer is the very thing the
-       * overview and the tabs were caught disagreeing about.
-       *
-       * A bookmarked house (`visited: false`, never slept in) therefore
-       * belongs to the lifetime view and to no year at all.
-       */
-      const scopedLodgings =
-        year === undefined
-          ? lodgings
-          : (() => {
-              const stayedAt = new Set(stays.map((stay) => stay.lodgingId));
-              return lodgings.filter((l) => stayedAt.has(l.id));
-            })();
-
-      const lodgingRecords: LodgingRecord[] = scopedLodgings.map((l) => ({
+      const lodgingRecords: LodgingRecord[] = scopeLodgingsToStays(lodgings, stays, year).map((l) => ({
         id: l.id,
         chainId: l.chainId,
         type: l.type,
-        country: countryKey(l),
+        country: lodgingCountryKey(l),
         city: l.city,
         visited: l.visited,
       }));
@@ -2002,7 +1899,7 @@ router.get(
         lodgingId: s.lodgingId,
         lodgingName: s.lodging.name,
         type: s.lodging.type,
-        country: countryKey(s.lodging),
+        country: lodgingCountryKey(s.lodging),
         city: s.lodging.city,
         chainId: s.lodging.chainId,
         chainName: s.lodging.chain?.name ?? null,
