@@ -239,7 +239,30 @@ function checkExpectation(result: FileResult, expected: Expectation | undefined)
   return misses;
 }
 
+/**
+ * `--regex-only` only holds if nothing else can reach an Ollama.
+ *
+ * Measured 2026-09-17: a flight run with the flag reported `{"ollama": 31}`
+ * and took 37 s per mail, because the admin row in the dev database named the
+ * house Ollama and the resolver prefers it over the env. The numbers looked
+ * like a template measurement and were an LLM measurement. A run that cannot
+ * do what it says must stop, not print.
+ */
+async function assertRegexOnlyHolds(): Promise<void> {
+  const { prisma } = await import("../src/db");
+  const row = await prisma.adminSettings.findFirst({ select: { ollamaUrl: true } });
+  if (!row?.ollamaUrl) return;
+  process.stderr.write(
+    `--regex-only cannot hold: admin_settings.ollamaUrl is ${row.ollamaUrl}, and the\n` +
+      `resolver prefers it over OLLAMA_URL. Clear it in THIS database (never a real one)\n` +
+      `and run again:\n` +
+      `  UPDATE admin_settings SET ollama_url = NULL;\n`
+  );
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
+  if (args.regexOnly) await assertRegexOnlyHolds();
   // Loaded after the env is settled (see --regex-only above).
   const { extractEmailFromFile } = await import("../src/services/emailExtractor");
   const { extractTextFromPdf } = await import("../src/services/pdfParser");

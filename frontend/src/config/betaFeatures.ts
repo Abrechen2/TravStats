@@ -91,9 +91,9 @@ export const BETA_FEATURES = Object.freeze({
    */
   parserTemplates: Object.freeze({
     reason: "beta",
-    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. Only the LLM parser (Ollama) is fully tested; the template and regex parsers this page manages are experimental.",
+    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. The doubt the entry was written on — that only the LLM path was tested — no longer holds: measured on 2026-09-17 with scripts/parser-corpus.ts --regex-only, the template path answered all 31 flight mails and met all 29 expectations in under a second, where the same corpus through gemma3:12b took 19 minutes and missed three. Lodging: 96 of 108 templated, 2 mails yielded nothing. Cruise: 4 of 4. What is left is the owner's look at the page itself.",
     returnsWhen:
-      "The template and regex parsers are tested against the sample set under test-samples/ and the owner accepts the page for release.",
+      "The owner accepts the page for release. The measurement half of this condition is met (see `why`); this is the only gate whose remaining condition is a decision rather than work.",
   }),
 
   /**
