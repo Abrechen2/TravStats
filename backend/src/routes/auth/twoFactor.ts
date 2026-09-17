@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
+import { rejectDemo } from "../../middleware/demoGuard";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie, issuePasswordChangeChallenge } from "../../utils/session";
@@ -54,6 +55,7 @@ router.get("/status", authenticate, async (req: AuthRequest, res: Response, next
 router.post(
   "/setup",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -87,6 +89,7 @@ router.post(
 router.post(
   "/activate",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -216,6 +219,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
+        isDemo: user.isDemo,
         firstName: user.firstName,
         lastName: user.lastName,
       },
@@ -230,6 +234,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
 router.post(
   "/disable",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -269,6 +274,7 @@ router.post(
 router.post(
   "/recovery-codes",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {

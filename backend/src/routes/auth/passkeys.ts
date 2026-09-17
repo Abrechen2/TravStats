@@ -8,6 +8,7 @@ import {
 } from "@simplewebauthn/server";
 import { prisma } from "../../db";
 import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
+import { rejectDemo } from "../../middleware/demoGuard";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie } from "../../utils/session";
@@ -64,7 +65,7 @@ async function requireRp(): Promise<NonNullable<Awaited<ReturnType<typeof resolv
   return rp;
 }
 
-router.post("/register/options", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
+router.post("/register/options", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const rp = await requireRp();
     const userId = req.userId!;
@@ -106,7 +107,7 @@ router.post("/register/options", authenticate, requireBrowserSession, authLimite
   }
 });
 
-router.post("/register/verify", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
+router.post("/register/verify", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const rp = await requireRp();
     const userId = req.userId!;
@@ -281,7 +282,7 @@ router.get("/", authenticate, async (req: AuthRequest, res, next) => {
   }
 });
 
-router.patch("/:id", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
+router.patch("/:id", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     const { name } = renamePasskeySchema.parse(req.body);
     // Scoped by userId for the same reason as the delete below.
@@ -296,7 +297,7 @@ router.patch("/:id", authenticate, requireBrowserSession, authLimiter, async (re
   }
 });
 
-router.delete("/:id", authenticate, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
+router.delete("/:id", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
   try {
     // Scoped by userId, not just id: a foreign key proves the row exists, never
     // that it belongs to the caller.

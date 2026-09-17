@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
+import { rejectDemo } from '../middleware/demoGuard';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
@@ -868,20 +869,9 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 // dev demo from draining real RapidAPI quota. Hard-capped at
 // `MAX_PER_CALL` flights per request — the frontend re-clicks until the
 // returned `remaining` hits zero.
-router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/refresh-historical-bulk/preview', flightCreationLimiter, rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isDemo: true },
-    });
-    if (user?.isDemo) {
-      return res.status(403).json({
-        error: 'DEMO_ACCOUNT_FORBIDDEN',
-        message:
-          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
-      });
-    }
     const [remaining, hasProvider] = await Promise.all([
       countBulkRefreshCandidates(userId),
       hasHistoricalProvider(userId),
@@ -898,21 +888,9 @@ router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req
   }
 });
 
-router.post('/refresh-historical-bulk', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/refresh-historical-bulk', flightCreationLimiter, rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isDemo: true },
-    });
-    if (user?.isDemo) {
-      return res.status(403).json({
-        error: 'DEMO_ACCOUNT_FORBIDDEN',
-        message:
-          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
-      });
-    }
-
     if (!(await hasHistoricalProvider(userId))) {
       return res.status(409).json({
         error: 'NO_HISTORICAL_PROVIDER',

@@ -8,6 +8,7 @@ import { registerSchema, loginSchema, changePasswordSchema } from '../schemas/au
 import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { rejectDemo } from '../middleware/demoGuard';
 import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
@@ -177,6 +178,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
+        isDemo: user.isDemo,
         firstName: user.firstName,
         lastName: user.lastName,
       },
@@ -316,6 +318,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
+        isDemo: user.isDemo,
         // The header greets by first name and falls back to the username
         // (#241). Sending it with the login response means the greeting is
         // right on the first paint instead of flashing the username.
@@ -344,6 +347,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: Ne
         id: true,
         username: true,
         isAdmin: true,
+        isDemo: true,
         firstName: true,
         lastName: true,
       },
@@ -368,7 +372,7 @@ router.post('/logout', (req: Request, res: Response) => {
 });
 
 // Change Password (requires authentication)
-router.post('/change-password', authenticate, authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/change-password', authenticate, rejectDemo, authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
     const userId = req.userId!;

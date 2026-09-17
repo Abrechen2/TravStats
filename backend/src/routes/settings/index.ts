@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate, requireWriteScope } from '../../middleware/auth';
+import { rejectDemoWrites } from '../../middleware/demoGuard';
 import generalRouter from './general';
 import parserRouter from './parser';
 import apiKeysRouter from './apiKeys';
@@ -26,6 +27,9 @@ router.use(authenticate);
 // request (PAT-cannot-mint-PAT defence), so this middleware is defence-in-depth
 // for every other settings sub-router.
 router.use(requireWriteScope);
+
+// Shared demo account: no keys, tokens, outbound URLs or pictures (spec §3).
+router.use(['/api-keys', '/tokens', '/immich', '/dawarich', '/profile-picture'], rejectDemoWrites);
 
 // Mount sub-routers
 router.use('/', generalRouter);
