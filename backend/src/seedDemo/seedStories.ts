@@ -1,0 +1,117 @@
+import { prisma } from "../db";
+import type { AirportRow } from "../seedDemoAccount";
+import { calculateCo2Kg } from "../services/co2Calculator";
+import { linkRowsFor, resolveCompanions } from "../services/companionService";
+import { airportByIata, curatedIdIfPresent, portIdByLocode, shipByName } from "./lookup";
+import { seedTour } from "./seedTours";
+import { STORIES, type Story } from "./stories";
+
+const nightsBetween = (from: string, to: string): number =>
+  Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+
+async function seedStory(userId: string, story: Story, airports: Map<string, AirportRow>): Promise<void> {
+  const planned = story.status === "planned";
+  const trip = await prisma.trip.create({
+    data: {
+      userId, name: story.name, description: story.description, color: story.color, icon: story.icon,
+      status: story.status, category: story.category, startDate: new Date(story.start), endDate: new Date(story.end),
+      originLabel: story.origin, destinationLabel: story.destination, countries: story.countries,
+      tags: story.tags, companions: story.companions,
+    },
+  });
+  const companions = await resolveCompanions(userId, story.companions);
+  if (companions.length > 0) {
+    await prisma.tripCompanion.createMany({
+      data: linkRowsFor(companions.map((c) => c.id)).map((l) => ({ tripId: trip.id, companionId: l.companionId, position: l.position })),
+      skipDuplicates: true,
+    });
+  }
+
+  for (const f of story.flights) {
+    const dep = airportByIata(airports, f.from);
+    const arr = airportByIata(airports, f.to);
+    await prisma.flight.create({
+      data: {
+        userId, tripId: trip.id, airline: f.airline, flightNumber: f.flightNumber,
+        depIcao: dep.icao, depIata: dep.iata, depName: dep.name, depLat: dep.lat, depLon: dep.lon,
+        arrIcao: arr.icao, arrIata: arr.iata, arrName: arr.name, arrLat: arr.lat, arrLon: arr.lon,
+        departureTime: new Date(f.departure), arrivalTime: new Date(f.arrival),
+        status: planned ? "scheduled" : "flown", seatClass: "economy", category: "vacation",
+        companions: story.companions, tags: story.tags, dataSource: "manual", lastModifiedBy: "user",
+        co2Kg: calculateCo2Kg({ depLat: dep.lat, depLon: dep.lon, arrLat: arr.lat, arrLon: arr.lon, seatClass: "economy" }),
+      },
+    });
+  }
+
+  for (const s of story.stays) {
+    const lodging = await prisma.lodging.create({
+      data: {
+        userId, type: s.type, name: s.name, city: s.city, country: s.country, isoCountryCode: s.iso,
+        lat: s.lat, lon: s.lon, stars: s.stars, visited: !planned, dataSource: "manual",
+      },
+    });
+    await prisma.lodgingStay.create({
+      data: {
+        lodgingId: lodging.id, userId, tripId: trip.id, checkIn: new Date(s.checkIn), checkOut: new Date(s.checkOut),
+        nights: nightsBetween(s.checkIn, s.checkOut), status: planned ? "scheduled" : "completed", board: s.board,
+        guests: 1 + story.companions.length, currency: s.currency, totalPrice: s.price,
+        ratingOverall: s.rating, companions: story.companions, dataSource: "manual",
+      },
+    });
+  }
+
+  for (const [orderIdx, p] of story.places.entries()) {
+    const curatedItemId = p.curatedId ? await curatedIdIfPresent(p.curatedId) : null;
+    const place = await prisma.place.create({
+      data: {
+        userId, name: p.name, category: p.category, lat: p.lat, lon: p.lon, city: p.city, country: p.country,
+        isoCountryCode: p.iso, visited: p.visitedAt !== null, curatedItemId, dataSource: curatedItemId ? "curated" : "manual",
+      },
+    });
+    if (p.visitedAt) {
+      await prisma.placeVisit.create({
+        data: { placeId: place.id, userId, tripId: trip.id, visitedAt: new Date(p.visitedAt), orderIdx, rating: p.rating },
+      });
+    }
+  }
+
+  if (story.cruise) {
+    const c = story.cruise;
+    const ship = await shipByName(c.ship);
+    const portIds: Array<number | null> = [];
+    for (const stop of c.stops) portIds.push("locode" in stop ? await portIdByLocode(stop.locode) : null);
+    const firstPort = portIds.find((id) => id !== null) ?? null;
+    const lastPort = [...portIds].reverse().find((id) => id !== null) ?? null;
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId, tripId: trip.id, shipId: ship.id, cruiseLine: ship.cruiseLine, departurePortId: firstPort, arrivalPortId: lastPort,
+        startDate: new Date(c.start), endDate: new Date(c.end), status: planned ? "scheduled" : "flown",
+        cabinType: c.cabinType, price: c.price, currency: "EUR", companions: story.companions, tags: story.tags, dataSource: "manual",
+      },
+    });
+    for (const [i, portId] of portIds.entries()) {
+      const day = new Date(Date.parse(c.start) + i * 86_400_000);
+      await prisma.cruiseStop.create({
+        data: {
+          cruiseId: cruise.id, dayNumber: i + 1, portId, isAtSea: portId === null,
+          arrivalTime: portId === null ? null : day,
+          departureTime: portId === null ? null : new Date(day.getTime() + 9 * 3_600_000),
+        },
+      });
+    }
+  }
+
+  if (story.tour) await seedTour(trip.id, story.tour, 0);
+
+  for (const j of story.journal) {
+    await prisma.tripJournalEntry.create({
+      data: { tripId: trip.id, date: new Date(j.date), title: j.title, body: j.body, mood: j.mood, weather: j.weather },
+    });
+  }
+}
+
+/** The narrated trips — each one coherent across flights, stays, places, tour and journal. */
+export async function seedStories(userId: string, airports: Map<string, AirportRow>): Promise<number> {
+  for (const story of STORIES) await seedStory(userId, story, airports);
+  return STORIES.length;
+}
