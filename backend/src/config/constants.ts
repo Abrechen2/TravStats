@@ -112,6 +112,12 @@ export const RATE_LIMITS = {
   UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   UPLOAD_RECEIPT_MAX: 30, // 30 uploads per hour
 
+  // Kept originals (forgejo#116). Sized for the Companion flushing an offline
+  // queue after a trip without signal (a week abroad is easily 60 originals)
+  // while still bounding a script to about 1 GB an hour at the 10 MB ceiling.
+  DOCUMENT_UPLOAD_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  DOCUMENT_UPLOAD_MAX: 100, // 100 originals per hour per user or token
+
   // Profile picture upload rate limits (prevent disk exhaustion)
   UPLOAD_PROFILE_PICTURE_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   UPLOAD_PROFILE_PICTURE_MAX: 20, // 20 uploads per hour per user

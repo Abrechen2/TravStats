@@ -435,6 +435,25 @@ export const uploadReceiptLimiter = rateLimit({
 });
 
 /**
+ * Uploads of kept originals (forgejo#116), per user or token.
+ *
+ * Not `uploadReceiptLimiter`: that bucket is 30 an hour and shared by every
+ * receipt and photo surface, and the Companion sends its offline queue in one
+ * burst. A trip's worth of boarding passes and bills arriving together must
+ * not spend the budget of the next receipt the user attaches by hand.
+ *
+ * Mount it BEFORE multer: a rejected request must not be read into memory first.
+ */
+export const documentUploadLimiter = rateLimit({
+  windowMs: RATE_LIMITS.DOCUMENT_UPLOAD_WINDOW_MS,
+  max: RATE_LIMITS.DOCUMENT_UPLOAD_MAX,
+  message: 'Too many document uploads, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for profile picture uploads
  * Prevents disk exhaustion through repeated uploads
  * Allows 20 uploads per hour per user

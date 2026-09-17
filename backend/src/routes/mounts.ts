@@ -84,6 +84,7 @@ import importRoutes from './import';
 import pairingRoutes from './pairing';
 import appSettingsRoutes from './appSettings';
 import geoRoutes from './geo';
+import documentRoutes from './documents';
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -109,6 +110,12 @@ export const apiMounts: ApiMount[] = [
   { id: 'auth.passkeys', base: '/api/v1/auth/passkeys', router: passkeyRoutes },
   { id: 'auth', base: '/api/v1/auth', router: authRoutes },
   { id: 'auth.passwordReset', base: '/api/v1/auth', router: passwordResetRoutes },
+  // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
+  // five prefixes (`/flights/:id/documents`, `/lodging/stays/:id/documents`,
+  // ...); mounted BEFORE those routers so none of their `router.use` guards
+  // (lodging's write-scope requirement, say) decides a document read. It has
+  // no router-level middleware of its own, so passing through it is free.
+  { id: 'documents', base: '/api/v1', router: documentRoutes },
   { id: 'flights', base: '/api/v1/flights', router: flightRoutes },
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.

@@ -1,3 +1,5 @@
+import path from "path";
+
 import type { Document, Prisma } from "@prisma/client";
 
 import { prisma } from "../../db";
@@ -5,7 +7,10 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import {
   DOCUMENT_KINDS,
+  ENTRY_TYPES,
   detectDocumentFormat,
+  type DocumentFormat,
+  type EntryType,
   exceededLimit,
   type DetectedFormat,
   type DocumentKind,
@@ -36,8 +41,7 @@ import {
  * Logs carry id, format and size — never content, never the file name.
  */
 
-export const ENTRY_TYPES = ["flight", "cruise", "lodgingStay", "trip", "placeVisit"] as const;
-export type EntryType = (typeof ENTRY_TYPES)[number];
+export { ENTRY_TYPES, type EntryType } from "./documentFormats";
 
 export interface EntryRef {
   type: EntryType;
@@ -51,6 +55,25 @@ const OWNER_COLUMN = {
   trip: "tripId",
   placeVisit: "placeVisitId",
 } as const satisfies Record<EntryType, keyof Document>;
+
+/**
+ * How the row came to be. `parse` is the server's own (a parse route kept its
+ * input); a client may say `upload` or `companion`, nothing else.
+ */
+export const DOCUMENT_SOURCES = ["upload", "companion", "parse"] as const;
+export type DocumentSource = (typeof DOCUMENT_SOURCES)[number];
+
+/**
+ * The MIME type a declared format stands for, used ONLY as the detection hint
+ * for the formats that have no byte signature of their own. A React Native
+ * multipart part often arrives as `application/octet-stream`, which would make
+ * a mail file or a Wallet pass unrecognisable although the client said what it is.
+ */
+const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
+  eml: "message/rfc822",
+  emailText: "text/plain",
+  pkpass: "application/vnd.apple.pkpass",
+};
 
 /** Unfiled uploads older than this are removed by the nightly sweep. */
 export const UNLINKED_TTL_DAYS = 7;
@@ -119,7 +142,13 @@ export interface CreateDocumentInput {
   declaredMime?: string;
   /** Set for text the server received as text (a pasted mail), where no file name exists. */
   forceFormat?: DetectedFormat;
-  source?: "upload" | "parse";
+  /**
+   * What the client says the file is. A hint for the text and ZIP formats, and
+   * a claim the bytes must bear out: an upload declared as a PDF that is a JPEG
+   * is refused rather than silently filed as something else.
+   */
+  declaredFormat?: DocumentFormat;
+  source?: DocumentSource;
   kind?: DocumentKind | null;
   issuedOn?: Date | null;
   parsedDomain?: string | null;
@@ -144,7 +173,12 @@ function sanitizeOriginalName(name: string | undefined): string | null {
 }
 
 export async function createDocument(input: CreateDocumentInput): Promise<CreateDocumentResult> {
-  const detected = input.forceFormat ?? detectDocumentFormat(input.buffer, input.originalName, input.declaredMime);
+  const hintMime = input.declaredFormat ? FORMAT_HINT_MIME[input.declaredFormat] : undefined;
+  const detected =
+    input.forceFormat ?? detectDocumentFormat(input.buffer, input.originalName, hintMime ?? input.declaredMime);
+  if (detected && input.declaredFormat && detected.format !== input.declaredFormat) {
+    throw new AppError(`Document declared as ${input.declaredFormat} but its content is ${detected.format}.`, 415);
+  }
   if (!detected) {
     throw new AppError(
       "Unsupported document. Accepted: JPEG, PNG, WebP or HEIC images, PDF, .eml mail files, plain text, Wallet passes (.pkpass).",
@@ -247,6 +281,48 @@ export async function unlinkDocument(userId: string, id: string): Promise<Docume
   return prisma.document.update({ where: { id: document.id }, data: ownerData(null) });
 }
 
+export interface UpdateDocumentInput {
+  kind?: DocumentKind | null;
+  issuedOn?: Date | null;
+  /** An entry files it there; null takes it off its entry; absent leaves it. */
+  entry?: EntryRef | null;
+}
+
+/**
+ * Changes what the user may change about a kept original: what it is, the date
+ * printed on it, and where it is filed. The bytes and everything derived from
+ * them (format, sha256, size) are not editable — a different file is a
+ * different document.
+ */
+export async function updateDocument(userId: string, id: string, input: UpdateDocumentInput): Promise<Document> {
+  const document = await getOwnDocument(userId, id);
+  if (input.kind && !DOCUMENT_KINDS.includes(input.kind)) throw new AppError("Unknown document kind", 400);
+
+  let owner: Partial<OwnerColumns> = {};
+  if (input.entry === null) {
+    owner = ownerData(null);
+  } else if (input.entry) {
+    const current = entryOf(document);
+    const same = current?.type === input.entry.type && current.id === input.entry.id;
+    if (!same) {
+      await assertEntryOwned(userId, input.entry);
+      // Moving between entries is an unlink and a link, said explicitly: a
+      // document filed elsewhere answers 409, exactly as linking does.
+      if (current) throw new AppError("Document is already filed with another entry", 409);
+      owner = ownerData(input.entry);
+    }
+  }
+
+  return prisma.document.update({
+    where: { id: document.id },
+    data: {
+      ...(input.kind !== undefined && { kind: input.kind }),
+      ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
+      ...owner,
+    },
+  });
+}
+
 export async function getOwnDocument(userId: string, id: string): Promise<Document> {
   const document = await prisma.document.findFirst({ where: { id, userId } });
   if (!document) throw new AppError("Document not found", 404);
@@ -336,6 +412,8 @@ export interface DocumentDto {
   sizeBytes: number;
   sha256: string;
   originalName: string | null;
+  /** What to call it on screen: the client's name, or a generic one with the right extension. */
+  displayName: string;
   issuedOn: string | null;
   source: string;
   parsedDomain: string | null;
@@ -354,6 +432,7 @@ export function toDocumentDto(document: Document): DocumentDto {
     sizeBytes: document.sizeBytes,
     sha256: document.sha256,
     originalName: document.originalName,
+    displayName: document.originalName ?? `document${path.extname(document.storedName)}`,
     issuedOn: document.issuedOn ? document.issuedOn.toISOString().slice(0, 10) : null,
     source: document.source,
     parsedDomain: document.parsedDomain,

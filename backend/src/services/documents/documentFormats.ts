@@ -20,6 +20,10 @@ export type DocumentFormat = (typeof DOCUMENT_FORMATS)[number];
 export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "other"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
+/** The entries a document can be filed with — at most one of them. */
+export const ENTRY_TYPES = ["flight", "cruise", "lodgingStay", "trip", "placeVisit"] as const;
+export type EntryType = (typeof ENTRY_TYPES)[number];
+
 const MB = 1024 * 1024;
 
 export const DOCUMENT_SIZE_LIMITS: Record<DocumentFormat, number> = {
