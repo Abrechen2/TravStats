@@ -10,6 +10,7 @@ import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
 import CurrencyInput from "./CurrencyInput";
+import { getConfidenceColor, isInferred } from "../lib/flightReviewFields";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -21,16 +22,6 @@ function getFieldBorderClass(
   if (source === "llm") return "border-l-4 border-yellow-400";
   if (source === "empty") return "border-l-4 border-red-500";
   return "";
-}
-
-function isInferred(
-  fieldName: string,
-  inferredFields?: string[],
-  aliases: readonly string[] = []
-): boolean {
-  if (!inferredFields || inferredFields.length === 0) return false;
-  if (inferredFields.includes(fieldName)) return true;
-  return aliases.some((alias) => inferredFields.includes(alias));
 }
 
 interface InferredBadgeProps {
@@ -49,12 +40,6 @@ function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
       !
     </span>
   );
-}
-
-function getConfidenceColor(confidence: number): string {
-  if (confidence >= 70) return "text-(--success) bg-(--success)/15";
-  if (confidence >= 40) return "text-(--warning) bg-(--warning)/15";
-  return "text-(--danger) bg-(--danger)/15";
 }
 
 interface FlightReviewModalProps {
