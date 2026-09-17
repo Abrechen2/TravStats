@@ -34,8 +34,8 @@ countries, companions and tags, and is linked to its rows via `tripId`.
 | Island – Ringstraße | completed | MUC→KEF, KEF→MUC | 5 (guesthouse, hotel, campsite) | ~8 (waterfalls, glacier lagoon, national park) | car, ~8 stops | 4 journal entries |
 | Japan – Tokyo bis Kyoto | completed | FRA→HND, KIX→FRA | 3 hotels | ~8 (temples, shrine, castle) | train, ~5 stops | 3 journal entries |
 | Toskana | completed | MUC→FLR, PSA→MUC | 2 (agriturismo as guesthouse, apartment) | ~6 | car, ~6 stops | 2 journal entries |
-| Mittelmeer-Kreuzfahrt | completed | MUC→BCN, CIV→MUC | 1 hotel before embarkation | ~4 port-city sights | — | cruise with port and sea-day stops |
-| Norwegen Hurtigruten | completed | MUC→BGO, TOS→MUC | — | ~4 | — | cruise |
+| Mittelmeer-Kreuzfahrt | completed | MUC→BCN, FCO→MUC | 1 hotel before embarkation | ~4 port-city sights | — | cruise with port and sea-day stops |
+| Norwegens Fjorde | completed | MUC→BGO, TOS→MUC | — | ~4 | — | AIDAsol cruise Bergen–Ålesund–Trondheim–Tromsø (the ship catalogue has no Hurtigruten ship) |
 | Portugal (future) | planned | 2 planned flights | 2 planned stays | ~4 not yet visited | car, planned | — |
 
 Places that exist in the curated catalogue (world heritage sites, national
@@ -83,9 +83,13 @@ exports `seedDevAdmin` imports. New code goes into `backend/src/seedDemo/`:
 | `seedPlaces.ts` | bulk places, curated links, place lists |
 | `seedTours.ts` | tour routes + stops + legs for a trip |
 
-Airports, ships and ports are looked up by code in the pools `loadPools()`
-already loads; a missing code fails the seed loudly rather than silently
-dropping a flight.
+Airports are looked up by IATA in the pool `loadPools()` loads (KEF, FLR, BGO
+and TOS are added to its list); ports by UN/LOCODE and ships by name, queried
+directly — the pool keys ports by name, and "Naples" exists twice. A missing
+airport, port or ship fails the seed loudly rather than silently dropping a
+row. Curated catalogue links are the one exception: `init.ts` seeds the demo
+before the server seeds the curated catalogue, so a missing curated item
+leaves the place unlinked instead of failing.
 
 ## 3. Protection of the demo account
 
@@ -101,7 +105,7 @@ Locked, because a visitor could lock out or harm every other visitor:
 | Password | `POST /api/v1/auth/change-password` |
 | Two-factor | `POST /api/v1/auth/2fa/setup`, `/activate`, `/disable`, `/recovery-codes` |
 | Passkeys | `POST /api/v1/auth/passkeys/register/options`, `/register/verify`, `PATCH` and `DELETE /api/v1/auth/passkeys/:id` |
-| Device pairing | `POST /api/v1/pairing/start`, `/claim`, `/unpair` |
+| Device pairing | `POST /api/v1/pairing/start` — `/claim` is unauthenticated and redeems a code only `/start` can mint; `/unpair` needs a token only a claim can issue |
 | API tokens | `POST` and `DELETE /api/v1/settings/tokens` |
 | Provider keys | `PUT /api/v1/settings/api-keys` and its `/test/*` routes |
 | Outbound connections | `PUT` and `POST /test` on `/api/v1/settings/immich` and `/api/v1/settings/dawarich` — a shared account must not point the server at an arbitrary URL |
