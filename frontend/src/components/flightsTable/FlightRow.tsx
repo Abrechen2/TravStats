@@ -30,9 +30,10 @@ export const FLIGHT_COLUMN_LAYOUT: Record<
   // Minimums are what the cells measured in a browser with 124 real rows
   // (2026-09-16): the actions need 124px for three 32px buttons, the flight
   // number 80px. The first guesses (84 and 72) summed to a table that "fit"
-  // on paper and then pushed itself 20px past its frame. Honestly, all ten
-  // columns need ~1200px, the list shell gives 1150 — so the price, the column
-  // most often empty, is the one that steps aside first, and the table says so.
+  // on paper and then pushed itself 20px past its frame. All ten columns need
+  // ~1216px, which is why the logbooks use the `table` shell (1440px) rather
+  // than `list` (R02). Below that, the price — the column most often empty — is
+  // the one that steps aside first, and the table says so.
   // The airline takes 64: the logo tile is 44, its header and sort arrow 62.
   airline: { min: 64, onNarrow: "mark" },
   flightNumber: { min: 80, mono: true, priority: 2 },

@@ -154,7 +154,7 @@ export function tableMinWidth(
  * two of them left unused.
  *
  * Derived from the columns' own numbers rather than from breakpoints, because
- * the same table sits in a 1150px shell, on a tablet, and behind a column
+ * the same table sits in a 1440px shell, on a tablet, and behind a column
  * picker that adds or removes any of them. When even the essential columns do
  * not fit, the table scrolls — visibly.
  */

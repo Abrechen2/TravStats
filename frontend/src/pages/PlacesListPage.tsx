@@ -359,7 +359,7 @@ export default function PlacesListPage(): JSX.Element {
   }
 
   return (
-    <AppShell width="list">
+    <AppShell width="table">
       <LogbookTabs />
       {/* The shared filter bar sits directly under the navigation, the way
           it does on the other three domain lists — it is `sticky top-14`, so

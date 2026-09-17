@@ -178,16 +178,24 @@ utilities `p-md`, `gap-lg` follow.
 ### 4.2 Width — the one web-only decision
 
 The Companion caps content at 480dp because a phone is a column. A desktop
-page is not, and a table of flights needs the width. The web keeps three
+page is not, and a table of flights needs the width. The web keeps four
 containers and nothing else:
 
 | Container | Max width | Use |
 |---|---|---|
 | `reading` | 720px | settings, forms, detail pages, text |
-| `list` | 1200px | tables, lists, dashboards |
+| `list` | 1200px | lists, cards, dashboards |
+| `table` | 1440px | the four logbooks (flights, cruises, stays, places) |
 | `full` | none | maps, the globe |
 
-The ten `max-w-*` values in use today collapse into these three.
+The ten `max-w-*` values in use today collapse into these four.
+
+`table` was added on 2026-09-17 against the round-4 export, which draws the
+logbooks at 1200px. With every column ticked, flights need 1266px of page,
+stays 1272px and cruises 1212px, so at 1200px they hid ticked columns on any
+screen, and the hint telling the reader to widen the window was false
+(CT106 design-6 R02, owner decision). Places fit in 1200px but take the same
+width so the page does not jump between the logbook tabs.
 
 ### 4.3 Radius (`radius`)
 

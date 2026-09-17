@@ -297,10 +297,10 @@ export default function CruisesPage(): JSX.Element {
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   return (
-    <AppShell width="list">
+    <AppShell width="table">
       <LogbookTabs />
-      {/* The width is the shell's now — `list`, 1200px, the same one every
-          logbook page asks for by name. */}
+      {/* The width is the shell's now — `table`, the same one every logbook
+          page asks for by name. */}
       <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("list.title")}</h1>

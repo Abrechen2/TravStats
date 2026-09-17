@@ -3,20 +3,27 @@ import NavigationBar from "../NavigationBar";
 import PageTransition from "../PageTransition";
 
 /**
- * The three container widths, and nothing else.
+ * The four container widths, and nothing else.
  *
  * The Companion caps content at 480dp because a phone is a column. A desktop
- * page is not, and a table of flights needs the width — so the web keeps three
+ * page is not, and a table of flights needs the width — so the web keeps four
  * names instead of one number (DESIGN_SYSTEM.md §4.2). The ten different
  * `max-w-*` values the app carries today collapse into these.
  */
-export type ShellWidth = "reading" | "list" | "full";
+export type ShellWidth = "reading" | "list" | "table" | "full";
 
 const MAX_WIDTH: Record<ShellWidth, string | undefined> = {
   /** settings, forms, detail pages, text */
   reading: "var(--ts-width-reading)",
-  /** tables, lists, dashboards */
+  /** lists, cards, dashboards */
   list: "var(--ts-width-list)",
+  /**
+   * The four logbooks, whose column tables need more than `list` gives: at
+   * 1200px flights, stays and cruises hid columns the reader had ticked, even
+   * on a 1920px screen (CT106 design-6 R02). Their own hint sends the reader
+   * to a wider window, which only helps if the page can grow into it.
+   */
+  table: "var(--ts-width-table)",
   /** maps and the globe — the page IS the surface */
   full: undefined,
 };

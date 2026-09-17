@@ -107,6 +107,7 @@
   /* Width — the one web-only layout decision (DESIGN_SYSTEM.md §4.2) */
   --ts-width-reading: 720px;
   --ts-width-list: 1200px;
+  --ts-width-table: 1440px;
 
   /* Radius — no other radius exists */
   --ts-radius-chip: 999px;
@@ -232,6 +233,7 @@
   --spacing-ts-screen-padding: var(--ts-space-screen-padding);
   --container-ts-reading: var(--ts-width-reading);
   --container-ts-list: var(--ts-width-list);
+  --container-ts-table: var(--ts-width-table);
   --radius-ts-chip: var(--ts-radius-chip);
   --radius-ts-button: var(--ts-radius-button);
   --radius-ts-tile: var(--ts-radius-tile);

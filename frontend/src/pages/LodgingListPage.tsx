@@ -326,9 +326,9 @@ export default function LodgingListPage(): JSX.Element {
   const importAdapter = useLodgingImportAdapter();
 
   return (
-    <AppShell width="list">
+    <AppShell width="table">
       <LogbookTabs />
-      {/* The width is the shell's now — `list`, 1200px, asked for by name. */}
+      {/* The width is the shell's now — `table`, asked for by name. */}
       <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("lodging:list.title")}</h1>
