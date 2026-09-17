@@ -42,6 +42,19 @@ describe("Lodging API", () => {
     lodgingId = lodging.id;
   });
 
+  // The geocoder is a network call (Photon / Nominatim). Creating or patching
+  // a lodging with a city reaches it, and nothing here stubbed it: on the CI
+  // runner POST "Boutique Inn, Paris" and PATCH of the Zürich fixture timed out
+  // at 5 s — the only red suite of the first complete CI run (2026-09-16), and
+  // the "known 40P01 deadlock" the workflow comment blamed was not it. A test
+  // that needs coordinates says so with its own spy, which replaces this
+  // default; everyone else gets "the geocoder found nothing", a path the route
+  // already has to handle.
+  beforeEach(() => {
+    jest.spyOn(geo, "resolveCoordinates").mockResolvedValue(null);
+    jest.spyOn(geo, "completeAddressFromCoordinates").mockResolvedValue(null);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });

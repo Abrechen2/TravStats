@@ -1,0 +1,46 @@
+From: Lufthansa <noreply@example.invalid>
+To: traveller@example.invalid
+Subject: Ihre Buchungsdetails
+Date: Mon, 06 Nov 2023 10:00:00 +0100
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Buchungsdetails
+Buchungscode:
+QX7PLM
+Passagierinformationen
+Ticketnummer: 2201234567890
+Reiseverlauf
+Do. 23. November 2023: München – Frankfurt/Main
+09:00 Uhr 	München Munich (MUC)
+Terminal 2
+10:05 Uhr 	Frankfurt/Main Frankfurt (FRA)
+Terminal 1
+ 	LH 99
+durchgeführt von:
+Lufthansa
+Status: bestätigt
+Sitzplätze: 26F*
+Klasse: Economy Class (K)
+Do. 23. November 2023: Frankfurt/Main – Las Vegas
+11:05 Uhr 	Frankfurt/Main Frankfurt (FRA)
+Terminal 1
+13:50 Uhr 	Las Vegas McCarran Intl (LAS)
+Terminal 3
+ 	LH 4352
+durchgeführt von:
+Eurowings Discover
+Status: bestätigt
+Klasse: Premium Economy (N)
+Do. 30. November 2023: Los Angeles – München
+17:30 Uhr 	Los Angeles Los Angeles Intl (LAX)
+Terminal B
+13:40 Uhr +1 	München Munich (MUC)
+Terminal 2
+ 	LH 453
+durchgeführt von:
+Lufthansa
+Status: bestätigt
+Klasse: Premium Economy (R)
+Flugpreis

@@ -1,6 +1,13 @@
 import { Router, Response, NextFunction } from 'express';
 import aircraftStatsRouter from "./stats/aircraft";
-import { z } from 'zod';
+import {
+  CountryCodeParamSchema,
+  DateRangeQuerySchema,
+  RoutesQuerySchema,
+  SummaryQuerySchema,
+  TimeseriesQuerySchema,
+  WrappedQuerySchema,
+} from '../schemas/statsQuery';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
@@ -61,6 +68,7 @@ import { lodgingCountryKey } from '../utils/stats/lodgingCountryKey';
 import { buildTravelAccount } from '../services/stats/travelAccount';
 import { buildTripAccount } from '../services/stats/tripAccount';
 import { getBaseCurrency } from '../services/fx/snapshot';
+import { statsEtag } from '../middleware/statsEtag';
 
 const router = Router();
 
@@ -70,51 +78,9 @@ const router = Router();
 // abuse. Same reasoning we applied to /settings. Auth alone is enough here.
 router.use(authenticate);
 
-// Shared schema for date-range query parameters
-const DateRangeQuerySchema = z.object({
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
-});
-
-// Extended schema for summary endpoint with year comparison support
-const SummaryQuerySchema = z.object({
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
-  year: z.coerce.number().int().min(1900).max(2100).optional(),
-  compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
-});
-
-/**
- * The country a detail page is asked for. Accepts an ISO alpha-2 code or an
- * English country name — `isoCountryCode` resolves both, and rejecting a name
- * here would make the endpoint stricter than the catalogue that feeds it. The
- * bound is the longest country name the table carries, with room to spare.
- */
-const CountryCodeParamSchema = z.object({
-  code: z.string().trim().min(2).max(64),
-});
-
-// Wrapped — a year in review. Omitting `year` asks for the latest year that
-// has anything in it; see services/stats/wrapped.ts rule 1.
-const WrappedQuerySchema = z.object({
-  year: z.coerce.number().int().min(1900).max(2100).optional(),
-});
-
-// Timeseries endpoint — bucketed series + current/previous window totals
-const TimeseriesQuerySchema = z.object({
-  domain: z.enum(['flight', 'cruise']).default('flight'),
-  granularity: z.enum(['month', 'year']).default('month'),
-  window: z.enum(['rolling12m', 'year', 'all']).default('rolling12m'),
-  year: z.coerce.number().int().min(1900).max(2100).optional(),
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
-});
-
-
-// Schema for routes query parameters
-const RoutesQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-});
+// Conditional GET: an unchanged account answers 304 without recomputing
+// (forgejo#50). Must run AFTER authenticate — the fingerprint is per user.
+router.use(statsEtag);
 
 // Get summary statistics
 router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

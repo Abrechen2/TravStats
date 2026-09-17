@@ -49,6 +49,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve, join } from "node:path";
+import { PrismaClient } from "@prisma/client";
 
 const SCHEMA_PATH = resolve(__dirname, "..", "prisma", "schema.prisma");
 const MIGRATIONS_PATH = join(__dirname, "..", "prisma", "migrations");
@@ -61,7 +62,38 @@ function fail(message: string, hint?: string): never {
   process.exit(1);
 }
 
-function main(): void {
+const DERIVED_SHADOW_NAME = "travstats_drift_shadow";
+
+/**
+ * `prisma migrate diff --shadow-database-url` does NOT create the database it
+ * is pointed at — it answers P1003. So the derived shadow is created here when
+ * it is missing. Without this the check could never pass on a fresh server:
+ * the CI job was red on every run from the day it was wired (2026-09-15,
+ * forgejo#60) until 2026-09-16, and a developer running it the documented way
+ * met the same P1003. An explicit SHADOW_DATABASE_URL is left alone — whoever
+ * sets it owns that database.
+ */
+async function ensureDerivedShadowDatabase(databaseUrl: string): Promise<void> {
+  const client = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+  try {
+    const rows = await client.$queryRaw<Array<{ one: number }>>`
+      SELECT 1 AS one FROM pg_database WHERE datname = ${DERIVED_SHADOW_NAME}`;
+    if (rows.length === 0) {
+      process.stdout.write(`[check:drift] Creating shadow database ${DERIVED_SHADOW_NAME}...\n`);
+      // A database name cannot be a bound parameter; the name is a constant.
+      await client.$executeRawUnsafe(`CREATE DATABASE "${DERIVED_SHADOW_NAME}"`);
+    }
+  } catch (error) {
+    fail(
+      `Could not prepare the shadow database: ${error instanceof Error ? error.message : String(error)}`,
+      "The DATABASE_URL role needs CREATEDB, or set SHADOW_DATABASE_URL to an existing empty database.",
+    );
+  } finally {
+    await client.$disconnect();
+  }
+}
+
+async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     fail(
@@ -84,7 +116,8 @@ function main(): void {
   // anything else and holds no data worth keeping.
   const shadowUrl =
     process.env.SHADOW_DATABASE_URL ??
-    `${databaseUrl.replace(/\/[^/?]+(\?|$)/, "/")}travstats_drift_shadow`;
+    `${databaseUrl.replace(/\/[^/?]+(\?|$)/, "/")}${DERIVED_SHADOW_NAME}`;
+  if (!process.env.SHADOW_DATABASE_URL) await ensureDerivedShadowDatabase(databaseUrl);
 
   const args = [
     "prisma",
@@ -127,4 +160,4 @@ function main(): void {
   fail(`prisma migrate diff exited with unexpected code ${code}.`);
 }
 
-main();
+void main();

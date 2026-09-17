@@ -121,7 +121,13 @@ jobs:
         # credentials. The user owns the container, so it may CREATE DATABASE
         # for the shadow — a restricted role would need SHADOW_DATABASE_URL
         # set explicitly instead.
-        image: postgres:16-alpine
+        #
+        # PostGIS, not plain postgres: the migrations CREATE EXTENSION postgis,
+        # and on postgres:16-alpine the replay died on it. This job and the
+        # Jest one were red on EVERY run from the day they were wired
+        # (2026-09-15, forgejo#60) until 2026-09-16 — the other half was the
+        # shadow database, which check-schema-drift.ts now creates itself.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
@@ -175,11 +181,26 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
+      # Coverage rides along with the same run (forgejo#62). `reportOnFailure`
+      # so a red run still publishes its figure; the step is red either way.
       - name: Vitest
-        run: cd frontend && npx vitest --run
+        run: >-
+          cd frontend && npx vitest --run --coverage
+          --coverage.reporter=json-summary --coverage.reporter=text-summary
+          --coverage.reportOnFailure
+
+      # Not below scripts/coverage-baseline.json, and the figure goes to the
+      # job summary. Runs after a red Vitest too, so the number is never
+      # missing from a failed run — but it cannot turn that run green.
+      - name: Coverage ratchet
+        if: success() || failure()
+        run: node scripts/check-coverage.mjs frontend
 
   # ---------------------------------------------------------------------
-  # ADVISORY — DO NOT MARK REQUIRED YET.
+  # REQUIRED since 2026-09-16 (owner decision). Until then this job was
+  # advisory; the history below is why, and what changed.
+  #
+  # (Historical) ADVISORY — DO NOT MARK REQUIRED YET.
   #
   # The reason is the sharpest possible illustration of why "green" and
   # "checked" are different words. Measured on main @ 80ca3061 (2026-08-30)
@@ -237,6 +258,18 @@ jobs:
   # only after re-measuring. Then delete `continue-on-error` below in one
   # deliberate move.
   #
+  # RE-MEASURED 2026-09-16 — the first run that reached the suite at all.
+  # Until that day the job died in `migrate deploy` (no PostGIS in the service
+  # image) and then in jest.globalSetup (the destructive-test guard), so the
+  # figures above were measured locally and nothing here had ever run. On
+  # main @ 77b56258: 522 of 523 suites green. Neither the missing fixture nor
+  # the chain seed failed — both had been addressed since. The single red
+  # suite was lodging.test.ts, and not with 40P01: two CRUD cases timed out
+  # at 5 s because they reached the real geocoder (Photon / Nominatim) from
+  # the runner. That test now stubs the geocoder by default. What remains
+  # before promotion is one more green run on main to confirm, and the
+  # owner's decision.
+  #
   # On the environment: main now carries jest.globalSetup.ts (fails fast
   # with one clear sentence when Postgres is unreachable, instead of a
   # four-figure failure count) and jest.setup.ts + workerIdleMemoryLimit
@@ -247,15 +280,16 @@ jobs:
   # already-chosen limit, which makes the intent visible at the call site.
   # ---------------------------------------------------------------------
   backend-tests:
-    name: Backend tests (Jest, advisory)
+    name: Backend tests (Jest)
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     services:
       postgres:
         # Values are CI-local throwaways and intentionally unrelated to any
-        # developer or deployment credentials.
-        image: postgres:16-alpine
+        # developer or deployment credentials. PostGIS for the same reason as
+        # the drift job: `prisma migrate deploy` below failed on
+        # CREATE EXTENSION postgis, so the suite never ran at all.
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: travstats_ci
           POSTGRES_PASSWORD: travstats_ci
@@ -280,6 +314,13 @@ jobs:
       # throwaway CI literals with no relationship to any real key.
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      # jest.globalSetup.ts refuses to empty a database whose name does not
+      # mark it as disposable. This one is a service container that exists
+      # for this job only, so the permission is given on purpose rather than
+      # by renaming the database to slip past the check. Once PostGIS let the
+      # migrations through on 2026-09-16, this refusal was the next thing
+      # standing between the job and its first actual test.
+      TRAVSTATS_ALLOW_DESTRUCTIVE_TESTS: "1"
 
     steps:
       - uses: actions/checkout@v7
@@ -305,21 +346,124 @@ jobs:
 
       - name: Jest
         id: jest
-        run: cd backend && npx jest --ci --forceExit
+        run: >-
+          cd backend && npx jest --ci --forceExit --coverage
+          --coverageReporters=json-summary --coverageReporters=text-summary
 
-      # Without this, `continue-on-error` above would render a failing run
-      # as a green tick and the whole job would become decoration.
-      - name: Report outcome
-        if: always()
+      # The baseline was recorded from a green local run and CI's figures
+      # matched it within the tolerance (2026-09-16). If a later CI figure
+      # differs for an environment reason (a test that skips here), record
+      # CI's figure rather than widening the tolerance. Runs after a red Jest
+      # too, like the frontend ratchet, so the number is never missing.
+      - name: Coverage ratchet
+        if: success() || failure()
+        run: node scripts/check-coverage.mjs backend
+
+  # ---------------------------------------------------------------------
+  # E2E (Playwright, Chromium) — added 2026-09-16 (forgejo#28).
+  #
+  # The browser suite existed and ran only on a developer machine. It needs
+  # the whole stack, so this job builds it: PostGIS, migrations, the test
+  # catalogues, the seeded dev admin (admin:admin123 with demo data), the
+  # backend, and — started by playwright.config.ts's webServer — Vite on 3000.
+  #
+  # Chromium only: the full three-browser run takes ~7 minutes locally and
+  # adds no coverage of our code, only of browser engines. The auth-ladder
+  # passkey case needs Chromium anyway (CDP virtual authenticator).
+  #
+  # NODE_ENV=development on purpose: the E2E stack is a dev stack, and the
+  # address-keyed rate limits step aside in development (one runner is one
+  # address for every spec). OLLAMA_URL is empty so the booking-import spec
+  # is answered by the template, as it demands.
+  #
+  # Until 2026-09-16 playwright.config.ts defaulted to port 5173 while Vite
+  # serves 3000, so `npm run test:e2e` without PLAYWRIGHT_BASE_URL waited for
+  # a server that never came up — the reason this could not simply be wired.
+  # ---------------------------------------------------------------------
+  e2e:
+    name: E2E (Playwright, Chromium)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # CI-local throwaways, unrelated to any real credentials.
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_e2e
+      NODE_ENV: development
+      PORT: "8000"
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      COOKIE_SECURE: "false"
+      OLLAMA_URL: ""
+      VITE_API_URL: http://localhost:8000
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci && (cd backend && npm ci) && (cd frontend && npm ci)
+
+      - name: Apply migrations
+        run: cd backend && npx prisma migrate deploy
+
+      - name: Seed catalogues and the dev admin
         run: |
-          if [ "${{ steps.jest.outcome }}" = "success" ]; then
-            echo "Backend suite passed." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "### Backend suite FAILED (advisory job)" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "This job does not block merges yet. Check whether this is the known" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`lodging.test.ts\` 40P01 deadlock or a genuine regression you introduced." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          cd backend
+          npx tsx scripts/seed-test-catalogues.ts
+          npm run seed:dev-admin
+
+      - name: Start backend
+        run: |
+          cd backend
+          nohup npx tsx src/index.ts > ../backend-e2e.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8000/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "backend did not become healthy" >&2
+          tail -50 ../backend-e2e.log >&2
+          exit 1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright
+        run: npx playwright test --project=chromium --reporter=line
+
+      - name: Upload report and backend log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+            backend-e2e.log
+          retention-days: 7
 
   # ---------------------------------------------------------------------
   # SAFE TO REQUIRE — but note it only checks files the change touched.

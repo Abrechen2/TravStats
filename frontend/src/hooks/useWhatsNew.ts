@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { settingsApi, versionApi } from "../lib/api";
-import { findEntryForVersion, type WhatsNewEntry } from "../content/whatsNew";
+import { compareVersions, findEntryForVersion, type WhatsNewEntry } from "../content/whatsNew";
 import { logger } from "../lib/logger";
 
 interface UseWhatsNewResult {
@@ -39,8 +39,14 @@ export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
         // findEntryForVersion matches with <=, so on 2.3.1 the running version
         // and the entry's ("2.3.0") differ — comparing against the former would
         // never register the dismissal and the modal would reappear forever.
+        //
+        // And "at or after", not "equal": a NEW account is stamped server-side
+        // with the RUNNING version (services/whatsNewStamp.ts), so on 2.6.3 it
+        // carries "2.6.3" against a "2.6.0" entry. Equality showed that account
+        // the highlights of a release it never used.
         const match = findEntryForVersion(version);
-        if (!match || settings.whatsNewSeenVersion === match.version) {
+        const seen = settings.whatsNewSeenVersion;
+        if (!match || (seen && compareVersions(seen, match.version) >= 0)) {
           setEntry(null);
           setShouldShow(false);
           return;

@@ -21,7 +21,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     locale: 'de-DE',
     // Animations never settle, and Playwright will not click an element whose
     // bounding box is still moving. The account-menu button was located and
@@ -58,7 +58,7 @@ export default defineConfig({
 
   webServer: {
     command: 'cd frontend && npm run dev',
-    url: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
+    url: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
   },
 });

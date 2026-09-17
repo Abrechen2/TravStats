@@ -9,108 +9,13 @@ import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
 import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
 import type { TimeEstimationWarning } from "./FlightCompleteStep";
-import { historicalDateShape } from "./fields/HistoricalDateFields";
 
-export interface FlightLookupResult {
-  flightNumber: string;
-  airline: string;
-  /** Operating airline if the searched flight number is a marketing codeshare. */
-  operatingAirline?: string;
-  /** True if the API flagged the entry as `IsCodeshare`. */
-  isCodeshare?: boolean;
-  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
-  callsign?: string;
-  /** Airline IATA code, e.g. "LH". AeroDataBox-only. */
-  airlineIata?: string;
-  /** Airline ICAO code, e.g. "DLH". AeroDataBox-only. */
-  airlineIcao?: string;
-  departure: {
-    iata?: string;
-    name?: string;
-    scheduledTime?: string;
-    terminal?: string;
-    gate?: string;
-  };
-  arrival: {
-    iata?: string;
-    name?: string;
-    scheduledTime?: string;
-    terminal?: string;
-    gate?: string;
-  };
-  aircraft?: string;
-  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
-  aircraftRegistration?: string;
-  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
-  aircraftModeS?: string;
-  /** Great-circle route distance in km from the provider. */
-  distance?: number;
-  /** Hint to set status to `'cancelled'` or `'diverted'`. AeroDataBox-only. */
-  status?: string;
-}
-
-export interface DuplicateFlight {
-  id: string;
-  flightNumber: string;
-  airline: string | null;
-  depIata: string | null;
-  arrIata: string | null;
-  departureTime: string;
-}
-
-export interface FlightSubmitOptions {
-  force?: boolean;
-  merge?: boolean;
-  hasMoreFlights?: boolean;
-}
-
-// Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
-// optional HH:mm time into the canonical local-wall-clock submit shape.
-// Year-only  -> YYYY-01-01T00:00
-// Year+Month -> YYYY-MM-01T00:00
-// Year+Month+Day -> YYYY-MM-DDT<time|12:00>
-// Everything else falls through to the original YYYY-MM-DDT<time> path.
-//
-// Module-level (not a hook-local closure) and exported so every submit path
-// that recombines a split date+time pair (e.g. FlightEditModal) reuses this
-// exact implementation instead of writing a second one — two
-// implementations of this is precisely how the create and edit forms
-// drifted apart before the edit form's inputs were split to match.
-// `anchorDateOnly` is what separates "I only know the day" from "I cleared
-// the time". A historical flight legitimately carries a day without a clock
-// reading, and noon is its documented midpoint (the row is stamped DATE_ONLY
-// alongside). On the ordinary path a blank time means the user emptied the
-// field, and inventing noon there wrote a departure nobody entered — and,
-// via actual-vs-scheduled, a delay nobody suffered. Callers on that path get
-// `null` and must treat it as incomplete input, not as a value.
-export function buildLocalString(
-  date: string,
-  time: string,
-  opts: { anchorDateOnly?: boolean } = {}
-): string | null {
-  if (/^\d{4}$/.test(date)) {
-    return `${date}-01-01T00:00`;
-  }
-  if (/^\d{4}-\d{2}$/.test(date)) {
-    return `${date}-01T00:00`;
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    if (time) return `${date}T${time}`;
-    return opts.anchorDateOnly ? `${date}T12:00` : null;
-  }
-  return `${date}T${time}`;
-}
-
-/**
- * A 409 `already_imported` is the server saying "you already have this one" —
- * the ordinary answer to reading a forwarded confirmation a second time. It is
- * recognised by the fixed code, never by prose, so a reworded message cannot
- * turn a known outcome back into an unexplained failure.
- */
-function isAlreadyImported(err: unknown): boolean {
-  const res = (err as { response?: { status?: number; data?: { error?: string } } }).response;
-  return res?.status === 409 && res.data?.error === "already_imported";
-}
+export type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
+export { buildLocalString } from "./flightFormModel";
+import { isAlreadyImported } from "./flightFormModel";
+import { buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
+import { reportBatchOutcome } from "./flightReviewBatch";
+import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 
 export function useFlightForm(
   // Returning the created Flight is what makes the post-create trip
@@ -503,113 +408,53 @@ export function useFlightForm(
   // the column stays NULL on the row. Default is ON.
   const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
 
-  const buildFlightPayload = (): FlightInput => {
-    // For historical flights, derive time-semantics from the date-precision shape.
-    // DATE_ONLY when the user knows the real calendar date but not the time;
-    // UNKNOWN for year-only or year+month rows (no meaningful time at all).
-    const depShape = status === "historical" ? historicalDateShape(departureDate) : "unknown";
-    const depTimeSemantics: FlightInput["depTimeSemantics"] =
-      depShape === "year_month_day" ? "DATE_ONLY" : depShape !== "unknown" ? "UNKNOWN" : undefined;
-    const arrTimeSemantics: FlightInput["arrTimeSemantics"] = depTimeSemantics;
-
-    // For DATE_ONLY historical rows, arrival mirrors departure so the wall-clock
-    // duration is 0 (great-circle estimate takes over downstream). The form already
-    // keeps arrivalDate in sync via setArrivalDate — this makes it explicit.
-    const effectiveArrivalDate =
-      status === "historical" && depShape === "year_month_day" ? departureDate : arrivalDate;
-    const effectiveArrivalTime =
-      status === "historical" && depShape === "year_month_day" ? departureTime : arrivalTime;
-
-    // Only a historical row may anchor a bare day to noon; see buildLocalString.
-    const anchorDateOnly = status === "historical";
-
-    return {
-      departure: {
-        iata: departure!.iata,
-        icao: departure!.icao,
-        name: departure!.name,
-        lat: departure!.lat,
-        lon: departure!.lon,
-      },
-      arrival: {
-        iata: arrival!.iata,
-        icao: arrival!.icao,
-        name: arrival!.name,
-        lat: arrival!.lat,
-        lon: arrival!.lon,
-      },
-      airline: airline || undefined,
-      airlineIata: lookupAirlineIata || undefined,
-      airlineIcao: lookupAirlineIcao || undefined,
-      operatingAirline: operatingAirline || undefined,
-      isCodeshare: lookupIsCodeshare ?? undefined,
-      flightNumber: flightNumber || undefined,
-      callsign: lookupCallsign || undefined,
-      aircraft: aircraft || undefined,
-      aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
-      aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
-      // "" = the explicit "(optional)" choice. null on the wire, NULL in the
-      // DB — undefined would let the server's column default decide instead
-      // of the user.
-      seatClass: seatClass || null,
-      seatNumber: seatNumber || undefined,
-      terminal: terminal || undefined,
-      gate: gate || undefined,
-      // Omitted when empty — "" would overwrite a parser-provided value.
-      boardingGroup: boardingGroup || undefined,
-      // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
-      // No browser-side `new Date(...).toISOString()` — that would leak the
-      // browser's local TZ into the payload.
-      departureLocal: departureDate
-        ? (buildLocalString(departureDate, departureTime, { anchorDateOnly }) ?? undefined)
-        : undefined,
-      depTimezone: departureDate ? depTz : undefined,
-      arrivalLocal: effectiveArrivalDate
-        ? (buildLocalString(effectiveArrivalDate, effectiveArrivalTime, { anchorDateOnly }) ??
-          undefined)
-        : undefined,
-      arrTimezone: effectiveArrivalDate ? arrTz : undefined,
-      // Actual departure/arrival (#200) — same undefined-when-empty contract
-      // as the scheduled pair above: leaving these blank must never emit an
-      // empty string or null, only omit the field entirely (a flight with no
-      // recorded actual time must stay that way). Paired with the SAME
-      // airport timezone as its scheduled counterpart (depTz/arrTz) since
-      // actual departure happens at the departure airport and actual arrival
-      // at the arrival airport, same as the scheduled times.
-      // Never anchored: an actual time is a recorded observation. A date
-      // without a clock reading is incomplete input (canSubmit blocks it),
-      // not a midpoint to guess at.
-      actualDepartureLocal: actualDepartureDate
-        ? (buildLocalString(actualDepartureDate, actualDepartureTime) ?? undefined)
-        : undefined,
-      actualDepartureTz: actualDepartureDate ? depTz : undefined,
-      actualArrivalLocal: actualArrivalDate
-        ? (buildLocalString(actualArrivalDate, actualArrivalTime) ?? undefined)
-        : undefined,
-      actualArrivalTz: actualArrivalDate ? arrTz : undefined,
-      depTimeSemantics,
-      arrTimeSemantics,
+  const buildFlightPayload = (): FlightInput =>
+    buildFlightPayloadFrom({
       status,
-      notes: notes || undefined,
-      bookingReference: bookingReference || undefined,
-      ticketNumber: ticketNumber || undefined,
+      departureDate,
+      departureTime,
+      arrivalDate,
+      arrivalTime,
+      departure,
+      arrival,
+      airline,
+      lookupAirlineIata,
+      lookupAirlineIcao,
+      operatingAirline,
+      lookupIsCodeshare,
+      flightNumber,
+      lookupCallsign,
+      aircraft,
+      trackAircraft,
+      lookupAircraftRegistration,
+      lookupAircraftModeS,
+      seatClass,
+      seatNumber,
+      terminal,
+      gate,
+      boardingGroup,
+      depTz,
+      arrTz,
+      actualDepartureDate,
+      actualDepartureTime,
+      actualArrivalDate,
+      actualArrivalTime,
+      notes,
+      bookingReference,
+      ticketNumber,
       price,
       currency,
       taxes,
       fees,
-      receiptUrl: receiptUrl || undefined,
-      category: category || null,
-      tags: tags.length ? tags : undefined,
-      companions: companions.length ? companions : undefined,
-      // `|| undefined` matters here: since #199 these are editable inputs,
-      // and a blanked field must be OMITTED — an empty string would
-      // overwrite a parser-provided value with nothing on the server.
-      baggageAllowance: baggageAllowance || undefined,
-      frequentFlyerNumber: frequentFlyerNumber || undefined,
-      bookingClassLetter: bookingClassLetter || undefined,
-      coPassengers: coPassengers.length ? coPassengers : undefined,
-    };
-  };
+      receiptUrl,
+      category,
+      tags,
+      companions,
+      baggageAllowance,
+      frequentFlyerNumber,
+      bookingClassLetter,
+      coPassengers,
+    });
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
@@ -888,33 +733,7 @@ export function useFlightForm(
             importBatchId
           );
 
-          /**
-           * Say what the import actually did.
-           *
-           * Forgejo #13: re-importing the same multi-leg MSG replayed the whole
-           * review wizard with no duplicate warning, and after the final click
-           * the dialog simply closed. The flight count did not move and nothing
-           * said why — the server had skipped every row as already present, and
-           * the frontend threw that number away, using only `newAchievements`
-           * from the response.
-           *
-           * A silent no-op after four screens of review is the worst available
-           * outcome: the user cannot tell it from a failure, so they try again.
-           */
-          const created = batchResult.count ?? 0;
-          const skipped = batchResult.skipped ?? 0;
-          const toast = useToastStore.getState().addToast;
-          if (created === 0 && skipped > 0) {
-            toast("info", t("flights:review.batchAllDuplicates", { count: skipped }));
-          } else if (skipped > 0) {
-            toast("success", t("flights:review.batchImportedWithSkips", { created, skipped }));
-          } else if (created > 0) {
-            toast("success", t("flights:review.batchImported", { count: created }));
-          } else if (submittedCount > 0) {
-            // Neither created nor skipped, yet rows were sent: something is
-            // wrong that no other branch describes, and silence would hide it.
-            toast("error", t("errors:saveFailed"));
-          }
+          reportBatchOutcome(batchResult, submittedCount, t);
 
           confirmedFlightsRef.current = [];
           setShowFlightReview(false);
