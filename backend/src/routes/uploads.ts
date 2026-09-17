@@ -8,6 +8,8 @@ import fs from "fs";
 import { prisma } from "../db";
 import { validateReceiptFile } from "../utils/fileValidation";
 import logger from "../utils/logger";
+import { createDocument } from "../services/documents/documentService";
+import { RECEIPT_SOURCE, receiptUrlFor } from "../services/documents/receipts";
 
 const router = Router();
 
@@ -89,25 +91,31 @@ router.post(
         throw new AppError(`File validation failed: ${validation.reason}`, 400);
       }
 
-      // Record who owns this file, once, from the session. This row — not any
-      // later reference in a request body — is what decides who may read or
-      // delete it (audit finding AUD-019).
-      await prisma.receiptUpload.create({
-        data: { filename: req.file.filename, userId: req.userId! },
+      // Kept as a Document since forgejo#116: the receipt is an original like
+      // any other, and its owner is written once, from the session, as the
+      // upload's was (AUD-019). The entry that names this URL gets it filed by
+      // the hourly document run (services/documents/receipts.ts).
+      const { document } = await createDocument({
+        userId: req.userId!,
+        buffer: fs.readFileSync(filePath),
+        originalName: req.file.originalname,
+        declaredMime: req.file.mimetype,
+        source: RECEIPT_SOURCE,
+        kind: "invoice",
       });
-
-      // Return the URL to access the uploaded file
-      const receiptUrl = `/api/v1/uploads/receipts/${req.file.filename}`;
 
       res.status(201).json({
         success: true,
-        receiptUrl,
-        filename: req.file.filename,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
+        receiptUrl: receiptUrlFor(document.id),
+        filename: document.id,
+        size: document.sizeBytes,
+        mimetype: document.mimetype,
       });
     } catch (error) {
-      // Cleanup on error
+      next(error);
+    } finally {
+      // The multer copy is a staging file either way: the document store holds
+      // the kept bytes, and a refused upload keeps nothing.
       if (filePath && fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);
@@ -119,7 +127,6 @@ router.post(
           });
         }
       }
-      next(error);
     }
   }
 );

@@ -20,6 +20,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
@@ -62,6 +63,7 @@ const stay = registry.register(
   "Stay",
   z
     .object({
+      ...prismaColumns("LodgingStay"),
       id: z.string().uuid(),
       lodgingId: z.string().uuid(),
       checkIn: z.string().datetime().nullable(),
@@ -84,8 +86,6 @@ const stay = registry.register(
         ),
       status: z.enum(STAY_STATUSES),
       board: z.enum(BOARD_TYPES).nullable(),
-      roomType: z.string().nullable(),
-      price: z.number().nullable(),
       currency: z
         .string()
         .nullable()
@@ -107,6 +107,7 @@ const lodging = registry.register(
   "Lodging",
   z
     .object({
+      ...prismaColumns("Lodging"),
       id: z.string().uuid(),
       userId: z.string().uuid(),
       type: z.enum(LODGING_TYPES),
@@ -126,6 +127,12 @@ const lodging = registry.register(
         .array(stay)
         .optional()
         .describe("Included by GET /lodging/{id}; the list endpoint omits them."),
+      chain: includedRow("chain").nullable().optional(),
+      stayCount: z.number().int().optional().describe("Stays that count: check-out is past"),
+      nights: z.number().int().optional(),
+      overallRating: z.number().nullable().optional(),
+      totalSpendBase: z.number().optional().describe("Spend in the account's base currency"),
+      totalSpendBaseByCurrency: z.record(z.string(), z.number()).optional(),
     })
     .describe(
       "A place you slept. Created once and reused: the same hotel visited twice " +

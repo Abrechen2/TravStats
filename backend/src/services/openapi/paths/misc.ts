@@ -10,17 +10,24 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
 
 const achievement = registry.register(
   "Achievement",
   z
     .object({
-      id: z.string(),
-      category: z.string(),
-      points: z.number().int(),
-      unlocked: z.boolean(),
+      ...prismaColumns("Achievement"),
+      isUnlocked: z.boolean().describe("Progress has reached the requirement"),
       unlockedAt: z.string().datetime().nullable(),
-      progress: z.number().describe("0–1 completion toward unlocking"),
+      progress: z
+        .number()
+        .describe(
+          "Absolute progress in the requirement's own unit (flights, km, countries …), not a fraction"
+        ),
+      progressPercentage: z
+        .number()
+        .int()
+        .describe("progress / requirement, as 0–100, capped at 100"),
     })
     .describe(
       "Identifiers and rank values are stable slugs, never display copy — " +

@@ -22,14 +22,7 @@ export default function ReceiptUpload({
 
   const handleFileChange = async (file: File) => {
     // Validate file type
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "application/pdf",
-    ];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
     if (!allowedTypes.includes(file.type)) {
       setError(t("flights:receipt.invalidFileType"));
       return;
@@ -127,7 +120,7 @@ export default function ReceiptUpload({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+            accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
             onChange={(e) => e.target.files && handleFileChange(e.target.files[0])}
             className="hidden"
             disabled={uploading}

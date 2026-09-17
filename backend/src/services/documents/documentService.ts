@@ -65,10 +65,11 @@ const OWNER_COLUMN = {
 } as const satisfies Record<EntryType, keyof Document>;
 
 /**
- * How the row came to be. `parse` is the server's own (a parse route kept its
- * input); a client may say `upload` or `companion`, nothing else.
+ * How the row came to be. `parse` (a parse route kept its input) and `receipt`
+ * (the receipt upload, see receipts.ts) are the server's own; a client may say
+ * `upload` or `companion`, nothing else.
  */
-export const DOCUMENT_SOURCES = ["upload", "companion", "parse"] as const;
+export const DOCUMENT_SOURCES = ["upload", "companion", "parse", "receipt"] as const;
 export type DocumentSource = (typeof DOCUMENT_SOURCES)[number];
 
 /**
@@ -417,7 +418,14 @@ export async function listDocumentsForEntry(userId: string, entry: EntryRef): Pr
 
 export async function deleteDocument(userId: string, id: string): Promise<void> {
   const document = await getOwnDocument(userId, id);
-  await prisma.document.delete({ where: { id: document.id } });
+  // A receipt is named by its entry's `receiptUrl`; left behind, the link
+  // would show a receipt that answers 404.
+  const receiptUrl = `/api/v1/documents/${document.id}/file`;
+  await prisma.$transaction([
+    prisma.flight.updateMany({ where: { userId, receiptUrl }, data: { receiptUrl: null } }),
+    prisma.lodgingStay.updateMany({ where: { userId, receiptUrl }, data: { receiptUrl: null } }),
+    prisma.document.delete({ where: { id: document.id } }),
+  ]);
   await removeDocumentFile(document.storedName);
   logger.info(
     { operation: "document_deleted", documentId: document.id, format: document.format },

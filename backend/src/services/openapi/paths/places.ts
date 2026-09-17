@@ -21,6 +21,7 @@ import { z } from "zod";
 import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { createVisitSchema } from "../../../schemas/place";
 import { errorContent } from "./shared";
@@ -41,6 +42,7 @@ const place = registry.register(
   "Place",
   z
     .object({
+      ...prismaColumns("Place"),
       id: uuid,
       userId: uuid,
       name: z.string(),
@@ -57,7 +59,11 @@ const place = registry.register(
       visited: z
         .boolean()
         .describe("False means a wishlist entry — somewhere wanted, not somewhere been."),
-      visitCount: z.number().int(),
+      visitCount: z.number().int().describe("Visits that happened; future-dated ones excluded"),
+      plannedVisitCount: z.number().int().describe("Future-dated visits, counted apart"),
+      lastVisitAt: z.string().datetime().nullable().describe("Most recent completed visit"),
+      continent: z.string().nullable(),
+      visits: z.array(includedRow("visit")).optional().describe("Included by GET /places/{id}"),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
     })
@@ -68,6 +74,7 @@ const placeList = registry.register(
   "PlaceList",
   z
     .object({
+      ...prismaColumns("PlaceList"),
       id: uuid,
       userId: uuid,
       name: z.string(),
@@ -111,6 +118,10 @@ const placeList = registry.register(
             "a real denominator (47 of 1,248, not 47 of 47). Null for an " +
             "ordinary list, where placeCount is already the total."
         ),
+      entries: z
+        .array(includedRow("list entry"))
+        .optional()
+        .describe("Only when the entries were asked for"),
     })
     .openapi("PlaceList")
 );
