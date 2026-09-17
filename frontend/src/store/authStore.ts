@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { User } from "../types";
 import { authApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { useDashboardCountsStore } from "./dashboardCountsStore";
 
 interface AuthState {
   user: User | null;
@@ -37,7 +38,20 @@ export const useAuthStore = create<AuthState>()(
         // Drops the local session without calling the server. Used when the
         // server has ALREADY rejected the cookie — a logout round-trip would
         // only confirm what the 401 just told us.
-        clearSession: () => set({ user: null }),
+        //
+        // Also resets `dashboardCountsStore`: logout/login is an SPA
+        // navigation (NavigationBar calls `logout()` then `navigate`,
+        // LoginPage calls `setAuth()` then `navigate` — no page reload), so
+        // the module-level counts store would otherwise keep showing
+        // account A's numbers in the tab strip for however long it takes
+        // account B's own fetch to land. Only the 401 interceptor path does
+        // a hard reload; this store's own transitions do not, so both of
+        // them must clear it themselves (critical finding, review round 1
+        // of the 2026-09-17 alex-design-feedback task 2 fix).
+        clearSession: () => {
+          useDashboardCountsStore.getState().reset();
+          set({ user: null });
+        },
         logout: async () => {
           try {
             // Clear the HttpOnly cookie on server
@@ -46,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
             logger.error("Logout error:", error);
           } finally {
             // Clear local user state regardless of API result
+            useDashboardCountsStore.getState().reset();
             set({ user: null });
           }
         },
