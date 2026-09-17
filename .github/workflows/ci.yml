@@ -279,9 +279,24 @@ jobs:
   # on the URL below only because jest.setup.ts explicitly honours an
   # already-chosen limit, which makes the intent visible at the call site.
   # ---------------------------------------------------------------------
+  # Sharded since 2026-09-17. The suite runs serially (`maxWorkers: 1`,
+  # because its files share one database and wipe tables), and in one job
+  # it took 30.5 minutes, against six for everything else together. Four
+  # jobs, each with its own PostGIS container, cut the wall-clock time and
+  # change nothing about isolation: a shard is the old job on a quarter of
+  # the files. `fail-fast: false` so that one red shard does not hide the
+  # results of the other three.
+  #
+  # Coverage is merged in `backend-coverage` below, from the hit counts,
+  # not from the shards' percentages. Each shard reports every source file
+  # (`collectCoverageFrom`), so on its own each would read far too low.
   backend-tests:
-    name: Backend tests (Jest)
+    name: Backend tests (Jest ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -347,16 +362,54 @@ jobs:
       - name: Jest
         id: jest
         run: >-
-          cd backend && npx jest --ci --forceExit --coverage
-          --coverageReporters=json-summary --coverageReporters=text-summary
+          cd backend && npx jest --ci --forceExit --shard=${{ matrix.shard }}/4
+          --coverage --coverageReporters=json
+
+      # Uploaded after a red run too: the coverage job merges what exists and
+      # the ratchet then reports the number, as it did before sharding.
+      - name: Keep this shard's coverage
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-${{ matrix.shard }}
+          path: backend/coverage/coverage-final.json
+          if-no-files-found: error
+          retention-days: 3
+
+  backend-coverage:
+    name: Backend coverage ratchet
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    # Runs whether the shards passed or failed, so the figure is never
+    # missing. A shard that died before writing its report fails the merge
+    # step loudly instead of silently lowering the number.
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Collect the shards' coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: backend-coverage-*
+          path: backend/coverage-shards
+
+      - name: Merge coverage
+        run: cd backend && node scripts/merge-coverage.cjs coverage-shards coverage
 
       # The baseline was recorded from a green local run and CI's figures
       # matched it within the tolerance (2026-09-16). If a later CI figure
       # differs for an environment reason (a test that skips here), record
-      # CI's figure rather than widening the tolerance. Runs after a red Jest
-      # too, like the frontend ratchet, so the number is never missing.
+      # CI's figure rather than widening the tolerance.
       - name: Coverage ratchet
-        if: success() || failure()
         run: node scripts/check-coverage.mjs backend
 
   # ---------------------------------------------------------------------
