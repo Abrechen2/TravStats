@@ -18,8 +18,28 @@
  * This file, not `seedDemoAccount.ts`, owns the username: importing the seed
  * from middleware would drag the whole seeding machinery into the running app.
  */
+import { prisma } from "../db";
+
 export const DEMO_USERNAME = "demo";
 
 export function isSharedDemoAccount(user: { isDemo: boolean; username: string }): boolean {
   return user.isDemo && user.username === DEMO_USERNAME;
+}
+
+/**
+ * The same question, asked of an id.
+ *
+ * It lives here rather than in `middleware/demoGuard.ts`, where it started,
+ * because SERVICES ask it too since the independent review of 2026-09-17
+ * (finding A2: the Immich and Dawarich resolvers must hand the shared account
+ * no instance connection). A service reaching into a middleware for a
+ * predicate would invert the layering; `demoGuard` re-exports this one so its
+ * existing callers are unaffected.
+ */
+export async function isSharedDemoUser(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isDemo: true, username: true },
+  });
+  return user ? isSharedDemoAccount(user) : false;
 }

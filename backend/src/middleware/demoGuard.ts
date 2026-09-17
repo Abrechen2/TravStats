@@ -1,18 +1,18 @@
 import type { NextFunction, Response } from "express";
 import { prisma } from "../db";
-import { isSharedDemoAccount } from "../utils/sharedDemo";
+import { isSharedDemoUser } from "../utils/sharedDemo";
 import type { AuthRequest } from "./auth";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-/** Is the caller the shared, publicly-logged-in demo account? */
-export async function isSharedDemoUser(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { isDemo: true, username: true },
-  });
-  return user ? isSharedDemoAccount(user) : false;
-}
+/**
+ * Is the caller the shared, publicly-logged-in demo account?
+ *
+ * Re-exported, not defined here: services ask the same question (see
+ * `utils/sharedDemo.ts`), and a service importing a middleware would invert
+ * the layering. Existing callers of this name keep working.
+ */
+export { isSharedDemoUser };
 
 /**
  * The demo account is shared by every visitor of a public instance. What one

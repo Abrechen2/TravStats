@@ -12,6 +12,7 @@
  */
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
+import { isSharedDemoUser } from "../../utils/sharedDemo";
 import logger from "../../utils/logger";
 import { DawarichConnection, DawarichConnectionSource, normalizeDawarichBaseUrl } from "./errors";
 
@@ -76,6 +77,20 @@ export function buildUserDawarichConnection(
 export async function getDawarichConnection(userId?: string): Promise<DawarichConnection | null> {
   try {
     if (userId) {
+      /**
+       * The SHARED demo account resolves nothing (independent review,
+       * 2026-09-17, finding A2) — the same trade as `immichResolver.ts`, and
+       * for a sharper reason: the admin-global and ENV tiers below would hand
+       * a stranger on a public instance the operator's own LOCATION HISTORY
+       * through the track-pull route. `null` is what an unconfigured account
+       * gets, so the route answers its existing `notConfigured` path.
+       *
+       * `buildUserDawarichConnection` above needs no such check: it is the
+       * user tier alone, and the demo cannot set one (`/settings/dawarich`
+       * refuses it), so the nightly country-day sweep never enumerates it.
+       */
+      if (await isSharedDemoUser(userId)) return null;
+
       const settings = await prisma.userSettings.findUnique({
         where: { userId },
         select: { dawarichBaseUrl: true, dawarichApiKey: true },
