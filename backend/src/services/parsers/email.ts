@@ -131,8 +131,12 @@ export async function parseEmail(
 
   // Step 0: User-derived regex templates (before HTML-selector templates)
   if (config.userId) {
+    // "flight", named rather than implied: this parser reads flight mails, and
+    // a template derived for another domain would be applied as if its
+    // patterns were flight numbers and airport codes.
     const userTemplate = await findMatchingTemplate(
       config.userId,
+      "flight",
       fromAddress,
       subject,
       cleanedText

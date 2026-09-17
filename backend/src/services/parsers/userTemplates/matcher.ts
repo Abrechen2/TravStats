@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import type { TemplateDomain } from "./types";
 import type { TemplateFingerprint, TemplatePatterns, TemplateStats, UserTemplate } from "./types";
 import logger from "../../../utils/logger";
 
@@ -30,16 +31,30 @@ export function matchesFingerprint(
 /**
  * Finds the first active ParserTemplate that matches this email from the
  * user's own templates. Returns the template or null if none match.
+ *
+ * `domain` is REQUIRED, and it is the whole point of this parameter existing.
+ * `ParserTemplate` has carried a `domain` column since it was created, the
+ * query never used it, and nothing ever wrote a value other than the
+ * `"flight"` default — so the omission cost nothing and was invisible. The day
+ * the workshop derives a lodging template (forgejo#124, phase 6), an
+ * unfiltered query hands it to the FLIGHT parser, whose patterns are read as
+ * flight numbers and airport codes. A template that matches and extracts
+ * nonsense is worse than one that never runs, because the result is a
+ * proposal a human accepts by habit.
+ *
+ * Callers pass the domain they are parsing. There is no "any" — a caller that
+ * does not know what it is reading cannot be handed a template for it.
  */
 export async function findMatchingTemplate(
   userId: string,
+  domain: TemplateDomain,
   fromAddress: string,
   subject: string,
   body: string
 ): Promise<UserTemplate | null> {
   try {
     const templates = await prisma.parserTemplate.findMany({
-      where: { userId, status: "active" },
+      where: { userId, domain, status: "active" },
       orderBy: { updatedAt: "desc" },
     });
 

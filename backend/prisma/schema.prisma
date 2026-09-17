@@ -1249,6 +1249,11 @@ model ParserTemplate {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  // The shape the matcher actually asks for since 2026-09-17 (forgejo#124):
+  // this user's ACTIVE templates for the domain being parsed. The two indexes
+  // below stay — `[userId, status]` still serves the workshop's own list, and
+  // `[domain]` the per-domain counts.
+  @@index([userId, domain, status])
   @@index([domain])
   @@map("parser_templates")
 }
