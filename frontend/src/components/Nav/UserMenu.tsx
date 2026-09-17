@@ -11,6 +11,9 @@ interface UserMenuProps {
   onLogout: () => void;
   /** Opens the diagnostic export. Absent: the entry is not drawn. */
   onReportBug?: () => void;
+  /** Draws the admin link (T4, 2026-09-17 tester feedback). Absent or false:
+   *  no entry — the same default a normal account gets. */
+  isAdmin?: boolean;
 }
 
 /** Where support goes. The same three the old header's Support chip held. */
@@ -41,6 +44,7 @@ export default function UserMenu({
   profilePicture,
   onLogout,
   onReportBug,
+  isAdmin = false,
 }: UserMenuProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "settings", "common"]);
   const [open, setOpen] = useState(false);
@@ -118,6 +122,18 @@ export default function UserMenu({
             <Icon name="settings" size={16} />
             {t("dashboard:settings")}
           </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
+              style={{ color: "var(--ts-text)" }}
+            >
+              <Icon name="shield" size={16} />
+              {t("dashboard:admin")}
+            </Link>
+          )}
           {onReportBug && (
             <button
               type="button"

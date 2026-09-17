@@ -91,7 +91,7 @@ export default function NavigationBar(): JSX.Element {
   };
 
   const inboxCount = pendingUpdatesCount + openFlagCount;
-  const { primary, more } = useNavItems(inboxCount);
+  const { primary, more } = useNavItems();
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =
     inboxCount > 0 ? `${t("dataQuality:inbox.nav")} (${inboxCount})` : t("dataQuality:inbox.nav");
@@ -173,6 +173,7 @@ export default function NavigationBar(): JSX.Element {
               user={user}
               profilePicture={profilePicture}
               onReportBug={() => setDiagnosticModalOpen(true)}
+              isAdmin={user?.isAdmin ?? false}
               onLogout={() => {
                 handleLogout().catch(() => undefined);
               }}

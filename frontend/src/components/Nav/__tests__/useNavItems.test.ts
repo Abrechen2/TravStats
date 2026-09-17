@@ -23,8 +23,8 @@ import {
 } from "../useNavItems";
 import { useSettingsStore } from "../../../store/settingsStore";
 
-function run(pending = 0) {
-  return renderHook(() => useNavItems(pending)).result.current;
+function run() {
+  return renderHook(() => useNavItems()).result.current;
 }
 
 function section(more: NavSection[], id: string): NavLeaf[] {
@@ -72,7 +72,7 @@ describe("useNavItems — primary destinations (round 4, E1)", () => {
   });
 
   it("marks a group active when any child route matches", () => {
-    const { primary } = run(0);
+    const { primary } = run();
     const logbuch = primary.find((n) => n.id === "logbook")!;
     expect(isNodeActive(logbuch, "/cruises/42")).toBe(true);
     expect(isNodeActive(logbuch, "/trips")).toBe(false);
@@ -86,7 +86,7 @@ describe("useNavItems — Mehr › Sammlungen", () => {
 
   it("moves Erfolge from the header row into Sammlungen", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
-    const { primary, more } = run(0);
+    const { primary, more } = run();
     expect(primary.some((n) => n.id === "achievements")).toBe(false);
     expect(section(more, "collections").map((i) => i.path)).toContain("/achievements");
   });
@@ -94,22 +94,22 @@ describe("useNavItems — Mehr › Sammlungen", () => {
   // Built from flights alone; the entry depends on the flights domain.
   it("offers the passport whenever flights are on, whatever the beta switch says", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
-    expect(section(run(0).more, "collections").map((i) => i.path)).toContain("/passport");
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/passport");
   });
 
   it("omits the passport when flights are off", () => {
     useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: true });
-    expect(section(run(0).more, "collections").map((i) => i.path)).not.toContain("/passport");
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/passport");
   });
 
   it("offers Ortslisten while places are visible", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "poi"] });
-    expect(section(run(0).more, "collections").map((i) => i.path)).toContain("/places/lists");
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/places/lists");
   });
 
   it("omits Ortslisten while places are off", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
-    expect(section(run(0).more, "collections").map((i) => i.path)).not.toContain("/places/lists");
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/places/lists");
   });
 });
 
@@ -119,41 +119,48 @@ describe("useNavItems — Mehr › Werkzeuge", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
   });
 
-  // Owner rule 2026-09-05: the Posteingang is reachable from the menu at all
-  // times, empty or not.
-  it("keeps the Posteingang when nothing is open — without badge or warning", () => {
-    const tools = section(run(0).more, "tools");
-    expect(tools.map((c) => c.path)).toEqual(["/pending-updates"]);
-    expect(tools[0].badge).toBeUndefined();
-    expect(tools[0].warn).toBeUndefined();
+  /**
+   * T4 (2026-09-17 tester feedback): Posteingang was drawn TWICE — once as
+   * the header's own icon with its badge (NavigationBar.tsx), once as a
+   * leaf here — and Admin sat in "Mehr" rather than the account menu, where
+   * settings and logout already live. Both leaves are gone from `tools`;
+   * `UserMenu.admin.test.tsx` covers the admin link's new home.
+   */
+  it("carries no Posteingang leaf — it is the header icon, not a menu entry", () => {
+    const tools = section(run().more, "tools");
+    expect(tools.map((c) => c.id)).not.toContain("inbox");
   });
 
-  it("shows the Posteingang with badge and warning when something is open", () => {
-    const inbox = section(run(3).more, "tools")[0];
-    expect(inbox.badge).toBe(3);
-    expect(inbox.warn).toBe(true);
+  it("carries no Admin leaf, for a normal user", () => {
+    const tools = section(run().more, "tools");
+    expect(tools.map((c) => c.id)).not.toContain("admin");
   });
 
-  it("adds Parser (beta) and Admin for admins while the instance beta switch is on", () => {
+  it("carries neither Posteingang nor Admin for an admin either", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
-    const tools = section(run(0).more, "tools");
-    expect(tools.map((c) => c.path)).toEqual(["/pending-updates", "/parser", "/admin"]);
-    expect(tools.find((c) => c.path === "/parser")?.betaBadge).toBe(true);
+    const tools = section(run().more, "tools");
+    expect(tools.map((c) => c.id)).not.toContain("inbox");
+    expect(tools.map((c) => c.id)).not.toContain("admin");
+  });
+
+  it("still offers Parser (beta) to admins while the instance beta switch is on", () => {
+    authState.user = { isAdmin: true };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+    const tools = section(run().more, "tools");
+    expect(tools.map((c) => c.path)).toEqual(["/parser"]);
+    expect(tools[0].betaBadge).toBe(true);
   });
 
   // Owner decision 2026-09-05 (no. 10): the Beta badge has a gate behind it.
-  it("keeps the Parser off the menu for admins while the instance beta switch is off", () => {
+  it("leaves Werkzeuge empty for admins while the instance beta switch is off", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
-    expect(section(run(0).more, "tools").map((c) => c.path)).toEqual([
-      "/pending-updates",
-      "/admin",
-    ]);
+    expect(section(run().more, "tools")).toEqual([]);
   });
 
   it("draws no settings entry here — settings live behind the avatar", () => {
-    const { primary, more } = run(0);
+    const { primary, more } = run();
     const paths = [
       ...primary.flatMap((n) => (n.kind === "group" ? n.children : [n])).map((n) => n.path),
       ...more.flatMap((s) => s.items.map((i) => i.path)),

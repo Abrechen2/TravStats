@@ -101,11 +101,14 @@ describe("NavigationBar — round-4 header", () => {
     expect(trips.getAttribute("aria-current")).toBe("page");
   });
 
-  it("keeps Erfolge and the Posteingang under Mehr", () => {
+  // T4 (2026-09-17 tester feedback): Posteingang left "Mehr" — it is the
+  // header's own icon below (and only there now), so drawing it a second
+  // time here duplicated it.
+  it("keeps Erfolge under Mehr, without a second Posteingang entry", () => {
     renderNav();
     fireEvent.click(screen.getAllByRole("button", { name: /nav\.more/i })[0]);
     expect(screen.getByRole("menuitem", { name: /dashboard:achievements/ })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /dataQuality:inbox\.nav/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /dataQuality:inbox\.nav/ })).toBeNull();
   });
 
   // Owner rule 2026-09-05: the Posteingang is reachable at all times — as an

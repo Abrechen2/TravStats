@@ -57,19 +57,22 @@ function collapseSingleChild(group: NavGroup): NavNode {
  *
  * Four primary destinations — Dashboard, Logbuch, Reisen, Statistik — and
  * everything else in "Mehr", in two sections: Sammlungen (Erfolge, Reisepass,
- * Ortslisten) and Werkzeuge (Posteingang, Parser, Admin). Settings and logout
- * live behind the avatar. The old header carried seven top-level entries plus
- * Support and System chips, and wrapped into a hamburger below 1280px.
+ * Ortslisten) and Werkzeuge (Parser, while an admin's beta switch is on).
+ * Settings, Admin and logout live behind the avatar (`UserMenu`); Posteingang
+ * is the header's own icon (`NavigationBar`), with its own badge. The old
+ * header carried seven top-level entries plus Support and System chips, and
+ * wrapped into a hamburger below 1280px.
+ *
+ * T4 (2026-09-17 tester feedback) removed BOTH the Posteingang and the Admin
+ * leaves that used to live here: Posteingang was drawn twice (once as the
+ * header icon, once as this menu entry), and Admin sat in "Mehr" rather than
+ * beside the other account-level actions.
  *
  * The model draws only what the product has. The design's Schnellsuche,
  * Import-Logbuch page and Mitreisende page do not exist yet, so they are not
  * here — an entry that leads nowhere is worse than none.
- *
- * `inboxCount` is the WHOLE Posteingang — pending flight updates plus open
- * data-quality questions, summed by `NavigationBar`. It reads no router state,
- * so the model stays testable without a router.
  */
-export function useNavItems(inboxCount: number): {
+export function useNavItems(): {
   primary: NavNode[];
   more: NavSection[];
 } {
@@ -144,44 +147,21 @@ export function useNavItems(inboxCount: number): {
         : []),
     ];
 
-    // The path stays `/pending-updates` although the page is the Posteingang:
-    // it is bookmarked, and `Settings/AutoUpdateSection` links to it.
-    //
-    // The entry is ALWAYS there (owner rule 2026-09-05): an empty inbox must
-    // still be reachable from the menu, and the badge alone says whether it
-    // is empty.
-    const hasOpenItems = inboxCount > 0;
+    // T4 (2026-09-17 tester feedback): Posteingang left this list entirely —
+    // it is the header's own icon now (`NavigationBar`), and drawing it here
+    // too duplicated it. Admin moved into `UserMenu`, beside settings.
     const tools: NavLeaf[] = [
-      {
-        kind: "leaf",
-        id: "inbox",
-        path: "/pending-updates",
-        label: t("dataQuality:inbox.nav"),
-        icon: "inbox",
-        ...(hasOpenItems ? { badge: inboxCount, warn: true } : {}),
-      },
-      ...(isAdmin
+      // The badge and the gate agree: offered only while the instance
+      // beta switch is on (see `parserTemplates` in config/betaFeatures.ts).
+      ...(isAdmin && isFeatureVisible("parserTemplates")
         ? [
-            // The badge and the gate agree: offered only while the instance
-            // beta switch is on (see `parserTemplates` in config/betaFeatures.ts).
-            ...(isFeatureVisible("parserTemplates")
-              ? [
-                  {
-                    kind: "leaf" as const,
-                    id: "parser",
-                    path: "/parser",
-                    label: t("dashboard:parser"),
-                    icon: "mail" as const,
-                    betaBadge: true,
-                  },
-                ]
-              : []),
             {
               kind: "leaf" as const,
-              id: "admin",
-              path: "/admin",
-              label: t("dashboard:admin"),
-              icon: "shield" as const,
+              id: "parser",
+              path: "/parser",
+              label: t("dashboard:parser"),
+              icon: "mail" as const,
+              betaBadge: true,
             },
           ]
         : []),
@@ -193,5 +173,5 @@ export function useNavItems(inboxCount: number): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, isFeatureVisible, placesVisible, isAdmin, inboxCount]);
+  }, [t, isEnabled, isFeatureVisible, placesVisible, isAdmin]);
 }
