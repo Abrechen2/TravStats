@@ -55,6 +55,19 @@ export async function removeDocumentFile(storedName: string): Promise<void> {
   }
 }
 
+/**
+ * How long ago a stored file was last written, or null when it is gone. The
+ * orphan sweep needs it: a file with no row may be an upload whose row is being
+ * inserted right now.
+ */
+export async function documentFileAgeMs(storedName: string, now = Date.now()): Promise<number | null> {
+  try {
+    return now - (await fsp.stat(documentPath(storedName))).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
 /** Every stored name currently on disk — for the orphan sweep. */
 export async function listStoredNames(): Promise<string[]> {
   try {

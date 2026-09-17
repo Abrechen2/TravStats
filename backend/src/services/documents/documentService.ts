@@ -16,6 +16,7 @@ import {
   type DocumentKind,
 } from "./documentFormats";
 import {
+  documentFileAgeMs,
   listStoredNames,
   newStoredName,
   removeDocumentFile,
@@ -35,7 +36,13 @@ import {
  *  - Linking works at creation (`documentIds` on the create routes) AND
  *    afterwards, because an offline capture's document can arrive after its
  *    entry.
- *  - Deleting an entry deletes its documents, row and file.
+ *  - Deleting an entry deletes its documents, row and file. The ROWS go with
+ *    the entry through the foreign keys; the BYTES go with the hourly sweep,
+ *    which is the one place that removes a file whose row is gone. Every path
+ *    that can delete an entry — the entry's own route, deleting its lodging
+ *    or place, deleting the account, a restore — is covered by that one rule,
+ *    where a removal in each route would cover only the routes someone
+ *    remembered.
  *  - An upload that is never filed expires (UNLINKED_TTL_DAYS).
  *
  * Logs carry id, format and size — never content, never the file name.
@@ -75,7 +82,13 @@ const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
   pkpass: "application/vnd.apple.pkpass",
 };
 
-/** Unfiled uploads older than this are removed by the nightly sweep. */
+/**
+ * A file with no row younger than this is left alone by the sweep: it may be an
+ * upload whose row is being inserted right now.
+ */
+export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
+
+/** Unfiled uploads older than this are removed by the sweep. */
 export const UNLINKED_TTL_DAYS = 7;
 
 const NO_OWNER: Prisma.DocumentWhereInput = {
@@ -364,12 +377,15 @@ export interface SweepResult {
 }
 
 /**
- * Nightly: unfiled uploads past their TTL go, and so does any file with no row
+ * Hourly (jobs/documentSweepScheduler.ts): unfiled uploads past their TTL go, and so does any file with no row
  * (a cascade that removed rows without their bytes, a crash between write and
  * insert). A file younger than an hour is left alone — it may belong to an
  * upload whose row is being written right now.
  */
-export async function sweepDocuments(now = new Date(), fileAgeMs?: (name: string) => Promise<number | null>): Promise<SweepResult> {
+export async function sweepDocuments(
+  now = new Date(),
+  fileAgeMs: (name: string) => Promise<number | null> = (name) => documentFileAgeMs(name, now.getTime()),
+): Promise<SweepResult> {
   const cutoff = new Date(now.getTime() - UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
   const expired = await prisma.document.findMany({
     where: { ...NO_OWNER, createdAt: { lt: cutoff } },
@@ -389,8 +405,9 @@ export async function sweepDocuments(now = new Date(), fileAgeMs?: (name: string
   let orphanFiles = 0;
   for (const name of onDisk) {
     if (known.has(name)) continue;
-    const age = fileAgeMs ? await fileAgeMs(name) : null;
-    if (age !== null && age < 60 * 60 * 1000) continue;
+    // No age means the file vanished between the listing and now: nothing to remove.
+    const age = await fileAgeMs(name);
+    if (age === null || age < ORPHAN_GRACE_MS) continue;
     await removeDocumentFile(name);
     orphanFiles++;
   }

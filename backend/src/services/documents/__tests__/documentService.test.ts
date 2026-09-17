@@ -156,4 +156,32 @@ describe("documentService", () => {
     expect(fs.existsSync(documentPath(youngName))).toBe(true);
     fs.rmSync(documentPath(youngName), { force: true });
   });
+
+  it("removes a deleted entry's bytes on the next sweep, whichever route deleted the entry", async () => {
+    const doomedFlight = await prisma.flight.create({ data: flightData(userId) });
+    const { document } = await createDocument({
+      userId,
+      buffer: PDF("doomed"),
+      entry: { type: "flight", id: doomedFlight.id },
+    });
+    await prisma.flight.delete({ where: { id: doomedFlight.id } });
+    expect(await prisma.document.findUnique({ where: { id: document.id } })).toBeNull();
+    expect(fs.existsSync(documentPath(document.storedName))).toBe(true);
+
+    await sweepDocuments(new Date(Date.now() + 2 * 60 * 60 * 1000));
+    expect(fs.existsSync(documentPath(document.storedName))).toBe(false);
+  });
+
+  it("reads a file's real age when the scheduler calls it without an age function", async () => {
+    // The scheduler passes nothing. Before the default read the file's mtime,
+    // "no age" meant "old enough" — and an upload mid-insert lost its bytes.
+    const freshName = `fresh-${PREFIX}.pdf`;
+    fs.writeFileSync(documentPath(freshName), "%PDF fresh");
+    await sweepDocuments();
+    expect(fs.existsSync(documentPath(freshName))).toBe(true);
+
+    const past = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    await sweepDocuments(past);
+    expect(fs.existsSync(documentPath(freshName))).toBe(false);
+  });
 });
