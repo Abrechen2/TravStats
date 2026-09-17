@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, within, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminPage from "../AdminPage";
+import {
+  installFakeIntersectionObserver,
+  type FakeIntersectionObserverHandle,
+} from "../Admin/__tests__/intersectionObserverStub";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback, forgejo#…): the admin
@@ -60,6 +64,12 @@ vi.mock("@/lib/api", async (importOriginal) => {
         ollamaUrl: null,
         ollamaModel: null,
       }),
+      // Only reached once a lazy section's IntersectionObserver reports it
+      // visible — the "lazy section reveal" describe block below is the only
+      // place these get called at all.
+      getLoggingConfig: vi.fn().mockResolvedValue({ logLevel: "info" }),
+      getLogFiles: vi.fn().mockResolvedValue({ files: [] }),
+      getLogStats: vi.fn().mockResolvedValue({ totalSize: 0, fileCount: 0 }),
     },
   };
 });
@@ -142,5 +152,82 @@ describe("AdminPage — one page, anchor jumps", () => {
     await screen.findByRole("region", { name: "admin:tabs.system" });
 
     expect(scrollSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Wave C finding C3 (independent review, 2026-09-17): jsdom has no
+ * IntersectionObserver at all, so every describe block above this one
+ * relies on a lazy section's body deliberately never mounting — which also
+ * means none of them could ever have caught a broken reveal. This block
+ * installs the controllable stub from `intersectionObserverStub.ts` to drive
+ * an actual intersection and observe what happens on the other side of it,
+ * for exactly the "logging" section (general tab, `LAZY_ADMIN_SECTIONS`):
+ * its body renders nothing until `loggingConfig` arrives from
+ * `adminApi.getLoggingConfig()`, which `AdminPage`'s `sectionOnVisible.logging`
+ * fires from `LazySection`'s `onVisible` — the same wiring finding C1 fixed
+ * the placeholder height and deep-link re-scroll around.
+ */
+describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
+  let io: FakeIntersectionObserverHandle;
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    io = installFakeIntersectionObserver();
+  });
+
+  afterEach(() => {
+    io.restore();
+  });
+
+  it("mounts the logging section's body and fetches its data on first intersection, but not again on a second", async () => {
+    renderAdmin();
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+
+    const sectionEl = document.getElementById("admin-logging");
+    expect(sectionEl?.childElementCount).toBe(0);
+
+    const observer = io.observerFor("admin-logging");
+    expect(observer).toBeDefined();
+
+    act(() => {
+      observer?.trigger(true);
+    });
+    await waitFor(() => expect(sectionEl?.childElementCount).toBeGreaterThan(0));
+
+    const { adminApi } = await import("@/lib/api");
+    expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
+
+    // A second intersection report for the same section (a real browser
+    // would not deliver one post-disconnect, but the point here is
+    // LazySection's OWN `notifiedRef` guard, not that detail — see the stub).
+    act(() => {
+      observer?.trigger(true);
+    });
+    expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-scrolls the deep-linked section once its lazy content has actually mounted", async () => {
+    const scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy;
+
+    renderAdmin("/admin?section=logging");
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+
+    // The first scroll runs against the section's placeholder height (finding
+    // C1) — it happens regardless of any intersection, same as the plain
+    // (no-stub) test above.
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+
+    const observer = io.observerFor("admin-logging");
+    act(() => {
+      observer?.trigger(true);
+    });
+
+    // Once the target has actually mounted, the page re-scrolls to correct
+    // for whatever the mount shifted — a bug fixed only in the placeholder,
+    // not in the re-scroll, would leave this at 1.
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(2));
+    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-logging"));
   });
 });
