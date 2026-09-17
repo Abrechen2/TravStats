@@ -14,6 +14,7 @@ import { useLocale } from "../hooks/useLocale";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { countAchievements } from "../lib/achievementCounts";
 import { AVAILABLE_DOMAINS, type DomainKey } from "../shared/domains";
 
 /**
@@ -205,17 +206,24 @@ export default function AchievementsPage(): JSX.Element {
     );
   }
 
-  const unlockedCount = countBy((a) => Boolean(a.isUnlocked));
+  const counts = countAchievements(visibleAchievements);
 
   return (
     <AppShell width="list">
       <PageHeader
         title={t("achievements:title")}
-        meta={t("achievements:header.meta", {
-          unlocked: unlockedCount,
-          total: visibleAchievements.length,
-          points: (summary?.totalPoints ?? 0).toLocaleString(locale),
-        })}
+        meta={[
+          t("achievements:header.meta", {
+            unlocked: counts.unlocked,
+            total: counts.total,
+            points: (summary?.totalPoints ?? 0).toLocaleString(locale),
+          }),
+          counts.retiredUnlocked > 0
+            ? t("achievements:header.retired", { count: counts.retiredUnlocked })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
             <Button onClick={() => void handleCheckAchievements()}>
@@ -263,8 +271,8 @@ export default function AchievementsPage(): JSX.Element {
                   {t(`achievements:tiers.${tier}`)}
                 </span>
                 <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                  {countBy((a) => a.tier === tier && Boolean(a.isUnlocked))} /{" "}
-                  {countBy((a) => a.tier === tier)}
+                  {countBy((a) => a.tier === tier && !a.isRetired && Boolean(a.isUnlocked))} /{" "}
+                  {countBy((a) => a.tier === tier && !a.isRetired)}
                 </span>
               </span>
             </button>

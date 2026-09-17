@@ -19,6 +19,12 @@ const achievement = registry.register(
       category: z.string(),
       points: z.number().int(),
       unlocked: z.boolean(),
+      isRetired: z
+        .boolean()
+        .describe(
+          "The definition was removed; listed only because this user earned it. " +
+            "Its points count, but it is outside totalAchievements/unlockedAchievements."
+        ),
       unlockedAt: z.string().datetime().nullable(),
       progress: z.number().describe("0–1 completion toward unlocking"),
     })

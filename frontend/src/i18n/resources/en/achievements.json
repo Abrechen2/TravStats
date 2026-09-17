@@ -1187,6 +1187,8 @@
     }
   },
   "header": {
-    "meta": "{{unlocked}} of {{total}} unlocked · {{points}} points"
+    "meta": "{{unlocked}} of {{total}} unlocked · {{points}} points",
+    "retired_one": "{{count}} retired achievement counts toward points only",
+    "retired_other": "{{count}} retired achievements count toward points only"
   }
 }

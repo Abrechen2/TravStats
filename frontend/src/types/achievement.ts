@@ -18,6 +18,8 @@ export interface Achievement {
   isHidden: boolean;
   createdAt: string;
   isUnlocked?: boolean;
+  /** Removed from the catalogue, listed because it was earned — outside the fraction. */
+  isRetired?: boolean;
   unlockedAt?: string | null;
   progress?: number;
   progressPercentage?: number;

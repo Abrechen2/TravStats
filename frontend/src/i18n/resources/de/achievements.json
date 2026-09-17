@@ -1187,6 +1187,8 @@
     }
   },
   "header": {
-    "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte"
+    "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte",
+    "retired_one": "{{count}} eingestellter Erfolg zählt nur zu den Punkten",
+    "retired_other": "{{count}} eingestellte Erfolge zählen nur zu den Punkten"
   }
 }
