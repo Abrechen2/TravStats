@@ -7,8 +7,6 @@ export interface ParserSettingsData {
   allowUserApiKeys: boolean;
   /** Whether this instance may ask jsDelivr for rates the ECB does not carry. */
   fxCdnFallbackEnabled: boolean;
-  defaultVisionParser: string;
-  defaultTextParser: string;
   /** Who reads a booking document first, in every domain. Absent on a backend
    *  older than 2.7, which always read templates last for flights. */
   parserOrder?: ParserOrder;

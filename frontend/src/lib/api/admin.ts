@@ -254,8 +254,6 @@ export const adminApi = {
   getAdminParserSettings: async (): Promise<{
     allowUserApiKeys: boolean;
     fxCdnFallbackEnabled: boolean;
-    defaultVisionParser: string;
-    defaultTextParser: string;
     /** Who reads a booking document first, in every domain. Absent on a
      *  backend older than 2.7 — treat a missing value as "template_first". */
     parserOrder?: ParserOrder;
@@ -265,8 +263,6 @@ export const adminApi = {
     const { data } = await api.get<{
       allowUserApiKeys: boolean;
       fxCdnFallbackEnabled: boolean;
-      defaultVisionParser: string;
-      defaultTextParser: string;
       parserOrder?: ParserOrder;
       ollamaUrl: string | null;
       ollamaModel: string | null;

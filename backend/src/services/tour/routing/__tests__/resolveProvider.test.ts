@@ -36,8 +36,6 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          defaultVisionParser: "auto",
-          defaultTextParser: "auto",
           allowUserFlightApiKeys: true,
         },
       });

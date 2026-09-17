@@ -740,10 +740,6 @@ model AdminSettings {
   // self-hoster gets to decide whether their instance talks to jsDelivr at all.
   fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
 
-  // Default parser settings for new users
-  defaultVisionParser String @default("auto") @map("default_vision_parser")
-  defaultTextParser   String @default("auto") @map("default_text_parser")
-
   // Which reader gets the first look at a booking document, in EVERY domain:
   // "template_first" or "llm_first". Owner decision 2026-09-17, after the
   // paths were measured against the sample corpus: the template chain read

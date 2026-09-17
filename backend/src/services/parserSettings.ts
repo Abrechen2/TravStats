@@ -18,8 +18,6 @@ export interface AdminParserSettings {
   globalOpenaiApiKey?: string | null;
   globalClaudeApiKey?: string | null;
   allowUserApiKeys?: boolean;
-  defaultVisionParser?: string | null;
-  defaultTextParser?: string | null;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
   ollamaVisionModel?: string | null;
@@ -90,8 +88,6 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
     globalOpenaiApiKey: decryptApiKey(settings.globalOpenaiApiKey),
     globalClaudeApiKey: decryptApiKey(settings.globalClaudeApiKey),
     allowUserApiKeys: settings.allowUserApiKeys,
-    defaultVisionParser: settings.defaultVisionParser,
-    defaultTextParser: settings.defaultTextParser,
     ollamaUrl: settings.ollamaUrl,
     ollamaModel: settings.ollamaModel,
     ollamaVisionModel: settings.ollamaVisionModel,
