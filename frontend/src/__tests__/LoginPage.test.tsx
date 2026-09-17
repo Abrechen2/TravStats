@@ -23,6 +23,16 @@ vi.mock("../lib/api", () => ({
     loginOptions: vi.fn(),
     loginVerify: vi.fn(),
   },
+  // The page also asks on mount whether this is a public demo instance.
+  // Default to "no" so these cases keep testing ordinary login.
+  setupApi: {
+    getStatus: vi.fn().mockResolvedValue({
+      setupComplete: true,
+      requiresSetup: false,
+      message: "",
+      publicDemoLogin: false,
+    }),
+  },
 }));
 vi.mock("../store/authStore");
 

@@ -17,11 +17,21 @@ const passkeyApi = vi.hoisted(() => ({
   loginOptions: vi.fn(),
   loginVerify: vi.fn(),
 }));
+// The page also asks on mount whether this is a public demo instance.
+// Default to "no" so these cases keep testing ordinary passkey sign-in.
+const setupApi = vi.hoisted(() => ({
+  getStatus: vi.fn().mockResolvedValue({
+    setupComplete: true,
+    requiresSetup: false,
+    message: "",
+    publicDemoLogin: false,
+  }),
+}));
 const startAuthentication = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
 const setAuth = vi.hoisted(() => vi.fn());
 
-vi.mock("../lib/api", () => ({ authApi, passkeyApi }));
+vi.mock("../lib/api", () => ({ authApi, passkeyApi, setupApi }));
 vi.mock("@simplewebauthn/browser", () => ({ startAuthentication }));
 vi.mock("../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
@@ -132,9 +142,7 @@ describe("LoginPage — passkey sign-in", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "login.passkeySubmit" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument());
     expect(navigate).not.toHaveBeenCalled();
   });
 });
