@@ -34,14 +34,25 @@ export function describeLodgingCommitResult(
   // externalRef-dedup feature otherwise reads as a silent "0 hotels, 0 stays
   // imported" on a same-file re-import (every row skipped, nothing failed),
   // with no indication the import worked exactly as designed.
+  // A changed booking moves a stay that already existed, so it shows up in
+  // neither "imported" nor "skipped" — without this sentence the headline
+  // would read "0 hotels and 0 stays imported" for an import that did the
+  // most consequential thing of all: it changed stored data (forgejo#122).
+  // Appended rather than folded into the sentence, so an older backend that
+  // does not send the field reads exactly as it did before.
+  const updated = result.updatedStays ?? 0;
+  const updatedSuffix =
+    updated > 0 ? t("lodging:import.commitResult.updatedSuffix", { count: updated }) : "";
+
   if (result.failed.length === 0) {
     return {
       type: "success",
-      message: t("lodging:import.commitResult.success", {
-        hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
-        stays: t("lodging:units.stays", { count: result.createdStays }),
-        skipped: result.skipped,
-      }),
+      message:
+        t("lodging:import.commitResult.success", {
+          hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
+          stays: t("lodging:units.stays", { count: result.createdStays }),
+          skipped: result.skipped,
+        }) + updatedSuffix,
     };
   }
 
@@ -55,13 +66,14 @@ export function describeLodgingCommitResult(
 
   return {
     type: "warning",
-    message: t("lodging:import.commitResult.partial", {
-      hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
-      stays: t("lodging:units.stays", { count: result.createdStays }),
-      skipped: result.skipped,
-      rows: t("lodging:units.rows", { count: result.failed.length }),
-      reasons,
-    }),
+    message:
+      t("lodging:import.commitResult.partial", {
+        hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
+        stays: t("lodging:units.stays", { count: result.createdStays }),
+        skipped: result.skipped,
+        rows: t("lodging:units.rows", { count: result.failed.length }),
+        reasons,
+      }) + updatedSuffix,
   };
 }
 

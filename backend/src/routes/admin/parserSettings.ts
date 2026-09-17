@@ -9,8 +9,7 @@ import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
   fxCdnFallbackEnabled?: boolean;
-  defaultVisionParser?: string;
-  defaultTextParser?: string;
+  parserOrder?: string;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
 }
@@ -22,8 +21,10 @@ const parserSettingsSchema = z.object({
   // because it is the same kind of decision as the Ollama URL: which outside
   // service this instance is allowed to contact.
   fxCdnFallbackEnabled: z.boolean().optional(),
-  defaultVisionParser: z.string().optional(),
-  defaultTextParser: z.string().optional(),
+  // Which reader looks at a booking document first, in every domain. Kept to
+  // the two values the parsers understand, so an admin cannot save a word
+  // that silently means "template_first" (`getParserOrder`).
+  parserOrder: z.enum(["template_first", "llm_first"]).optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
   ollamaModel: z.string().min(1).max(100).optional().nullable(),
 });
@@ -44,8 +45,7 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       allowUserApiKeys: adminSettings.allowUserApiKeys,
       fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-      defaultVisionParser: adminSettings.defaultVisionParser ?? "tesseract",
-      defaultTextParser: adminSettings.defaultTextParser ?? "regex",
+      parserOrder: adminSettings.parserOrder ?? "template_first",
       ollamaUrl: adminSettings.ollamaUrl ?? null,
       ollamaModel: adminSettings.ollamaModel ?? null,
     });
@@ -57,14 +57,8 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
 // Update admin parser settings
 router.put("/parser-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const {
-      allowUserApiKeys,
-      fxCdnFallbackEnabled,
-      defaultVisionParser,
-      defaultTextParser,
-      ollamaUrl,
-      ollamaModel,
-    } = parserSettingsSchema.parse(req.body);
+    const { allowUserApiKeys, fxCdnFallbackEnabled, parserOrder, ollamaUrl, ollamaModel } =
+      parserSettingsSchema.parse(req.body);
 
     let adminSettings;
 
@@ -76,11 +70,8 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     if (fxCdnFallbackEnabled !== undefined) {
       updateData.fxCdnFallbackEnabled = fxCdnFallbackEnabled;
     }
-    if (defaultVisionParser !== undefined) {
-      updateData.defaultVisionParser = defaultVisionParser;
-    }
-    if (defaultTextParser !== undefined) {
-      updateData.defaultTextParser = defaultTextParser;
+    if (parserOrder !== undefined) {
+      updateData.parserOrder = parserOrder;
     }
     if (ollamaUrl !== undefined) {
       updateData.ollamaUrl = ollamaUrl;
@@ -102,8 +93,7 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       settings: {
         allowUserApiKeys: adminSettings.allowUserApiKeys,
         fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
-        defaultVisionParser: adminSettings.defaultVisionParser ?? "tesseract",
-        defaultTextParser: adminSettings.defaultTextParser ?? "regex",
+        parserOrder: adminSettings.parserOrder ?? "template_first",
         ollamaUrl: adminSettings.ollamaUrl ?? null,
         ollamaModel: adminSettings.ollamaModel ?? null,
       },

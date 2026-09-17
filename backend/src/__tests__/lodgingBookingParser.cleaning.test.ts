@@ -5,6 +5,8 @@ import { getAdminParserSettings } from "../services/parserSettings";
 
 jest.mock("../services/parserSettings", () => ({
   getAdminParserSettings: jest.fn(async () => ({ ollamaUrl: null, ollamaModel: null })),
+  // The instance default since 2026-09-17 (forgejo#125).
+  getParserOrder: jest.fn(async () => "template_first"),
 }));
 
 const mockGetAdminParserSettings = getAdminParserSettings as jest.MockedFunction<

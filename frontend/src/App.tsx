@@ -33,7 +33,6 @@ const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import { TripRouteGuard } from "./components/Trips/TripRouteGuard";
-import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -491,13 +490,14 @@ function AppContent() {
                 path="/parser"
                 element={
                   isAuthenticated ? (
-                    // Behind the instance beta switch since 2026-09-05 (owner
-                    // decision; `parserTemplates` in config/betaFeatures.ts).
-                    // Not a boolean guard — the flag is null for one request
-                    // on a cold load, see BetaFeatureRouteGuard.
-                    <BetaFeatureRouteGuard feature="parserTemplates" redirectTo="/">
-                      <ParserPage />
-                    </BetaFeatureRouteGuard>
+                    // Out of the beta registry on 2026-09-17, on the owner's
+                    // decision: the gate's condition was "the template and
+                    // regex parsers are tested against the sample set", and
+                    // they are — 31 of 31 flight mails, 97 of 108 lodging,
+                    // 4 of 4 cruise, every expectation met without an LLM
+                    // (scripts/parser-corpus.ts --regex-only, forgejo#122).
+                    // The page is admin-only through the menu, as before.
+                    <ParserPage />
                   ) : (
                     <Navigate to="/login" />
                   )

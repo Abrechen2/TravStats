@@ -79,24 +79,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The Parser page — /parser and its admin-only nav entry: annotating a mail
-   * to derive a template, the user's own templates, the community templates
-   * and the parse log.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: this gates the TEMPLATE WORKSHOP, not
-   * the parsing. "Buchungs-E-Mail oder PDF" in the add dialog keeps reading
-   * bookings whatever the flag says — that path is the product, this page is
-   * the tooling behind it. The endpoints under /api/v1/templates stay open like
-   * every other gated endpoint (see the file header).
-   */
-  parserTemplates: Object.freeze({
-    reason: "beta",
-    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. The doubt the entry was written on — that only the LLM path was tested — no longer holds: measured on 2026-09-17 with scripts/parser-corpus.ts --regex-only, the template path answered all 31 flight mails and met all 29 expectations in under a second, where the same corpus through gemma3:12b took 19 minutes and missed three. Lodging, re-measured with the same guard in place: 96 of 108 templated with all 96 expectations met, and 12 mails the template path reads nothing from — the earlier figure of 2 was itself an LLM measurement, because 10 of those 12 had quietly gone to Ollama. Cruise: 4 of 4. What is left is the owner's look at the page itself, and the 12.",
-    returnsWhen:
-      "The owner accepts the page for release. The measurement half of this condition is met (see `why`); this is the only gate whose remaining condition is a decision rather than work.",
-  }),
-
-  /**
    * The "Touren" tab on the trip detail page (tour route sections: a named
    * ordered chain of stops with driven legs — the road-trip counterpart to
    * cruise itineraries), and its editor at

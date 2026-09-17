@@ -83,7 +83,7 @@ describe("useNavItems — System group", () => {
     expect((system as NavGroup).badge).toBe(3);
   });
 
-  it("adds Admin and Parser (beta) for admins while the instance beta switch is on", () => {
+  it("adds Admin and Parser for admins", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const { system } = run(0);
@@ -95,18 +95,27 @@ describe("useNavItems — System group", () => {
       "/admin",
       "/parser",
     ]);
-    expect(g.children.find((c) => c.path === "/parser")?.betaBadge).toBe(true);
+    // Out of the beta registry on 2026-09-17, so no badge either: a "Beta"
+    // label with no gate behind it is what the 2026-09-05 decision removed,
+    // and leaving the label while deleting the gate would restore it.
+    expect(g.children.find((c) => c.path === "/parser")?.betaBadge).toBeUndefined();
   });
 
-  // Owner decision 2026-09-05 (design-system decisions, no. 10): the badge
-  // gets a gate behind it. Before, an admin on a production instance saw a
-  // "Beta" label on a page the switch had no say over.
-  it("keeps the Parser off the menu for admins while the instance beta switch is off", () => {
+  // The gate this replaced was added on 2026-09-05 and removed on 2026-09-17,
+  // both on the owner's decision: its condition was that the template and
+  // regex parsers be measured against the sample set, and they were. The
+  // entry depends on being an admin, and on nothing else.
+  it("offers the Parser to admins whatever the instance beta switch says", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
     const { system } = run(0);
     const g = system as NavGroup;
-    expect(g.children.map((c) => c.path)).toEqual(["/settings", "/pending-updates", "/admin"]);
+    expect(g.children.map((c) => c.path)).toEqual([
+      "/settings",
+      "/pending-updates",
+      "/admin",
+      "/parser",
+    ]);
   });
 });
 

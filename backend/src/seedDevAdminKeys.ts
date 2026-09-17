@@ -78,8 +78,6 @@ async function seedDevAdminKeys(): Promise<void> {
     await prisma.adminSettings.create({
       data: {
         allowUserApiKeys: true,
-        defaultVisionParser: "auto",
-        defaultTextParser: "auto",
         allowUserFlightApiKeys: true,
         ...updateData,
       },

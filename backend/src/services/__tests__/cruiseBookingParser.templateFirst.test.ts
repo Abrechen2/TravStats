@@ -44,9 +44,21 @@ describe("parseCruiseBookingText — the template path comes first", () => {
 
   // The fall-back must still fall back: a document no template recognises has
   // to reach the model, and say so plainly when the model is not there.
-  it("still asks the model for a document no template recognises", async () => {
-    await expect(
-      parseCruiseBookingText("Ihre Buchung bei einer anderen Reederei", NO_OLLAMA)
-    ).rejects.toThrow(/Ollama is not reachable/);
+  //
+  // "Plainly" stopped meaning "by throwing" on 2026-09-17. The route turned a
+  // throw into HTTP 503, so a cruise line no template covers met an ERROR on
+  // an instance with no model — while a hotel in exactly the same position got
+  // an empty result and the offer to type it in. Same situation, two answers,
+  // and the wrong one belonged to the domain with fewer templates.
+  it("abstains for a document no template recognises, and says why", async () => {
+    const result = await parseCruiseBookingText(
+      "Ihre Buchung bei einer anderen Reederei",
+      NO_OLLAMA
+    );
+
+    expect(result.parserUsed).toBe("none");
+    expect(result.cruises).toEqual([]);
+    expect(result.ollamaAvailable).toBe(false);
+    expect(result.fallbackReason).toMatch(/Ollama is not reachable/);
   });
 });

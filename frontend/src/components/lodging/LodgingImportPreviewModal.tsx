@@ -35,8 +35,14 @@ export interface LodgingImportPreviewModalProps {
  * to `needs_input` through the UI.
  */
 interface EditableRow extends LodgingImportPreviewRow {
-  /** "" while a needs_input row is still undecided. */
-  decision: "" | "create" | "skip";
+  /**
+   * "" while a needs_input row is still undecided.
+   *
+   * `update` is offered only for a row the server classified that way — a
+   * changed booking under a stored reference (forgejo#122). It is never a
+   * choice on any other row: there would be no stay to move.
+   */
+  decision: "" | "create" | "skip" | "update";
 }
 
 const INPUT =
@@ -78,6 +84,11 @@ function currencyOptions(current: string | null | undefined): readonly string[] 
 
 function toEditableRow(row: LodgingImportPreviewRow): EditableRow {
   return { ...row, decision: row.action === "needs_input" ? "" : row.action };
+}
+
+/** What a changed booking would move, as "field: old → new". */
+function changeSummary(row: EditableRow): string {
+  return (row.changes ?? []).map((c) => `${c.field}: ${c.from ?? "—"} → ${c.to ?? "—"}`).join(", ");
 }
 
 /**
@@ -180,7 +191,8 @@ export function LodgingImportPreviewModal({
     const newRows = edited.filter((r) => r.decision === "create").length;
     const alreadyPresent = edited.filter((r) => r.decision === "skip").length;
     const needsInput = edited.filter((r) => r.decision === "").length;
-    return { newRows, alreadyPresent, needsInput };
+    const changed = edited.filter((r) => r.decision === "update").length;
+    return { newRows, alreadyPresent, needsInput, changed };
   }, [edited]);
 
   const pricesWithoutCurrency = useMemo(() => edited.filter(priceLacksCurrency).length, [edited]);
@@ -202,7 +214,7 @@ export function LodgingImportPreviewModal({
     setError(null);
     try {
       const decided = edited.filter(
-        (r): r is EditableRow & { decision: "create" | "skip" } => r.decision !== ""
+        (r): r is EditableRow & { decision: "create" | "skip" | "update" } => r.decision !== ""
       );
 
       // Names some OTHER row in this payload will create. Those rows keep the
@@ -222,6 +234,10 @@ export function LodgingImportPreviewModal({
         sourceRowIndex: r.sourceRowIndex,
         action: r.decision,
         matchedLodgingId: r.matchedLodgingId,
+        // Only an `update` row carries it, and the server re-checks that the
+        // stay is the caller's before it writes — this id comes from a
+        // response the client could have edited.
+        matchedStayId: r.decision === "update" ? r.matchedStayId : null,
         // `ensureLodging` materialises the lodging object lazily, on the
         // first EDIT of a lodging field. A stays-only row the user simply
         // marked "create" — hotel name plus dates, nothing to edit — never
@@ -285,6 +301,12 @@ export function LodgingImportPreviewModal({
           {counts.alreadyPresent} {t("lodging:import.preview.presentLabel")}
           {" · "}
           {counts.needsInput} {t("lodging:import.preview.needsInputLabel")}
+          {counts.changed > 0 && (
+            <>
+              {" · "}
+              {counts.changed} {t("lodging:import.preview.changedLabel")}
+            </>
+          )}
         </p>
         {summary.needsInput > 0 && (
           <p className="mb-3 text-xs text-amber-300/90">
@@ -583,6 +605,17 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
               {t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
             </span>
           )}
+          {/* A changed booking: say WHAT moves. "This differs" is not a
+              decision anyone can take. */}
+          {row.action === "update" && (row.changes ?? []).length > 0 && (
+            <span
+              data-testid={`lodging-import-changes-${sourceRowIndex}`}
+              title={changeSummary(row)}
+              className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] text-sky-300"
+            >
+              {t("lodging:import.changedHint")}: {changeSummary(row)}
+            </span>
+          )}
         </div>
       </td>
       <td className="p-2">
@@ -600,6 +633,9 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
           <option value="">{t("lodging:import.actions.choose")}</option>
           <option value="create">{t("lodging:import.actions.create")}</option>
           <option value="skip">{t("lodging:import.actions.skip")}</option>
+          {row.action === "update" && (
+            <option value="update">{t("lodging:import.actions.update")}</option>
+          )}
         </select>
       </td>
     </tr>

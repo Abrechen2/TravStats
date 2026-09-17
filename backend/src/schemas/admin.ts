@@ -54,8 +54,6 @@ export const parserSettingsSchema = z.object({
   globalClaudeApiKey: z.string().optional().nullable(),
   allowUserApiKeys: z.boolean().optional(),
   requireUserApiKeys: z.boolean().optional(),
-  defaultVisionParser: z.string().optional(),
-  defaultTextParser: z.string().optional(),
 });
 
 // Type exports

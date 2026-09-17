@@ -18,6 +18,9 @@ function composeAddress(booking: ParsedLodgingBooking): string | null {
 export function bookingsToCandidates(bookings: ParsedLodgingBooking[]): LodgingImportCandidate[] {
   return bookings.map((booking, index) => ({
     sourceRowIndex: index,
+    // The reader's own name, carried through so the answer can say WHICH
+    // template read the mail rather than just that one did.
+    parserTemplate: booking.parserTemplate,
     lodging: {
       name: booking.hotelName,
       // Judged by the parser now — a KOA is a campsite, and a third of real

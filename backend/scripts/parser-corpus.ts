@@ -88,6 +88,17 @@ interface FileResult {
   domain: string;
   domainSource: string;
   parserUsed: string;
+  /**
+   * WHICH reader answered, not just which kind.
+   *
+   * `parserUsed` collapses every deterministic reader into one word — the
+   * flight path reports "regex" whether an airline template matched or the
+   * generic extractor did, and lodging reports "template" for Booking.com and
+   * for each declarative reader alike. That makes a corpus run unable to say
+   * what is actually carrying the load, which is the one question a template
+   * registry exists to answer.
+   */
+  parserTemplate: string | null;
   fallbackReason: string | null;
   candidateCount: number;
   flights?: FlightRow[];
@@ -122,6 +133,22 @@ function readExpectations(dir: string): Record<string, Expectation> {
   return Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key.normalize("NFC"), value])
   );
+}
+
+/** The reader's own name, wherever the domain happens to carry it. */
+function templateNameOf(row: unknown): string | null {
+  if (!isRecord(row)) return null;
+  const direct = str(row.parserTemplate);
+  if (direct) return direct;
+  // Lodging candidates wrap the parsed booking; the name rides on the stay.
+  for (const key of ["stay", "lodging", "input"]) {
+    const nested = row[key];
+    if (isRecord(nested)) {
+      const found = str(nested.parserTemplate);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -330,6 +357,7 @@ async function main(): Promise<void> {
         domain: outcome.domain,
         domainSource: outcome.domainSource,
         parserUsed: String(body.parserUsed ?? "?"),
+        parserTemplate: null,
         fallbackReason: str(body.fallbackReason),
         candidateCount: 0,
         flags: [],
@@ -339,10 +367,12 @@ async function main(): Promise<void> {
         result.flights = flightRows(body.flights);
         result.candidateCount = result.flights.length;
         result.flags = flagFlights(result.flights);
+        result.parserTemplate = templateNameOf(body.flights[0]);
       } else if (outcome.domain === "lodging" && Array.isArray(body.candidates)) {
         result.lodgings = lodgingRows(body.candidates);
         result.candidateCount = result.lodgings.length;
         result.flags = flagLodgings(result.lodgings);
+        result.parserTemplate = templateNameOf(body.candidates[0]);
       } else if (outcome.domain === "cruise" && Array.isArray(body.cruises)) {
         result.cruises = cruiseRows(body.cruises);
         result.candidateCount = result.cruises.length;
@@ -393,6 +423,11 @@ async function main(): Promise<void> {
     }
   }
 
+  const byTemplate = results.reduce<Record<string, number>>((acc, r) => {
+    const key = r.parserTemplate ?? `(${r.parserUsed})`;
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
   const byParser = results.reduce<Record<string, number>>((acc, r) => {
     acc[r.parserUsed] = (acc[r.parserUsed] ?? 0) + 1;
     return acc;
@@ -428,7 +463,7 @@ async function main(): Promise<void> {
   const unreachable = Object.keys(expectations).filter((key) => !matchedExpectations.has(key));
 
   process.stdout.write(
-    `\n${results.length} files · parsers ${JSON.stringify(byParser)} · ${zero} with 0 candidates · ${flagged} flagged · ${Math.round(totalMs / 1000)} s\n` +
+    `\n${results.length} files · parsers ${JSON.stringify(byParser)} · readers ${JSON.stringify(byTemplate)} · ${zero} with 0 candidates · ${flagged} flagged · ${Math.round(totalMs / 1000)} s\n` +
       (unreachable.length > 0
         ? `UNREACHABLE expectations (no such file): ${unreachable.join(", ")}\n`
         : "") +

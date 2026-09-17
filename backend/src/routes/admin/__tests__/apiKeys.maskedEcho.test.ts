@@ -45,8 +45,6 @@ describe("PUT /api/v1/admin/api-keys — masked-echo overwrite protection", () =
       await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          defaultVisionParser: "auto",
-          defaultTextParser: "auto",
           allowUserFlightApiKeys: true,
         },
       });

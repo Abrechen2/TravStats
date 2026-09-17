@@ -21,7 +21,7 @@ function renderGuard() {
         <Route
           path="/parser"
           element={
-            <BetaFeatureRouteGuard feature="parserTemplates" redirectTo="/">
+            <BetaFeatureRouteGuard feature="tourRoutes" redirectTo="/">
               <div>parser-page</div>
             </BetaFeatureRouteGuard>
           }

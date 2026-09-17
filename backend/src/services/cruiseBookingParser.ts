@@ -2,7 +2,7 @@ import http from "http";
 import https from "https";
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import logger from "../utils/logger";
-import { getAdminParserSettings } from "./parserSettings";
+import { getAdminParserSettings, getParserOrder } from "./parserSettings";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
@@ -74,8 +74,17 @@ export interface CruiseParseResult {
    * tried first, so an instance without Ollama can still import the formats it
    * covers.
    */
-  parserUsed: "template" | "ollama";
+  parserUsed: "template" | "ollama" | "none";
   ollamaAvailable: boolean;
+  /**
+   * Why nothing was read, when `parserUsed` is "none". Same shape the lodging
+   * parser answers with, and for the same reason: an unreadable document is
+   * not a server fault. Until 2026-09-17 this path THREW, and the route turned
+   * that into a 503 — so a cruise line no template covers, on an instance with
+   * no model, met an error page where a hotel in the same position offered
+   * manual entry.
+   */
+  fallbackReason?: string;
 }
 
 // Exported for the prompt-contract tests — extraction truthfulness rules
@@ -515,21 +524,45 @@ export async function parseCruiseBookingText(
   // if it did not, so an instance without a local model could not import a
   // cruise booking at all — measured on the sample set, every TUI confirmation
   // failed for that reason alone.
-  const templated = parseTuiCruisesConfirmation(text);
-  if (templated.length > 0) {
-    return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+  // Which reader looks first is one admin setting for all four domains
+  // (`getParserOrder`), default template-first — which is what this domain
+  // has always done.
+  const order = await getParserOrder();
+  if (order === "template_first") {
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
   }
 
   const resolved = await resolveCruiseParserOptions(options);
   const parser = getCruiseBookingParser(resolved);
   const ollamaAvailable = await parser.checkAvailability();
   if (!ollamaAvailable) {
-    throw new Error(
-      `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
-        `Check the parser configuration in Settings (Ollama URL / model).`
-    );
+    // Under `llm_first` the template has not been tried yet, and an
+    // unreachable model must not cost a booking the template can read.
+    const templated = order === "llm_first" ? parseTuiCruisesConfirmation(text) : [];
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
+    return {
+      cruises: [],
+      parserUsed: "none",
+      ollamaAvailable: false,
+      fallbackReason:
+        `Ollama is not reachable at ${parser.endpoint} — ` +
+        `check the parser configuration in Settings (Ollama URL / model).`,
+    };
   }
   const cruises = await parser.parseText(text);
+  if (cruises.length === 0 && order === "llm_first") {
+    // Same rule as lodging: the model finding nothing is not a reason to
+    // leave a template hit on the table.
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: true };
+    }
+  }
   return { cruises, parserUsed: "ollama", ollamaAvailable: true };
 }
 

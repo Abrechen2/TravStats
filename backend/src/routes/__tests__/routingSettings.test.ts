@@ -50,8 +50,6 @@ describe("Tour routing provider settings (Phase 3)", () => {
       await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          defaultVisionParser: "auto",
-          defaultTextParser: "auto",
           allowUserFlightApiKeys: true,
         },
       });

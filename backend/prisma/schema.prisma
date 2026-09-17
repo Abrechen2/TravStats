@@ -740,9 +740,14 @@ model AdminSettings {
   // self-hoster gets to decide whether their instance talks to jsDelivr at all.
   fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
 
-  // Default parser settings for new users
-  defaultVisionParser String @default("auto") @map("default_vision_parser")
-  defaultTextParser   String @default("auto") @map("default_text_parser")
+  // Which reader gets the first look at a booking document, in EVERY domain:
+  // "template_first" or "llm_first". Owner decision 2026-09-17, after the
+  // paths were measured against the sample corpus: the template chain read
+  // all 31 flight mails in under a second, gemma3:12b took 19 minutes and
+  // missed three. Flight parsing used to be LLM-first while lodging and
+  // cruise were template-first — one hardcoded order each, and no way to say
+  // otherwise. This is that say, and it is the same say for all four domains.
+  parserOrder String @default("template_first") @map("parser_order")
 
   // Aviationstack usage guard — max lookups per UTC day before falling
   // through to AirLabs/OpenSky. Default 3 keeps Free tier (100/month) safe.
@@ -1240,6 +1245,11 @@ model ParserTemplate {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  // The shape the matcher actually asks for since 2026-09-17 (forgejo#124):
+  // this user's ACTIVE templates for the domain being parsed. The two indexes
+  // below stay — `[userId, status]` still serves the workshop's own list, and
+  // `[domain]` the per-domain counts.
+  @@index([userId, domain, status])
   @@index([domain])
   @@map("parser_templates")
 }

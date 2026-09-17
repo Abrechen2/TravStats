@@ -102,7 +102,12 @@ describe("/api/v1/lodging-import", () => {
     expect(preview.status).toBe(200);
     expect(preview.body.success).toBe(true);
     expect(preview.body.data.rows).toHaveLength(1);
-    expect(preview.body.data.summary).toEqual({ newRows: 1, alreadyPresent: 0, needsInput: 0 });
+    expect(preview.body.data.summary).toEqual({
+      newRows: 1,
+      alreadyPresent: 0,
+      needsInput: 0,
+      changedRows: 0,
+    });
 
     const commit = await request(app)
       .post("/api/v1/lodging-import/commit")

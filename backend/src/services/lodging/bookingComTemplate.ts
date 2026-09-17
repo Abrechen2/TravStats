@@ -65,7 +65,7 @@ const GERMAN_MONTHS: Record<string, number> = {
  * "S$ 1.324,90"), which is why those forms are listed rather than folded into
  * a bare "$".
  */
-const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
+export const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
   "€": "EUR",
   $: "USD",
   "£": "GBP",
@@ -80,7 +80,23 @@ const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
   R$: "BRL",
 };
 
-const CONFIRMATION_RE = /Bestätigungsnummer:\s*‌?\s*(\d{6,})/;
+/**
+ * A confirmation says "Bestätigungsnummer:"; a CHANGED booking says
+ * "Reservierungsnummer" and no colon.
+ *
+ * Measured 2026-09-17 (forgejo#122): of the twelve lodging mails the template
+ * path reads nothing from, one is a Booking.com mail the template would parse
+ * perfectly — "Ihre geänderte Buchung in der Unterkunft …". Same brand, same
+ * inline layout, same `Anreise`/`Abreise`/`Ihre Buchung`/`Gesamtpreis` lines;
+ * only the number's label differs. That is the one kind of mail a user most
+ * needs read, because the stay already exists and the dates have moved.
+ *
+ * "Buchungsnummer" stays out on purpose — that is what a direct hotel booking
+ * says, and those must fall through rather than be read by a Booking.com
+ * template. The brand check below is what actually keeps them out, but the
+ * label list should not invite them either.
+ */
+const CONFIRMATION_RE = /(?:Bestätigungs|Reservierungs)nummer:?\s*‌?\s*(\d{6,})/;
 
 function toLines(body: string): string[] {
   return body
@@ -119,6 +135,12 @@ const KNOWN_LABELS = new Set([
   "Gesamtpreis",
   "Buchungsinformationen",
   "Zahlungsangaben",
+  // Only a changed booking carries these four, and they sit directly above
+  // "Ihre Buchung" — a stacked read of that label must not return one of them.
+  "Reservierungsnummer",
+  "PIN-Code",
+  "Gebucht von",
+  "Ihre Änderungen",
 ]);
 
 /**
@@ -153,14 +175,34 @@ function findValue(lines: string[], label: string): string | null {
 }
 
 /** "Donnerstag, 4. Juni 2026 (ab 14:00)" -> "2026-06-04". */
-function parseGermanDate(value: string | null): string | null {
+/**
+ * "Mittwoch, 26. Juni 2024" — and "Samstag, 26 November 2022", which is the
+ * same sender writing the same field without the ordinal dot.
+ *
+ * The dot was required until 2026-09-17, and one missing character cost the
+ * WHOLE mail: `checkIn` came back null, the template declined, and a
+ * confirmation the reader understood in every other respect fell through to
+ * the LLM — or, with no LLM, to manual entry. Measured on the owner's corpus,
+ * where exactly this shape was one of the two mails nothing could read.
+ *
+ * Widening it is safe because the shape stays tight: a 1-2 digit day, a word
+ * that must be in the month table, and a four-digit year.
+ */
+export function parseGermanDate(value: string | null): string | null {
   if (!value) return null;
-  const m = value.match(/(\d{1,2})\.\s*([A-Za-zÄÖÜäöüß]+)\s+(\d{4})/);
+  const m = value.match(/(\d{1,2})\.?\s*([A-Za-zÄÖÜäöüß]+)\s+(\d{4})/);
   if (!m) return null;
   const month = GERMAN_MONTHS[m[2].toLowerCase()];
   if (!month) return null;
   const day = Number(m[1]);
   if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+  const year = Number(m[3]);
+  // A day the calendar does not have. "31 April 2026" passed the range check
+  // above and came back as "2026-04-31", which `Date.parse` then quietly
+  // normalises to the first of May — so a line that is not a date produced a
+  // stay that looked read. The round trip is the only honest check.
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
   return `${m[3]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
@@ -218,6 +260,31 @@ function parseLage(raw: string | null): AddressParts {
 
   const country = segments.length > 1 ? segments[segments.length - 1] : null;
   const rest = country ? segments.slice(0, -1) : segments;
+
+  // North America first, because its shape defeats the European one below.
+  // "4949 Regent Boulevard, Irving, TX 75063, USA" has a HOUSE NUMBER of four
+  // digits, which the European pattern reads as a postal code and the street
+  // name as the city — measured on a real Courtyard confirmation, which
+  // imported with the city "Regent Boulevard". A state or province code
+  // followed by a ZIP is unambiguous, and the city is the segment before it.
+  //
+  // Only the LAST segment before the country counts, which is where that form
+  // always puts it. Scanning for it anywhere would let a European address
+  // whose middle segment happens to read "IT 00186" hand back the segment
+  // before it as the city and drop the real one that follows — two capitals
+  // and five digits is not rare enough to trust out of position.
+  const statePostcodeRe = /^([A-Z]{2})\s+(\d{5}(?:-\d{4})?|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/;
+  const last = rest.length - 1;
+  const stateMatch = last >= 1 ? rest[last].match(statePostcodeRe) : null;
+  if (stateMatch) {
+    const address = rest.slice(0, last - 1).join(", ");
+    return {
+      address: address.length > 0 ? address : null,
+      postcode: stateMatch[2],
+      city: rest[last - 1],
+      country,
+    };
+  }
 
   // NL codes look like "2718 RL"; DE/AT/CH are 4-5 digits.
   const postcodeRe = /^(\d{4,5}(?:\s+[A-Z]{2})?)\s+(.+)$/;
@@ -321,7 +388,13 @@ function findTotal(lines: string[]): { amount: number; currency: LodgingCurrency
 function hotelNameFromSubject(subject: string | undefined): string | null {
   if (!subject) return null;
   const m = subject.match(/bestätigt:\s*(.+)$/i);
-  return m ? m[1].trim() : null;
+  if (m) return m[1].trim();
+  // A changed booking names the property in prose instead: "Ihre geänderte
+  // Buchung in der Unterkunft City Premiere Hotel Apartments". The body
+  // fallback cannot help there — that mail puts the name on the SAME line as
+  // the property link, so the line after it is the hotel's name in Arabic.
+  const changed = subject.match(/in der Unterkunft\s+(.+)$/i);
+  return changed ? changed[1].trim() : null;
 }
 
 /** Fallback: the first non-empty line after the property's booking.com link. */

@@ -14,6 +14,7 @@ import { calculateParserQuality } from "./boardingPass";
 import { findMatchingTemplate } from "./userTemplates/matcher";
 import { applyUserTemplate } from "./userTemplates/engine";
 import { TemplateParser } from "./text/templateParser";
+import { getParserOrder } from "../parserSettings";
 
 async function applyEmailRegexPostProcessing(
   flights: ParsedBooking[],
@@ -130,8 +131,12 @@ export async function parseEmail(
 
   // Step 0: User-derived regex templates (before HTML-selector templates)
   if (config.userId) {
+    // "flight", named rather than implied: this parser reads flight mails, and
+    // a template derived for another domain would be applied as if its
+    // patterns were flight numbers and airport codes.
     const userTemplate = await findMatchingTemplate(
       config.userId,
+      "flight",
       fromAddress,
       subject,
       cleanedText
@@ -157,10 +162,17 @@ export async function parseEmail(
     }
   }
 
-  // Determine if Ollama should be tried before templates
-  // When Ollama is explicitly configured (ollamaUrl set), it takes priority over templates.
-  // Templates become the fallback when Ollama is unavailable or returns no results.
-  const ollamaConfigured = !!config.ollamaUrl && config.textFallbacks.includes("ollama");
+  // Whether the LLM gets the first look is an ADMIN SETTING now, and the same
+  // one in all four domains (`getParserOrder`). It used to be hardcoded here
+  // as "a configured Ollama wins", which measured badly the day anyone
+  // measured it: on the owner's 31 flight mails the template chain answered
+  // all of them in under a second and the model took 19 minutes and missed
+  // three. The default is therefore template-first; an instance whose senders
+  // no template knows can still put the model in front.
+  const ollamaConfigured =
+    !!config.ollamaUrl &&
+    config.textFallbacks.includes("ollama") &&
+    (await getParserOrder()) === "llm_first";
 
   if (ollamaConfigured) {
     // Try Ollama first (before templates) when explicitly configured
