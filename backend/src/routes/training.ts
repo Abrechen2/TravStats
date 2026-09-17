@@ -33,6 +33,18 @@ if (!fs.existsSync(TRAINING_UPLOAD_DIR)) {
   fs.mkdirSync(TRAINING_UPLOAD_DIR, { recursive: true });
 }
 
+/**
+ * Test-only accessor, mirroring the `getXxxUploadDir()` getters
+ * `middleware/upload.ts` exports for its own disk directories — kept here
+ * instead of moved there because this router owns its storage config rather
+ * than sharing that module. Used by `demoGuard.uploads.test.ts` (Wave C
+ * finding C2, Codex review 2026-09-17) to prove the guard refuses a request
+ * before a single byte reaches this directory.
+ */
+export function getTrainingUploadDir(): string {
+  return TRAINING_UPLOAD_DIR;
+}
+
 const trainingStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, TRAINING_UPLOAD_DIR),
   filename: (_req, file, cb) => {
