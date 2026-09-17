@@ -1,7 +1,9 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import type { JSX, ReactNode } from "react";
 import { useRevealActive } from "../../lib/ui/revealInRow";
 import { useTranslation } from "../../hooks/useTranslation";
+import { isStatsTabArrival } from "../../lib/stats/statsTabArrival";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { DOMAIN_ICON } from "../ui/domainIcons";
@@ -26,6 +28,15 @@ export default function StatsTabStrip({ tabs, active, onSelect }: Props): JSX.El
   const rowRef = useRef<HTMLDivElement | null>(null);
 
   useRevealActive(rowRef, '[aria-current="page"]', [active, tabs.join(",")]);
+
+  // Opened from a "Details" link further down: start at the top, on the tab.
+  const location = useLocation();
+  const arrived = isStatsTabArrival(location.state);
+  useEffect(() => {
+    if (!arrived) return;
+    window.scrollTo({ top: 0 });
+    rowRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.focus();
+  }, [arrived, location.key]);
 
   return (
     <div style={{ background: "var(--ts-bg)", borderBottom: "1px solid var(--ts-border)" }}>

@@ -6,6 +6,7 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { withYear } from "../../../lib/stats/periodUrl";
+import { STATS_TAB_ARRIVAL } from "../../../lib/stats/statsTabArrival";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainKpi, DomainStats } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -139,6 +140,7 @@ export default function DomainSummaryCard({
             the tab it opened showed the newest year, not this one (B04). */}
         <Link
           to={withYear(stats.summary.detailRoute, selectedYear)}
+          state={STATS_TAB_ARRIVAL}
           className="text-xs font-medium hover:underline whitespace-nowrap"
           style={{ color: domainHex }}
         >
