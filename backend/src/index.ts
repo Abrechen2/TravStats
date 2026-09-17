@@ -279,6 +279,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
+  (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -699,133 +700,75 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // Start historical enrichment scheduler
-    try {
-      const { startHistoricalEnrichmentScheduler } =
-        await import("./jobs/historicalEnrichmentScheduler");
-      startHistoricalEnrichmentScheduler();
-      logger.info({
-        operation: "server_start_historical_enrichment_scheduler",
-        message: "Historical enrichment scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_historical_enrichment_scheduler_error",
-        message: "Failed to start historical enrichment scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Start airline logo refresh scheduler
-    try {
-      const { startAirlineLogoRefreshScheduler } =
-        await import("./jobs/airlineLogoRefreshScheduler");
-      startAirlineLogoRefreshScheduler();
-      logger.info({
-        operation: "server_start_airline_logo_refresh_scheduler",
-        message: "Airline logo refresh scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_airline_logo_refresh_scheduler_error",
-        message: "Failed to start airline logo refresh scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Start hourly status sweep scheduler
-    try {
-      const { startStatusSweepScheduler } = await import("./jobs/statusSweepScheduler");
-      startStatusSweepScheduler();
-      logger.info({
-        operation: "server_start_status_sweep_scheduler",
-        message: "Status sweep scheduler started",
-      });
-
-      const { startPlaceAddressBackfillScheduler } =
-        await import("./jobs/placeAddressBackfillScheduler");
-      startPlaceAddressBackfillScheduler();
-      logger.info({
-        operation: "server_start_place_address_backfill_scheduler",
-        message: "Place address backfill scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_status_sweep_scheduler_error",
-        message: "Failed to start status sweep scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Start nightly data-quality sweep (04:10 UTC — after the place address
-    // backfill at 03:20, which fills the columns the checks read)
-    try {
-      const { startDataQualitySweepScheduler } = await import("./jobs/dataQualitySweepScheduler");
-      startDataQualitySweepScheduler();
-      logger.info({
-        operation: "server_start_data_quality_sweep_scheduler",
-        message: "Data-quality sweep scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_data_quality_sweep_scheduler_error",
-        message: "Failed to start data-quality sweep scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Start nightly Dawarich country-day sweep (04:40 UTC — clear of the
-    // outbound-heavy jobs at 03:00/03:20 and of the data-quality pass at 04:10)
-    try {
-      const { startDawarichCountryDaySweepScheduler } =
-        await import("./jobs/dawarichCountryDaySweepScheduler");
-      startDawarichCountryDaySweepScheduler();
-      logger.info({
-        operation: "server_start_dawarich_country_day_sweep_scheduler",
-        message: "Dawarich country-day sweep scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_dawarich_country_day_sweep_scheduler_error",
-        message: "Failed to start Dawarich country-day sweep scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Hourly sweep of kept originals (:25): unfiled uploads past their week, and
-    // the bytes of documents whose entry was deleted (forgejo#116)
-    try {
-      (await import("./jobs/documentSweepScheduler")).startDocumentSweepScheduler();
-    } catch (error) {
-      logger.error({ error }, "server_start_document_sweep_scheduler_error");
-    }
-
-    // Start flight reminder scheduler
-    try {
-      const { startReminderScheduler } = await import("./services/reminderScheduler");
-      startReminderScheduler();
-      logger.info({
-        operation: "server_start_reminder_scheduler",
-        message: "Flight reminder scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_reminder_scheduler_error",
-        message: "Failed to start flight reminder scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
+    // The cron jobs. Each starts on its own: one that fails to start is logged
+    // and stops neither the others nor the server. Their UTC slots, and why,
+    // are in each module's header (the table is in dataQualitySweepScheduler.ts).
+    const jobs: Array<[name: string, start: () => Promise<void>]> = [
+      [
+        "historical_enrichment",
+        async () =>
+          (
+            await import("./jobs/historicalEnrichmentScheduler")
+          ).startHistoricalEnrichmentScheduler(),
+      ],
+      [
+        "airline_logo_refresh",
+        async () =>
+          (await import("./jobs/airlineLogoRefreshScheduler")).startAirlineLogoRefreshScheduler(),
+      ],
+      [
+        "status_sweep",
+        async () => (await import("./jobs/statusSweepScheduler")).startStatusSweepScheduler(),
+      ],
+      [
+        "place_address_backfill",
+        async () =>
+          (
+            await import("./jobs/placeAddressBackfillScheduler")
+          ).startPlaceAddressBackfillScheduler(),
+      ],
+      [
+        "data_quality_sweep",
+        async () =>
+          (await import("./jobs/dataQualitySweepScheduler")).startDataQualitySweepScheduler(),
+      ],
+      [
+        "dawarich_country_day_sweep",
+        async () =>
+          (
+            await import("./jobs/dawarichCountryDaySweepScheduler")
+          ).startDawarichCountryDaySweepScheduler(),
+      ],
+      // Kept originals (forgejo#116), hourly at :25.
+      [
+        "document_sweep",
+        async () => (await import("./jobs/documentSweepScheduler")).startDocumentSweepScheduler(),
+      ],
+      // Opt-in nightly Foto-Spürhund (forgejo#94), 04:55.
+      [
+        "photo_journey_scan",
+        async () =>
+          (await import("./jobs/photoJourneyScanScheduler")).startPhotoJourneyScanScheduler(),
+      ],
+      [
+        "reminder",
+        async () => (await import("./services/reminderScheduler")).startReminderScheduler(),
+      ],
+    ];
+    for (const [name, start] of jobs) {
+      try {
+        await start();
+        logger.info({
+          operation: `server_start_${name}_scheduler`,
+          message: `${name} scheduler started`,
+        });
+      } catch (error) {
+        logger.warn({
+          operation: `server_start_${name}_scheduler_error`,
+          message: `Failed to start ${name} scheduler`,
+          error: { message: error instanceof Error ? error.message : "Unknown error" },
+        });
+      }
     }
 
     // Start usage-stats scheduler (jittered daily ping — no-op unless the

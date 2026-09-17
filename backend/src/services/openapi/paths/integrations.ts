@@ -521,6 +521,48 @@ registry.registerPath({
   responses: { 200: { description: "Photo journeys" } },
 });
 
+const nightlyScanSettings = z.object({
+  success: z.literal(true),
+  data: z.object({
+    nightlyScan: z
+      .boolean()
+      .describe("Scan this account's Immich every night at 04:55 UTC, last 400 days"),
+  }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/photo-journeys/settings",
+  summary: "Whether the nightly photo-journey scan is on",
+  description: "Off by default. The full-history scan stays POST /photo-journeys/scan.",
+  tags: miscTag,
+  responses: {
+    200: {
+      description: "The opt-in",
+      content: { "application/json": { schema: nightlyScanSettings } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/photo-journeys/settings",
+  summary: "Turn the nightly photo-journey scan on or off",
+  description:
+    "Opt-in per account, like flight auto-updates: a scan reads the library in its window and " +
+    "sends the positions it finds to the geocoder (at most 40 lookups).",
+  tags: miscTag,
+  request: {
+    body: {
+      content: { "application/json": { schema: z.object({ nightlyScan: z.boolean() }) } },
+    },
+  },
+  responses: {
+    200: { description: "Saved", content: { "application/json": { schema: nightlyScanSettings } } },
+    400: badInput,
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/photo-journeys/scan",

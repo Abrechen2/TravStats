@@ -581,6 +581,10 @@ model UserSettings {
 
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
+  /// Opt-in: scan the user's Immich for photo journeys every night (forgejo#94).
+  /// Off by default, like flight auto-updates — a scan reads the whole library
+  /// and asks a third-party geocoder about the result.
+  photoJourneyNightlyScan    Boolean @default(false) @map("photo_journey_nightly_scan")
   autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
   autoUpdateCheckInterval    Int     @default(15) @map("auto_update_check_interval") // minutes
   autoUpdateOnlyDuringFlight Boolean @default(true) @map("auto_update_only_during_flight")

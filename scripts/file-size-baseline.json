@@ -18,7 +18,7 @@
     "frontend/src/components/FlightForm/useFlightForm.ts": 894,
     "frontend/src/components/FlightCertificate.tsx": 883,
     "backend/src/utils/achievementChecks.ts": 863,
-    "backend/src/index.ts": 860,
-    "frontend/src/components/Training/EmailAnnotation.tsx": 857
+    "frontend/src/components/Training/EmailAnnotation.tsx": 857,
+    "backend/src/index.ts": 803
   }
 }

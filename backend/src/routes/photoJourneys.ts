@@ -77,6 +77,48 @@ async function assertCreatedOwned(
   if (found.some((row) => row === null)) throw new AppError("Linked entry not found", 404);
 }
 
+const settingsBodySchema = z.object({ nightlyScan: z.boolean() }).strict();
+
+/**
+ * The account's opt-in to the nightly scan (forgejo#94, point 5). Off until the
+ * user turns it on: the scan reads their library and asks a third-party
+ * geocoder about what it finds (see jobs/photoJourneyScanScheduler.ts).
+ */
+router.get(
+  "/settings",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const row = await prisma.userSettings.findUnique({
+        where: { userId: req.userId! },
+        select: { photoJourneyNightlyScan: true },
+      });
+      res.json({ success: true, data: { nightlyScan: row?.photoJourneyNightlyScan ?? false } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.put(
+  "/settings",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = settingsBodySchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const update = { photoJourneyNightlyScan: parsed.data.nightlyScan };
+      const row = await prisma.userSettings.upsert({
+        where: { userId: req.userId! },
+        update,
+        create: { userId: req.userId!, data: {}, ...update },
+        select: { photoJourneyNightlyScan: true },
+      });
+      res.json({ success: true, data: { nightlyScan: row.photoJourneyNightlyScan } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
