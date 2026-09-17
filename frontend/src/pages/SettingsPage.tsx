@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
@@ -7,6 +7,7 @@ import { useSettingsPage, type AutoSaveState } from "../components/Settings/useS
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useSectionInView } from "../hooks/useSectionInView";
 import PasswordModal from "../components/Settings/PasswordModal";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
 import {
@@ -52,39 +53,6 @@ function useDeepLinkedSection(): string | null {
   const fromQuery = searchParams.get("section");
   const fromHash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
   return fromQuery || fromHash || null;
-}
-
-/**
- * Which section is on screen, for the index to mark.
- *
- * An IntersectionObserver over the section landmarks: the topmost section that
- * reaches the upper third of the viewport wins. Absent in jsdom, where the
- * index simply marks nothing.
- */
-function useSectionInView(ids: readonly string[]): string | null {
-  const [inView, setInView] = useState<string | null>(ids[0] ?? null);
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const id = entry.target.id.replace(/^settings-/, "");
-          if (entry.isIntersecting) visible.set(id, entry.boundingClientRect.top);
-          else visible.delete(id);
-        }
-        const first = ids.find((id) => visible.has(id));
-        if (first) setInView(first);
-      },
-      { rootMargin: "-80px 0px -60% 0px" }
-    );
-    for (const id of ids) {
-      const el = document.getElementById(`settings-${id}`);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [ids]);
-  return inView;
 }
 
 export default function SettingsPage(): JSX.Element {
@@ -145,7 +113,7 @@ export default function SettingsPage(): JSX.Element {
       .filter((category) => category.entries.length > 0);
   }, [group, isGeneral, sections, isShown, t]);
 
-  const inView = useSectionInView(sections);
+  const inView = useSectionInView(sections, "settings");
 
   const routeLabel = group
     ? isGeneral

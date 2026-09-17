@@ -4,7 +4,7 @@
   "files": {
     "backend/src/routes/stats.ts": 1827,
     "frontend/src/components/GlobeView.tsx": 1672,
-    "backend/src/routes/flights.ts": 1491,
+    "backend/src/routes/flights.ts": 1469,
     "frontend/src/pages/TripDetailPage.tsx": 1401,
     "backend/src/services/schematicRouter.ts": 1114,
     "backend/src/services/flightLookup.ts": 1073,
@@ -16,7 +16,6 @@
     "frontend/src/components/FlightCertificate.tsx": 883,
     "backend/src/utils/achievementChecks.ts": 873,
     "frontend/src/components/Training/EmailAnnotation.tsx": 868,
-    "frontend/src/pages/AdminPage.tsx": 847,
     "frontend/src/pages/AdvancedStatsPage.tsx": 819
   }
 }

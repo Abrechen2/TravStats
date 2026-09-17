@@ -42,12 +42,19 @@ interface Props {
 
 /**
  * The admin page's left column, round 4 ("Admin v2"): the area tabs, a mono
- * "Bereich" label and the sections as icon rows, open on the page.
+ * "Bereich" label and the sections as icon rows.
+ *
+ * Every section of the active tab renders on the page at once now (tester
+ * feedback: admin should read like the settings page, anchor jumps rather
+ * than a picker that swaps content out) — so an entry is an `<a href="#admin-
+ * <id>">` that scrolls the target into view, exactly like
+ * SettingsIndexColumn, rather than a button that used to pick which single
+ * section was mounted.
  *
  * It replaces a 208px surface panel fixed to the viewport height, whose own
  * scroll box held the title and whose active row was an accent-coloured
  * label on a left border — the same column the settings page draws, so the
- * two instance-wide and personal surfaces now read as one family.
+ * two instance-wide and personal surfaces read as one family.
  */
 export default function AdminIndex({
   tabs,
@@ -113,11 +120,14 @@ export default function AdminIndex({
         {sections.map((section) => {
           const active = section.id === activeSection;
           return (
-            <button
+            <a
               key={section.id}
-              type="button"
+              href={`#admin-${section.id}`}
               aria-current={active ? "page" : undefined}
-              onClick={() => onSection(section.id)}
+              onClick={(event) => {
+                event.preventDefault();
+                onSection(section.id);
+              }}
               className="flex items-center text-left"
               style={{
                 gap: "var(--ts-space-sm)",
@@ -137,7 +147,7 @@ export default function AdminIndex({
                   {section.badge}
                 </span>
               )}
-            </button>
+            </a>
           );
         })}
       </nav>
