@@ -34,6 +34,15 @@ describe("Wave A demo guards", () => {
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
+    // The "a normal account is not refused" half of A3 really writes into the
+    // global catalogues — that is the point of the finding — so this suite
+    // takes its own rows back out again.
+    await prisma.port.deleteMany({ where: { name: "Demoport" } });
+    await prisma.ship.deleteMany({ where: { name: "Demoship" } });
+    await prisma.airline.deleteMany({ where: { name: "Demo Air" } });
+    await prisma.aircraft.deleteMany({ where: { name: "Demo 100" } });
+    await prisma.airport.deleteMany({ where: { iata: "ZZZ" } });
+    await prisma.lodgingChain.deleteMany({ where: { name: "Demo Hotels" } });
   });
 
   /**
@@ -60,6 +69,49 @@ describe("Wave A demo guards", () => {
       // stays open — the guard must not be widened to the whole family.
       const res = await request(app).get("/api/v1/diagnostics").set("Cookie", demoCookie);
       expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+  });
+
+  /**
+   * A3. The six GLOBAL catalogues — ports, ships, airlines, aircraft, airports
+   * and lodging chains — are the only rows in this application every account
+   * reads. A write there is visible to everybody, and `wipeDemoUser` does not
+   * touch it, so it outlives the nightly reseed: a visitor could leave
+   * "Lufthansa (idiot)" in the catalogue of a public instance permanently.
+   * Reads stay open — the typeaheads are most of what a visitor came to try.
+   */
+  describe("A3 global catalogue writes", () => {
+    const catalogueWrites: Array<[string, object]> = [
+      ["/api/v1/ports", { name: "Demoport", lat: 1, lon: 1 }],
+      ["/api/v1/ships", { name: "Demoship", cruiseLine: "Demo Line" }],
+      ["/api/v1/airlines", { name: "Demo Air" }],
+      ["/api/v1/aircraft", { name: "Demo 100" }],
+      ["/api/v1/airports", { iata: "ZZZ", name: "Demo Field", lat: 1, lon: 1 }],
+      ["/api/v1/lodging-chains", { name: "Demo Hotels" }],
+    ];
+
+    it.each(catalogueWrites)("refuses POST %s for the shared demo account", async (path, body) => {
+      const res = await request(app).post(path).set("Cookie", demoCookie).send(body);
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+
+    it.each(catalogueWrites)("does not refuse POST %s for a normal account", async (path, body) => {
+      const res = await request(app).post(path).set("Cookie", userCookie).send(body);
+      expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+
+    const catalogueReads = [
+      "/api/v1/ports",
+      "/api/v1/ships",
+      "/api/v1/airlines",
+      "/api/v1/aircraft",
+      "/api/v1/lodging-chains",
+    ];
+
+    it.each(catalogueReads)("still lets the shared demo account read %s", async (path) => {
+      const res = await request(app).get(path).set("Cookie", demoCookie);
+      expect(res.status).toBe(200);
     });
   });
 });

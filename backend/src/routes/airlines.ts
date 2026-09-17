@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { rejectDemoWrites } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import {
   invalidateAirlineCatalogCache,
@@ -18,6 +19,13 @@ import logger from "../utils/logger";
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);
+// A GLOBAL catalogue: every account reads the same rows, and a write here is
+// visible to all of them AND survives the nightly demo reseed, which only
+// deletes rows the demo user owns. So the shared demo account does not write
+// here (independent review, 2026-09-17, finding A3). Method-aware: the
+// typeahead is most of what a visitor came to try, so reads pass through.
+router.use(rejectDemoWrites);
+
 
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),
