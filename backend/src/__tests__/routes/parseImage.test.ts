@@ -306,7 +306,12 @@ describe("POST /api/v1/parse-image", () => {
     expect(kept.status).toBe(200);
     const documentId = String(asRecord(kept.body).documentId);
     const document = await prisma.document.findUniqueOrThrow({ where: { id: documentId } });
-    expect(document).toMatchObject({ userId, format: "image", mimetype: "image/png", source: "parse" });
+    expect(document).toMatchObject({
+      userId,
+      format: "image",
+      mimetype: "image/png",
+      source: "parse",
+    });
     expect(document.parsedDomain).toBe("lodging");
 
     mockRecognizeText.mockClear();
@@ -319,6 +324,8 @@ describe("POST /api/v1/parse-image", () => {
     expect(asRecord(again.body).documentId).toBe(documentId);
     expect(mockRecognizeText).toHaveBeenCalledWith(TINY_PNG_BASE64);
 
-    await request(app).delete(`/api/v1/documents/${documentId}`).set("Cookie", [`auth_token=${token}`]);
+    await request(app)
+      .delete(`/api/v1/documents/${documentId}`)
+      .set("Cookie", [`auth_token=${token}`]);
   });
 });

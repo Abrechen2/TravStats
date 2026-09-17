@@ -19,12 +19,22 @@ vi.mock("../../../hooks/useTranslation", () => ({
 
 describe("AddDomainPicker", () => {
   it("renders the button label", () => {
-    render(<AddDomainPicker enabled={{ flight: true, cruise: true, lodging: true, poi: false }} onPick={() => {}} />);
+    render(
+      <AddDomainPicker
+        enabled={{ flight: true, cruise: true, lodging: true, poi: false }}
+        onPick={() => {}}
+      />
+    );
     expect(screen.getByRole("button", { name: /hinzufügen/i })).toBeTruthy();
   });
 
   it("opens the menu on click and lists only enabled domains", () => {
-    render(<AddDomainPicker enabled={{ flight: true, cruise: true, lodging: true, poi: false }} onPick={() => {}} />);
+    render(
+      <AddDomainPicker
+        enabled={{ flight: true, cruise: true, lodging: true, poi: false }}
+        onPick={() => {}}
+      />
+    );
     fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
     expect(screen.getByRole("menuitem", { name: /flug/i })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /kreuzfahrt/i })).toBeTruthy();
@@ -47,7 +57,12 @@ describe("AddDomainPicker", () => {
 
   it("calls onPick with the selected domain and closes the menu", () => {
     const onPick = vi.fn();
-    render(<AddDomainPicker enabled={{ flight: true, cruise: true, lodging: true, poi: false }} onPick={onPick} />);
+    render(
+      <AddDomainPicker
+        enabled={{ flight: true, cruise: true, lodging: true, poi: false }}
+        onPick={onPick}
+      />
+    );
     fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /kreuzfahrt/i }));
     expect(onPick).toHaveBeenCalledWith("cruise");
@@ -58,7 +73,10 @@ describe("AddDomainPicker", () => {
     const onPick = vi.fn();
     render(
       <div>
-        <AddDomainPicker enabled={{ flight: true, cruise: true, lodging: true, poi: false }} onPick={onPick} />
+        <AddDomainPicker
+          enabled={{ flight: true, cruise: true, lodging: true, poi: false }}
+          onPick={onPick}
+        />
         <button type="button">outside</button>
       </div>
     );

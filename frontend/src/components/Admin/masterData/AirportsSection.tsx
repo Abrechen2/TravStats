@@ -61,7 +61,12 @@ export default function AirportsSection(): JSX.Element {
     }
     const lat = Number(newLat.replace(",", "."));
     const lon = Number(newLon.replace(",", "."));
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lon) > 180
+    ) {
       addToast("error", t("admin:airlineAircraftMasterData.airport.invalidCoords"));
       return;
     }
@@ -203,7 +208,10 @@ export default function AirportsSection(): JSX.Element {
           style={{ borderColor: "var(--color-border)" }}
         >
           {airports.slice(0, 50).map((a) => (
-            <li key={a.id ?? `${a.name}-${a.lat}`} className="flex items-center justify-between py-2 text-sm">
+            <li
+              key={a.id ?? `${a.name}-${a.lat}`}
+              className="flex items-center justify-between py-2 text-sm"
+            >
               <div>
                 <span className="font-medium text-(--text-primary)">{a.name}</span>
                 {a.city && <span className="text-(--text-muted)"> · {a.city}</span>}

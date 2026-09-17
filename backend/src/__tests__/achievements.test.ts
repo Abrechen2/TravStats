@@ -1,7 +1,7 @@
-import { prisma } from '../db';
-import { checkAndUpdateAchievements } from '../utils/achievements';
+import { prisma } from "../db";
+import { checkAndUpdateAchievements } from "../utils/achievements";
 
-describe('Achievements', () => {
+describe("Achievements", () => {
   let userId: string;
   let authCookie: string;
 
@@ -10,7 +10,7 @@ describe('Achievements', () => {
     const user = await prisma.user.create({
       data: {
         username: `testachievements${Date.now()}`,
-        passwordHash: 'testhash',
+        passwordHash: "testhash",
       },
     });
     userId = user.id;
@@ -21,13 +21,13 @@ describe('Achievements', () => {
       // Create a test achievement
       await prisma.achievement.create({
         data: {
-          code: 'TEST_FIRST_FLIGHT',
-          name: 'First Flight',
-          description: 'Complete your first flight',
-          requirementType: 'flights_count',
+          code: "TEST_FIRST_FLIGHT",
+          name: "First Flight",
+          description: "Complete your first flight",
+          requirementType: "flights_count",
           requirement: 1,
-          icon: '✈️',
-          category: 'milestone',
+          icon: "✈️",
+          category: "milestone",
         },
       });
     }
@@ -41,23 +41,23 @@ describe('Achievements', () => {
     await prisma.$disconnect();
   });
 
-  describe('checkAndUpdateAchievements', () => {
-    it('should unlock achievement when requirement is met', async () => {
+  describe("checkAndUpdateAchievements", () => {
+    it("should unlock achievement when requirement is met", async () => {
       // Create a flight that meets the requirement
       await prisma.flight.create({
         data: {
           userId,
-          airline: 'Test Airline',
-          flightNumber: 'TA123',
+          airline: "Test Airline",
+          flightNumber: "TA123",
           depLat: 50.0379,
           depLon: 8.5622,
-          arrLat: 51.4700,
+          arrLat: 51.47,
           arrLon: -0.4543,
-          depIata: 'FRA',
-          arrIata: 'LHR',
-          departureTime: new Date('2025-01-20T08:00:00Z'),
-          arrivalTime: new Date('2025-01-20T09:30:00Z'),
-          status: 'flown',
+          depIata: "FRA",
+          arrIata: "LHR",
+          departureTime: new Date("2025-01-20T08:00:00Z"),
+          arrivalTime: new Date("2025-01-20T09:30:00Z"),
+          status: "flown",
         },
       });
 
@@ -76,11 +76,11 @@ describe('Achievements', () => {
       expect(userAchievements.length).toBeGreaterThan(0);
     });
 
-    it('should not unlock achievement when requirement is not met', async () => {
+    it("should not unlock achievement when requirement is not met", async () => {
       // Get a high requirement achievement
       const highRequirementAchievement = await prisma.achievement.findFirst({
         where: {
-          requirementType: 'distance_km',
+          requirementType: "distance_km",
           requirement: { gte: 100000 },
         },
       });
@@ -93,34 +93,34 @@ describe('Achievements', () => {
 
         // Should not unlock high requirement achievement
         const unlocked = newlyUnlocked.find(
-          ua => ua.achievement.id === highRequirementAchievement.id
+          (ua) => ua.achievement.id === highRequirementAchievement.id
         );
         expect(unlocked).toBeUndefined();
       }
     });
 
-    it('should handle invalid userId gracefully', async () => {
+    it("should handle invalid userId gracefully", async () => {
       // Test with invalid userId - should return empty array (user has no flights)
-      const result = await checkAndUpdateAchievements('invalid-user-id');
+      const result = await checkAndUpdateAchievements("invalid-user-id");
       expect(result).toEqual([]);
     });
 
-    it('should update progress for non-unlocked achievements', async () => {
+    it("should update progress for non-unlocked achievements", async () => {
       // Create a flight
       await prisma.flight.create({
         data: {
           userId,
-          airline: 'Test Airline',
-          flightNumber: 'TA456',
+          airline: "Test Airline",
+          flightNumber: "TA456",
           depLat: 50.0379,
           depLon: 8.5622,
-          arrLat: 51.4700,
+          arrLat: 51.47,
           arrLon: -0.4543,
-          depIata: 'FRA',
-          arrIata: 'LHR',
-          departureTime: new Date('2025-01-21T08:00:00Z'),
-          arrivalTime: new Date('2025-01-21T09:30:00Z'),
-          status: 'flown',
+          depIata: "FRA",
+          arrIata: "LHR",
+          departureTime: new Date("2025-01-21T08:00:00Z"),
+          arrivalTime: new Date("2025-01-21T09:30:00Z"),
+          status: "flown",
         },
       });
 
@@ -134,32 +134,8 @@ describe('Achievements', () => {
 
       expect(userAchievements.length).toBeGreaterThan(0);
       // Progress should be greater than 0
-      const hasProgress = userAchievements.some(ua => ua.progress > 0);
+      const hasProgress = userAchievements.some((ua) => ua.progress > 0);
       expect(hasProgress).toBe(true);
     });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

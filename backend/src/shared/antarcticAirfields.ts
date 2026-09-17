@@ -33,8 +33,8 @@ export interface AntarcticCandidate {
  */
 export function isAntarcticAirfield(airport: AntarcticCandidate): boolean {
   return (
-    airport.iso_country === 'AQ' &&
-    airport.type === 'small_airport' &&
+    airport.iso_country === "AQ" &&
+    airport.type === "small_airport" &&
     Boolean(airport.iata_code || airport.gps_code)
   );
 }
@@ -61,9 +61,9 @@ export interface CatalogueCandidate extends AntarcticCandidate {
  */
 export function admitsAirport(
   airport: CatalogueCandidate,
-  { closedOnly = false }: { closedOnly?: boolean } = {},
+  { closedOnly = false }: { closedOnly?: boolean } = {}
 ): boolean {
-  const allowedTypes = closedOnly ? ['closed'] : ['large_airport', 'medium_airport', 'closed'];
+  const allowedTypes = closedOnly ? ["closed"] : ["large_airport", "medium_airport", "closed"];
   if (!allowedTypes.includes(airport.type) && !(!closedOnly && isAntarcticAirfield(airport))) {
     return false;
   }

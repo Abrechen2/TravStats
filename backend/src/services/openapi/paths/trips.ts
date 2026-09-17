@@ -118,7 +118,10 @@ registry.registerPath({
   summary: "Create a trip",
   tags: ["Trips"],
   request: {
-    body: { content: { "application/json": { schema: tripCreateInput.and(documentIdsBodySchema) } }, required: true },
+    body: {
+      content: { "application/json": { schema: tripCreateInput.and(documentIdsBodySchema) } },
+      required: true,
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: tripResponse } } },

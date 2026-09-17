@@ -148,9 +148,7 @@ export interface ResolvedCoordinates {
  *
  * Never throws — every tier degrades to "no answer" internally.
  */
-async function resolveCoordinates(
-  row: GeocodeSubject,
-): Promise<ResolvedCoordinates | null> {
+async function resolveCoordinates(row: GeocodeSubject): Promise<ResolvedCoordinates | null> {
   // The address belongs in the query, not just the city: it is the strongest
   // signal a text search has, and leaving it out is what let a Bavarian hotel
   // match its Roman namesake.
@@ -180,7 +178,7 @@ async function resolveCoordinates(
         name: row.name,
         source: "photon",
       },
-      "photon hit contradicts the row's own city/country — falling through",
+      "photon hit contradicts the row's own city/country — falling through"
     );
   }
 
@@ -210,7 +208,7 @@ async function resolveCoordinates(
     if (!agreesWithRow(row, candidate)) {
       logger.info(
         { operation: "google_places_contradicts_row", lodging: row.name },
-        "Discarding a Places hit that lands in a different place than the row says",
+        "Discarding a Places hit that lands in a different place than the row says"
       );
       return null;
     }
@@ -238,7 +236,7 @@ async function resolveCoordinates(
  */
 export async function backfillMissingCoordinates(
   userId: string,
-  batchId?: string,
+  batchId?: string
 ): Promise<BackfillResult> {
   let attempted = 0;
   let filled = 0;
@@ -296,7 +294,7 @@ export async function backfillMissingCoordinates(
               lodgingId: row.id,
               source: coords.source,
             },
-            "geocoder returned coordinates outside the world — treated as no result",
+            "geocoder returned coordinates outside the world — treated as no result"
           );
           continue;
         }
@@ -334,7 +332,7 @@ export async function backfillMissingCoordinates(
         if (written.count === 0) {
           logger.info(
             { operation: "lodging_geocode_backfill_superseded", lodgingId: row.id },
-            "row gained a position while the geocoder was working — left alone",
+            "row gained a position while the geocoder was working — left alone"
           );
           continue;
         }
@@ -346,7 +344,7 @@ export async function backfillMissingCoordinates(
             lodgingId: row.id,
             err: err instanceof Error ? err.message : String(err),
           },
-          "Geocode backfill row failed — continuing",
+          "Geocode backfill row failed — continuing"
         );
       }
     }
@@ -359,7 +357,7 @@ export async function backfillMissingCoordinates(
         attempted,
         filled,
       },
-      "Lodging geocode backfill finished",
+      "Lodging geocode backfill finished"
     );
   } catch (err) {
     logger.error(
@@ -369,7 +367,7 @@ export async function backfillMissingCoordinates(
         batchId,
         err: err instanceof Error ? err.message : String(err),
       },
-      "Lodging geocode backfill failed",
+      "Lodging geocode backfill failed"
     );
   }
 
@@ -401,7 +399,7 @@ type PinnedRow = Prisma.LodgingGetPayload<{ select: typeof PINNED_SELECT }>;
 
 export async function completeMissingAddresses(
   userId: string,
-  batchId?: string,
+  batchId?: string
 ): Promise<BackfillResult> {
   let attempted = 0;
   let filled = 0;
@@ -448,8 +446,7 @@ export async function completeMissingAddresses(
         // Unreadable counts as missing — the ONE case where this pass replaces
         // instead of fills. It applies to the script, never the wording:
         // "Lëtzebuerg" is Latin and stays untouched.
-        const gone = (v: string | null): boolean =>
-          !v?.trim() || hasNonLatinScript(v);
+        const gone = (v: string | null): boolean => !v?.trim() || hasNonLatinScript(v);
 
         const data: { address?: string; city?: string; country?: string } = {};
         if (gone(row.address) && parts.address) data.address = parts.address;
@@ -466,14 +463,14 @@ export async function completeMissingAddresses(
             lodgingId: row.id,
             err: err instanceof Error ? err.message : String(err),
           },
-          "Address backfill row failed — continuing",
+          "Address backfill row failed — continuing"
         );
       }
     }
 
     logger.info(
       { operation: "lodging_address_backfill", userId, batchId, attempted, filled },
-      "Lodging address backfill finished",
+      "Lodging address backfill finished"
     );
   } catch (err) {
     logger.error(
@@ -483,7 +480,7 @@ export async function completeMissingAddresses(
         batchId,
         err: err instanceof Error ? err.message : String(err),
       },
-      "Lodging address backfill failed",
+      "Lodging address backfill failed"
     );
   }
 
@@ -502,7 +499,7 @@ export async function completeMissingAddresses(
  */
 export async function backfillLodgingLocations(
   userId: string,
-  batchId?: string,
+  batchId?: string
 ): Promise<{ coordinates: BackfillResult; addresses: BackfillResult }> {
   const coordinates = await backfillMissingCoordinates(userId, batchId);
   const addresses = await completeMissingAddresses(userId, batchId);
@@ -537,13 +534,7 @@ export async function backfillAllLodgingLocations(): Promise<{
     // the lodging domain must do no work at all here.
     const incomplete = await prisma.lodging.findMany({
       where: {
-        OR: [
-          { lat: null },
-          { lon: null },
-          { address: null },
-          { city: null },
-          { country: null },
-        ],
+        OR: [{ lat: null }, { lon: null }, { address: null }, { city: null }, { country: null }],
       },
       select: { userId: true },
       distinct: ["userId"],
@@ -564,7 +555,7 @@ export async function backfillAllLodgingLocations(): Promise<{
           coordinatesFilled,
           addressesFilled,
         },
-        "Lodging location boot backfill finished",
+        "Lodging location boot backfill finished"
       );
     }
   } catch (err) {
@@ -573,7 +564,7 @@ export async function backfillAllLodgingLocations(): Promise<{
         operation: "lodging_location_boot_backfill_failed",
         err: err instanceof Error ? err.message : String(err),
       },
-      "Lodging location boot backfill failed",
+      "Lodging location boot backfill failed"
     );
   }
 

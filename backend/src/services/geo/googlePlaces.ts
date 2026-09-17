@@ -78,10 +78,10 @@ const responseSchema = z.object({
               longText: z.string(),
               shortText: z.string().optional(),
               types: z.array(z.string()),
-            }),
+            })
           )
           .optional(),
-      }),
+      })
     )
     .optional(),
 });
@@ -144,13 +144,19 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
 
     if (!res.ok) {
       // Never log the body: it is third-party content and may echo the query.
-      logger.warn({ operation: "google_places_non_ok", status: res.status }, "Google Places lookup non-OK");
+      logger.warn(
+        { operation: "google_places_non_ok", status: res.status },
+        "Google Places lookup non-OK"
+      );
       return null;
     }
 
     const parsed = responseSchema.safeParse(await res.json());
     if (!parsed.success) {
-      logger.warn({ operation: "google_places_shape" }, "Google Places answered an unexpected shape");
+      logger.warn(
+        { operation: "google_places_shape" },
+        "Google Places answered an unexpected shape"
+      );
       return null;
     }
 
@@ -163,7 +169,7 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
       // building, a casino. Discarding it is the point.
       logger.debug(
         { operation: "google_places_not_lodging", primaryType: place.primaryType },
-        "Google Places matched something that is not a lodging",
+        "Google Places matched something that is not a lodging"
       );
       return null;
     }
@@ -179,7 +185,10 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
       lon: place.location.longitude,
       type,
       name: place.displayName?.text ?? null,
-      city: component("locality") ?? component("postal_town") ?? component("administrative_area_level_2"),
+      city:
+        component("locality") ??
+        component("postal_town") ??
+        component("administrative_area_level_2"),
       country: component("country"),
       address: place.shortFormattedAddress ?? null,
       chainName: chainFromWebsite(place.websiteUri),
@@ -187,8 +196,11 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
     };
   } catch (error) {
     logger.warn(
-      { operation: "google_places_failed", error: error instanceof Error ? error.message : String(error) },
-      "Google Places lookup failed",
+      {
+        operation: "google_places_failed",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Google Places lookup failed"
     );
     return null;
   }

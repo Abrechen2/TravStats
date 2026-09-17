@@ -1,6 +1,6 @@
-import { prisma } from '../../../db';
-import { hashPassword } from '../../../utils/password';
-import { refreshLegsForMovedStop } from '../legRecompute';
+import { prisma } from "../../../db";
+import { hashPassword } from "../../../utils/password";
+import { refreshLegsForMovedStop } from "../legRecompute";
 
 /**
  * Moving a stop moves the legs that end at it.
@@ -19,7 +19,7 @@ import { refreshLegsForMovedStop } from '../legRecompute';
  */
 const USERNAME = `leg-refresh-${Date.now()}`;
 
-describe('refreshLegsForMovedStop', () => {
+describe("refreshLegsForMovedStop", () => {
   let userId: string;
   let tripId: string;
   let routeId: string;
@@ -29,27 +29,27 @@ describe('refreshLegsForMovedStop', () => {
   beforeEach(async () => {
     const user = await prisma.user.upsert({
       where: { username: USERNAME },
-      create: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      create: { username: USERNAME, passwordHash: await hashPassword("password123") },
       update: {},
     });
     userId = user.id;
 
     await prisma.trip.deleteMany({ where: { userId } });
     const trip = await prisma.trip.create({
-      data: { userId, name: 'Leg refresh', startDate: new Date('2026-01-01') },
+      data: { userId, name: "Leg refresh", startDate: new Date("2026-01-01") },
     });
     tripId = trip.id;
 
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: 'Section', mode: 'road' },
+      data: { tripId, name: "Section", mode: "road" },
     });
     routeId = route.id;
 
     const a = await prisma.tripStop.create({
-      data: { tripId, title: 'A', lat: 0, lon: 0, routeId, routeOrderIdx: 0 },
+      data: { tripId, title: "A", lat: 0, lon: 0, routeId, routeOrderIdx: 0 },
     });
     const b = await prisma.tripStop.create({
-      data: { tripId, title: 'B', lat: 0, lon: 1, routeId, routeOrderIdx: 1 },
+      data: { tripId, title: "B", lat: 0, lon: 1, routeId, routeOrderIdx: 1 },
     });
     stopA = a.id;
     stopB = b.id;
@@ -60,14 +60,14 @@ describe('refreshLegsForMovedStop', () => {
     await prisma.user.deleteMany({ where: { username: USERNAME } }).catch(() => {});
   });
 
-  it('recomputes a straight leg after its endpoint moves', async () => {
+  it("recomputes a straight leg after its endpoint moves", async () => {
     const leg = await prisma.tripRouteLeg.create({
       data: {
         routeId,
         fromStopId: stopA,
         toStopId: stopB,
-        source: 'straight',
-        mode: 'road',
+        source: "straight",
+        mode: "road",
         distanceKm: 111.195,
       },
     });
@@ -81,16 +81,16 @@ describe('refreshLegsForMovedStop', () => {
     expect(after.distanceKm).toBeLessThan(1120);
   });
 
-  it('keeps a drawn line but stops calling it trustworthy', async () => {
+  it("keeps a drawn line but stops calling it trustworthy", async () => {
     const leg = await prisma.tripRouteLeg.create({
       data: {
         routeId,
         fromStopId: stopA,
         toStopId: stopB,
-        source: 'drawn',
-        mode: 'road',
+        source: "drawn",
+        mode: "road",
         distanceKm: 150,
-        confidence: 'high',
+        confidence: "high",
         waypoints: [
           [0, 0],
           [0.5, 0.2],
@@ -107,6 +107,6 @@ describe('refreshLegsForMovedStop', () => {
     expect(after.waypoints).not.toBeNull();
     expect(after.distanceKm).toBe(150);
     // But it is no longer presented as reliable.
-    expect(after.confidence).toBe('low');
+    expect(after.confidence).toBe("low");
   });
 });

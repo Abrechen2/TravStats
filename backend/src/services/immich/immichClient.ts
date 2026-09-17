@@ -13,13 +13,7 @@
  */
 import axios, { AxiosRequestConfig } from "axios";
 import logger from "../../utils/logger";
-import {
-  ImmichAlbum,
-  ImmichAsset,
-  ImmichAssetSize,
-  ImmichConnection,
-  ImmichError,
-} from "./types";
+import { ImmichAlbum, ImmichAsset, ImmichAssetSize, ImmichConnection, ImmichError } from "./types";
 
 /** Immich caps `size` at 1000. */
 const PAGE_SIZE = 1000;
@@ -200,7 +194,7 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
         .filter(isRecord)
         .filter(
           (raw): raw is Record<string, unknown> & { id: string } =>
-            typeof raw.id === "string" && raw.id.length > 0,
+            typeof raw.id === "string" && raw.id.length > 0
         )
         .map((raw) => ({
           id: raw.id,
@@ -221,7 +215,7 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
           ({ data } = await axios.post(
             url("/search/metadata"),
             { albumIds: [albumId], withExif: true, page, size: PAGE_SIZE },
-            jsonConfig,
+            jsonConfig
           ));
         } catch (error) {
           throw toImmichError(error, `search/metadata album=${albumId}`);
@@ -277,7 +271,7 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
               page,
               size: PAGE_SIZE,
             },
-            jsonConfig,
+            jsonConfig
           ));
         } catch (error) {
           throw toImmichError(error, "search/metadata by date");

@@ -55,7 +55,16 @@ import AirportsSection from "../masterData/AirportsSection";
 describe("flight master-data sections", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const lufthansa = { id: 1, iata: "LH", icao: "DLH", name: "Lufthansa", callsign: "LUFTHANSA", country: "Germany", active: true, isUserAdded: false };
+    const lufthansa = {
+      id: 1,
+      iata: "LH",
+      icao: "DLH",
+      name: "Lufthansa",
+      callsign: "LUFTHANSA",
+      country: "Germany",
+      active: true,
+      isUserAdded: false,
+    };
     search.mockResolvedValue([lufthansa]);
     list.mockResolvedValue({ items: [lufthansa], total: 1 });
   });

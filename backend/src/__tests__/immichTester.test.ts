@@ -63,7 +63,7 @@ describe("testImmichConnection", () => {
 
   it("reports a protocol mismatch when the server answers with garbage", async () => {
     getServerVersion.mockRejectedValue(
-      new ImmichError("protocol", "Immich returned an unexpected version payload"),
+      new ImmichError("protocol", "Immich returned an unexpected version payload")
     );
     await expect(testImmichConnection("https://immich.lan", "key")).resolves.toEqual({
       success: false,

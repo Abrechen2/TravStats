@@ -93,7 +93,8 @@ registry.registerPath({
   method: "get",
   path: "/achievements/leaderboard",
   summary: "Instance leaderboard",
-  description: "Ranks the users of this instance by points. Small, self-hosted instances may return a single row.",
+  description:
+    "Ranks the users of this instance by points. Small, self-hosted instances may return a single row.",
   tags: ["Achievements"],
   responses: {
     200: {
@@ -146,8 +147,13 @@ registry.registerPath({
                   startsAt: z.string().datetime(),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),
-                  primary: z.string().describe("Headline, e.g. 'MUC → VIE', a ship or a hotel name"),
-                  secondary: z.string().nullable().describe("Qualifier: flight number, cruise line, city"),
+                  primary: z
+                    .string()
+                    .describe("Headline, e.g. 'MUC → VIE', a ship or a hotel name"),
+                  secondary: z
+                    .string()
+                    .nullable()
+                    .describe("Qualifier: flight number, cruise line, city"),
                 })
               ),
             }),

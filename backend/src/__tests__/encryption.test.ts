@@ -1,11 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import {
-  encrypt,
-  decrypt,
-  isEncrypted,
-  encryptApiKey,
-  decryptApiKey,
-} from "../utils/encryption";
+import { encrypt, decrypt, isEncrypted, encryptApiKey, decryptApiKey } from "../utils/encryption";
 
 /**
  * Regression coverage for the short-secret decryption bug (smoke-test S2).
@@ -20,14 +14,17 @@ describe("encryption round-trip across secret lengths", () => {
   // 16..128 always worked. All must round-trip after the fix.
   const lengths = [1, 3, 8, 14, 15, 16, 17, 32, 41, 128];
 
-  it.each(lengths)("decryptApiKey(encryptApiKey(secret)) === secret for a %d-byte secret", (len) => {
-    const secret = "k".repeat(len);
-    const stored = encryptApiKey(secret);
-    expect(stored).not.toBeNull();
-    // The stored value must NOT be the plaintext — it must actually be encrypted.
-    expect(stored).not.toBe(secret);
-    expect(decryptApiKey(stored)).toBe(secret);
-  });
+  it.each(lengths)(
+    "decryptApiKey(encryptApiKey(secret)) === secret for a %d-byte secret",
+    (len) => {
+      const secret = "k".repeat(len);
+      const stored = encryptApiKey(secret);
+      expect(stored).not.toBeNull();
+      // The stored value must NOT be the plaintext — it must actually be encrypted.
+      expect(stored).not.toBe(secret);
+      expect(decryptApiKey(stored)).toBe(secret);
+    }
+  );
 
   it("recognises every ciphertext it produces as encrypted", () => {
     for (const len of lengths) {

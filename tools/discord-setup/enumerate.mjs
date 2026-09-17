@@ -14,7 +14,11 @@ const WATERMARKS = {
 const DEFAULT_SINCE = "2026-08-01T00:00:00Z";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 function fmt(m) {
@@ -39,7 +43,9 @@ async function dump(ch, label, sinceIso) {
   } catch {
     return 0;
   }
-  const fresh = [...msgs.values()].filter((m) => m.createdTimestamp > since).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+  const fresh = [...msgs.values()]
+    .filter((m) => m.createdTimestamp > since)
+    .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
   if (fresh.length) {
     console.log(`\n  ${label}  — ${fresh.length} neu seit ${sinceIso}`);
     for (const m of fresh) console.log(fmt(m));
@@ -56,7 +62,9 @@ client.once("clientReady", async () => {
   const known = new Set(Object.keys(WATERMARKS));
   const seen = [];
 
-  for (const ch of [...channels.values()].filter(Boolean).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const ch of [...channels.values()]
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name))) {
     const kind = ChannelType[ch.type];
     const hasMark = known.has(ch.name);
     seen.push(`${ch.name} (${kind})${hasMark ? "" : "  ← KEINE Wasserlinie"}`);
@@ -67,7 +75,10 @@ client.once("clientReady", async () => {
     } else if (ch.type === ChannelType.GuildForum) {
       const active = await ch.threads.fetchActive().catch(() => null);
       const archived = await ch.threads.fetchArchived({ limit: 50 }).catch(() => null);
-      const threads = [...(active?.threads?.values() ?? []), ...(archived?.threads?.values() ?? [])];
+      const threads = [
+        ...(active?.threads?.values() ?? []),
+        ...(archived?.threads?.values() ?? []),
+      ];
       for (const t of threads) total += await dump(t, `#${ch.name} › ${t.name}`, since);
     }
   }

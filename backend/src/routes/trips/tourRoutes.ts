@@ -30,21 +30,19 @@ interface LegRow {
  * a `route` in the same shape every other section endpoint does, and this
  * is the one function that builds it.
  */
-export function toDto(
-  route: {
-    id: string;
-    tripId: string;
-    name: string;
-    mode: string;
-    orderIdx: number;
-    color: string | null;
-    notes: string | null;
-    startOdometerKm: number | null;
-    endOdometerKm: number | null;
-    legs: LegRow[];
-    _count: { stops: number };
-  },
-): Record<string, unknown> {
+export function toDto(route: {
+  id: string;
+  tripId: string;
+  name: string;
+  mode: string;
+  orderIdx: number;
+  color: string | null;
+  notes: string | null;
+  startOdometerKm: number | null;
+  endOdometerKm: number | null;
+  legs: LegRow[];
+  _count: { stops: number };
+}): Record<string, unknown> {
   return {
     id: route.id,
     tripId: route.tripId,
@@ -97,7 +95,11 @@ export const ROUTE_SELECT = {
 } as const;
 
 /** Section must exist AND belong to a trip this user owns. */
-export async function resolveRoute(userId: string, tripId: string, routeId: string): Promise<string> {
+export async function resolveRoute(
+  userId: string,
+  tripId: string,
+  routeId: string
+): Promise<string> {
   await resolveTrip(userId, tripId);
   const route = await prisma.tripRoute.findFirst({
     where: { id: routeId, tripId },
@@ -125,7 +127,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** POST /trips/:id/routes */
@@ -164,7 +166,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** PATCH /trips/:id/routes/:routeId */
@@ -187,7 +189,7 @@ router.patch(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -219,7 +221,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -287,7 +289,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -340,15 +342,12 @@ router.put(
       if (missing) {
         throw new AppError(
           `Every route stop needs a coordinate — "${missing.title}" has none`,
-          400,
+          400
         );
       }
       const stolen = stops.find((s) => s.routeId !== null && s.routeId !== routeId);
       if (stolen) {
-        throw new AppError(
-          `Stop "${stolen.title}" already belongs to another route section`,
-          400,
-        );
+        throw new AppError(`Stop "${stolen.title}" already belongs to another route section`, 400);
       }
 
       const byId = new Map(stops.map((s) => [s.id, s]));
@@ -392,7 +391,7 @@ router.put(
         // Default interactive-transaction timeout is 5000ms. At the
         // 512-stop cap this loop is up to 512 awaited updates; comfortably
         // inside 20s even over a non-local socket.
-        { timeout: 20_000 },
+        { timeout: 20_000 }
       );
 
       const [route, legs, savedStops] = await Promise.all([
@@ -413,7 +412,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

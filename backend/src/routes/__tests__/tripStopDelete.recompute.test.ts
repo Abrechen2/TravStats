@@ -72,9 +72,9 @@ describe("DELETE /trips/:id/stops/:stopId recomputes its section", () => {
       .set("Cookie", cookie);
     expect(detail.status).toBe(200);
 
-    expect(
-      detail.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx),
-    ).toEqual([0, 1]);
+    expect(detail.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([
+      0, 1,
+    ]);
 
     expect(detail.body.legs).toHaveLength(1);
     const leg = detail.body.legs[0];

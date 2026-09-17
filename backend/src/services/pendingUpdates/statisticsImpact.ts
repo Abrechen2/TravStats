@@ -68,7 +68,7 @@ export async function calculateStatisticsImpact(
   const allFlights = await prismaClient.flight.findMany({
     where: {
       userId: flight.userId,
-      status: 'flown',
+      status: "flown",
     },
   });
 
@@ -91,19 +91,19 @@ export async function calculateStatisticsImpact(
   // Build original data with coordinates
   const originalWithCoords = {
     ...originalData,
-    depLat: airports.get(originalData.depIata || originalData.depIcao || '')?.lat || flight.depLat,
-    depLon: airports.get(originalData.depIata || originalData.depIcao || '')?.lon || flight.depLon,
-    arrLat: airports.get(originalData.arrIata || originalData.arrIcao || '')?.lat || flight.arrLat,
-    arrLon: airports.get(originalData.arrIata || originalData.arrIcao || '')?.lon || flight.arrLon,
+    depLat: airports.get(originalData.depIata || originalData.depIcao || "")?.lat || flight.depLat,
+    depLon: airports.get(originalData.depIata || originalData.depIcao || "")?.lon || flight.depLon,
+    arrLat: airports.get(originalData.arrIata || originalData.arrIcao || "")?.lat || flight.arrLat,
+    arrLon: airports.get(originalData.arrIata || originalData.arrIcao || "")?.lon || flight.arrLon,
   };
 
   // Build proposed data with coordinates
   const proposedWithCoords = {
     ...proposedData,
-    depLat: airports.get(proposedData.depIata || proposedData.depIcao || '')?.lat || flight.depLat,
-    depLon: airports.get(proposedData.depIata || proposedData.depIcao || '')?.lon || flight.depLon,
-    arrLat: airports.get(proposedData.arrIata || proposedData.arrIcao || '')?.lat || flight.arrLat,
-    arrLon: airports.get(proposedData.arrIata || proposedData.arrIcao || '')?.lon || flight.arrLon,
+    depLat: airports.get(proposedData.depIata || proposedData.depIcao || "")?.lat || flight.depLat,
+    depLon: airports.get(proposedData.depIata || proposedData.depIcao || "")?.lon || flight.depLon,
+    arrLat: airports.get(proposedData.arrIata || proposedData.arrIcao || "")?.lat || flight.arrLat,
+    arrLon: airports.get(proposedData.arrIata || proposedData.arrIcao || "")?.lon || flight.arrLon,
   };
 
   // Calculate before stats
@@ -113,17 +113,27 @@ export async function calculateStatisticsImpact(
   const afterStats = await calculateUserStats(allFlights, flight, proposedWithCoords);
 
   // Calculate flight time for this specific flight only
-  const originalDepTime = originalData.departureTime ? new Date(originalData.departureTime) : flight.departureTime;
-  const originalArrTime = originalData.arrivalTime ? new Date(originalData.arrivalTime) : flight.arrivalTime;
-  const proposedDepTime = proposedData.departureTime ? new Date(proposedData.departureTime) : flight.departureTime;
-  const proposedArrTime = proposedData.arrivalTime ? new Date(proposedData.arrivalTime) : flight.arrivalTime;
+  const originalDepTime = originalData.departureTime
+    ? new Date(originalData.departureTime)
+    : flight.departureTime;
+  const originalArrTime = originalData.arrivalTime
+    ? new Date(originalData.arrivalTime)
+    : flight.arrivalTime;
+  const proposedDepTime = proposedData.departureTime
+    ? new Date(proposedData.departureTime)
+    : flight.departureTime;
+  const proposedArrTime = proposedData.arrivalTime
+    ? new Date(proposedData.arrivalTime)
+    : flight.arrivalTime;
 
-  const originalFlightTime = (originalArrTime && originalDepTime)
-    ? Math.round((originalArrTime.getTime() - originalDepTime.getTime()) / (1000 * 60))
-    : 0;
-  const proposedFlightTime = (proposedArrTime && proposedDepTime)
-    ? Math.round((proposedArrTime.getTime() - proposedDepTime.getTime()) / (1000 * 60))
-    : 0;
+  const originalFlightTime =
+    originalArrTime && originalDepTime
+      ? Math.round((originalArrTime.getTime() - originalDepTime.getTime()) / (1000 * 60))
+      : 0;
+  const proposedFlightTime =
+    proposedArrTime && proposedDepTime
+      ? Math.round((proposedArrTime.getTime() - proposedDepTime.getTime()) / (1000 * 60))
+      : 0;
 
   return {
     distance: {
@@ -139,22 +149,14 @@ export async function calculateStatisticsImpact(
     airlines: {
       before: beforeStats.airlines,
       after: afterStats.airlines,
-      added: Array.from(afterStats.airlines).filter(
-        a => !beforeStats.airlines.has(a)
-      ),
-      removed: Array.from(beforeStats.airlines).filter(
-        a => !afterStats.airlines.has(a)
-      ),
+      added: Array.from(afterStats.airlines).filter((a) => !beforeStats.airlines.has(a)),
+      removed: Array.from(beforeStats.airlines).filter((a) => !afterStats.airlines.has(a)),
     },
     airports: {
       before: beforeStats.airports,
       after: afterStats.airports,
-      added: Array.from(afterStats.airports).filter(
-        a => !beforeStats.airports.has(a)
-      ),
-      removed: Array.from(beforeStats.airports).filter(
-        a => !afterStats.airports.has(a)
-      ),
+      added: Array.from(afterStats.airports).filter((a) => !beforeStats.airports.has(a)),
+      removed: Array.from(beforeStats.airports).filter((a) => !afterStats.airports.has(a)),
     },
   };
 }
@@ -173,7 +175,7 @@ async function calculateUserStats(
   airports: Set<string>;
 }> {
   // Replace target flight with provided data
-  const modifiedFlights = allFlights.map(f => {
+  const modifiedFlights = allFlights.map((f) => {
     if (f.id === targetFlight.id) {
       return {
         ...f,
@@ -189,9 +191,7 @@ async function calculateUserStats(
         departureTime: flightData.departureTime
           ? new Date(flightData.departureTime)
           : f.departureTime,
-        arrivalTime: flightData.arrivalTime
-          ? new Date(flightData.arrivalTime)
-          : f.arrivalTime,
+        arrivalTime: flightData.arrivalTime ? new Date(flightData.arrivalTime) : f.arrivalTime,
       };
     }
     return f;

@@ -167,8 +167,7 @@ export async function sweepStatuses(
 
   const flights = staleFlights.count + futureFlown.count;
   const cruises = cruiseToInProgress.count + cruiseToFlown.count + cruiseToScheduled.count;
-  const lodging =
-    lodgingToInProgress.count + lodgingToCompleted.count + lodgingToScheduled.count;
+  const lodging = lodgingToInProgress.count + lodgingToCompleted.count + lodgingToScheduled.count;
   if (flights + cruises + lodging + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",

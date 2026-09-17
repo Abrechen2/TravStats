@@ -107,12 +107,22 @@ import { TemplateParser } from "../services/parsers/text/templateParser";
 import type { TextProvider } from "../services/parsers/types";
 
 // ── Typed mock helpers ────────────────────────────────────────────────────────
-const mockFindMatchingTemplate = findMatchingTemplate as jest.MockedFunction<typeof findMatchingTemplate>;
+const mockFindMatchingTemplate = findMatchingTemplate as jest.MockedFunction<
+  typeof findMatchingTemplate
+>;
 const mockApplyUserTemplate = applyUserTemplate as jest.MockedFunction<typeof applyUserTemplate>;
-const mockGetTextParserInstance = getTextParserInstance as jest.MockedFunction<typeof getTextParserInstance>;
-const mockCheckProviderAvailability = checkProviderAvailability as jest.MockedFunction<typeof checkProviderAvailability>;
-const mockCalculateParserQuality = calculateParserQuality as jest.MockedFunction<typeof calculateParserQuality>;
-const mockShouldLogParserOperations = shouldLogParserOperations as jest.MockedFunction<typeof shouldLogParserOperations>;
+const mockGetTextParserInstance = getTextParserInstance as jest.MockedFunction<
+  typeof getTextParserInstance
+>;
+const mockCheckProviderAvailability = checkProviderAvailability as jest.MockedFunction<
+  typeof checkProviderAvailability
+>;
+const mockCalculateParserQuality = calculateParserQuality as jest.MockedFunction<
+  typeof calculateParserQuality
+>;
+const mockShouldLogParserOperations = shouldLogParserOperations as jest.MockedFunction<
+  typeof shouldLogParserOperations
+>;
 
 // ── Base config used across tests ─────────────────────────────────────────────
 const BASE_CONFIG = {
@@ -211,7 +221,7 @@ describe("parseEmail — fallback chain", () => {
     const regexFlight = { ...MOCK_FLIGHT, flightNumber: "BA200", parserConfidence: 75 };
     const mockRegexParser = {
       provider: "regex",
-      parseEmail: jest.fn<() => Promise<typeof regexFlight[]>>().mockResolvedValue([regexFlight]),
+      parseEmail: jest.fn<() => Promise<(typeof regexFlight)[]>>().mockResolvedValue([regexFlight]),
       checkAvailability: jest.fn(),
     };
     mockGetTextParserInstance.mockReturnValue(mockRegexParser as never);
@@ -270,12 +280,7 @@ describe("parseEmail — fallback chain", () => {
     });
 
     await expect(
-      parseEmail(
-        "Booking confirmation",
-        "Flight BA200 departing LHR",
-        undefined,
-        config
-      )
+      parseEmail("Booking confirmation", "Flight BA200 departing LHR", undefined, config)
     ).rejects.toThrow("All text parsers failed");
   });
 });

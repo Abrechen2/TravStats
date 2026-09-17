@@ -1,15 +1,15 @@
-import { Router, Response, NextFunction } from 'express';
-import crypto from 'crypto';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { AppError } from '../../middleware/errorHandler';
-import { takeUserCountLock } from '../../utils/userCountLock';
-import { hashPassword } from '../../utils/password';
-import { adminCreateUserSchema, adminResetPasswordSchema } from '../../schemas/auth';
-import { sendAdminPasswordResetEmail } from '../../services/emailService';
-import { SMTP_CONFIG_ID } from './smtp';
-import logger from '../../utils/logger';
-import { getInstanceSettings } from '../../services/instanceSettingsService';
+import { Router, Response, NextFunction } from "express";
+import crypto from "crypto";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { AppError } from "../../middleware/errorHandler";
+import { takeUserCountLock } from "../../utils/userCountLock";
+import { hashPassword } from "../../utils/password";
+import { adminCreateUserSchema, adminResetPasswordSchema } from "../../schemas/auth";
+import { sendAdminPasswordResetEmail } from "../../services/emailService";
+import { SMTP_CONFIG_ID } from "./smtp";
+import logger from "../../utils/logger";
+import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
 
 const router = Router();
@@ -18,12 +18,12 @@ const router = Router();
 // Surface for AI-agent / onboarding flows: an admin-scope PAT can call this
 // to provision test users or import-only accounts without the cookie/email
 // invitation dance. The MAX_USERS instance limit is still enforced.
-router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = adminCreateUserSchema.parse(req.body);
 
     const existing = await prisma.user.findUnique({ where: { username: payload.username } });
-    if (existing) throw new AppError('Username already exists', 400);
+    if (existing) throw new AppError("Username already exists", 400);
 
     const { maxUsers } = await getInstanceSettings();
     const passwordHash = await hashPassword(payload.password);
@@ -35,7 +35,7 @@ router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction
       await takeUserCountLock(tx);
 
       const userCount = await tx.user.count();
-      if (userCount >= maxUsers) throw new AppError('User limit reached', 409);
+      if (userCount >= maxUsers) throw new AppError("User limit reached", 409);
 
       return tx.user.create({
         data: {
@@ -53,8 +53,8 @@ router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction
     await stampWhatsNewSeen(prisma, created.id);
 
     logger.info({
-      operation: 'admin_user_create',
-      message: 'Admin created user via /admin/users',
+      operation: "admin_user_create",
+      message: "Admin created user via /admin/users",
       context: { createdUserId: created.id, createdBy: req.userId, viaPAT: !!req.apiToken },
     });
 
@@ -65,7 +65,7 @@ router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Get all users
-router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/users", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -86,7 +86,7 @@ router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction)
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     res.json({ users });
@@ -96,40 +96,43 @@ router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction)
 });
 
 // Toggle user active status
-router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
+router.patch(
+  "/users/:id/toggle-active",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
 
-    // Prevent deactivating yourself
-    if (id === req.userId) {
-      throw new AppError('Cannot deactivate your own account', 400);
+      // Prevent deactivating yourself
+      if (id === req.userId) {
+        throw new AppError("Cannot deactivate your own account", 400);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { isActive: true },
+      });
+
+      if (!user) {
+        throw new AppError("User not found", 404);
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { isActive: !user.isActive },
+        select: {
+          id: true,
+          username: true,
+          isAdmin: true,
+          isActive: true,
+        },
+      });
+
+      res.json({ user: updatedUser });
+    } catch (error) {
+      next(error);
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { isActive: true },
-    });
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { isActive: !user.isActive },
-      select: {
-        id: true,
-        username: true,
-        isAdmin: true,
-        isActive: true,
-      },
-    });
-
-    res.json({ user: updatedUser });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 // DELETE /users/:id — permanently remove a user and all related data
 // (admin only — protected by requireAdmin in admin/index.ts).
@@ -137,12 +140,12 @@ router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response,
 // Cascade: flights, trips, bookings, user_settings, achievements,
 // pending_flight_updates, parser_templates, etc. are all removed via
 // Prisma onDelete: Cascade on their User foreign key.
-router.delete('/users/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
     if (id === req.userId) {
-      throw new AppError('Cannot delete your own account', 400);
+      throw new AppError("Cannot delete your own account", 400);
     }
 
     const user = await prisma.user.findUnique({
@@ -151,26 +154,26 @@ router.delete('/users/:id', async (req: AuthRequest, res: Response, next: NextFu
     });
 
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
 
     if (user.isAdmin) {
       const adminCount = await prisma.user.count({ where: { isAdmin: true } });
       if (adminCount <= 1) {
-        throw new AppError('Cannot delete the last remaining admin', 400);
+        throw new AppError("Cannot delete the last remaining admin", 400);
       }
     }
 
     await prisma.user.delete({ where: { id } });
 
     logger.info({
-      operation: 'admin_delete_user',
+      operation: "admin_delete_user",
       adminId: req.userId,
       targetUserId: id,
       targetUsername: user.username,
     });
 
-    res.json({ message: 'User deleted', userId: id });
+    res.json({ message: "User deleted", userId: id });
   } catch (error) {
     next(error);
   }
@@ -178,7 +181,7 @@ router.delete('/users/:id', async (req: AuthRequest, res: Response, next: NextFu
 
 // POST /users/:id/reset-password (admin only — protected by requireAdmin in admin/index.ts)
 router.post(
-  '/users/:id/reset-password',
+  "/users/:id/reset-password",
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -189,20 +192,16 @@ router.post(
         select: { id: true, username: true, notificationEmail: true },
       });
       if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError("User not found", 404);
       }
 
       let plainPassword: string | undefined;
       let newPasswordHash: string;
 
-      if (mode === 'generate') {
-        const chars =
-          'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+      if (mode === "generate") {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
         const randomBytes = crypto.randomBytes(12);
-        plainPassword = Array.from(
-          randomBytes,
-          (byte) => chars[byte % chars.length],
-        ).join('');
+        plainPassword = Array.from(randomBytes, (byte) => chars[byte % chars.length]).join("");
         newPasswordHash = await hashPassword(plainPassword);
       } else {
         if (!password) {
@@ -211,7 +210,7 @@ router.post(
         newPasswordHash = await hashPassword(password);
       }
 
-      const shouldMustChange = mustChangePassword ?? mode === 'generate';
+      const shouldMustChange = mustChangePassword ?? mode === "generate";
 
       await prisma.user.update({
         where: { id },
@@ -229,7 +228,7 @@ router.post(
       });
 
       logger.info({
-        operation: 'admin_password_reset',
+        operation: "admin_password_reset",
         adminId: req.userId,
         targetUserId: id,
         mode,
@@ -246,19 +245,15 @@ router.post(
         });
         if (smtpConfig?.enabled) {
           try {
-            await sendAdminPasswordResetEmail(
-              user.notificationEmail,
-              user.username,
-              plainPassword,
-            );
+            await sendAdminPasswordResetEmail(user.notificationEmail, user.username, plainPassword);
             emailDelivered = true;
           } catch (error) {
             logger.warn({
-              operation: 'admin_password_reset_email_failed',
+              operation: "admin_password_reset_email_failed",
               adminId: req.userId,
               targetUserId: id,
               error: {
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: error instanceof Error ? error.message : "Unknown error",
               },
             });
           }
@@ -267,8 +262,8 @@ router.post(
 
       res.json({
         message: emailDelivered
-          ? 'Password reset — temporary password emailed to user'
-          : 'Password reset successfully',
+          ? "Password reset — temporary password emailed to user"
+          : "Password reset successfully",
         emailDelivered,
         // Only surface the plaintext password if it could not be delivered by email
         // (no notification email on file, or SMTP disabled / send failed).
@@ -277,14 +272,14 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // POST /users/:id/disable-2fa — the way back in for a user who lost their phone
 // AND their recovery codes, without anyone needing a shell. Logged, because an
 // admin switching off someone else's protection should leave a trace.
 router.post(
-  '/users/:id/disable-2fa',
+  "/users/:id/disable-2fa",
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -292,7 +287,7 @@ router.post(
         where: { id },
         select: { id: true, username: true },
       });
-      if (!user) throw new AppError('User not found', 404);
+      if (!user) throw new AppError("User not found", 404);
 
       await prisma.$transaction([
         prisma.user.update({
@@ -309,7 +304,7 @@ router.post(
       ]);
 
       logger.warn({
-        operation: 'admin_two_factor_disabled',
+        operation: "admin_two_factor_disabled",
         adminId: req.userId,
         targetUserId: id,
         targetUsername: user.username,
@@ -318,7 +313,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

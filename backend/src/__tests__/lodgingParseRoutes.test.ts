@@ -192,7 +192,11 @@ describe("lodging domain wired into the parse routes", () => {
       const res = await request(app)
         .post("/api/v1/parse-email-file")
         .set("Cookie", [`auth_token=${token}`])
-        .attach("email", Buffer.from("From: test@example.com\nSubject: garbage\n\nnothing useful"), "x.eml")
+        .attach(
+          "email",
+          Buffer.from("From: test@example.com\nSubject: garbage\n\nnothing useful"),
+          "x.eml"
+        )
         .field("domain", "lodging");
 
       expect(res.status).toBe(200);

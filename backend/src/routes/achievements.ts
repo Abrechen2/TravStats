@@ -1,10 +1,10 @@
-import { Router, Response, NextFunction } from 'express';
-import { prisma } from '../db';
-import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { statsLimiter } from '../middleware/rateLimit';
-import { checkAndUpdateAchievements } from '../utils/achievements';
-import { resolveRank } from '../utils/achievementRank';
-import { achievements as catalogueDefinitions } from '../data/achievements';
+import { Router, Response, NextFunction } from "express";
+import { prisma } from "../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { statsLimiter } from "../middleware/rateLimit";
+import { checkAndUpdateAchievements } from "../utils/achievements";
+import { resolveRank } from "../utils/achievementRank";
+import { achievements as catalogueDefinitions } from "../data/achievements";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ const TEST_ACHIEVEMENT_PREFIX = "TEST_";
 // instance read "83 of 276" against a 275-entry catalogue, a badge nobody can
 // earn any more. The fraction counts live definitions; a legacy unlock stays
 // listed and keeps its points.
-const LIVE_ACHIEVEMENT_CODES = new Set(catalogueDefinitions.map(a => a.code));
+const LIVE_ACHIEVEMENT_CODES = new Set(catalogueDefinitions.map((a) => a.code));
 
 // All routes require authentication; PATs need write scope to mutate
 // (POST /check recomputes + persists user achievement state).
@@ -27,7 +27,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 // Get all achievements with user progress
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
 
@@ -36,11 +36,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       where: {
         code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
       },
-      orderBy: [
-        { category: 'asc' },
-        { tier: 'asc' },
-        { requirement: 'asc' },
-      ],
+      orderBy: [{ category: "asc" }, { tier: "asc" }, { requirement: "asc" }],
     });
 
     // Get user's unlocked achievements
@@ -50,54 +46,52 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     });
 
     // Create a map for quick lookup
-    const userAchievementMap = new Map(
-      userAchievements.map(ua => [ua.achievementId, ua])
-    );
+    const userAchievementMap = new Map(userAchievements.map((ua) => [ua.achievementId, ua]));
 
     const isLive = (code: string) => LIVE_ACHIEVEMENT_CODES.has(code);
-    const liveAchievements = achievements.filter(a => isLive(a.code));
+    const liveAchievements = achievements.filter((a) => isLive(a.code));
 
     // Combine data — an orphaned row is shown only to a user who unlocked it
-    const achievementsWithProgress = achievements.filter(achievement => {
-      if (isLive(achievement.code)) return true;
-      const ua = userAchievementMap.get(achievement.id);
-      return !!ua && ua.progress >= achievement.requirement;
-    }).map(achievement => {
-      const userAchievement = userAchievementMap.get(achievement.id);
-      const progress = userAchievement?.progress || 0;
-      const isUnlocked = !!userAchievement && progress >= achievement.requirement;
+    const achievementsWithProgress = achievements
+      .filter((achievement) => {
+        if (isLive(achievement.code)) return true;
+        const ua = userAchievementMap.get(achievement.id);
+        return !!ua && ua.progress >= achievement.requirement;
+      })
+      .map((achievement) => {
+        const userAchievement = userAchievementMap.get(achievement.id);
+        const progress = userAchievement?.progress || 0;
+        const isUnlocked = !!userAchievement && progress >= achievement.requirement;
 
-      return {
-        ...achievement,
-        isUnlocked,
-        unlockedAt: isUnlocked ? userAchievement?.unlockedAt || null : null,
-        progress,
-        progressPercentage: Math.min(
-          100,
-          Math.round(progress / achievement.requirement * 100)
-        ),
-      };
-    });
+        return {
+          ...achievement,
+          isUnlocked,
+          unlockedAt: isUnlocked ? userAchievement?.unlockedAt || null : null,
+          progress,
+          progressPercentage: Math.min(100, Math.round((progress / achievement.requirement) * 100)),
+        };
+      });
 
     // Calculate totals only for unlocked achievements
-    const unlocked = userAchievements.filter(
-      ua => ua.progress >= ua.achievement.requirement
-    );
+    const unlocked = userAchievements.filter((ua) => ua.progress >= ua.achievement.requirement);
 
     const totalPoints = unlocked.reduce((sum, ua) => sum + ua.achievement.points, 0);
-    const unlockedLive = unlocked.filter(ua => isLive(ua.achievement.code));
+    const unlockedLive = unlocked.filter((ua) => isLive(ua.achievement.code));
 
     // Calculate achievements by category
-    const categories = liveAchievements.reduce((acc, ach) => {
-      if (!acc[ach.category]) {
-        acc[ach.category] = { total: 0, unlocked: 0 };
-      }
+    const categories = liveAchievements.reduce(
+      (acc, ach) => {
+        if (!acc[ach.category]) {
+          acc[ach.category] = { total: 0, unlocked: 0 };
+        }
         acc[ach.category].total++;
-      if (achievementsWithProgress.find(a => a.id === ach.id)?.isUnlocked) {
-        acc[ach.category].unlocked++;
-      }
-      return acc;
-    }, {} as Record<string, { total: number; unlocked: number }>);
+        if (achievementsWithProgress.find((a) => a.id === ach.id)?.isUnlocked) {
+          acc[ach.category].unlocked++;
+        }
+        return acc;
+      },
+      {} as Record<string, { total: number; unlocked: number }>
+    );
 
     // Rank rides on unlocked points only — see utils/achievementRank.ts. The
     // `rank` value is a stable slug, not display copy: clients localize it.
@@ -120,7 +114,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 });
 
 // Get recently unlocked achievements
-router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const rawLimit = parseInt(req.query.limit as string, 10);
@@ -138,14 +132,14 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
       // is Postgres' default for DESC — which would put every un-earned row at
       // the head of the list the filter below then throws away. Ordering them
       // last keeps the "recent" order recent.
-      orderBy: { unlockedAt: { sort: 'desc', nulls: 'last' } },
+      orderBy: { unlockedAt: { sort: "desc", nulls: "last" } },
     });
 
     // Only return actually unlocked achievements (progress >= requirement).
     // Held-ness is derived from the numbers, never from `unlockedAt` — the date
     // is a label on that fact, not the fact itself.
     const recentAchievements = allRecent
-      .filter(ua => ua.progress >= ua.achievement.requirement)
+      .filter((ua) => ua.progress >= ua.achievement.requirement)
       .slice(0, limit);
 
     res.json({ achievements: recentAchievements });
@@ -160,14 +154,14 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
 // caller's whole logbook and writes the progress rows back, which is the same
 // full-history aggregation the stats endpoints do — plus the writes. The list
 // routes above only read the already-computed rows and stay unlimited.
-router.post('/check', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/check", statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
 
     const newlyUnlocked = await checkAndUpdateAchievements(userId);
 
     res.json({
-      message: 'Achievement check completed',
+      message: "Achievement check completed",
       newlyUnlocked: newlyUnlocked.length,
       achievements: newlyUnlocked,
     });
@@ -184,71 +178,82 @@ router.post('/check', statsLimiter, async (req: AuthRequest, res: Response, next
 // There is no WHERE on the caller and no pagination, so on a family instance
 // it grows with everyone's progress at once. Same `statsLimiter` bucket —
 // 30/min is plenty for a board nobody watches change second by second.
-router.get('/leaderboard', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const rawLeaderboardLimit = parseInt(req.query.limit as string, 10);
-    const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
+router.get(
+  "/leaderboard",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const rawLeaderboardLimit = parseInt(req.query.limit as string, 10);
+      const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
 
-    // Get user achievements with points and requirement for unlock check
-    const userAchievements = await prisma.userAchievement.findMany({
-      where: {
-        achievement: {
-          code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
-        },
-      },
-      select: {
-        userId: true,
-        progress: true,
-        achievement: {
-          select: {
-            points: true,
-            requirement: true,
+      // Get user achievements with points and requirement for unlock check
+      const userAchievements = await prisma.userAchievement.findMany({
+        where: {
+          achievement: {
+            code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
           },
         },
-        user: {
-          select: {
-            id: true,
-            username: true,
-            createdAt: true,
+        select: {
+          userId: true,
+          progress: true,
+          achievement: {
+            select: {
+              points: true,
+              requirement: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              username: true,
+              createdAt: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Only count actually unlocked achievements (progress >= requirement)
-    const userPointsMap = new Map<string, { user: { id: string; username: string; createdAt: Date }; totalPoints: number; achievementCount: number }>();
+      // Only count actually unlocked achievements (progress >= requirement)
+      const userPointsMap = new Map<
+        string,
+        {
+          user: { id: string; username: string; createdAt: Date };
+          totalPoints: number;
+          achievementCount: number;
+        }
+      >();
 
-    for (const ua of userAchievements) {
-      if (ua.progress < ua.achievement.requirement) continue;
+      for (const ua of userAchievements) {
+        if (ua.progress < ua.achievement.requirement) continue;
 
-      const userId = ua.userId;
-      if (!userPointsMap.has(userId)) {
-        userPointsMap.set(userId, {
-          user: ua.user,
-          totalPoints: 0,
-          achievementCount: 0,
-        });
+        const userId = ua.userId;
+        if (!userPointsMap.has(userId)) {
+          userPointsMap.set(userId, {
+            user: ua.user,
+            totalPoints: 0,
+            achievementCount: 0,
+          });
+        }
+        const entry = userPointsMap.get(userId)!;
+        entry.totalPoints += ua.achievement.points;
+        entry.achievementCount++;
       }
-      const entry = userPointsMap.get(userId)!;
-      entry.totalPoints += ua.achievement.points;
-      entry.achievementCount++;
+
+      // Convert to array, sort, and limit
+      const leaderboard = Array.from(userPointsMap.values())
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .slice(0, limit)
+        .map((entry, index) => ({
+          rank: index + 1,
+          username: entry.user.username,
+          totalPoints: entry.totalPoints,
+          achievementCount: entry.achievementCount,
+        }));
+
+      res.json({ leaderboard });
+    } catch (error) {
+      next(error);
     }
-
-    // Convert to array, sort, and limit
-    const leaderboard = Array.from(userPointsMap.values())
-      .sort((a, b) => b.totalPoints - a.totalPoints)
-      .slice(0, limit)
-      .map((entry, index) => ({
-        rank: index + 1,
-        username: entry.user.username,
-        totalPoints: entry.totalPoints,
-        achievementCount: entry.achievementCount,
-      }));
-
-    res.json({ leaderboard });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 export default router;

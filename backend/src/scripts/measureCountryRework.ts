@@ -150,30 +150,34 @@ for (const v of placeVisits) {
 
 // --- the NEW rule, from the shipped module --------------------------------
 const now = new Date();
-const passport = buildPassport(
-  flights,
-  airportCountry,
-  [],
-  now,
-  portCalls,
-  placeVisits,
-  lodgings
-);
+const passport = buildPassport(flights, airportCountry, [], now, portCalls, placeVisits, lodgings);
 
 const rows = passport.countries;
 const byCode = new Map(rows.map((c) => [c.code, c]));
 const newCounted = new Set(rows.filter((c) => c.counted).map((c) => c.code));
 
-const name = (code: string) =>
-  new Intl.DisplayNames(["de"], { type: "region" }).of(code) ?? code;
+const name = (code: string) => new Intl.DisplayNames(["de"], { type: "region" }).of(code) ?? code;
 
 console.log("=".repeat(72));
-console.log("INPUT   flights", flights.length, " lodgings", lodgings.length,
-  " stays", [...stays.values()].reduce((n, s) => n + s.length, 0),
-  " places", placeVisits.length, " ports", portCalls.length);
+console.log(
+  "INPUT   flights",
+  flights.length,
+  " lodgings",
+  lodgings.length,
+  " stays",
+  [...stays.values()].reduce((n, s) => n + s.length, 0),
+  " places",
+  placeVisits.length,
+  " ports",
+  portCalls.length
+);
 console.log("OLD rule (flight began or ended there, + ports + places):", oldCountries.size);
-console.log("NEW rule, headline at threshold", `"${passport.summary.countryThreshold}"`,
-  ":", passport.summary.countries);
+console.log(
+  "NEW rule, headline at threshold",
+  `"${passport.summary.countryThreshold}"`,
+  ":",
+  passport.summary.countries
+);
 console.log("NEW rule, every country with evidence:", passport.summary.countriesTotal);
 console.log("byTier:", JSON.stringify(passport.summary.byTier));
 console.log("byEvidence:", JSON.stringify(passport.summary.byEvidence));
@@ -184,16 +188,21 @@ const removed = [...oldCountries].filter((c) => !newCounted.has(c)).sort();
 console.log("\n--- GAINED (" + added.length + ") — counted now, not before ---");
 for (const code of added) {
   const r = byCode.get(code);
-  console.log(`  ${code} ${name(code).padEnd(24)} tier=${r?.tier} kinds=${r?.kinds?.join(",")}` +
-    ` days=${r?.daysPresent} undated=${r?.hasUndatedEvidence}`);
+  console.log(
+    `  ${code} ${name(code).padEnd(24)} tier=${r?.tier} kinds=${r?.kinds?.join(",")}` +
+      ` days=${r?.daysPresent} undated=${r?.hasUndatedEvidence}`
+  );
 }
 
 console.log("\n--- LOST (" + removed.length + ") — counted before, not now ---");
 for (const code of removed) {
   const r = byCode.get(code);
-  console.log(`  ${code} ${name(code).padEnd(24)} ` +
-    (r ? `still listed, tier=${r.tier} counted=${r.counted} kinds=${r.kinds.join(",")}`
-       : "no longer has any evidence"));
+  console.log(
+    `  ${code} ${name(code).padEnd(24)} ` +
+      (r
+        ? `still listed, tier=${r.tier} counted=${r.counted} kinds=${r.kinds.join(",")}`
+        : "no longer has any evidence")
+  );
 }
 
 console.log("\n--- every country NOT counted at this threshold (must still be listed) ---");

@@ -41,7 +41,7 @@ const domainDetectionSchema = registry.register(
           domain: z.enum(["flight", "cruise", "lodging"]),
           score: z.number(),
           confidence: z.number(),
-          matched: z.array(z.string()).describe("Signal ids that fired, e.g. \"checkin-checkout\""),
+          matched: z.array(z.string()).describe('Signal ids that fired, e.g. "checkin-checkout"'),
         })
       ),
     })
@@ -90,7 +90,11 @@ registry.registerPath({
             flights: z.array(parsedFlightSchema),
             parserUsed: z.string(),
             subject: z.string().optional(),
-            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
+            documentId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe("Present when retained or read from a document"),
           }),
         },
       },
@@ -122,7 +126,11 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              imageBase64: z.string().min(1).max(20 * 1024 * 1024).optional(),
+              imageBase64: z
+                .string()
+                .min(1)
+                .max(20 * 1024 * 1024)
+                .optional(),
               domain: requestableDomain.default("auto").optional(),
               ...parseRetentionFields,
             })
@@ -140,7 +148,11 @@ registry.registerPath({
             domain: z.enum(["flight", "cruise", "lodging"]),
             ocrConfidence: z.number(),
             ocrTextLength: z.number(),
-            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
+            documentId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe("Present when retained or read from a document"),
             domainSource: z
               .enum(["requested", "detected"])
               .optional()
@@ -171,7 +183,11 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              imageBase64: z.string().min(1).max(20 * 1024 * 1024).optional(),
+              imageBase64: z
+                .string()
+                .min(1)
+                .max(20 * 1024 * 1024)
+                .optional(),
               enrichWithApi: z.boolean().default(true).optional(),
               ...parseRetentionFields,
             })
@@ -187,7 +203,11 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             flight: parsedFlightSchema,
-            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
+            documentId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe("Present when retained or read from a document"),
             provider: z.string(),
             fallbackUsed: z.boolean().optional(),
             enriched: z.boolean().optional(),

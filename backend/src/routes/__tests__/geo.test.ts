@@ -54,9 +54,7 @@ describe("Geo API", () => {
         degraded: false,
       });
 
-      const res = await request(app)
-        .get("/api/v1/geo/search?q=Zurich")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/geo/search?q=Zurich").set("Cookie", authCookie);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -80,9 +78,7 @@ describe("Geo API", () => {
 
     it("forwards lang to the service", async () => {
       mockSearchPlaces.mockResolvedValue({ results: [], degraded: false });
-      await request(app)
-        .get("/api/v1/geo/search?q=Berlin&lang=de")
-        .set("Cookie", authCookie);
+      await request(app).get("/api/v1/geo/search?q=Berlin&lang=de").set("Cookie", authCookie);
       expect(mockSearchPlaces).toHaveBeenCalledWith("Berlin", { lang: "de" });
     });
 
@@ -93,17 +89,13 @@ describe("Geo API", () => {
     });
 
     it("rejects a query shorter than 2 characters (400, not a service call)", async () => {
-      const res = await request(app)
-        .get("/api/v1/geo/search?q=a")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/geo/search?q=a").set("Cookie", authCookie);
       expect(res.status).toBe(400);
       expect(mockSearchPlaces).not.toHaveBeenCalled();
     });
 
     it("rejects a missing q", async () => {
-      const res = await request(app)
-        .get("/api/v1/geo/search")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/geo/search").set("Cookie", authCookie);
       expect(res.status).toBe(400);
     });
 
@@ -117,9 +109,7 @@ describe("Geo API", () => {
 
     it("never surfaces a 5xx to the client when the geocoder is down — the service degrades to []", async () => {
       mockSearchPlaces.mockResolvedValue({ results: [], degraded: true });
-      const res = await request(app)
-        .get("/api/v1/geo/search?q=Berlin")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/geo/search?q=Berlin").set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
       // #263: the failure is still visible to the client — as a flag, not a 5xx.
@@ -128,9 +118,7 @@ describe("Geo API", () => {
 
     it("applies the photonSearchLimiter (rate-limit headers present)", async () => {
       mockSearchPlaces.mockResolvedValue({ results: [], degraded: false });
-      const res = await request(app)
-        .get("/api/v1/geo/search?q=Berlin")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/geo/search?q=Berlin").set("Cookie", authCookie);
       expect(res.headers["ratelimit-limit"]).toBeDefined();
     });
   });

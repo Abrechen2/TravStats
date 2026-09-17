@@ -8,11 +8,7 @@ vi.mock("../../../../hooks/useTranslation", () => ({
 }));
 vi.mock("../../../CurrencyInput", () => ({
   default: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input
-      data-testid="currency-input"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <input data-testid="currency-input" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
 }));
 vi.mock("../../../ReceiptUpload", () => ({

@@ -33,10 +33,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
   const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const score = (value: number | null): string => (value !== null ? `★ ${value.toFixed(1)}` : "—");
-  const ratingRows = (
-    groups: LodgingRatingGroup[],
-    label: (key: string) => string,
-  ): RankedRow[] =>
+  const ratingRows = (groups: LodgingRatingGroup[], label: (key: string) => string): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),

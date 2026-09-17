@@ -32,10 +32,7 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
   const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const money = (value: number): string => formatCurrency(value, baseCurrency);
-  const priceRows = (
-    groups: LodgingPriceGroup[],
-    label: (key: string) => string,
-  ): RankedRow[] =>
+  const priceRows = (groups: LodgingPriceGroup[], label: (key: string) => string): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),
@@ -62,7 +59,8 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
               nights: price.pricedNights,
               currency: baseCurrency,
             })}
-        {price.unpricedStays > 0 && ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
+        {price.unpricedStays > 0 &&
+          ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
       </p>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

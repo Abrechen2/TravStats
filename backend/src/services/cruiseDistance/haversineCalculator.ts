@@ -1,9 +1,5 @@
 import { haversineKm } from "../../shared/geo/haversine";
-import type {
-  ComputedLeg,
-  DistanceCalculator,
-  PortPoint,
-} from "./types";
+import type { ComputedLeg, DistanceCalculator, PortPoint } from "./types";
 
 /**
  * Always-accepts fallback. Returns the great-circle distance with low
@@ -20,10 +16,7 @@ export const haversineCalculator: DistanceCalculator = {
   },
 
   async compute(from: PortPoint, to: PortPoint): Promise<ComputedLeg> {
-    const distanceKm = haversineKm(
-      { lat: from.lat, lon: from.lon },
-      { lat: to.lat, lon: to.lon },
-    );
+    const distanceKm = haversineKm({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon });
     return {
       distanceKm,
       method: "haversine",

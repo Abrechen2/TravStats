@@ -12,10 +12,7 @@
  * endpoint and the achievement rollup — and a copy in each is how the two
  * would come to disagree about whose nights count toward a status.
  */
-import {
-  deriveStayMembership,
-  type MembershipCoverage,
-} from "../../shared/membershipDerivation";
+import { deriveStayMembership, type MembershipCoverage } from "../../shared/membershipDerivation";
 
 /** The shape a `LodgingMembership` must be loaded in for this to work. */
 export interface MembershipWithLinks {
@@ -44,9 +41,7 @@ export interface StayMembershipContext {
  * has; a user with none yields an empty context, and every stay then resolves
  * to no programme without any special-casing at the call site.
  */
-export function buildMembershipContext(
-  memberships: MembershipWithLinks[],
-): StayMembershipContext {
+export function buildMembershipContext(memberships: MembershipWithLinks[]): StayMembershipContext {
   return {
     coverage: memberships.map((m) => ({
       id: m.id,
@@ -69,7 +64,7 @@ export function buildMembershipContext(
 export function resolveStayProgramme(
   stay: { membershipId: string | null; membershipOptOut: boolean; lodgingId: string },
   lodgingChainId: number | null,
-  context: StayMembershipContext,
+  context: StayMembershipContext
 ): ResolvedProgramme {
   const { membershipId } = deriveStayMembership({
     overrideId: stay.membershipId,

@@ -313,13 +313,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalAirlabsApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No AirLabs key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No AirLabs key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testAirlabsKey(effective);
       res.json(result);
@@ -338,13 +336,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalAviationstackApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No Aviationstack key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No Aviationstack key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testAviationstackKey(effective);
       res.json(result);
@@ -363,13 +359,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalAerodataboxApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No AeroDataBox key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No AeroDataBox key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testAerodataboxKey(effective);
       res.json(result);
@@ -388,13 +382,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalLogostreamApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No logostream key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No logostream key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testLogostreamKey(effective);
       res.json(result);
@@ -413,13 +405,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalGooglePlacesApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No Google Places key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No Google Places key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testGooglePlacesKey(effective);
       res.json(result);
@@ -438,13 +428,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalOpenrouteserviceApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No OpenRouteService key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No OpenRouteService key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testOpenRouteServiceKey(effective);
       res.json(result);
@@ -463,13 +451,11 @@ router.post(
         ? ((await resolveAdminGlobalKey("globalGraphhopperApiKey")) ?? "")
         : apiKey!;
       if (!effective) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No GraphHopper key configured to test. Save one first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No GraphHopper key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testGraphHopperKey(effective);
       res.json(result);
@@ -489,13 +475,11 @@ router.post(
         clientSecret = (await resolveAdminGlobalKey("globalOpenskyClientSecret")) ?? undefined;
       }
       if (!(clientId && clientSecret) && !(username && password)) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "No OpenSky credentials configured to test. Save them first.",
-            messageKey: "notConfigured",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "No OpenSky credentials configured to test. Save them first.",
+          messageKey: "notConfigured",
+        });
       }
       const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
       res.json(result);

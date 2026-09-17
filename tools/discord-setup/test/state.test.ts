@@ -31,7 +31,7 @@ describe("state", () => {
         { nope: true },
         "not-an-object",
       ]),
-      "utf8",
+      "utf8"
     );
     expect(readState()).toEqual([{ guildId: "123", rulesMessageId: "456" }]);
   });

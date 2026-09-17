@@ -57,9 +57,7 @@ export const CONTINENT_GROUPS: readonly ContinentGroup[] = [
  */
 export function groupsCoverEveryContinent(): boolean {
   const grouped = CONTINENT_GROUPS.flatMap((g) => g.continents);
-  return (
-    grouped.length === CONTINENTS.length && CONTINENTS.every((c) => grouped.includes(c))
-  );
+  return grouped.length === CONTINENTS.length && CONTINENTS.every((c) => grouped.includes(c));
 }
 
 /** The denominator per continent — see DECISION 2. */

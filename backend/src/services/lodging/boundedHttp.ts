@@ -95,9 +95,10 @@ export function requestTextWithDeadline(options: BoundedRequestOptions): Promise
         // (already settled). Without a preceding `end` it is the one signal a
         // truncated body leaves behind.
         res.on("close", () => {
-          if (!ended) fail(new Error(`${options.label} connection closed before the response ended`));
+          if (!ended)
+            fail(new Error(`${options.label} connection closed before the response ended`));
         });
-      },
+      }
     );
 
     deadline = setTimeout(() => {

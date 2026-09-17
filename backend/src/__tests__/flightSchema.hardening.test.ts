@@ -38,11 +38,7 @@ describe("createFlightSchema — chronological order applies to historicals (G1)
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(
-        r.error.issues.some((i) =>
-          CHRONOLOGY_REJECTION.test(i.message)
-        )
-      ).toBe(true);
+      expect(r.error.issues.some((i) => CHRONOLOGY_REJECTION.test(i.message))).toBe(true);
     }
   });
 
@@ -69,9 +65,7 @@ describe("createFlightSchema — chronological order applies to historicals (G1)
 
 describe("createFlightSchema — year-axis sanity (G2/G3)", () => {
   it("rejects historical with a future departureLocal", () => {
-    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 19);
+    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 19);
     const r = createFlightSchema.safeParse({
       ...baseValid,
       status: "historical",
@@ -82,15 +76,15 @@ describe("createFlightSchema — year-axis sanity (G2/G3)", () => {
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(
-        r.error.issues.some((i) => /historical flights cannot have a departureLocal in the future/.test(i.message)),
+        r.error.issues.some((i) =>
+          /historical flights cannot have a departureLocal in the future/.test(i.message)
+        )
       ).toBe(true);
     }
   });
 
   it("rejects flown with a future departureLocal", () => {
-    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 19);
+    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 19);
     const r = createFlightSchema.safeParse({
       ...baseValid,
       status: "flown",
@@ -101,9 +95,7 @@ describe("createFlightSchema — year-axis sanity (G2/G3)", () => {
   });
 
   it("accepts scheduled with a future departureLocal (the normal case)", () => {
-    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 19);
+    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 19);
     const r = createFlightSchema.safeParse({
       ...baseValid,
       status: "scheduled",
@@ -132,11 +124,7 @@ describe("updateFlightSchema — chronological refine now applies (G5)", () => {
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(
-        r.error.issues.some((i) =>
-          CHRONOLOGY_REJECTION.test(i.message)
-        )
-      ).toBe(true);
+      expect(r.error.issues.some((i) => CHRONOLOGY_REJECTION.test(i.message))).toBe(true);
     }
   });
 
@@ -149,9 +137,7 @@ describe("updateFlightSchema — chronological refine now applies (G5)", () => {
   });
 
   it("rejects historical update with future departureLocal", () => {
-    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 19);
+    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 19);
     const r = updateFlightSchema.safeParse({
       status: "historical",
       departureLocal: future,

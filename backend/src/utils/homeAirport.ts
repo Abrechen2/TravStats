@@ -89,14 +89,14 @@ export function normalizeHistory(raw: unknown): HomeAirportEntry[] {
   if (!Array.isArray(raw)) return [];
   const result: HomeAirportEntry[] = [];
   for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
+    if (!item || typeof item !== "object") continue;
     const rec = item as Record<string, unknown>;
-    const iata = typeof rec.iata === 'string' ? rec.iata.trim().toUpperCase() : null;
-    const fromDate = typeof rec.fromDate === 'string' ? rec.fromDate : null;
+    const iata = typeof rec.iata === "string" ? rec.iata.trim().toUpperCase() : null;
+    const fromDate = typeof rec.fromDate === "string" ? rec.fromDate : null;
     const toDate =
       rec.toDate === null || rec.toDate === undefined
         ? null
-        : typeof rec.toDate === 'string'
+        : typeof rec.toDate === "string"
           ? rec.toDate
           : undefined;
     if (!iata || !fromDate || toDate === undefined) continue;

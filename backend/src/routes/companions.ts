@@ -1,7 +1,7 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction } from "express";
 
-import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { prisma } from "../db";
+import { authenticate, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ const router = Router();
  * The caller's companions, most used first. Feeds the companion picker in the
  * flight, trip and cruise forms.
  */
-router.get('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const rows = await prisma.companion.findMany({
       where: { userId: req.userId },

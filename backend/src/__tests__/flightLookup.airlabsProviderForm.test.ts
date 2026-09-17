@@ -35,7 +35,7 @@ jest.mock("../services/airportLookup", () => ({
 jest.mock("../services/apiKeyResolver", () => ({
   // Only AirLabs configured, so the lookup deterministically takes that path.
   getApiKey: jest.fn(async (provider: string) =>
-    provider === "airlabs" ? "test-airlabs-key" : null,
+    provider === "airlabs" ? "test-airlabs-key" : null
   ),
   getOpenSkyCredentials: jest.fn(async () => null),
 }));
@@ -107,7 +107,7 @@ describe("AirLabs lookup uses the provider's flight-number form", () => {
       "https://airlabs.co/api/v9/schedules",
       expect.objectContaining({
         params: expect.objectContaining({ flight_iata: "EK51" }),
-      }),
+      })
     );
   });
 

@@ -65,7 +65,7 @@ function renderCard(trip: Trip): void {
   render(
     <MemoryRouter>
       <TripCard trip={trip} onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

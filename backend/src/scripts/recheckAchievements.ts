@@ -1,6 +1,6 @@
-import { prisma } from '../db';
-import { checkAndUpdateAchievements } from '../utils/achievements';
-import logger from '../utils/logger';
+import { prisma } from "../db";
+import { checkAndUpdateAchievements } from "../utils/achievements";
+import logger from "../utils/logger";
 
 /**
  * Re-evaluate every user's achievements once.
@@ -30,8 +30,8 @@ export async function recheckAllAchievements(): Promise<{
       // One broken user must not stop the rest — and must not stop the server booting.
       failed++;
       logger.warn({
-        operation: 'achievement_recheck_user_failed',
-        message: 'Failed to re-evaluate achievements for a user',
+        operation: "achievement_recheck_user_failed",
+        message: "Failed to re-evaluate achievements for a user",
         context: { userId: user.id },
         error,
       });
@@ -45,15 +45,15 @@ if (require.main === module) {
   recheckAllAchievements()
     .then(({ users, failed }) => {
       logger.info({
-        operation: 'achievement_recheck_cli',
+        operation: "achievement_recheck_cli",
         message: `Re-evaluated achievements for ${users - failed} of ${users} users`,
       });
       return prisma.$disconnect();
     })
     .catch(async (error) => {
       logger.error({
-        operation: 'achievement_recheck_cli_failed',
-        message: 'Achievement re-check failed',
+        operation: "achievement_recheck_cli_failed",
+        message: "Achievement re-check failed",
         error,
       });
       await prisma.$disconnect();

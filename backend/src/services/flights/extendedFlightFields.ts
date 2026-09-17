@@ -42,9 +42,10 @@ export function extendedFlightCreateFields(data: ExtendedFlightInput) {
  */
 export function applyExtendedFlightFields(
   data: ExtendedFlightInput,
-  updateData: ExtendedFlightInput,
+  updateData: ExtendedFlightInput
 ): void {
-  if (data.runwayDepartureTime !== undefined) updateData.runwayDepartureTime = data.runwayDepartureTime;
+  if (data.runwayDepartureTime !== undefined)
+    updateData.runwayDepartureTime = data.runwayDepartureTime;
   if (data.runwayArrivalTime !== undefined) updateData.runwayArrivalTime = data.runwayArrivalTime;
   if (data.isCargo !== undefined) updateData.isCargo = data.isCargo;
   if (data.aerodataboxLastUpdatedUtc !== undefined)
@@ -68,7 +69,7 @@ export function applyExtendedFlightFields(
  */
 export function delayMinutesBetween(
   scheduledDeparture: Date | null,
-  actualDeparture: Date | null,
+  actualDeparture: Date | null
 ): number | null {
   if (!scheduledDeparture || !actualDeparture) return null;
   return Math.round((actualDeparture.getTime() - scheduledDeparture.getTime()) / 60000);
@@ -89,14 +90,16 @@ export function applyDepartureTimesAndDelay(
     incomingScheduledDep: Date | null;
     existing: { departureTime: Date | null; actualDeparture: Date | null };
   },
-  updateData: { actualDeparture?: Date | null; delayMinutes?: number | null },
+  updateData: { actualDeparture?: Date | null; delayMinutes?: number | null }
 ): void {
   if (sent.actualDepartureSent) {
     updateData.actualDeparture = times.incomingActualDep;
   }
   if (!sent.actualDepartureSent && !sent.scheduledSent) return;
 
-  const actual = sent.actualDepartureSent ? times.incomingActualDep : times.existing.actualDeparture;
+  const actual = sent.actualDepartureSent
+    ? times.incomingActualDep
+    : times.existing.actualDeparture;
   const scheduled = times.incomingScheduledDep ?? times.existing.departureTime;
   updateData.delayMinutes = delayMinutesBetween(scheduled, actual);
 }

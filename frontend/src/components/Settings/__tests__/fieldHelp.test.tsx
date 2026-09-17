@@ -25,7 +25,7 @@ describe("FieldLabel", () => {
 
   it("shows one when a help text was supplied", () => {
     const { container } = render(
-      <FieldLabel help="Kilometer, Meilen oder Nautische Meilen.">Distanz</FieldLabel>,
+      <FieldLabel help="Kilometer, Meilen oder Nautische Meilen.">Distanz</FieldLabel>
     );
     expect(container.querySelectorAll("button").length).toBe(1);
   });
@@ -44,7 +44,7 @@ describe("FieldLabel", () => {
           Währung
         </FieldLabel>
         <input id="x" />
-      </>,
+      </>
     );
     expect(container.querySelector("label")?.getAttribute("for")).toBe("x");
   });

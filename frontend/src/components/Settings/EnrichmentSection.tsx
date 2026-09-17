@@ -37,7 +37,6 @@ export default function EnrichmentSection({
         </span>
       </div>
 
-
       <div className="space-y-4">
         <label className="flex items-center gap-3">
           <AmberToggle

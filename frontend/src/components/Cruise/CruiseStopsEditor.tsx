@@ -68,10 +68,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
   return (
     <div className="space-y-3">
       {stops.map((stop, i) => (
-        <div
-          key={i}
-          className="rounded-md border border-border bg-(--bg-surface) p-3"
-        >
+        <div key={i} className="rounded-md border border-border bg-(--bg-surface) p-3">
           <div className="mb-2 flex items-center justify-between text-xs text-(--text-muted)">
             <span>
               {t("stops.day")} {stop.dayNumber}

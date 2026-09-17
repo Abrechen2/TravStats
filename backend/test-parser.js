@@ -68,18 +68,18 @@ Ticketnummer 2202236084346
 `;
 
 // Import the parser function
-import { parseBookingEmail } from './src/services/bookingParser.ts';
+import { parseBookingEmail } from "./src/services/bookingParser.ts";
 
 const subject = "Vielen Dank für Ihre Buchung | von München nach Luxemburg am 18 November 2025";
 
 const result = parseBookingEmail(subject, emailText, undefined);
 
-console.log('=== PARSER RESULT ===');
+console.log("=== PARSER RESULT ===");
 console.log(JSON.stringify(result, null, 2));
-console.log('\n=== EXPECTED ===');
-console.log('Flight Number: LH103 or LH5642 or LH2317');
-console.log('Route: MUC → LUX (outbound) or LUX → MUC (return)');
-console.log('Departure: MUC (München)');
-console.log('Arrival: LUX (Luxemburg)');
-console.log('Price: 513.47 EUR');
-console.log('PNR: 9RFAA7');
+console.log("\n=== EXPECTED ===");
+console.log("Flight Number: LH103 or LH5642 or LH2317");
+console.log("Route: MUC → LUX (outbound) or LUX → MUC (return)");
+console.log("Departure: MUC (München)");
+console.log("Arrival: LUX (Luxemburg)");
+console.log("Price: 513.47 EUR");
+console.log("PNR: 9RFAA7");

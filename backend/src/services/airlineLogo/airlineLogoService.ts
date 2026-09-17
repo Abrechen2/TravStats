@@ -76,9 +76,8 @@ async function fetchImage(url: string): Promise<CachedLogo | null> {
     return { body, contentType };
   } catch (error) {
     // Scrub any embedded API keys from the error message before logging.
-    const message = error instanceof Error
-      ? error.message.replace(/key=[^&\s]+/g, "key=***")
-      : "unknown error";
+    const message =
+      error instanceof Error ? error.message.replace(/key=[^&\s]+/g, "key=***") : "unknown error";
     logger.warn(
       { operation: "logo_fetch_failed", url: maskKey(url), message },
       "airline logo fetch failed"

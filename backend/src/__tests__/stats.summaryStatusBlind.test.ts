@@ -17,22 +17,22 @@
  * The headline figures now describe one population, and what is merely booked
  * is reported separately instead of being folded in.
  */
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { generateToken } from "../utils/jwt";
 
-const USERNAME = 'summarystatusblind';
+const USERNAME = "summarystatusblind";
 
-describe('summary headline figures count only flights that happened', () => {
+describe("summary headline figures count only flights that happened", () => {
   let userId: string;
   let cookie: string;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: USERNAME } });
     const user = await prisma.user.create({
-      data: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     userId = user.id;
     cookie = `auth_token=${generateToken(user.id)}`;
@@ -43,63 +43,63 @@ describe('summary headline figures count only flights that happened', () => {
       data: [
         {
           userId,
-          flightNumber: 'LH100',
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'LHR',
+          flightNumber: "LH100",
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "LHR",
           depLat: 50.0379,
           depLon: 8.5622,
           arrLat: 51.47,
           arrLon: -0.4543,
-          departureTime: new Date('2024-05-01T08:00:00Z'),
-          arrivalTime: new Date('2024-05-01T09:30:00Z'),
-          status: 'flown',
+          departureTime: new Date("2024-05-01T08:00:00Z"),
+          arrivalTime: new Date("2024-05-01T09:30:00Z"),
+          status: "flown",
           price: 100,
         },
         {
           userId,
-          flightNumber: 'LH200',
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'JFK',
+          flightNumber: "LH200",
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "JFK",
           depLat: 50.0379,
           depLon: 8.5622,
           arrLat: 40.6413,
           arrLon: -73.7781,
-          departureTime: new Date('2027-05-01T08:00:00Z'),
-          arrivalTime: new Date('2027-05-01T16:00:00Z'),
-          status: 'scheduled',
+          departureTime: new Date("2027-05-01T08:00:00Z"),
+          arrivalTime: new Date("2027-05-01T16:00:00Z"),
+          status: "scheduled",
           price: 900,
         },
         {
           // A flown flight in a year of its own, with no price at all — the
           // year the cost total must abstain for (forgejo#83).
           userId,
-          flightNumber: 'LH400',
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'MUC',
+          flightNumber: "LH400",
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "MUC",
           depLat: 50.0379,
           depLon: 8.5622,
           arrLat: 48.3538,
           arrLon: 11.7861,
-          departureTime: new Date('2023-03-01T08:00:00Z'),
-          arrivalTime: new Date('2023-03-01T09:00:00Z'),
-          status: 'flown',
+          departureTime: new Date("2023-03-01T08:00:00Z"),
+          arrivalTime: new Date("2023-03-01T09:00:00Z"),
+          status: "flown",
         },
         {
           userId,
-          flightNumber: 'LH300',
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'CDG',
+          flightNumber: "LH300",
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "CDG",
           depLat: 50.0379,
           depLon: 8.5622,
           arrLat: 49.0097,
           arrLon: 2.5479,
-          departureTime: new Date('2024-06-01T08:00:00Z'),
-          arrivalTime: new Date('2024-06-01T09:00:00Z'),
-          status: 'cancelled',
+          departureTime: new Date("2024-06-01T08:00:00Z"),
+          arrivalTime: new Date("2024-06-01T09:00:00Z"),
+          status: "cancelled",
           price: 50,
         },
       ],
@@ -111,39 +111,30 @@ describe('summary headline figures count only flights that happened', () => {
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it('counts the flown flights only', async () => {
-    const res = await request(app)
-      .get('/api/v1/stats/summary')
-      .set('Cookie', cookie)
-      .expect(200);
+  it("counts the flown flights only", async () => {
+    const res = await request(app).get("/api/v1/stats/summary").set("Cookie", cookie).expect(200);
 
     // LH100 (2024, priced) and LH400 (2023, unpriced) — never the booked or
     // the cancelled one.
     expect(res.body.totalFlights).toBe(2);
   });
 
-  it('reports totalCost null, not 0, for a year whose flights are unpriced (forgejo#83)', async () => {
-    const res = await request(app).get('/api/v1/stats/summary?year=2023').set('Cookie', cookie);
+  it("reports totalCost null, not 0, for a year whose flights are unpriced (forgejo#83)", async () => {
+    const res = await request(app).get("/api/v1/stats/summary?year=2023").set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body.totalFlights).toBe(1);
     expect(res.body.totalCost).toBeNull();
     expect(res.body.unpricedFlights).toBe(1);
   });
 
-  it('sums the cost of the flown flight only', async () => {
-    const res = await request(app)
-      .get('/api/v1/stats/summary')
-      .set('Cookie', cookie)
-      .expect(200);
+  it("sums the cost of the flown flight only", async () => {
+    const res = await request(app).get("/api/v1/stats/summary").set("Cookie", cookie).expect(200);
 
     expect(res.body.totalCost).toBe(100);
   });
 
-  it('still breaks every status down, because that is what a breakdown is for', async () => {
-    const res = await request(app)
-      .get('/api/v1/stats/summary')
-      .set('Cookie', cookie)
-      .expect(200);
+  it("still breaks every status down, because that is what a breakdown is for", async () => {
+    const res = await request(app).get("/api/v1/stats/summary").set("Cookie", cookie).expect(200);
 
     expect(res.body.byStatus).toMatchObject({
       flown: 2,
@@ -152,20 +143,14 @@ describe('summary headline figures count only flights that happened', () => {
     });
   });
 
-  it('reports what is merely booked separately, so it is not lost', async () => {
-    const res = await request(app)
-      .get('/api/v1/stats/summary')
-      .set('Cookie', cookie)
-      .expect(200);
+  it("reports what is merely booked separately, so it is not lost", async () => {
+    const res = await request(app).get("/api/v1/stats/summary").set("Cookie", cookie).expect(200);
 
     expect(res.body.plannedFlights).toBe(1);
   });
 
   it('hero no longer says "one flight, nowhere"', async () => {
-    const res = await request(app)
-      .get('/api/v1/stats/hero')
-      .set('Cookie', cookie)
-      .expect(200);
+    const res = await request(app).get("/api/v1/stats/hero").set("Cookie", cookie).expect(200);
 
     const hero = res.body.data ?? res.body;
     // Every figure in the object now describes the same population: whatever

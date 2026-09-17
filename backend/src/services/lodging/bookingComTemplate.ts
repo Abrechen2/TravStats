@@ -336,7 +336,7 @@ function hotelNameFromBody(lines: string[]): string | null {
 
 export function parseBookingComEmail(
   subject: string | undefined,
-  body: string,
+  body: string
 ): ParsedLodgingBooking | null {
   if (!isBookingComConfirmation(subject, body)) return null;
 
@@ -357,8 +357,8 @@ export function parseBookingComEmail(
     0,
     Math.round(
       (Date.parse(`${checkOut}T00:00:00.000Z`) - Date.parse(`${checkIn}T00:00:00.000Z`)) /
-        (24 * 60 * 60 * 1000),
-    ),
+        (24 * 60 * 60 * 1000)
+    )
   );
 
   const missing: string[] = [];

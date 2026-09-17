@@ -16,13 +16,13 @@
  * test on the day it is written, with no line to add that would quiet it.
  */
 
-import '../services/openapi/paths';
-import { buildOpenApiDocument } from '../services/openapi/registry';
+import "../services/openapi/paths";
+import { buildOpenApiDocument } from "../services/openapi/registry";
 import {
   listDocumentableEndpoints,
   listMountedEndpoints,
   UNDOCUMENTED_MOUNTS,
-} from '../services/openapi/coverage';
+} from "../services/openapi/coverage";
 
 const documentedOperations = (): Set<string> => {
   const doc = buildOpenApiDocument();
@@ -37,11 +37,11 @@ const documentedOperations = (): Set<string> => {
 
 const label = (method: string, path: string) => `${method.toUpperCase()} ${path}`;
 
-describe('openapi coverage', () => {
+describe("openapi coverage", () => {
   const documented = documentedOperations();
   const inScope = listDocumentableEndpoints();
 
-  it('documents every endpoint in scope', () => {
+  it("documents every endpoint in scope", () => {
     const undocumented = inScope
       .filter((e) => !documented.has(`${e.method} ${e.path}`))
       .map((e) => label(e.method, e.path));
@@ -49,14 +49,14 @@ describe('openapi coverage', () => {
     expect(undocumented).toEqual([]);
   });
 
-  it('documents nothing the app does not serve', () => {
+  it("documents nothing the app does not serve", () => {
     const live = new Set(listMountedEndpoints().map((e) => `${e.method} ${e.path}`));
     const phantom = [...documented].filter((op) => !live.has(op));
 
     expect(phantom).toEqual([]);
   });
 
-  it('keeps every excluded mount id present in the mount table', () => {
+  it("keeps every excluded mount id present in the mount table", () => {
     // A rename in mounts.ts would otherwise silently turn an exclusion
     // into a no-op and pull 60 admin endpoints into scope.
     const mountIds = new Set(listMountedEndpoints().map((e) => e.mountId));

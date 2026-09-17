@@ -272,7 +272,10 @@ export default function StatsYearFilter({
                 {compareSummary !== null &&
                   yearSummary.totalCost !== null &&
                   compareSummary.totalCost !== null && (
-                    <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
+                    <TrendDelta
+                      current={yearSummary.totalCost}
+                      previous={compareSummary.totalCost}
+                    />
                   )}
               </div>
               {yearSummary.totalCost === null && (

@@ -68,20 +68,14 @@ describe("an image the OCR cannot read", () => {
     // A data URI: the exact shape that crashed the beta three times.
     const body = { imageBase64: `data:image/png;base64,${PNG_1x1}`, domain: "auto" };
 
-    const first = await request(app)
-      .post("/api/v1/parse-image")
-      .set("Cookie", cookie)
-      .send(body);
+    const first = await request(app).post("/api/v1/parse-image").set("Cookie", cookie).send(body);
 
     // 422 for "cannot read this", or 422 for "almost no text" — both are the
     // route answering. What must NOT happen is a 5xx, and what must REALLY not
     // happen is the process going away.
     expect(first.status).toBeLessThan(500);
 
-    const second = await request(app)
-      .post("/api/v1/parse-image")
-      .set("Cookie", cookie)
-      .send(body);
+    const second = await request(app).post("/api/v1/parse-image").set("Cookie", cookie).send(body);
 
     // The proof: the app is still serving. Before the fix the first request
     // ended the process and there was nothing left to answer this one.

@@ -11,7 +11,7 @@ import logger from "../../utils/logger";
  */
 export function warnIfScheduledInPast(
   userId: string,
-  data: { status?: string | null; departureLocal?: string | null; flightNumber?: string | null },
+  data: { status?: string | null; departureLocal?: string | null; flightNumber?: string | null }
 ): void {
   if (data.status !== "scheduled" || !data.departureLocal) return;
   const nowIso = new Date().toISOString().slice(0, 19);

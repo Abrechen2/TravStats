@@ -74,7 +74,7 @@ export interface ScanOptions {
  */
 export async function scanPhotoJourneys(
   userId: string,
-  { since, until, home }: ScanOptions,
+  { since, until, home }: ScanOptions
 ): Promise<ScanOutcome> {
   const connection = await getImmichConnection(userId);
   if (connection === null) {
@@ -121,7 +121,7 @@ export async function scanPhotoJourneys(
   const uncovered = findUncoveredClusters(
     clusters,
     travelWindows({ flights, trips, cruises, stays }),
-    { padDays: PAD_DAYS },
+    { padDays: PAD_DAYS }
   );
 
   const candidates = uncovered
@@ -205,7 +205,7 @@ export async function scanPhotoJourneys(
 
 function isAwayFromHome(
   cluster: PhotoCluster,
-  home: { lat: number; lon: number } | null | undefined,
+  home: { lat: number; lon: number } | null | undefined
 ): boolean {
   if (home == null || cluster.position === null) {
     return true;

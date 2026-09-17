@@ -15,7 +15,7 @@ interface Envelope<T> {
 }
 
 export const previewLodgingImport = async (
-  candidates: LodgingImportCandidate[],
+  candidates: LodgingImportCandidate[]
 ): Promise<{ rows: LodgingImportPreviewRow[]; summary: LodgingImportSummary }> => {
   const { data } = await api.post<
     Envelope<{ rows: LodgingImportPreviewRow[]; summary: LodgingImportSummary }>
@@ -26,7 +26,7 @@ export const previewLodgingImport = async (
 export const commitLodgingImport = async (
   source: LodgingImportSource,
   fileName: string | null,
-  rows: LodgingImportCommitRow[],
+  rows: LodgingImportCommitRow[]
 ): Promise<LodgingImportCommitResult> => {
   const { data } = await api.post<Envelope<LodgingImportCommitResult>>("/lodging-import/commit", {
     source,
@@ -51,12 +51,12 @@ export const commitLodgingImport = async (
  */
 export const suggestLodgingCsvMapping = async (
   headers: string[],
-  sampleRows: Record<string, string>[],
+  sampleRows: Record<string, string>[]
 ): Promise<Record<string, string>> => {
   try {
     const { data } = await api.post<Envelope<{ mapping: Record<string, string> }>>(
       "/lodging-import/suggest-mapping",
-      { headers, sampleRows },
+      { headers, sampleRows }
     );
     return data.data.mapping ?? {};
   } catch (err) {

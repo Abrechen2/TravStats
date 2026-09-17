@@ -9,8 +9,12 @@ describe("parseAirlinesDat", () => {
     expect(rows).toHaveLength(3);
     const lh = rows.find((r) => r.name === "Lufthansa");
     expect(lh).toEqual({
-      iata: "LH", icao: "DLH", name: "Lufthansa",
-      callsign: "LUFTHANSA", country: "Germany", active: true,
+      iata: "LH",
+      icao: "DLH",
+      name: "Lufthansa",
+      callsign: "LUFTHANSA",
+      country: "Germany",
+      active: true,
     });
     // "-" and "N/A" IATA/ICAO placeholders normalize to null
     const priv = rows.find((r) => r.name === "Private flight");

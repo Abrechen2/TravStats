@@ -75,9 +75,7 @@ test.describe("Authentication Flow", () => {
 });
 
 test.describe("Registration Flow", () => {
-  test("shows the username form, or says plainly that registration is closed", async ({
-    page,
-  }) => {
+  test("shows the username form, or says plainly that registration is closed", async ({ page }) => {
     await page.goto("/register");
 
     // Instance-dependent by design: allowRegistration defaults to false, so a

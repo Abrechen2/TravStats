@@ -12,7 +12,7 @@ import { accumulateCountryDays, createCountryDayAccumulator, drainCountryDays } 
 
 /** Doha's airport reference point, and the middle of the city 5 km north-west. */
 const DOH = { lat: 25.2731, lon: 51.6081 };
-const DOHA_CITY = { lat: 25.2854, lon: 51.5310 };
+const DOHA_CITY = { lat: 25.2854, lon: 51.531 };
 
 describe("knownAirportTest", () => {
   it("answers yes on the airport itself and across its grounds", () => {
@@ -71,7 +71,7 @@ describe("the signal reaches the stored row", () => {
     accumulateCountryDays(
       rows,
       [{ latitude: DOH.lat, longitude: DOH.lon, timestampMs: Date.parse("2024-06-01T12:00:00Z") }],
-      () => "QA",
+      () => "QA"
     );
 
     expect(drainCountryDays(rows)[0].airportPointCount).toBe(0);

@@ -33,8 +33,17 @@ describe("chain from a hotel website", () => {
   it("only ever produces names the seeded catalogue actually has", () => {
     // The connect-by-name in the backfill throws if a name does not exist, so
     // this list and the chain seed must stay in step.
-    expect(knownChainNames()).toEqual(
-      ["Accor", "Best Western", "Hilton", "IHG", "Marriott", "Meliá", "NH Hotels", "Radisson", "Scandic", "Wyndham"],
-    );
+    expect(knownChainNames()).toEqual([
+      "Accor",
+      "Best Western",
+      "Hilton",
+      "IHG",
+      "Marriott",
+      "Meliá",
+      "NH Hotels",
+      "Radisson",
+      "Scandic",
+      "Wyndham",
+    ]);
   });
 });

@@ -148,9 +148,7 @@ describe("continent resolution", () => {
       expect(continentForCountry("Türkiye", 41.28, 28.75)).toBe("Europe");
       expect(continentForCountry("Turkey", 41.28, 28.75)).toBe("Europe");
       expect(continentForCountry("Côte d'Ivoire", 5.26, -3.93)).toBe("Africa");
-      expect(continentForCountry("united states of america", 40, -75)).toBe(
-        "North America",
-      );
+      expect(continentForCountry("united states of america", 40, -75)).toBe("North America");
     });
 
     it("returns null for the catalogue's placeholder codes rather than inventing one", () => {

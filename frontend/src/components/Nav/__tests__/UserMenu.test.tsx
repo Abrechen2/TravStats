@@ -18,7 +18,7 @@ function renderMenu(props: Partial<React.ComponentProps<typeof UserMenu>> = {}) 
   render(
     <MemoryRouter>
       <UserMenu user={user} onLogout={onLogout} {...props} />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { onLogout };
 }
@@ -50,7 +50,7 @@ describe("UserMenu", () => {
     // overrides its implicit "link" role — so query the menu role, not the link.
     expect(screen.getByRole("menuitem", { name: "Profil bearbeiten" })).toHaveAttribute(
       "href",
-      "/settings?tab=general&section=profile",
+      "/settings?tab=general&section=profile"
     );
     expect(screen.getByRole("menuitem", { name: "dashboard:logout" })).toBeInTheDocument();
   });
@@ -87,7 +87,7 @@ describe("UserMenu", () => {
     render(
       <MemoryRouter>
         <UserMenu user={{ username: "akuenzel" }} onLogout={vi.fn()} />
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(screen.getByText("akuenzel")).toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();

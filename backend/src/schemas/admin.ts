@@ -1,10 +1,10 @@
-import { z } from './zod';
+import { z } from "./zod";
 
 /**
  * Schema for logging configuration
  */
 export const loggingConfigSchema = z.object({
-  logLevel: z.enum(['error', 'warn', 'info', 'debug', 'trace']).optional(),
+  logLevel: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
   maxLogFileSize: z.number().min(1).max(100).optional(), // 1-100 MB
   maxLogFiles: z.number().min(1).max(30).optional(), // Keep 1-30 files
   logHttpRequests: z.boolean().optional(),
@@ -26,8 +26,10 @@ export const toggleDebugLoggingSchema = z.object({
 export const readLogFileQuerySchema = z.object({
   offset: z.coerce.number().min(0).optional(),
   limit: z.coerce.number().min(1).max(1000).optional(),
-  level: z.enum(['error', 'warn', 'info', 'debug', 'trace']).optional(),
-  category: z.enum(['general', 'http', 'database', 'parser', 'security', 'error', 'system']).optional(),
+  level: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
+  category: z
+    .enum(["general", "http", "database", "parser", "security", "error", "system"])
+    .optional(),
   search: z.string().max(200).optional(),
 });
 
@@ -36,8 +38,10 @@ export const readLogFileQuerySchema = z.object({
  */
 export const searchLogsQuerySchema = z.object({
   query: z.string().max(200).optional(),
-  level: z.enum(['error', 'warn', 'info', 'debug', 'trace']).optional(),
-  category: z.enum(['general', 'http', 'database', 'parser', 'security', 'error', 'system']).optional(),
+  level: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
+  category: z
+    .enum(["general", "http", "database", "parser", "security", "error", "system"])
+    .optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });

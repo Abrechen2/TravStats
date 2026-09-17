@@ -1,41 +1,31 @@
-import { prisma } from '../db';
-import logger from './logger';
+import { prisma } from "../db";
+import logger from "./logger";
 import {
   applyAchievementWrites,
   planAchievementWrites,
   type UserAchievementWithRelation,
-} from './achievementWrites';
-import {
-  calculateUserStats,
-  getContinent,
-  type FlightData,
-} from './achievementStats';
+} from "./achievementWrites";
+import { calculateUserStats, getContinent, type FlightData } from "./achievementStats";
 import {
   calculateCruiseStats,
   rangeContainsMonthDay,
   type CruiseData as CruiseStatsInput,
-} from './cruiseStats';
+} from "./cruiseStats";
 import {
   calculateLodgingStats,
   type LodgingStayData as LodgingStatsInput,
   type LodgingRecord,
-} from './lodgingStats';
-import {
-  computeFlyAndStayFlags,
-  type TripDomainCounts,
-} from './achievementStats';
+} from "./lodgingStats";
+import { computeFlyAndStayFlags, type TripDomainCounts } from "./achievementStats";
 // The country join has ONE home. `achievementStats.ts` used to carry a sibling
 // copy of `toCountryCode` beside the module's, which is the drift §4 of
 // `docs/superpowers/specs/2026-09-02-country-counting-design.md` exists to end.
-import { normalizeCountrySet, unionCountries } from '../shared/countryEvidence';
-import {
-  buildMembershipContext,
-  resolveStayProgramme,
-} from '../services/lodging/stayMembership';
-import { classifyStay } from '../shared/lodgingCounting';
-import { countableFlightWhere } from '../shared/flightCounting';
-import { calculatePlaceStats } from './placeStats';
-import { loadPassport } from '../services/stats/passportLoader';
+import { normalizeCountrySet, unionCountries } from "../shared/countryEvidence";
+import { buildMembershipContext, resolveStayProgramme } from "../services/lodging/stayMembership";
+import { classifyStay } from "../shared/lodgingCounting";
+import { countableFlightWhere } from "../shared/flightCounting";
+import { calculatePlaceStats } from "./placeStats";
+import { loadPassport } from "../services/stats/passportLoader";
 
 /** Shared "did this actually happen" check for flights and cruises alike —
  * both domains use the same status vocabulary (`flown` / `historical` are
@@ -47,13 +37,13 @@ import { loadPassport } from '../services/stats/passportLoader';
  * flight-named helper called on a cruise would hide that. If the flight rule
  * ever moves, the cruise half of this line has to be decided separately —
  * which is the whole reason it is written out here rather than imported. */
-const isDoneStatus = (status: string): boolean => status === 'flown' || status === 'historical';
+const isDoneStatus = (status: string): boolean => status === "flown" || status === "historical";
 
 // Re-export the shared types so existing callers that imported them from
 // `./achievements` keep compiling without touching every import site.
-export type { FlightData, UserStats } from './achievementStats';
-export { calculateUserStats, getContinent } from './achievementStats';
-export { checkAchievement } from './achievementChecks';
+export type { FlightData, UserStats } from "./achievementStats";
+export { calculateUserStats, getContinent } from "./achievementStats";
+export { checkAchievement } from "./achievementChecks";
 
 /**
  * The re-check currently running or queued for a user, if any.
@@ -95,7 +85,10 @@ export function checkAndUpdateAchievements(userId: string): Promise<UserAchievem
 
   // Both branches run the check: a failed run must not stop the queue behind it.
   const started: Promise<UserAchievementWithRelation[]> = previous
-    ? previous.then(() => runAchievementCheck(userId), () => runAchievementCheck(userId))
+    ? previous.then(
+        () => runAchievementCheck(userId),
+        () => runAchievementCheck(userId)
+      )
     : runAchievementCheck(userId);
 
   // Only clear the slot if nothing newer has taken it, or a later caller's run
@@ -133,10 +126,7 @@ export async function recheckAchievements(userId: string, after: string): Promis
   try {
     await checkAndUpdateAchievements(userId);
   } catch (error) {
-    logger.error(
-      { error, userId, context: { after } },
-      "[Achievements] Re-check failed"
-    );
+    logger.error({ error, userId, context: { after } }, "[Achievements] Re-check failed");
   }
 }
 
@@ -158,7 +148,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     });
 
     const existingAchievementMap = new Map(
-      existingAchievements.map(ua => [ua.achievementId, ua])
+      existingAchievements.map((ua) => [ua.achievementId, ua])
     );
 
     // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
@@ -168,17 +158,27 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings, places] = await Promise.all([
+    const [
+      flights,
+      allFlights,
+      cruises,
+      lodgingStays,
+      lodgings,
+      lodgingMemberships,
+      trips,
+      userSettings,
+      places,
+    ] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, ...countableFlightWhere() },
-        orderBy: { departureTime: 'asc' },
+        orderBy: { departureTime: "asc" },
       }),
       prisma.flight.findMany({
         where: { userId },
-        orderBy: { departureTime: 'asc' },
+        orderBy: { departureTime: "asc" },
       }),
       prisma.cruise.findMany({
-        where: { userId, status: { in: ['flown', 'historical'] } },
+        where: { userId, status: { in: ["flown", "historical"] } },
         include: {
           stops: { include: { port: true } },
           trip: { include: { flights: true, cruises: true } },
@@ -189,7 +189,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
           // different point than the kilometres on the user's own statistics
           // page. The statistics route loads them the same way; both now read
           // the routed (or hand-corrected) length.
-          legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
+          legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },
         },
       }),
       prisma.lodgingStay.findMany({
@@ -244,7 +244,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // record of the base currency active WHEN IT WAS SAVED, so the spend-based
     // achievement threshold must only count stays matching the CURRENT base
     // currency — never silently mix currencies together (finding 2).
-    const lodgingBaseCurrency = userSettings?.baseCurrency ?? 'EUR';
+    const lodgingBaseCurrency = userSettings?.baseCurrency ?? "EUR";
 
     // Calculate user stats with error handling
     let stats;
@@ -252,11 +252,11 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       stats = await calculateUserStats(flights as FlightData[]);
     } catch (error) {
       logger.error({
-        operation: 'calculate_user_stats',
-        message: 'Failed to calculate user stats for achievements',
+        operation: "calculate_user_stats",
+        message: "Failed to calculate user stats for achievements",
         context: { userId, flightCount: flights.length },
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
         },
       });
@@ -267,9 +267,9 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // Build a fresh `augmentedStats` via spread so the `stats` object
     // returned by `calculateUserStats()` is never mutated.
     const now = Date.now();
-    const scheduled = allFlights.filter((f) => f.status === 'scheduled');
-    const cancelledCount = allFlights.filter((f) => f.status === 'cancelled').length;
-    const duplicatedCount = allFlights.filter((f) => f.status === 'duplicated').length;
+    const scheduled = allFlights.filter((f) => f.status === "scheduled");
+    const cancelledCount = allFlights.filter((f) => f.status === "cancelled").length;
+    const duplicatedCount = allFlights.filter((f) => f.status === "duplicated").length;
 
     const scheduledContinents = new Set(stats.scheduledContinents);
     let scheduledMaxAdvanceDays = stats.scheduledMaxAdvanceDays;
@@ -293,10 +293,10 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       const bDay = user.birthdate.getDate();
       birthdayFlights = flights.filter(
         (f) =>
-          f.status === 'flown' &&
+          f.status === "flown" &&
           f.departureTime &&
           f.departureTime.getMonth() === bMonth &&
-          f.departureTime.getDate() === bDay,
+          f.departureTime.getDate() === bDay
       ).length;
     }
 
@@ -373,33 +373,33 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => {
       const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
       return {
-      lodgingId: s.lodgingId,
-      lodgingName: s.lodging.name,
-      type: s.lodging.type,
-      country: s.lodging.country,
-      city: s.lodging.city,
-      chainId: s.lodging.chainId,
-      chainName: s.lodging.chain?.name ?? null,
-      stars: s.lodging.stars,
-      lat: s.lodging.lat,
-      lon: s.lodging.lon,
-      checkIn: s.checkIn,
-      checkOut: s.checkOut,
-      datePrecision: s.datePrecision,
-      nights: s.nights,
-      status: s.status,
-      totalPriceBase: s.totalPriceBase,
-      fxBaseCurrency: s.fxBaseCurrency,
-      currency: s.currency,
-      totalPrice: s.totalPrice,
-      board: s.board,
-      isAwardStay: s.isAwardStay,
-      ratingOverall: s.ratingOverall,
-      ratingRoom: s.ratingRoom,
-      ratingBreakfast: s.ratingBreakfast,
-      ratingService: s.ratingService,
-      programName: programme.programName,
-      membershipTier: programme.tier,
+        lodgingId: s.lodgingId,
+        lodgingName: s.lodging.name,
+        type: s.lodging.type,
+        country: s.lodging.country,
+        city: s.lodging.city,
+        chainId: s.lodging.chainId,
+        chainName: s.lodging.chain?.name ?? null,
+        stars: s.lodging.stars,
+        lat: s.lodging.lat,
+        lon: s.lodging.lon,
+        checkIn: s.checkIn,
+        checkOut: s.checkOut,
+        datePrecision: s.datePrecision,
+        nights: s.nights,
+        status: s.status,
+        totalPriceBase: s.totalPriceBase,
+        fxBaseCurrency: s.fxBaseCurrency,
+        currency: s.currency,
+        totalPrice: s.totalPrice,
+        board: s.board,
+        isAwardStay: s.isAwardStay,
+        ratingOverall: s.ratingOverall,
+        ratingRoom: s.ratingRoom,
+        ratingBreakfast: s.ratingBreakfast,
+        ratingService: s.ratingService,
+        programName: programme.programName,
+        membershipTier: programme.tier,
       };
     });
     const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
@@ -410,28 +410,28 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       city: l.city,
       visited: l.visited,
     }));
-    const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
+    const lodgingStats = calculateLodgingStats(
+      lodgingStatsInput,
+      lodgingBaseCurrency,
+      lodgingRecords
+    );
 
     // Birthday / Christmas stays — a day-precise, actually-visited stay whose
     // check-in..check-out range spans the date in question. Month/Year/None
     // precision is excluded: a guessed overlap would be indistinguishable
     // from a known one.
     const dayPreciseVisitedStays = lodgingStays.filter(
-      (s) =>
-        s.datePrecision === 'DAY' &&
-        s.checkIn &&
-        s.checkOut &&
-        classifyStay(s) === 'visited',
+      (s) => s.datePrecision === "DAY" && s.checkIn && s.checkOut && classifyStay(s) === "visited"
     );
     const hasLodgingBirthdayStay =
       userBirthday !== undefined &&
       dayPreciseVisitedStays.some((s) =>
-        rangeContainsMonthDay(s.checkIn!, s.checkOut!, userBirthday),
+        rangeContainsMonthDay(s.checkIn!, s.checkOut!, userBirthday)
       );
     const hasLodgingXmasStay = dayPreciseVisitedStays.some(
       (s) =>
         rangeContainsMonthDay(s.checkIn!, s.checkOut!, { month: 12, day: 24 }) ||
-        rangeContainsMonthDay(s.checkIn!, s.checkOut!, { month: 12, day: 25 }),
+        rangeContainsMonthDay(s.checkIn!, s.checkOut!, { month: 12, day: 25 })
     );
 
     // Per-trip domain counts, DONE items only (flown/historical flights and
@@ -440,7 +440,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     const doneTrips = trips.map((t) => ({
       flightCount: t.flights.filter((f) => isDoneStatus(f.status)).length,
       cruiseCount: t.cruises.filter((c) => isDoneStatus(c.status)).length,
-      lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === 'visited').length,
+      lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === "visited").length,
       journalEntries: t._count.journalEntries,
       photos: t._count.photos,
     }));
@@ -462,7 +462,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       (c) =>
         c.trip &&
         c.trip.flights.some((f) => isDoneStatus(f.status)) &&
-        c.trip.cruises.some((tc) => isDoneStatus(tc.status)),
+        c.trip.cruises.some((tc) => isDoneStatus(tc.status))
     );
 
     // Amphibious Week — fires when any flight sits within ±7 days of a
@@ -476,7 +476,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       .map((f) => f.departureTime)
       .filter((d): d is Date => d instanceof Date);
     const flyAndSail7d = cruiseDates.some((cd) =>
-      flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS),
+      flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS)
     );
 
     // POI stats. Places carry their own country codes, but they are NOT unioned
@@ -536,8 +536,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     const passport = await loadPassport(userId);
     const countedByPassport = new Set(
       passport.countries
-        .filter((c) => c.counted && c.kinds.some((kind) => kind !== 'place'))
-        .map((c) => c.code),
+        .filter((c) => c.counted && c.kinds.some((kind) => kind !== "place"))
+        .map((c) => c.code)
     );
     const finalCountries = new Set(
       [...unionedCountries].filter(
@@ -546,8 +546,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
           // Not in the passport's list at all — a country only this union can
           // see. It is not below the threshold; it was never measured against
           // one, and abstention is not exclusion.
-          !passport.countries.some((c) => c.code === code),
-      ),
+          !passport.countries.some((c) => c.code === code)
+      )
     );
 
     const augmentedStats = {
@@ -610,8 +610,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       lodgingTypesUnique: Object.keys(lodgingStats.nightsByType).length,
       lodgingCitiesUnique: lodgingStats.citiesUnique,
       lodgingContinents: lodgingStats.geo.continentsCount,
-      lodgingFiveStarNights: lodgingStats.nightsByStars['5'] ?? 0,
-      lodgingAllInclusiveNights: lodgingStats.nightsByBoard['all_inclusive'] ?? 0,
+      lodgingFiveStarNights: lodgingStats.nightsByStars["5"] ?? 0,
+      lodgingAllInclusiveNights: lodgingStats.nightsByBoard["all_inclusive"] ?? 0,
       lodgingPerfectStays: lodgingStats.perfectStays,
       lodgingEnduredStays: lodgingStats.enduredStays,
       lodgingRatedStays: lodgingStats.ratings.ratedStays,
@@ -620,12 +620,12 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       // Stored 0..1; the requirement is written as a percentage because "25 %
       // of a year away" is the sentence, and 0.25 in a seed file is not.
       lodgingAwaySharePct: Math.round(
-        Math.max(0, ...Object.values(lodgingStats.rhythm.awayShareByYear), 0) * 100,
+        Math.max(0, ...Object.values(lodgingStats.rhythm.awayShareByYear), 0) * 100
       ),
       lodgingIndependentNights: lodgingStats.loyalty.independentNights,
       lodgingProgrammeYearNights: Math.max(
         0,
-        ...lodgingStats.loyalty.programmeYears.map((p) => p.nights),
+        ...lodgingStats.loyalty.programmeYears.map((p) => p.nights)
       ),
       // Northernmost latitude, floored to whole degrees by the checker. A
       // southern-hemisphere-only traveller yields a negative here, which no
@@ -644,7 +644,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
           t.flightCount + t.cruiseCount > 0 &&
           t.lodgingStayCount > 0 &&
           t.journalEntries > 0 &&
-          t.photos > 0,
+          t.photos > 0
       ).length,
       // Cross-domain (lodging)
       flyAndStay,
@@ -677,7 +677,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       allAchievements,
       existingAchievementMap,
       augmentedStats,
-      flights as FlightData[],
+      flights as FlightData[]
     );
 
     // `return await`, not `return`: a bare return would hand the promise out
@@ -685,11 +685,11 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     return await applyAchievementWrites(userId, plan, allAchievements.length);
   } catch (error) {
     logger.error({
-      operation: 'check_and_update_achievements',
-      message: 'Failed to check and update achievements',
+      operation: "check_and_update_achievements",
+      message: "Failed to check and update achievements",
       context: { userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });

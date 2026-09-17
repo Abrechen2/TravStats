@@ -5,10 +5,27 @@ import type { Lodging } from "../../../types/lodging";
 /** Nur die Felder, über die dieser Zustand entscheidet — der Rest ist Beiwerk. */
 function haus(teile: Partial<Lodging>): Lodging {
   return {
-    id: "x", userId: "u", type: "hotel", name: "Haus", chainId: null, chain: null,
-    address: "Hauptstr. 1", city: "Köln", country: "Deutschland", lat: 50.9, lon: 6.9,
-    stars: null, amenities: [], notes: null, dataSource: null,
-    createdAt: "", updatedAt: "", stays: [], overallRating: null, stayCount: 0, nights: 0,
+    id: "x",
+    userId: "u",
+    type: "hotel",
+    name: "Haus",
+    chainId: null,
+    chain: null,
+    address: "Hauptstr. 1",
+    city: "Köln",
+    country: "Deutschland",
+    lat: 50.9,
+    lon: 6.9,
+    stars: null,
+    amenities: [],
+    notes: null,
+    dataSource: null,
+    createdAt: "",
+    updatedAt: "",
+    stays: [],
+    overallRating: null,
+    stayCount: 0,
+    nights: 0,
     ...teile,
   } as Lodging;
 }
@@ -36,9 +53,7 @@ describe("lodgingIssue", () => {
   });
 
   it("nur ein Name: das ist die schwerste Lücke und gewinnt", () => {
-    expect(
-      lodgingIssue(haus({ address: null, city: null, lat: null, lon: null }))
-    ).toBe("bare");
+    expect(lodgingIssue(haus({ address: null, city: null, lat: null, lon: null }))).toBe("bare");
   });
 
   it("Leerzeichen sind kein Inhalt", () => {

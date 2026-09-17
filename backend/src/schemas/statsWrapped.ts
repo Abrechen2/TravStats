@@ -31,13 +31,16 @@ export const wrappedSchema = z.object({
   earthFactor: z.number().openapi({
     description: "`distanceKm` in trips around the Earth, one decimal.",
   }),
-  newCountries: z.number().int().openapi({
-    description:
-      "Countries first evidenced in this year AND reaching the user's counting " +
-      "threshold. The threshold is taken from the passport rather than re-decided " +
-      "here, so the story cannot count from a different tier than the headline it " +
-      "sits next to.",
-  }),
+  newCountries: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Countries first evidenced in this year AND reaching the user's counting " +
+        "threshold. The threshold is taken from the passport rather than re-decided " +
+        "here, so the story cannot count from a different tier than the headline it " +
+        "sits next to.",
+    }),
   cruises: z.number().int(),
   topAirline: z
     .object({

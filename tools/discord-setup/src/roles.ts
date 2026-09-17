@@ -40,7 +40,12 @@ export async function ensureRoles(guild: Guild, dryRun: boolean): Promise<void> 
         dryRunLog(`create role ${def.name} (${def.color})`);
         continue;
       }
-      await guild.roles.create({ name: def.name, color: def.color, permissions: perms, reason: "TravStats setup" });
+      await guild.roles.create({
+        name: def.name,
+        color: def.color,
+        permissions: perms,
+        reason: "TravStats setup",
+      });
       log(`created role ${def.name}`);
     } else {
       const existing = roles.find((r) => r.name === def.name);

@@ -39,7 +39,7 @@ function merge<T>(sent: T | undefined, stored: T | null | undefined): T | null {
  */
 function hasPlaceMaterial(fields: AddressFields): boolean {
   return [fields.address, fields.city, fields.country].some(
-    (value) => (value ?? "").trim().length > 0,
+    (value) => (value ?? "").trim().length > 0
   );
 }
 
@@ -72,7 +72,7 @@ function hasPlaceMaterial(fields: AddressFields): boolean {
  */
 export async function resolveUpdatedCoordinates(
   input: AddressWithCoords,
-  existing: ExistingLodging,
+  existing: ExistingLodging
 ): Promise<geo.Coordinates | null> {
   const addressChanged =
     (input.address !== undefined && input.address !== existing.address) ||
@@ -137,7 +137,7 @@ export interface LocationPatch {
  */
 export async function resolveLocation(
   input: AddressWithCoords,
-  existing?: ExistingLodging,
+  existing?: ExistingLodging
 ): Promise<LocationPatch> {
   const coords = existing
     ? await resolveUpdatedCoordinates(input, existing)

@@ -4,15 +4,20 @@ import { dayShift } from "../../lib/dayShift";
 
 const dateFmt = (iso: string, tz: string, lang: string): string =>
   new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-GB", {
-    weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit", timeZone: tz,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: tz,
   })
     .format(new Date(iso))
     // de-DE renders "Mo., 09.11.26" — the mockup wants the bare "Mo 09.11.26".
     .replace(".,", "");
 
 const timeFmt = (iso: string, tz: string): string =>
-  new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: tz })
-    .format(new Date(iso));
+  new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(
+    new Date(iso)
+  );
 
 type DelayState = "late" | "early" | "onTime";
 
@@ -52,7 +57,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
     showTime: boolean,
     tzKnown: boolean,
     actualIso?: string | null,
-    marker?: number,
+    marker?: number
   ) => (
     // Monospace, not just tabular-nums: the digits already lined up, but the
     // weekday abbreviations ("Mi" vs "Fr") differ in width in a proportional
@@ -61,7 +66,9 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
       className="flex items-baseline gap-2 whitespace-nowrap font-mono text-[12.5px]"
       style={{ fontVariantNumeric: "tabular-nums" }}
     >
-      <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </span>
       {iso ? (
         <>
           <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
@@ -93,7 +100,9 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
             </span>
           )}
           {marker !== undefined && marker >= 1 && (
-            <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>+{marker}</span>
+            <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
+              +{marker}
+            </span>
           )}
         </>
       ) : (
@@ -110,7 +119,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
         depTz,
         !depDateOnly,
         !!flight.depTimezone,
-        flight.actualDeparture,
+        flight.actualDeparture
       )}
       {row(
         t("flights:table.timeArr"),
@@ -119,7 +128,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
         !arrDateOnly,
         !!flight.arrTimezone,
         flight.actualArrival,
-        shift,
+        shift
       )}
     </div>
   );

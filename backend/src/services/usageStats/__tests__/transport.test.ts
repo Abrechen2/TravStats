@@ -27,7 +27,7 @@ describe("sendPing", () => {
     await expect(sendPing(PAYLOAD, "https://stats.test")).resolves.toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
       "https://stats.test/v1/ping",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST" })
     );
   });
 
@@ -48,7 +48,7 @@ describe("sendErasure", () => {
     await expect(sendErasure("abc123", "https://stats.test")).resolves.toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
       "https://stats.test/v1/install/abc123",
-      expect.objectContaining({ method: "DELETE" }),
+      expect.objectContaining({ method: "DELETE" })
     );
   });
 

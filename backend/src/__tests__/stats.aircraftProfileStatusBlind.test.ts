@@ -12,37 +12,37 @@
  * they are two views of one population, and the bug is precisely that they
  * disagreed.
  */
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { generateToken } from "../utils/jwt";
 
-const USERNAME = 'aircraftprofilestatusblind';
-const REGISTRATION = 'D-AUD078';
+const USERNAME = "aircraftprofilestatusblind";
+const REGISTRATION = "D-AUD078";
 
 // MUC -> TXL, one real leg. Same route three times so a status leak shows up
 // as an exact multiple rather than as an arguable rounding difference.
 const LEG = {
-  flightNumber: 'LH100',
-  depIata: 'MUC',
-  arrIata: 'TXL',
+  flightNumber: "LH100",
+  depIata: "MUC",
+  arrIata: "TXL",
   depLat: 48.3538,
   depLon: 11.7861,
   arrLat: 52.5597,
   arrLon: 13.2877,
   aircraftRegistration: REGISTRATION,
-  aircraft: 'A320',
-  airline: 'Lufthansa',
+  aircraft: "A320",
+  airline: "Lufthansa",
 };
 
-describe('aircraft profile counts the same flights the ranking does', () => {
+describe("aircraft profile counts the same flights the ranking does", () => {
   let cookie: string;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: USERNAME } });
     const user = await prisma.user.create({
-      data: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     cookie = `auth_token=${generateToken(user.id)}`;
 
@@ -51,23 +51,23 @@ describe('aircraft profile counts the same flights the ranking does', () => {
         {
           ...LEG,
           userId: user.id,
-          status: 'flown',
-          departureTime: new Date('2025-06-01T08:00:00Z'),
-          arrivalTime: new Date('2025-06-01T09:10:00Z'),
+          status: "flown",
+          departureTime: new Date("2025-06-01T08:00:00Z"),
+          arrivalTime: new Date("2025-06-01T09:10:00Z"),
         },
         {
           ...LEG,
           userId: user.id,
-          status: 'cancelled',
-          departureTime: new Date('2025-06-02T08:00:00Z'),
-          arrivalTime: new Date('2025-06-02T09:10:00Z'),
+          status: "cancelled",
+          departureTime: new Date("2025-06-02T08:00:00Z"),
+          arrivalTime: new Date("2025-06-02T09:10:00Z"),
         },
         {
           ...LEG,
           userId: user.id,
-          status: 'scheduled',
-          departureTime: new Date('2099-06-03T08:00:00Z'),
-          arrivalTime: new Date('2099-06-03T09:10:00Z'),
+          status: "scheduled",
+          departureTime: new Date("2099-06-03T08:00:00Z"),
+          arrivalTime: new Date("2099-06-03T09:10:00Z"),
         },
       ],
     });
@@ -78,24 +78,24 @@ describe('aircraft profile counts the same flights the ranking does', () => {
     await prisma.$disconnect();
   });
 
-  it('reports one flight, not three', async () => {
+  it("reports one flight, not three", async () => {
     const res = await request(app)
       .get(`/api/v1/stats/aircraft/${REGISTRATION}`)
-      .set('Cookie', cookie);
+      .set("Cookie", cookie);
 
     expect(res.status).toBe(200);
     expect(res.body.flightCount).toBe(1);
     expect(res.body.flights).toHaveLength(1);
     // The 2099 booking must not become the aircraft's "last flight".
-    expect(String(res.body.lastFlightDate ?? '')).not.toContain('2099');
+    expect(String(res.body.lastFlightDate ?? "")).not.toContain("2099");
     // And the cancelled leg must not appear in the history list either.
-    expect(res.body.flights.map((f: { status: string }) => f.status)).toEqual(['flown']);
+    expect(res.body.flights.map((f: { status: string }) => f.status)).toEqual(["flown"]);
   });
 
-  it('agrees with the ranking on flights and distance', async () => {
+  it("agrees with the ranking on flights and distance", async () => {
     const [ranking, profile] = await Promise.all([
-      request(app).get('/api/v1/stats/aircraft').set('Cookie', cookie),
-      request(app).get(`/api/v1/stats/aircraft/${REGISTRATION}`).set('Cookie', cookie),
+      request(app).get("/api/v1/stats/aircraft").set("Cookie", cookie),
+      request(app).get(`/api/v1/stats/aircraft/${REGISTRATION}`).set("Cookie", cookie),
     ]);
 
     expect(ranking.status).toBe(200);

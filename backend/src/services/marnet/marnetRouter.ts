@@ -24,12 +24,7 @@
 
 import logger from "../../utils/logger";
 import { bearingDeg, haversineKm } from "../../shared/geo/haversine";
-import {
-  findMarnetPath,
-  findNearestNode,
-  loadMarnetGraph,
-  type MarnetGraph,
-} from "./marnetGraph";
+import { findMarnetPath, findNearestNode, loadMarnetGraph, type MarnetGraph } from "./marnetGraph";
 
 export interface LatLon {
   readonly lat: number;
@@ -85,7 +80,7 @@ export interface MarnetRouteOptions {
 export async function routeMarnet(
   dep: LatLon,
   arr: LatLon,
-  options: MarnetRouteOptions = {},
+  options: MarnetRouteOptions = {}
 ): Promise<MarnetRouteResult | null> {
   const graph = await loadMarnetGraph();
   return routeMarnetWithGraph(graph, dep, arr, options);
@@ -97,7 +92,7 @@ export function routeMarnetWithGraph(
   graph: MarnetGraph,
   dep: LatLon,
   arr: LatLon,
-  options: MarnetRouteOptions = {},
+  options: MarnetRouteOptions = {}
 ): MarnetRouteResult | null {
   const onlyMainComponent = options.allowDisconnectedComponents !== true;
   const maxSnapKm = options.maxSnapKm ?? null;
@@ -185,7 +180,7 @@ export function routeMarnetWithGraph(
 export async function routeMarnetAsFeature(
   dep: LatLon,
   arr: LatLon,
-  options: MarnetRouteOptions = {},
+  options: MarnetRouteOptions = {}
 ): Promise<{
   type: "Feature";
   properties: { lengthKm: number; snapDepKm: number; snapArrKm: number };

@@ -35,8 +35,7 @@ export async function backfillDemoFlag(): Promise<number> {
   if (!isSeededDemo) {
     logger.info({
       operation: "backfill_demo_flag_skipped",
-      message:
-        'An account named "demo" does not carry the seeded demo password — left untouched',
+      message: 'An account named "demo" does not carry the seeded demo password — left untouched',
     });
     return 0;
   }

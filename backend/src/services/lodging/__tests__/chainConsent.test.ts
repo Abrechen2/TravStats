@@ -1,5 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
-import { lodgingCandidateFieldsSchema, type LodgingImportFlag } from "../../../schemas/lodgingImport";
+import {
+  lodgingCandidateFieldsSchema,
+  type LodgingImportFlag,
+} from "../../../schemas/lodgingImport";
 
 /**
  * The commit used to create ANY unknown chain name it was handed
@@ -13,7 +16,10 @@ import { lodgingCandidateFieldsSchema, type LodgingImportFlag } from "../../../s
  */
 describe("createChain consent flag", () => {
   it("defaults to absent — an import that does not ask does not create", () => {
-    const parsed = lodgingCandidateFieldsSchema.parse({ name: "Canton KOA Holiday", chainName: "KOA" });
+    const parsed = lodgingCandidateFieldsSchema.parse({
+      name: "Canton KOA Holiday",
+      chainName: "KOA",
+    });
     expect(parsed.createChain).toBeUndefined();
   });
 

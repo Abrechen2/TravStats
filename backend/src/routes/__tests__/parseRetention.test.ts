@@ -1,14 +1,22 @@
 import { describe, it, expect, jest, beforeAll, beforeEach, afterAll } from "@jest/globals";
 
-const parseBookingEmail = jest.fn<
-  (subject?: string, text?: string, html?: string, settings?: { referenceDate?: Date }) => Promise<unknown>
->();
+const parseBookingEmail =
+  jest.fn<
+    (
+      subject?: string,
+      text?: string,
+      html?: string,
+      settings?: { referenceDate?: Date }
+    ) => Promise<unknown>
+  >();
 const parseBookingText = jest.fn<(text: string, userId?: string) => Promise<unknown>>();
 const extractTextFromPdf = jest.fn<(buffer: Buffer) => Promise<string>>();
 
 jest.mock("../../services/bookingParser", () => ({
-  parseBookingEmail: (...args: unknown[]) => parseBookingEmail(...(args as Parameters<typeof parseBookingEmail>)),
-  parseBookingText: (...args: unknown[]) => parseBookingText(...(args as Parameters<typeof parseBookingText>)),
+  parseBookingEmail: (...args: unknown[]) =>
+    parseBookingEmail(...(args as Parameters<typeof parseBookingEmail>)),
+  parseBookingText: (...args: unknown[]) =>
+    parseBookingText(...(args as Parameters<typeof parseBookingText>)),
 }));
 jest.mock("../../services/pdfParser", () => ({
   extractTextFromPdf: (buffer: Buffer) => extractTextFromPdf(buffer),
@@ -51,8 +59,11 @@ describe("parse routes keep their originals", () => {
 
   beforeAll(async () => {
     const passwordHash = await hashPassword("test-password");
-    userId = (await prisma.user.create({ data: { username: `parse-keep-${stamp}`, passwordHash } })).id;
-    strangerId = (await prisma.user.create({ data: { username: `parse-keep-other-${stamp}`, passwordHash } })).id;
+    userId = (await prisma.user.create({ data: { username: `parse-keep-${stamp}`, passwordHash } }))
+      .id;
+    strangerId = (
+      await prisma.user.create({ data: { username: `parse-keep-other-${stamp}`, passwordHash } })
+    ).id;
     cookie = `auth_token=${generateToken(userId)}`;
   });
 
@@ -66,7 +77,9 @@ describe("parse routes keep their originals", () => {
   });
 
   afterAll(async () => {
-    const rows = await prisma.document.findMany({ where: { userId: { in: [userId, strangerId] } } });
+    const rows = await prisma.document.findMany({
+      where: { userId: { in: [userId, strangerId] } },
+    });
     for (const row of rows) fs.rmSync(documentPath(row.storedName), { force: true });
     await prisma.user.deleteMany({ where: { id: { in: [userId, strangerId] } } });
   });
@@ -78,15 +91,25 @@ describe("parse routes keep their originals", () => {
       .send({ emailContent: `Flug LH1234 ${stamp}`, retain: true });
 
     expect(res.status).toBe(200);
-    const document = await prisma.document.findUniqueOrThrow({ where: { id: res.body.documentId } });
-    expect(document).toMatchObject({ userId, format: "emailText", source: "parse", parsedDomain: "flight" });
+    const document = await prisma.document.findUniqueOrThrow({
+      where: { id: res.body.documentId },
+    });
+    expect(document).toMatchObject({
+      userId,
+      format: "emailText",
+      source: "parse",
+      parsedDomain: "flight",
+    });
     expect(document.parsedPayload).toMatchObject({ flights: [], parserUsed: "regex" });
     expect(fs.readFileSync(documentPath(document.storedName), "utf8")).toBe(`Flug LH1234 ${stamp}`);
   });
 
   it("answers without a documentId, and keeps nothing, when retain was not asked for", async () => {
     const before = await prisma.document.count({ where: { userId } });
-    const res = await request(app).post("/api/v1/parse-email").set("Cookie", cookie).send({ emailContent: "x" });
+    const res = await request(app)
+      .post("/api/v1/parse-email")
+      .set("Cookie", cookie)
+      .send({ emailContent: "x" });
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty("documentId");
     expect(await prisma.document.count({ where: { userId } })).toBe(before);
@@ -119,7 +142,9 @@ describe("parse routes keep their originals", () => {
     expect(subject).toBe("Ihre Buchung LH1234");
     expect(text).toContain("Flug LH1234");
     expect(settings?.referenceDate?.toISOString().slice(0, 10)).toBe("2005-07-16");
-    expect((await prisma.document.findUniqueOrThrow({ where: { id: document.id } })).parsedDomain).toBe("flight");
+    expect(
+      (await prisma.document.findUniqueOrThrow({ where: { id: document.id } })).parsedDomain
+    ).toBe("flight");
   });
 
   it("answers 404 for another user's document and 415 for one the route cannot read", async () => {
@@ -155,20 +180,28 @@ describe("parse routes keep their originals", () => {
   it("keeps a PDF sent as base64, and a second retained parse of it is the same document", async () => {
     const pdf = PDF(`keep-${stamp}`).toString("base64");
     const send = () =>
-      request(app).post("/api/v1/parse-pdf").set("Cookie", cookie).send({ pdfBase64: pdf, retain: true });
+      request(app)
+        .post("/api/v1/parse-pdf")
+        .set("Cookie", cookie)
+        .send({ pdfBase64: pdf, retain: true });
 
     const first = await send();
     expect(first.status).toBe(200);
     const second = await send();
     expect(second.body.documentId).toBe(first.body.documentId);
 
-    const document = await prisma.document.findUniqueOrThrow({ where: { id: first.body.documentId } });
+    const document = await prisma.document.findUniqueOrThrow({
+      where: { id: first.body.documentId },
+    });
     expect(document).toMatchObject({ format: "pdf", source: "parse" });
   });
 
   it("parses a kept PDF by id — the path for originals too large for a JSON body", async () => {
     const own = await createDocument({ userId, buffer: PDF(`by-id-${stamp}`) });
-    const res = await request(app).post("/api/v1/parse-pdf").set("Cookie", cookie).send({ documentId: own.document.id });
+    const res = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Cookie", cookie)
+      .send({ documentId: own.document.id });
     expect(res.status).toBe(200);
     expect(res.body.documentId).toBe(own.document.id);
     expect(extractTextFromPdf.mock.calls[0]?.[0].equals(PDF(`by-id-${stamp}`))).toBe(true);

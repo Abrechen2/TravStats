@@ -73,24 +73,14 @@ describe("UnifiedActivityPanel", () => {
     expect(screen.getByTitle("dashboard:sidebar.notOnMap")).toBeInTheDocument();
 
     rerender(
-      <UnifiedActivityPanel
-        lodgings={[lodging()]}
-        lockedKind="lodging"
-        isOpen
-        onClose={vi.fn()}
-      />
+      <UnifiedActivityPanel lodgings={[lodging()]} lockedKind="lodging" isOpen onClose={vi.fn()} />
     );
     expect(screen.queryByTitle("dashboard:sidebar.notOnMap")).toBeNull();
   });
 
   it("hides the domain chips when the tab already picked a domain", () => {
     render(
-      <UnifiedActivityPanel
-        lodgings={[lodging()]}
-        lockedKind="lodging"
-        isOpen
-        onClose={vi.fn()}
-      />
+      <UnifiedActivityPanel lodgings={[lodging()]} lockedKind="lodging" isOpen onClose={vi.fn()} />
     );
     expect(screen.queryByRole("tablist")).toBeNull();
   });

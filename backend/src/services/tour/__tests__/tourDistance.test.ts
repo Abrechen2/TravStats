@@ -24,10 +24,12 @@ describe("legDistanceKm", () => {
 
   it("falls back to the chord when a drawn leg has no usable line", () => {
     const straight = legDistanceKm({ source: "straight", from: OSLO, to: GOTHENBURG });
-    expect(legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: null }))
-      .toBeCloseTo(straight, 6);
-    expect(legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: [[10.75, 59.91]] }))
-      .toBeCloseTo(straight, 6);
+    expect(
+      legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: null })
+    ).toBeCloseTo(straight, 6);
+    expect(
+      legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: [[10.75, 59.91]] })
+    ).toBeCloseTo(straight, 6);
   });
 
   it("is zero for a leg that starts and ends at the same point", () => {
@@ -40,13 +42,14 @@ describe("legDistanceKm", () => {
       [OSLO.lon, OSLO.lat],
     ];
     const straight = legDistanceKm({ source: "straight", from: OSLO, to: GOTHENBURG });
-    expect(legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: snapped }))
-      .toBeCloseTo(straight, 6);
+    expect(
+      legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: snapped })
+    ).toBeCloseTo(straight, 6);
   });
 
   it("throws rather than returning NaN for a non-finite endpoint", () => {
     expect(() =>
-      legDistanceKm({ source: "straight", from: { lat: Number.NaN, lon: 10 }, to: GOTHENBURG }),
+      legDistanceKm({ source: "straight", from: { lat: Number.NaN, lon: 10 }, to: GOTHENBURG })
     ).toThrow(/non-finite/);
   });
 
@@ -56,8 +59,12 @@ describe("legDistanceKm", () => {
         source: "drawn",
         from: OSLO,
         to: GOTHENBURG,
-        waypoints: [[OSLO.lon, OSLO.lat], [Number.POSITIVE_INFINITY, 58], [GOTHENBURG.lon, GOTHENBURG.lat]],
-      }),
+        waypoints: [
+          [OSLO.lon, OSLO.lat],
+          [Number.POSITIVE_INFINITY, 58],
+          [GOTHENBURG.lon, GOTHENBURG.lat],
+        ],
+      })
     ).toThrow(/non-finite/);
   });
 });

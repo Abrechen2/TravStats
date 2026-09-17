@@ -67,7 +67,7 @@ jest.mock("../../../db", () => ({
               row.source === where.source &&
               row.date.getTime() >= where.date.gte.getTime() &&
               row.date.getTime() < where.date.lt.getTime()
-            ),
+            )
         );
         return { count: before - db.days.length };
       },
@@ -126,7 +126,11 @@ const RIGA = { latitude: 56.9496222, longitude: 24.1051888 };
 
 const countryAt = (lat: number): string | null => (lat >= 58 ? "EE" : "LV");
 
-function point(id: number, whenMs: number, where: { latitude: number; longitude: number }): DawarichPoint {
+function point(
+  id: number,
+  whenMs: number,
+  where: { latitude: number; longitude: number }
+): DawarichPoint {
   return {
     id,
     latitude: where.latitude,
@@ -152,7 +156,7 @@ const HISTORY: DawarichPoint[] = [
 /** Answers a window from a fixed history, optionally always claiming truncation. */
 function fakeClient(
   history: DawarichPoint[],
-  options: { truncateWindowsLongerThanMs?: number } = {},
+  options: { truncateWindowsLongerThanMs?: number } = {}
 ): DawarichClient & { calls: DawarichPointsWindow[] } {
   const calls: DawarichPointsWindow[] = [];
   return {
@@ -161,8 +165,7 @@ function fakeClient(
     getPoints: async (window: DawarichPointsWindow) => {
       calls.push(window);
       const points = history.filter(
-        (p) =>
-          p.timestampMs >= window.startAt.getTime() && p.timestampMs <= window.endAt.getTime(),
+        (p) => p.timestampMs >= window.startAt.getTime() && p.timestampMs <= window.endAt.getTime()
       );
       const span = window.endAt.getTime() - window.startAt.getTime();
       const truncated =
@@ -175,7 +178,7 @@ function fakeClient(
 
 function deps(
   client: DawarichClient,
-  overrides: Partial<CountryDaySweepDeps> = {},
+  overrides: Partial<CountryDaySweepDeps> = {}
 ): CountryDaySweepDeps {
   return {
     client,
@@ -208,7 +211,7 @@ describe("sweepUserCountryDays", () => {
         countryCode: row.countryCode,
         pointCount: row.pointCount,
         partialWindow: row.partialWindow,
-      })),
+      }))
     ).toEqual([
       { date: "2026-03-03", countryCode: "EE", pointCount: 2, partialWindow: false },
       { date: "2026-03-03", countryCode: "LV", pointCount: 1, partialWindow: false },
@@ -289,15 +292,13 @@ describe("sweepUserCountryDays", () => {
 
     const outcome = await sweepUserCountryDays(
       USER,
-      deps(client, { maxMonthsWithData: 12, maxWindows: 4 }),
+      deps(client, { maxMonthsWithData: 12, maxWindows: 4 })
     );
 
     // One forward month plus three backwards, then the window budget stops it.
     expect(outcome.monthsSwept).toBe(4);
     expect(outcome.backfillComplete).toBe(false);
-    expect(db.states.get(USER)?.backfilledFromMonth).toEqual(
-      new Date("2025-12-01T00:00:00.000Z"),
-    );
+    expect(db.states.get(USER)?.backfilledFromMonth).toEqual(new Date("2025-12-01T00:00:00.000Z"));
   });
 
   describe("when Dawarich does not answer", () => {
@@ -332,10 +333,7 @@ describe("sweepUserCountryDays", () => {
    * log at all are exactly the unhappy ones, where somebody is debugging.
    */
   it("never writes a coordinate into a log line", async () => {
-    await sweepUserCountryDays(
-      USER,
-      deps(fakeClient(HISTORY, { truncateWindowsLongerThanMs: 0 })),
-    );
+    await sweepUserCountryDays(USER, deps(fakeClient(HISTORY, { truncateWindowsLongerThanMs: 0 })));
     await sweepUserCountryDays("user-2", deps(brokenForLogs()));
 
     expect(logLines.length).toBeGreaterThan(0);

@@ -61,7 +61,7 @@ export function isSettledRateDate(date: string, now: Date = new Date()): boolean
  */
 export async function fetchWithTimeout(
   url: string,
-  timeoutMs: number = FX_PROVIDER_TIMEOUT_MS,
+  timeoutMs: number = FX_PROVIDER_TIMEOUT_MS
 ): Promise<Response> {
   return fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
 }

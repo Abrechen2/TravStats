@@ -48,7 +48,7 @@ interface LegWithStops {
 export async function findLegOrThrow(
   routeId: string,
   fromStopId: string,
-  toStopId: string,
+  toStopId: string
 ): Promise<LegWithStops> {
   const leg = await prisma.tripRouteLeg.findUnique({
     where: {
@@ -76,7 +76,7 @@ export async function findLegOrThrow(
  */
 export function requireCoords(
   stop: { lat: number | null; lon: number | null },
-  which: "from" | "to",
+  which: "from" | "to"
 ): { lat: number; lon: number } {
   if (stop.lat === null || stop.lon === null) {
     throw new AppError(`Leg's ${which} stop lost its coordinates`, 409);
@@ -127,7 +127,7 @@ router.put(
           throw new AppError(
             `This track doesn't come within ${ANCHOR_TOLERANCE_KM} km of both of this leg's ` +
               "stops — it likely covers a different day or place. Not adopted; the leg is unchanged.",
-            409,
+            409
           );
         }
         // The recording stopped somewhere between these two stops. The distance
@@ -138,7 +138,7 @@ router.put(
           throw new AppError(
             "The recording stops and restarts between this leg's two stops, so part of the " +
               "way was never recorded. Not adopted; the leg is unchanged.",
-            409,
+            409
           );
         }
 
@@ -178,7 +178,7 @@ router.put(
         ) {
           throw new AppError(
             `The line must start and end at the leg's stops (anchor tolerance ${ANCHOR_TOLERANCE_KM} km)`,
-            400,
+            400
           );
         }
       }
@@ -192,18 +192,17 @@ router.put(
           // is a placeholder.
           confidence: body.source === "drawn" ? "high" : "low",
           waypoints:
-            waypoints === null
-              ? Prisma.DbNull
-              : (waypoints as unknown as Prisma.InputJsonValue),
+            waypoints === null ? Prisma.DbNull : (waypoints as unknown as Prisma.InputJsonValue),
           // `drivingMinutes`/`tollCost`/`currency` are `.nullable().optional()`
           // in `legOverrideSchema` — a client may send an explicit `null` to
           // CLEAR one of them. `body.x ?? leg.x` cannot tell "absent" from
           // "present and null" apart (both are nullish), so it would silently
           // keep the old value on a clear request. Zod omits an absent
           // optional key entirely, so `in` is the reliable discriminator.
-          drivingMinutes: "drivingMinutes" in body ? body.drivingMinutes ?? null : leg.drivingMinutes,
-          tollCost: "tollCost" in body ? body.tollCost ?? null : leg.tollCost,
-          currency: "currency" in body ? body.currency ?? null : leg.currency,
+          drivingMinutes:
+            "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
+          tollCost: "tollCost" in body ? (body.tollCost ?? null) : leg.tollCost,
+          currency: "currency" in body ? (body.currency ?? null) : leg.currency,
           distanceKm: legDistanceKm({
             source: body.source,
             from: fromCoord,
@@ -218,7 +217,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** DELETE the override — back to a straight chord. */
@@ -254,7 +253,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -288,7 +287,7 @@ function isCoordinatePolyline(value: unknown): value is Array<[number, number]> 
       Array.isArray(point) &&
       point.length === 2 &&
       typeof point[0] === "number" &&
-      typeof point[1] === "number",
+      typeof point[1] === "number"
   );
 }
 
@@ -300,7 +299,7 @@ function isCoordinatePolyline(value: unknown): value is Array<[number, number]> 
  */
 function chordCoordinates(
   from: { lat: number | null; lon: number | null },
-  to: { lat: number | null; lon: number | null },
+  to: { lat: number | null; lon: number | null }
 ): Array<[number, number]> | null {
   if (from.lat === null || from.lon === null || to.lat === null || to.lon === null) return null;
   return [
@@ -403,7 +402,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

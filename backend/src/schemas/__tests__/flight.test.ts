@@ -32,14 +32,14 @@ describe("createFlightSchema — canonical-UTC contract", () => {
   });
 
   it("rejects an invalid IANA timezone", () => {
-    expect(() =>
-      createFlightSchema.parse({ ...baseValid, depTimezone: "Berlin/Invalid" }),
-    ).toThrow(/Invalid IANA timezone/);
+    expect(() => createFlightSchema.parse({ ...baseValid, depTimezone: "Berlin/Invalid" })).toThrow(
+      /Invalid IANA timezone/
+    );
   });
 
   it("rejects a malformed local datetime string", () => {
     expect(() =>
-      createFlightSchema.parse({ ...baseValid, departureLocal: "01.05.2026 10:30" }),
+      createFlightSchema.parse({ ...baseValid, departureLocal: "01.05.2026 10:30" })
     ).toThrow(/Expected YYYY-MM-DDTHH:mm/);
   });
 
@@ -63,7 +63,7 @@ describe("createFlightSchema — canonical-UTC contract", () => {
         departure: baseAirport,
         arrival: { ...baseAirport, lat: 52, lon: 13, iata: "BER" },
         status: "historical",
-      }),
+      })
     ).not.toThrow();
   });
 });
@@ -74,14 +74,14 @@ describe("updateFlightSchema — partial canonical-UTC contract", () => {
       updateFlightSchema.parse({
         departureLocal: "2026-05-01T11:00",
         depTimezone: "Europe/Berlin",
-      }),
+      })
     ).not.toThrow();
   });
 
   it("rejects a partial update missing the tz half", () => {
-    expect(() =>
-      updateFlightSchema.parse({ departureLocal: "2026-05-01T11:00" }),
-    ).toThrow(/depTimezone is required/);
+    expect(() => updateFlightSchema.parse({ departureLocal: "2026-05-01T11:00" })).toThrow(
+      /depTimezone is required/
+    );
   });
 
   it("rejects empty updates", () => {

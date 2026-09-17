@@ -5,7 +5,8 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 
 /** supertest buffers an image/* body into `res.body` and leaves `res.text` empty. */
-const svgText = (res: request.Response): string => res.text ?? Buffer.from(res.body).toString("utf8");
+const svgText = (res: request.Response): string =>
+  res.text ?? Buffer.from(res.body).toString("utf8");
 
 /**
  * forgejo#91 — country flags for the Companion, served from the vendored
@@ -84,7 +85,9 @@ describe("GET /api/v1/country-flags", () => {
 
     it("400 for anything that is not two ASCII letters (no path traversal)", async () => {
       for (const bad of ["..%2Fde", "%2E%2E%2F%2E%2E%2Fpackage", "d", "deu", "d1", "%C3%A9e"]) {
-        const res = await request(app).get(`/api/v1/country-flags/${bad}`).set("Cookie", authCookie);
+        const res = await request(app)
+          .get(`/api/v1/country-flags/${bad}`)
+          .set("Cookie", authCookie);
         expect([bad, res.status]).toEqual([bad, 400]);
       }
     });
@@ -117,7 +120,9 @@ describe("GET /api/v1/country-flags", () => {
     });
 
     it("304 on a matching If-None-Match", async () => {
-      const first = await request(app).get("/api/v1/country-flags?codes=DE,FR").set("Cookie", authCookie);
+      const first = await request(app)
+        .get("/api/v1/country-flags?codes=DE,FR")
+        .set("Cookie", authCookie);
       const res = await request(app)
         .get("/api/v1/country-flags?codes=DE,FR")
         .set("Cookie", authCookie)
@@ -128,14 +133,18 @@ describe("GET /api/v1/country-flags", () => {
     it("400 when codes is missing, empty, malformed or over 250 entries", async () => {
       const tooMany = Array.from({ length: 251 }, () => "DE").join(",");
       for (const query of ["", "?codes=", "?codes=DE,../fr", "?codes=DEU", `?codes=${tooMany}`]) {
-        const res = await request(app).get(`/api/v1/country-flags${query}`).set("Cookie", authCookie);
+        const res = await request(app)
+          .get(`/api/v1/country-flags${query}`)
+          .set("Cookie", authCookie);
         expect([query.slice(0, 20), res.status]).toEqual([query.slice(0, 20), 400]);
       }
     });
 
     it("accepts exactly 250 codes, deduplicated", async () => {
       const codes = Array.from({ length: 250 }, () => "DE").join(",");
-      const res = await request(app).get(`/api/v1/country-flags?codes=${codes}`).set("Cookie", authCookie);
+      const res = await request(app)
+        .get(`/api/v1/country-flags?codes=${codes}`)
+        .set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(Object.keys(res.body.flags)).toEqual(["DE"]);
     });

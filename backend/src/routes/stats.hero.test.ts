@@ -1,13 +1,13 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { calculateDistance } from '../utils/geo';
-import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { calculateDistance } from "../utils/geo";
+import { calculateCo2Kg, toSeatClass } from "../services/co2Calculator";
 
 const mockFindMany = jest.fn();
 const mockCount = jest.fn();
 const mockGroupBy = jest.fn();
 const mockGetCachedAirports = jest.fn();
 
-jest.mock('../db', () => ({
+jest.mock("../db", () => ({
   prisma: {
     flight: {
       findMany: mockFindMany,
@@ -22,7 +22,7 @@ jest.mock('../db', () => ({
     },
   },
 }));
-jest.mock('../services/airportCache', () => ({
+jest.mock("../services/airportCache", () => ({
   getCachedAirports: mockGetCachedAirports,
 }));
 /**
@@ -37,32 +37,30 @@ jest.mock('../services/airportCache', () => ({
  * proves nothing about which of them was read.
  */
 const mockLoadPassport = jest.fn();
-jest.mock('../services/stats/passportLoader', () => ({
+jest.mock("../services/stats/passportLoader", () => ({
   loadPassport: mockLoadPassport,
 }));
-jest.mock('../middleware/auth', () => ({
+jest.mock("../middleware/auth", () => ({
   authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
   AuthRequest: {},
 }));
 
-import request from 'supertest';
-import express from 'express';
+import request from "supertest";
+import express from "express";
 
 // Fixture airports — 2-letter ISO country codes so the country/airport
 // counting in calculateAirportStats resolves deterministically.
-const AIRPORT_DB: Record<
-  string,
-  { lat: number; lon: number; country: string; timezone: string }
-> = {
-  FRA: { lat: 50.0379, lon: 8.5622, country: 'DE', timezone: 'Europe/Berlin' },
-  EDDF: { lat: 50.0379, lon: 8.5622, country: 'DE', timezone: 'Europe/Berlin' },
-  MUC: { lat: 48.3538, lon: 11.7861, country: 'DE', timezone: 'Europe/Berlin' },
-  EDDM: { lat: 48.3538, lon: 11.7861, country: 'DE', timezone: 'Europe/Berlin' },
-  JFK: { lat: 40.6398, lon: -73.7789, country: 'US', timezone: 'America/New_York' },
-  KJFK: { lat: 40.6398, lon: -73.7789, country: 'US', timezone: 'America/New_York' },
-};
+const AIRPORT_DB: Record<string, { lat: number; lon: number; country: string; timezone: string }> =
+  {
+    FRA: { lat: 50.0379, lon: 8.5622, country: "DE", timezone: "Europe/Berlin" },
+    EDDF: { lat: 50.0379, lon: 8.5622, country: "DE", timezone: "Europe/Berlin" },
+    MUC: { lat: 48.3538, lon: 11.7861, country: "DE", timezone: "Europe/Berlin" },
+    EDDM: { lat: 48.3538, lon: 11.7861, country: "DE", timezone: "Europe/Berlin" },
+    JFK: { lat: 40.6398, lon: -73.7789, country: "US", timezone: "America/New_York" },
+    KJFK: { lat: 40.6398, lon: -73.7789, country: "US", timezone: "America/New_York" },
+  };
 
-describe('GET /api/v1/stats/hero', () => {
+describe("GET /api/v1/stats/hero", () => {
   let app: express.Express;
 
   beforeEach(async () => {
@@ -73,13 +71,13 @@ describe('GET /api/v1/stats/hero', () => {
     mockGetCachedAirports.mockReset();
     mockLoadPassport.mockReset();
     mockLoadPassport.mockResolvedValue({ summary: { countries: 5 } });
-    const { default: statsRoutes } = await import('./stats');
+    const { default: statsRoutes } = await import("./stats");
     app = express();
     app.use(express.json());
-    app.use('/api/v1/stats', statsRoutes);
+    app.use("/api/v1/stats", statsRoutes);
   });
 
-  it('composes distanceKm/flights/flightTimeMinutes from computeSummary, airports/co2Kg from the airport+fun calculators, and countries from the passport', async () => {
+  it("composes distanceKm/flights/flightTimeMinutes from computeSummary, airports/co2Kg from the airport+fun calculators, and countries from the passport", async () => {
     mockGetCachedAirports.mockImplementation(async (...args: unknown[]) => {
       const codes = args[0] as string[];
       const map = new Map<string, unknown>();
@@ -92,26 +90,26 @@ describe('GET /api/v1/stats/hero', () => {
 
     // Flight A: FRA -> MUC, flown, 2024-04-10 08:00-09:00 UTC (60 min).
     const flightA = {
-      id: 'a',
-      depIata: 'FRA',
-      depIcao: 'EDDF',
-      arrIata: 'MUC',
-      arrIcao: 'EDDM',
+      id: "a",
+      depIata: "FRA",
+      depIcao: "EDDF",
+      arrIata: "MUC",
+      arrIcao: "EDDM",
       depLat: AIRPORT_DB.FRA.lat,
       depLon: AIRPORT_DB.FRA.lon,
       arrLat: AIRPORT_DB.MUC.lat,
       arrLon: AIRPORT_DB.MUC.lon,
-      departureTime: new Date('2024-04-10T08:00:00Z'),
-      arrivalTime: new Date('2024-04-10T09:00:00Z'),
-      depTimeSemantics: 'UTC',
-      arrTimeSemantics: 'UTC',
+      departureTime: new Date("2024-04-10T08:00:00Z"),
+      arrivalTime: new Date("2024-04-10T09:00:00Z"),
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
       // What Postgres stores for those two clocks (forgejo#45). The summary
       // reads the column instead of re-deriving, so a fixture that omits it
       // is a fixture whose flight has no measured duration at all.
       durationMinutes: 60,
-      airline: 'Lufthansa',
+      airline: "Lufthansa",
       aircraft: null,
-      status: 'flown',
+      status: "flown",
       price: null,
       taxes: null,
       fees: null,
@@ -131,17 +129,17 @@ describe('GET /api/v1/stats/hero', () => {
     // and so could not tell the two behaviours apart.
     const flightB = {
       ...flightA,
-      id: 'b',
-      arrIata: 'JFK',
-      arrIcao: 'KJFK',
+      id: "b",
+      arrIata: "JFK",
+      arrIcao: "KJFK",
       arrLat: AIRPORT_DB.JFK.lat,
       arrLon: AIRPORT_DB.JFK.lon,
-      departureTime: new Date('1989-03-15T12:00:00Z'),
-      arrivalTime: new Date('1989-03-15T13:00:00Z'),
+      departureTime: new Date("1989-03-15T12:00:00Z"),
+      arrivalTime: new Date("1989-03-15T13:00:00Z"),
       // Stored, because the clocks are what they are — and still never
       // measured, because the `historical` status disqualifies them upstream.
       durationMinutes: 60,
-      status: 'historical',
+      status: "historical",
     };
 
     // Every findMany call the route triggers (computeSummary's flownFlights
@@ -156,13 +154,13 @@ describe('GET /api/v1/stats/hero', () => {
       AIRPORT_DB.FRA.lat,
       AIRPORT_DB.FRA.lon,
       AIRPORT_DB.MUC.lat,
-      AIRPORT_DB.MUC.lon,
+      AIRPORT_DB.MUC.lon
     );
     const distB = calculateDistance(
       AIRPORT_DB.FRA.lat,
       AIRPORT_DB.FRA.lon,
       AIRPORT_DB.JFK.lat,
-      AIRPORT_DB.JFK.lon,
+      AIRPORT_DB.JFK.lon
     );
     const expectedDistanceKm = Math.round(distA + distB);
 
@@ -182,7 +180,7 @@ describe('GET /api/v1/stats/hero', () => {
     })!;
     const expectedCo2Kg = co2A + co2B;
 
-    const res = await request(app).get('/api/v1/stats/hero');
+    const res = await request(app).get("/api/v1/stats/hero");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({

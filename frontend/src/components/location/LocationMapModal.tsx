@@ -147,8 +147,7 @@ export function LocationMapModal({
   );
 
   const handleMarkerDragEnd = useCallback(
-    (e: { lngLat: { lng: number; lat: number } }): void =>
-      placeFromMap(e.lngLat.lat, e.lngLat.lng),
+    (e: { lngLat: { lng: number; lat: number } }): void => placeFromMap(e.lngLat.lat, e.lngLat.lng),
     [placeFromMap]
   );
 
@@ -316,7 +315,10 @@ export function LocationMapModal({
             <ul className="max-h-40 divide-y divide-[var(--color-border)] overflow-y-auto rounded-lg border border-[var(--color-border)]">
               {pois.map((poi, i) => {
                 const selected =
-                  hit !== null && hit.lat === poi.lat && hit.lon === poi.lon && hit.name === poi.name;
+                  hit !== null &&
+                  hit.lat === poi.lat &&
+                  hit.lon === poi.lon &&
+                  hit.name === poi.name;
                 return (
                   <li key={`${poi.name}-${i}`}>
                     <button

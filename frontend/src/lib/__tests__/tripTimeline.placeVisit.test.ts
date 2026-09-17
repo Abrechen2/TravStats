@@ -43,12 +43,7 @@ describe("place-visit events keep the #175 ordering", () => {
       { id: "a", kind: "place-visit", date: "2025-05-03T10:00:00.000Z" },
       { id: "b", kind: "place-visit", date: "2025-05-03T12:30:00.000Z" },
     ];
-    expect([...events].sort(compareTimelineEvents).map((e) => e.id)).toEqual([
-      "a",
-      "b",
-      "c",
-      "j",
-    ]);
+    expect([...events].sort(compareTimelineEvents).map((e) => e.id)).toEqual(["a", "b", "c", "j"]);
   });
 
   it("does not drag a visit across a day boundary", () => {

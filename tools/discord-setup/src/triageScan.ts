@@ -52,7 +52,9 @@ async function main(): Promise<void> {
     const fresh = [...msgs.values()].filter((m) => m.createdTimestamp > cutoff);
     if (fresh.length === 0) {
       const last = [...msgs.values()][0];
-      console.log(`#${ch.name}: nothing new (last ${last ? last.createdAt.toISOString() : "—"}, ${msgs.size} msgs)`);
+      console.log(
+        `#${ch.name}: nothing new (last ${last ? last.createdAt.toISOString() : "—"}, ${msgs.size} msgs)`
+      );
       continue;
     }
     console.log(`\n### #${ch.name} — ${fresh.length} new since ${new Date(cutoff).toISOString()}`);
@@ -61,7 +63,13 @@ async function main(): Promise<void> {
   await client.destroy();
 }
 
-function print(m: { createdAt: Date; author: { username: string }; content: string; attachments: Map<string, { url: string; name: string | null }>; embeds: unknown[] }): void {
+function print(m: {
+  createdAt: Date;
+  author: { username: string };
+  content: string;
+  attachments: Map<string, { url: string; name: string | null }>;
+  embeds: unknown[];
+}): void {
   console.log(`--- ${m.createdAt.toISOString()} @${m.author.username}`);
   console.log(m.content || "(no text)");
   for (const [, a] of m.attachments) console.log(`  [ATTACHMENT] ${a.name} ${a.url}`);

@@ -38,8 +38,8 @@
  *   Add --dry-run to preview without writing.
  */
 
-import { PrismaClient } from '@prisma/client';
-import { resolveAirlineCodes } from '../src/utils/airlineNormalize';
+import { PrismaClient } from "@prisma/client";
+import { resolveAirlineCodes } from "../src/utils/airlineNormalize";
 
 interface Args {
   dryRun: boolean;
@@ -48,8 +48,8 @@ interface Args {
 
 function parseArgs(argv: string[]): Args {
   return {
-    dryRun: argv.includes('--dry-run'),
-    batchSize: Number(argv.find((a) => a.startsWith('--batch-size='))?.split('=')[1]) || 500,
+    dryRun: argv.includes("--dry-run"),
+    batchSize: Number(argv.find((a) => a.startsWith("--batch-size="))?.split("=")[1]) || 500,
   };
 }
 
@@ -61,10 +61,7 @@ interface PassAResult {
   unresolved: string[];
 }
 
-async function passAirlineCodes(
-  prisma: PrismaClient,
-  args: Args,
-): Promise<PassAResult> {
+async function passAirlineCodes(prisma: PrismaClient, args: Args): Promise<PassAResult> {
   const candidatesAirline = await prisma.flight.findMany({
     where: { airline: { not: null }, airlineIata: null },
     select: { id: true, airline: true },
@@ -81,7 +78,7 @@ async function passAirlineCodes(
 
   if (!args.dryRun) {
     for (const f of candidatesAirline) {
-      const resolved = resolveAirlineCodes(f.airline ?? '');
+      const resolved = resolveAirlineCodes(f.airline ?? "");
       if (!resolved) {
         if (f.airline) unresolved.add(f.airline);
         continue;
@@ -97,7 +94,7 @@ async function passAirlineCodes(
     }
 
     for (const f of candidatesOperating) {
-      const resolved = resolveAirlineCodes(f.operatingAirline ?? '');
+      const resolved = resolveAirlineCodes(f.operatingAirline ?? "");
       if (!resolved) {
         if (f.operatingAirline) unresolved.add(f.operatingAirline);
         continue;
@@ -113,12 +110,12 @@ async function passAirlineCodes(
     }
   } else {
     for (const f of candidatesAirline) {
-      const r = resolveAirlineCodes(f.airline ?? '');
+      const r = resolveAirlineCodes(f.airline ?? "");
       if (r) updatedAirline++;
       else if (f.airline) unresolved.add(f.airline);
     }
     for (const f of candidatesOperating) {
-      const r = resolveAirlineCodes(f.operatingAirline ?? '');
+      const r = resolveAirlineCodes(f.operatingAirline ?? "");
       if (r) updatedOperating++;
       else if (f.operatingAirline) unresolved.add(f.operatingAirline);
     }
@@ -140,10 +137,7 @@ interface PassBResult {
 async function passDateOnlyCount(prisma: PrismaClient): Promise<PassBResult> {
   const dateOnlyRows = await prisma.flight.count({
     where: {
-      OR: [
-        { depTimeSemantics: 'DATE_ONLY' },
-        { arrTimeSemantics: 'DATE_ONLY' },
-      ],
+      OR: [{ depTimeSemantics: "DATE_ONLY" }, { arrTimeSemantics: "DATE_ONLY" }],
     },
   });
   return { dateOnlyRows };
@@ -153,13 +147,19 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const prisma = new PrismaClient();
 
-  console.log(`[backfill-rc4] mode=${args.dryRun ? 'dry-run' : 'apply'} batchSize=${args.batchSize}`);
+  console.log(
+    `[backfill-rc4] mode=${args.dryRun ? "dry-run" : "apply"} batchSize=${args.batchSize}`
+  );
 
   try {
     const a = await passAirlineCodes(prisma, args);
     console.log(`[backfill-rc4] pass A — airline codes`);
-    console.log(`  airline:           ${a.candidatesAirline} candidates → ${a.updatedAirline} resolved`);
-    console.log(`  operatingAirline:  ${a.candidatesOperating} candidates → ${a.updatedOperating} resolved`);
+    console.log(
+      `  airline:           ${a.candidatesAirline} candidates → ${a.updatedAirline} resolved`
+    );
+    console.log(
+      `  operatingAirline:  ${a.candidatesOperating} candidates → ${a.updatedOperating} resolved`
+    );
     if (a.unresolved.length > 0) {
       console.log(`  unresolved (${a.unresolved.length}, add to NAME_TO_IATA if needed):`);
       for (const name of a.unresolved.slice(0, 20)) console.log(`    - "${name}"`);
@@ -178,6 +178,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[backfill-rc4] FAILED:', err);
+  console.error("[backfill-rc4] FAILED:", err);
   process.exit(1);
 });

@@ -17,22 +17,22 @@
  * because both bugs live in the SQL window and the selected columns — neither
  * is visible to the pure function they feed.
  */
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { generateToken } from "../utils/jwt";
 
-const USERNAME = 'daysawayprecision';
+const USERNAME = "daysawayprecision";
 
 async function lodgingDays(cookie: string, year?: number): Promise<number> {
-  const url = year ? `/api/v1/stats/summary?year=${year}` : '/api/v1/stats/summary';
-  const res = await request(app).get(url).set('Cookie', cookie);
+  const url = year ? `/api/v1/stats/summary?year=${year}` : "/api/v1/stats/summary";
+  const res = await request(app).get(url).set("Cookie", cookie);
   expect(res.status).toBe(200);
   return res.body.daysAway.lodging;
 }
 
-describe('days away only counts days the record actually names', () => {
+describe("days away only counts days the record actually names", () => {
   let userId: string;
   let cookie: string;
   let lodgingId: string;
@@ -40,13 +40,13 @@ describe('days away only counts days the record actually names', () => {
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: USERNAME } });
     const user = await prisma.user.create({
-      data: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     userId = user.id;
     cookie = `auth_token=${generateToken(user.id)}`;
 
     const lodging = await prisma.lodging.create({
-      data: { userId, name: 'Testhaus', visited: true },
+      data: { userId, name: "Testhaus", visited: true },
     });
     lodgingId = lodging.id;
   });
@@ -62,15 +62,15 @@ describe('days away only counts days the record actually names', () => {
     await prisma.$disconnect();
   });
 
-  it('does not turn a month placeholder into 32 days of presence (AUD-083)', async () => {
+  it("does not turn a month placeholder into 32 days of presence (AUD-083)", async () => {
     await prisma.lodgingStay.create({
       data: {
         userId,
         lodgingId,
-        status: 'completed',
-        datePrecision: 'MONTH',
-        checkIn: new Date('2025-05-01T00:00:00Z'),
-        checkOut: new Date('2025-06-01T00:00:00Z'),
+        status: "completed",
+        datePrecision: "MONTH",
+        checkIn: new Date("2025-05-01T00:00:00Z"),
+        checkOut: new Date("2025-06-01T00:00:00Z"),
         nights: 3,
       },
     });
@@ -80,17 +80,17 @@ describe('days away only counts days the record actually names', () => {
     expect(await lodgingDays(cookie)).toBe(0);
   });
 
-  it('still counts a real day-precision stay', async () => {
+  it("still counts a real day-precision stay", async () => {
     // The control that makes the case above meaningful rather than "lodging
     // days are always zero now".
     await prisma.lodgingStay.create({
       data: {
         userId,
         lodgingId,
-        status: 'completed',
-        datePrecision: 'DAY',
-        checkIn: new Date('2025-05-01T00:00:00Z'),
-        checkOut: new Date('2025-05-04T00:00:00Z'),
+        status: "completed",
+        datePrecision: "DAY",
+        checkIn: new Date("2025-05-01T00:00:00Z"),
+        checkOut: new Date("2025-05-04T00:00:00Z"),
         nights: 3,
       },
     });
@@ -99,15 +99,15 @@ describe('days away only counts days the record actually names', () => {
     expect(await lodgingDays(cookie, 2025)).toBe(4);
   });
 
-  it('keeps a stay with a known check-out and no check-in inside its year (AUD-084)', async () => {
+  it("keeps a stay with a known check-out and no check-in inside its year (AUD-084)", async () => {
     await prisma.lodgingStay.create({
       data: {
         userId,
         lodgingId,
-        status: 'completed',
-        datePrecision: 'DAY',
+        status: "completed",
+        datePrecision: "DAY",
         checkIn: null,
-        checkOut: new Date('2025-05-04T00:00:00Z'),
+        checkOut: new Date("2025-05-04T00:00:00Z"),
         nights: null,
       },
     });

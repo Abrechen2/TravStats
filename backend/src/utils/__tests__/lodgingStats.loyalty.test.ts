@@ -34,10 +34,8 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
 });
 
 /** Two nights, at whichever chain and in whichever year is asked for. */
-const nightsAt = (
-  chainName: string | null,
-  o: Partial<LodgingStayData> = {},
-): LodgingStayData => stay({ chainName, chainId: chainName === null ? null : 1, ...o });
+const nightsAt = (chainName: string | null, o: Partial<LodgingStayData> = {}): LodgingStayData =>
+  stay({ chainName, chainId: chainName === null ? null : 1, ...o });
 
 const loyalty = (stays: LodgingStayData[]) =>
   calculateLodgingStats(stays, "EUR", undefined, NOW).loyalty;
@@ -143,7 +141,11 @@ describe("lodging loyalty", () => {
 
   it("lists programme years newest first", () => {
     const l = loyalty([
-      stay({ programName: "Bonvoy", checkIn: new Date("2022-01-01"), checkOut: new Date("2022-01-03") }),
+      stay({
+        programName: "Bonvoy",
+        checkIn: new Date("2022-01-01"),
+        checkOut: new Date("2022-01-03"),
+      }),
       stay({
         lodgingId: "l2",
         programName: "Bonvoy",
@@ -177,11 +179,26 @@ describe("lodgingNightsRanked", () => {
   it("ranks individual hotels by nights, then by stays", () => {
     const stats = calculateLodgingStats(
       [
-        stay({ lodgingId: "a", lodgingName: "Hotel Adlon", checkIn: new Date("2024-05-14T00:00:00Z"), checkOut: new Date("2024-05-16T00:00:00Z") }),
-        stay({ lodgingId: "a", lodgingName: "Hotel Adlon", checkIn: new Date("2024-07-01T00:00:00Z"), checkOut: new Date("2024-07-04T00:00:00Z") }),
-        stay({ lodgingId: "b", lodgingName: "Le Meurice", checkIn: new Date("2024-06-01T00:00:00Z"), checkOut: new Date("2024-06-03T00:00:00Z") }),
+        stay({
+          lodgingId: "a",
+          lodgingName: "Hotel Adlon",
+          checkIn: new Date("2024-05-14T00:00:00Z"),
+          checkOut: new Date("2024-05-16T00:00:00Z"),
+        }),
+        stay({
+          lodgingId: "a",
+          lodgingName: "Hotel Adlon",
+          checkIn: new Date("2024-07-01T00:00:00Z"),
+          checkOut: new Date("2024-07-04T00:00:00Z"),
+        }),
+        stay({
+          lodgingId: "b",
+          lodgingName: "Le Meurice",
+          checkIn: new Date("2024-06-01T00:00:00Z"),
+          checkOut: new Date("2024-06-03T00:00:00Z"),
+        }),
       ],
-      NOW,
+      NOW
     );
 
     const ranked = stats.loyalty.lodgingNightsRanked;
@@ -197,7 +214,7 @@ describe("lodgingNightsRanked", () => {
         stay({ lodgingId: "muc", lodgingName: "Motel One", city: "München" }),
         stay({ lodgingId: "ber", lodgingName: "Motel One", city: "Berlin" }),
       ],
-      NOW,
+      NOW
     );
 
     expect(stats.loyalty.lodgingNightsRanked).toHaveLength(2);

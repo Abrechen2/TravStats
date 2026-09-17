@@ -71,7 +71,7 @@ interface CandidateFlight {
 
 async function backfillRouteDistance(
   prisma: PrismaClient,
-  args: BackfillArgs,
+  args: BackfillArgs
 ): Promise<{ scanned: number; updated: number; skipped: number }> {
   const candidates = (await prisma.flight.findMany({
     where: { routeDistance: null },
@@ -83,12 +83,7 @@ async function backfillRouteDistance(
   const updates: Array<{ id: string; routeDistance: number }> = [];
 
   for (const f of candidates) {
-    if (
-      f.depLat == null ||
-      f.depLon == null ||
-      f.arrLat == null ||
-      f.arrLon == null
-    ) {
+    if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
       skipped += 1;
       continue;
     }
@@ -111,8 +106,8 @@ async function backfillRouteDistance(
         prisma.flight.update({
           where: { id: u.id },
           data: { routeDistance: u.routeDistance },
-        }),
-      ),
+        })
+      )
     );
     updated += batch.length;
   }
@@ -138,8 +133,8 @@ async function main(): Promise<void> {
           elapsedMs: ms,
         },
         null,
-        2,
-      ) + "\n",
+        2
+      ) + "\n"
     );
   } finally {
     await prisma.$disconnect();

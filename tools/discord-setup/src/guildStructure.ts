@@ -13,7 +13,10 @@ type GuildTextLikeChannelType =
   | ChannelType.GuildForum
   | ChannelType.GuildAnnouncement;
 
-export function channelTypeFor(kind: ChannelKind, communityEnabled: boolean): GuildTextLikeChannelType {
+export function channelTypeFor(
+  kind: ChannelKind,
+  communityEnabled: boolean
+): GuildTextLikeChannelType {
   switch (kind) {
     case "voice":
       return ChannelType.GuildVoice;
@@ -33,7 +36,7 @@ export function planChannels(existingNames: readonly string[]): ChannelAction[] 
     cat.channels.map((ch) => ({
       name: ch.name,
       op: existing.has(ch.name) ? ("skip" as const) : ("create" as const),
-    })),
+    }))
   );
 }
 
@@ -75,7 +78,7 @@ function categoryOverwrites(guild: Guild, cat: CategoryDef): PermOverwrite[] {
 // one overwrite per target id). Returns a new array; never mutates inputs.
 export function withReadOnlyDeny(
   overwrites: readonly PermOverwrite[],
-  everyoneId: string,
+  everyoneId: string
 ): PermOverwrite[] {
   const idx = overwrites.findIndex((o) => o.id === everyoneId);
   if (idx === -1) {
@@ -89,9 +92,13 @@ export function withReadOnlyDeny(
   return overwrites.map((o, i) => (i === idx ? merged : o));
 }
 
-async function ensureCategory(guild: Guild, cat: CategoryDef, dryRun: boolean): Promise<CategoryChannel | null> {
+async function ensureCategory(
+  guild: Guild,
+  cat: CategoryDef,
+  dryRun: boolean
+): Promise<CategoryChannel | null> {
   const existing = guild.channels.cache.find(
-    (c) => c.type === ChannelType.GuildCategory && c.name === cat.name,
+    (c) => c.type === ChannelType.GuildCategory && c.name === cat.name
   ) as CategoryChannel | undefined;
   if (existing) return existing;
   if (dryRun) {
@@ -114,10 +121,10 @@ async function ensureChannel(
   cat: CategoryDef,
   ch: ChannelDef,
   communityEnabled: boolean,
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<string | null> {
   const existing = guild.channels.cache.find(
-    (c) => c.name === ch.name && c.type !== ChannelType.GuildCategory,
+    (c) => c.name === ch.name && c.type !== ChannelType.GuildCategory
   );
   if (existing) {
     log(`skip existing channel #${ch.name}`);
@@ -143,13 +150,17 @@ async function ensureChannel(
 
 export async function ensureStructure(
   guild: Guild,
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<{ rulesChannelId: string | null }> {
   await guild.channels.fetch();
   const communityEnabled = guild.features.includes("COMMUNITY");
   if (!communityEnabled) {
-    log("Community mode is OFF — bug-report/feature-request/announcements/changelog are being created as text channels.");
-    log("To get real forum/announcement channels: enable Community in Server Settings, DELETE those text channels, then re-run setup. (Existing channels are matched by name and are NOT converted in place.)");
+    log(
+      "Community mode is OFF — bug-report/feature-request/announcements/changelog are being created as text channels."
+    );
+    log(
+      "To get real forum/announcement channels: enable Community in Server Settings, DELETE those text channels, then re-run setup. (Existing channels are matched by name and are NOT converted in place.)"
+    );
   }
   let rulesChannelId: string | null = null;
   for (const cat of CATEGORIES) {

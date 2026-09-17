@@ -42,7 +42,9 @@ const statsResponse = registry.register(
       totalCost: z
         .number()
         .nullable()
-        .describe("Null when no flight in the window carries a price — never 0 for an unpriced year"),
+        .describe(
+          "Null when no flight in the window carries a price — never 0 for an unpriced year"
+        ),
       unpricedFlights: z.number(),
       byStatus: z.record(z.string(), z.number()),
       byAirline: z.record(z.string(), z.number()),
@@ -50,12 +52,18 @@ const statsResponse = registry.register(
       daysAway: z
         .object({
           flight: z.number().describe("Distinct days with a flight's departure or arrival"),
-          cruise: z.number().describe("Distinct days from a cruise's departure to its arrival, inclusive"),
-          lodging: z.number().describe("Distinct days from a stay's check-in to its check-out, inclusive"),
+          cruise: z
+            .number()
+            .describe("Distinct days from a cruise's departure to its arrival, inclusive"),
+          lodging: z
+            .number()
+            .describe("Distinct days from a stay's check-in to its check-out, inclusive"),
           place: z.number().describe("Distinct days with a recorded place visit"),
           total: z
             .number()
-            .describe("The UNION of the four day sets — never their sum; a day with a flight and a hotel night is one day"),
+            .describe(
+              "The UNION of the four day sets — never their sum; a day with a flight and a hotel night is one day"
+            ),
         })
         .describe(
           "Days away, per domain — the one measure the design charter lets every domain share. " +
@@ -209,9 +217,13 @@ const evidenceKindSchema = z.enum(["flight", "lodging", "port", "place", "track"
 const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
 const passportCountrySchema = z.object({
-  code: z.string().describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
+  code: z
+    .string()
+    .describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
   continent: continentSchema.nullable(),
-  entries: z.number().describe("Flights that began or ended here; 0 for a country proved another way"),
+  entries: z
+    .number()
+    .describe("Flights that began or ended here; 0 for a country proved another way"),
   firstYear: z.number().nullable(),
   lastYear: z.number().nullable(),
   airports: z.array(z.string()).describe("IATA codes used here, first visit first"),
@@ -227,7 +239,9 @@ const passportCountrySchema = z.object({
     z.object({ state: z.literal("unknown") }),
     z.object({ state: z.literal("notApplicable") }),
   ]),
-  counted: z.boolean().describe("Whether the row reaches `summary.countries`; a false greys, never removes"),
+  counted: z
+    .boolean()
+    .describe("Whether the row reaches `summary.countries`; a false greys, never removes"),
   portCalls: z.number().describe("Port calls of sailed cruises in this country"),
   places: z.number().describe("Recorded visits to places in this country"),
   lodging: z
@@ -235,11 +249,15 @@ const passportCountrySchema = z.object({
       place: z
         .string()
         .nullable()
-        .describe("The city of the house with the most proved nights; null when none names one. The client abbreviates — there is no canonical short code for a city"),
+        .describe(
+          "The city of the house with the most proved nights; null when none names one. The client abbreviates — there is no canonical short code for a city"
+        ),
       nights: z
         .number()
         .nullable()
-        .describe("Nights proved by stays that happened. Null when no stay proves a span — 'slept here, nobody knows how long' — never 0, which would claim zero nights"),
+        .describe(
+          "Nights proved by stays that happened. Null when no stay proves a span — 'slept here, nobody knows how long' — never 0, which would claim zero nights"
+        ),
     })
     .nullable()
     .describe("The lodging stamp. Null when no house proves this country"),
@@ -250,8 +268,12 @@ const passportResponse = registry.register(
   z
     .object({
       summary: z.object({
-        countries: z.number().describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),
-        countriesTotal: z.number().describe("Every row, whatever its tier. What `byEvidence` sums to"),
+        countries: z
+          .number()
+          .describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),
+        countriesTotal: z
+          .number()
+          .describe("Every row, whatever its tier. What `byEvidence` sums to"),
         legacyCountries: z.number().describe("What the flights-only rule would have said"),
         countryThreshold: countryTierSchema,
         airports: z.number(),
@@ -395,8 +417,8 @@ registry.registerPath({
     "carries a value, a unit and the raw parts of its detail, because a formatted " +
     '"12.345 km" would fix the decimal separator and the unit for every client. A ' +
     "record that cannot be derived is OMITTED rather than zeroed — a shortest " +
-    "flight of 0 km would win forever, and a missing delay means \"not recorded\", " +
-    "which is a different fact from \"on time\".",
+    'flight of 0 km would win forever, and a missing delay means "not recorded", ' +
+    'which is a different fact from "on time".',
   tags: statsTag,
   responses: {
     200: {
@@ -486,10 +508,7 @@ registry.registerPath({
   },
 });
 
-const timeseries = registry.register(
-  "Timeseries",
-  timeseriesResponseSchema.openapi("Timeseries")
-);
+const timeseries = registry.register("Timeseries", timeseriesResponseSchema.openapi("Timeseries"));
 const funStats = registry.register("FunStats", funStatsSchema.openapi("FunStats"));
 
 registry.registerPath({
@@ -592,10 +611,7 @@ registry.registerPath({
   },
 });
 
-const punctuality = registry.register(
-  "Punctuality",
-  punctualityStatsSchema.openapi("Punctuality")
-);
+const punctuality = registry.register("Punctuality", punctualityStatsSchema.openapi("Punctuality"));
 const seatStats = registry.register("SeatStats", seatStatsSchema.openapi("SeatStats"));
 const airlineRanking = registry.register(
   "AirlineRanking",
@@ -625,7 +641,7 @@ registry.registerPath({
   summary: "Countries reached",
   description:
     "Counted by country CODE, not by the spelling a geocoder returned — the same " +
-    "country arriving as \"Egypt\" and as its own-language name is one country here.",
+    'country arriving as "Egypt" and as its own-language name is one country here.',
   tags: statsTag,
   responses: {
     200: {
@@ -702,7 +718,7 @@ registry.registerPath({
   path: "/stats/aircraft-types",
   summary: "Aircraft types flown",
   description:
-    "Ranked by TYPE (\"Airbus A320neo\"), unlike /stats/aircraft which ranks tail " +
+    'Ranked by TYPE ("Airbus A320neo"), unlike /stats/aircraft which ranks tail ' +
     "numbers. `total` is the user's whole flight count, so percentages need not " +
     "sum to 100 — the gap is the flights with no type recorded.",
   tags: statsTag,

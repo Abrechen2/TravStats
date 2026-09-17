@@ -21,7 +21,7 @@ function buildConnection(
   rawUrl: string | null | undefined,
   rawKey: string | null | undefined,
   source: ImmichConnectionSource,
-  decrypt: boolean,
+  decrypt: boolean
 ): ImmichConnection | null {
   if (!rawUrl || !rawKey) return null;
 
@@ -61,7 +61,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
       admin?.globalImmichBaseUrl,
       admin?.globalImmichApiKey,
       "global",
-      true,
+      true
     );
     if (global) return global;
 

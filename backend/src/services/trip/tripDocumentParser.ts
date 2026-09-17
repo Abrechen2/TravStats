@@ -128,7 +128,7 @@ function parseInvoiceFlights(all: string[]): TripFlightRow[] {
   if (header === -1) return [];
   const rows: TripFlightRow[] = [];
   const re = new RegExp(
-    String.raw`^([A-Z]{3}) - ([A-Z]{3}) ([A-Z0-9]{2}) ?(\d{1,4}) ${DATE} ${TIME} ${TIME}(\+\d)?$`,
+    String.raw`^([A-Z]{3}) - ([A-Z]{3}) ([A-Z0-9]{2}) ?(\d{1,4}) ${DATE} ${TIME} ${TIME}(\+\d)?$`
   );
   for (const line of all.slice(header + 1)) {
     const m = line.match(re);
@@ -162,7 +162,7 @@ function parseItineraryFlights(all: string[]): { flights: TripFlightRow[]; count
   const flights: TripFlightRow[] = [];
   const countries: string[] = [];
   const flightRe = new RegExp(
-    String.raw`^${DATE} (.+?) - (.+?) ${TIME} Uhr - ${TIME}(\+\d)? Uhr ([A-Z0-9]{2}) ?([A-Z0-9]{3,4})$`,
+    String.raw`^${DATE} (.+?) - (.+?) ${TIME} Uhr - ${TIME}(\+\d)? Uhr ([A-Z0-9]{2}) ?([A-Z0-9]{3,4})$`
   );
   const sepTicketRe = new RegExp(String.raw`^${DATE} (.+?) - (.+?) sep\. Ticket\*?$`);
   const hotelBlockRe = new RegExp(String.raw`^${DATE} - ${DATE} div\. Rundreisehotels (.+)$`);
@@ -326,7 +326,8 @@ export function parseTripDocument(text: string): TripDocument {
   const amountLine = all.find((l) => /^Gesamtbetrag\s/.test(l));
   const amount = amountLine?.match(/^Gesamtbetrag\s+([\d.,]+)\s+([A-Z]{3})/);
 
-  const itinerary = kind === "itinerary" ? parseItineraryFlights(all) : { flights: [], countries: [] };
+  const itinerary =
+    kind === "itinerary" ? parseItineraryFlights(all) : { flights: [], countries: [] };
 
   return {
     kind,

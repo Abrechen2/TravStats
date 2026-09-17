@@ -6,15 +6,7 @@ import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
 
 export type CruiseColumnId =
-  | "ship"
-  | "line"
-  | "dates"
-  | "ports"
-  | "status"
-  | "cabin"
-  | "price"
-  | "trip"
-  | "actions";
+  "ship" | "line" | "dates" | "ports" | "status" | "cabin" | "price" | "trip" | "actions";
 
 interface Props {
   cruise: Cruise;
@@ -51,8 +43,7 @@ export function CruiseRow({
   // used to print "3290.00 EUR" — two fixed decimals whatever the currency
   // (a yen amount has none), the code instead of the symbol, and the
   // machine's decimal point inside a German page.
-  const price =
-    cruise.price !== null ? formatAmount(cruise.price, cruise.currency) : "—";
+  const price = cruise.price !== null ? formatAmount(cruise.price, cruise.currency) : "—";
   return (
     <tr
       onClick={onOpen}

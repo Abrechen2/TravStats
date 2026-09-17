@@ -49,9 +49,9 @@ test.describe("Pending updates page", () => {
   });
 
   test("is reachable and names itself", async ({ page }) => {
-    await expect(
-      page.getByRole("heading", { name: /^Posteingang$|^Inbox$/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /^Posteingang$|^Inbox$/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("names the section these suggestions live in", async ({ page }) => {
@@ -59,17 +59,17 @@ test.describe("Pending updates page", () => {
     // old file asserted "Ausstehende Updates", a string from a namespace this
     // page does not use — it never had to be right, because it was reached
     // through a login redirect where nothing matched anyway.
-    await expect(
-      page.getByRole("heading", { name: /Flug-Updates|Flight updates/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /Flug-Updates|Flight updates/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("survives a reload without losing the session", async ({ page }) => {
     await page.reload();
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(
-      page.getByRole("heading", { name: /^Posteingang$|^Inbox$/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /^Posteingang$|^Inbox$/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test.skip(`applies a suggestion and shows the result on the flight — ${NEEDS_A_SUGGESTION}`, async () => {});

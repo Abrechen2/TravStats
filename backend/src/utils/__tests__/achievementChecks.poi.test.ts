@@ -164,8 +164,13 @@ describe("checkAchievement — POI requirement types", () => {
       // failure below means a missing case rather than a short fixture.
       placeCities: new Set(Array.from({ length: 80 }, (_, i) => `city-${i}`)),
       placeContinents: new Set([
-        "Africa", "Antarctica", "Asia", "Europe",
-        "North America", "Oceania", "South America",
+        "Africa",
+        "Antarctica",
+        "Asia",
+        "Europe",
+        "North America",
+        "Oceania",
+        "South America",
       ]),
       placeCategoriesUnique: 8,
       placeSameRepeatMax: 999,

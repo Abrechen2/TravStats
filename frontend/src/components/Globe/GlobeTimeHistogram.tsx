@@ -418,24 +418,33 @@ export const GlobeTimeHistogram = ({
             flex/justify-between row would misplace every intermediate
             label. */}
         {expanded && (
-          <div className="relative h-[11px] text-[9.5px] tabular-nums" style={{ color: "rgba(241,245,249,0.4)" }}>
-            {computeYearTicks(rangeMin.getUTCFullYear(), rangeMax.getUTCFullYear()).map((year, i, arr) => {
-              const frac = fracOfDate(new Date(Date.UTC(year, 0, 1)));
-              const isFirst = i === 0;
-              const isLast = i === arr.length - 1;
-              return (
-                <span
-                  key={year}
-                  className="absolute px-[2px]"
-                  style={{
-                    left: `${frac * 100}%`,
-                    transform: isFirst ? "none" : isLast ? "translateX(-100%)" : "translateX(-50%)",
-                  }}
-                >
-                  {year}
-                </span>
-              );
-            })}
+          <div
+            className="relative h-[11px] text-[9.5px] tabular-nums"
+            style={{ color: "rgba(241,245,249,0.4)" }}
+          >
+            {computeYearTicks(rangeMin.getUTCFullYear(), rangeMax.getUTCFullYear()).map(
+              (year, i, arr) => {
+                const frac = fracOfDate(new Date(Date.UTC(year, 0, 1)));
+                const isFirst = i === 0;
+                const isLast = i === arr.length - 1;
+                return (
+                  <span
+                    key={year}
+                    className="absolute px-[2px]"
+                    style={{
+                      left: `${frac * 100}%`,
+                      transform: isFirst
+                        ? "none"
+                        : isLast
+                          ? "translateX(-100%)"
+                          : "translateX(-50%)",
+                    }}
+                  >
+                    {year}
+                  </span>
+                );
+              }
+            )}
           </div>
         )}
       </div>

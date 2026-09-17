@@ -58,7 +58,6 @@ export default function InvitationManagement({
 
   return (
     <div className="space-y-4">
-
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-lg font-semibold text-(--text-primary)">
@@ -66,9 +65,7 @@ export default function InvitationManagement({
           </h2>
           {/* Was the collapsed help box; the two facts an admin needs before
               sending one — single use, seven days — now simply stand here. */}
-          <p className="text-sm text-(--text-muted) mt-1">
-            {t("admin:invitations.description")}
-          </p>
+          <p className="text-sm text-(--text-muted) mt-1">{t("admin:invitations.description")}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={onCreateLink} className="btn-primary">
@@ -142,9 +139,7 @@ export default function InvitationManagement({
                     {format(new Date(invitation.expiresAt), "MMM d, yyyy")}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {invitation.user?.username ?? (
-                      <span className="text-(--text-muted)">—</span>
-                    )}
+                    {invitation.user?.username ?? <span className="text-(--text-muted)">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     {status === "used" ? (

@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "@jest/globals";
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { generateToken } from "../utils/jwt";
 
-describe('Admin Routes', () => {
+describe("Admin Routes", () => {
   let adminUser: any;
   let regularUser: any;
   let adminToken: string;
@@ -17,7 +17,7 @@ describe('Admin Routes', () => {
     adminUser = await prisma.user.create({
       data: {
         username: `admin-test-${timestamp}`,
-        passwordHash: await hashPassword('admin-password'),
+        passwordHash: await hashPassword("admin-password"),
         isAdmin: true,
         isActive: true,
       },
@@ -28,7 +28,7 @@ describe('Admin Routes', () => {
     regularUser = await prisma.user.create({
       data: {
         username: `user-test-${timestamp}`,
-        passwordHash: await hashPassword('user-password'),
+        passwordHash: await hashPassword("user-password"),
         isAdmin: false,
         isActive: true,
       },
@@ -46,34 +46,33 @@ describe('Admin Routes', () => {
     }
   });
 
-  describe('GET /api/admin/users', () => {
-    it('should allow admin to get all users', async () => {
+  describe("GET /api/admin/users", () => {
+    it("should allow admin to get all users", async () => {
       const response = await request(app)
-        .get('/api/v1/admin/users')
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .get("/api/v1/admin/users")
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body?.users)).toBe(true);
       expect(response.body.users.length).toBeGreaterThan(0);
     });
 
-    it('should deny access to non-admin users', async () => {
+    it("should deny access to non-admin users", async () => {
       const response = await request(app)
-        .get('/api/v1/admin/users')
-        .set('Cookie', [`auth_token=${userToken}`]);
+        .get("/api/v1/admin/users")
+        .set("Cookie", [`auth_token=${userToken}`]);
 
       expect(response.status).toBe(403);
     });
 
-    it('should deny access to unauthenticated requests', async () => {
-      const response = await request(app)
-        .get('/api/v1/admin/users');
+    it("should deny access to unauthenticated requests", async () => {
+      const response = await request(app).get("/api/v1/admin/users");
 
       expect(response.status).toBe(401);
     });
   });
 
-  describe('Admin User Management', () => {
+  describe("Admin User Management", () => {
     let testUserToDelete: any;
 
     beforeEach(async () => {
@@ -81,17 +80,17 @@ describe('Admin Routes', () => {
       testUserToDelete = await prisma.user.create({
         data: {
           username: `delete-test-${timestamp}`,
-          passwordHash: await hashPassword('password'),
+          passwordHash: await hashPassword("password"),
           isAdmin: false,
           isActive: true,
         },
       });
     });
 
-    it('should allow admin to deactivate a user', async () => {
+    it("should allow admin to deactivate a user", async () => {
       const response = await request(app)
         .patch(`/api/v1/admin/users/${testUserToDelete.id}/toggle-active`)
-        .set('Cookie', [`auth_token=${adminToken}`])
+        .set("Cookie", [`auth_token=${adminToken}`])
         .send({ isActive: false });
 
       if (response.status === 200) {
@@ -105,10 +104,10 @@ describe('Admin Routes', () => {
       }
     });
 
-    it('should deny non-admin from deactivating users', async () => {
+    it("should deny non-admin from deactivating users", async () => {
       const response = await request(app)
         .patch(`/api/v1/admin/users/${testUserToDelete.id}/toggle-active`)
-        .set('Cookie', [`auth_token=${userToken}`])
+        .set("Cookie", [`auth_token=${userToken}`])
         .send({ isActive: false });
 
       expect([401, 403, 404]).toContain(response.status);
@@ -121,7 +120,7 @@ describe('Admin Routes', () => {
     });
   });
 
-  describe('DELETE /api/admin/users/:id', () => {
+  describe("DELETE /api/admin/users/:id", () => {
     let victim: { id: string } | null;
 
     beforeEach(async () => {
@@ -129,7 +128,7 @@ describe('Admin Routes', () => {
       victim = await prisma.user.create({
         data: {
           username: `del-victim-${ts}`,
-          passwordHash: await hashPassword('password'),
+          passwordHash: await hashPassword("password"),
           isAdmin: false,
           isActive: true,
         },
@@ -142,10 +141,10 @@ describe('Admin Routes', () => {
       }
     });
 
-    it('allows admin to delete a regular user', async () => {
+    it("allows admin to delete a regular user", async () => {
       const res = await request(app)
         .delete(`/api/v1/admin/users/${victim!.id}`)
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       expect(res.status).toBe(200);
       expect(res.body.userId).toBe(victim!.id);
@@ -154,22 +153,22 @@ describe('Admin Routes', () => {
       victim = null; // prevent afterEach double-delete
     });
 
-    it('blocks admin from deleting own account', async () => {
+    it("blocks admin from deleting own account", async () => {
       const res = await request(app)
         .delete(`/api/v1/admin/users/${adminUser.id}`)
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       expect(res.status).toBe(400);
       const stillThere = await prisma.user.findUnique({ where: { id: adminUser.id } });
       expect(stillThere).not.toBeNull();
     });
 
-    it('allows one admin to delete another admin as long as one admin remains', async () => {
+    it("allows one admin to delete another admin as long as one admin remains", async () => {
       const ts = Date.now();
       const otherAdmin = await prisma.user.create({
         data: {
           username: `other-admin-${ts}`,
-          passwordHash: await hashPassword('password'),
+          passwordHash: await hashPassword("password"),
           isAdmin: true,
           isActive: true,
         },
@@ -177,35 +176,35 @@ describe('Admin Routes', () => {
 
       const res = await request(app)
         .delete(`/api/v1/admin/users/${otherAdmin.id}`)
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       expect(res.status).toBe(200);
       const gone = await prisma.user.findUnique({ where: { id: otherAdmin.id } });
       expect(gone).toBeNull();
     });
 
-    it('denies non-admin callers', async () => {
+    it("denies non-admin callers", async () => {
       const res = await request(app)
         .delete(`/api/v1/admin/users/${victim!.id}`)
-        .set('Cookie', [`auth_token=${userToken}`]);
+        .set("Cookie", [`auth_token=${userToken}`]);
 
       expect([401, 403]).toContain(res.status);
     });
 
-    it('returns 404 for unknown user id', async () => {
+    it("returns 404 for unknown user id", async () => {
       const res = await request(app)
         .delete(`/api/v1/admin/users/nonexistent-id-${Date.now()}`)
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       expect(res.status).toBe(404);
     });
   });
 
-  describe('Admin Statistics', () => {
-    it('should allow admin to view system stats', async () => {
+  describe("Admin Statistics", () => {
+    it("should allow admin to view system stats", async () => {
       const response = await request(app)
-        .get('/api/v1/admin/system/info')
-        .set('Cookie', [`auth_token=${adminToken}`]);
+        .get("/api/v1/admin/system/info")
+        .set("Cookie", [`auth_token=${adminToken}`]);
 
       // If implemented, should return stats
       // If not, should still require admin
@@ -216,10 +215,10 @@ describe('Admin Routes', () => {
       }
     });
 
-    it('should deny non-admin access to stats', async () => {
+    it("should deny non-admin access to stats", async () => {
       const response = await request(app)
-        .get('/api/v1/admin/system/info')
-        .set('Cookie', [`auth_token=${userToken}`]);
+        .get("/api/v1/admin/system/info")
+        .set("Cookie", [`auth_token=${userToken}`]);
 
       expect([401, 403, 404]).toContain(response.status);
     });

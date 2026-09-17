@@ -132,7 +132,7 @@ function fetchJson(url: string, body: string): Promise<string> {
       res.on("end", () => resolve(data));
     });
     req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
-      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`)),
+      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`))
     );
     req.on("error", reject);
     req.write(body);
@@ -158,7 +158,7 @@ function fetchGet(url: string): Promise<string> {
           data += chunk;
         });
         res.on("end", () => resolve(data));
-      },
+      }
     );
     req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
     req.on("error", reject);
@@ -181,7 +181,10 @@ function asString(value: unknown): string | undefined {
 function asNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const cleaned = value.replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".");
+    const cleaned = value
+      .replace(/[^\d.,-]/g, "")
+      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+      .replace(",", ".");
     const n = Number(cleaned);
     return Number.isFinite(n) ? n : undefined;
   }
@@ -308,7 +311,7 @@ function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
 function normalizeCruise(raw: RawCruise, sourceText: string): ParsedCruise {
   const stopsArray = Array.isArray(raw.stops) ? (raw.stops as unknown[]) : [];
   const stops = stopsArray.map((entry, index) =>
-    normalizeStop((entry ?? {}) as RawCruiseStop, index),
+    normalizeStop((entry ?? {}) as RawCruiseStop, index)
   );
 
   // Re-sequence dayNumber so it is monotonically increasing 1..N regardless of
@@ -404,7 +407,7 @@ export class CruiseBookingParser {
 
     logger.info(
       { model: this.model, url: this.url, chars: snippet.length },
-      "[Cruise Parser] Sending text to Ollama",
+      "[Cruise Parser] Sending text to Ollama"
     );
 
     const raw = await fetchJson(`${this.url}/api/generate`, body);
@@ -436,7 +439,7 @@ export class CruiseBookingParser {
         const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
           { model: this.model, responsePreview: preview },
-          "[Cruise Parser] No JSON array found in Ollama response",
+          "[Cruise Parser] No JSON array found in Ollama response"
         );
         throw new Error("No JSON array found in Ollama response");
       }
@@ -450,7 +453,7 @@ export class CruiseBookingParser {
             matchPreview: preview,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[Cruise Parser] JSON.parse failed on matched array",
+          "[Cruise Parser] JSON.parse failed on matched array"
         );
         throw new Error("Ollama response JSON parse failed");
       }
@@ -461,7 +464,7 @@ export class CruiseBookingParser {
       const preview = JSON.stringify(parsed).slice(0, 300);
       logger.warn(
         { model: this.model, preview },
-        "[Cruise Parser] Parsed JSON did not yield a cruise array",
+        "[Cruise Parser] Parsed JSON did not yield a cruise array"
       );
       throw new Error("Ollama response did not contain a cruise array");
     }
@@ -499,7 +502,7 @@ export function getCruiseBookingParser(options?: CruiseBookingParserOptions): Cr
 
 export async function parseCruiseBookingText(
   text: string,
-  options?: CruiseBookingParserOptions,
+  options?: CruiseBookingParserOptions
 ): Promise<CruiseParseResult> {
   // Resolve the Ollama endpoint from admin settings first, mirroring the flight
   // text parser (services/parsers/config.ts). The Settings "Test" button reads
@@ -523,7 +526,7 @@ export async function parseCruiseBookingText(
   if (!ollamaAvailable) {
     throw new Error(
       `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
-        `Check the parser configuration in Settings (Ollama URL / model).`,
+        `Check the parser configuration in Settings (Ollama URL / model).`
     );
   }
   const cruises = await parser.parseText(text);
@@ -536,7 +539,7 @@ export async function parseCruiseBookingText(
  * own env/localhost fallback unchanged.
  */
 async function resolveCruiseParserOptions(
-  options?: CruiseBookingParserOptions,
+  options?: CruiseBookingParserOptions
 ): Promise<CruiseBookingParserOptions | undefined> {
   if (options?.url && options?.model) return options;
   let adminUrl: string | undefined;

@@ -28,7 +28,9 @@ describe("placeList labelMode", () => {
       false
     );
     expect(createPlaceListSchema.safeParse({ name: "Maccis", labelMode: "" }).success).toBe(false);
-    expect(createPlaceListSchema.safeParse({ name: "Maccis", labelMode: null }).success).toBe(false);
+    expect(createPlaceListSchema.safeParse({ name: "Maccis", labelMode: null }).success).toBe(
+      false
+    );
   });
 
   it("can be changed on its own", () => {

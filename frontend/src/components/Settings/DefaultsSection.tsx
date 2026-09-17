@@ -21,7 +21,9 @@ export default function DefaultsSection({
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <FieldLabel help={t("settings:defaults.help.status")}>{t("settings:defaults.flightStatus")}</FieldLabel>
+          <FieldLabel help={t("settings:defaults.help.status")}>
+            {t("settings:defaults.flightStatus")}
+          </FieldLabel>
           <select
             value={defaults.flightStatus}
             onChange={(e) =>
@@ -61,7 +63,9 @@ export default function DefaultsSection({
           />
         </div>
         <div>
-          <FieldLabel help={t("settings:defaults.help.category")}>{t("settings:defaults.flightCategory")}</FieldLabel>
+          <FieldLabel help={t("settings:defaults.help.category")}>
+            {t("settings:defaults.flightCategory")}
+          </FieldLabel>
           <select
             value={defaults.flightCategory}
             onChange={(e) =>

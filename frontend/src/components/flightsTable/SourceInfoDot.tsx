@@ -41,14 +41,22 @@ export default function SourceInfoDot({ flight }: { flight: Flight }): JSX.Eleme
       </button>
       <span
         className={`absolute right-0 top-full mt-2 z-20 rounded-lg border px-3 py-2 text-xs whitespace-nowrap shadow-lg ${open ? "block" : "hidden group-hover:block"}`}
-        style={{ background: "var(--bg-base)", borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+        style={{
+          background: "var(--bg-base)",
+          borderColor: "var(--color-border)",
+          color: "var(--text-primary)",
+        }}
         role="tooltip"
       >
         {lines.map((line, i) => (
           <span key={i} className="block">
-            <span className="font-medium">{line.icon} {line.label}</span>
+            <span className="font-medium">
+              {line.icon} {line.label}
+            </span>
             {line.detail && (
-              <span className="block" style={{ color: "var(--text-muted)" }}>{line.detail}</span>
+              <span className="block" style={{ color: "var(--text-muted)" }}>
+                {line.detail}
+              </span>
             )}
           </span>
         ))}

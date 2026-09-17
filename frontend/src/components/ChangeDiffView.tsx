@@ -65,10 +65,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
         {changes.map((change, index) => {
           const isExpanded = expandedFields.has(change.field);
           return (
-            <div
-              key={index}
-              className="border rounded-lg p-3 border-border bg-(--bg-surface)"
-            >
+            <div key={index} className="border rounded-lg p-3 border-border bg-(--bg-surface)">
               <button
                 onClick={() => toggleField(change.field)}
                 className="w-full flex items-center justify-between text-left"

@@ -64,7 +64,7 @@ describe("Cruise geometry honours a stored route", () => {
   // Defaults to leg 0 (from -> mid); pass explicit refs to target leg 1.
   const storeLine = async (
     fromRef: number = fromPortId,
-    toRef: number = midPortId,
+    toRef: number = midPortId
   ): Promise<void> => {
     await prisma.cruiseLegRoute.create({
       data: {
@@ -135,7 +135,12 @@ describe("Cruise geometry honours a stored route", () => {
 
     const del = await request(app)
       .delete(`/api/v1/cruises/${cruiseId}/route-override`)
-      .query({ fromKind: "port", fromRef: String(fromPortId), toKind: "port", toRef: String(midPortId) })
+      .query({
+        fromKind: "port",
+        fromRef: String(fromPortId),
+        toKind: "port",
+        toRef: String(midPortId),
+      })
       .set("Cookie", authCookie);
     expect(del.status).toBe(200);
     expect(del.body.data.deleted).toBe(1);

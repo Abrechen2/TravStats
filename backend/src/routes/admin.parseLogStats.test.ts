@@ -109,7 +109,7 @@ describe("GET /api/v1/admin/parse-logs/stats", () => {
   });
 });
 
-describe('GET /api/v1/admin/parse-logs/export', () => {
+describe("GET /api/v1/admin/parse-logs/export", () => {
   let app: express.Express;
 
   beforeEach(async () => {
@@ -120,29 +120,32 @@ describe('GET /api/v1/admin/parse-logs/export', () => {
     app.use("/api/v1/admin", adminRoutes);
   });
 
-  it('returns JSONL with userId stripped', async () => {
+  it("returns JSONL with userId stripped", async () => {
     mockParseTrainingLogFindMany.mockResolvedValue([
       {
-        id: 'abc',
-        airline: 'Lufthansa',
-        templateUsed: 'lh-v1',
+        id: "abc",
+        airline: "Lufthansa",
+        templateUsed: "lh-v1",
         templateHit: true,
         confidence: 90,
         fieldCount: 8,
         missingFields: [],
-        parserProvider: 'ollama',
-        createdAt: new Date('2026-01-01'),
+        parserProvider: "ollama",
+        createdAt: new Date("2026-01-01"),
       },
     ]);
 
-    const res = await request(app).get('/api/v1/admin/parse-logs/export');
+    const res = await request(app).get("/api/v1/admin/parse-logs/export");
     expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toMatch(/ndjson/);
-    const lines = res.text.trim().split('\n').filter((l: string) => l.length > 0);
+    expect(res.headers["content-type"]).toMatch(/ndjson/);
+    const lines = res.text
+      .trim()
+      .split("\n")
+      .filter((l: string) => l.length > 0);
     expect(lines).toHaveLength(1);
     const parsed = JSON.parse(lines[0]);
     expect(parsed.userId).toBeUndefined();
-    expect(parsed.airline).toBe('Lufthansa');
-    expect(parsed.id).toBe('abc');
+    expect(parsed.airline).toBe("Lufthansa");
+    expect(parsed.id).toBe("abc");
   });
 });

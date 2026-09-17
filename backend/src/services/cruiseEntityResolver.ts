@@ -148,7 +148,7 @@ async function loadShipCandidates(): Promise<ShipCandidate[]> {
 
 async function resolveShip(
   shipName: string | undefined,
-  cruiseLine: string | undefined,
+  cruiseLine: string | undefined
 ): Promise<{ id: number | null; line: string | undefined }> {
   if (!shipName) return { id: null, line: cruiseLine };
 
@@ -168,7 +168,7 @@ async function resolveShip(
   }
   logger.info(
     { shipName, cruiseLine, bestScore: best.score },
-    "[Cruise Resolver] No matching ship in DB — preserving free-text via shipNameOverride",
+    "[Cruise Resolver] No matching ship in DB — preserving free-text via shipNameOverride"
   );
   return { id: null, line: cruiseLine };
 }
@@ -189,12 +189,14 @@ function nameScore(needle: string, candidate: string): number {
 
 function findBestPort(
   needle: { name?: string; city?: string; country?: string },
-  candidates: PortCandidate[],
+  candidates: PortCandidate[]
 ): PortCandidate | null {
   if (!needle.name && !needle.city) return null;
 
   // Pre-strip "X (Y)" → use X as primary needle, Y as country/region hint.
-  const [bareName, parenHint] = needle.name ? splitParenSuffix(needle.name) : [undefined, undefined];
+  const [bareName, parenHint] = needle.name
+    ? splitParenSuffix(needle.name)
+    : [undefined, undefined];
   const country = needle.country ?? parenHint;
 
   // Expand German exonyms / local endonyms to their English catalog names
@@ -239,9 +241,7 @@ function findBestPort(
  * stops (portId=null, isAtSea=false, unresolvedPortName set) so the name is
  * never lost and the user can pick the catalog port later in the UI.
  */
-export async function resolveCruiseEntities(
-  parsed: ParsedCruise,
-): Promise<ResolvedCruise> {
+export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<ResolvedCruise> {
   const ship = await resolveShip(parsed.shipName, parsed.cruiseLine);
   const ports = await loadPortCandidates();
   const unmatched: { dayNumber: number; portName: string }[] = [];
@@ -288,7 +288,7 @@ function mapStop(
   stop: ParsedCruiseStop,
   index: number,
   ports: PortCandidate[],
-  unmatched: { dayNumber: number; portName: string }[],
+  unmatched: { dayNumber: number; portName: string }[]
 ): NonNullable<CruiseInput["stops"]>[number] {
   if (stop.isAtSea) {
     return {
@@ -304,7 +304,7 @@ function mapStop(
 
   const match = findBestPort(
     { name: stop.portName, city: stop.city, country: stop.country },
-    ports,
+    ports
   );
   if (!match && stop.portName) {
     unmatched.push({ dayNumber: index + 1, portName: stop.portName });
@@ -364,7 +364,7 @@ async function getHomeAirport(userId: string | undefined): Promise<AirportData |
   if (!userId) return null;
   const settings = await prisma.userSettings.findUnique({ where: { userId } });
   const history = normalizeHistory(
-    (settings?.data as { homeAirportHistory?: unknown } | null)?.homeAirportHistory,
+    (settings?.data as { homeAirportHistory?: unknown } | null)?.homeAirportHistory
   );
   const iata = getCurrentHomeAirport(history);
   if (!iata) return null;
@@ -379,7 +379,7 @@ async function getHomeAirport(userId: string | undefined): Promise<AirportData |
  */
 export async function hydrateResolvedCruises(
   resolved: ResolvedCruise[],
-  userId: string | undefined,
+  userId: string | undefined
 ): Promise<HydratedParsedCruise[]> {
   const homeAirport = await getHomeAirport(userId);
   const shipIds = new Set<number>();
@@ -414,18 +414,18 @@ export async function hydrateResolvedCruises(
         }
       }
 
-      const ship = r.input.shipId != null ? shipMap.get(r.input.shipId) ?? null : null;
+      const ship = r.input.shipId != null ? (shipMap.get(r.input.shipId) ?? null) : null;
       const departurePort =
-        r.input.departurePortId != null ? portMap.get(r.input.departurePortId) ?? null : null;
+        r.input.departurePortId != null ? (portMap.get(r.input.departurePortId) ?? null) : null;
       const arrivalPort =
-        r.input.arrivalPortId != null ? portMap.get(r.input.arrivalPortId) ?? null : null;
+        r.input.arrivalPortId != null ? (portMap.get(r.input.arrivalPortId) ?? null) : null;
 
       const flights = r.flights.length
         ? await hydrateFlights(r, stopPorts, departurePort, arrivalPort, homeAirport)
         : [];
 
       return { ...r, ship, departurePort, arrivalPort, stopPorts, flights };
-    }),
+    })
   );
 }
 
@@ -440,16 +440,16 @@ async function hydrateFlights(
   stopPorts: Record<number, Port>,
   departurePort: Port | null,
   arrivalPort: Port | null,
-  homeAirport: AirportData | null,
+  homeAirport: AirportData | null
 ): Promise<HydratedFlight[]> {
   const portStops = (r.input.stops ?? [])
     .filter((s) => !s.isAtSea && s.portId != null)
     .sort((a, b) => a.dayNumber - b.dayNumber);
   const embarkPort =
-    departurePort ?? (portStops[0] ? stopPorts[portStops[0].dayNumber] ?? null : null);
+    departurePort ?? (portStops[0] ? (stopPorts[portStops[0].dayNumber] ?? null) : null);
   const disembarkPort =
     arrivalPort ??
-    (portStops.length ? stopPorts[portStops[portStops.length - 1].dayNumber] ?? null : null);
+    (portStops.length ? (stopPorts[portStops[portStops.length - 1].dayNumber] ?? null) : null);
 
   const [embarkAirport, disembarkAirport] = await Promise.all([
     embarkPort ? findNearestAirport(embarkPort.lat, embarkPort.lon, PORT_AIRPORT_RADIUS_KM) : null,

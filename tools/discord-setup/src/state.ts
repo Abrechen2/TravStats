@@ -21,7 +21,7 @@ export function readState(): SetupState[] {
       e !== null &&
       typeof (e as { guildId?: unknown }).guildId === "string" &&
       (typeof (e as { rulesMessageId?: unknown }).rulesMessageId === "string" ||
-        (e as { rulesMessageId?: unknown }).rulesMessageId === null),
+        (e as { rulesMessageId?: unknown }).rulesMessageId === null)
   );
 }
 

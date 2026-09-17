@@ -110,9 +110,7 @@ describe("GET /api/v1/import-batches/:id/items", () => {
       .set("Cookie", ownerCookie)
       .expect(200);
 
-    const flights = res.body.data.items.filter(
-      (i: { kind: string }) => i.kind === "flight"
-    );
+    const flights = res.body.data.items.filter((i: { kind: string }) => i.kind === "flight");
     expect(flights).toHaveLength(2);
     expect(flights.map((f: { label: string }) => f.label).sort()).toEqual(["LH100", "LH200"]);
     expect(flights[0]).toHaveProperty("id");
@@ -132,9 +130,9 @@ describe("GET /api/v1/import-batches/:id/items", () => {
     const kinds = res.body.data.items.map((i: { kind: string }) => i.kind);
     expect(kinds).toContain("lodging");
     expect(kinds).toContain("stay");
-    expect(
-      res.body.data.items.find((i: { kind: string }) => i.kind === "lodging").label
-    ).toBe("Hotel Adlon");
+    expect(res.body.data.items.find((i: { kind: string }) => i.kind === "lodging").label).toBe(
+      "Hotel Adlon"
+    );
   });
 
   it("reports an empty import as empty rather than as an error", async () => {

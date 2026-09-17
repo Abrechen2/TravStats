@@ -53,14 +53,14 @@ export function findNearbyLodgings(
   stored: ReadonlyArray<PinnedLodging>,
   lat: number | null | undefined,
   lon: number | null | undefined,
-  radiusMetres: number,
+  radiusMetres: number
 ): PinnedLodging[] {
   if (typeof lat !== "number" || typeof lon !== "number") return [];
 
   return stored
     .filter(
       (candidate): candidate is PinnedLodging & { lat: number; lon: number } =>
-        typeof candidate.lat === "number" && typeof candidate.lon === "number",
+        typeof candidate.lat === "number" && typeof candidate.lon === "number"
     )
     .map((candidate) => ({
       candidate,

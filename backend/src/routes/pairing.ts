@@ -89,7 +89,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 // POST /status — poll whether the code has been claimed (cookie only). The
@@ -113,7 +113,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 // POST /claim — exchange a pairing code for a device PAT (public, rate-limited).
@@ -199,7 +199,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 // POST /unpair — self-revoke the calling device token (Bearer only).
@@ -229,7 +229,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 export default router;

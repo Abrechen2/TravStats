@@ -4,10 +4,7 @@ import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
 import { getCachedAirports } from "../airportCache";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
 import type { AddressBearingRecord } from "./checks/addressCountryMismatch";
-import type {
-  CoordinateCountryLookup,
-  LocatedRecord,
-} from "./checks/coordinatesOutsideCountry";
+import type { CoordinateCountryLookup, LocatedRecord } from "./checks/coordinatesOutsideCountry";
 import type { CountryTouch } from "./checks/undatedCountryEvidence";
 import type { LodgingWithStays } from "./checks/stayDatesReversed";
 

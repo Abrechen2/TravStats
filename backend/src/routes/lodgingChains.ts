@@ -52,9 +52,7 @@ const createChainSchema = z.object({
     .optional(),
 });
 
-function isUniqueConstraintError(
-  error: unknown,
-): error is Prisma.PrismaClientKnownRequestError {
+function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
@@ -127,7 +125,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       // not pull this average even if it already carries a rating, or it
       // would disagree with every per-hotel overallRating on this same page.
       avgRating: deriveOverallRating(
-        rawLodgings.flatMap((l) => l.stays.filter((s) => classifyStay(s) === "visited")),
+        rawLodgings.flatMap((l) => l.stays.filter((s) => classifyStay(s) === "visited"))
       ),
     };
 
@@ -167,9 +165,9 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 
     // Which OTHER chains this membership actually covers — from the membership
     // when there is one, from the catalogue suggestion when there is not.
-    const siblingChains = (
-      membership ? membership.chains : suggestedChains
-    ).filter((c) => c.id !== chain.id);
+    const siblingChains = (membership ? membership.chains : suggestedChains).filter(
+      (c) => c.id !== chain.id
+    );
 
     res.json({
       success: true,

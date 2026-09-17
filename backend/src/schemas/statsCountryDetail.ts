@@ -20,13 +20,7 @@ export const continentSchema = z.enum([
   "South America",
 ]);
 
-export const passportEvidenceSchema = z.enum([
-  "flight",
-  "lodging",
-  "port",
-  "place",
-  "track",
-]);
+export const passportEvidenceSchema = z.enum(["flight", "lodging", "port", "place", "track"]);
 
 export const countryAirportUseSchema = z.object({
   iata: z.string(),
@@ -69,23 +63,25 @@ const timelineLodgingSchema = z.object({
   name: z.string(),
 });
 
-const timelineTrackSchema = z.object({
-  kind: z.literal("track"),
-  date: z.string().nullable(),
-  days: z.number().int(),
-  points: z.number().int(),
-}).openapi({
-  description:
-    "Measured presence — ONE entry for the whole country, not one per day. The " +
-    "other kinds name a record somebody typed and can go and edit; a country-day " +
-    "is a reduction of a location history on the user's own server, and there is " +
-    "nothing here to correct except the connection that produced it. `points` is " +
-    "published RAW and deliberately not turned into a word: the payload cannot " +
-    "say whether a fix was measured by GPS or estimated from a photograph, so a " +
-    "day held up by four hundred fixes and a day held up by one must stay " +
-    "distinguishable without anyone deciding on the reader's behalf what that " +
-    "difference means.",
-});
+const timelineTrackSchema = z
+  .object({
+    kind: z.literal("track"),
+    date: z.string().nullable(),
+    days: z.number().int(),
+    points: z.number().int(),
+  })
+  .openapi({
+    description:
+      "Measured presence — ONE entry for the whole country, not one per day. The " +
+      "other kinds name a record somebody typed and can go and edit; a country-day " +
+      "is a reduction of a location history on the user's own server, and there is " +
+      "nothing here to correct except the connection that produced it. `points` is " +
+      "published RAW and deliberately not turned into a word: the payload cannot " +
+      "say whether a fix was measured by GPS or estimated from a photograph, so a " +
+      "day held up by four hundred fixes and a day held up by one must stay " +
+      "distinguishable without anyone deciding on the reader's behalf what that " +
+      "difference means.",
+  });
 
 export const countryTimelineEntrySchema = z.discriminatedUnion("kind", [
   timelineFlightSchema,
@@ -115,11 +111,14 @@ export const countryDetailSchema = z.object({
   lodgings: z.number().int().openapi({
     description: "Houses here whose record proves presence.",
   }),
-  trackDays: z.number().int().openapi({
-    description:
-      "Distinct days a location history placed the traveller here. Zero for an " +
-      "account that has none, which is most of them.",
-  }),
+  trackDays: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Distinct days a location history placed the traveller here. Zero for an " +
+        "account that has none, which is most of them.",
+    }),
   anchor: z
     .object({ iata: z.string(), lat: z.number(), lon: z.number() })
     .nullable()

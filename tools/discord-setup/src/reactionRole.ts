@@ -12,11 +12,7 @@ import { log } from "./log.js";
 
 const BETA_ROLE = "Beta-Tester";
 
-async function toggleBeta(
-  guild: Guild,
-  userId: string,
-  add: boolean,
-): Promise<void> {
+async function toggleBeta(guild: Guild, userId: string, add: boolean): Promise<void> {
   const role = guild.roles.cache.find((r) => r.name === BETA_ROLE);
   if (!role) {
     log(`WARNING: ${BETA_ROLE} role not found — run setup first.`);
@@ -42,7 +38,7 @@ export async function runServe(client: Client, token: string, guildId: string): 
   async function handle(
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
-    add: boolean,
+    add: boolean
   ): Promise<void> {
     try {
       if (user.bot) return;
@@ -59,7 +55,9 @@ export async function runServe(client: Client, token: string, guildId: string): 
 
   client.on("messageReactionAdd", (r, u) => void handle(r, u, true));
   client.on("messageReactionRemove", (r, u) => void handle(r, u, false));
-  client.once("clientReady", () => log(`serve mode ready — watching rules message ${rulesMessageId} for ✈️`));
+  client.once("clientReady", () =>
+    log(`serve mode ready — watching rules message ${rulesMessageId} for ✈️`)
+  );
 
   await client.login(token);
 }

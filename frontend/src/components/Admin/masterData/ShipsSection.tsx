@@ -182,4 +182,3 @@ export default function ShipsSection(): JSX.Element {
     </section>
   );
 }
-

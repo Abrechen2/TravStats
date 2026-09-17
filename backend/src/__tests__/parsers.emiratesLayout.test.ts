@@ -13,16 +13,16 @@
  * The fixture is sanitised (fake PNR / passenger); the layout mirrors the
  * text that pdf-parse extracts from the real booking.
  */
-import { RegexTextParser } from '../services/parsers/text/regexParser';
+import { RegexTextParser } from "../services/parsers/text/regexParser";
 import {
   extractAllTimePairs,
   resolveMonth,
   resolvePlausibleYear,
-} from '../services/parsers/text/regexDateExtractor';
+} from "../services/parsers/text/regexDateExtractor";
 
 // Dynamic year keeps the plausible-year window from aging the fixture out.
 const YEAR = new Date().getUTCFullYear() + 1;
-const YY = String(YEAR % 100).padStart(2, '0');
+const YY = String(YEAR % 100).padStart(2, "0");
 
 const EMIRATES_TEXT = `Ihre Buchung ist bestätigt
 Buchungsreferenz AB12CD
@@ -107,41 +107,41 @@ Diese E-Mail wurde Ihnen von Emirates gesendet, einer durch den Emir-Erlass Nr. 
 gegründete Gesellschaft. Firmensitz: Emirates Group Headquarters, Airport Road, PO Box 686, Dubai, VAE.
 `;
 
-describe('resolveMonth', () => {
-  it('accepts German/English month names and numerics', () => {
-    expect(resolveMonth('Aug')).toBe('08');
-    expect(resolveMonth('August')).toBe('08');
-    expect(resolveMonth('MÄRZ')).toBe('03');
-    expect(resolveMonth('12')).toBe('12');
-    expect(resolveMonth('1')).toBe('01');
+describe("resolveMonth", () => {
+  it("accepts German/English month names and numerics", () => {
+    expect(resolveMonth("Aug")).toBe("08");
+    expect(resolveMonth("August")).toBe("08");
+    expect(resolveMonth("MÄRZ")).toBe("03");
+    expect(resolveMonth("12")).toBe("12");
+    expect(resolveMonth("1")).toBe("01");
   });
 
-  it('rejects non-months instead of defaulting to January', () => {
-    expect(resolveMonth('von')).toBeNull(); // the 1985 killer
-    expect(resolveMonth('Std')).toBeNull(); // "23 Std. 35 Min."
-    expect(resolveMonth('of')).toBeNull(); // "-- 2 of 6 --"
-    expect(resolveMonth('13')).toBeNull();
-    expect(resolveMonth('0')).toBeNull();
+  it("rejects non-months instead of defaulting to January", () => {
+    expect(resolveMonth("von")).toBeNull(); // the 1985 killer
+    expect(resolveMonth("Std")).toBeNull(); // "23 Std. 35 Min."
+    expect(resolveMonth("of")).toBeNull(); // "-- 2 of 6 --"
+    expect(resolveMonth("13")).toBeNull();
+    expect(resolveMonth("0")).toBeNull();
   });
 });
 
-describe('resolvePlausibleYear', () => {
+describe("resolvePlausibleYear", () => {
   const now = new Date().getUTCFullYear();
 
-  it('accepts near-term four-digit years and pivots two-digit years', () => {
+  it("accepts near-term four-digit years and pivots two-digit years", () => {
     expect(resolvePlausibleYear(String(now))).toBe(now);
-    expect(resolvePlausibleYear(String((now + 1) % 100).padStart(2, '0'))).toBe(now + 1);
+    expect(resolvePlausibleYear(String((now + 1) % 100).padStart(2, "0"))).toBe(now + 1);
   });
 
-  it('rejects legal-footer years like 1985', () => {
-    expect(resolvePlausibleYear('1985')).toBeNull();
-    expect(resolvePlausibleYear('1999')).toBeNull();
+  it("rejects legal-footer years like 1985", () => {
+    expect(resolvePlausibleYear("1985")).toBeNull();
+    expect(resolvePlausibleYear("1999")).toBeNull();
     expect(resolvePlausibleYear(String(now + 10))).toBeNull();
   });
 });
 
-describe('extractAllTimePairs — Emirates column layout', () => {
-  it('pairs each time on the line above (across the weekday line) with its date', () => {
+describe("extractAllTimePairs — Emirates column layout", () => {
+  it("pairs each time on the line above (across the weekday line) with its date", () => {
     const pairs = extractAllTimePairs(EMIRATES_TEXT);
     expect(pairs).toHaveLength(4);
     expect(pairs[0]).toEqual({
@@ -163,44 +163,44 @@ describe('extractAllTimePairs — Emirates column layout', () => {
     });
   });
 
-  it('drops the date-only header lines instead of shifting every pair', () => {
+  it("drops the date-only header lines instead of shifting every pair", () => {
     const pairs = extractAllTimePairs(EMIRATES_TEXT);
     // "Mittwoch 5. August ${YEAR}" / "Dienstag 11. August ${YEAR}" carry no
     // time — with timed pairs present they are page furniture, not legs.
-    expect(pairs.some(p => p.departure?.endsWith('T00:00'))).toBe(false);
+    expect(pairs.some((p) => p.departure?.endsWith("T00:00"))).toBe(false);
   });
 
-  it('never fabricates a date from the 1985 legal footer', () => {
+  it("never fabricates a date from the 1985 legal footer", () => {
     const pairs = extractAllTimePairs(EMIRATES_TEXT);
-    expect(pairs.some(p => p.departure?.startsWith('1985') || p.arrival?.startsWith('1985'))).toBe(
-      false
-    );
+    expect(
+      pairs.some((p) => p.departure?.startsWith("1985") || p.arrival?.startsWith("1985"))
+    ).toBe(false);
   });
 
-  it('does not steal the next cell\'s time across a newline', () => {
+  it("does not steal the next cell's time across a newline", () => {
     // "11. Aug. ${YY}\n14:10" — 14:10 belongs to the SECOND date, not the first.
     const pairs = extractAllTimePairs(EMIRATES_TEXT);
     expect(pairs[2]?.departure).toBe(`${YEAR}-08-11T06:00`);
   });
 });
 
-describe('RegexTextParser — Emirates booking end to end', () => {
-  it('extracts all four legs with the correct dates and times', async () => {
+describe("RegexTextParser — Emirates booking end to end", () => {
+  it("extracts all four legs with the correct dates and times", async () => {
     const parser = new RegexTextParser();
-    const flights = await parser.parseEmail('Ihre Buchung ist bestätigt AB12CD', EMIRATES_TEXT);
+    const flights = await parser.parseEmail("Ihre Buchung ist bestätigt AB12CD", EMIRATES_TEXT);
 
     expect(flights).toHaveLength(4);
 
-    const byNumber = new Map(flights.map(f => [f.flightNumber, f]));
-    expect([...byNumber.keys()].sort()).toEqual(['EK051', 'EK052', 'EK412', 'EK415']);
+    const byNumber = new Map(flights.map((f) => [f.flightNumber, f]));
+    expect([...byNumber.keys()].sort()).toEqual(["EK051", "EK052", "EK412", "EK415"]);
 
-    expect(byNumber.get('EK052')?.departureTime).toBe(`${YEAR}-08-05T22:30`);
-    expect(byNumber.get('EK052')?.arrivalTime).toBe(`${YEAR}-08-06T06:30`);
-    expect(byNumber.get('EK412')?.departureTime).toBe(`${YEAR}-08-06T10:10`);
-    expect(byNumber.get('EK412')?.arrivalTime).toBe(`${YEAR}-08-07T06:05`);
-    expect(byNumber.get('EK415')?.departureTime).toBe(`${YEAR}-08-11T06:00`);
-    expect(byNumber.get('EK415')?.arrivalTime).toBe(`${YEAR}-08-11T14:10`);
-    expect(byNumber.get('EK051')?.departureTime).toBe(`${YEAR}-08-11T16:20`);
-    expect(byNumber.get('EK051')?.arrivalTime).toBe(`${YEAR}-08-11T20:40`);
+    expect(byNumber.get("EK052")?.departureTime).toBe(`${YEAR}-08-05T22:30`);
+    expect(byNumber.get("EK052")?.arrivalTime).toBe(`${YEAR}-08-06T06:30`);
+    expect(byNumber.get("EK412")?.departureTime).toBe(`${YEAR}-08-06T10:10`);
+    expect(byNumber.get("EK412")?.arrivalTime).toBe(`${YEAR}-08-07T06:05`);
+    expect(byNumber.get("EK415")?.departureTime).toBe(`${YEAR}-08-11T06:00`);
+    expect(byNumber.get("EK415")?.arrivalTime).toBe(`${YEAR}-08-11T14:10`);
+    expect(byNumber.get("EK051")?.departureTime).toBe(`${YEAR}-08-11T16:20`);
+    expect(byNumber.get("EK051")?.arrivalTime).toBe(`${YEAR}-08-11T20:40`);
   });
 });

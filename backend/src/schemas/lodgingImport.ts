@@ -40,7 +40,7 @@ const isoDay = z
       const t = Date.parse(`${s}T00:00:00.000Z`);
       return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
     },
-    { message: "must be a real calendar day" },
+    { message: "must be a real calendar day" }
   );
 
 // Same 0.5 floor as `schemas/lodging.ts` — an import must accept every rating
@@ -77,9 +77,7 @@ export const lodgingCandidateFieldsSchema = z.object({
    */
   visited: z.boolean().optional(),
 });
-export type LodgingCandidateFields = z.infer<
-  typeof lodgingCandidateFieldsSchema
->;
+export type LodgingCandidateFields = z.infer<typeof lodgingCandidateFieldsSchema>;
 
 export const stayCandidateFieldsSchema = z.object({
   checkIn: isoDay,
@@ -124,10 +122,10 @@ export type StayCandidateFields = z.infer<typeof stayCandidateFieldsSchema>;
  * to the COMMIT row only — the preview must still accept the row so it can
  * flag it, rather than reject the whole request over one line.
  */
-const stayCommitFieldsSchema = stayCandidateFieldsSchema.refine(
-  (s) => s.checkOut >= s.checkIn,
-  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
-);
+const stayCommitFieldsSchema = stayCandidateFieldsSchema.refine((s) => s.checkOut >= s.checkIn, {
+  message: "checkOut must not precede checkIn",
+  path: ["checkOut"],
+});
 
 export const lodgingImportCandidateSchema = z
   .object({
@@ -145,9 +143,7 @@ export const lodgingImportCandidateSchema = z
     message: "A candidate needs either `lodging` or `lodgingName`",
     path: ["lodgingName"],
   });
-export type LodgingImportCandidate = z.infer<
-  typeof lodgingImportCandidateSchema
->;
+export type LodgingImportCandidate = z.infer<typeof lodgingImportCandidateSchema>;
 
 export type LodgingImportFlag =
   | "missing_name"
@@ -203,10 +199,7 @@ export interface LodgingImportBatchSummary {
 }
 
 export const lodgingImportPreviewRequestSchema = z.object({
-  candidates: z
-    .array(lodgingImportCandidateSchema)
-    .min(1)
-    .max(MAX_LODGING_IMPORT_ROWS),
+  candidates: z.array(lodgingImportCandidateSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
 });
 
 // `needs_input` is deliberately NOT accepted here: the preview may produce it,
@@ -235,9 +228,7 @@ export const lodgingImportCommitRequestSchema = z.object({
   fileName: z.string().max(260).nullable(),
   rows: z.array(commitRowSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
 });
-export type LodgingImportCommitRequest = z.infer<
-  typeof lodgingImportCommitRequestSchema
->;
+export type LodgingImportCommitRequest = z.infer<typeof lodgingImportCommitRequestSchema>;
 
 // Mirrors the `headers` array cap below — a sample row is built FROM those
 // headers, so it can never legitimately need more keys than the header list

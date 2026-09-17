@@ -45,9 +45,21 @@ function happyPath(): void {
   ]);
   p.flight.findFirst.mockResolvedValue({ id: "f1" }); // some flight has live tracking
   p.userSettings.findMany.mockResolvedValue([
-    { enabledDomains: ["flight"], historicalEnrichmentEnabled: false, data: { display: { language: "de" } } },
-    { enabledDomains: ["flight", "cruise"], historicalEnrichmentEnabled: true, data: { display: { language: "de" } } },
-    { enabledDomains: ["flight"], historicalEnrichmentEnabled: false, data: { display: { language: "en" } } },
+    {
+      enabledDomains: ["flight"],
+      historicalEnrichmentEnabled: false,
+      data: { display: { language: "de" } },
+    },
+    {
+      enabledDomains: ["flight", "cruise"],
+      historicalEnrichmentEnabled: true,
+      data: { display: { language: "de" } },
+    },
+    {
+      enabledDomains: ["flight"],
+      historicalEnrichmentEnabled: false,
+      data: { display: { language: "en" } },
+    },
   ]);
 }
 
@@ -92,9 +104,13 @@ describe("buildUsagePayload", () => {
   it("derives llm_parser from ollamaUrl or a global LLM key", async () => {
     expect((await buildUsagePayload()).features.llm_parser).toBe(true);
     p.adminSettings.findFirst.mockResolvedValue({
-      id: 3, usageStatsInstallId: "x", ollamaUrl: null,
-      globalOpenaiApiKey: null, globalClaudeApiKey: null,
-      backupEnabled: false, webdavSyncEnabled: false,
+      id: 3,
+      usageStatsInstallId: "x",
+      ollamaUrl: null,
+      globalOpenaiApiKey: null,
+      globalClaudeApiKey: null,
+      backupEnabled: false,
+      webdavSyncEnabled: false,
     });
     expect((await buildUsagePayload()).features.llm_parser).toBe(false);
   });
@@ -131,8 +147,16 @@ describe("buildUsagePayload", () => {
   it("picks the majority locale, breaking ties toward en", async () => {
     expect((await buildUsagePayload()).locale).toBe("de");
     p.userSettings.findMany.mockResolvedValue([
-      { enabledDomains: ["flight"], historicalEnrichmentEnabled: false, data: { display: { language: "de" } } },
-      { enabledDomains: ["flight"], historicalEnrichmentEnabled: false, data: { display: { language: "en" } } },
+      {
+        enabledDomains: ["flight"],
+        historicalEnrichmentEnabled: false,
+        data: { display: { language: "de" } },
+      },
+      {
+        enabledDomains: ["flight"],
+        historicalEnrichmentEnabled: false,
+        data: { display: { language: "en" } },
+      },
     ]);
     expect((await buildUsagePayload()).locale).toBe("en");
   });
@@ -148,8 +172,19 @@ describe("buildUsagePayload", () => {
   it("contains NO personally identifying data", async () => {
     const serialized = JSON.stringify(await buildUsagePayload()).toLowerCase();
     const forbidden = [
-      "password", "username", "@", "http://", "https://", "/app/", "c:\\",
-      "hostname", "apikey", "api_key", "token", "secret", "email",
+      "password",
+      "username",
+      "@",
+      "http://",
+      "https://",
+      "/app/",
+      "c:\\",
+      "hostname",
+      "apikey",
+      "api_key",
+      "token",
+      "secret",
+      "email",
     ];
     for (const needle of forbidden) {
       // Jest's `expect()` takes exactly one argument in this repo's installed

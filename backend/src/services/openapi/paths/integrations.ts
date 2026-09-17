@@ -97,7 +97,10 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            pdfBase64: z.string().optional().describe("The PDF, base64. Required unless documentId is sent"),
+            pdfBase64: z
+              .string()
+              .optional()
+              .describe("The PDF, base64. Required unless documentId is sent"),
             domain: parseDomain,
             ...parseRetentionFields,
           }),
@@ -162,7 +165,11 @@ registry.registerPath({
     "and the answer mapped back onto it.",
   tags: parseTag,
   request: { params: z.object({ flightNumber: z.string() }) },
-  responses: { 200: { description: "Lookup result" }, 404: notFound, 503: { description: "No provider configured", content: errorContent } },
+  responses: {
+    200: { description: "Lookup result" },
+    404: notFound,
+    503: { description: "No provider configured", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -170,7 +177,10 @@ registry.registerPath({
   path: "/flight-lookup/bulk",
   summary: "Look up several flights",
   tags: parseTag,
-  responses: { 200: { description: "Results" }, 503: { description: "No provider configured", content: errorContent } },
+  responses: {
+    200: { description: "Results" },
+    503: { description: "No provider configured", content: errorContent },
+  },
 });
 
 // -------------------------------------------------------------- import
@@ -338,7 +348,11 @@ registry.registerPath({
     "fresh import will not start against a link that is already busy.",
   tags: immichTag,
   request: { params: z.object({ id: uuid, linkId: uuid }) },
-  responses: { 202: { description: "Resync started" }, 409: { description: "Import already running", content: errorContent }, 404: notFound },
+  responses: {
+    202: { description: "Resync started" },
+    409: { description: "Import already running", content: errorContent },
+    404: notFound,
+  },
 });
 
 registry.registerPath({

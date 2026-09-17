@@ -3,7 +3,7 @@
  * Handles labelled PNR fields and generic 6-char alphanumeric scanning.
  */
 
-import { PNR_FALSE_POSITIVES } from './regexMappings';
+import { PNR_FALSE_POSITIVES } from "./regexMappings";
 
 /**
  * Find the first PNR candidate in an already-uppercased source string.

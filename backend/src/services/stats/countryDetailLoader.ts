@@ -93,7 +93,15 @@ export async function loadCountryDetail(
           isoCountryCode: true,
           // datePrecision + nights: a MONTH placeholder spans a whole month while
           // attesting a few nights, and must not be walked into exact days.
-          stays: { select: { status: true, checkIn: true, checkOut: true, datePrecision: true, nights: true } },
+          stays: {
+            select: {
+              status: true,
+              checkIn: true,
+              checkOut: true,
+              datePrecision: true,
+              nights: true,
+            },
+          },
         },
       }),
       // The fifth: measured presence (spec §8). Handed over unfiltered like

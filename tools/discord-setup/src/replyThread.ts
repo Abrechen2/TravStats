@@ -20,13 +20,13 @@ async function collectForumThreads(forums: ForumChannel[]): Promise<ThreadChanne
   for (const forum of forums) {
     const active = await forum.threads.fetchActive().catch((err: unknown) => {
       log(
-        `WARNING: failed to fetch active threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`,
+        `WARNING: failed to fetch active threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`
       );
       return null;
     });
     const archived = await forum.threads.fetchArchived().catch((err: unknown) => {
       log(
-        `WARNING: failed to fetch archived threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`,
+        `WARNING: failed to fetch archived threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`
       );
       return null;
     });
@@ -42,7 +42,10 @@ async function collectForumThreads(forums: ForumChannel[]): Promise<ThreadChanne
  * title. Returns the single match, or logs the ambiguity / miss and returns
  * null so the caller can abort without posting.
  */
-export function resolveThread<T extends ThreadLike>(threads: readonly T[], query: string): T | null {
+export function resolveThread<T extends ThreadLike>(
+  threads: readonly T[],
+  query: string
+): T | null {
   const byId = threads.find((t) => t.id === query);
   if (byId) return byId;
 
@@ -62,7 +65,10 @@ export function resolveThread<T extends ThreadLike>(threads: readonly T[], query
 }
 
 /** `resolveThread` without the diagnostics, for use as the first of two lookups. */
-function resolveThreadQuietly<T extends ThreadLike>(threads: readonly T[], query: string): T | null {
+function resolveThreadQuietly<T extends ThreadLike>(
+  threads: readonly T[],
+  query: string
+): T | null {
   const byId = threads.find((t) => t.id === query);
   if (byId) return byId;
   const needle = query.toLowerCase();
@@ -92,11 +98,15 @@ export interface ExactMatch<T extends ThreadLike> {
 export function findExactMatches<T extends ThreadLike, U extends ThreadLike>(
   threads: readonly T[],
   channels: readonly U[],
-  query: string,
+  query: string
 ): Array<ExactMatch<T> | ExactMatch<U>> {
   return [
-    ...threads.filter((t) => isExactMatch(t, query)).map((value) => ({ kind: "thread" as const, value })),
-    ...channels.filter((c) => isExactMatch(c, query)).map((value) => ({ kind: "channel" as const, value })),
+    ...threads
+      .filter((t) => isExactMatch(t, query))
+      .map((value) => ({ kind: "thread" as const, value })),
+    ...channels
+      .filter((c) => isExactMatch(c, query))
+      .map((value) => ({ kind: "channel" as const, value })),
   ];
 }
 
@@ -124,13 +134,15 @@ export function findExactMatches<T extends ThreadLike, U extends ThreadLike>(
 export function resolveReplyTarget<T extends ThreadLike, U extends ThreadLike>(
   threads: readonly T[],
   channels: readonly U[],
-  query: string,
+  query: string
 ): T | U | null {
   const exact = findExactMatches(threads, channels, query);
   if (exact.length === 1) return exact[0].value;
 
   if (exact.length > 1) {
-    log(`"${query}" is ambiguous — ${exact.length} exact matches across threads and channels. Use the id:`);
+    log(
+      `"${query}" is ambiguous — ${exact.length} exact matches across threads and channels. Use the id:`
+    );
     for (const m of exact) log(`  - "${m.value.name}"  (${m.kind}, id ${m.value.id})`);
     return null;
   }
@@ -160,7 +172,7 @@ export async function runReply(
   guildId: string,
   threadQuery: string,
   message: string,
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     client.once("clientReady", async () => {
@@ -170,7 +182,7 @@ export async function runReply(
         await full.channels.fetch();
 
         const forums = [...full.channels.cache.values()].filter(
-          (c): c is ForumChannel => c instanceof ForumChannel,
+          (c): c is ForumChannel => c instanceof ForumChannel
         );
         if (forums.length === 0) {
           log("This guild has no forum channels.");
@@ -180,7 +192,7 @@ export async function runReply(
 
         const threads = await collectForumThreads(forums);
         const channels = [...full.channels.cache.values()].filter(
-          (c): c is TextChannel => c instanceof TextChannel,
+          (c): c is TextChannel => c instanceof TextChannel
         );
         // Forum threads first — that is the common case. But conversations also
         // happen in plain text channels (#general), and a follow-up owes the
@@ -191,7 +203,7 @@ export async function runReply(
         const target: ThreadChannel | TextChannel | null = resolveReplyTarget(
           threads,
           channels,
-          threadQuery,
+          threadQuery
         );
 
         if (!target) {

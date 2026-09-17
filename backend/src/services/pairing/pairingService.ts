@@ -72,8 +72,7 @@ export async function generatePairingCode(userId: string): Promise<GeneratedPair
 export type PairingClaimFailure = "unknown" | "expired" | "alreadyClaimed";
 
 export type PairingClaimResult =
-  | { outcome: "ok"; userId: string }
-  | { outcome: PairingClaimFailure };
+  { outcome: "ok"; userId: string } | { outcome: PairingClaimFailure };
 
 /**
  * Atomically verify and consume a pairing code.
@@ -128,7 +127,7 @@ export async function verifyAndConsume(code: string): Promise<PairingClaimResult
  */
 export async function getPairingStatus(
   code: string,
-  requestingUserId: string,
+  requestingUserId: string
 ): Promise<PairingStatus> {
   const codeHash = tokenLookupHash(code);
   const row = await prisma.pairingCode.findUnique({

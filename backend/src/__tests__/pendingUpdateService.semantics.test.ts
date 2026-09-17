@@ -58,7 +58,7 @@ describe("applyPendingUpdate time-semantics upgrade", () => {
     flightId: string,
     apiSource: string,
     proposedData: Record<string, unknown>,
-    metadata?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ) {
     return prisma.pendingFlightUpdate.create({
       data: {
@@ -91,9 +91,7 @@ describe("applyPendingUpdate time-semantics upgrade", () => {
     });
     expect(reloaded?.depTimeSemantics).toBe("UTC");
     expect(reloaded?.arrTimeSemantics).toBe("UTC");
-    expect(reloaded?.departureTime?.toISOString()).toBe(
-      "2026-06-02T18:05:00.000Z",
-    );
+    expect(reloaded?.departureTime?.toISOString()).toBe("2026-06-02T18:05:00.000Z");
   });
 
   it("marks aerodatabox-sourced updates as live tracking too", async () => {
@@ -150,7 +148,7 @@ describe("applyPendingUpdate time-semantics upgrade", () => {
       flight.id,
       "historical_aggregation",
       { departureTime: "2026-06-02T18:05:00.000Z" },
-      { isHistoricalEnrichment: true, confidence: 90, sourceFlightsCount: 5 },
+      { isHistoricalEnrichment: true, confidence: 90, sourceFlightsCount: 5 }
     );
 
     const applied = await applyPendingUpdate(update.id, userId);

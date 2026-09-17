@@ -1,7 +1,7 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
-import { JWT_SECRET } from './jwtSecret';
+import jwt, { SignOptions } from "jsonwebtoken";
+import { JWT_SECRET } from "./jwtSecret";
 
-const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
 
 /**
  * Mint a session token.
@@ -20,7 +20,7 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
  * correct answer: nothing about them has been invalidated yet.
  */
 export const generateToken = (userId: string, epoch = 0): string => {
-  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] };
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
   return jwt.sign({ userId, epoch }, JWT_SECRET, options);
 };
 

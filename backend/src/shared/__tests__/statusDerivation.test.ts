@@ -21,16 +21,31 @@ describe("deriveFlightStatus", () => {
 
   it("arrival more than 6h past -> flown; within slack -> scheduled", () => {
     expect(
-      deriveFlightStatus({ departureTime: past(9), arrivalTime: past(7), current: "scheduled", now })
+      deriveFlightStatus({
+        departureTime: past(9),
+        arrivalTime: past(7),
+        current: "scheduled",
+        now,
+      })
     ).toBe("flown");
     expect(
-      deriveFlightStatus({ departureTime: past(7), arrivalTime: past(5), current: "scheduled", now })
+      deriveFlightStatus({
+        departureTime: past(7),
+        arrivalTime: past(5),
+        current: "scheduled",
+        now,
+      })
     ).toBe("scheduled");
   });
 
   it("future-dated 'flown' reverts to scheduled (the zombie-anomaly killer)", () => {
     expect(
-      deriveFlightStatus({ departureTime: future(24), arrivalTime: future(26), current: "flown", now })
+      deriveFlightStatus({
+        departureTime: future(24),
+        arrivalTime: future(26),
+        current: "flown",
+        now,
+      })
     ).toBe("scheduled");
   });
 
@@ -53,9 +68,9 @@ describe("deriveFlightStatus", () => {
 describe("deriveCruiseStatus", () => {
   it("passes through cancelled/historical", () => {
     for (const s of ["cancelled", "historical"]) {
-      expect(
-        deriveCruiseStatus({ startDate: past(100), endDate: past(50), current: s, now })
-      ).toBe(s);
+      expect(deriveCruiseStatus({ startDate: past(100), endDate: past(50), current: s, now })).toBe(
+        s
+      );
     }
   });
 
@@ -164,9 +179,9 @@ describe("deriveLodgingStatus", () => {
   // completed — a morning check-out, and the only way a same-day stay avoids
   // being stuck in_progress forever.
   it("counts a stay as completed the moment check-out is reached, not after it", () => {
-    expect(deriveLodgingStatus({ checkIn: past(48), checkOut: now, current: "scheduled", now })).toBe(
-      "completed"
-    );
+    expect(
+      deriveLodgingStatus({ checkIn: past(48), checkOut: now, current: "scheduled", now })
+    ).toBe("completed");
   });
 
   it("a same-day stay is never in_progress once its date has arrived", () => {

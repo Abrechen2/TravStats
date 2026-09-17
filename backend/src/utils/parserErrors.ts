@@ -8,16 +8,16 @@
  * 500 with the original message for debuggability.
  */
 export function describeParserError(error: unknown): { status: number; message: string } {
-  const raw = error instanceof Error ? error.message : 'Unknown error';
+  const raw = error instanceof Error ? error.message : "Unknown error";
   const llmUnreachable =
     /ollama|econnrefused|econnreset|etimedout|fetch failed|socket hang up|network|timeout|abort/i.test(
-      raw,
+      raw
     );
   if (llmUnreachable) {
     return {
       status: 503,
       message:
-        'The LLM parser is currently unreachable. Check the parser configuration in Settings (Ollama/OpenAI/Claude) or try again later.',
+        "The LLM parser is currently unreachable. Check the parser configuration in Settings (Ollama/OpenAI/Claude) or try again later.",
     };
   }
   return { status: 500, message: raw };

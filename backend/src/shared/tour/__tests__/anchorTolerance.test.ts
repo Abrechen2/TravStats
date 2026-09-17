@@ -10,24 +10,24 @@
  * Vite frontend module graph) and compare against this side's own live,
  * type-checked value.
  */
-import { readFileSync } from 'fs';
-import path from 'path';
-import { ANCHOR_TOLERANCE_KM } from '../anchorTolerance';
+import { readFileSync } from "fs";
+import path from "path";
+import { ANCHOR_TOLERANCE_KM } from "../anchorTolerance";
 
 const FRONTEND_MIRROR_PATH = path.join(
   __dirname,
-  '../../../../../frontend/src/shared/tour/anchorTolerance.ts',
+  "../../../../../frontend/src/shared/tour/anchorTolerance.ts"
 );
 
 function readFrontendValue(): number {
   let contents: string;
   try {
-    contents = readFileSync(FRONTEND_MIRROR_PATH, 'utf-8');
+    contents = readFileSync(FRONTEND_MIRROR_PATH, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(
         `Frontend mirror not found at ${FRONTEND_MIRROR_PATH}. ` +
-          'It must exist alongside backend/src/shared/tour/anchorTolerance.ts.',
+          "It must exist alongside backend/src/shared/tour/anchorTolerance.ts."
       );
     }
     throw err;
@@ -37,18 +37,18 @@ function readFrontendValue(): number {
   if (!match) {
     throw new Error(
       `Could not find "export const ANCHOR_TOLERANCE_KM = <number>;" in ${FRONTEND_MIRROR_PATH}. ` +
-        'Has its export shape changed? Update this guard alongside it.',
+        "Has its export shape changed? Update this guard alongside it."
     );
   }
   return Number(match[1]);
 }
 
-describe('shared/tour/anchorTolerance drift guard', () => {
-  it('keeps the frontend mirror equal to the backend value', () => {
+describe("shared/tour/anchorTolerance drift guard", () => {
+  it("keeps the frontend mirror equal to the backend value", () => {
     expect(readFrontendValue()).toBe(ANCHOR_TOLERANCE_KM);
   });
 
-  it('is a small, sane tolerance (regression: catches an accidental order-of-magnitude typo)', () => {
+  it("is a small, sane tolerance (regression: catches an accidental order-of-magnitude typo)", () => {
     expect(ANCHOR_TOLERANCE_KM).toBeGreaterThan(0);
     expect(ANCHOR_TOLERANCE_KM).toBeLessThan(100);
   });

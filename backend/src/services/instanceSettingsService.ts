@@ -102,8 +102,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
   return {
     instanceName: row.instanceName ?? process.env.INSTANCE_NAME ?? "TravStats",
     maxUsers: row.maxUsers ?? parseInt(process.env.MAX_USERS ?? "10", 10),
-    allowRegistration:
-      row.allowRegistration ?? process.env.ALLOW_REGISTRATION === "true",
+    allowRegistration: row.allowRegistration ?? process.env.ALLOW_REGISTRATION === "true",
     frontendUrl:
       row.frontendUrl ??
       process.env.FRONTEND_URL ??
@@ -114,8 +113,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     webauthnRpId: row.webauthnRpId ?? null,
     webauthnOrigins: row.webauthnOrigins ?? [],
     photonUrl: row.photonUrl ?? process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL,
-    nominatimUrl:
-      row.nominatimUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL,
+    nominatimUrl: row.nominatimUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL,
     // Non-nullable column (default false) — no ENV fallback on purpose: an
     // instance is either flagged beta by an admin or it is not.
     betaFeaturesEnabled: row.betaFeaturesEnabled,
@@ -132,15 +130,13 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
  * "clear the DB override, fall back to ENV/default") even though the
  * resolved `InstanceSettings` output is always a non-null string.
  */
-type InstanceSettingsPatch = Partial<
-  Omit<InstanceSettings, "photonUrl" | "nominatimUrl">
-> & {
+type InstanceSettingsPatch = Partial<Omit<InstanceSettings, "photonUrl" | "nominatimUrl">> & {
   photonUrl?: string | null;
   nominatimUrl?: string | null;
 };
 
 export async function updateInstanceSettings(
-  patch: InstanceSettingsPatch,
+  patch: InstanceSettingsPatch
 ): Promise<InstanceSettings> {
   const row = await ensureAdminSettings();
   await prisma.adminSettings.update({
@@ -232,29 +228,23 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
   const row = await ensureAdminSettings();
 
   const dbPasswordEncrypted = row.webdavPasswordEncrypted;
-  const dbPassword = dbPasswordEncrypted
-    ? decryptApiKey(dbPasswordEncrypted)
-    : null;
+  const dbPassword = dbPasswordEncrypted ? decryptApiKey(dbPasswordEncrypted) : null;
 
   const envPassword = process.env.WEBDAV_PASSWORD || null;
 
   return {
-    enabled:
-      row.webdavSyncEnabled ?? process.env.WEBDAV_SYNC_ENABLED === "true",
+    enabled: row.webdavSyncEnabled ?? process.env.WEBDAV_SYNC_ENABLED === "true",
     url: row.webdavUrl ?? process.env.WEBDAV_URL ?? null,
     username: row.webdavUsername ?? process.env.WEBDAV_USERNAME ?? null,
     password: dbPassword ?? envPassword,
-    backupPath:
-      row.webdavBackupPath ||
-      process.env.WEBDAV_BACKUP_PATH ||
-      "/TravStats/backups/",
+    backupPath: row.webdavBackupPath || process.env.WEBDAV_BACKUP_PATH || "/TravStats/backups/",
   };
 }
 
 export async function updateWebDAVSettings(
   patch: Partial<Omit<WebDAVSettings, "password">> & {
     password?: string | null;
-  },
+  }
 ): Promise<WebDAVSettings> {
   const row = await ensureAdminSettings();
 

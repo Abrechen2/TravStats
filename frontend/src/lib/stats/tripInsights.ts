@@ -45,7 +45,12 @@ export function tripDistanceKm(trip: Trip): number {
  */
 export function tripDominantCost(trip: Trip): { currency: string; amount: number } | null {
   const totals = sumByCurrency(
-    tripCostSources(trip.bookings ?? [], trip.flights ?? [], trip.cruises ?? [], trip.lodgingStays ?? [])
+    tripCostSources(
+      trip.bookings ?? [],
+      trip.flights ?? [],
+      trip.cruises ?? [],
+      trip.lodgingStays ?? []
+    )
   );
   let best: { currency: string; amount: number } | null = null;
   for (const t of totals) {

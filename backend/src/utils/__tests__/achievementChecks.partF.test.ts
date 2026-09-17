@@ -7,11 +7,7 @@
 
 import type { Achievement } from "@prisma/client";
 import { checkAchievement } from "../achievementChecks";
-import {
-  calculateUserStats,
-  type FlightData,
-  type UserStats,
-} from "../achievementStats";
+import { calculateUserStats, type FlightData, type UserStats } from "../achievementStats";
 import { calculateCruiseStats, type CruiseData, type CruisePortData } from "../cruiseStats";
 import { achievements } from "../../data/achievements";
 import { seedsPartA } from "../../data/achievementSeeds/partA";
@@ -109,7 +105,7 @@ describe("checkAchievement — partF requirement types dispatch", () => {
           requirement: def.requirement,
         }),
         maxedStats,
-        antarcticFlights,
+        antarcticFlights
       );
       if (!isUnlocked || progress <= 0) {
         failed.push(`${def.code} (${def.requirementType})`);
@@ -124,7 +120,7 @@ describe("checkAchievement — partF requirement types dispatch", () => {
     const result = checkAchievement(
       fakeAchievement({ requirementType: "lodging_southern_lat", requirement: 45 }),
       stats,
-      [],
+      []
     );
     expect(result.progress).toBe(0);
     expect(result.isUnlocked).toBe(false);

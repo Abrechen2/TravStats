@@ -100,7 +100,7 @@ describe("runAnnounce promise settlement (non-dry-run)", () => {
     const client = { login, once, destroy: vi.fn() } as unknown as Client;
 
     await expect(
-      runAnnounce(client, "bad-token", "guild", "beta", "1.0.0", null, false),
+      runAnnounce(client, "bad-token", "guild", "beta", "1.0.0", null, false)
     ).rejects.toThrow("bad token");
   });
 });

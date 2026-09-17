@@ -47,7 +47,7 @@ const NUMBER_FIRST_COUNTRIES = new Set([
 export function formatStreetAddress(
   street: string | null | undefined,
   houseNumber: string | null | undefined,
-  countryCode: string | null | undefined,
+  countryCode: string | null | undefined
 ): string | undefined {
   // A bare house number is not an address — it names nothing on its own.
   if (!street) return undefined;

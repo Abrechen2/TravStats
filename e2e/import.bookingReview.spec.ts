@@ -45,7 +45,11 @@ async function expectFieldShowing(page: Page, value: string): Promise<void> {
       () =>
         page
           .locator("input")
-          .evaluateAll((inputs, wanted) => inputs.some((i) => (i as HTMLInputElement).value.replace(/\s+/g, "") === wanted), value),
+          .evaluateAll(
+            (inputs, wanted) =>
+              inputs.some((i) => (i as HTMLInputElement).value.replace(/\s+/g, "") === wanted),
+            value
+          ),
       { timeout: 20_000 }
     )
     .toBe(true);
@@ -60,7 +64,9 @@ test.describe("booking mail with three legs", () => {
     admin = await adminApi(baseURL!);
     const current = await admin.get("/api/v1/admin/parser-settings");
     expect(current.ok(), await current.text()).toBe(true);
-    previousOllama = { ollamaUrl: ((await current.json()) as { ollamaUrl: string | null }).ollamaUrl };
+    previousOllama = {
+      ollamaUrl: ((await current.json()) as { ollamaUrl: string | null }).ollamaUrl,
+    };
     const cleared = await admin.put("/api/v1/admin/parser-settings", { data: { ollamaUrl: null } });
     expect(cleared.ok(), await cleared.text()).toBe(true);
 
@@ -104,7 +110,10 @@ test.describe("booking mail with three legs", () => {
     expect(parsed.flights).toHaveLength(3);
 
     await page.goto("/flights");
-    await page.getByRole("button", { name: /^\+?\s*Flug hinzufügen$|^\+?\s*Add flight$/i }).first().click();
+    await page
+      .getByRole("button", { name: /^\+?\s*Flug hinzufügen$|^\+?\s*Add flight$/i })
+      .first()
+      .click();
     await page.locator('input[type="file"]').first().setInputFiles(MAIL);
 
     // Steps one and two only accumulate: they must say so, and must not write.
@@ -124,12 +133,21 @@ test.describe("booking mail with three legs", () => {
     // All three arrived — none dropped by the batch (forgejo#13), and with the
     // year the mail carries, not today's (forgejo#18).
     await expect
-      .poll(async () => ((await (await page.request.get("/api/v1/flights")).json()) as { total: number }).total, {
-        timeout: 20_000,
-      })
+      .poll(
+        async () =>
+          ((await (await page.request.get("/api/v1/flights")).json()) as { total: number }).total,
+        {
+          timeout: 20_000,
+        }
+      )
       .toBe(3);
     const { flights } = (await (await page.request.get("/api/v1/flights")).json()) as {
-      flights: Array<{ flightNumber: string; depIata: string; arrIata: string; departureTime: string }>;
+      flights: Array<{
+        flightNumber: string;
+        depIata: string;
+        arrIata: string;
+        departureTime: string;
+      }>;
     };
     const seen = flights
       .map((f) => ({

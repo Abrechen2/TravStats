@@ -53,8 +53,8 @@ export const FILE_LIMITS = {
   GPX_TRACK_MAX_SIZE: 15 * 1024 * 1024, // 15 MB
 
   // Body parsing limits
-  JSON_BODY_MAX_SIZE: '10mb',
-  URLENCODED_BODY_MAX_SIZE: '10mb',
+  JSON_BODY_MAX_SIZE: "10mb",
+  URLENCODED_BODY_MAX_SIZE: "10mb",
 
   // Text processing limits
   EMAIL_TEXT_MAX_LENGTH: 4000, // characters for basic parser

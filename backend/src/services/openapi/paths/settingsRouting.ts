@@ -28,10 +28,10 @@ const apiKeyTestInput = registry.register(
           "A key to test directly. Omit it, or send back the masked echo " +
             "from GET /settings/api-keys (a value containing '****'), to " +
             "test the persisted/inherited key instead — the handler " +
-            "resolves that case itself.",
+            "resolves that case itself."
         ),
     })
-    .openapi("ApiKeyTestInput", { example: {} }),
+    .openapi("ApiKeyTestInput", { example: {} })
 );
 
 /**
@@ -66,7 +66,7 @@ const apiKeyTestResult = registry.register(
     })
     .openapi("ApiKeyTestResult", {
       example: { success: true, message: "API key is valid", messageKey: "valid" },
-    }),
+    })
 );
 
 const testEndpoint = (provider: "OpenRouteService" | "GraphHopper", path: string) => {

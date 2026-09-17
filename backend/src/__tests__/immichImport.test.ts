@@ -130,10 +130,10 @@ describe("startAlbumImport", () => {
           lat: 1,
           lon: 2,
         }),
-      }),
+      })
     );
     expect(jobUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "completed" }) }),
+      expect.objectContaining({ data: expect.objectContaining({ status: "completed" }) })
     );
   });
 
@@ -175,7 +175,7 @@ describe("startAlbumImport", () => {
     expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "completed", failedAssets: 1 }),
-      }),
+      })
     );
   });
 
@@ -204,7 +204,7 @@ describe("startAlbumImport", () => {
     expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "completed", failedAssets: 0 }),
-      }),
+      })
     );
     // The duplicate bytes we downloaded must be cleaned up (a sibling owns the row).
     expect(unlinkSyncMock).toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe("startAlbumImport", () => {
     expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "failed", error: "immich down" }),
-      }),
+      })
     );
   });
 
@@ -229,7 +229,7 @@ describe("startAlbumImport", () => {
       expect.objectContaining({
         where: { id: "link-1" },
         data: expect.objectContaining({ lastSyncedAt: expect.any(Date) }),
-      }),
+      })
     );
   });
 
@@ -246,7 +246,7 @@ describe("startAlbumImport", () => {
       expect.objectContaining({
         where: { albumLinkId: "link-1", status: { in: ["pending", "running"] } },
         data: expect.objectContaining({ status: "failed", error: "notConfigured" }),
-      }),
+      })
     );
   });
 });
@@ -267,13 +267,13 @@ describe("startAlbumImport per-asset byte cap (M2)", () => {
       expect.objectContaining({
         message: "immich_import_asset_too_large",
         context: expect.objectContaining({ assetId: "big" }),
-      }),
+      })
     );
     // Oversized = a per-asset failure, not an aborted run.
     expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "completed", failedAssets: 1, processedAssets: 1 }),
-      }),
+      })
     );
   });
 });
@@ -294,8 +294,8 @@ describe("createByteCapStream", () => {
       pipeline(
         Readable.from([Buffer.from("aaaa"), Buffer.from("bbbb"), Buffer.from("cccc")]),
         createByteCapStream(6),
-        sink,
-      ),
+        sink
+      )
     ).rejects.toMatchObject({ code: "IMMICH_ASSET_TOO_LARGE" });
   });
 });
@@ -306,7 +306,7 @@ describe("startAlbumImport concurrency guard", () => {
     listAlbumAssets.mockReturnValue(
       new Promise<ReturnType<typeof asset>[]>((resolve) => {
         resolveAssets = resolve;
-      }),
+      })
     );
 
     const first = startAlbumImport("u1", "link-1");
@@ -351,7 +351,7 @@ describe("startAlbumImport stale running-job reclaim", () => {
       expect.objectContaining({
         message: "immich_import_reclaimed_stale_job",
         context: expect.objectContaining({ linkId: "link-1" }),
-      }),
+      })
     );
   });
 

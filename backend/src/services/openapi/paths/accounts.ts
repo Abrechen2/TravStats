@@ -59,7 +59,11 @@ registry.registerPath({
     "Consumes the change token from login and nothing else. It is deliberately " +
     "unable to accept the two-factor token: the two must not be interchangeable.",
   tags: authTag,
-  responses: { 200: { description: "Changed" }, 400: badInput, 401: { description: "No valid token", content: errorContent } },
+  responses: {
+    200: { description: "Changed" },
+    400: badInput,
+    401: { description: "No valid token", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -70,7 +74,10 @@ registry.registerPath({
     "Answers the same way whether or not the address is known. Telling a stranger " +
     "which addresses have accounts is the leak this endpoint exists to avoid.",
   tags: authTag,
-  responses: { 200: { description: "Accepted" }, 429: { description: "Too many attempts", content: errorContent } },
+  responses: {
+    200: { description: "Accepted" },
+    429: { description: "Too many attempts", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -83,11 +90,23 @@ registry.registerPath({
 
 for (const [path, summary, description] of [
   ["/auth/2fa/status", "Whether two-factor is on", undefined],
-  ["/auth/2fa/setup", "Begin two-factor setup", "Returns the secret and its QR payload. Nothing is enabled until it is verified."],
+  [
+    "/auth/2fa/setup",
+    "Begin two-factor setup",
+    "Returns the secret and its QR payload. Nothing is enabled until it is verified.",
+  ],
   ["/auth/2fa/verify", "Confirm a code and switch two-factor on", undefined],
   ["/auth/2fa/activate", "Activate after verification", undefined],
-  ["/auth/2fa/disable", "Switch two-factor off", "Requires a current code, not just a session — a stolen session must not be able to remove the factor protecting it."],
-  ["/auth/2fa/recovery-codes", "Issue fresh recovery codes", "Shown once. They are the way back in when the phone is gone."],
+  [
+    "/auth/2fa/disable",
+    "Switch two-factor off",
+    "Requires a current code, not just a session — a stolen session must not be able to remove the factor protecting it.",
+  ],
+  [
+    "/auth/2fa/recovery-codes",
+    "Issue fresh recovery codes",
+    "Shown once. They are the way back in when the phone is gone.",
+  ],
 ] as const) {
   registry.registerPath({
     method: path.endsWith("status") ? "get" : "post",
@@ -95,7 +114,11 @@ for (const [path, summary, description] of [
     summary,
     ...(description ? { description } : {}),
     tags: authTag,
-    responses: { 200: { description: summary }, 400: badInput, 401: { description: "Not signed in", content: errorContent } },
+    responses: {
+      200: { description: summary },
+      400: badInput,
+      401: { description: "Not signed in", content: errorContent },
+    },
   });
 }
 
@@ -128,7 +151,10 @@ registry.registerPath({
   path: "/auth/passkeys/register/options",
   summary: "Options for registering a passkey",
   tags: authTag,
-  responses: { 200: { description: "Options" }, 401: { description: "Not signed in", content: errorContent } },
+  responses: {
+    200: { description: "Options" },
+    401: { description: "Not signed in", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -156,7 +182,10 @@ registry.registerPath({
     "Issues the session directly and never consults the two-factor setting — the " +
     "assertion already proves possession and a local gesture.",
   tags: authTag,
-  responses: { 200: { description: "Signed in" }, 401: { description: "Rejected", content: errorContent } },
+  responses: {
+    200: { description: "Signed in" },
+    401: { description: "Rejected", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -197,7 +226,11 @@ registry.registerPath({
   path: "/pairing/claim",
   summary: "Claim a pairing code from the phone",
   tags: pairingTag,
-  responses: { 200: { description: "Paired" }, 400: badInput, 410: { description: "Code expired", content: errorContent } },
+  responses: {
+    200: { description: "Paired" },
+    400: badInput,
+    410: { description: "Code expired", content: errorContent },
+  },
 });
 
 registry.registerPath({

@@ -1,6 +1,6 @@
-import { ParsedBooking } from '../../bookingParser';
-import logger from '../../../utils/logger';
-import { AIRLINE_IATA_MAP } from '../../../data/airlines';
+import { ParsedBooking } from "../../bookingParser";
+import logger from "../../../utils/logger";
+import { AIRLINE_IATA_MAP } from "../../../data/airlines";
 
 /**
  * Get all available Claude models for text parsing, ordered by preference (newest first)
@@ -16,11 +16,11 @@ export function getClaudeTextModels(): string[] {
   // These are the most common models for text parsing
   // Update this list when new models are released
   return [
-    'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet (October 2024 - latest stable)
-    'claude-3-5-sonnet-20240620', // Claude 3.5 Sonnet (June 2024)
-    'claude-3-opus-20240229',     // Claude 3 Opus (February 2024)
-    'claude-3-sonnet-20240229',   // Claude 3 Sonnet (February 2024)
-    'claude-3-haiku-20240307',    // Claude 3 Haiku (March 2024)
+    "claude-3-5-sonnet-20241022", // Claude 3.5 Sonnet (October 2024 - latest stable)
+    "claude-3-5-sonnet-20240620", // Claude 3.5 Sonnet (June 2024)
+    "claude-3-opus-20240229", // Claude 3 Opus (February 2024)
+    "claude-3-sonnet-20240229", // Claude 3 Sonnet (February 2024)
+    "claude-3-haiku-20240307", // Claude 3 Haiku (March 2024)
   ];
 }
 
@@ -50,11 +50,11 @@ export function getClaudeVisionModels(): string[] {
   // List of Claude models with vision capabilities ordered by release date (newest first)
   // Update this list when new models are released
   return [
-    'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet (October 2024 - latest stable with vision)
-    'claude-3-5-sonnet-20240620', // Claude 3.5 Sonnet (June 2024)
-    'claude-3-opus-20240229',     // Claude 3 Opus (February 2024)
-    'claude-3-sonnet-20240229',   // Claude 3 Sonnet (February 2024)
-    'claude-3-haiku-20240307',    // Claude 3 Haiku (March 2024)
+    "claude-3-5-sonnet-20241022", // Claude 3.5 Sonnet (October 2024 - latest stable with vision)
+    "claude-3-5-sonnet-20240620", // Claude 3.5 Sonnet (June 2024)
+    "claude-3-opus-20240229", // Claude 3 Opus (February 2024)
+    "claude-3-sonnet-20240229", // Claude 3 Sonnet (February 2024)
+    "claude-3-haiku-20240307", // Claude 3 Haiku (March 2024)
   ];
 }
 
@@ -76,27 +76,144 @@ export function getLatestClaudeVisionModel(): string {
  */
 const COMMON_VALID_IATA_CODES = new Set([
   // Major European airports
-  'MUC', 'FRA', 'BER', 'HAM', 'DUS', 'CGN', 'STR', 'HAJ', 'NUE', 'LEJ', 'DRS', 'BRE',
-  'LUX', 'CDG', 'ORY', 'LHR', 'LGW', 'STN', 'AMS', 'BRU', 'VIE', 'ZRH', 'GVA',
-  'FCO', 'MXP', 'BCN', 'MAD', 'LIS', 'CPH', 'ARN', 'OSL', 'PRG', 'WAW', 'BUD', 'IST', 'ATH',
-  'HEL', 'DUB', 'EDI', 'MAN', 'BHX', 'BRS', 'NCL', 'LPL', 'EMA', 'SOU',
+  "MUC",
+  "FRA",
+  "BER",
+  "HAM",
+  "DUS",
+  "CGN",
+  "STR",
+  "HAJ",
+  "NUE",
+  "LEJ",
+  "DRS",
+  "BRE",
+  "LUX",
+  "CDG",
+  "ORY",
+  "LHR",
+  "LGW",
+  "STN",
+  "AMS",
+  "BRU",
+  "VIE",
+  "ZRH",
+  "GVA",
+  "FCO",
+  "MXP",
+  "BCN",
+  "MAD",
+  "LIS",
+  "CPH",
+  "ARN",
+  "OSL",
+  "PRG",
+  "WAW",
+  "BUD",
+  "IST",
+  "ATH",
+  "HEL",
+  "DUB",
+  "EDI",
+  "MAN",
+  "BHX",
+  "BRS",
+  "NCL",
+  "LPL",
+  "EMA",
+  "SOU",
   // Major US airports
-  'JFK', 'EWR', 'LGA', 'LAX', 'SFO', 'ORD', 'DFW', 'DEN', 'ATL', 'MIA', 'SEA', 'BOS', 'IAD', 'DCA',
-  'PHX', 'LAS', 'MCO', 'CLT', 'DTW', 'PHL', 'MSP', 'BWI', 'SLC', 'HNL',
+  "JFK",
+  "EWR",
+  "LGA",
+  "LAX",
+  "SFO",
+  "ORD",
+  "DFW",
+  "DEN",
+  "ATL",
+  "MIA",
+  "SEA",
+  "BOS",
+  "IAD",
+  "DCA",
+  "PHX",
+  "LAS",
+  "MCO",
+  "CLT",
+  "DTW",
+  "PHL",
+  "MSP",
+  "BWI",
+  "SLC",
+  "HNL",
   // Major Asian airports
-  'NRT', 'HND', 'ICN', 'PEK', 'PVG', 'HKG', 'SIN', 'BKK', 'KUL', 'DXB', 'DOH', 'AUH',
-  'KIX', 'TPE', 'MNL', 'CGK', 'BOM', 'DEL', 'CCU', 'MAA', 'BLR', 'HYD',
+  "NRT",
+  "HND",
+  "ICN",
+  "PEK",
+  "PVG",
+  "HKG",
+  "SIN",
+  "BKK",
+  "KUL",
+  "DXB",
+  "DOH",
+  "AUH",
+  "KIX",
+  "TPE",
+  "MNL",
+  "CGK",
+  "BOM",
+  "DEL",
+  "CCU",
+  "MAA",
+  "BLR",
+  "HYD",
   // Major airports in other regions
-  'SYD', 'MEL', 'BNE', 'PER', 'ADL', 'AKL', 'WLG', 'YVR', 'YYZ', 'YUL', 'YOW', 'YEG', 'YYC',
-  'GRU', 'GIG', 'EZE', 'SCL', 'LIM', 'BOG', 'MEX', 'CUN', 'PTY', 'SJO',
-  'JNB', 'CPT', 'CAI', 'NBO', 'LOS', 'ACC', 'ADD', 'CMN', 'TUN', 'ALG',
+  "SYD",
+  "MEL",
+  "BNE",
+  "PER",
+  "ADL",
+  "AKL",
+  "WLG",
+  "YVR",
+  "YYZ",
+  "YUL",
+  "YOW",
+  "YEG",
+  "YYC",
+  "GRU",
+  "GIG",
+  "EZE",
+  "SCL",
+  "LIM",
+  "BOG",
+  "MEX",
+  "CUN",
+  "PTY",
+  "SJO",
+  "JNB",
+  "CPT",
+  "CAI",
+  "NBO",
+  "LOS",
+  "ACC",
+  "ADD",
+  "CMN",
+  "TUN",
+  "ALG",
 ]);
 
 /**
  * Validate IATA airport code (must be exactly 3 uppercase letters)
  * Optionally check against whitelist of common valid codes
  */
-export function validateIATACode(code: string | null | undefined, strict: boolean = false): string | undefined {
+export function validateIATACode(
+  code: string | null | undefined,
+  strict: boolean = false
+): string | undefined {
   if (!code) return undefined;
   const cleaned = code.toUpperCase().trim();
   if (!/^[A-Z]{3}$/.test(cleaned)) return undefined;
@@ -115,7 +232,7 @@ export function validateIATACode(code: string | null | undefined, strict: boolea
  */
 export function validateFlightNumber(flightNumber: string | null | undefined): string | undefined {
   if (!flightNumber) return undefined;
-  const cleaned = flightNumber.toUpperCase().replace(/\s+/g, '');
+  const cleaned = flightNumber.toUpperCase().replace(/\s+/g, "");
   return /^[A-Z]{2,3}\d{1,4}$/.test(cleaned) ? cleaned : undefined;
 }
 
@@ -137,11 +254,11 @@ export function validateDateTime(dateTime: string | null | undefined): string | 
 export function getMissingFields(booking: Partial<ParsedBooking>): string[] {
   const missing: string[] = [];
 
-  if (!booking.flightNumber) missing.push('flightNumber');
-  if (!booking.departureCode) missing.push('departureCode');
-  if (!booking.arrivalCode) missing.push('arrivalCode');
-  if (!booking.departureTime) missing.push('departureTime');
-  if (!booking.arrivalTime) missing.push('arrivalTime');
+  if (!booking.flightNumber) missing.push("flightNumber");
+  if (!booking.departureCode) missing.push("departureCode");
+  if (!booking.arrivalCode) missing.push("arrivalCode");
+  if (!booking.departureTime) missing.push("departureTime");
+  if (!booking.arrivalTime) missing.push("arrivalTime");
 
   return missing;
 }
@@ -152,8 +269,10 @@ export function getMissingFields(booking: Partial<ParsedBooking>): string[] {
 export function normalizeParsedBooking(data: Record<string, unknown>): ParsedBooking {
   const missing = getMissingFields(data);
 
-  const str = (val: unknown): string | undefined => typeof val === 'string' && val ? val : undefined;
-  const strUp = (val: unknown): string | undefined => typeof val === 'string' && val ? val.toUpperCase() : undefined;
+  const str = (val: unknown): string | undefined =>
+    typeof val === "string" && val ? val : undefined;
+  const strUp = (val: unknown): string | undefined =>
+    typeof val === "string" && val ? val.toUpperCase() : undefined;
   const flightNum = str(data.flightNumber);
 
   const result: ParsedBooking = {
@@ -181,17 +300,20 @@ export function normalizeParsedBooking(data: Record<string, unknown>): ParsedBoo
 
   // Log missing fields for debugging
   if (missing.length > 0) {
-    logger.debug({
-      flightNumber: result.flightNumber || 'UNKNOWN',
-      missingFields: missing,
-      rawData: {
-        flightNumber: data.flightNumber,
-        departureCode: data.departureCode,
-        arrivalCode: data.arrivalCode,
-        departureTime: data.departureTime,
-        arrivalTime: data.arrivalTime,
-      }
-    }, '[Parser Utils] Normalized booking has missing fields');
+    logger.debug(
+      {
+        flightNumber: result.flightNumber || "UNKNOWN",
+        missingFields: missing,
+        rawData: {
+          flightNumber: data.flightNumber,
+          departureCode: data.departureCode,
+          arrivalCode: data.arrivalCode,
+          departureTime: data.departureTime,
+          arrivalTime: data.arrivalTime,
+        },
+      },
+      "[Parser Utils] Normalized booking has missing fields"
+    );
   }
 
   return result;
@@ -342,7 +464,7 @@ export function extractFlightDataFromText(text: string): Partial<ParsedBooking> 
   const priceMatch = text.match(PATTERNS.PRICE_EUR);
   if (priceMatch) {
     result.price = priceMatch[1];
-    result.currency = 'EUR';
+    result.currency = "EUR";
   }
 
   // Ticket number
@@ -361,26 +483,23 @@ export function cleanLLMJsonResponse(response: string): string {
   let cleaned = response.trim();
 
   // Remove markdown code blocks
-  if (cleaned.includes('```json')) {
-    cleaned = cleaned.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-  } else if (cleaned.includes('```')) {
-    cleaned = cleaned.replace(/```\n?/g, '');
+  if (cleaned.includes("```json")) {
+    cleaned = cleaned.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+  } else if (cleaned.includes("```")) {
+    cleaned = cleaned.replace(/```\n?/g, "");
   }
 
   // Remove any text before first [ or {
   const jsonStart = Math.min(
-    cleaned.indexOf('[') >= 0 ? cleaned.indexOf('[') : Infinity,
-    cleaned.indexOf('{') >= 0 ? cleaned.indexOf('{') : Infinity
+    cleaned.indexOf("[") >= 0 ? cleaned.indexOf("[") : Infinity,
+    cleaned.indexOf("{") >= 0 ? cleaned.indexOf("{") : Infinity
   );
   if (jsonStart > 0 && jsonStart !== Infinity) {
     cleaned = cleaned.substring(jsonStart);
   }
 
   // Remove any text after last ] or }
-  const jsonEnd = Math.max(
-    cleaned.lastIndexOf(']'),
-    cleaned.lastIndexOf('}')
-  );
+  const jsonEnd = Math.max(cleaned.lastIndexOf("]"), cleaned.lastIndexOf("}"));
   if (jsonEnd > 0) {
     cleaned = cleaned.substring(0, jsonEnd + 1);
   }
@@ -478,9 +597,9 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanations). Use null 
  */
 export function getTextParserPrompt(subject: string, text: string): string {
   const cleanText = text
-    .replace(/\0/g, '')
-    .replace(/\uFFFD/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\0/g, "")
+    .replace(/\uFFFD/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .substring(0, 15000);
 
@@ -613,7 +732,10 @@ export function cleanEmailBody(text: string): string {
   out = out.replace(/https?:\/\/[^\s<>]+/gi, "");
   out = out.replace(/www\.[^\s<>]+/gi, "");
   // Trim leading/trailing whitespace on every line (removes stray tab/space prefix from tab-delimited blocks)
-  out = out.split("\n").map((l) => l.trim()).join("\n");
+  out = out
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n");
   // Collapse runs of 2+ consecutive blank lines to one
   out = out.replace(/\n{2,}/g, "\n");
   // Collapse multiple spaces/tabs within a line to a single space

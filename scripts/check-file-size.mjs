@@ -51,13 +51,7 @@ const SCAN_ROOTS = ["backend/src", "frontend/src"];
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 /** Directory names that never contain hand-written logic worth measuring. */
-const IGNORED_DIRECTORIES = new Set([
-  "node_modules",
-  "dist",
-  "build",
-  "generated",
-  "__tests__",
-]);
+const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "build", "generated", "__tests__"]);
 
 /**
  * Deliberate exclusions. A line count says nothing about these: a test file grows
@@ -104,8 +98,7 @@ function collectSourceFiles(absoluteDir, collected) {
       continue;
     }
     if (!entry.isFile()) continue;
-    if (!SOURCE_EXTENSIONS.some((extension) => entry.name.endsWith(extension)))
-      continue;
+    if (!SOURCE_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) continue;
 
     const repoRelativePath = toRepoRelative(absolutePath);
     if (isExcluded(repoRelativePath)) continue;
@@ -137,8 +130,8 @@ function readBaseline() {
 function sortByCountDescending(files) {
   return Object.fromEntries(
     Object.entries(files).sort(([pathA, countA], [pathB, countB]) =>
-      countA === countB ? pathA.localeCompare(pathB) : countB - countA,
-    ),
+      countA === countB ? pathA.localeCompare(pathB) : countB - countA
+    )
   );
 }
 
@@ -151,11 +144,7 @@ function writeBaseline(files) {
     limit: LINE_LIMIT,
     files: sortByCountDescending(files),
   };
-  writeFileSync(
-    BASELINE_PATH,
-    `${JSON.stringify(document, null, 2)}\n`,
-    "utf8",
-  );
+  writeFileSync(BASELINE_PATH, `${JSON.stringify(document, null, 2)}\n`, "utf8");
 }
 
 function verify(measured, baseline) {
@@ -167,8 +156,7 @@ function verify(measured, baseline) {
   for (const [path, count] of measured) {
     const allowed = baseline[path];
     if (allowed === undefined) {
-      if (count > LINE_LIMIT)
-        overLimit.push({ path, count, allowed: LINE_LIMIT });
+      if (count > LINE_LIMIT) overLimit.push({ path, count, allowed: LINE_LIMIT });
       continue;
     }
     if (count > allowed) {
@@ -193,11 +181,8 @@ function reportFailures(title, remedy, findings) {
   console.error(`\n${title} (${findings.length})`);
   console.error(`  ${remedy}`);
   for (const { path, count, allowed } of findings) {
-    const actual =
-      count === null ? "file not found / no longer scanned" : `${count} lines`;
-    console.error(
-      `    ${path}\n      actual: ${actual}   allowed: ${allowed} lines`,
-    );
+    const actual = count === null ? "file not found / no longer scanned" : `${count} lines`;
+    console.error(`    ${path}\n      actual: ${actual}   allowed: ${allowed} lines`);
   }
 }
 
@@ -222,7 +207,7 @@ function main() {
       reportFailures(
         "REFUSING TO UPDATE — these files grew past their baseline",
         "The baseline may only shrink. Bring the file back down instead of re-recording it.",
-        wouldRaise,
+        wouldRaise
       );
       console.error("\nBaseline left untouched.\n");
       return 1;
@@ -230,36 +215,37 @@ function main() {
 
     writeBaseline(next);
     console.log(
-      `Baseline written: ${Object.keys(next).length} file(s) over the ${LINE_LIMIT}-line limit.`,
+      `Baseline written: ${Object.keys(next).length} file(s) over the ${LINE_LIMIT}-line limit.`
     );
     return 0;
   }
 
-  const { overLimit, grewPastBaseline, staleEntries, shrunkBelowBaseline } =
-    verify(measured, baseline);
+  const { overLimit, grewPastBaseline, staleEntries, shrunkBelowBaseline } = verify(
+    measured,
+    baseline
+  );
 
   reportFailures(
     "OVER LIMIT — new file above the line limit",
     `Split it. Only files that predate the ratchet get a baseline entry; new ones do not.`,
-    overLimit,
+    overLimit
   );
   reportFailures(
     "GREW PAST BASELINE — file was already too long and got longer",
     "Keep it at or below its recorded size: put the addition in a new module, " +
       "or remove at least as many lines as you added.",
-    grewPastBaseline,
+    grewPastBaseline
   );
   reportFailures(
     "STALE BASELINE ENTRY — file is within the limit and must leave the list",
     `Run "npm run check:size -- --update" and commit the baseline. The list only shrinks.`,
-    staleEntries,
+    staleEntries
   );
 
-  const failureCount =
-    overLimit.length + grewPastBaseline.length + staleEntries.length;
+  const failureCount = overLimit.length + grewPastBaseline.length + staleEntries.length;
   if (failureCount > 0) {
     console.error(
-      `\nFAIL: ${failureCount} file-size violation(s). Limit is ${LINE_LIMIT} lines.\n`,
+      `\nFAIL: ${failureCount} file-size violation(s). Limit is ${LINE_LIMIT} lines.\n`
     );
     return 1;
   }
@@ -268,13 +254,13 @@ function main() {
   if (shrunkBelowBaseline.length > 0) {
     console.log(
       `Note: ${shrunkBelowBaseline.length} baselined file(s) shrank. ` +
-        `Run "npm run check:size -- --update" to tighten the baseline.`,
+        `Run "npm run check:size -- --update" to tighten the baseline.`
     );
   }
 
   console.log(
     `OK: ${measured.size} source file(s) checked, ` +
-      `${Object.keys(baseline).length} baselined at their frozen size, limit ${LINE_LIMIT}.`,
+      `${Object.keys(baseline).length} baselined at their frozen size, limit ${LINE_LIMIT}.`
   );
   return 0;
 }

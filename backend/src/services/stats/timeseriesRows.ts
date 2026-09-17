@@ -28,11 +28,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // The rule lives in departureClock.ts, next to the timezone resolution every
 // caller of it has already done. This file used to carry its own copy.
 
-
 export async function fetchFlightDatedRows(
   userId: string,
   from: Date,
-  to: Date,
+  to: Date
 ): Promise<DatedRow[]> {
   const rows = await prisma.flight.findMany({
     where: {
@@ -44,23 +43,35 @@ export async function fetchFlightDatedRows(
       // flight leaving Bangkok early on 1 January is fetched as 31 December UTC
       // and never appears in the year it departed. The margin rows are removed
       // again by `withinWindow` once their local day is known — see the route.
-      departureTime: { gte: new Date(from.getTime() - DAY_MS), lt: new Date(to.getTime() + DAY_MS) },
+      departureTime: {
+        gte: new Date(from.getTime() - DAY_MS),
+        lt: new Date(to.getTime() + DAY_MS),
+      },
     },
     select: {
-      depIata: true, depIcao: true, depLat: true, depLon: true,
-      arrIata: true, arrIcao: true, arrLat: true, arrLon: true,
-      departureTime: true, arrivalTime: true,
-      depTimeSemantics: true, arrTimeSemantics: true,
+      depIata: true,
+      depIcao: true,
+      depLat: true,
+      depLon: true,
+      arrIata: true,
+      arrIcao: true,
+      arrLat: true,
+      arrLon: true,
+      departureTime: true,
+      arrivalTime: true,
+      depTimeSemantics: true,
+      arrTimeSemantics: true,
       durationMinutes: true,
       status: true,
     },
   });
   const tzMap = await buildTzMap(rows);
   return rows.map((f) => {
-    const depTz = (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
-    const arrTz = (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
-    const measuredMin =
-      f.status === "flown" ? measuredDurationMinutes(f, depTz, arrTz) : null;
+    const depTz =
+      (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
+    const arrTz =
+      (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
+    const measuredMin = f.status === "flown" ? measuredDurationMinutes(f, depTz, arrTz) : null;
     // Same rule as `/stats/summary` and the overview card (#268): measured
     // where there are clocks, estimated from the coordinates where there are
     // not. This used to be a bare 0, which is why the scorecard tile and the
@@ -68,7 +79,10 @@ export async function fetchFlightDatedRows(
     const durationMin =
       resolveFlightDuration({
         measuredMinutes: measuredMin,
-        depLat: f.depLat, depLon: f.depLon, arrLat: f.arrLat, arrLon: f.arrLon,
+        depLat: f.depLat,
+        depLon: f.depLon,
+        arrLat: f.arrLat,
+        arrLon: f.arrLon,
       })?.minutes ?? 0;
     return {
       // The airport's calendar day, not the UTC instant — Forgejo #46. Every
@@ -81,7 +95,7 @@ export async function fetchFlightDatedRows(
       date: airportCalendarDay(
         f.departureTime as Date,
         depTz,
-        f.depTimeSemantics as FlightTimeSemantics,
+        f.depTimeSemantics as FlightTimeSemantics
       ),
       distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
       durationMin,
@@ -92,7 +106,7 @@ export async function fetchFlightDatedRows(
 export async function fetchCruiseDatedRows(
   userId: string,
   from: Date,
-  to: Date,
+  to: Date
 ): Promise<DatedRow[]> {
   const rows = await prisma.cruise.findMany({
     // Sailed cruises only — the same done-predicate /stats/cruise uses, and

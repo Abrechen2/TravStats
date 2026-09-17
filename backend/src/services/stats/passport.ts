@@ -100,12 +100,7 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
-import {
-  FLOWN,
-  flightEvidence,
-  isoDayOf,
-  type PassportFlight,
-} from "./flightEvidence";
+import { FLOWN, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";

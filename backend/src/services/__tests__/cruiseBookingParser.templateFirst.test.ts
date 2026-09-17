@@ -46,7 +46,7 @@ describe("parseCruiseBookingText — the template path comes first", () => {
   // to reach the model, and say so plainly when the model is not there.
   it("still asks the model for a document no template recognises", async () => {
     await expect(
-      parseCruiseBookingText("Ihre Buchung bei einer anderen Reederei", NO_OLLAMA),
+      parseCruiseBookingText("Ihre Buchung bei einer anderen Reederei", NO_OLLAMA)
     ).rejects.toThrow(/Ollama is not reachable/);
   });
 });

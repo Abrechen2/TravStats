@@ -1,16 +1,16 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AuthRequest } from '../../middleware/auth';
-import { AppError } from '../../middleware/errorHandler';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { AuthRequest } from "../../middleware/auth";
+import { AppError } from "../../middleware/errorHandler";
 import {
   getInstanceSettings,
   updateInstanceSettings,
   getWebDAVSettings,
   updateWebDAVSettings,
-} from '../../services/instanceSettingsService';
-import { testConnection as testWebDAVConnection } from '../../services/cloudSyncService';
-import { isValidRpId, passkeyUnavailableReason } from '../../services/webauthn/rpConfig';
-import { COUNTRY_TIERS } from '../../shared/countryEvidence';
+} from "../../services/instanceSettingsService";
+import { testConnection as testWebDAVConnection } from "../../services/cloudSyncService";
+import { isValidRpId, passkeyUnavailableReason } from "../../services/webauthn/rpConfig";
+import { COUNTRY_TIERS } from "../../shared/countryEvidence";
 
 const router = Router();
 
@@ -24,19 +24,19 @@ const instancePatchSchema = z.object({
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   publicUrl: z
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   lanUrl: z
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   // Geocoder endpoints (Photon search, Nominatim one-shot geocode). Empty
   // string clears the DB override, reverting to ENV/default.
@@ -44,13 +44,13 @@ const instancePatchSchema = z.object({
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   nominatimUrl: z
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   // WebAuthn relying party. Validated hard HERE rather than at the ceremony:
   // a credential is bound to the rpId forever, so a typo saved today mints
@@ -59,7 +59,7 @@ const instancePatchSchema = z.object({
     .string()
     .trim()
     .max(253)
-    .refine((v) => v === '' || isValidRpId(v), 'Must be a bare domain — not a URL and not an IP')
+    .refine((v) => v === "" || isValidRpId(v), "Must be a bare domain — not a URL and not an IP")
     .optional(),
   webauthnOrigins: z
     .array(z.string().trim().max(500))
@@ -68,7 +68,7 @@ const instancePatchSchema = z.object({
     .transform((list) => list?.filter((entry) => entry.length > 0))
     .refine(
       (list) => list === undefined || list.every((entry) => /^https?:\/\//.test(entry)),
-      'Each origin must be a valid http(s) URL'
+      "Each origin must be a valid http(s) URL"
     ),
   // Instance-level beta gate. No admin UI on purpose — curl / PAT is the
   // intended way to flip it (ON for RC + Beta servers, OFF for production).
@@ -103,11 +103,11 @@ function passkeyStatusOf(settings: {
   if (reason !== null) return { usable: false, reason };
 
   const rpId = settings.webauthnRpId ?? new URL(primary!).hostname;
-  if (!isValidRpId(rpId)) return { usable: false, reason: 'invalidRpId' };
+  if (!isValidRpId(rpId)) return { usable: false, reason: "invalidRpId" };
   return { usable: true, reason: null };
 }
 
-router.get('/instance-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/instance-settings", async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const settings = await getInstanceSettings();
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });
@@ -116,7 +116,7 @@ router.get('/instance-settings', async (_req: AuthRequest, res: Response, next: 
   }
 });
 
-router.put('/instance-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/instance-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const patch = instancePatchSchema.parse(req.body);
     const settings = await updateInstanceSettings({
@@ -124,22 +124,22 @@ router.put('/instance-settings', async (req: AuthRequest, res: Response, next: N
       ...(patch.maxUsers !== undefined && { maxUsers: patch.maxUsers }),
       ...(patch.allowRegistration !== undefined && { allowRegistration: patch.allowRegistration }),
       ...(patch.frontendUrl !== undefined && {
-        frontendUrl: patch.frontendUrl === '' ? null : patch.frontendUrl,
+        frontendUrl: patch.frontendUrl === "" ? null : patch.frontendUrl,
       }),
       ...(patch.publicUrl !== undefined && {
-        publicUrl: patch.publicUrl === '' ? null : patch.publicUrl,
+        publicUrl: patch.publicUrl === "" ? null : patch.publicUrl,
       }),
       ...(patch.lanUrl !== undefined && {
-        lanUrl: patch.lanUrl === '' ? null : patch.lanUrl,
+        lanUrl: patch.lanUrl === "" ? null : patch.lanUrl,
       }),
       ...(patch.photonUrl !== undefined && {
-        photonUrl: patch.photonUrl === '' ? null : patch.photonUrl,
+        photonUrl: patch.photonUrl === "" ? null : patch.photonUrl,
       }),
       ...(patch.nominatimUrl !== undefined && {
-        nominatimUrl: patch.nominatimUrl === '' ? null : patch.nominatimUrl,
+        nominatimUrl: patch.nominatimUrl === "" ? null : patch.nominatimUrl,
       }),
       ...(patch.webauthnRpId !== undefined && {
-        webauthnRpId: patch.webauthnRpId === '' ? null : patch.webauthnRpId,
+        webauthnRpId: patch.webauthnRpId === "" ? null : patch.webauthnRpId,
       }),
       ...(patch.webauthnOrigins !== undefined && {
         webauthnOrigins: patch.webauthnOrigins,
@@ -165,14 +165,14 @@ const webdavPatchSchema = z.object({
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
     .optional(),
   username: z.string().trim().max(200).optional(),
   password: z.string().max(500).optional(),
   backupPath: z.string().trim().max(200).optional(),
 });
 
-router.get('/webdav-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/webdav-settings", async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const settings = await getWebDAVSettings();
     // Never leak the password back — return a boolean marker instead.
@@ -190,14 +190,14 @@ router.get('/webdav-settings', async (_req: AuthRequest, res: Response, next: Ne
   }
 });
 
-router.put('/webdav-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/webdav-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const patch = webdavPatchSchema.parse(req.body);
     const settings = await updateWebDAVSettings({
       ...(patch.enabled !== undefined && { enabled: patch.enabled }),
-      ...(patch.url !== undefined && { url: patch.url === '' ? null : patch.url }),
+      ...(patch.url !== undefined && { url: patch.url === "" ? null : patch.url }),
       ...(patch.username !== undefined && {
-        username: patch.username === '' ? null : patch.username,
+        username: patch.username === "" ? null : patch.username,
       }),
       ...(patch.password !== undefined && { password: patch.password }),
       ...(patch.backupPath !== undefined && { backupPath: patch.backupPath }),
@@ -217,19 +217,19 @@ router.put('/webdav-settings', async (req: AuthRequest, res: Response, next: Nex
 });
 
 router.post(
-  '/webdav-settings/test',
+  "/webdav-settings/test",
   async (_req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { enabled } = await getWebDAVSettings();
       if (!enabled) {
-        throw new AppError('WebDAV sync is disabled', 400);
+        throw new AppError("WebDAV sync is disabled", 400);
       }
       const result = await testWebDAVConnection();
       res.json(result);
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

@@ -18,8 +18,8 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "completed", checkIn: d("2026-08-10"), checkOut: d("2026-08-12") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("visited");
   });
 
@@ -27,8 +27,8 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "scheduled", checkIn: d("2026-09-01"), checkOut: d("2026-09-05") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("planned");
   });
 
@@ -36,8 +36,8 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "completed", checkIn: d("2026-08-14"), checkOut: d("2026-08-20") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("planned");
   });
 
@@ -45,8 +45,8 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "cancelled", checkIn: d("2020-01-01"), checkOut: d("2020-01-05") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("excluded");
   });
 
@@ -57,8 +57,8 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "scheduled", checkIn: d("2024-03-01"), checkOut: d("2024-03-04") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("visited");
   });
 
@@ -66,14 +66,14 @@ describe("classifyStay", () => {
     expect(
       classifyStay(
         { status: "completed", checkIn: d("2026-08-14"), checkOut: d("2026-08-14") },
-        NOW,
-      ),
+        NOW
+      )
     ).toBe<LodgingCountState>("visited");
   });
 
   it("falls back to planned for a dateless stay rather than inventing a visit", () => {
     expect(
-      classifyStay({ status: "scheduled", checkIn: null, checkOut: null }, NOW),
+      classifyStay({ status: "scheduled", checkIn: null, checkOut: null }, NOW)
     ).toBe<LodgingCountState>("planned");
   });
 });
@@ -85,13 +85,13 @@ describe("classifyLodging", () => {
 
   it("counts a house with a finished stay as visited", () => {
     expect(classifyLodging({ visited: true }, ["planned", "visited"])).toBe<LodgingCountState>(
-      "visited",
+      "visited"
     );
   });
 
   it("counts a house whose only stays lie ahead as planned", () => {
     expect(classifyLodging({ visited: true }, ["planned", "planned"])).toBe<LodgingCountState>(
-      "planned",
+      "planned"
     );
   });
 
@@ -105,7 +105,7 @@ describe("classifyLodging", () => {
     // a booking proved a visit.
     expect(classifyLodging({ visited: true }, ["excluded"])).toBe<LodgingCountState>("excluded");
     expect(classifyLodging({ visited: true }, ["excluded", "excluded"])).toBe<LodgingCountState>(
-      "excluded",
+      "excluded"
     );
   });
 
@@ -119,13 +119,13 @@ describe("classifyLodging", () => {
 
   it("still counts a house with one cancelled stay and one finished one", () => {
     expect(classifyLodging({ visited: true }, ["excluded", "visited"])).toBe<LodgingCountState>(
-      "visited",
+      "visited"
     );
   });
 
   it("still plans a house with one cancelled stay and one booking ahead", () => {
     expect(classifyLodging({ visited: true }, ["excluded", "planned"])).toBe<LodgingCountState>(
-      "planned",
+      "planned"
     );
   });
 });

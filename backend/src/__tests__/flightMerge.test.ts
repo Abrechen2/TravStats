@@ -107,7 +107,7 @@ describe("buildFlightMergePatch", () => {
       bookingReference: "ABC123",
     });
     expect(mergedFields).toEqual(
-      expect.arrayContaining(["seatNumber", "gate", "terminal", "bookingReference"]),
+      expect.arrayContaining(["seatNumber", "gate", "terminal", "bookingReference"])
     );
   });
 
@@ -221,9 +221,7 @@ describe("buildFlightMergePatch", () => {
     expect(patch.tags).toEqual(["business"]);
     expect(patch.companions).toEqual(["Alice"]);
     expect(patch.coPassengers).toEqual(["Bob Smith"]);
-    expect(mergedFields).toEqual(
-      expect.arrayContaining(["tags", "companions", "coPassengers"]),
-    );
+    expect(mergedFields).toEqual(expect.arrayContaining(["tags", "companions", "coPassengers"]));
   });
 
   it("never overwrites a non-empty existing array", () => {

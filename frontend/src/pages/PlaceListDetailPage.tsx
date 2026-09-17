@@ -484,9 +484,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                         : { color: "var(--text-muted)", border: "1px dashed var(--color-border)" }
                     }
                   >
-                    {p.visited
-                      ? t("places:list.status.visited")
-                      : t("places:list.status.wishlist")}
+                    {p.visited ? t("places:list.status.visited") : t("places:list.status.wishlist")}
                   </span>
                   <button
                     type="button"

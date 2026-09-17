@@ -34,7 +34,7 @@ describe("resolveStayTiming", () => {
 
   it("uses the explicit count when there are no dates at all", () => {
     const t = resolveStayTiming(
-      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: 3 }),
+      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: 3 })
     );
     expect(t.precision).toBe("NONE");
     expect(t.nights).toBe(3);
@@ -49,7 +49,7 @@ describe("resolveStayTiming", () => {
     // Both report 0 nights, and an average over the second is a different
     // claim from an average over the first.
     const unknown = resolveStayTiming(
-      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: null }),
+      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: null })
     );
     const sameDay = resolveStayTiming(stay({ checkOut: d("2024-05-14") }));
     expect(unknown.nights).toBe(0);
@@ -60,7 +60,7 @@ describe("resolveStayTiming", () => {
 
   it("lets a month-precision stay reach the month bucket but not a day walk", () => {
     const t = resolveStayTiming(
-      stay({ checkIn: d("2011-07-01"), checkOut: null, datePrecision: "MONTH", nights: 5 }),
+      stay({ checkIn: d("2011-07-01"), checkOut: null, datePrecision: "MONTH", nights: 5 })
     );
     expect(t.nights).toBe(5);
     expect(t.walkable).toBe(false);
@@ -72,7 +72,7 @@ describe("resolveStayTiming", () => {
     // Stored as 1 January. Bucketing that by month would report a January
     // holiday the user never took.
     const t = resolveStayTiming(
-      stay({ checkIn: d("2011-01-01"), checkOut: null, datePrecision: "YEAR", nights: 4 }),
+      stay({ checkIn: d("2011-01-01"), checkOut: null, datePrecision: "YEAR", nights: 4 })
     );
     expect(t.canBucketByYear).toBe(true);
     expect(t.canBucketByMonth).toBe(false);
@@ -90,7 +90,7 @@ describe("resolveStayTiming", () => {
     // A row edited to clear its dates without its precision being updated must
     // not go on claiming a precision it cannot back.
     const t = resolveStayTiming(
-      stay({ checkIn: null, checkOut: null, datePrecision: "DAY", nights: 2 }),
+      stay({ checkIn: null, checkOut: null, datePrecision: "DAY", nights: 2 })
     );
     expect(t.precision).toBe("NONE");
     expect(t.anchor).toBeNull();
@@ -104,7 +104,7 @@ describe("resolveStayTiming", () => {
 
   it("ignores a negative explicit night count", () => {
     const t = resolveStayTiming(
-      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: -3 }),
+      stay({ checkIn: null, checkOut: null, datePrecision: "NONE", nights: -3 })
     );
     expect(t.nights).toBe(0);
     expect(t.nightsKnown).toBe(false);

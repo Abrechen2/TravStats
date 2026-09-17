@@ -17,7 +17,9 @@ import { logger } from "../../lib/logger";
 /** Cancelling the OS or password-manager dialog rejects with this. It is a
  *  normal user action, not an error worth showing. */
 function isUserCancellation(error: unknown): boolean {
-  return error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError");
+  return (
+    error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError")
+  );
 }
 
 export default function PasskeySection(): JSX.Element {

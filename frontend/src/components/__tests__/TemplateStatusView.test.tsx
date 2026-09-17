@@ -4,7 +4,8 @@ import TemplateStatusView from "../TemplateStatusView";
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (k: string, opts?: { count?: number }) => (opts?.count !== undefined ? `${k}:${opts.count}` : k),
+    t: (k: string, opts?: { count?: number }) =>
+      opts?.count !== undefined ? `${k}:${opts.count}` : k,
   }),
 }));
 

@@ -29,7 +29,7 @@ function loadSample(nameFragment: string): { subject: string; text: string } {
     .filter((f) => f.includes(nameFragment) && f.endsWith(".msg"));
   if (matches.length > 1) {
     throw new Error(
-      `Fragment "${nameFragment}" matches ${matches.length} samples — make it unique.`,
+      `Fragment "${nameFragment}" matches ${matches.length} samples — make it unique.`
     );
   }
   const file = matches[0];
@@ -236,7 +236,7 @@ describe("Booking.com template parser (synthetic)", () => {
   it("reads the city off '122 Middle Road, Victoria, 188973 Singapur, Singapur' without the postcode", () => {
     const singapore = stacked.replace(
       "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "122 Middle Road, Victoria, 188973 Singapur, Singapur",
+      "122 Middle Road, Victoria, 188973 Singapur, Singapur"
     );
     const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", singapore);
     expect(r?.city).toBe("Singapur");
@@ -248,7 +248,7 @@ describe("Booking.com template parser (synthetic)", () => {
   it("reads the city off 'Seestraße 1, BW 78467 Konstanz, Deutschland' without the state and the code", () => {
     const konstanz = stacked.replace(
       "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "Seestraße 1, BW 78467 Konstanz, Deutschland",
+      "Seestraße 1, BW 78467 Konstanz, Deutschland"
     );
     const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", konstanz);
     expect(r?.city).toBe("Konstanz");
@@ -314,7 +314,7 @@ describe("Booking.com template parser (synthetic)", () => {
   it("still ignores the word Gesamtpreis inside cancellation prose", () => {
     const prose = stacked.replace(
       "Gesamtpreis\n€ 1.234,50",
-      "Bei einer Stornierung zahlen Sie einen Betrag in Höhe des Gesamtpreises.\n€ 1.234,50",
+      "Bei einer Stornierung zahlen Sie einen Betrag in Höhe des Gesamtpreises.\n€ 1.234,50"
     );
     const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", prose);
     expect(r?.totalPrice).toBeNull();
@@ -323,7 +323,7 @@ describe("Booking.com template parser (synthetic)", () => {
   it("reads a postcode that follows the city as its own segment", () => {
     const luxembourg = stacked.replace(
       "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "2, Rue Nicolas Wester, Luxemburg (Stadt), L-5836, Luxemburg",
+      "2, Rue Nicolas Wester, Luxemburg (Stadt), L-5836, Luxemburg"
     );
     const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", luxembourg);
     expect(r?.address).toBe("2, Rue Nicolas Wester");
@@ -333,7 +333,9 @@ describe("Booking.com template parser (synthetic)", () => {
   });
 
   it("returns null for text that is not a Booking.com confirmation", () => {
-    expect(parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")).toBeNull();
+    expect(
+      parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")
+    ).toBeNull();
   });
 
   it("reports a missing total price instead of failing", () => {

@@ -150,7 +150,10 @@ function YearBar({
       >
         {year.year}
       </span>
-      <div className="flex h-5 flex-1 overflow-hidden rounded" style={{ background: "var(--color-border)" }}>
+      <div
+        className="flex h-5 flex-1 overflow-hidden rounded"
+        style={{ background: "var(--color-border)" }}
+      >
         {BUCKETS.map((bucket) => {
           const nights = year[bucket.key];
           if (nights === 0) return null;

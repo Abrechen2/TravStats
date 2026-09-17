@@ -108,7 +108,7 @@ describe("collectFlightState — aggregates", () => {
     ]);
     // 5 pipeline counts
     mockFlightCount
-      .mockResolvedValueOnce(5)  // withNextApiCheck
+      .mockResolvedValueOnce(5) // withNextApiCheck
       .mockResolvedValueOnce(38) // withLiveTracking
       .mockResolvedValueOnce(12) // withActualTimes
       .mockResolvedValueOnce(1); // zombieCandidates
@@ -143,11 +143,11 @@ describe("collectFlightState — aggregates", () => {
     for (const call of mockFlightCount.mock.calls) {
       expect((call[0] as { where: { userId: string } }).where.userId).toBe("u1");
     }
+    expect((mockFlightGroupBy.mock.calls[0][0] as { where: { userId: string } }).where.userId).toBe(
+      "u1"
+    );
     expect(
-      (mockFlightGroupBy.mock.calls[0][0] as { where: { userId: string } }).where.userId,
-    ).toBe("u1");
-    expect(
-      (mockPendingFindCount.mock.calls[0][0] as { where: { userId: string } }).where.userId,
+      (mockPendingFindCount.mock.calls[0][0] as { where: { userId: string } }).where.userId
     ).toBe("u1");
   });
 
@@ -163,8 +163,7 @@ describe("collectFlightState — aggregates", () => {
       where: {
         status: string;
         OR: Array<
-          | { arrivalTime: { not: null; lt: Date } }
-          | { departureTime: { not: null; lt: Date } }
+          { arrivalTime: { not: null; lt: Date } } | { departureTime: { not: null; lt: Date } }
         >;
       };
     };
@@ -172,10 +171,10 @@ describe("collectFlightState — aggregates", () => {
     expect(zombieCall.where.OR).toHaveLength(2);
 
     const arrBranch = zombieCall.where.OR.find(
-      (b): b is { arrivalTime: { not: null; lt: Date } } => "arrivalTime" in b,
+      (b): b is { arrivalTime: { not: null; lt: Date } } => "arrivalTime" in b
     );
     const depBranch = zombieCall.where.OR.find(
-      (b): b is { departureTime: { not: null; lt: Date } } => "departureTime" in b,
+      (b): b is { departureTime: { not: null; lt: Date } } => "departureTime" in b
     );
     expect(arrBranch).toBeDefined();
     expect(depBranch).toBeDefined();

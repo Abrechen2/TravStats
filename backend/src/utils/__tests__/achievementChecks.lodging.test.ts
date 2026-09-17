@@ -50,15 +50,15 @@ describe("checkAchievement — lodging requirement types", () => {
       checkAchievement(
         fakeAchievement({ requirementType: "lodging_nights", requirement: 10 }),
         stats,
-        [],
-      ).isUnlocked,
+        []
+      ).isUnlocked
     ).toBe(true);
     expect(
       checkAchievement(
         fakeAchievement({ requirementType: "lodging_nights", requirement: 50 }),
         stats,
-        [],
-      ).isUnlocked,
+        []
+      ).isUnlocked
     ).toBe(false);
   });
 
@@ -70,15 +70,15 @@ describe("checkAchievement — lodging requirement types", () => {
       checkAchievement(
         fakeAchievement({ requirementType: "fly_and_stay", requirement: 1 }),
         stats,
-        [],
-      ).isUnlocked,
+        []
+      ).isUnlocked
     ).toBe(true);
     expect(
       checkAchievement(
         fakeAchievement({ requirementType: "grand_tour", requirement: 1 }),
         stats,
-        [],
-      ).isUnlocked,
+        []
+      ).isUnlocked
     ).toBe(false);
   });
 
@@ -134,7 +134,7 @@ describe("checkAchievement — lodging requirement types", () => {
           requirement: def.requirement,
         }),
         maxedStats,
-        [],
+        []
       );
       if (!isUnlocked || progress <= 0) {
         untestedTypes.push(`${def.code} (${def.requirementType})`);
@@ -147,9 +147,13 @@ describe("checkAchievement — lodging requirement types", () => {
 
 describe("achievement seed integrity", () => {
   it("has no duplicate codes across partA + partB + partC + partD + partE", () => {
-    const allCodes = [...seedsPartA, ...seedsPartB, ...seedsPartC, ...seedsPartD, ...seedsPartE].map(
-      (a) => a.code,
-    );
+    const allCodes = [
+      ...seedsPartA,
+      ...seedsPartB,
+      ...seedsPartC,
+      ...seedsPartD,
+      ...seedsPartE,
+    ].map((a) => a.code);
     const seen = new Set<string>();
     const duplicates: string[] = [];
     for (const code of allCodes) {

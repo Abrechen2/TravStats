@@ -37,7 +37,7 @@ const PROBE_WINDOW_MS = 60_000;
 
 export async function testDawarichConnection(
   baseUrl: string,
-  apiKey: string,
+  apiKey: string
 ): Promise<DawarichTestResult> {
   let normalized: string;
   try {

@@ -111,7 +111,7 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
 export function localWallClockOf(
   stored: Date,
   timezone: string | null | undefined,
-  semantics: FlightTimeSemantics = "UNKNOWN",
+  semantics: FlightTimeSemantics = "UNKNOWN"
 ): LocalWallClock {
   const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone;
   const { year, month, day, hour } =

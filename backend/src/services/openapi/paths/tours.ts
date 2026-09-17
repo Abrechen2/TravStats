@@ -44,7 +44,7 @@ const legSource = z
       "by the configured routing provider via POST .../route or POST " +
       ".../route-all, phase 3 task 6), and 'track' (a segment adopted from " +
       "a recorded TripRouteTrack via the leg-override endpoint's `track` " +
-      "branch, phase 3b task 5).",
+      "branch, phase 3b task 5)."
   );
 const confidence = z.enum(["low", "medium", "high"]);
 
@@ -84,7 +84,7 @@ const tourRoute = registry.register(
         distanceKm: 305.4,
         drivenKm: 305.4,
       },
-    }),
+    })
 );
 
 const tourStop = registry.register(
@@ -97,7 +97,7 @@ const tourStop = registry.register(
       lon: z.number(),
       routeOrderIdx: z.number().int().describe("0-based position within the section"),
     })
-    .openapi("TourRouteStop"),
+    .openapi("TourRouteStop")
 );
 
 const tourLeg = registry.register(
@@ -133,7 +133,7 @@ const tourLeg = registry.register(
         tollCost: null,
         currency: null,
       },
-    }),
+    })
 );
 
 const tourRouteGeometry = z
@@ -153,7 +153,7 @@ const tourRouteGeometry = z
           distanceKm: z.number(),
           confidence,
         }),
-      }),
+      })
     ),
   })
   .describe(
@@ -162,7 +162,7 @@ const tourRouteGeometry = z
       "stored waypoints; a straight leg emits its two endpoint stops — " +
       "exactly the chord its distanceKm was computed from, so the picture " +
       "and the number never disagree. A section with fewer than two stops " +
-      "has no legs, so `features` comes back empty rather than 404.",
+      "has no legs, so `features` comes back empty rather than 404."
   )
   .openapi("TourRouteGeometry", {
     example: {
@@ -202,24 +202,21 @@ const routeCreateInput = registry.register(
   "TourRouteCreateInput",
   createRouteSchema.openapi("TourRouteCreateInput", {
     example: { name: "Süd-Norwegen", mode: "road", color: "#2563eb" },
-  }),
+  })
 );
 const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
   updateRouteSchema.openapi("TourRouteUpdateInput", {
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
-  }),
+  })
 );
 const assignStopsInput = registry.register(
   "TourRouteStopsInput",
   assignStopsSchema.openapi("TourRouteStopsInput", {
     example: {
-      stopIds: [
-        "d1d1d1d1-1a1a-1a1a-1a1a-1a1a1a1a1a1a",
-        "d2d2d2d2-1a1a-1a1a-1a1a-1a1a1a1a1a1a",
-      ],
+      stopIds: ["d1d1d1d1-1a1a-1a1a-1a1a-1a1a1a1a1a1a", "d2d2d2d2-1a1a-1a1a-1a1a-1a1a1a1a1a1a"],
     },
-  }),
+  })
 );
 const legOverrideInput = registry.register(
   "TourRouteLegOverrideInput",
@@ -239,7 +236,7 @@ const legOverrideInput = registry.register(
         [5.32, 60.39],
       ],
     },
-  }),
+  })
 );
 
 /* ─────────────────────────────── sections ────────────────────────────── */
@@ -274,7 +271,10 @@ registry.registerPath({
     body: { content: { "application/json": { schema: routeCreateInput } } },
   },
   responses: {
-    201: { description: "Created", content: { "application/json": { schema: z.object({ route: tourRoute }) } } },
+    201: {
+      description: "Created",
+      content: { "application/json": { schema: z.object({ route: tourRoute }) } },
+    },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Trip not found", content: errorContent },
   },
@@ -291,7 +291,10 @@ registry.registerPath({
     body: { content: { "application/json": { schema: routeUpdateInput } } },
   },
   responses: {
-    200: { description: "Updated", content: { "application/json": { schema: z.object({ route: tourRoute }) } } },
+    200: {
+      description: "Updated",
+      content: { "application/json": { schema: z.object({ route: tourRoute }) } },
+    },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
   },
@@ -382,9 +385,15 @@ registry.registerPath({
         },
       },
     },
-    400: { description: "Validation failed, or a stop belongs to another section", content: errorContent },
+    400: {
+      description: "Validation failed, or a stop belongs to another section",
+      content: errorContent,
+    },
     404: { description: "Not found", content: errorContent },
-    409: { description: "A stop changed section while this request was in flight", content: errorContent },
+    409: {
+      description: "A stop changed section while this request was in flight",
+      content: errorContent,
+    },
   },
 });
 
@@ -405,7 +414,7 @@ registry.registerPath({
     "segment of an already-uploaded TripRouteTrack that runs between this " +
     "leg's two stops; the SAME 1 km anchor tolerance applies to both of " +
     "the track's nearest points, and a non-covering track 409s rather " +
-    "than silently falling back to a straight chord). `\"routed\"` " +
+    'than silently falling back to a straight chord). `"routed"` ' +
     "geometry comes from the routing provider, not a request body, so " +
     "this endpoint refuses it (400) and names the routing endpoint " +
     "(`POST .../route` / `.../route-all`) instead of silently accepting " +
@@ -416,11 +425,14 @@ registry.registerPath({
     body: { content: { "application/json": { schema: legOverrideInput } } },
   },
   responses: {
-    200: { description: "Leg updated", content: { "application/json": { schema: z.object({ leg: tourLeg }) } } },
+    200: {
+      description: "Leg updated",
+      content: { "application/json": { schema: z.object({ leg: tourLeg }) } },
+    },
     400: {
       description:
         "Validation failed — an unrecognised source (including " +
-        "\"routed\"), a `drawn` leg with fewer than two waypoints, a " +
+        '"routed"), a `drawn` leg with fewer than two waypoints, a ' +
         "`straight` leg carrying waypoints, a `track` leg with no " +
         "`trackId`, or a `drawn`/`straight` line that doesn't anchor to " +
         "the leg's stops",
@@ -428,13 +440,13 @@ registry.registerPath({
     },
     404: {
       description:
-        "Trip, section or leg not found, or (for source: \"track\") the " +
+        'Trip, section or leg not found, or (for source: "track") the ' +
         "trackId doesn't belong to this route",
       content: errorContent,
     },
     409: {
       description:
-        "The leg's stop lost its coordinates, or (for source: \"track\") " +
+        'The leg\'s stop lost its coordinates, or (for source: "track") ' +
         "the track doesn't come within the anchor tolerance of both stops",
       content: errorContent,
     },
@@ -467,18 +479,20 @@ registry.registerPath({
     "where the provider needs one) and stores the result. A ferry or rail " +
     "leg, or a provider answer that does not anchor to the leg's stops or " +
     "looks implausible, still comes back 200 — the leg falls back to its " +
-    "straight chord with `confidence: \"low\"`, an honest result rather " +
+    'straight chord with `confidence: "low"`, an honest result rather ' +
     "than an error. Only a genuinely unconfigured instance (no provider at " +
     "all) is refused, and with 409 rather than 400 — the request itself is " +
     "fine, the instance just cannot answer it.",
   tags: ["Tours"],
   request: { params: legParams },
   responses: {
-    200: { description: "Leg routed (or honestly left as a straight chord)", content: { "application/json": { schema: z.object({ leg: tourLeg }) } } },
+    200: {
+      description: "Leg routed (or honestly left as a straight chord)",
+      content: { "application/json": { schema: z.object({ leg: tourLeg }) } },
+    },
     404: { description: "Trip, section or leg not found", content: errorContent },
     409: {
-      description:
-        "The leg's stop lost its coordinates, or no routing provider is configured",
+      description: "The leg's stop lost its coordinates, or no routing provider is configured",
       content: errorContent,
     },
   },
@@ -530,7 +544,10 @@ registry.registerPath({
   tags: ["Tours"],
   request: { params: routeIdParams },
   responses: {
-    200: { description: "Route geometry", content: { "application/json": { schema: tourRouteGeometry } } },
+    200: {
+      description: "Route geometry",
+      content: { "application/json": { schema: tourRouteGeometry } },
+    },
     404: { description: "Trip or section not found", content: errorContent },
   },
 });
@@ -542,7 +559,7 @@ const trackSource = z
   .describe(
     "How the track was captured. 'gpx' (task 4) — a user-uploaded GPX " +
       "file. 'dawarich' (task 7) — pulled from a self-hosted Dawarich " +
-      "instance via POST .../tracks/dawarich.",
+      "instance via POST .../tracks/dawarich."
   );
 
 const pullDawarichTrackInput = registry.register(
@@ -553,7 +570,7 @@ const pullDawarichTrackInput = registry.register(
       "own date span, derived from its stops' dates, so an empty body " +
       "pulls exactly the section's own window.",
     example: {},
-  }),
+  })
 );
 
 const tourRouteTrackMeta = registry.register(
@@ -566,8 +583,13 @@ const tourRouteTrackMeta = registry.register(
       name: z.string().nullable(),
       startedAt: z.string().datetime(),
       endedAt: z.string().datetime(),
-      pointCount: z.number().int().describe("Point count of the RAW recording, before simplification"),
-      distanceKm: z.number().describe("Distance measured on the RAW recording, before simplification"),
+      pointCount: z
+        .number()
+        .int()
+        .describe("Point count of the RAW recording, before simplification"),
+      distanceKm: z
+        .number()
+        .describe("Distance measured on the RAW recording, before simplification"),
       truncated: z
         .boolean()
         .describe(
@@ -577,7 +599,7 @@ const tourRouteTrackMeta = registry.register(
             "measured newest-first ordering — never the whole span asked for. " +
             "distanceKm above is therefore a PARTIAL measurement, not the " +
             "complete one it would otherwise look like. Always false for " +
-            "source: \"gpx\", which refuses an oversized file outright instead " +
+            'source: "gpx", which refuses an oversized file outright instead ' +
             "of ever storing a silently-shortened one."
         ),
       createdAt: z.string().datetime(),
@@ -595,7 +617,7 @@ const tourRouteTrackMeta = registry.register(
         truncated: false,
         createdAt: "2026-06-02T09:00:00.000Z",
       },
-    }),
+    })
 );
 
 const tourRouteTrack = registry.register(
@@ -606,7 +628,7 @@ const tourRouteTrack = registry.register(
         .array(z.tuple([z.number(), z.number()]))
         .describe("[[lon, lat], …], simplified on import — see pointCount for the raw count"),
     })
-    .openapi("TourRouteTrack"),
+    .openapi("TourRouteTrack")
 );
 
 const trackParams = z.object({
@@ -654,7 +676,7 @@ registry.registerPath({
     "derived from its stops — the common case is one click; either side " +
     "of the window can be overridden explicitly. Every failure is a 409, " +
     "never a 500 or a silently-stored empty track: no connection " +
-    "configured answers `{error: \"notConfigured\"}`; an upstream Dawarich " +
+    'configured answers `{error: "notConfigured"}`; an upstream Dawarich ' +
     "failure answers `{error: <kind>}` using the same fixed kind " +
     "vocabulary as POST /settings/dawarich/test (unreachable, auth, " +
     "notFound, protocol, invalidUrl); a window with no points answers a " +
@@ -670,14 +692,12 @@ registry.registerPath({
       content: { "application/json": { schema: z.object({ track: tourRouteTrack }) } },
     },
     400: {
-      description:
-        "Invalid body, or no explicit window AND no dated stops to derive one from",
+      description: "Invalid body, or no explicit window AND no dated stops to derive one from",
       content: errorContent,
     },
     404: { description: "Trip or section not found", content: errorContent },
     409: {
-      description:
-        "Not configured, an upstream Dawarich failure (with a kind), or an empty window",
+      description: "Not configured, an upstream Dawarich failure (with a kind), or an empty window",
       content: errorContent,
     },
   },
@@ -697,7 +717,9 @@ registry.registerPath({
   responses: {
     200: {
       description: "Tracks, oldest first",
-      content: { "application/json": { schema: z.object({ tracks: z.array(tourRouteTrackMeta) }) } },
+      content: {
+        "application/json": { schema: z.object({ tracks: z.array(tourRouteTrackMeta) }) },
+      },
     },
     404: { description: "Trip or section not found", content: errorContent },
   },

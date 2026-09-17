@@ -50,9 +50,9 @@ describe("deriveLodgingStatus (frontend mirror)", () => {
   });
 
   it("counts a stay as completed the moment check-out is reached, not after it", () => {
-    expect(deriveLodgingStatus({ checkIn: past(48), checkOut: now, current: "scheduled", now })).toBe(
-      "completed"
-    );
+    expect(
+      deriveLodgingStatus({ checkIn: past(48), checkOut: now, current: "scheduled", now })
+    ).toBe("completed");
   });
 
   it("a same-day stay is never in_progress once its date has arrived", () => {
@@ -83,10 +83,20 @@ describe("deriveFlightStatus (mirror of the backend rules)", () => {
 
   it("arrival more than 6h past -> flown; within slack -> scheduled", () => {
     expect(
-      deriveFlightStatus({ departureTime: past(9), arrivalTime: past(7), current: "scheduled", now })
+      deriveFlightStatus({
+        departureTime: past(9),
+        arrivalTime: past(7),
+        current: "scheduled",
+        now,
+      })
     ).toBe("flown");
     expect(
-      deriveFlightStatus({ departureTime: past(7), arrivalTime: past(5), current: "scheduled", now })
+      deriveFlightStatus({
+        departureTime: past(7),
+        arrivalTime: past(5),
+        current: "scheduled",
+        now,
+      })
     ).toBe("scheduled");
   });
 

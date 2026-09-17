@@ -1,13 +1,14 @@
 import { describe, it, expect, jest, beforeAll, afterAll } from "@jest/globals";
 
-const parseBookingEmail = jest.fn<
-  (
-    subject?: string,
-    text?: string,
-    html?: string,
-    settings?: { userId?: string; referenceDate?: Date },
-  ) => Promise<unknown>
->();
+const parseBookingEmail =
+  jest.fn<
+    (
+      subject?: string,
+      text?: string,
+      html?: string,
+      settings?: { userId?: string; referenceDate?: Date }
+    ) => Promise<unknown>
+  >();
 
 jest.mock("../../services/bookingParser", () => ({
   parseBookingEmail: (...args: unknown[]) =>
@@ -175,5 +176,4 @@ describe("POST /api/v1/parse-email — the email's own date", () => {
     const settings = parseBookingEmail.mock.calls[0]?.[3];
     expect(settings?.referenceDate?.toISOString().slice(0, 10)).toBe("2023-08-26");
   });
-
 });

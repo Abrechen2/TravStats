@@ -152,7 +152,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

@@ -172,9 +172,7 @@ export default function ReceiptUpload({
                   {t("flights:receipt.dragAndDrop")}
                 </p>
               </div>
-              <p className="text-xs text-(--text-muted) mt-2">
-                {t("flights:receipt.fileFormats")}
-              </p>
+              <p className="text-xs text-(--text-muted) mt-2">{t("flights:receipt.fileFormats")}</p>
             </>
           )}
         </div>

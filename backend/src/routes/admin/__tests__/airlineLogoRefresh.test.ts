@@ -1,4 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import request from "supertest";
 import app from "../../../index";
 import { prisma } from "../../../db";
@@ -80,7 +89,9 @@ describe("POST /api/v1/admin/airline-logos/refresh", () => {
 
   it("starts a sweep and returns immediately", async () => {
     const adminCookie = await createAdminCookie();
-    const spy = jest.spyOn(scheduler, "sweepStaleLogos").mockResolvedValue({ checked: 5, refreshed: 2 });
+    const spy = jest
+      .spyOn(scheduler, "sweepStaleLogos")
+      .mockResolvedValue({ checked: 5, refreshed: 2 });
     await request(app)
       .post("/api/v1/admin/airline-logos/refresh")
       .set("Cookie", adminCookie)
@@ -91,8 +102,14 @@ describe("POST /api/v1/admin/airline-logos/refresh", () => {
   it("refuses a second sweep while one is running", async () => {
     const adminCookie = await createAdminCookie();
     jest.spyOn(scheduler, "sweepStaleLogos").mockImplementation(() => neverResolves());
-    await request(app).post("/api/v1/admin/airline-logos/refresh").set("Cookie", adminCookie).expect(202);
-    await request(app).post("/api/v1/admin/airline-logos/refresh").set("Cookie", adminCookie).expect(409);
+    await request(app)
+      .post("/api/v1/admin/airline-logos/refresh")
+      .set("Cookie", adminCookie)
+      .expect(202);
+    await request(app)
+      .post("/api/v1/admin/airline-logos/refresh")
+      .set("Cookie", adminCookie)
+      .expect(409);
   });
 
   it("reports the last result", async () => {

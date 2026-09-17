@@ -553,7 +553,15 @@ describe("the evidence beside the tier", () => {
     // THE RULE. A house bounds no departure, so there is no ground time to
     // read; a zero would be a measurement nobody made, and it would drag every
     // average that ever touches this field down.
-    const p = buildPassport([], AIRPORTS, [], NOW, [], [], [house("CZ", [dated("2019-08-01", "2019-08-04")])]);
+    const p = buildPassport(
+      [],
+      AIRPORTS,
+      [],
+      NOW,
+      [],
+      [],
+      [house("CZ", [dated("2019-08-01", "2019-08-04")])]
+    );
 
     const cz = p.countries.find((c) => c.code === "CZ");
     expect(cz?.groundTime).toEqual({ state: "notApplicable" });
@@ -582,7 +590,15 @@ describe("the evidence beside the tier", () => {
     // Why the design prefers days to hours: a day exists for a house, a port
     // call and a flight pair alike. Four days present, three nights slept —
     // this answers the first question, which is the one the tier is judged on.
-    const p = buildPassport([], AIRPORTS, [], NOW, [], [], [house("CZ", [dated("2019-08-01", "2019-08-04")])]);
+    const p = buildPassport(
+      [],
+      AIRPORTS,
+      [],
+      NOW,
+      [],
+      [],
+      [house("CZ", [dated("2019-08-01", "2019-08-04")])]
+    );
 
     expect(p.countries.find((c) => c.code === "CZ")?.daysPresent).toBe(4);
   });

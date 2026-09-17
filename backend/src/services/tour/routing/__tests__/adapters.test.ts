@@ -81,7 +81,10 @@ describe("createOpenRouteService", () => {
 
   it("never puts the API key in the URL or body", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-    const provider = createOpenRouteService("super-secret-key", fetchImpl as unknown as typeof fetch);
+    const provider = createOpenRouteService(
+      "super-secret-key",
+      fetchImpl as unknown as typeof fetch
+    );
 
     await provider.route(roadRequest());
 
@@ -89,7 +92,7 @@ describe("createOpenRouteService", () => {
     expect(String(url)).not.toContain("super-secret-key");
     expect((init as RequestInit).body as string).not.toContain("super-secret-key");
     expect((init as RequestInit).headers).toEqual(
-      expect.objectContaining({ Authorization: "super-secret-key" }),
+      expect.objectContaining({ Authorization: "super-secret-key" })
     );
   });
 
@@ -254,7 +257,10 @@ describe("createCustomOsrm", () => {
 
   it("decodes a successful response into waypoints/distanceKm/drivingMinutes", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000",
+      fetchImpl as unknown as typeof fetch
+    );
 
     const result = await provider.route(roadRequest());
 
@@ -270,7 +276,10 @@ describe("createCustomOsrm", () => {
 
   it("builds the OSRM URL shape with the mapped profile and no key", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm("http://osrm.local:5000/", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000/",
+      fetchImpl as unknown as typeof fetch
+    );
 
     await provider.route(roadRequest());
 
@@ -278,7 +287,7 @@ describe("createCustomOsrm", () => {
     // Literal — "car" matches OSRM's own out-of-the-box car.lua profile
     // filename convention, not a value imported back from the adapter.
     expect(String(url)).toBe(
-      `http://osrm.local:5000/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?geometries=geojson&overview=full`,
+      `http://osrm.local:5000/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?geometries=geojson&overview=full`
     );
   });
 
@@ -286,20 +295,23 @@ describe("createCustomOsrm", () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
     const provider = createCustomOsrm(
       "http://osrm.local:5000/proxy?token=abc123",
-      fetchImpl as unknown as typeof fetch,
+      fetchImpl as unknown as typeof fetch
     );
 
     await provider.route(roadRequest());
 
     const [url] = fetchImpl.mock.calls[0];
     expect(String(url)).toBe(
-      `http://osrm.local:5000/proxy/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?token=abc123&geometries=geojson&overview=full`,
+      `http://osrm.local:5000/proxy/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?token=abc123&geometries=geojson&overview=full`
     );
   });
 
   it("returns null on a non-200 response", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(400, { code: "InvalidQuery" }));
-    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000",
+      fetchImpl as unknown as typeof fetch
+    );
 
     const result = await provider.route(roadRequest());
 
@@ -308,7 +320,10 @@ describe("createCustomOsrm", () => {
 
   it("returns null on a 200 with a malformed body", async () => {
     const fetchImpl = jest.fn(async () => malformedResponse(200));
-    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000",
+      fetchImpl as unknown as typeof fetch
+    );
 
     const result = await provider.route(roadRequest());
 
@@ -317,7 +332,10 @@ describe("createCustomOsrm", () => {
 
   it("returns null on a 200 with a well-formed but wrong-shaped body", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, { routes: [] }));
-    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000",
+      fetchImpl as unknown as typeof fetch
+    );
 
     const result = await provider.route(roadRequest());
 
@@ -326,7 +344,10 @@ describe("createCustomOsrm", () => {
 
   it("returns null for a non-routable mode without calling fetch", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl as unknown as typeof fetch);
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000",
+      fetchImpl as unknown as typeof fetch
+    );
 
     const result = await provider.route({ from: FROM, to: TO, mode: "rail" });
 

@@ -81,10 +81,7 @@ function isOsrmResponse(value: unknown): value is OsrmResponse {
   return true;
 }
 
-export function createCustomOsrm(
-  baseUrl: string,
-  fetchImpl: typeof fetch = fetch,
-): RouteProvider {
+export function createCustomOsrm(baseUrl: string, fetchImpl: typeof fetch = fetch): RouteProvider {
   // Parsed eagerly: a baseUrl that isn't a valid absolute URL fails clearly
   // and immediately at configuration time (URL's own descriptive error),
   // rather than producing a silently-broken request string on the first
@@ -118,7 +115,7 @@ export function createCustomOsrm(
       } catch (err) {
         logger.warn(
           { provider: "custom", error: err instanceof Error ? err.message : String(err) },
-          "custom OSRM request failed",
+          "custom OSRM request failed"
         );
         return null;
       }
@@ -126,7 +123,7 @@ export function createCustomOsrm(
       if (!response.ok) {
         logger.warn(
           { provider: "custom", status: response.status },
-          "custom OSRM returned a non-200 response",
+          "custom OSRM returned a non-200 response"
         );
         return null;
       }
@@ -137,7 +134,7 @@ export function createCustomOsrm(
       } catch (_err) {
         logger.warn(
           { provider: "custom", status: response.status },
-          "custom OSRM response body was not valid JSON",
+          "custom OSRM response body was not valid JSON"
         );
         return null;
       }
@@ -145,7 +142,7 @@ export function createCustomOsrm(
       if (!isOsrmResponse(body)) {
         logger.warn(
           { provider: "custom", status: response.status },
-          "custom OSRM response did not match the expected shape",
+          "custom OSRM response did not match the expected shape"
         );
         return null;
       }

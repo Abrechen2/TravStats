@@ -11,7 +11,10 @@ const maccis = { labelMode: "icon" as const, icon: "🍟" };
 const hotels = { labelMode: "name" as const, icon: "🏨" };
 const plain = { labelMode: "name" as const, icon: null };
 
-function label(source: PlaceLabelSource, list: { labelMode: "name" | "icon"; icon: string | null } | null) {
+function label(
+  source: PlaceLabelSource,
+  list: { labelMode: "name" | "icon"; icon: string | null } | null
+) {
   return resolvePlaceLabel({ source, list });
 }
 

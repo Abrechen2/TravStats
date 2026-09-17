@@ -57,7 +57,14 @@ describe("Place visit photos API", () => {
     await prisma.place.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
 
     const place = await prisma.place.create({
-      data: { userId, name: "Kolosseum", category: "landmark", lat: 41.89, lon: 12.49, visited: true },
+      data: {
+        userId,
+        name: "Kolosseum",
+        category: "landmark",
+        lat: 41.89,
+        lon: 12.49,
+        visited: true,
+      },
     });
     visitId = (
       await prisma.placeVisit.create({
@@ -248,5 +255,4 @@ describe("Place visit photos API", () => {
       expect(rows[0].checksum).not.toBeNull();
     });
   });
-
 });

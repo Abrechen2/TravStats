@@ -36,8 +36,7 @@ export type LodgingImportRowFailureCode =
 const FAILURE_MESSAGES: Record<LodgingImportRowFailureCode, string> = {
   ownership_mismatch: "This lodging does not belong to your account.",
   missing_lodging_reference: "This row has no lodging to create or attach to.",
-  unexpected_error:
-    "This row could not be imported due to an unexpected error.",
+  unexpected_error: "This row could not be imported due to an unexpected error.",
 };
 
 /** Thrown when a client-supplied `matchedLodgingId` fails the ownership check. */
@@ -58,8 +57,7 @@ class MissingLodgingReferenceError extends Error {
 
 function classifyFailure(err: unknown): LodgingImportRowFailureCode {
   if (err instanceof OwnershipMismatchError) return "ownership_mismatch";
-  if (err instanceof MissingLodgingReferenceError)
-    return "missing_lodging_reference";
+  if (err instanceof MissingLodgingReferenceError) return "missing_lodging_reference";
   return "unexpected_error";
 }
 
@@ -78,10 +76,7 @@ export interface CommitResult {
 const UNIQUE_VIOLATION = "P2002";
 
 function isUniqueViolation(err: unknown): boolean {
-  return (
-    err instanceof Prisma.PrismaClientKnownRequestError &&
-    err.code === UNIQUE_VIOLATION
-  );
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === UNIQUE_VIOLATION;
 }
 
 /** A hotel-local calendar day widened to the UTC-midnight instant the column stores. */
@@ -100,7 +95,7 @@ function toDate(day: string): Date {
  */
 async function resolveChainId(
   chainName: string | null | undefined,
-  allowCreate: boolean,
+  allowCreate: boolean
 ): Promise<number | null> {
   const name = chainName?.trim();
   if (!name) return null;
@@ -133,7 +128,7 @@ async function resolveChainId(
 async function createLodging(
   userId: string,
   batchId: string,
-  fields: LodgingCandidateFields,
+  fields: LodgingCandidateFields
 ): Promise<string> {
   const chainId = await resolveChainId(fields.chainName, fields.createChain === true);
   const lodging = await prisma.lodging.create({
@@ -184,12 +179,11 @@ function fxOutcomeKey(currency: string, checkInDay: string): string {
  */
 async function resolveFxOutcomes(
   rows: readonly CommitRowInput[],
-  baseCurrency: string,
+  baseCurrency: string
 ): Promise<Map<string, FxSnapshotOutcome>> {
   const outcomes = new Map<string, FxSnapshotOutcome>();
   for (const row of rows) {
-    if (row.action === "skip" || !row.stay || row.stay.totalPrice == null)
-      continue;
+    if (row.action === "skip" || !row.stay || row.stay.totalPrice == null) continue;
     // A priced row with no currency has nothing to look up — `applyFxSnapshot`
     // would answer `missingCurrency` anyway, and defaulting to EUR here would
     // burn a real lookup on a guess.
@@ -212,7 +206,7 @@ async function resolveFxOutcomes(
           currency,
           checkIn: toDate(row.stay.checkIn),
         },
-        baseCurrency,
+        baseCurrency
       );
       outcomes.set(key, outcome);
     } catch (err) {
@@ -223,7 +217,7 @@ async function resolveFxOutcomes(
           checkInDay: row.stay.checkIn,
           message: err instanceof Error ? err.message : String(err),
         },
-        "FX pre-resolve lookup threw unexpectedly — degrading this pair to lookupFailed",
+        "FX pre-resolve lookup threw unexpectedly — degrading this pair to lookupFailed"
       );
       outcomes.set(key, { status: "lookupFailed" });
     }
@@ -245,7 +239,7 @@ async function resolveFxOutcomes(
 function fxOutcomeForStay(
   fields: StayCandidateFields,
   outcomes: ReadonlyMap<string, FxSnapshotOutcome>,
-  baseCurrency: string,
+  baseCurrency: string
 ): FxSnapshotOutcome {
   if (fields.totalPrice == null) return { status: "priceRemoved" };
   if (!fields.currency) return { status: "missingCurrency" };
@@ -273,7 +267,7 @@ async function createStay(
   lodgingId: string,
   fields: StayCandidateFields,
   fxOutcome: FxSnapshotOutcome,
-  sourceRowIndex: number,
+  sourceRowIndex: number
 ): Promise<void> {
   const checkIn = toDate(fields.checkIn);
 
@@ -400,7 +394,7 @@ export async function commitLodgingImport(
   userId: string,
   source: LodgingImportSource,
   fileName: string | null,
-  rows: CommitRowInput[],
+  rows: CommitRowInput[]
 ): Promise<CommitResult> {
   const batch = await prisma.importBatch.create({
     data: { userId, domain: "lodging", source, fileName },
@@ -538,7 +532,7 @@ export async function commitLodgingImport(
           code,
           message: detail,
         },
-        "Lodging import row failed — batch continues",
+        "Lodging import row failed — batch continues"
       );
       // The client only ever sees the stable, generic message for `code` —
       // this response is a 201 success body, so the error handler's leak
@@ -562,7 +556,7 @@ export async function commitLodgingImport(
       skipped,
       failedCount: failed.length,
     },
-    "Lodging import committed",
+    "Lodging import committed"
   );
 
   return { batchId: batch.id, createdLodgings, createdStays, skipped, failed };

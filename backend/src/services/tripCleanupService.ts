@@ -26,11 +26,7 @@ import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
-import {
-  mergeImmichAlbums,
-  mergeTripPhotos,
-  retargetCoverUrl,
-} from "./trip/mergeTripRelations";
+import { mergeImmichAlbums, mergeTripPhotos, retargetCoverUrl } from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -293,7 +289,7 @@ export async function mergeTrips(
           target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
           sourceIds,
           targetId,
-          mergedPhotos.survivorFor,
+          mergedPhotos.survivorFor
         ),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]

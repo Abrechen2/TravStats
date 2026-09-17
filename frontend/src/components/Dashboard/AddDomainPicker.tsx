@@ -75,7 +75,12 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
                   setOpen(false);
                 }}
                 className="w-full cursor-pointer text-left text-[13px] transition-colors hover:bg-white/5"
-                style={{ padding: "8px 14px", background: "transparent", color: TEXT, border: "none" }}
+                style={{
+                  padding: "8px 14px",
+                  background: "transparent",
+                  color: TEXT,
+                  border: "none",
+                }}
               >
                 {opt.label}
               </button>

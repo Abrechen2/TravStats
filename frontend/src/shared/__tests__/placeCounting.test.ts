@@ -71,6 +71,8 @@ describe("the totals are unmoved by the new state", () => {
   });
 
   it("counts only visits that happened", () => {
-    expect(countCompletedVisits([{ visitedAt: PAST }, { visitedAt: FUTURE }, { visitedAt: null }])).toBe(2);
+    expect(
+      countCompletedVisits([{ visitedAt: PAST }, { visitedAt: FUTURE }, { visitedAt: null }])
+    ).toBe(2);
   });
 });

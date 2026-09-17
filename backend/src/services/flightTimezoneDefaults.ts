@@ -83,7 +83,7 @@ export async function withAirportTimezones<T>(rawBody: T): Promise<T> {
     zones = new Map(
       [...airports.entries()]
         .filter(([, data]) => Boolean(data?.timezone))
-        .map(([code, data]) => [code, data.timezone as string]),
+        .map(([code, data]) => [code, data.timezone as string])
     );
   } catch {
     // Catalogue unreachable: fill nothing in, and let the schema say what is

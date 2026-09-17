@@ -42,7 +42,7 @@ function openSkyCalls(): { url: string; headers: Record<string, string> }[] {
   return mockedAxios.get.mock.calls
     .map((c) => ({
       url: String(c[0]),
-      headers: ((c[1] as { headers?: Record<string, string> })?.headers ?? {}),
+      headers: (c[1] as { headers?: Record<string, string> })?.headers ?? {},
     }))
     .filter((c) => c.url.includes("opensky"));
 }

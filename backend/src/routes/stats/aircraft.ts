@@ -11,12 +11,12 @@
  * rest of that router (docs/adr/0001-api-response-shape.md).
  */
 
-import { Router, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
+import { Router, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 
-import { prisma } from '../../db';
-import { AuthRequest } from '../../middleware/auth';
-import { countableFlightWhere } from '../../shared/flightCounting';
+import { prisma } from "../../db";
+import { AuthRequest } from "../../middleware/auth";
+import { countableFlightWhere } from "../../shared/flightCounting";
 // The response shapes live in `schemas/statsAircraft` and this file infers
 // from them, so the spec and the handler cannot describe different things
 // (forgejo#52).
@@ -27,8 +27,8 @@ import type {
   AircraftRankingResponse,
   AircraftProfileResponse,
   AircraftProfileFlight,
-} from '../../schemas/statsAircraft';
-import { calculateDistance } from '../../utils/geo';
+} from "../../schemas/statsAircraft";
+import { calculateDistance } from "../../utils/geo";
 
 const router = Router();
 
@@ -41,7 +41,7 @@ const router = Router();
 // therefore that endpoint's flown + historical scope; flights with no
 // `aircraft` value produce no row, so percentages need not sum to 100.
 router.get(
-  '/aircraft-types',
+  "/aircraft-types",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -50,7 +50,7 @@ router.get(
       const [total, typeCounts] = await Promise.all([
         prisma.flight.count({ where }),
         prisma.flight.groupBy({
-          by: ['aircraft'],
+          by: ["aircraft"],
           where: { ...where, aircraft: { not: null } },
           _count: true,
         }),
@@ -60,8 +60,7 @@ router.get(
         .map((row) => ({
           aircraft: row.aircraft!,
           count: row._count,
-          percentage:
-            total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
+          percentage: total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
         }))
         .sort((a, b) => b.count - a.count);
 
@@ -70,7 +69,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
@@ -80,7 +79,7 @@ router.get(
 // AeroDataBox-enriched rows. The per-user index on
 // (user_id, aircraft_registration) makes this cheap.
 router.get(
-  '/aircraft',
+  "/aircraft",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -140,20 +139,20 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // GET /api/v1/stats/aircraft/:registration — per-tail profile.
 // Returns aggregate stats plus the user's flights on that hull, newest
 // first. 404 if the user has no flights with that registration.
 router.get(
-  '/aircraft/:registration',
+  "/aircraft/:registration",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const registration = req.params['registration'];
+      const registration = req.params["registration"];
       if (!registration || registration.length > 20) {
-        res.status(400).json({ error: 'Invalid registration' });
+        res.status(400).json({ error: "Invalid registration" });
         return;
       }
       // The ranking that leads here already counts with the shared filter
@@ -166,11 +165,11 @@ router.get(
       // numbers.
       const flights = await prisma.flight.findMany({
         where: { userId, ...countableFlightWhere(), aircraftRegistration: registration },
-        orderBy: { departureTime: 'desc' },
+        orderBy: { departureTime: "desc" },
       });
 
       if (flights.length === 0) {
-        res.status(404).json({ error: 'NO_FLIGHTS_FOR_AIRCRAFT' });
+        res.status(404).json({ error: "NO_FLIGHTS_FOR_AIRCRAFT" });
         return;
       }
 
@@ -226,7 +225,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

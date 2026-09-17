@@ -42,13 +42,17 @@ export default function TemplateStatusView(): JSX.Element {
   };
 
   if (loading) {
-    return <div className="text-slate-400 text-sm">{t("parser:communityTemplates.status.loading")}</div>;
+    return (
+      <div className="text-slate-400 text-sm">{t("parser:communityTemplates.status.loading")}</div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate-200">{t("parser:communityTemplates.status.title")}</h3>
+        <h3 className="font-semibold text-slate-200">
+          {t("parser:communityTemplates.status.title")}
+        </h3>
         <div className="flex items-center gap-3">
           {isAdmin && (
             <button

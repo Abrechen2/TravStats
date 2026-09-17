@@ -1,13 +1,13 @@
-import { Router, Response, NextFunction } from 'express';
-import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { uploadReceipt, deleteReceiptFile, getUploadDir } from '../middleware/upload';
-import { AppError } from '../middleware/errorHandler';
-import { uploadReceiptLimiter } from '../middleware/rateLimit';
-import path from 'path';
-import fs from 'fs';
-import { prisma } from '../db';
-import { validateReceiptFile } from '../utils/fileValidation';
-import logger from '../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { uploadReceipt, deleteReceiptFile, getUploadDir } from "../middleware/upload";
+import { AppError } from "../middleware/errorHandler";
+import { uploadReceiptLimiter } from "../middleware/rateLimit";
+import path from "path";
+import fs from "fs";
+import { prisma } from "../db";
+import { validateReceiptFile } from "../utils/fileValidation";
+import logger from "../utils/logger";
 
 const router = Router();
 
@@ -42,7 +42,7 @@ async function ownsUpload(userId: string, filename: string): Promise<boolean> {
  */
 async function findReceiptReferences(
   userId: string,
-  receiptUrl: string,
+  receiptUrl: string
 ): Promise<{ flightId: string | null; lodgingStayId: string | null }> {
   const [flight, stay] = await Promise.all([
     prisma.flight.findFirst({ where: { userId, receiptUrl }, select: { id: true } }),
@@ -56,16 +56,16 @@ async function findReceiptReferences(
  * Upload a receipt file
  */
 router.post(
-  '/receipt',
+  "/receipt",
   authenticate,
   requireWriteScope,
   uploadReceiptLimiter,
-  uploadReceipt.single('receipt'),
+  uploadReceipt.single("receipt"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     let filePath: string | undefined;
     try {
       if (!req.file) {
-        throw new AppError('No file uploaded', 400);
+        throw new AppError("No file uploaded", 400);
       }
 
       filePath = req.file.path;
@@ -78,8 +78,8 @@ router.post(
           fs.unlinkSync(filePath);
         }
         logger.warn({
-          operation: 'receipt_upload_validation_failed',
-          message: 'Receipt file validation failed',
+          operation: "receipt_upload_validation_failed",
+          message: "Receipt file validation failed",
           context: {
             filename: req.file.originalname,
             mimetype: req.file.mimetype,
@@ -113,8 +113,8 @@ router.post(
           fs.unlinkSync(filePath);
         } catch (_cleanupError) {
           logger.error({
-            operation: 'receipt_upload_cleanup_error',
-            message: 'Failed to cleanup file after validation error',
+            operation: "receipt_upload_cleanup_error",
+            message: "Failed to cleanup file after validation error",
             context: { filePath },
           });
         }
@@ -128,38 +128,42 @@ router.post(
  * GET /api/v1/uploads/receipts/:filename
  * Serve uploaded receipt files
  */
-router.get('/receipts/:filename', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { filename } = req.params;
-    const userId = req.userId!;
+router.get(
+  "/receipts/:filename",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { filename } = req.params;
+      const userId = req.userId!;
 
-    // Sanitize filename to prevent directory traversal
-    const sanitized = path.basename(filename);
-    const filePath = path.join(getUploadDir(), sanitized);
+      // Sanitize filename to prevent directory traversal
+      const sanitized = path.basename(filename);
+      const filePath = path.join(getUploadDir(), sanitized);
 
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      throw new AppError('File not found', 404);
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        throw new AppError("File not found", 404);
+      }
+
+      // The file's own owner decides, not a reference to it.
+      if (!(await ownsUpload(userId, sanitized))) {
+        throw new AppError("File not found or access denied", 404);
+      }
+
+      // Send file (only after ownership check)
+      res.sendFile(filePath);
+    } catch (error) {
+      next(error);
     }
-
-    // The file's own owner decides, not a reference to it.
-    if (!(await ownsUpload(userId, sanitized))) {
-      throw new AppError('File not found or access denied', 404);
-    }
-
-    // Send file (only after ownership check)
-    res.sendFile(filePath);
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 /**
  * DELETE /api/v1/uploads/receipts/:filename
  * Delete a receipt file (authenticated users only)
  */
 router.delete(
-  '/receipts/:filename',
+  "/receipts/:filename",
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -176,7 +180,7 @@ router.delete(
       const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
 
       if (!(await ownsUpload(userId, sanitized))) {
-        throw new AppError('File not found or access denied', 404);
+        throw new AppError("File not found or access denied", 404);
       }
 
       // References are cleared below; they never granted the right to be here.
@@ -200,7 +204,7 @@ router.delete(
         });
       }
 
-      res.json({ success: true, message: 'Receipt deleted successfully' });
+      res.json({ success: true, message: "Receipt deleted successfully" });
     } catch (error) {
       next(error);
     }

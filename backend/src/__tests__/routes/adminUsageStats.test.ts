@@ -93,7 +93,7 @@ describe("applyConsentChange", () => {
       () =>
         new Promise<void>((resolve) => {
           resolveTick = resolve;
-        }),
+        })
     );
     // Must resolve even though the tick is still pending.
     await applyConsentChange("granted");
@@ -127,11 +127,9 @@ describe("PUT /usage-stats handler", () => {
     const next: NextFunction = jest.fn();
 
     const putHandler = router.stack.find(
-      (layer: { route?: { methods?: Record<string, boolean> } }) =>
-        layer.route?.methods?.put
+      (layer: { route?: { methods?: Record<string, boolean> } }) => layer.route?.methods?.put
     )?.route?.stack[0]?.handle as
-      | ((req: AuthRequest, res: Response, next: NextFunction) => Promise<void>)
-      | undefined;
+      ((req: AuthRequest, res: Response, next: NextFunction) => Promise<void>) | undefined;
 
     if (!putHandler) {
       throw new Error("PUT /usage-stats handler not found");

@@ -17,11 +17,7 @@ import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
 import { marnetCalculator } from "./marnetCalculator";
 import { riverCalculator } from "./riverCalculator";
-import type {
-  ComputedLeg,
-  DistanceCalculator,
-  PortPoint,
-} from "./types";
+import type { ComputedLeg, DistanceCalculator, PortPoint } from "./types";
 
 const calculators: DistanceCalculator[] = [
   // Order matters: highest-priority calculator first. Each is tried
@@ -32,10 +28,7 @@ const calculators: DistanceCalculator[] = [
   haversineCalculator,
 ];
 
-export async function computeLegDistance(
-  from: PortPoint,
-  to: PortPoint,
-): Promise<ComputedLeg> {
+export async function computeLegDistance(from: PortPoint, to: PortPoint): Promise<ComputedLeg> {
   for (const calc of calculators) {
     if (!calc.accepts(from, to)) continue;
     try {

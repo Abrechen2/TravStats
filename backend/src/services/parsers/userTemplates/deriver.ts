@@ -56,21 +56,18 @@ export function derivePatternFromSelection(
 /**
  * Extracts a TemplateFingerprint from plain-text email content.
  */
-export function extractFingerprint(
-  fullText: string,
-  subject: string
-): TemplateFingerprint {
+export function extractFingerprint(fullText: string, subject: string): TemplateFingerprint {
   // Sender domain from "From:" header line
   const fromMatch = /^From:\s*.*?@([\w.-]+)/im.exec(fullText);
   const senderDomains = fromMatch ? [fromMatch[1].toLowerCase()] : [];
 
   // Subject pattern (stripped of user-specific data — dates, booking codes, routes)
   const cleanSubject = subject
-    .replace(/\d{2}\.\d{2}\.\d{4}/g, "")           // DD.MM.YYYY
-    .replace(/\b\d{1,2}\s+\w+\s+\d{4}\b/g, "")     // "14 November 2024"
-    .replace(/\b[A-Z]{3}-[A-Z]{3}\b/g, "")          // "MUC-FRA"
-    .replace(/[A-Z0-9]{5,8}/g, "")                  // booking codes
-    .replace(/[_|\s]+/g, " ")                        // collapse separators
+    .replace(/\d{2}\.\d{2}\.\d{4}/g, "") // DD.MM.YYYY
+    .replace(/\b\d{1,2}\s+\w+\s+\d{4}\b/g, "") // "14 November 2024"
+    .replace(/\b[A-Z]{3}-[A-Z]{3}\b/g, "") // "MUC-FRA"
+    .replace(/[A-Z0-9]{5,8}/g, "") // booking codes
+    .replace(/[_|\s]+/g, " ") // collapse separators
     .trim();
   const subjectPatterns = cleanSubject.length > 4 ? [cleanSubject] : [subject];
 
@@ -168,8 +165,7 @@ export async function deriveTemplateFromAnnotation(
     const fingerprint = extractFingerprint(fullText, subject);
 
     // Name template from airline name if detectable
-    const airlineMatch =
-      /(?:Lufthansa|Swiss|Austrian|Ryanair|Eurowings|easyJet)/i.exec(fullText);
+    const airlineMatch = /(?:Lufthansa|Swiss|Austrian|Ryanair|Eurowings|easyJet)/i.exec(fullText);
     const airline = airlineMatch ? airlineMatch[0] : "Unknown";
     const name = `${airline} (abgeleitet am ${new Date().toLocaleDateString("de-DE")})`;
 

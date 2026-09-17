@@ -89,7 +89,12 @@ describe("/api/v1/lodging-import", () => {
           {
             sourceRowIndex: 0,
             lodging: { name: "Route Hotel", city: "Wien", lat: 48.2, lon: 16.3 },
-            stay: { checkIn: "2026-09-01", checkOut: "2026-09-03", totalPrice: 200, currency: "EUR" },
+            stay: {
+              checkIn: "2026-09-01",
+              checkOut: "2026-09-03",
+              totalPrice: 200,
+              currency: "EUR",
+            },
           },
         ],
       });
@@ -110,7 +115,12 @@ describe("/api/v1/lodging-import", () => {
             sourceRowIndex: 0,
             action: "create",
             lodging: { name: "Route Hotel", city: "Wien", lat: 48.2, lon: 16.3 },
-            stay: { checkIn: "2026-09-01", checkOut: "2026-09-03", totalPrice: 200, currency: "EUR" },
+            stay: {
+              checkIn: "2026-09-01",
+              checkOut: "2026-09-03",
+              totalPrice: 200,
+              currency: "EUR",
+            },
           },
         ],
       });
@@ -123,9 +133,7 @@ describe("/api/v1/lodging-import", () => {
     // The commit must kick off the background geocode pass, not await it.
     expect(backfillSpy).toHaveBeenCalled();
 
-    const list = await request(app)
-      .get("/api/v1/lodging-import/batches")
-      .set("Cookie", auth());
+    const list = await request(app).get("/api/v1/lodging-import/batches").set("Cookie", auth());
     expect(list.status).toBe(200);
     expect(list.body.data.some((b: { id: string }) => b.id === batchId)).toBe(true);
 
@@ -163,7 +171,10 @@ describe("/api/v1/lodging-import", () => {
     const res = await request(app)
       .post("/api/v1/lodging-import/suggest-mapping")
       .set("Cookie", auth())
-      .send({ headers: ["Hotel", "Anreise"], sampleRows: [{ Hotel: "NH", Anreise: "2026-03-30" }] });
+      .send({
+        headers: ["Hotel", "Anreise"],
+        sampleRows: [{ Hotel: "NH", Anreise: "2026-03-30" }],
+      });
     expect(res.status).toBe(200);
     expect(res.body.data.mapping).toEqual({ name: "Hotel" });
   });
@@ -262,9 +273,7 @@ describe("/api/v1/lodging-import", () => {
     expect(theirCommit.status).toBe(201);
     const theirBatchId = theirCommit.body.data.batchId;
 
-    const mine = await request(app)
-      .get("/api/v1/lodging-import/batches")
-      .set("Cookie", auth());
+    const mine = await request(app).get("/api/v1/lodging-import/batches").set("Cookie", auth());
     expect(mine.status).toBe(200);
     expect(mine.body.data.some((b: { id: string }) => b.id === theirBatchId)).toBe(false);
 
@@ -274,7 +283,9 @@ describe("/api/v1/lodging-import", () => {
     expect(theirs.body.data.some((b: { id: string }) => b.id === theirBatchId)).toBe(true);
 
     await prisma.importBatch.delete({ where: { id: theirBatchId } });
-    await prisma.lodging.deleteMany({ where: { userId: otherUserId, name: "Other User Batch Hotel" } });
+    await prisma.lodging.deleteMany({
+      where: { userId: otherUserId, name: "Other User Batch Hotel" },
+    });
   });
 
   it("404s reverting another user's batch, and the batch survives", async () => {
@@ -301,11 +312,11 @@ describe("/api/v1/lodging-import", () => {
       .set("Cookie", auth());
     expect(revert.status).toBe(404);
 
-    expect(
-      await prisma.importBatch.findUnique({ where: { id: theirBatchId } }),
-    ).not.toBeNull();
+    expect(await prisma.importBatch.findUnique({ where: { id: theirBatchId } })).not.toBeNull();
 
     await prisma.importBatch.delete({ where: { id: theirBatchId } });
-    await prisma.lodging.deleteMany({ where: { userId: otherUserId, name: "Other User Revert Hotel" } });
+    await prisma.lodging.deleteMany({
+      where: { userId: otherUserId, name: "Other User Revert Hotel" },
+    });
   });
 });

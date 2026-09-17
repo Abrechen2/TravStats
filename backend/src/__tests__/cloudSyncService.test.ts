@@ -136,7 +136,9 @@ describe("cloudSyncService", () => {
       mockExistsSync.mockReturnValue(true);
 
       await expect(listCloudBackups()).rejects.toMatchObject({ statusCode: 409 });
-      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 409 });
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({
+        statusCode: 409,
+      });
       await expect(syncToCloud("backup-1")).rejects.toMatchObject({ statusCode: 409 });
     });
 
@@ -161,19 +163,23 @@ describe("cloudSyncService", () => {
       const { downloadFromCloud } = await loadModule(true);
 
       mockClient.getFileContents.mockRejectedValue(
-        Object.assign(new Error("Invalid response: 404 Not Found"), { status: 404 }),
+        Object.assign(new Error("Invalid response: 404 Not Found"), { status: 404 })
       );
       await expect(downloadFromCloud("gone.tar.gz", "/tmp/gone")).rejects.toMatchObject({
         statusCode: 404,
       });
 
       mockClient.getFileContents.mockRejectedValue(
-        Object.assign(new Error("Invalid response: 500"), { status: 500 }),
+        Object.assign(new Error("Invalid response: 500"), { status: 500 })
       );
-      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 502 });
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({
+        statusCode: 502,
+      });
 
       mockClient.getFileContents.mockRejectedValue(new Error("ECONNREFUSED"));
-      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({ statusCode: 502 });
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({
+        statusCode: 502,
+      });
     });
   });
 
@@ -232,7 +238,7 @@ describe("cloudSyncService", () => {
             syncedToCloud: true,
             cloudSyncAt: expect.any(Date),
           }),
-        }),
+        })
       );
     });
 
@@ -279,7 +285,7 @@ describe("cloudSyncService", () => {
       expect(mockBackupUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ syncedToCloud: true, cloudSyncError: null }),
-        }),
+        })
       );
     });
   });
@@ -336,7 +342,7 @@ describe("cloudSyncService", () => {
           data: expect.objectContaining({
             cloudSyncError: expect.stringContaining("Insufficient Storage"),
           }),
-        }),
+        })
       );
       // The status is untouched — no `status: 'failed'` anywhere in that call.
       const [{ data }] = mockBackupUpdate.mock.calls[0] as [{ data: Record<string, unknown> }];
@@ -360,7 +366,7 @@ describe("cloudSyncService", () => {
           data: expect.objectContaining({
             cloudSyncError: expect.stringMatching(/not configured/i),
           }),
-        }),
+        })
       );
     });
 
@@ -375,9 +381,7 @@ describe("cloudSyncService", () => {
 
       await syncToCloudIfEnabled("backup-1");
 
-      const [{ data }] = mockBackupUpdate.mock.calls[0] as [
-        { data: { cloudSyncError: string } },
-      ];
+      const [{ data }] = mockBackupUpdate.mock.calls[0] as [{ data: { cloudSyncError: string } }];
       expect(data.cloudSyncError.length).toBeLessThanOrEqual(500);
     });
   });
@@ -411,9 +415,7 @@ describe("cloudSyncService", () => {
       const { listCloudBackups } = await loadModule(true);
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.getDirectoryContents.mockResolvedValue({
-        data: [
-          { type: "file", basename: "a.tar.gz", size: 5, lastmod: "2026-01-01T00:00:00Z" },
-        ],
+        data: [{ type: "file", basename: "a.tar.gz", size: 5, lastmod: "2026-01-01T00:00:00Z" }],
       });
 
       const result = await listCloudBackups();
@@ -436,7 +438,7 @@ describe("cloudSyncService", () => {
       const { downloadFromCloud } = await loadModule(false);
 
       await expect(downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(
-        /not enabled/i,
+        /not enabled/i
       );
     });
 
@@ -448,7 +450,7 @@ describe("cloudSyncService", () => {
 
       expect(mockClient.getFileContents).toHaveBeenCalledWith(
         expect.stringContaining("backup-1.tar.gz"),
-        { format: "binary" },
+        { format: "binary" }
       );
       expect(mockWriteFileSync).toHaveBeenCalledWith("/tmp/out.tar.gz", expect.any(Buffer));
     });
@@ -457,9 +459,7 @@ describe("cloudSyncService", () => {
       const { downloadFromCloud } = await loadModule(true);
       mockClient.getFileContents.mockRejectedValue(new Error("404 Not Found"));
 
-      await expect(downloadFromCloud("missing.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(
-        /404/,
-      );
+      await expect(downloadFromCloud("missing.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(/404/);
       expect(mockWriteFileSync).not.toHaveBeenCalled();
     });
   });

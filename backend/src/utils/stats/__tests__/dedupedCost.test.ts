@@ -28,7 +28,7 @@ describe("computeDedupedTotalCost", () => {
     const shared = { bookingId: "b1", booking: booking(500) };
     const out = computeDedupedTotalCost(
       [f({ ...shared, taxes: 50 }), f({ ...shared, fees: 20 })],
-      BASE,
+      BASE
     );
     expect(out.base).toBe(500);
     expect(out.unconvertedByCurrency).toEqual({});
@@ -40,16 +40,13 @@ describe("computeDedupedTotalCost", () => {
 
   it("booking with null/zero price falls back per flight (truthiness semantics)", () => {
     expect(
-      computeDedupedTotalCost(
-        [f({ bookingId: "b2", booking: booking(0), price: 80 })],
-        BASE,
-      ).base,
+      computeDedupedTotalCost([f({ bookingId: "b2", booking: booking(0), price: 80 })], BASE).base
     ).toBe(80);
     expect(
       computeDedupedTotalCost(
         [f({ bookingId: "b3", booking: { ...booking(0), price: null }, price: 60 })],
-        BASE,
-      ).base,
+        BASE
+      ).base
     ).toBe(60);
   });
 
@@ -63,7 +60,7 @@ describe("computeDedupedTotalCost", () => {
   it("abstains with null when no flight carries a price — a zero would read as a free year", () => {
     const out = computeDedupedTotalCost(
       [f({ price: null, taxes: null, fees: null }), f({ price: null })],
-      "EUR",
+      "EUR"
     );
     expect(out.base).toBeNull();
     expect(out.pricedFlights).toBe(0);
@@ -77,7 +74,7 @@ describe("computeDedupedTotalCost", () => {
         f({ price: null, bookingId: "b1", booking: booking(500) }),
         f({ price: null }),
       ],
-      "EUR",
+      "EUR"
     );
     expect(out.base).toBe(500);
     expect(out.pricedFlights).toBe(2);
@@ -86,7 +83,9 @@ describe("computeDedupedTotalCost", () => {
 
   it("returns null for empty input and rounds a real total to cents", () => {
     expect(computeDedupedTotalCost([], BASE).base).toBeNull();
-    expect(computeDedupedTotalCost([f({ price: 0.105 }), f({ price: 0.105 })], BASE).base).toBe(0.21);
+    expect(computeDedupedTotalCost([f({ price: 0.105 }), f({ price: 0.105 })], BASE).base).toBe(
+      0.21
+    );
   });
 
   // #267 — the defect itself.
@@ -97,7 +96,7 @@ describe("computeDedupedTotalCost", () => {
           f({ price: 300 }),
           f({ price: 300, currency: "USD", priceBase: null, fxBaseCurrency: null }),
         ],
-        BASE,
+        BASE
       );
       expect(out.base).toBe(300);
       expect(out.unconvertedByCurrency).toEqual({ USD: 300 });
@@ -106,7 +105,7 @@ describe("computeDedupedTotalCost", () => {
     it("uses the snapshot, not the raw amount, for a converted foreign price", () => {
       const out = computeDedupedTotalCost(
         [f({ price: 300, currency: "USD", priceBase: 276.5, fxBaseCurrency: BASE })],
-        BASE,
+        BASE
       );
       expect(out.base).toBe(276.5);
       expect(out.unconvertedByCurrency).toEqual({});
@@ -117,7 +116,7 @@ describe("computeDedupedTotalCost", () => {
     it("ignores a snapshot taken against a different base currency", () => {
       const out = computeDedupedTotalCost(
         [f({ price: 300, currency: "USD", priceBase: 276.5, fxBaseCurrency: "CHF" })],
-        BASE,
+        BASE
       );
       expect(out.base).toBeNull();
       expect(out.unconvertedByCurrency).toEqual({ USD: 300 });
@@ -128,7 +127,7 @@ describe("computeDedupedTotalCost", () => {
     it("buckets an amount with no recorded currency as unknown", () => {
       const out = computeDedupedTotalCost(
         [f({ price: 120, currency: null, priceBase: null, fxBaseCurrency: null })],
-        BASE,
+        BASE
       );
       expect(out.base).toBeNull();
       expect(out.unconvertedByCurrency).toEqual({ unknown: 120 });
@@ -140,7 +139,7 @@ describe("computeDedupedTotalCost", () => {
     it("counts an amount already in the base currency without any snapshot", () => {
       const out = computeDedupedTotalCost(
         [f({ price: 250, currency: BASE, priceBase: null, fxBaseCurrency: null })],
-        BASE,
+        BASE
       );
       expect(out.base).toBe(250);
       expect(out.unconvertedByCurrency).toEqual({});

@@ -99,7 +99,10 @@ export function buildTravelAccount(input: {
 
   for (const stay of stays) {
     // The same rule every lodging figure uses: only a stay that is over counts.
-    if (classifyStay({ status: stay.status, checkIn: stay.checkIn, checkOut: stay.checkOut }, now) !== "visited") {
+    if (
+      classifyStay({ status: stay.status, checkIn: stay.checkIn, checkOut: stay.checkOut }, now) !==
+      "visited"
+    ) {
       continue;
     }
     // The account assigns NIGHTS TO DATES, so it needs real dates. An undated
@@ -184,13 +187,8 @@ export function buildTravelAccount(input: {
       };
       const nowYear = now.getUTCFullYear();
       row.days =
-        y === nowYear
-          ? Math.floor((today - Date.UTC(y, 0, 1)) / DAY_MS) + 1
-          : daysInYear(y);
-      row.homeNights = Math.max(
-        0,
-        row.days - row.hotelNights - row.seaNights - row.airNights,
-      );
+        y === nowYear ? Math.floor((today - Date.UTC(y, 0, 1)) / DAY_MS) + 1 : daysInYear(y);
+      row.homeNights = Math.max(0, row.days - row.hotelNights - row.seaNights - row.airNights);
       byYear.set(year, row);
     }
   }

@@ -60,7 +60,7 @@ router.post(
 
       // The asset must belong to this album — same boundary the proxy enforces.
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId),
+        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
       );
       if (!assets.some((a) => a.id === assetId)) {
         throw new AppError("notFound", 404);
@@ -78,7 +78,7 @@ router.post(
       }
       next(error);
     }
-  },
+  }
 );
 
 router.post(
@@ -109,7 +109,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

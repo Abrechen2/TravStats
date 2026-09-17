@@ -1,9 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import {
-  buildAirportCoordinateIndex,
-  resolveAirportCoordinate,
-} from "../airportCoordinates";
+import { buildAirportCoordinateIndex, resolveAirportCoordinate } from "../airportCoordinates";
 
 /**
  * A flight row keeps its OWN copy of the departure/arrival coordinates,
@@ -62,13 +59,7 @@ describe("resolveAirportCoordinate", () => {
     const index = buildAirportCoordinateIndex([zurich]);
 
     const fromFlownFlight = resolveAirportCoordinate(index, "ZRH", "LSZH", 47.4647, 8.5492);
-    const fromScheduledFlight = resolveAirportCoordinate(
-      index,
-      "ZRH",
-      "LSZH",
-      47.458056,
-      8.548056,
-    );
+    const fromScheduledFlight = resolveAirportCoordinate(index, "ZRH", "LSZH", 47.458056, 8.548056);
 
     expect(fromFlownFlight).toEqual(fromScheduledFlight);
   });

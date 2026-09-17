@@ -141,7 +141,7 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
  * a bug — is `failed` and is worth looking at.
  */
 export async function runDawarichCountryDaySweep(
-  options: CountryDaySweepOptions = {},
+  options: CountryDaySweepOptions = {}
 ): Promise<CountryDaySweepResult> {
   const accounts = await eligibleAccounts(options.userId);
 
@@ -201,14 +201,14 @@ export async function runDawarichCountryDaySweep(
           userId: account.userId,
           message: error instanceof Error ? error.message : String(error),
         },
-        "The country-day sweep failed for one account — the sweep continues",
+        "The country-day sweep failed for one account — the sweep continues"
       );
     }
   }
 
   logger.info(
     { operation: "dawarich_country_day_sweep_done", ...result },
-    "Dawarich country-day sweep complete",
+    "Dawarich country-day sweep complete"
   );
   return result;
 }
@@ -224,13 +224,13 @@ export function startDawarichCountryDaySweepScheduler(): void {
       // which tonight's run can do anything about.
       logger.warn(
         { operation: "dawarich_country_day_sweep_error", error },
-        "Nightly Dawarich country-day sweep failed",
+        "Nightly Dawarich country-day sweep failed"
       );
     }
   });
   logger.info(
     { operation: "dawarich_country_day_sweep_scheduler_started", cron: CRON_EXPRESSION },
-    "dawarich country-day sweep scheduler started",
+    "dawarich country-day sweep scheduler started"
   );
 }
 

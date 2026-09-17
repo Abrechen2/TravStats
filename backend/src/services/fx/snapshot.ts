@@ -70,7 +70,7 @@ export interface FxSnapshotInput {
 
 export async function snapshotFx(
   input: FxSnapshotInput,
-  baseCurrency: string,
+  baseCurrency: string
 ): Promise<FxSnapshotOutcome> {
   if (input.amount == null) return { status: "amountRemoved" };
   // A rate is a rate ON A DAY. An undated record has no day to look one up for,
@@ -82,7 +82,12 @@ export async function snapshotFx(
   // guessing one is how 11,662 AED became €11,662 (see the 2026-08-13 spec).
   if (!input.currency) return { status: "missingCurrency" };
 
-  const conv = await fx.convertToBase(input.amount, input.currency, baseCurrency, new Date(input.date));
+  const conv = await fx.convertToBase(
+    input.amount,
+    input.currency,
+    baseCurrency,
+    new Date(input.date)
+  );
   if (conv === null) return { status: "lookupFailed" };
 
   return {
@@ -141,7 +146,7 @@ export const CLEARED_FX_COLUMNS: FxColumns = {
 
 export async function fxColumnsFor(
   input: FxSnapshotInput,
-  baseCurrency: string,
+  baseCurrency: string
 ): Promise<FxColumns> {
   const outcome = await snapshotFx(input, baseCurrency);
   if (outcome.status !== "snapshotted") return CLEARED_FX_COLUMNS;

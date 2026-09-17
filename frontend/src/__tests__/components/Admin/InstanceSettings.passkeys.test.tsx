@@ -58,7 +58,11 @@ describe("InstanceSettings — passkey relying party", () => {
 
   it("says so when passkeys are usable", async () => {
     getInstanceSettings.mockResolvedValue({
-      settings: { ...base, webauthnRpId: "trav.example.com", webauthnOrigins: ["https://trav.example.com"] },
+      settings: {
+        ...base,
+        webauthnRpId: "trav.example.com",
+        webauthnOrigins: ["https://trav.example.com"],
+      },
       passkeyStatus: { usable: true, reason: null },
     });
     render(<InstanceSettings />);
@@ -88,7 +92,11 @@ describe("InstanceSettings — passkey relying party", () => {
   // lines are how people space things out while typing, not entries.
   it("sends the origins as an array and drops blank lines", async () => {
     updateInstanceSettings.mockResolvedValue({
-      settings: { ...base, webauthnRpId: "trav.example.com", webauthnOrigins: ["https://trav.example.com"] },
+      settings: {
+        ...base,
+        webauthnRpId: "trav.example.com",
+        webauthnOrigins: ["https://trav.example.com"],
+      },
       passkeyStatus: { usable: true, reason: null },
     });
     render(<InstanceSettings />);
@@ -154,15 +162,17 @@ describe("InstanceSettings — passkey relying party", () => {
 
   it("refreshes the status from the save response", async () => {
     updateInstanceSettings.mockResolvedValue({
-      settings: { ...base, webauthnRpId: "trav.example.com", webauthnOrigins: ["https://trav.example.com"] },
+      settings: {
+        ...base,
+        webauthnRpId: "trav.example.com",
+        webauthnOrigins: ["https://trav.example.com"],
+      },
       passkeyStatus: { usable: true, reason: null },
     });
     render(<InstanceSettings />);
 
     await waitFor(() =>
-      expect(
-        screen.getByText("admin:instance.passkeys.status.notConfigured")
-      ).toBeInTheDocument()
+      expect(screen.getByText("admin:instance.passkeys.status.notConfigured")).toBeInTheDocument()
     );
 
     fireEvent.change(screen.getByLabelText("admin:instance.passkeys.origins.label"), {

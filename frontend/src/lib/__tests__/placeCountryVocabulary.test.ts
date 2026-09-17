@@ -57,7 +57,7 @@ const FOUR_SPELLINGS_TWO_COUNTRIES = [
 describe("country vocabulary across spellings", () => {
   it("counts two countries, not four", () => {
     const codes = new Set(
-      FOUR_SPELLINGS_TWO_COUNTRIES.map((p) => placeCountryCode(p)).filter(Boolean),
+      FOUR_SPELLINGS_TWO_COUNTRIES.map((p) => placeCountryCode(p)).filter(Boolean)
     );
     expect(codes.size).toBe(2);
   });
@@ -84,7 +84,7 @@ describe("country vocabulary across spellings", () => {
     };
     const countryColumn = spec.columns.find((c) => c.key === "country")!;
     const written = new Set(
-      FOUR_SPELLINGS_TWO_COUNTRIES.map((p) => String(countryColumn.value(p))),
+      FOUR_SPELLINGS_TWO_COUNTRIES.map((p) => String(countryColumn.value(p)))
     );
 
     expect(written.size).toBe(2);

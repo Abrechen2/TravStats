@@ -274,9 +274,7 @@ export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "track";
  * leg would answer it". `notApplicable` says "there is nothing to add".
  */
 export type CountryGroundTime =
-  | { state: "measured"; minutes: number }
-  | { state: "unknown" }
-  | { state: "notApplicable" };
+  { state: "measured"; minutes: number } | { state: "unknown" } | { state: "notApplicable" };
 
 export interface CountryEvidence {
   /** ISO 3166-1 alpha-2. */
@@ -577,12 +575,14 @@ export interface LodgingEvidence {
 function stayDays(stay: CountableStay, now: Date): string[] {
   const out = isoDay(stay.checkOut);
   if (out === null || (stay.checkOut as Date).getTime() > now.getTime()) return [];
-  if (!stayNamesExactDays({
-    checkIn: stay.checkIn,
-    checkOut: stay.checkOut,
-    datePrecision: stay.datePrecision ?? "DAY",
-    nights: stay.nights ?? null,
-  })) {
+  if (
+    !stayNamesExactDays({
+      checkIn: stay.checkIn,
+      checkOut: stay.checkOut,
+      datePrecision: stay.datePrecision ?? "DAY",
+      nights: stay.nights ?? null,
+    })
+  ) {
     return [];
   }
   return daysBetween(isoDay(stay.checkIn) ?? out, out);

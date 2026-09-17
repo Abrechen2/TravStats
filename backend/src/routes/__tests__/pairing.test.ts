@@ -15,7 +15,9 @@ describe("Pairing API", () => {
   let otherAuthCookie: string;
 
   beforeAll(async () => {
-    await prisma.user.deleteMany({ where: { username: { in: ["pairingroute", "pairingroute2"] } } });
+    await prisma.user.deleteMany({
+      where: { username: { in: ["pairingroute", "pairingroute2"] } },
+    });
     const u = await prisma.user.create({
       data: { username: "pairingroute", passwordHash: await hashPassword("password123") },
     });
@@ -126,9 +128,13 @@ describe("Pairing API", () => {
   describe("POST /api/v1/pairing/claim", () => {
     it("happy path: mints a device PAT", async () => {
       const { code } = await generatePairingCode(userId);
-      const res = await request(app)
-        .post("/api/v1/pairing/claim")
-        .send({ code, deviceName: "iPhone 15", deviceId: "dev-happy", platform: "ios", appVersion: "2.2.0" });
+      const res = await request(app).post("/api/v1/pairing/claim").send({
+        code,
+        deviceName: "iPhone 15",
+        deviceId: "dev-happy",
+        platform: "ios",
+        appVersion: "2.2.0",
+      });
 
       expect(res.status).toBe(201);
       expect(res.body.token).toMatch(/^ts_pat_/);

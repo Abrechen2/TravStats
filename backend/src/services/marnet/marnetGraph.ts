@@ -47,7 +47,7 @@ const DEFAULT_DATA_PATH = path.resolve(
   "..",
   "data",
   "marnet",
-  "marnet.geojson",
+  "marnet.geojson"
 );
 
 /** Coordinate-rounding precision for node-key dedup. 4 decimals ≈ 11 m
@@ -139,11 +139,7 @@ function bucketKey(lon: number, lat: number): string {
  * yields the lon=-175 bucket too) so a snap near the dateline finds
  * nodes on both sides. Skips buckets whose latitude is out of range
  * (above the poles). */
-function* expandingBuckets(
-  lon: number,
-  lat: number,
-  ringRadius: number,
-): Generator<string> {
+function* expandingBuckets(lon: number, lat: number, ringRadius: number): Generator<string> {
   const cLon = Math.floor(lon / BUCKET_DEG) * BUCKET_DEG;
   const cLat = Math.floor(lat / BUCKET_DEG) * BUCKET_DEG;
   if (ringRadius === 0) {
@@ -333,7 +329,7 @@ export function findNearestNode(
   graph: MarnetGraph,
   lat: number,
   lon: number,
-  options: NearestNodeOptions = {},
+  options: NearestNodeOptions = {}
 ): { readonly node: MarnetNode; readonly distKm: number } | null {
   const onlyMain = options.onlyMainComponent !== false;
   const maxRing = options.maxRingRadius ?? 5;
@@ -398,7 +394,7 @@ export interface MarnetPath {
 export function findMarnetPath(
   graph: MarnetGraph,
   startKey: string,
-  endKey: string,
+  endKey: string
 ): MarnetPath | null {
   const start = graph.nodes.get(startKey);
   const end = graph.nodes.get(endKey);
@@ -414,10 +410,7 @@ export function findMarnetPath(
   const closed = new Set<string>();
 
   const open = new BinaryHeap<string>((key) => fScore.get(key) ?? Infinity);
-  const startH = haversineKm(
-    { lat: start.lat, lon: start.lon },
-    { lat: end.lat, lon: end.lon },
-  );
+  const startH = haversineKm({ lat: start.lat, lon: start.lon }, { lat: end.lat, lon: end.lon });
   gScore.set(startKey, 0);
   fScore.set(startKey, startH);
   open.push(startKey);
@@ -459,10 +452,7 @@ export function findMarnetPath(
       cameFrom.set(edge.neighborKey, cur);
       gScore.set(edge.neighborKey, tentativeG);
       const nb = graph.nodes.get(edge.neighborKey)!;
-      const h = haversineKm(
-        { lat: nb.lat, lon: nb.lon },
-        { lat: end.lat, lon: end.lon },
-      );
+      const h = haversineKm({ lat: nb.lat, lon: nb.lon }, { lat: end.lat, lon: end.lon });
       fScore.set(edge.neighborKey, tentativeG + h);
       open.push(edge.neighborKey); // duplicates accepted; closed-set filters them
     }

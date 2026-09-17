@@ -92,7 +92,7 @@ describe("single create and batch import agree", () => {
     const differing = (Object.keys(a) as Array<keyof typeof a>).filter(
       (key) =>
         !EXPECTED_DIFFERENCES.has(key as string) &&
-        JSON.stringify(a[key]) !== JSON.stringify(b[key]),
+        JSON.stringify(a[key]) !== JSON.stringify(b[key])
     );
 
     expect(differing).toEqual([]);

@@ -65,7 +65,7 @@ const DAY_MS = 86_400_000;
  */
 export function clusterPhotosByTime(
   photos: readonly ScanPhoto[],
-  { gapHours, minPhotos }: ClusterOptions,
+  { gapHours, minPhotos }: ClusterOptions
 ): PhotoCluster[] {
   const usable = photos
     // A photo with no capture time is a download or a screenshot as often
@@ -85,9 +85,7 @@ export function clusterPhotosByTime(
     current.push(photo);
   }
 
-  return runs
-    .filter((run) => run.length >= minPhotos)
-    .map((run) => toCluster(run));
+  return runs.filter((run) => run.length >= minPhotos).map((run) => toCluster(run));
 }
 
 function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
@@ -96,7 +94,7 @@ function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
       typeof photo.lat === "number" &&
       typeof photo.lon === "number" &&
       Number.isFinite(photo.lat) &&
-      Number.isFinite(photo.lon),
+      Number.isFinite(photo.lon)
   );
 
   return {
@@ -125,7 +123,7 @@ function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
  * be an approximation.
  */
 function representativePosition(
-  located: readonly { lat: number; lon: number }[],
+  located: readonly { lat: number; lon: number }[]
 ): { lat: number; lon: number } | null {
   if (located.length === 0) {
     return null;
@@ -139,9 +137,7 @@ function representativePosition(
 function median(values: readonly number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0
-    ? (sorted[middle - 1] + sorted[middle]) / 2
-    : sorted[middle];
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 }
 
 /**
@@ -161,16 +157,15 @@ function median(values: readonly number[]): number {
 export function findUncoveredClusters(
   clusters: readonly PhotoCluster[],
   windows: readonly TravelWindow[],
-  { padDays }: { padDays: number },
+  { padDays }: { padDays: number }
 ): PhotoCluster[] {
   const padMs = padDays * DAY_MS;
   return clusters.filter(
     (cluster) =>
       !windows.some(
         (window) =>
-          cluster.startMs <= window.endMs + padMs &&
-          cluster.endMs >= window.startMs - padMs,
-      ),
+          cluster.startMs <= window.endMs + padMs && cluster.endMs >= window.startMs - padMs
+      )
   );
 }
 
@@ -182,7 +177,7 @@ export function findUncoveredClusters(
  */
 export function distanceKm(
   a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
+  b: { lat: number; lon: number }
 ): number {
   const EARTH_RADIUS_KM = 6371;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -190,8 +185,6 @@ export function distanceKm(
   const dLon = toRad(b.lon - a.lon);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }

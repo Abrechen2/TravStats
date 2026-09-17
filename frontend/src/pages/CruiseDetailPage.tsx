@@ -131,7 +131,7 @@ export default function CruiseDetailPage(): JSX.Element {
     date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
     title: entry.isAtSea
       ? t("stops.at_sea")
-      : entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—"),
+      : (entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—")),
     subtitle: entry.isAtSea
       ? undefined
       : entry.port
@@ -232,9 +232,7 @@ export default function CruiseDetailPage(): JSX.Element {
         {/* Two-column body */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
-            <h2 className="mb-2 text-sm font-semibold text-(--text-muted)">
-              {t("detail.route")}
-            </h2>
+            <h2 className="mb-2 text-sm font-semibold text-(--text-muted)">{t("detail.route")}</h2>
             {events.length > 0 ? (
               <TripTimeline events={events} />
             ) : (
@@ -251,9 +249,7 @@ export default function CruiseDetailPage(): JSX.Element {
             </div>
 
             <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">
-                {t("detail.cabin")}
-              </h3>
+              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.cabin")}</h3>
               <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
                 <div className="flex justify-between">
                   <dt>{t("field.cabin")}</dt>
@@ -275,9 +271,7 @@ export default function CruiseDetailPage(): JSX.Element {
             </div>
 
             <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">
-                {t("detail.costs")}
-              </h3>
+              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.costs")}</h3>
               <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
                 <div className="flex justify-between">
                   <dt>{t("field.bookingReference")}</dt>
@@ -295,9 +289,7 @@ export default function CruiseDetailPage(): JSX.Element {
             </div>
 
             <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">
-                {t("detail.meta")}
-              </h3>
+              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.meta")}</h3>
               {cruise.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {cruise.tags.map((tag) => (

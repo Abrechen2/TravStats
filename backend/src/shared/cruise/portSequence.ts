@@ -18,7 +18,7 @@
 export function buildEffectivePortSequence<P extends { id: number }>(
   departurePort: P | null | undefined,
   portCalls: P[],
-  arrivalPort: P | null | undefined,
+  arrivalPort: P | null | undefined
 ): P[] {
   const seq = [...portCalls];
   if (departurePort && departurePort.id !== seq[0]?.id) seq.unshift(departurePort);

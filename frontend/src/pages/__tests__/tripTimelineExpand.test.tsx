@@ -52,9 +52,9 @@ describe("ExpandableEventCard", () => {
   it("shows the panel and says it is open", () => {
     setup({ expanded: true });
     expect(screen.getByTestId("panel")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Mein Schiff 4/ }).getAttribute("aria-expanded")).toBe(
-      "true"
-    );
+    expect(
+      screen.getByRole("button", { name: /Mein Schiff 4/ }).getAttribute("aria-expanded")
+    ).toBe("true");
   });
 
   it("does NOT nest the jump link inside the toggle button", () => {

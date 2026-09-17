@@ -1,5 +1,5 @@
-import { localWallClockOf, type LocalWallClock } from '../timezone';
-import type { FlightData } from './types';
+import { localWallClockOf, type LocalWallClock } from "../timezone";
+import type { FlightData } from "./types";
 
 /**
  * The clock at the departure airport when this flight left, or null when the

@@ -32,7 +32,10 @@ const f = (overrides: Partial<TestFlight> & Pick<TestFlight, "id">): TestFlight 
   departureTime: null,
   depIata: null,
   arrIata: null,
-  depLat: 0, depLon: 0, arrLat: 0, arrLon: 0,
+  depLat: 0,
+  depLon: 0,
+  arrLat: 0,
+  arrLon: 0,
   status: "flown",
   ...overrides,
 });
@@ -95,8 +98,18 @@ describe("tripDetectionService heuristics", () => {
 
     it("keeps the flight that was taken, not the one that was cancelled", () => {
       const flights = [
-        f({ id: "cancelled", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "rebooked", ...muc, status: "flown", departureTime: new Date("2024-04-01T10:00:00Z") }),
+        f({
+          id: "cancelled",
+          ...muc,
+          status: "cancelled",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
+        f({
+          id: "rebooked",
+          ...muc,
+          status: "flown",
+          departureTime: new Date("2024-04-01T10:00:00Z"),
+        }),
       ];
 
       expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["rebooked"]);
@@ -106,8 +119,18 @@ describe("tripDetectionService heuristics", () => {
       // The old rule was pure ordering, so the reverse order is the case that
       // happened to look right and proved nothing.
       const flights = [
-        f({ id: "rebooked", ...muc, status: "flown", departureTime: new Date("2024-04-01T10:00:00Z") }),
-        f({ id: "cancelled", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({
+          id: "rebooked",
+          ...muc,
+          status: "flown",
+          departureTime: new Date("2024-04-01T10:00:00Z"),
+        }),
+        f({
+          id: "cancelled",
+          ...muc,
+          status: "cancelled",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
       ];
 
       expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["rebooked"]);
@@ -117,8 +140,18 @@ describe("tripDetectionService heuristics", () => {
       // A positioning hop and the long haul out. Neither is cancelled, so
       // neither is a duplicate — the old key could not tell them apart.
       const flights = [
-        f({ id: "hop", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "longhaul", depIata: "MUC", arrIata: "JFK", departureTime: new Date("2024-04-01T15:00:00Z") }),
+        f({
+          id: "hop",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
+        f({
+          id: "longhaul",
+          depIata: "MUC",
+          arrIata: "JFK",
+          departureTime: new Date("2024-04-01T15:00:00Z"),
+        }),
       ];
 
       expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["hop", "longhaul"]);
@@ -137,8 +170,18 @@ describe("tripDetectionService heuristics", () => {
       // Dropping both would silently shrink the proposal below the minimum and
       // lose the trip; a cancelled leg is still a record of the booking.
       const flights = [
-        f({ id: "x", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "y", ...muc, status: "cancelled", departureTime: new Date("2024-04-01T10:00:00Z") }),
+        f({
+          id: "x",
+          ...muc,
+          status: "cancelled",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
+        f({
+          id: "y",
+          ...muc,
+          status: "cancelled",
+          departureTime: new Date("2024-04-01T10:00:00Z"),
+        }),
       ];
 
       expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["x"]);
@@ -147,7 +190,12 @@ describe("tripDetectionService heuristics", () => {
     it("leaves unrelated routes alone", () => {
       const flights = [
         f({ id: "a", ...muc, departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "c", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T10:00:00Z") }),
+        f({
+          id: "c",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-04-01T10:00:00Z"),
+        }),
       ];
 
       expect(dropCancelledDuplicates(flights).map((x) => x.id)).toEqual(["a", "c"]);
@@ -155,15 +203,28 @@ describe("tripDetectionService heuristics", () => {
   });
 
   describe("Home-loop detection", () => {
-    const history: HomeAirportEntry[] = [
-      { iata: "MUC", fromDate: "2010-01-01", toDate: null },
-    ];
+    const history: HomeAirportEntry[] = [{ iata: "MUC", fromDate: "2010-01-01", toDate: null }];
 
     it("groups a MUC → … → MUC sequence into one loop", () => {
       const flights = [
-        f({ id: "1", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T00:00:00Z") }),
-        f({ id: "2", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T12:00:00Z") }),
-        f({ id: "3", depIata: "JFK", arrIata: "MUC", departureTime: new Date("2024-04-15T00:00:00Z") }),
+        f({
+          id: "1",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-04-01T00:00:00Z"),
+        }),
+        f({
+          id: "2",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-04-01T12:00:00Z"),
+        }),
+        f({
+          id: "3",
+          depIata: "JFK",
+          arrIata: "MUC",
+          departureTime: new Date("2024-04-15T00:00:00Z"),
+        }),
       ];
       const loops = findHomeLoops(flights, history);
       expect(loops.length).toBe(1);
@@ -172,14 +233,24 @@ describe("tripDetectionService heuristics", () => {
 
     it("skips a sequence that does not start at home", () => {
       const flights = [
-        f({ id: "1", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T00:00:00Z") }),
+        f({
+          id: "1",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-04-01T00:00:00Z"),
+        }),
       ];
       expect(findHomeLoops(flights, history).length).toBe(0);
     });
 
     it("returns empty when home history is missing", () => {
       const flights = [
-        f({ id: "1", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T00:00:00Z") }),
+        f({
+          id: "1",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-04-01T00:00:00Z"),
+        }),
       ];
       expect(findHomeLoops(flights, null).length).toBe(0);
     });
@@ -188,10 +259,26 @@ describe("tripDetectionService heuristics", () => {
   describe("Continuity sliding window", () => {
     it("groups consecutive flights with matching IATA hops within 7 days", () => {
       const flights = [
-        f({ id: "a", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-05-01T00:00:00Z"),
-            depLat: 48.354, depLon: 11.786, arrLat: 50.033, arrLon: 8.570 }),
-        f({ id: "b", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-05-01T05:00:00Z"),
-            depLat: 50.033, depLon: 8.570, arrLat: 40.640, arrLon: -73.779 }),
+        f({
+          id: "a",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-05-01T00:00:00Z"),
+          depLat: 48.354,
+          depLon: 11.786,
+          arrLat: 50.033,
+          arrLon: 8.57,
+        }),
+        f({
+          id: "b",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-05-01T05:00:00Z"),
+          depLat: 50.033,
+          depLon: 8.57,
+          arrLat: 40.64,
+          arrLon: -73.779,
+        }),
       ];
       const clusters = findContinuityClusters(flights);
       expect(clusters.length).toBe(1);
@@ -200,10 +287,22 @@ describe("tripDetectionService heuristics", () => {
 
     it("breaks the cluster when ground gap exceeds 7 days", () => {
       const flights = [
-        f({ id: "a", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-05-01T00:00:00Z"),
-            arrLat: 50.033, arrLon: 8.570 }),
-        f({ id: "b", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-05-15T00:00:00Z"),
-            depLat: 50.033, depLon: 8.570 }),
+        f({
+          id: "a",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-05-01T00:00:00Z"),
+          arrLat: 50.033,
+          arrLon: 8.57,
+        }),
+        f({
+          id: "b",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-05-15T00:00:00Z"),
+          depLat: 50.033,
+          depLon: 8.57,
+        }),
       ];
       expect(findContinuityClusters(flights).length).toBe(2);
     });
@@ -212,10 +311,22 @@ describe("tripDetectionService heuristics", () => {
       // LHR → CDG straight-line is ~344 km — too far. Use SXF (Berlin) → BER
       // (also Berlin) at ~25 km as a realistic open-jaw test.
       const flights = [
-        f({ id: "a", depIata: "MUC", arrIata: "SXF", departureTime: new Date("2024-05-01T00:00:00Z"),
-            arrLat: 52.380, arrLon: 13.522 }),
-        f({ id: "b", depIata: "BER", arrIata: "MUC", departureTime: new Date("2024-05-03T00:00:00Z"),
-            depLat: 52.366, depLon: 13.503 }),
+        f({
+          id: "a",
+          depIata: "MUC",
+          arrIata: "SXF",
+          departureTime: new Date("2024-05-01T00:00:00Z"),
+          arrLat: 52.38,
+          arrLon: 13.522,
+        }),
+        f({
+          id: "b",
+          depIata: "BER",
+          arrIata: "MUC",
+          departureTime: new Date("2024-05-03T00:00:00Z"),
+          depLat: 52.366,
+          depLon: 13.503,
+        }),
       ];
       expect(findContinuityClusters(flights).length).toBe(1);
     });
@@ -232,8 +343,18 @@ describe("tripDetectionService heuristics", () => {
 
     it("re-orders RAK→MAD before MAD→MUC on the same calendar day", () => {
       const flights = [
-        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
-        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+        f({
+          id: "anchor",
+          depIata: "MAD",
+          arrIata: "MUC",
+          departureTime: new Date("2009-09-21T10:00:00Z"),
+        }),
+        f({
+          id: "return",
+          depIata: "RAK",
+          arrIata: "MAD",
+          departureTime: new Date("2009-09-21T12:00:00Z"),
+        }),
       ];
       const sorted = chainCoherentSort(flights);
       expect(sorted.map((x) => x.id)).toEqual(["return", "anchor"]);
@@ -241,10 +362,30 @@ describe("tripDetectionService heuristics", () => {
 
     it("preserves multi-day order while re-sorting within each day", () => {
       const flights = [
-        f({ id: "out1", depIata: "MUC", arrIata: "MAD", departureTime: new Date("2009-09-14T10:00:00Z") }),
-        f({ id: "out2", depIata: "MAD", arrIata: "RAK", departureTime: new Date("2009-09-14T10:00:00Z") }),
-        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
-        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+        f({
+          id: "out1",
+          depIata: "MUC",
+          arrIata: "MAD",
+          departureTime: new Date("2009-09-14T10:00:00Z"),
+        }),
+        f({
+          id: "out2",
+          depIata: "MAD",
+          arrIata: "RAK",
+          departureTime: new Date("2009-09-14T10:00:00Z"),
+        }),
+        f({
+          id: "anchor",
+          depIata: "MAD",
+          arrIata: "MUC",
+          departureTime: new Date("2009-09-21T10:00:00Z"),
+        }),
+        f({
+          id: "return",
+          depIata: "RAK",
+          arrIata: "MAD",
+          departureTime: new Date("2009-09-21T12:00:00Z"),
+        }),
       ];
       const sorted = chainCoherentSort(flights);
       // Day 1 chain: MUC→MAD→RAK ; Day 2 chain: RAK→MAD→MUC
@@ -253,7 +394,12 @@ describe("tripDetectionService heuristics", () => {
 
     it("leaves single-flight days unchanged", () => {
       const flights = [
-        f({ id: "solo", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({
+          id: "solo",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
       ];
       expect(chainCoherentSort(flights).map((x) => x.id)).toEqual(["solo"]);
     });
@@ -262,25 +408,63 @@ describe("tripDetectionService heuristics", () => {
       // Two independent connections on the same day (rare but possible:
       // e.g. dropping a friend off then taking a separate trip later).
       const flights = [
-        f({ id: "ax", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
-        f({ id: "ay", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T11:00:00Z") }),
-        f({ id: "bx", depIata: "HEL", arrIata: "ARN", departureTime: new Date("2024-04-01T14:00:00Z") }),
-        f({ id: "by", depIata: "ARN", arrIata: "OSL", departureTime: new Date("2024-04-01T17:00:00Z") }),
+        f({
+          id: "ax",
+          depIata: "MUC",
+          arrIata: "FRA",
+          departureTime: new Date("2024-04-01T08:00:00Z"),
+        }),
+        f({
+          id: "ay",
+          depIata: "FRA",
+          arrIata: "JFK",
+          departureTime: new Date("2024-04-01T11:00:00Z"),
+        }),
+        f({
+          id: "bx",
+          depIata: "HEL",
+          arrIata: "ARN",
+          departureTime: new Date("2024-04-01T14:00:00Z"),
+        }),
+        f({
+          id: "by",
+          depIata: "ARN",
+          arrIata: "OSL",
+          departureTime: new Date("2024-04-01T17:00:00Z"),
+        }),
       ];
       const sorted = chainCoherentSort(flights);
       expect(sorted.map((x) => x.id)).toEqual(["ax", "ay", "bx", "by"]);
     });
 
     it("findHomeLoops captures all 4 legs of MUC↺RAK after chain-coherent sort (issue #104)", () => {
-      const history: HomeAirportEntry[] = [
-        { iata: "MUC", fromDate: "2009-01-01", toDate: null },
-      ];
+      const history: HomeAirportEntry[] = [{ iata: "MUC", fromDate: "2009-01-01", toDate: null }];
       // Order as findMany returns it (departureTime asc):
       const fromDb = [
-        f({ id: "out1", depIata: "MUC", arrIata: "MAD", departureTime: new Date("2009-09-14T10:00:00Z") }),
-        f({ id: "out2", depIata: "MAD", arrIata: "RAK", departureTime: new Date("2009-09-14T10:00:00Z") }),
-        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
-        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+        f({
+          id: "out1",
+          depIata: "MUC",
+          arrIata: "MAD",
+          departureTime: new Date("2009-09-14T10:00:00Z"),
+        }),
+        f({
+          id: "out2",
+          depIata: "MAD",
+          arrIata: "RAK",
+          departureTime: new Date("2009-09-14T10:00:00Z"),
+        }),
+        f({
+          id: "anchor",
+          depIata: "MAD",
+          arrIata: "MUC",
+          departureTime: new Date("2009-09-21T10:00:00Z"),
+        }),
+        f({
+          id: "return",
+          depIata: "RAK",
+          arrIata: "MAD",
+          departureTime: new Date("2009-09-21T12:00:00Z"),
+        }),
       ];
       const loops = findHomeLoops(chainCoherentSort(fromDb), history);
       expect(loops.length).toBe(1);

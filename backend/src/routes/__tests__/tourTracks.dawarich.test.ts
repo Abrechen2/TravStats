@@ -142,7 +142,10 @@ describe("Tour tracks — pull a Dawarich window", () => {
   async function seedUserConnection(): Promise<void> {
     await prisma.userSettings.upsert({
       where: { userId },
-      update: { dawarichBaseUrl: DAWARICH_BASE_URL, dawarichApiKey: encryptApiKey(DAWARICH_API_KEY) },
+      update: {
+        dawarichBaseUrl: DAWARICH_BASE_URL,
+        dawarichApiKey: encryptApiKey(DAWARICH_API_KEY),
+      },
       create: {
         userId,
         data: {},
@@ -218,7 +221,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toBe("notConfigured");
 
-    expect((global.fetch as jest.Mock)).not.toHaveBeenCalled();
+    expect(global.fetch as jest.Mock).not.toHaveBeenCalled();
   });
 
   it("Dawarich unreachable → 409 with kind unreachable, and nothing is stored", async () => {
@@ -272,7 +275,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
   it("refuses a window with exactly one point instead of storing a one-point track", async () => {
     await seedUserConnection();
     (global.fetch as jest.Mock).mockResolvedValueOnce(
-      fakeOkResponse([rawPoint(1, 60.39, 5.32, T_OLD)]),
+      fakeOkResponse([rawPoint(1, 60.39, 5.32, T_OLD)])
     );
 
     const before = await prisma.tripRouteTrack.count({ where: { routeId } });

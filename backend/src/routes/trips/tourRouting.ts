@@ -117,7 +117,7 @@ router.post(
       if (provider === null) {
         throw new AppError(
           "Routing is not configured for this instance — no provider is set up",
-          409,
+          409
         );
       }
 
@@ -142,7 +142,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -238,7 +238,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

@@ -13,13 +13,13 @@
  * data. Unknown names return null and the row keeps its IATA/ICAO empty.
  */
 
-import type { AirlineResolvers } from '../shared/airlineNormalize';
-import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
-import { AIRLINES } from '../data/airlines';
+import type { AirlineResolvers } from "../shared/airlineNormalize";
+import { getAirlineCatalogSync, type CachedAirline } from "../services/airlineCatalogCache";
+import { AIRLINES } from "../data/airlines";
 // The canonical-spelling half now lives in `shared/` so the browser groups
 // carriers exactly as the server does (#268). Re-exported here because every
 // existing import site names this module.
-export { normalizeAirline, mergeAirlineCounts } from '../shared/airlineNormalize';
+export { normalizeAirline, mergeAirlineCounts } from "../shared/airlineNormalize";
 
 /**
  * Extra alias → IATA mapping for names users actually type that don't
@@ -29,29 +29,29 @@ export { normalizeAirline, mergeAirlineCounts } from '../shared/airlineNormalize
  */
 const NAME_TO_IATA: Record<string, string> = {
   // Iberia variants
-  'iberia airlines': 'IB',
-  'iberia lae': 'IB',           // legal name "Iberia Líneas Aéreas"
+  "iberia airlines": "IB",
+  "iberia lae": "IB", // legal name "Iberia Líneas Aéreas"
   // Lufthansa
-  'lufthansa airlines': 'LH',
-  'lufthansa german airlines': 'LH',
+  "lufthansa airlines": "LH",
+  "lufthansa german airlines": "LH",
   // British Airways
-  'british airways plc': 'BA',
+  "british airways plc": "BA",
   // SAS — already in AIRLINE_ALIASES for spelling, also need IATA
-  'sas': 'SK',
-  'sas scandinavian airlines': 'SK',
-  'scandinavian airlines': 'SK',
+  sas: "SK",
+  "sas scandinavian airlines": "SK",
+  "scandinavian airlines": "SK",
   // Air France / KLM
-  'air france klm': 'AF',
+  "air france klm": "AF",
   // ITA Airways successor of Alitalia — users still type the old name
-  'alitalia': 'AZ',
-  'ita airways': 'AZ',
+  alitalia: "AZ",
+  "ita airways": "AZ",
   // United / American long forms
-  'united': 'UA',
-  'american': 'AA',
-  'delta': 'DL',
+  united: "UA",
+  american: "AA",
+  delta: "DL",
   // EgyptAir — also in AIRLINE_ALIASES for spelling
-  'egyptair': 'MS',
-  'egypt air': 'MS',
+  egyptair: "MS",
+  "egypt air": "MS",
 };
 
 /**
@@ -74,7 +74,7 @@ function buildLookups(catalog: CachedAirline[]) {
 // test that never called preloadAirlineCatalog(), and never silently returns
 // null for a known carrier while the boot-time preload is still pending.
 const FALLBACK_LOOKUPS = buildLookups(
-  AIRLINES.map((a) => ({ iata: a.iata, icao: a.icao ?? null, name: a.name })),
+  AIRLINES.map((a) => ({ iata: a.iata, icao: a.icao ?? null, name: a.name }))
 );
 
 let warmSource: CachedAirline[] | null = null;
@@ -110,7 +110,7 @@ function currentLookups(): ReturnType<typeof buildLookups> {
  *   4. NAME_TO_IATA alias (e.g. "iberia airlines" → IB)
  */
 export function resolveAirlineCodes(
-  name: string,
+  name: string
 ): { iata: string; icao?: string; name: string } | null {
   const trimmed = name.trim();
   if (!trimmed) return null;

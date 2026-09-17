@@ -1,8 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import { parse } from 'csv-parse/sync';
-import { prisma } from './db';
-import logger from './utils/logger';
+import fs from "fs";
+import path from "path";
+import { parse } from "csv-parse/sync";
+import { prisma } from "./db";
+import logger from "./utils/logger";
 
 interface CSVShip {
   name: string;
@@ -14,21 +14,21 @@ interface CSVShip {
   status: string;
 }
 
-const CSV_PATH = path.resolve(__dirname, 'seedData', 'ships.csv');
+const CSV_PATH = path.resolve(__dirname, "seedData", "ships.csv");
 
 const toIntOrNull = (v: string): number | null => {
-  if (!v || v.trim() === '') return null;
+  if (!v || v.trim() === "") return null;
   const n = Number.parseInt(v, 10);
   return Number.isFinite(n) ? n : null;
 };
 
 export async function seedShipsFromCSV(): Promise<number> {
   if (!fs.existsSync(CSV_PATH)) {
-    logger.warn({ operation: 'seed_ships_skip', reason: 'csv_missing', path: CSV_PATH });
+    logger.warn({ operation: "seed_ships_skip", reason: "csv_missing", path: CSV_PATH });
     return 0;
   }
 
-  const raw = fs.readFileSync(CSV_PATH, 'utf-8');
+  const raw = fs.readFileSync(CSV_PATH, "utf-8");
   const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true }) as CSVShip[];
 
   let inserted = 0;
@@ -49,13 +49,13 @@ export async function seedShipsFromCSV(): Promise<number> {
         yearBuilt: toIntOrNull(row.year_built),
         grossTonnage: toIntOrNull(row.gross_tonnage),
         capacity: toIntOrNull(row.capacity),
-        status: row.status?.trim() || 'active',
+        status: row.status?.trim() || "active",
         isUserAdded: false,
       },
     });
     inserted += 1;
   }
 
-  logger.info({ operation: 'seed_ships_done', inserted });
+  logger.info({ operation: "seed_ships_done", inserted });
   return inserted;
 }

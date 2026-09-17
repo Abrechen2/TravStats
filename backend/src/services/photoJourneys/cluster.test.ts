@@ -13,7 +13,7 @@ const START = Date.UTC(2026, 4, 1, 9, 0, 0);
 const photo = (
   id: string,
   offsetMs: number,
-  position?: { lat: number; lon: number },
+  position?: { lat: number; lon: number }
 ): ScanPhoto => ({
   id,
   takenAtMs: START + offsetMs,
@@ -27,7 +27,7 @@ describe("grouping photos into journeys", () => {
   it("keeps a burst together", () => {
     const clusters = clusterPhotosByTime(
       [0, HOUR, 2 * HOUR, 3 * HOUR].map((offset, i) => photo(`p${i}`, offset)),
-      OPTIONS,
+      OPTIONS
     );
     expect(clusters).toHaveLength(1);
     expect(clusters[0].photoCount).toBe(4);
@@ -37,11 +37,11 @@ describe("grouping photos into journeys", () => {
     const clusters = clusterPhotosByTime(
       [
         ...[0, HOUR, 2 * HOUR, 3 * HOUR].map((o, i) => photo(`a${i}`, o)),
-        ...[10 * DAY, 10 * DAY + HOUR, 10 * DAY + 2 * HOUR, 10 * DAY + 3 * HOUR].map(
-          (o, i) => photo(`b${i}`, o),
+        ...[10 * DAY, 10 * DAY + HOUR, 10 * DAY + 2 * HOUR, 10 * DAY + 3 * HOUR].map((o, i) =>
+          photo(`b${i}`, o)
         ),
       ],
-      OPTIONS,
+      OPTIONS
     );
     expect(clusters).toHaveLength(2);
   });
@@ -51,8 +51,8 @@ describe("grouping photos into journeys", () => {
     expect(
       clusterPhotosByTime(
         [0, HOUR, 2 * HOUR].map((o, i) => photo(`p${i}`, o)),
-        OPTIONS,
-      ),
+        OPTIONS
+      )
     ).toHaveLength(0);
   });
 
@@ -60,9 +60,7 @@ describe("grouping photos into journeys", () => {
     // Immich pages newest-first, so a caller that concatenates pages hands
     // over a sequence that is only locally ordered. Clustering that as-is
     // produces one bogus cluster per page boundary.
-    const ordered = [0, HOUR, 2 * HOUR, 3 * HOUR].map((o, i) =>
-      photo(`p${i}`, o),
-    );
+    const ordered = [0, HOUR, 2 * HOUR, 3 * HOUR].map((o, i) => photo(`p${i}`, o));
     const shuffled = [ordered[2], ordered[0], ordered[3], ordered[1]];
     expect(clusterPhotosByTime(shuffled, OPTIONS)).toHaveLength(1);
   });
@@ -75,7 +73,7 @@ describe("grouping photos into journeys", () => {
         { id: "junk", takenAtMs: 0, lat: null, lon: null },
         ...[0, HOUR, 2 * HOUR, 3 * HOUR].map((o, i) => photo(`p${i}`, o)),
       ],
-      OPTIONS,
+      OPTIONS
     );
     expect(clusters).toHaveLength(1);
     expect(clusters[0].photoIds).not.toContain("junk");
@@ -101,7 +99,7 @@ describe("where a journey happened", () => {
         photo("a3", 8 * HOUR, LISBON),
         photo("a4", 9 * HOUR, LISBON),
       ],
-      OPTIONS,
+      OPTIONS
     )[0];
 
     expect(cluster.position).not.toBeNull();
@@ -116,7 +114,7 @@ describe("where a journey happened", () => {
         photo("p2", 2 * HOUR),
         photo("p3", 3 * HOUR),
       ],
-      OPTIONS,
+      OPTIONS
     )[0];
 
     expect(cluster.photoCount).toBe(4);
@@ -129,7 +127,7 @@ describe("where a journey happened", () => {
     // Null, not (0,0) — that is a real place in the Atlantic.
     const cluster = clusterPhotosByTime(
       [0, HOUR, 2 * HOUR, 3 * HOUR].map((o, i) => photo(`p${i}`, o)),
-      OPTIONS,
+      OPTIONS
     )[0];
     expect(cluster.position).toBeNull();
     expect(cluster.locatedCount).toBe(0);
@@ -155,7 +153,7 @@ describe("which journeys nobody recorded", () => {
     expect(
       findUncoveredClusters([cluster(0, 2 * DAY)], [window(60 * DAY, 62 * DAY)], {
         padDays: 3,
-      }),
+      })
     ).toHaveLength(1);
   });
 
@@ -163,7 +161,7 @@ describe("which journeys nobody recorded", () => {
     expect(
       findUncoveredClusters([cluster(0, 2 * DAY)], [window(0, 2 * DAY)], {
         padDays: 3,
-      }),
+      })
     ).toHaveLength(0);
   });
 
@@ -172,11 +170,7 @@ describe("which journeys nobody recorded", () => {
     // real trip also produces a phantom cluster on each side of itself,
     // and the feature spends its credibility on journeys already recorded.
     expect(
-      findUncoveredClusters(
-        [cluster(-2 * DAY, -1 * DAY)],
-        [window(0, 2 * DAY)],
-        { padDays: 3 },
-      ),
+      findUncoveredClusters([cluster(-2 * DAY, -1 * DAY)], [window(0, 2 * DAY)], { padDays: 3 })
     ).toHaveLength(0);
   });
 
@@ -186,24 +180,18 @@ describe("which journeys nobody recorded", () => {
     expect(
       findUncoveredClusters([cluster(0, 14 * DAY)], [window(0, 1 * DAY)], {
         padDays: 3,
-      }),
+      })
     ).toHaveLength(0);
   });
 
   it("keeps a cluster that only just misses the slack", () => {
     expect(
-      findUncoveredClusters(
-        [cluster(-10 * DAY, -9 * DAY)],
-        [window(0, 2 * DAY)],
-        { padDays: 3 },
-      ),
+      findUncoveredClusters([cluster(-10 * DAY, -9 * DAY)], [window(0, 2 * DAY)], { padDays: 3 })
     ).toHaveLength(1);
   });
 
   it("explains everything when the user has recorded nothing... by not explaining any of it", () => {
-    expect(
-      findUncoveredClusters([cluster(0, 2 * DAY)], [], { padDays: 3 }),
-    ).toHaveLength(1);
+    expect(findUncoveredClusters([cluster(0, 2 * DAY)], [], { padDays: 3 })).toHaveLength(1);
   });
 });
 
@@ -216,8 +204,6 @@ describe("distance", () => {
   });
 
   it("is zero for a point against itself", () => {
-    expect(distanceKm({ lat: 38.72, lon: -9.14 }, { lat: 38.72, lon: -9.14 })).toBe(
-      0,
-    );
+    expect(distanceKm({ lat: 38.72, lon: -9.14 }, { lat: 38.72, lon: -9.14 })).toBe(0);
   });
 });

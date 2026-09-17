@@ -73,8 +73,13 @@ export default function MembershipsSection(): JSX.Element {
   // just tried to save) instead of the closure it was created with.
   const pendingLodgingIds = useRef<Map<string, Promise<string[]>>>(new Map());
 
-  const toggleLodging = (membership: LodgingMembership, lodgingId: string, checked: boolean): void => {
-    const base = pendingLodgingIds.current.get(membership.id) ?? Promise.resolve(membership.lodgingIds);
+  const toggleLodging = (
+    membership: LodgingMembership,
+    lodgingId: string,
+    checked: boolean
+  ): void => {
+    const base =
+      pendingLodgingIds.current.get(membership.id) ?? Promise.resolve(membership.lodgingIds);
     const chained = base.then(async (currentLodgingIds) => {
       const nextLodgingIds = checked
         ? [...currentLodgingIds, lodgingId]
@@ -116,10 +121,7 @@ export default function MembershipsSection(): JSX.Element {
               {t("settings:memberships.editHotels")}
             </button>
             {openPicker === m.id && (
-              <div
-                data-testid={`membership-hotel-picker-${m.id}`}
-                className="mt-1 space-y-1 pl-4"
-              >
+              <div data-testid={`membership-hotel-picker-${m.id}`} className="mt-1 space-y-1 pl-4">
                 {independentLodgings.length === 0 ? (
                   <p className="text-[var(--text-muted)]">
                     {t("settings:memberships.noIndependentHotels")}

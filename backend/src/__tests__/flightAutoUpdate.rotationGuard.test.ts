@@ -9,38 +9,38 @@
  *      ours, it is a different rotation of a daily flight number — its data
  *      must be rejected, not proposed (or auto-applied) onto our flight.
  */
-import { prisma } from '../db';
-import { checkAndUpdateFlightsForUser } from '../services/flightAutoUpdate';
-import { lookupFlightDetails } from '../services/flightLookup';
-import { Flight } from '@prisma/client';
+import { prisma } from "../db";
+import { checkAndUpdateFlightsForUser } from "../services/flightAutoUpdate";
+import { lookupFlightDetails } from "../services/flightLookup";
+import { Flight } from "@prisma/client";
 
-jest.mock('../services/flightLookup', () => ({
-  ...jest.requireActual('../services/flightLookup'),
+jest.mock("../services/flightLookup", () => ({
+  ...jest.requireActual("../services/flightLookup"),
   lookupFlightDetails: jest.fn(),
 }));
 
-jest.mock('../services/airportCache', () => ({
-  ...jest.requireActual('../services/airportCache'),
+jest.mock("../services/airportCache", () => ({
+  ...jest.requireActual("../services/airportCache"),
   getCachedAirport: jest.fn(async (code: string) => {
-    if (code === 'SYD') return { iata: 'SYD', timezone: 'Australia/Sydney' };
-    if (code === 'DXB') return { iata: 'DXB', timezone: 'Asia/Dubai' };
+    if (code === "SYD") return { iata: "SYD", timezone: "Australia/Sydney" };
+    if (code === "DXB") return { iata: "DXB", timezone: "Asia/Dubai" };
     return null;
   }),
 }));
 
 const lookupMock = lookupFlightDetails as jest.MockedFunction<typeof lookupFlightDetails>;
 
-describe('flightAutoUpdate — local lookup date + rotation guard', () => {
+describe("flightAutoUpdate — local lookup date + rotation guard", () => {
   let userId: string;
   let flight: Flight;
 
   // Stored as real UTC: 10 Aug 20:00Z == 11 Aug 06:00 Sydney local.
-  const DEP_UTC = new Date('2026-08-10T20:00:00Z');
-  const ARR_UTC = new Date('2026-08-11T10:10:00Z');
+  const DEP_UTC = new Date("2026-08-10T20:00:00Z");
+  const ARR_UTC = new Date("2026-08-11T10:10:00Z");
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { username: `rotguard${Date.now()}`, passwordHash: 'testhash' },
+      data: { username: `rotguard${Date.now()}`, passwordHash: "testhash" },
     });
     userId = user.id;
     await prisma.userSettings.create({
@@ -58,19 +58,19 @@ describe('flightAutoUpdate — local lookup date + rotation guard', () => {
     flight = await prisma.flight.create({
       data: {
         userId,
-        airline: 'Emirates',
-        flightNumber: 'EK415',
-        depIata: 'SYD',
-        arrIata: 'DXB',
+        airline: "Emirates",
+        flightNumber: "EK415",
+        depIata: "SYD",
+        arrIata: "DXB",
         depLat: -33.9461,
         depLon: 151.1772,
         arrLat: 25.2532,
         arrLon: 55.3657,
         departureTime: DEP_UTC,
         arrivalTime: ARR_UTC,
-        depTimeSemantics: 'UTC',
-        arrTimeSemantics: 'UTC',
-        status: 'scheduled',
+        depTimeSemantics: "UTC",
+        arrTimeSemantics: "UTC",
+        status: "scheduled",
         nextApiCheckAt: new Date(Date.now() - 60_000),
       },
     });
@@ -87,7 +87,7 @@ describe('flightAutoUpdate — local lookup date + rotation guard', () => {
     await prisma.$disconnect();
   });
 
-  it('queries the API with the LOCAL departure day, not the UTC day', async () => {
+  it("queries the API with the LOCAL departure day, not the UTC day", async () => {
     lookupMock.mockResolvedValue(null);
 
     await checkAndUpdateFlightsForUser(userId);
@@ -95,16 +95,16 @@ describe('flightAutoUpdate — local lookup date + rotation guard', () => {
     expect(lookupMock).toHaveBeenCalledTimes(1);
     // Sydney local day of 2026-08-10T20:00Z is 2026-08-11 — the UTC day
     // (2026-08-10) is the previous rotation and caused the day-shift bug.
-    expect(lookupMock.mock.calls[0][1]).toBe('2026-08-11');
+    expect(lookupMock.mock.calls[0][1]).toBe("2026-08-11");
   });
 
-  it('rejects API data from the wrong rotation (±24h) instead of proposing it', async () => {
+  it("rejects API data from the wrong rotation (±24h) instead of proposing it", async () => {
     lookupMock.mockResolvedValue({
-      source: 'airlabs',
+      source: "airlabs",
       // The PREVIOUS day's rotation — exactly what the buggy lookup returned.
-      departureTime: '2026-08-09T20:00:00Z',
-      arrivalTime: '2026-08-10T10:00:00Z',
-      status: 'flown',
+      departureTime: "2026-08-09T20:00:00Z",
+      arrivalTime: "2026-08-10T10:00:00Z",
+      status: "flown",
     });
 
     await checkAndUpdateFlightsForUser(userId);
@@ -115,12 +115,12 @@ describe('flightAutoUpdate — local lookup date + rotation guard', () => {
     expect(updates).toHaveLength(0);
   });
 
-  it('still proposes genuine same-rotation schedule changes', async () => {
+  it("still proposes genuine same-rotation schedule changes", async () => {
     lookupMock.mockResolvedValue({
-      source: 'airlabs',
+      source: "airlabs",
       // 40 minutes late — a real schedule change, well inside the guard.
-      departureTime: '2026-08-10T20:40:00Z',
-      arrivalTime: '2026-08-11T10:50:00Z',
+      departureTime: "2026-08-10T20:40:00Z",
+      arrivalTime: "2026-08-11T10:50:00Z",
     });
 
     await checkAndUpdateFlightsForUser(userId);

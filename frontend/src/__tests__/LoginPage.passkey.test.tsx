@@ -132,9 +132,7 @@ describe("LoginPage — passkey sign-in", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "login.passkeySubmit" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument());
     expect(navigate).not.toHaveBeenCalled();
   });
 });

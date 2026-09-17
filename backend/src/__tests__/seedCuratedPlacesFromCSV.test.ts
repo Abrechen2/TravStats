@@ -43,7 +43,11 @@ describe("seedCuratedPlacesFromCSV", () => {
     for (const key of ["biosphere-reserves", "nationalparks-de", "nationalparks-us"]) {
       const list = await prisma.curatedList.findUnique({ where: { key } });
       const places = await prisma.curatedPlace.count({ where: { listKey: key } });
-      expect({ key, listed: list !== null, hasPlaces: places > 0 }).toEqual({ key, listed: true, hasPlaces: true });
+      expect({ key, listed: list !== null, hasPlaces: places > 0 }).toEqual({
+        key,
+        listed: true,
+        hasPlaces: true,
+      });
     }
   });
 
@@ -105,7 +109,13 @@ describe("seedCuratedPlacesFromCSV", () => {
     await seedCuratedPlacesFromCSV();
     await prisma.curatedList.create({ data: { key: "retired-list", name: "Zurückgezogen" } });
     await prisma.curatedPlace.create({
-      data: { id: "retired-list:somewhere", listKey: "retired-list", name: "Irgendwo", lat: 1, lon: 1 },
+      data: {
+        id: "retired-list:somewhere",
+        listKey: "retired-list",
+        name: "Irgendwo",
+        lat: 1,
+        lon: 1,
+      },
     });
 
     await seedCuratedPlacesFromCSV();

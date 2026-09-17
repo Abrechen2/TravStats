@@ -100,7 +100,7 @@ const MEAL_WORD = "(?:breakfast|fr(?:ü|ue)hst(?:ü|ue)ck|board|pension|meals?|v
 const NEGATED_MEAL = new RegExp(
   `\\b(?:no|not|without|excluding|excludes|excl\\.?|ohne|keine?|nicht|exkl\\.?|exklusive)\\b[^.,;]{0,25}?${MEAL_WORD}` +
     `|${MEAL_WORD}[^.,;]{0,25}?\\b(?:not|nicht|excluded|exkl\\.?|ausgeschlossen)\\b`,
-  "i",
+  "i"
 );
 
 /**
@@ -110,7 +110,7 @@ const NEGATED_MEAL = new RegExp(
 const OPTIONAL_MEAL = new RegExp(
   `${MEAL_WORD}[^.,;]{0,25}?(?:optional|surcharge|aufpreis|extra\\s+charge|zubuchbar|buchbar|available|gegen\\s+(?:aufpreis|geb(?:ü|ue)hr)|for\\s+an?\\s+(?:additional|extra))` +
     `|(?:optional|zubuchbar|gegen\\s+(?:aufpreis|geb(?:ü|ue)hr))[^.,;]{0,25}?${MEAL_WORD}`,
-  "i",
+  "i"
 );
 
 export function normalizeBoard(value: unknown): LodgingBoard | null {

@@ -1,13 +1,13 @@
 // backend/src/services/parsers/userTemplates/types.ts
 
 export interface TemplateFingerprint {
-  senderDomains: string[];   // e.g. ["noti.swiss.com", "lufthansa.com"]
+  senderDomains: string[]; // e.g. ["noti.swiss.com", "lufthansa.com"]
   subjectPatterns: string[]; // literal strings (case-insensitive match)
-  bodyMarkers: string[];     // ALL must be present in body
+  bodyMarkers: string[]; // ALL must be present in body
 }
 
 export interface TemplatePatterns {
-  pnr?: string;              // regex with one capture group
+  pnr?: string; // regex with one capture group
   flightNumber?: string;
   departureCode?: string;
   arrivalCode?: string;
@@ -49,7 +49,7 @@ export type FieldSources = Partial<
     | "departureTime"
     | "arrivalTime"
     | "pnr"
-    | "aircraft"      // note: matches ParsedBooking.aircraft (not aircraftType)
+    | "aircraft" // note: matches ParsedBooking.aircraft (not aircraftType)
     | "seat"
     | "terminal"
     | "gate",
@@ -61,7 +61,7 @@ export type FieldSources = Partial<
 export interface TemplateTestResult {
   emailId: string;
   emailSubject: string;
-  expected: number;     // number of expected flights
-  found: number;        // number of flights found by template
+  expected: number; // number of expected flights
+  found: number; // number of flights found by template
   fieldAccuracy: number; // 0-1 ratio of correctly extracted fields
 }

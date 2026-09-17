@@ -117,9 +117,7 @@ function extractReiseplanFlights(
 
 function computeConfidence(booking: Partial<ParsedBooking>): number {
   const CRITICAL = ["flightNumber", "departureCode", "arrivalCode", "departureTime", "pnr"];
-  const filled = CRITICAL.filter(
-    (k) => (booking as Record<string, unknown>)[k] != null
-  ).length;
+  const filled = CRITICAL.filter((k) => (booking as Record<string, unknown>)[k] != null).length;
   return Math.round((filled / CRITICAL.length) * 100);
 }
 

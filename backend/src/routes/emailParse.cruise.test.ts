@@ -4,15 +4,14 @@ const mockParseCruiseBookingText = jest.fn();
 const mockResolveCruiseEntities = jest.fn();
 // Pass-through hydration: keep input/shipMatched/unmatchedPorts, add empty
 // display objects (matches the real signature's enrichment).
-const mockHydrateResolvedCruises = jest.fn(
-  async (resolved: Array<Record<string, unknown>>) =>
-    resolved.map((r) => ({
-      ...r,
-      ship: null,
-      departurePort: null,
-      arrivalPort: null,
-      stopPorts: {},
-    }))
+const mockHydrateResolvedCruises = jest.fn(async (resolved: Array<Record<string, unknown>>) =>
+  resolved.map((r) => ({
+    ...r,
+    ship: null,
+    departurePort: null,
+    arrivalPort: null,
+    stopPorts: {},
+  }))
 );
 const mockParseBookingEmail = jest.fn();
 const mockExtractEmailFromFile = jest.fn();
@@ -101,13 +100,11 @@ describe("POST /parse-email — cruise domain", () => {
       unmatchedPorts: [],
     }));
 
-    const res = await request(app)
-      .post("/parse-email")
-      .send({
-        emailContent: "Buchungsbestätigung AIDAprima ...",
-        subject: "Ihre Kreuzfahrtbuchung",
-        domain: "cruise",
-      });
+    const res = await request(app).post("/parse-email").send({
+      emailContent: "Buchungsbestätigung AIDAprima ...",
+      subject: "Ihre Kreuzfahrtbuchung",
+      domain: "cruise",
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.domain).toBe("cruise");
@@ -127,13 +124,11 @@ describe("POST /parse-email — cruise domain", () => {
       ollamaAvailable: true,
     });
 
-    const res = await request(app)
-      .post("/parse-email")
-      .send({
-        emailContent: "Booking confirmation LH123",
-        subject: "Your flight",
-        domain: "flight",
-      });
+    const res = await request(app).post("/parse-email").send({
+      emailContent: "Booking confirmation LH123",
+      subject: "Your flight",
+      domain: "flight",
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.flights).toHaveLength(1);

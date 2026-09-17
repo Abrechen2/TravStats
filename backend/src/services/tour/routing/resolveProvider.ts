@@ -39,7 +39,7 @@ export async function resolveRouteProvider(userId?: string): Promise<RouteProvid
   if (!isRoutingProviderId(selected)) {
     logger.warn(
       { routingProvider: selected },
-      "admin_settings.routing_provider holds a value outside the current provider set; treating routing as unconfigured",
+      "admin_settings.routing_provider holds a value outside the current provider set; treating routing as unconfigured"
     );
     return null;
   }
@@ -53,7 +53,7 @@ export async function resolveRouteProvider(userId?: string): Promise<RouteProvid
   if (!apiKey) {
     logger.warn(
       { routingProvider: selected },
-      "routing_provider is selected but no API key is configured for it (checked user, admin global, and ENV); treating routing as unconfigured",
+      "routing_provider is selected but no API key is configured for it (checked user, admin global, and ENV); treating routing as unconfigured"
     );
     return null;
   }
@@ -66,7 +66,7 @@ export async function resolveRouteProvider(userId?: string): Promise<RouteProvid
 function resolveCustomProvider(baseUrl: string | null): RouteProvider | null {
   if (!baseUrl) {
     logger.warn(
-      "routing_provider is \"custom\" but admin_settings.routing_custom_url is not set; treating routing as unconfigured",
+      'routing_provider is "custom" but admin_settings.routing_custom_url is not set; treating routing as unconfigured'
     );
     return null;
   }
@@ -76,7 +76,7 @@ function resolveCustomProvider(baseUrl: string | null): RouteProvider | null {
   } catch (err) {
     logger.warn(
       { error: err instanceof Error ? err.message : String(err) },
-      "admin_settings.routing_custom_url is not a valid URL; treating routing as unconfigured",
+      "admin_settings.routing_custom_url is not a valid URL; treating routing as unconfigured"
     );
     return null;
   }
@@ -92,7 +92,7 @@ function isRoutingProviderId(value: string): value is RoutingProviderId {
  * which provider answers it.
  */
 export async function describeRoutingAvailability(
-  userId?: string,
+  userId?: string
 ): Promise<{ configured: boolean; providerId: RoutingProviderId | null }> {
   try {
     const provider = await resolveRouteProvider(userId);
@@ -102,7 +102,7 @@ export async function describeRoutingAvailability(
   } catch (err) {
     logger.error(
       { error: err instanceof Error ? err.message : String(err) },
-      "failed to determine tour routing availability; reporting unconfigured",
+      "failed to determine tour routing availability; reporting unconfigured"
     );
     return { configured: false, providerId: null };
   }

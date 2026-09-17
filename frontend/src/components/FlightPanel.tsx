@@ -404,10 +404,7 @@ export function FlightPanel({
 
             {/* Footer */}
             {tab === "flights" && (
-              <div
-                className="p-3 shrink-0"
-                style={{ borderTop: "1px solid var(--color-border)" }}
-              >
+              <div className="p-3 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
                 <button type="button" onClick={onAddFlight} className="btn-primary w-full text-sm">
                   + {t("dashboard:addFlight")}
                 </button>

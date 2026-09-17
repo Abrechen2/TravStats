@@ -66,7 +66,7 @@ interface CandidateFlight {
 
 async function backfillCo2(
   prisma: PrismaClient,
-  args: BackfillArgs,
+  args: BackfillArgs
 ): Promise<{ scanned: number; updated: number; skipped: number }> {
   const candidates = (await prisma.flight.findMany({
     where: { co2Kg: null },
@@ -111,8 +111,8 @@ async function backfillCo2(
         prisma.flight.update({
           where: { id: u.id },
           data: { co2Kg: u.co2Kg },
-        }),
-      ),
+        })
+      )
     );
     updated += batch.length;
   }
@@ -138,8 +138,8 @@ async function main(): Promise<void> {
           elapsedMs: ms,
         },
         null,
-        2,
-      ) + "\n",
+        2
+      ) + "\n"
     );
   } finally {
     await prisma.$disconnect();

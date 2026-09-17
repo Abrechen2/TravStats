@@ -57,10 +57,7 @@ describe("TripModal", () => {
     vi.mocked(tripsApi.create).mockResolvedValue({ id: "t1" } as unknown as Trip);
     render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    await userEvent.type(
-      screen.getByPlaceholderText("trips:modal.namePlaceholder"),
-      "Japan trip"
-    );
+    await userEvent.type(screen.getByPlaceholderText("trips:modal.namePlaceholder"), "Japan trip");
     await userEvent.click(screen.getByText("trips:modal.save"));
 
     await waitFor(() => expect(tripsApi.create).toHaveBeenCalled());
@@ -95,15 +92,9 @@ describe("TripModal", () => {
     vi.mocked(tripsApi.create).mockResolvedValue({ id: "t1" } as unknown as Trip);
     render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    await userEvent.type(
-      screen.getByPlaceholderText("trips:modal.namePlaceholder"),
-      "Japan trip"
-    );
+    await userEvent.type(screen.getByPlaceholderText("trips:modal.namePlaceholder"), "Japan trip");
     await userEvent.click(screen.getByRole("tab", { name: /trips:modalTabs\.people/ }));
-    await userEvent.type(
-      screen.getByRole("combobox", { name: "picker.label" }),
-      "Marie{Enter}"
-    );
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Marie{Enter}");
     await userEvent.click(screen.getByText("trips:modal.save"));
 
     await waitFor(() => expect(tripsApi.create).toHaveBeenCalled());

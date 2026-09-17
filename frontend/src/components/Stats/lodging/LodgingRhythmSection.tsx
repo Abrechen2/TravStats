@@ -148,10 +148,7 @@ export default function LodgingRhythmSection({ stats }: Props): JSX.Element {
  * The month with the most nights across all years. Ties go to the earlier
  * month — arbitrary, but stable, which matters more than which January wins.
  */
-function busiestMonthLabel(
-  nightsByMonthOfYear: number[],
-  t: (key: string) => string,
-): string {
+function busiestMonthLabel(nightsByMonthOfYear: number[], t: (key: string) => string): string {
   let best = -1;
   let bestCount = 0;
   nightsByMonthOfYear.forEach((count, idx) => {

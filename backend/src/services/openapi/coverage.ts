@@ -16,9 +16,9 @@
  * "we forgot" is not a reachable state.
  */
 
-import type { Router } from 'express';
+import type { Router } from "express";
 
-import { apiMounts } from '../../routes/mounts';
+import { apiMounts } from "../../routes/mounts";
 
 export interface MountedEndpoint {
   /** Lowercase HTTP method, e.g. "get". */
@@ -39,18 +39,18 @@ export interface MountedEndpoint {
  * integration is meant to drive.
  */
 export const UNDOCUMENTED_MOUNTS: ReadonlyMap<string, string> = new Map([
-  ['admin', 'Admin console API — admin-scope only, free to change between minor versions'],
-  ['setup', 'First-boot wizard — unauthenticated, single-use, not an integration surface'],
-  ['openapi', 'The spec and Swagger UI themselves'],
+  ["admin", "Admin console API — admin-scope only, free to change between minor versions"],
+  ["setup", "First-boot wizard — unauthenticated, single-use, not an integration surface"],
+  ["openapi", "The spec and Swagger UI themselves"],
 ]);
 
-const API_ROOT = '/api/v1';
+const API_ROOT = "/api/v1";
 
 /** Express 4 builds this source for a router mounted at '/'. */
-const FAST_SLASH = '^\\/?(?=\\/|$)';
-const MOUNT_SUFFIX = '\\/?(?=\\/|$)';
+const FAST_SLASH = "^\\/?(?=\\/|$)";
+const MOUNT_SUFFIX = "\\/?(?=\\/|$)";
 /** What path-to-regexp emits for a `:param` segment inside a mount path. */
-const PARAM_GROUP = '(?:([^\\/]+?))';
+const PARAM_GROUP = "(?:([^\\/]+?))";
 
 interface ExpressLayer {
   route?: { path: string | string[]; methods: Record<string, boolean> };
@@ -69,9 +69,9 @@ interface ExpressLayer {
  */
 const decodeMountPrefix = (layer: ExpressLayer): string => {
   const source = layer.regexp?.source;
-  if (!source || source === FAST_SLASH) return '';
+  if (!source || source === FAST_SLASH) return "";
 
-  let body = source.startsWith('^') ? source.slice(1) : source;
+  let body = source.startsWith("^") ? source.slice(1) : source;
   if (body.endsWith(MOUNT_SUFFIX)) body = body.slice(0, -MOUNT_SUFFIX.length);
 
   const keys = layer.keys ?? [];
@@ -82,8 +82,8 @@ const decodeMountPrefix = (layer: ExpressLayer): string => {
     body = body.replace(PARAM_GROUP, `:${String(key.name)}`);
   }
 
-  const prefix = body.replace(/\\(.)/g, '$1');
-  if (!prefix.startsWith('/') || /[()[\]?*+|^$]/.test(prefix)) {
+  const prefix = body.replace(/\\(.)/g, "$1");
+  if (!prefix.startsWith("/") || /[()[\]?*+|^$]/.test(prefix)) {
     throw new Error(`Unsupported router mount regexp: ${source}`);
   }
   return prefix;
@@ -91,16 +91,16 @@ const decodeMountPrefix = (layer: ExpressLayer): string => {
 
 /** `/trips/:id/photos/:photoId` → `/trips/{id}/photos/{photoId}` */
 export const toOpenApiPath = (expressPath: string): string =>
-  expressPath.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+  expressPath.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 
 const walk = (stack: ExpressLayer[], prefix: string, mountId: string, out: MountedEndpoint[]) => {
   for (const layer of stack) {
     if (layer.route) {
       const paths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
       for (const routePath of paths) {
-        const full = `${prefix}${routePath === '/' ? '' : routePath}`;
+        const full = `${prefix}${routePath === "/" ? "" : routePath}`;
         for (const method of Object.keys(layer.route.methods)) {
-          if (method === '_all') continue;
+          if (method === "_all") continue;
           out.push({ method: method.toLowerCase(), path: full, mountId });
         }
       }
@@ -130,7 +130,9 @@ export const listMountedEndpoints = (): MountedEndpoint[] => {
     })
     .map((e) => ({
       ...e,
-      path: toOpenApiPath(e.path.startsWith(API_ROOT) ? e.path.slice(API_ROOT.length) || '/' : e.path),
+      path: toOpenApiPath(
+        e.path.startsWith(API_ROOT) ? e.path.slice(API_ROOT.length) || "/" : e.path
+      ),
     }));
 };
 

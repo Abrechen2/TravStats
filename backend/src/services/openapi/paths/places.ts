@@ -18,10 +18,7 @@
 
 import { z } from "zod";
 
-import {
-  placeImportCommitSchema,
-  placeImportPreviewSchema,
-} from "../../../schemas/placeImport";
+import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
 
 import { registry } from "../registry";
 import { documentIdsBodySchema } from "../../../schemas/document";
@@ -184,7 +181,11 @@ registry.registerPath({
   tags: placesTag,
   request: {
     params: z.object({ id: uuid }),
-    body: { content: { "application/json": { schema: createVisitSchema.extend(documentIdsBodySchema.shape) } } },
+    body: {
+      content: {
+        "application/json": { schema: createVisitSchema.extend(documentIdsBodySchema.shape) },
+      },
+    },
   },
   responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
@@ -355,7 +356,11 @@ registry.registerPath({
   summary: "Take a place out of a list",
   tags: placesTag,
   request: { params: z.object({ id: uuid, placeId: uuid }) },
-  responses: { 204: deleted, 404: notFound, 409: { description: "Fixed membership", content: errorContent } },
+  responses: {
+    204: deleted,
+    404: notFound,
+    409: { description: "Fixed membership", content: errorContent },
+  },
 });
 
 registry.registerPath({

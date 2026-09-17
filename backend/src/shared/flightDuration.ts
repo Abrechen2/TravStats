@@ -63,12 +63,7 @@ export interface FlightDurationInput {
 
 /** Great-circle distance in kilometres. Self-contained on purpose: this file
  * is mirrored into the frontend, where the geo helpers are a different module. */
-export function greatCircleKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function greatCircleKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat2 - lat1) * RAD_PER_DEG;
   const dLon = (lon2 - lon1) * RAD_PER_DEG;
   const a =
@@ -86,7 +81,7 @@ export function estimateDurationMinutes(
   depLat: number | null,
   depLon: number | null,
   arrLat: number | null,
-  arrLon: number | null,
+  arrLon: number | null
 ): number | null {
   if (
     typeof depLat !== "number" ||
@@ -145,7 +140,7 @@ export function emptyDurationTotals(): FlightDurationTotals {
 /** Folds one flight into a running total. Pure — returns a new object. */
 export function addFlightDuration(
   totals: FlightDurationTotals,
-  input: FlightDurationInput,
+  input: FlightDurationInput
 ): FlightDurationTotals {
   const d = resolveFlightDuration(input);
   if (d === null) return { ...totals, unknownCount: totals.unknownCount + 1 };
@@ -207,7 +202,7 @@ export interface TimedFlightRow {
  * now, the frontend row's rule, so a row is one number on every screen.
  */
 export function measureFlightMinutes(row: TimedFlightRow): number | null {
-  if ((row.depTimeSemantics ?? 'UTC') !== 'UTC') return null;
+  if ((row.depTimeSemantics ?? "UTC") !== "UTC") return null;
   if (!row.departureTime || !row.arrivalTime) return null;
   const minutes =
     (new Date(row.arrivalTime).getTime() - new Date(row.departureTime).getTime()) / 60000;

@@ -43,13 +43,15 @@ const tourSummary = registry.register(
         .string()
         .datetime()
         .nullable()
-        .describe("Earliest dated stop's startDate. Null if no stop in the section carries a date."),
+        .describe(
+          "Earliest dated stop's startDate. Null if no stop in the section carries a date."
+        ),
       endDate: z
         .string()
         .datetime()
         .nullable()
         .describe(
-          "Latest dated stop's endDate (falling back to its startDate for a single-day stop).",
+          "Latest dated stop's endDate (falling back to its startDate for a single-day stop)."
         ),
     })
     .openapi("TourSummary", {
@@ -64,7 +66,7 @@ const tourSummary = registry.register(
         startDate: "2024-07-01T00:00:00.000Z",
         endDate: "2024-07-05T00:00:00.000Z",
       },
-    }),
+    })
 );
 
 registry.registerPath({

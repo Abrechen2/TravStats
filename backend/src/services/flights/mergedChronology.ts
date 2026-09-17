@@ -37,7 +37,10 @@ export interface StoredFlightTimes {
  * Null when either side is missing — the schema's `requirePairedTimezone`
  * already enforces that a present local string carries a zone.
  */
-export function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
+export function toUtcDate(
+  local: string | null | undefined,
+  tz: string | null | undefined
+): Date | null {
   if (!local || !tz) return null;
   const instant = fromZonedTime(local, tz);
   return Number.isNaN(instant.getTime()) ? null : instant;
@@ -52,10 +55,7 @@ export function toUtcDate(local: string | null | undefined, tz: string | null | 
  * `departureTime` is a placeholder or an unclassified legacy value, and
  * ordering those would refuse edits to exactly the rows that most need them.
  */
-export function assertMergedChronology(
-  data: ChronologyPatch,
-  existing: StoredFlightTimes,
-): void {
+export function assertMergedChronology(data: ChronologyPatch, existing: StoredFlightTimes): void {
   const depSemantics = data.depTimeSemantics ?? existing.depTimeSemantics;
   const arrSemantics = data.arrTimeSemantics ?? existing.arrTimeSemantics;
   if (depSemantics !== "UTC" || arrSemantics !== "UTC") return;

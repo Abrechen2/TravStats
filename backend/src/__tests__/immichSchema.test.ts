@@ -59,14 +59,14 @@ describe("Immich schema", () => {
 
     await prisma.tripPhoto.create({ data: { ...base, immichAssetId: "dupe" } });
     await expect(
-      prisma.tripPhoto.create({ data: { ...base, immichAssetId: "dupe" } }),
+      prisma.tripPhoto.create({ data: { ...base, immichAssetId: "dupe" } })
     ).rejects.toThrow();
 
     // NULL immichAssetId is not constrained — manual uploads stay unlimited.
     await prisma.tripPhoto.create({ data: base });
     await prisma.tripPhoto.create({ data: base });
     expect(await prisma.tripPhoto.count({ where: { tripId: trip.id, immichAssetId: null } })).toBe(
-      2,
+      2
     );
   });
 

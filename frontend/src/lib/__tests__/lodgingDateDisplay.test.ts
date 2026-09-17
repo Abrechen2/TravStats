@@ -45,11 +45,8 @@ describe("formatStayPeriod", () => {
 
   it("says so plainly when there is no date at all", () => {
     expect(
-      formatStayPeriod(
-        stay({ checkIn: null, checkOut: null, datePrecision: "NONE" }),
-        "de-DE",
-        t
-      ).label
+      formatStayPeriod(stay({ checkIn: null, checkOut: null, datePrecision: "NONE" }), "de-DE", t)
+        .label
     ).toBe("lodging:period.unknown");
   });
 

@@ -13,7 +13,9 @@ import { proposeLodgingMatch, type StoredLodging } from "../proposeMatch";
  * city made it a different house. It was created twice.
  */
 
-const house = (over: Partial<StoredLodging> & Pick<StoredLodging, "id" | "name">): StoredLodging => ({
+const house = (
+  over: Partial<StoredLodging> & Pick<StoredLodging, "id" | "name">
+): StoredLodging => ({
   address: null,
   city: null,
   country: null,
@@ -65,10 +67,13 @@ describe("proposeLodgingMatch", () => {
   });
 
   it("refuses the same name in a different town", () => {
-    const result = proposeLodgingMatch([house({ id: "rose-bern", name: "Hotel Rose", city: "Bern" })], {
-      name: "Hotel Rose",
-      city: "Basel",
-    });
+    const result = proposeLodgingMatch(
+      [house({ id: "rose-bern", name: "Hotel Rose", city: "Bern" })],
+      {
+        name: "Hotel Rose",
+        city: "Basel",
+      }
+    );
 
     expect(result.action).toBe("create");
     expect(result.match).toBeNull();
@@ -78,9 +83,12 @@ describe("proposeLodgingMatch", () => {
   it("does not read a missing city as a different city", () => {
     // A saved-places export carries no city. Reading that as "not Opfikon"
     // is what turns an absent field into a refusal to match.
-    const result = proposeLodgingMatch([house({ id: "x", name: "Emirates Palace Mandarin Oriental" })], {
-      name: "Emirates Palace",
-    });
+    const result = proposeLodgingMatch(
+      [house({ id: "x", name: "Emirates Palace Mandarin Oriental" })],
+      {
+        name: "Emirates Palace",
+      }
+    );
 
     expect(result.action).toBe("merge");
     expect(result.reason).toBe("name");

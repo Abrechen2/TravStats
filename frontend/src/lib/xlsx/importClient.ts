@@ -10,13 +10,7 @@
 
 import api from "./../api/client";
 import { parseWorkbook } from "./workbook";
-import {
-  cruiseSheet,
-  flightSheet,
-  lodgingSheet,
-  placeSheet,
-  placeVisitSheet,
-} from "./sheets";
+import { cruiseSheet, flightSheet, lodgingSheet, placeSheet, placeVisitSheet } from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
@@ -83,7 +77,7 @@ function importableSpecs(t: T): SheetSpec<never>[] {
 /** Read the workbook into the payload shape the server expects. */
 export async function readWorkbookForImport(
   t: T,
-  file: File,
+  file: File
 ): Promise<{ key: string; rows: Record<string, string>[] }[]> {
   const buffer = await file.arrayBuffer();
   const parsed = await parseWorkbook(buffer, importableSpecs(t));
@@ -113,7 +107,7 @@ export class ImportRefused extends Error {
 export async function sendImport(
   sheets: { key: string; rows: Record<string, string>[] }[],
   dryRun: boolean,
-  mode: ImportMode = "merge",
+  mode: ImportMode = "merge"
 ): Promise<ImportOutcome> {
   try {
     const { data } = await api.post<{ success: boolean; data: ImportOutcome }>("/xlsx-import", {

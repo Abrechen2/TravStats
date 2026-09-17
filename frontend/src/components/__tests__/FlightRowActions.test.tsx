@@ -26,11 +26,7 @@ function renderInRow(openMenuFor: string | null = null) {
   };
   render(
     <div onClick={onRow}>
-      <FlightRowActions
-        flight={flight}
-        openDuplicateMenuFor={openMenuFor}
-        {...handlers}
-      />
+      <FlightRowActions flight={flight} openDuplicateMenuFor={openMenuFor} {...handlers} />
     </div>
   );
   return { onRow, ...handlers };
@@ -63,9 +59,7 @@ describe("FlightRowActions", () => {
 
   it("opens the duplicate menu without opening the flight", async () => {
     const { onRow, onToggleDuplicateMenu } = renderInRow();
-    await userEvent.click(
-      screen.getByRole("button", { name: "flights:table.duplicate.label" })
-    );
+    await userEvent.click(screen.getByRole("button", { name: "flights:table.duplicate.label" }));
     expect(onToggleDuplicateMenu).toHaveBeenCalledWith("f1");
     expect(onRow).not.toHaveBeenCalled();
   });

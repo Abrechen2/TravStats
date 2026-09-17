@@ -38,8 +38,12 @@ export interface LegDistanceInput {
 const finite = (n: number): boolean => Number.isFinite(n);
 
 export function legDistanceKm(input: LegDistanceInput): number {
-  if (!finite(input.from.lat) || !finite(input.from.lon) ||
-      !finite(input.to.lat) || !finite(input.to.lon)) {
+  if (
+    !finite(input.from.lat) ||
+    !finite(input.from.lon) ||
+    !finite(input.to.lat) ||
+    !finite(input.to.lon)
+  ) {
     throw new Error("legDistanceKm: leg endpoint has a non-finite coordinate");
   }
   const chord = haversineKm(input.from, input.to);

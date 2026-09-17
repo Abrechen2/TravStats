@@ -26,8 +26,7 @@ export interface SubsolarPoint {
 export function subsolarPoint(date: Date): SubsolarPoint {
   const start = Date.UTC(date.getUTCFullYear(), 0, 0);
   const dayOfYear = (date.getTime() - start) / 86_400_000;
-  const utcHours =
-    date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
 
   // Fractional year (radians).
   const g = ((2 * Math.PI) / 365) * (dayOfYear - 1 + (utcHours - 12) / 24);

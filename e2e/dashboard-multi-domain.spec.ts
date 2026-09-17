@@ -55,9 +55,9 @@ test.describe("Multi-domain dashboard", () => {
     // "Modus: …" dropdown this file was written against — that one is retired.
     // Which option is chosen is now readable via `aria-pressed`.
     await openMapPanel(page);
-    await expect(
-      page.getByRole("button", { name: /^Übersicht$/i, pressed: true }),
-    ).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole("button", { name: /^Übersicht$/i, pressed: true })).toBeVisible({
+      timeout: 8_000,
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -86,9 +86,9 @@ test.describe("Multi-domain dashboard", () => {
 
     // The deep-linked mode is the selected option, and the URL keeps saying so.
     await openMapPanel(page);
-    await expect(
-      page.getByRole("button", { name: /^Itinerar$/i, pressed: true }),
-    ).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole("button", { name: /^Itinerar$/i, pressed: true })).toBeVisible({
+      timeout: 8_000,
+    });
     await expect(page).toHaveURL(/mode=itinerary/);
   });
 
@@ -136,9 +136,9 @@ test.describe("Multi-domain dashboard", () => {
     // says the same thing — the documented contract is
     // `/dashboard/<tab>?mode=<mode>` (CLAUDE.md).
     await openMapPanel(page);
-    await expect(
-      page.getByRole("button", { name: /^Heatmap$/i, pressed: true }),
-    ).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole("button", { name: /^Heatmap$/i, pressed: true })).toBeVisible({
+      timeout: 8_000,
+    });
 
     // NOT asserted: that the URL also says `mode=heatmap`.
     //

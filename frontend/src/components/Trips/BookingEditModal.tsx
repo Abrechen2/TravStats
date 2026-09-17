@@ -91,7 +91,12 @@ export default function BookingEditModal({
           </label>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" className="btn-secondary text-sm" onClick={onClose} disabled={saving}>
+          <button
+            type="button"
+            className="btn-secondary text-sm"
+            onClick={onClose}
+            disabled={saving}
+          >
             {t("trips:bookingEdit.cancel")}
           </button>
           <button

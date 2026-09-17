@@ -39,7 +39,7 @@ export interface AirportCoordinateIndex {
  * vanish from the map.
  */
 function hasPosition(
-  row: AirportCoordinateRow,
+  row: AirportCoordinateRow
 ): row is AirportCoordinateRow & { lat: number; lon: number } {
   return typeof row.lat === "number" && typeof row.lon === "number";
 }
@@ -55,7 +55,7 @@ function hasPosition(
  * other resolution path relies on.
  */
 export function buildAirportCoordinateIndex(
-  airports: ReadonlyArray<AirportCoordinateRow>,
+  airports: ReadonlyArray<AirportCoordinateRow>
 ): AirportCoordinateIndex {
   const byIata = new Map<string, LonLat>();
   const byIcao = new Map<string, LonLat>();
@@ -83,7 +83,7 @@ export function resolveAirportCoordinate(
   iata: string | null,
   icao: string | null,
   flightLat: number,
-  flightLon: number,
+  flightLon: number
 ): LonLat {
   const fromCatalogue =
     (iata ? index.byIata.get(iata) : undefined) ?? (icao ? index.byIcao.get(icao) : undefined);

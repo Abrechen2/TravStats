@@ -31,8 +31,7 @@ import path from "path";
 
 let tmpCsvPath: string;
 
-const SYNTHETIC_CSV =
-  "Kdate,Kfrom,Kto,Kdep,Karr,Kfn\n2024-01-15,FRA,JFK,10:00:00,13:00:00,LH400";
+const SYNTHETIC_CSV = "Kdate,Kfrom,Kto,Kdep,Karr,Kfn\n2024-01-15,FRA,JFK,10:00:00,13:00:00,LH400";
 
 test.beforeAll(() => {
   tmpCsvPath = path.join(os.tmpdir(), `travstats-e2e-generic-${Date.now()}.csv`);
@@ -88,21 +87,21 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   // Confirm Import section is shown
   // Both locales — see the note in import.fr24.spec.ts.
   await expect(
-    page.getByText(/Aus beliebigem Logbuch \(CSV\)|From any logbook \(CSV\)/),
+    page.getByText(/Aus beliebigem Logbuch \(CSV\)|From any logbook \(CSV\)/)
   ).toBeVisible();
 
   // Upload synthetic CSV — Generic CSV tile label says "Choose CSV file"
   await page.setInputFiles(
     'label:has-text("CSV-Datei auswählen") input[type="file"], label:has-text("Choose CSV file") input[type="file"]',
-    tmpCsvPath,
+    tmpCsvPath
   );
 
   // Column Mapping Wizard must appear
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
     page.getByText(
-      /CSV-Spalten auf TravStats-Felder zuordnen|Map your CSV columns to TravStats fields/i,
-    ),
+      /CSV-Spalten auf TravStats-Felder zuordnen|Map your CSV columns to TravStats fields/i
+    )
   ).toBeVisible();
 
   // The wizard renders required fields first: date (nth=0), fromIata (nth=1), toIata (nth=2)
@@ -112,13 +111,13 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   // on desktop — so `.nth(0)` was the wrong element and the case timed out
   // selecting an option in something invisible.
   const selects = page.getByRole("dialog").locator("select");
-  await selects.nth(0).selectOption("Kdate");   // date
-  await selects.nth(1).selectOption("Kfrom");   // fromIata
-  await selects.nth(2).selectOption("Kto");     // toIata
+  await selects.nth(0).selectOption("Kdate"); // date
+  await selects.nth(1).selectOption("Kfrom"); // fromIata
+  await selects.nth(2).selectOption("Kto"); // toIata
   // Optional fields (dep/arr time, flight number) — map them for a richer preview
-  await selects.nth(3).selectOption("Kdep");    // depTimeLocal
-  await selects.nth(4).selectOption("Karr");    // arrTimeLocal
-  await selects.nth(5).selectOption("Kfn");     // flightNumber
+  await selects.nth(3).selectOption("Kdep"); // depTimeLocal
+  await selects.nth(4).selectOption("Karr"); // arrTimeLocal
+  await selects.nth(5).selectOption("Kfn"); // flightNumber
 
   // Advance to preview
   await page.click('button:has-text("Weiter"), button:has-text("Continue")');
@@ -136,9 +135,9 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   // Firefox and WebKit happened to be slow enough that it landed anyway,
   // Chromium was not — so the same test wrote a flight in two engines and
   // silently wrote nothing in the third, and then failed looking for it.
-  await expect(
-    page.getByText(/Import abgeschlossen|Import complete/i),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Import abgeschlossen|Import complete/i)).toBeVisible({
+    timeout: 20_000,
+  });
 
   // Verify the flight is now visible on the dashboard
   // The flight LIST, not the dashboard. The dashboard is a map since the
@@ -149,7 +148,7 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   // paginated and sorted by departure, and the synthetic row is old enough to
   // sit well down it — "not on screen" is not the same as "not imported".
   const search = page.getByPlaceholder(
-    /Airline, Flugnummer oder Flughafen|Airline, flight number/i,
+    /Airline, Flugnummer oder Flughafen|Airline, flight number/i
   );
   await expect(search).toBeVisible({ timeout: 15_000 });
   await search.fill("LH400");

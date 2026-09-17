@@ -7,11 +7,7 @@ import fsp from "fs/promises";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
-import {
-  uploadPlacePhotos,
-  getPlacePhotoDir,
-  deletePlacePhotoFile,
-} from "../../middleware/upload";
+import { uploadPlacePhotos, getPlacePhotoDir, deletePlacePhotoFile } from "../../middleware/upload";
 import { uploadReceiptLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
@@ -191,7 +187,12 @@ router.post(
       );
 
       logger.info(
-        { operation: "place_photo_upload", userId, visitId: req.params.visitId, count: created.length },
+        {
+          operation: "place_photo_upload",
+          userId,
+          visitId: req.params.visitId,
+          count: created.length,
+        },
         "Place visit photos uploaded"
       );
       res.status(201).json({ success: true, data: created.map(toPhotoDto) });

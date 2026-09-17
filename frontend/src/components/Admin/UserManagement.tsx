@@ -68,9 +68,7 @@ export default function UserManagement({
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-(--text-primary)">
-                    {user.username}
-                  </div>
+                  <div className="text-sm font-medium text-(--text-primary)">{user.username}</div>
                   <div className="text-xs text-(--text-muted)">
                     {format(new Date(user.createdAt), "MMM d, yyyy")}
                   </div>

@@ -8,7 +8,10 @@ interface GeoPoint {
   weight: number;
   position: [number, number];
 }
-const geo = (weight: number, lon: number, lat: number): GeoPoint => ({ weight, position: [lon, lat] });
+const geo = (weight: number, lon: number, lat: number): GeoPoint => ({
+  weight,
+  position: [lon, lat],
+});
 const geoWeight = (p: GeoPoint) => p.weight;
 const geoPosition = (p: GeoPoint) => p.position;
 
@@ -67,7 +70,12 @@ describe("declutterByDistance", () => {
   it("keeps all markers when they're far enough apart on screen", () => {
     // Roughly Munich, Tokyo, New York, Sydney — nothing here is remotely
     // close at any sane zoom.
-    const farApart = [geo(10, 11.79, 48.35), geo(5, 139.84, 35.65), geo(8, -73.97, 40.71), geo(3, 151.21, -33.87)];
+    const farApart = [
+      geo(10, 11.79, 48.35),
+      geo(5, 139.84, 35.65),
+      geo(8, -73.97, 40.71),
+      geo(3, 151.21, -33.87),
+    ];
     expect(declutterByDistance(farApart, geoWeight, geoPosition, 5)).toHaveLength(4);
   });
 

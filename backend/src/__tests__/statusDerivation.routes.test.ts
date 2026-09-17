@@ -69,7 +69,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(dep),
           arrivalLocal: isoLocal(arr),
           status: "scheduled",
-        }),
+        })
       );
     expect(res.status).toBe(201);
     expect(res.body.flight.status).toBe("flown");
@@ -94,7 +94,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(dep),
           arrivalLocal: isoLocal(arr),
           status: "flown",
-        }),
+        })
       );
     expect(res.status).toBe(400);
   });
@@ -111,7 +111,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(dep),
           arrivalLocal: isoLocal(arr),
           status: "cancelled",
-        }),
+        })
       );
     expect(res.status).toBe(201);
     expect(res.body.flight.status).toBe("cancelled");
@@ -129,7 +129,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(futureDep),
           arrivalLocal: isoLocal(futureArr),
           status: "scheduled",
-        }),
+        })
       )
       .expect(201);
     expect(created.body.flight.status).toBe("scheduled");
@@ -162,7 +162,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(futureDep),
           arrivalLocal: isoLocal(futureArr),
           status: "scheduled",
-        }),
+        })
       )
       .expect(201);
 
@@ -191,7 +191,7 @@ describe("Flight write paths derive temporal status from dates", () => {
           departureLocal: isoLocal(futureDep),
           arrivalLocal: isoLocal(futureArr),
           status: "cancelled",
-        }),
+        })
       )
       .expect(201);
     expect(created.body.flight.status).toBe("cancelled");

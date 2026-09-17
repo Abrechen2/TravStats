@@ -58,14 +58,11 @@ describe("lodgingImport schemas", () => {
   });
 
   it("caps the preview payload at MAX_LODGING_IMPORT_ROWS", () => {
-    const candidates = Array.from(
-      { length: MAX_LODGING_IMPORT_ROWS + 1 },
-      (_, i) => ({
-        sourceRowIndex: i,
-        lodging: { name: `Hotel ${i}` },
-        stay: null,
-      }),
-    );
+    const candidates = Array.from({ length: MAX_LODGING_IMPORT_ROWS + 1 }, (_, i) => ({
+      sourceRowIndex: i,
+      lodging: { name: `Hotel ${i}` },
+      stay: null,
+    }));
     const result = lodgingImportPreviewRequestSchema.safeParse({ candidates });
     expect(result.success).toBe(false);
   });
@@ -191,9 +188,7 @@ describe("lodgingImport schemas", () => {
     it("accepts a normal set of headers and sample rows", () => {
       const result = suggestMappingRequestSchema.safeParse({
         headers: ["Hotel", "Anreise", "Abreise"],
-        sampleRows: [
-          { Hotel: "NH", Anreise: "2026-03-30", Abreise: "2026-03-31" },
-        ],
+        sampleRows: [{ Hotel: "NH", Anreise: "2026-03-30", Abreise: "2026-03-31" }],
       });
       expect(result.success).toBe(true);
     });

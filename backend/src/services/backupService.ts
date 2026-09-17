@@ -1,32 +1,32 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import archiver from 'archiver';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { Backup } from '@prisma/client';
+import * as fs from "fs";
+import * as path from "path";
+import archiver from "archiver";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { Backup } from "@prisma/client";
 import {
   BACKUP_BASE_DIR,
   RETENTION_DAYS,
   BackupOptions,
   RestoreOptions,
-} from './backup/backupConfig';
-import { createDatabaseDump } from './backup/backupDatabase';
-import { archiveUploads, getMetadata } from './backup/backupFiles';
-import { restoreBackup as restoreBackupImpl } from './backup/backupRestore';
-import { syncToCloudIfEnabled } from './cloudSyncService';
-import { AppError } from '../middleware/errorHandler';
+} from "./backup/backupConfig";
+import { createDatabaseDump } from "./backup/backupDatabase";
+import { archiveUploads, getMetadata } from "./backup/backupFiles";
+import { restoreBackup as restoreBackupImpl } from "./backup/backupRestore";
+import { syncToCloudIfEnabled } from "./cloudSyncService";
+import { AppError } from "../middleware/errorHandler";
 
 // Re-export types for backward compatibility
-export type { BackupOptions, RestoreOptions } from './backup/backupConfig';
-export type { ExistingBackupRecord } from './backup/backupConfig';
+export type { BackupOptions, RestoreOptions } from "./backup/backupConfig";
+export type { ExistingBackupRecord } from "./backup/backupConfig";
 
 /**
  * Create a new backup
  */
 export async function createBackup(options: BackupOptions = {}): Promise<string> {
   logger.info({
-    operation: 'backup_create_start',
-    message: 'Starting backup creation',
+    operation: "backup_create_start",
+    message: "Starting backup creation",
     backupBaseDir: BACKUP_BASE_DIR,
     backupPathEnv: process.env.BACKUP_PATH,
     platform: process.platform,
@@ -48,35 +48,35 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     tempDir = path.dirname(options.existingRecord.dbBackupPath);
     backupDir = path.dirname(tempDir);
   } else {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     backupId = `backup-${timestamp}`;
     backupDir = path.join(BACKUP_BASE_DIR, backupId);
-    tempDir = path.join(backupDir, 'temp');
+    tempDir = path.join(backupDir, "temp");
   }
 
   // Ensure backup base directory exists
   try {
     if (!fs.existsSync(BACKUP_BASE_DIR)) {
       logger.info({
-        operation: 'backup_dir_creating',
+        operation: "backup_dir_creating",
         message: `Creating backup directory: ${BACKUP_BASE_DIR}`,
       });
       fs.mkdirSync(BACKUP_BASE_DIR, { recursive: true });
       logger.info({
-        operation: 'backup_dir_created',
+        operation: "backup_dir_created",
         message: `Created backup directory: ${BACKUP_BASE_DIR}`,
       });
     } else {
       logger.info({
-        operation: 'backup_dir_exists',
+        operation: "backup_dir_exists",
         message: `Backup directory already exists: ${BACKUP_BASE_DIR}`,
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error({
-      operation: 'backup_dir_creation_failed',
-      message: 'Failed to create backup directory',
+      operation: "backup_dir_creation_failed",
+      message: "Failed to create backup directory",
       error: errorMessage,
       backupBaseDir: BACKUP_BASE_DIR,
       platform: process.platform,
@@ -89,18 +89,22 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     fs.mkdirSync(tempDir, { recursive: true });
   } catch (error) {
     logger.error({
-      operation: 'backup_temp_dir_creation_failed',
-      message: 'Failed to create temp directory',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      operation: "backup_temp_dir_creation_failed",
+      message: "Failed to create temp directory",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
-    throw new Error(`Failed to create temp directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to create temp directory: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 
   // When an existingRecord is provided, its paths already match what was stored in the DB.
   // Otherwise derive them from the locally generated backupId (same formula as always).
-  const dbBackupPath = options.existingRecord?.dbBackupPath ?? path.join(tempDir, 'database.sql');
-  const filesBackupPath = options.existingRecord?.filesBackupPath ?? path.join(tempDir, 'uploads.tar.gz');
-  const finalArchivePath = options.existingRecord?.backupPath ?? path.join(backupDir, `${backupId}.tar.gz`);
+  const dbBackupPath = options.existingRecord?.dbBackupPath ?? path.join(tempDir, "database.sql");
+  const filesBackupPath =
+    options.existingRecord?.filesBackupPath ?? path.join(tempDir, "uploads.tar.gz");
+  const finalArchivePath =
+    options.existingRecord?.backupPath ?? path.join(backupDir, `${backupId}.tar.gz`);
 
   // Create backup record — or reuse one that was already created atomically inside a
   // Serializable transaction by the route handler (TOCTOU prevention).
@@ -108,23 +112,23 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
   if (options.existingRecord) {
     backup = { id: options.existingRecord.id };
     logger.info({
-      operation: 'backup_record_reused',
-      message: 'Reusing backup record created inside transaction',
+      operation: "backup_record_reused",
+      message: "Reusing backup record created inside transaction",
       backupId: backup.id,
     });
   } else {
     try {
       logger.info({
-        operation: 'backup_record_creation_start',
-        message: 'Creating backup record in database',
+        operation: "backup_record_creation_start",
+        message: "Creating backup record in database",
         backupPath: finalArchivePath,
         backupDir,
       });
 
       backup = await prisma.backup.create({
         data: {
-          type: options.type || 'full',
-          status: 'running',
+          type: options.type || "full",
+          status: "running",
           backupPath: finalArchivePath,
           dbBackupPath,
           filesBackupPath,
@@ -134,17 +138,17 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       });
 
       logger.info({
-        operation: 'backup_record_created',
-        message: 'Backup record created successfully',
+        operation: "backup_record_created",
+        message: "Backup record created successfully",
         backupId: backup.id,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       logger.error({
-        operation: 'backup_record_creation_failed',
-        message: 'Failed to create backup record in database',
+        operation: "backup_record_creation_failed",
+        message: "Failed to create backup record in database",
         error: errorMessage,
         stack: errorStack,
         backupPath: finalArchivePath,
@@ -158,15 +162,21 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
         }
       } catch (cleanupError) {
         logger.warn({
-          operation: 'backup_cleanup_failed',
-          message: 'Failed to cleanup temp directory after error',
-          error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+          operation: "backup_cleanup_failed",
+          message: "Failed to cleanup temp directory after error",
+          error: cleanupError instanceof Error ? cleanupError.message : "Unknown error",
         });
       }
 
       // Provide more specific error message
-      if (errorMessage.includes('does not exist') || errorMessage.includes('relation') || errorMessage.includes('table')) {
-        throw new Error(`Backup table does not exist. Please run database migrations: ${errorMessage}`);
+      if (
+        errorMessage.includes("does not exist") ||
+        errorMessage.includes("relation") ||
+        errorMessage.includes("table")
+      ) {
+        throw new Error(
+          `Backup table does not exist. Please run database migrations: ${errorMessage}`
+        );
       }
 
       throw new Error(`Failed to create backup record: ${errorMessage}`);
@@ -175,36 +185,36 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
 
   try {
     logger.info({
-      operation: 'backup_start',
-      message: 'Starting backup',
+      operation: "backup_start",
+      message: "Starting backup",
       backupId: backup.id,
     });
 
     // Step 1: Backup database
-    logger.info({ operation: 'backup_db_start', message: 'Backing up database' });
+    logger.info({ operation: "backup_db_start", message: "Backing up database" });
     await createDatabaseDump(dbBackupPath);
     fs.statSync(dbBackupPath); // verify dump was created
 
     // Step 2: Archive uploads
-    logger.info({ operation: 'backup_files_start', message: 'Archiving upload files' });
+    logger.info({ operation: "backup_files_start", message: "Archiving upload files" });
     await archiveUploads(filesBackupPath);
 
     // Step 3: Get metadata
     const metadata = await getMetadata();
 
     // Step 4: Create final archive
-    logger.info({ operation: 'backup_archive_start', message: 'Creating final archive' });
+    logger.info({ operation: "backup_archive_start", message: "Creating final archive" });
     await new Promise<void>((resolve, reject) => {
-      const archive = archiver('tar', { gzip: true });
+      const archive = archiver("tar", { gzip: true });
       const output = fs.createWriteStream(finalArchivePath);
 
       archive.pipe(output);
-      archive.file(dbBackupPath, { name: 'database.sql' });
-      archive.file(filesBackupPath, { name: 'uploads.tar.gz' });
-      archive.append(JSON.stringify(metadata, null, 2), { name: 'metadata.json' });
+      archive.file(dbBackupPath, { name: "database.sql" });
+      archive.file(filesBackupPath, { name: "uploads.tar.gz" });
+      archive.append(JSON.stringify(metadata, null, 2), { name: "metadata.json" });
 
-      archive.on('error', reject);
-      output.on('close', resolve);
+      archive.on("error", reject);
+      output.on("close", resolve);
       archive.finalize();
     });
 
@@ -217,7 +227,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     await prisma.backup.update({
       where: { id: backup.id },
       data: {
-        status: 'completed',
+        status: "completed",
         size: BigInt(totalSize),
         completedAt: new Date(),
         metadata,
@@ -225,8 +235,8 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     });
 
     logger.info({
-      operation: 'backup_complete',
-      message: 'Backup completed successfully',
+      operation: "backup_complete",
+      message: "Backup completed successfully",
       backupId: backup.id,
       size: totalSize,
     });
@@ -235,8 +245,8 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     await prisma.backup.update({
       where: { id: backup.id },
       data: {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
         completedAt: new Date(),
       },
     });
@@ -248,17 +258,17 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       }
     } catch (cleanupError) {
       logger.error({
-        operation: 'backup_cleanup_error',
-        message: 'Failed to cleanup failed backup',
-        error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+        operation: "backup_cleanup_error",
+        message: "Failed to cleanup failed backup",
+        error: cleanupError instanceof Error ? cleanupError.message : "Unknown error",
       });
     }
 
     logger.error({
-      operation: 'backup_failed',
-      message: 'Backup failed',
+      operation: "backup_failed",
+      message: "Backup failed",
       backupId: backup.id,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
 
     throw error;
@@ -297,7 +307,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
  */
 export async function listBackups(): Promise<Backup[]> {
   return prisma.backup.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 }
 
@@ -310,7 +320,7 @@ export async function getBackup(id: string): Promise<Backup & { fileExists: bool
   });
 
   if (!backup) {
-    throw new AppError('Backup not found', 404);
+    throw new AppError("Backup not found", 404);
   }
 
   // Check if backup file still exists
@@ -331,7 +341,7 @@ export async function deleteBackup(id: string): Promise<void> {
   });
 
   if (!backup) {
-    throw new AppError('Backup not found', 404);
+    throw new AppError("Backup not found", 404);
   }
 
   // Delete backup files
@@ -348,8 +358,8 @@ export async function deleteBackup(id: string): Promise<void> {
   });
 
   logger.info({
-    operation: 'backup_deleted',
-    message: 'Backup deleted',
+    operation: "backup_deleted",
+    message: "Backup deleted",
     backupId: id,
   });
 }
@@ -375,7 +385,7 @@ export async function cleanupOldBackups(): Promise<number> {
       createdAt: {
         lt: cutoffDate,
       },
-      status: 'completed',
+      status: "completed",
     },
   });
 
@@ -387,17 +397,17 @@ export async function cleanupOldBackups(): Promise<number> {
       deletedCount++;
     } catch (error) {
       logger.error({
-        operation: 'cleanup_backup_error',
-        message: 'Failed to delete old backup',
+        operation: "cleanup_backup_error",
+        message: "Failed to delete old backup",
         backupId: backup.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
 
   logger.info({
-    operation: 'cleanup_complete',
-    message: 'Old backups cleaned up',
+    operation: "cleanup_complete",
+    message: "Old backups cleaned up",
     deletedCount,
   });
 

@@ -5,14 +5,14 @@
  * Also calculates statistics impact of updates.
  */
 
-import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from '@prisma/client';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { getCachedAirports } from './airportCache';
+import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { getCachedAirports } from "./airportCache";
 import {
   calculateStatisticsImpact,
   type StatisticsImpact,
-} from './pendingUpdates/statisticsImpact';
+} from "./pendingUpdates/statisticsImpact";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -21,7 +21,7 @@ const prismaClient = prisma as PrismaClient;
  * UTC and applying them counts as live tracking. Kept in sync with
  * `FlightLookupSource` in flightLookup.ts.
  */
-const LIVE_API_SOURCES = ['aviationstack', 'airlabs', 'aerodatabox', 'opensky'];
+const LIVE_API_SOURCES = ["aviationstack", "airlabs", "aerodatabox", "opensky"];
 
 /** Flight data fields used for original/proposed data snapshots */
 export interface FlightDataSnapshot {
@@ -53,7 +53,7 @@ export interface ChangeEntry {
   field: string;
   oldValue: string | number | boolean | null | undefined;
   newValue: string | number | boolean | null | undefined;
-  type: 'added' | 'removed' | 'changed';
+  type: "added" | "removed" | "changed";
 }
 
 /** Metadata for pending updates (e.g. historical enrichment) */
@@ -111,7 +111,7 @@ export async function getPendingUpdates(
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 }
@@ -123,7 +123,7 @@ export async function getPendingUpdateById(
   id: string,
   userId: string
 ): Promise<(PendingFlightUpdate & { flight: Flight | null }) | null> {
-  return await prismaClient.pendingFlightUpdate.findFirst({
+  return (await prismaClient.pendingFlightUpdate.findFirst({
     where: {
       id,
       userId,
@@ -131,7 +131,7 @@ export async function getPendingUpdateById(
     include: {
       flight: true,
     },
-  }) as (PendingFlightUpdate & { flight: Flight | null }) | null;
+  })) as (PendingFlightUpdate & { flight: Flight | null }) | null;
 }
 
 /**
@@ -145,15 +145,15 @@ export async function updatePendingUpdate(
   try {
     const pendingUpdate = await getPendingUpdateById(id, userId);
     if (!pendingUpdate) {
-      throw new Error('Pending update not found');
+      throw new Error("Pending update not found");
     }
 
     // `edited` too, not just `pending`. The card offers "edit" for an already
     // edited suggestion — correctly, since nothing has been applied yet — and
     // the server refused it, so the button was there and did not work
     // (AUD-094). These are the same two statuses `applyPendingUpdate` accepts.
-    if (pendingUpdate.status !== 'pending' && pendingUpdate.status !== 'edited') {
-      throw new Error('Can only edit pending or edited updates');
+    if (pendingUpdate.status !== "pending" && pendingUpdate.status !== "edited") {
+      throw new Error("Can only edit pending or edited updates");
     }
 
     // Calculate edited changes
@@ -164,7 +164,7 @@ export async function updatePendingUpdate(
 
     // Recalculate statistics impact
     if (!pendingUpdate.flight) {
-      throw new Error('Flight not found for pending update');
+      throw new Error("Flight not found for pending update");
     }
     const statisticsImpact = await previewStatisticsImpact(id, userId, editedData);
 
@@ -175,14 +175,14 @@ export async function updatePendingUpdate(
         editedChanges: editedChanges as unknown as Prisma.InputJsonValue,
         statisticsImpact: statisticsImpact as unknown as Prisma.InputJsonValue,
         editedAt: new Date(),
-        status: 'edited',
+        status: "edited",
         updatedAt: new Date(),
       },
     });
 
     logger.info({
-      operation: 'update_pending_update',
-      message: 'Updated pending flight update',
+      operation: "update_pending_update",
+      message: "Updated pending flight update",
       context: {
         pendingUpdateId: id,
         userId,
@@ -192,11 +192,11 @@ export async function updatePendingUpdate(
     return updated;
   } catch (error) {
     logger.error({
-      operation: 'update_pending_update_error',
-      message: 'Failed to update pending update',
+      operation: "update_pending_update_error",
+      message: "Failed to update pending update",
       context: { id, userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -207,7 +207,10 @@ export async function updatePendingUpdate(
 /**
  * Calculate changes between two data objects
  */
-function calculateChanges(original: FlightDataSnapshot, proposed: FlightDataSnapshot): ChangeEntry[] {
+function calculateChanges(
+  original: FlightDataSnapshot,
+  proposed: FlightDataSnapshot
+): ChangeEntry[] {
   const changes: ChangeEntry[] = [];
   const allKeys = new Set([...Object.keys(original), ...Object.keys(proposed)]);
 
@@ -218,14 +221,9 @@ function calculateChanges(original: FlightDataSnapshot, proposed: FlightDataSnap
     if (oldValue !== newValue) {
       changes.push({
         field,
-        oldValue: oldValue as ChangeEntry['oldValue'],
-        newValue: newValue as ChangeEntry['newValue'],
-        type:
-          oldValue === undefined
-            ? 'added'
-            : newValue === undefined
-            ? 'removed'
-            : 'changed',
+        oldValue: oldValue as ChangeEntry["oldValue"],
+        newValue: newValue as ChangeEntry["newValue"],
+        type: oldValue === undefined ? "added" : newValue === undefined ? "removed" : "changed",
       });
     }
   }
@@ -239,22 +237,22 @@ function calculateChanges(original: FlightDataSnapshot, proposed: FlightDataSnap
  * a flight that contradicts itself.
  */
 const DERIVED_FIELDS: Record<string, string> = {
-  depLat: 'depIata',
-  depLon: 'depIata',
-  arrLat: 'arrIata',
-  arrLon: 'arrIata',
-  delayMinutes: 'actualDeparture',
+  depLat: "depIata",
+  depLon: "depIata",
+  arrLat: "arrIata",
+  arrLon: "arrIata",
+  delayMinutes: "actualDeparture",
 };
 
 /** Fields that describe the UPDATE itself rather than the flight's data. */
 const PROVENANCE_FIELDS = new Set([
-  'dataSource',
-  'lastModifiedBy',
-  'routeSource',
-  'hasLiveTracking',
-  'enrichmentHistory',
-  'depTimeSemantics',
-  'arrTimeSemantics',
+  "dataSource",
+  "lastModifiedBy",
+  "routeSource",
+  "hasLiveTracking",
+  "enrichmentHistory",
+  "depTimeSemantics",
+  "arrTimeSemantics",
 ]);
 
 /** Compare a stored value with its snapshot form — dates arrive as strings. */
@@ -282,7 +280,7 @@ function restrictToUncontestedProposal(
   updateData: Record<string, unknown>,
   changes: ChangeEntry[] | null,
   originalData: FlightDataSnapshot | null,
-  flight: Record<string, unknown>,
+  flight: Record<string, unknown>
 ): string[] {
   if (!Array.isArray(changes) || changes.length === 0) return [];
 
@@ -313,29 +311,27 @@ function restrictToUncontestedProposal(
 /**
  * Apply a pending update to the flight
  */
-export async function applyPendingUpdate(
-  id: string,
-  userId: string
-): Promise<Flight | null> {
+export async function applyPendingUpdate(id: string, userId: string): Promise<Flight | null> {
   try {
     const pendingUpdate = await getPendingUpdateById(id, userId);
     if (!pendingUpdate || !pendingUpdate.flight) {
-      throw new Error('Pending update not found');
+      throw new Error("Pending update not found");
     }
 
-    if (pendingUpdate.status !== 'pending' && pendingUpdate.status !== 'edited') {
-      throw new Error('Can only apply pending or edited updates');
+    if (pendingUpdate.status !== "pending" && pendingUpdate.status !== "edited") {
+      throw new Error("Can only apply pending or edited updates");
     }
 
     if (!pendingUpdate.flight) {
-      throw new Error('Flight not found for pending update');
+      throw new Error("Flight not found for pending update");
     }
 
     const flight = pendingUpdate.flight;
-    const dataToApply = (pendingUpdate.editedData || pendingUpdate.proposedData) as FlightDataSnapshot | null;
+    const dataToApply = (pendingUpdate.editedData ||
+      pendingUpdate.proposedData) as FlightDataSnapshot | null;
 
     if (!dataToApply) {
-      throw new Error('No data to apply');
+      throw new Error("No data to apply");
     }
 
     // Get airport coordinates if airports changed
@@ -352,8 +348,8 @@ export async function applyPendingUpdate(
       if (dataToApply.arrIcao) airportCodes.add(String(dataToApply.arrIcao));
 
       const airports = await getCachedAirports(Array.from(airportCodes));
-      const depAirport = airports.get(String(dataToApply.depIata || dataToApply.depIcao || ''));
-      const arrAirport = airports.get(String(dataToApply.arrIata || dataToApply.arrIcao || ''));
+      const depAirport = airports.get(String(dataToApply.depIata || dataToApply.depIcao || ""));
+      const arrAirport = airports.get(String(dataToApply.arrIata || dataToApply.arrIcao || ""));
 
       if (depAirport) {
         depLat = depAirport.lat;
@@ -407,9 +403,7 @@ export async function applyPendingUpdate(
       // UI shows the correct delay without a manual edit.
       delayMinutes:
         nextActualDeparture && nextDepartureTime
-          ? Math.round(
-              (nextActualDeparture.getTime() - nextDepartureTime.getTime()) / 60000
-            )
+          ? Math.round((nextActualDeparture.getTime() - nextDepartureTime.getTime()) / 60000)
           : flight.delayMinutes,
       // Don't change status automatically
     };
@@ -425,20 +419,20 @@ export async function applyPendingUpdate(
       updateData.routeDistance = dataToApply.routeDistance;
     }
     if (isHistoricalEnrichment) {
-      updateData.routeSource = 'historical_aggregation';
+      updateData.routeSource = "historical_aggregation";
     } else if (LIVE_API_SOURCES.includes(pendingUpdate.apiSource)) {
-      updateData.routeSource = 'live_tracking';
+      updateData.routeSource = "live_tracking";
       updateData.hasLiveTracking = true;
       // Live APIs report true UTC. When the stored row still carries legacy
       // semantics (LEGACY_FAKE_UTC / DATE_ONLY / UNKNOWN), applying a real-UTC
       // value without upgrading the flag would make the display layer
       // re-interpret the corrected timestamp via the airport timezone —
       // shifting every shown time by the airport's UTC offset.
-      if (dataToApply.departureTime && flight.depTimeSemantics !== 'UTC') {
-        updateData.depTimeSemantics = 'UTC';
+      if (dataToApply.departureTime && flight.depTimeSemantics !== "UTC") {
+        updateData.depTimeSemantics = "UTC";
       }
-      if (dataToApply.arrivalTime && flight.arrTimeSemantics !== 'UTC') {
-        updateData.arrTimeSemantics = 'UTC';
+      if (dataToApply.arrivalTime && flight.arrTimeSemantics !== "UTC") {
+        updateData.arrTimeSemantics = "UTC";
       }
     }
 
@@ -446,28 +440,33 @@ export async function applyPendingUpdate(
     if (isHistoricalEnrichment) {
       // Preserve original data source if it exists, otherwise set to historical_enrichment
       if (!flight.dataSource) {
-        updateData.dataSource = 'historical_enrichment';
+        updateData.dataSource = "historical_enrichment";
       }
-      updateData.lastModifiedBy = 'historical_enrichment';
+      updateData.lastModifiedBy = "historical_enrichment";
     } else {
       // For live updates
-      if (pendingUpdate.apiSource && pendingUpdate.apiSource !== 'historical_aggregation') {
-        updateData.dataSource = 'live_update';
-        updateData.lastModifiedBy = 'auto_update';
+      if (pendingUpdate.apiSource && pendingUpdate.apiSource !== "historical_aggregation") {
+        updateData.dataSource = "live_update";
+        updateData.lastModifiedBy = "auto_update";
       }
     }
 
     // Update enrichment history
     if (isHistoricalEnrichment && metadata) {
-      const existingHistory = (Array.isArray(flight.enrichmentHistory) ? flight.enrichmentHistory : []) as unknown as EnrichmentHistoryEntry[];
+      const existingHistory = (Array.isArray(flight.enrichmentHistory)
+        ? flight.enrichmentHistory
+        : []) as unknown as EnrichmentHistoryEntry[];
       const newHistoryEntry: EnrichmentHistoryEntry = {
-        type: 'historical_enrichment',
+        type: "historical_enrichment",
         timestamp: new Date().toISOString(),
         confidence: metadata.confidence,
-        source: 'aggregated_from_live_flights',
+        source: "aggregated_from_live_flights",
         sourceFlightsCount: metadata.sourceFlightsCount,
       };
-      updateData.enrichmentHistory = [...existingHistory, newHistoryEntry] as unknown as Prisma.InputJsonValue;
+      updateData.enrichmentHistory = [
+        ...existingHistory,
+        newHistoryEntry,
+      ] as unknown as Prisma.InputJsonValue;
     }
 
     // Only what was actually PROPOSED, and only where the user has not moved on.
@@ -483,12 +482,12 @@ export async function applyPendingUpdate(
       updateData,
       (pendingUpdate.editedChanges ?? pendingUpdate.changes) as unknown as ChangeEntry[] | null,
       pendingUpdate.originalData as FlightDataSnapshot | null,
-      flight,
+      flight
     );
     if (skipped.length > 0) {
       logger.info({
-        operation: 'apply_pending_update_skipped_fields',
-        message: 'Left fields alone that the user changed after the suggestion was made',
+        operation: "apply_pending_update_skipped_fields",
+        message: "Left fields alone that the user changed after the suggestion was made",
         context: { pendingUpdateId: id, flightId: flight.id, skipped },
       });
     }
@@ -507,7 +506,7 @@ export async function applyPendingUpdate(
       resultingArrival &&
       resultingArrival.getTime() < resultingDeparture.getTime()
     ) {
-      throw new Error('Arrival time must not precede departure time');
+      throw new Error("Arrival time must not precede departure time");
     }
 
     // Update flight
@@ -520,18 +519,18 @@ export async function applyPendingUpdate(
     await prismaClient.pendingFlightUpdate.update({
       where: { id },
       data: {
-        status: 'applied',
+        status: "applied",
         appliedAt: new Date(),
         updatedAt: new Date(),
       },
     });
 
     // Update user statistics
-    await updateUserStatistics(userId, 'applied');
+    await updateUserStatistics(userId, "applied");
 
     logger.info({
-      operation: 'apply_pending_update',
-      message: 'Applied pending flight update',
+      operation: "apply_pending_update",
+      message: "Applied pending flight update",
       context: {
         pendingUpdateId: id,
         flightId: flight.id,
@@ -542,11 +541,11 @@ export async function applyPendingUpdate(
     return updatedFlight;
   } catch (error) {
     logger.error({
-      operation: 'apply_pending_update_error',
-      message: 'Failed to apply pending update',
+      operation: "apply_pending_update_error",
+      message: "Failed to apply pending update",
       context: { id, userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -557,35 +556,32 @@ export async function applyPendingUpdate(
 /**
  * Reject a pending update
  */
-export async function rejectPendingUpdate(
-  id: string,
-  userId: string
-): Promise<boolean> {
+export async function rejectPendingUpdate(id: string, userId: string): Promise<boolean> {
   try {
     const pendingUpdate = await getPendingUpdateById(id, userId);
     if (!pendingUpdate) {
-      throw new Error('Pending update not found');
+      throw new Error("Pending update not found");
     }
 
-    if (pendingUpdate.status !== 'pending' && pendingUpdate.status !== 'edited') {
-      throw new Error('Can only reject pending or edited updates');
+    if (pendingUpdate.status !== "pending" && pendingUpdate.status !== "edited") {
+      throw new Error("Can only reject pending or edited updates");
     }
 
     await prismaClient.pendingFlightUpdate.update({
       where: { id },
       data: {
-        status: 'rejected',
+        status: "rejected",
         rejectedAt: new Date(),
         updatedAt: new Date(),
       },
     });
 
     // Update user statistics
-    await updateUserStatistics(userId, 'rejected');
+    await updateUserStatistics(userId, "rejected");
 
     logger.info({
-      operation: 'reject_pending_update',
-      message: 'Rejected pending flight update',
+      operation: "reject_pending_update",
+      message: "Rejected pending flight update",
       context: {
         pendingUpdateId: id,
         userId,
@@ -595,11 +591,11 @@ export async function rejectPendingUpdate(
     return true;
   } catch (error) {
     logger.error({
-      operation: 'reject_pending_update_error',
-      message: 'Failed to reject pending update',
+      operation: "reject_pending_update_error",
+      message: "Failed to reject pending update",
       context: { id, userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -612,7 +608,7 @@ export async function rejectPendingUpdate(
  */
 export async function updateUserStatistics(
   userId: string,
-  action: 'applied' | 'rejected' | 'edited' | 'expired'
+  action: "applied" | "rejected" | "edited" | "expired"
 ): Promise<void> {
   try {
     const stats = await prismaClient.pendingUpdateStatistics.findUnique({
@@ -623,13 +619,13 @@ export async function updateUserStatistics(
       lastUpdated: new Date(),
     };
 
-    if (action === 'applied') {
+    if (action === "applied") {
       updateData.appliedUpdates = { increment: 1 };
-    } else if (action === 'rejected') {
+    } else if (action === "rejected") {
       updateData.rejectedUpdates = { increment: 1 };
-    } else if (action === 'edited') {
+    } else if (action === "edited") {
       updateData.editedUpdates = { increment: 1 };
-    } else if (action === 'expired') {
+    } else if (action === "expired") {
       updateData.expiredUpdates = { increment: 1 };
     }
 
@@ -645,10 +641,10 @@ export async function updateUserStatistics(
         data: {
           userId,
           totalUpdates: 1,
-          appliedUpdates: action === 'applied' ? 1 : 0,
-          rejectedUpdates: action === 'rejected' ? 1 : 0,
-          editedUpdates: action === 'edited' ? 1 : 0,
-          expiredUpdates: action === 'expired' ? 1 : 0,
+          appliedUpdates: action === "applied" ? 1 : 0,
+          rejectedUpdates: action === "rejected" ? 1 : 0,
+          editedUpdates: action === "edited" ? 1 : 0,
+          expiredUpdates: action === "expired" ? 1 : 0,
           mostChangedFields: {},
           lastUpdated: new Date(),
         },
@@ -656,11 +652,11 @@ export async function updateUserStatistics(
     }
   } catch (error) {
     logger.error({
-      operation: 'update_user_statistics_error',
-      message: 'Failed to update user statistics',
+      operation: "update_user_statistics_error",
+      message: "Failed to update user statistics",
       context: { userId, action },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
@@ -676,7 +672,7 @@ export async function cleanupExpiredUpdates(): Promise<number> {
     // Get expired updates (only need userId for statistics)
     const expired = await prismaClient.pendingFlightUpdate.findMany({
       where: {
-        status: 'pending',
+        status: "pending",
         expiresAt: { lt: now },
       },
       select: { id: true, userId: true },
@@ -689,7 +685,7 @@ export async function cleanupExpiredUpdates(): Promise<number> {
           id: { in: expired.map((u) => u.id) },
         },
         data: {
-          status: 'expired',
+          status: "expired",
           updatedAt: new Date(),
         },
       });
@@ -699,14 +695,14 @@ export async function cleanupExpiredUpdates(): Promise<number> {
       for (const userId of userIds) {
         const count = expired.filter((u) => u.userId === userId).length;
         for (let i = 0; i < count; i++) {
-          await updateUserStatistics(userId, 'expired');
+          await updateUserStatistics(userId, "expired");
         }
       }
     }
 
     logger.info({
-      operation: 'cleanup_expired_updates',
-      message: 'Cleaned up expired pending updates',
+      operation: "cleanup_expired_updates",
+      message: "Cleaned up expired pending updates",
       context: {
         count: expired.length,
       },
@@ -715,10 +711,10 @@ export async function cleanupExpiredUpdates(): Promise<number> {
     return expired.length;
   } catch (error) {
     logger.error({
-      operation: 'cleanup_expired_updates_error',
-      message: 'Failed to cleanup expired updates',
+      operation: "cleanup_expired_updates_error",
+      message: "Failed to cleanup expired updates",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     return 0;
@@ -757,10 +753,14 @@ export async function previewStatisticsImpact(
   // Build flight data with coordinates
   const flightData = {
     ...dataToUse,
-    depLat: airports.get(String(dataToUse.depIata || dataToUse.depIcao || ''))?.lat || flight.depLat,
-    depLon: airports.get(String(dataToUse.depIata || dataToUse.depIcao || ''))?.lon || flight.depLon,
-    arrLat: airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ''))?.lat || flight.arrLat,
-    arrLon: airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ''))?.lon || flight.arrLon,
+    depLat:
+      airports.get(String(dataToUse.depIata || dataToUse.depIcao || ""))?.lat || flight.depLat,
+    depLon:
+      airports.get(String(dataToUse.depIata || dataToUse.depIcao || ""))?.lon || flight.depLon,
+    arrLat:
+      airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ""))?.lat || flight.arrLat,
+    arrLon:
+      airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ""))?.lon || flight.arrLon,
   };
 
   return await calculateStatisticsImpact(

@@ -5,9 +5,13 @@ import type { ParsedBooking } from "../../bookingParser";
 
 jest.mock("../providers");
 jest.mock("../userTemplates/matcher", () => ({ findMatchingTemplate: jest.fn(async () => null) }));
-jest.mock("../../parserLogging", () => ({ shouldLogParserOperations: jest.fn(async () => false) }), {
-  virtual: true,
-});
+jest.mock(
+  "../../parserLogging",
+  () => ({ shouldLogParserOperations: jest.fn(async () => false) }),
+  {
+    virtual: true,
+  }
+);
 
 /**
  * Forgejo #35: the #17 evidence gate lived in `regexParser` alone, and
@@ -45,9 +49,7 @@ describe("the parser factory drops candidates that identify no flight", () => {
   afterEach(() => jest.clearAllMocks());
 
   it("returns nothing when the provider invents three empty candidates", async () => {
-    mockedGetTextParserInstance.mockReturnValue(
-      providerReturning([{}, {}, {}] as ParsedBooking[])
-    );
+    mockedGetTextParserInstance.mockReturnValue(providerReturning([{}, {}, {}] as ParsedBooking[]));
 
     const result = await parseEmail(
       "Nur 7 Tage gültig: Ihr 30 EUR Oster-Geschenk",

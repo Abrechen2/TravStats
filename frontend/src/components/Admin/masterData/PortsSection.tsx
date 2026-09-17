@@ -190,9 +190,7 @@ export default function PortsSection(): JSX.Element {
                     {t("admin:cruiseMasterData.userAdded")}
                   </span>
                 )}
-                {p.unlocode && (
-                  <span className="text-(--text-muted) font-mono">{p.unlocode}</span>
-                )}
+                {p.unlocode && <span className="text-(--text-muted) font-mono">{p.unlocode}</span>}
               </div>
             </li>
           ))}

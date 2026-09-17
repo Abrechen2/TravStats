@@ -63,9 +63,7 @@ describe("template-status — the refresh is an admin action (forgejo#67)", () =
 
     expect(res.status).toBe(200);
     expect(syncNow).toHaveBeenCalledTimes(1);
-    expect(res.body).toEqual(
-      expect.objectContaining({ total: 0, templates: expect.any(Array) }),
-    );
+    expect(res.body).toEqual(expect.objectContaining({ total: 0, templates: expect.any(Array) }));
   });
 
   it("still answers the status read to every signed-in user", async () => {
@@ -77,7 +75,7 @@ describe("template-status — the refresh is an admin action (forgejo#67)", () =
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(
-      expect.objectContaining({ templates: expect.any(Array), total: expect.any(Number) }),
+      expect.objectContaining({ templates: expect.any(Array), total: expect.any(Number) })
     );
   });
 });

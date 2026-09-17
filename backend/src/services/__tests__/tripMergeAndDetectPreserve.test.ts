@@ -77,13 +77,14 @@ describe("a trip keeps its contents", () => {
       await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
 
       expect((await prisma.lodgingStay.findUniqueOrThrow({ where: { id: stay.id } })).tripId).toBe(
-        target.id,
+        target.id
       );
       expect((await prisma.placeVisit.findUniqueOrThrow({ where: { id: visit.id } })).tripId).toBe(
-        target.id,
+        target.id
       );
-      expect((await prisma.tripImmichAlbum.findUniqueOrThrow({ where: { id: album.id } })).tripId)
-        .toBe(target.id);
+      expect(
+        (await prisma.tripImmichAlbum.findUniqueOrThrow({ where: { id: album.id } })).tripId
+      ).toBe(target.id);
       // The photo is the one that used to be deleted by the album's cascade
       // AFTER the merge had already moved it.
       const movedPhoto = await prisma.tripPhoto.findUnique({ where: { id: photo.id } });
@@ -183,8 +184,15 @@ describe("a trip keeps its contents", () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const sourceA = await prisma.trip.create({ data: { userId, name: "Source A" } });
       const sourceB = await prisma.trip.create({ data: { userId, name: "Source B" } });
-      const shared = { filename: "shared.jpg", mimetype: "image/jpeg", sizeBytes: 10, immichAssetId: "asset-shared" };
-      const first = await prisma.tripPhoto.create({ data: { tripId: sourceA.id, ...shared, sortIdx: 0 } });
+      const shared = {
+        filename: "shared.jpg",
+        mimetype: "image/jpeg",
+        sizeBytes: 10,
+        immichAssetId: "asset-shared",
+      };
+      const first = await prisma.tripPhoto.create({
+        data: { tripId: sourceA.id, ...shared, sortIdx: 0 },
+      });
       await prisma.tripPhoto.create({ data: { tripId: sourceB.id, ...shared, sortIdx: 1 } });
 
       await mergeTrips(userId, {
@@ -203,7 +211,12 @@ describe("a trip keeps its contents", () => {
     it("points a cover at the surviving copy of a deduplicated photo", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });
-      const dup = { filename: "dup.jpg", mimetype: "image/jpeg", sizeBytes: 10, immichAssetId: "asset-cover" };
+      const dup = {
+        filename: "dup.jpg",
+        mimetype: "image/jpeg",
+        sizeBytes: 10,
+        immichAssetId: "asset-cover",
+      };
       const kept = await prisma.tripPhoto.create({ data: { tripId: target.id, ...dup } });
       const dropped = await prisma.tripPhoto.create({ data: { tripId: source.id, ...dup } });
       await prisma.trip.update({
@@ -243,7 +256,7 @@ describe("a trip keeps its contents", () => {
       // The photo moved; the URL used to keep naming the deleted trip and 404.
       expect(merged.coverImageUrl).toBe(`/api/v1/trips/${target.id}/photos/${cover.id}/file`);
       expect((await prisma.tripPhoto.findUniqueOrThrow({ where: { id: cover.id } })).tripId).toBe(
-        target.id,
+        target.id
       );
     });
 
@@ -277,9 +290,7 @@ describe("a trip keeps its contents", () => {
       expect(result.orphansRemoved).toBe(0);
       expect(await prisma.trip.findUnique({ where: { id: rail.id } })).not.toBeNull();
       expect(await prisma.tripStop.findUnique({ where: { id: stop.id } })).not.toBeNull();
-      expect(
-        await prisma.tripJournalEntry.findUnique({ where: { id: entry.id } }),
-      ).not.toBeNull();
+      expect(await prisma.tripJournalEntry.findUnique({ where: { id: entry.id } })).not.toBeNull();
     });
   });
 });

@@ -10,7 +10,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
 const base = { id: "1", depLat: 0, depLon: 0, arrLat: 0, arrLon: 0 } as unknown as Flight;
 
 it("renders nothing for a plain manual flight", () => {
-  const { container } = render(<SourceInfoDot flight={{ ...base, dataSource: "manual" } as unknown as Flight} />);
+  const { container } = render(
+    <SourceInfoDot flight={{ ...base, dataSource: "manual" } as unknown as Flight} />
+  );
   expect(container.firstChild).toBeNull();
 });
 

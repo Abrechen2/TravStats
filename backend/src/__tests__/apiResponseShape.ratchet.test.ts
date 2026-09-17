@@ -17,8 +17,8 @@
  * router. That leak has no grep-able signature; the OpenAPI response-schema
  * ratchet is the place that would notice a shape change per endpoint.
  */
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 interface Baseline {
   bare: string[];
@@ -26,36 +26,36 @@ interface Baseline {
   frozenEnvelopes: Record<string, number>;
 }
 
-const ROUTES_DIR = path.join(__dirname, '..', 'routes');
-const BASELINE_PATH = path.join(__dirname, 'apiResponseShape.baseline.json');
-const ADR = 'docs/adr/0001-api-response-shape.md';
+const ROUTES_DIR = path.join(__dirname, "..", "routes");
+const BASELINE_PATH = path.join(__dirname, "apiResponseShape.baseline.json");
+const ADR = "docs/adr/0001-api-response-shape.md";
 
 function routerFiles(dir: string): string[] {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .flatMap((entry) => {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) return entry.name === '__tests__' ? [] : routerFiles(full);
-      if (!entry.name.endsWith('.ts') || entry.name.endsWith('.test.ts')) return [];
-      return [path.relative(ROUTES_DIR, full).split(path.sep).join('/')];
+      if (entry.isDirectory()) return entry.name === "__tests__" ? [] : routerFiles(full);
+      if (!entry.name.endsWith(".ts") || entry.name.endsWith(".test.ts")) return [];
+      return [path.relative(ROUTES_DIR, full).split(path.sep).join("/")];
     })
     .sort();
 }
 
 function envelopeCount(relative: string): number {
-  const source = fs.readFileSync(path.join(ROUTES_DIR, relative), 'utf8');
+  const source = fs.readFileSync(path.join(ROUTES_DIR, relative), "utf8");
   return (source.match(/success:\s*true/g) ?? []).length;
 }
 
-const baseline: Baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
+const baseline: Baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8"));
 const files = routerFiles(ROUTES_DIR);
 
-describe('API response shape — one family per router (ADR 0001)', () => {
-  it('assigns every router file to exactly one family', () => {
+describe("API response shape — one family per router (ADR 0001)", () => {
+  it("assigns every router file to exactly one family", () => {
     const assigned = new Set([...baseline.bare, ...baseline.enveloped]);
     const unassigned = files.filter((f) => !assigned.has(f));
     expect(
-      unassigned,
+      unassigned
       // A new router: decide its family (see the ADR) and add it to the baseline.
     ).toEqual([]);
 
@@ -68,7 +68,7 @@ describe('API response shape — one family per router (ADR 0001)', () => {
     expect(stale).toEqual([]);
   });
 
-  it('a bare-family router gains no envelope, and a frozen entry only shrinks', () => {
+  it("a bare-family router gains no envelope, and a frozen entry only shrinks", () => {
     const grew: string[] = [];
     const shrank: string[] = [];
     for (const file of baseline.bare) {
@@ -85,14 +85,14 @@ describe('API response shape — one family per router (ADR 0001)', () => {
     expect(shrank).toEqual([]);
   });
 
-  it('frozen entries name bare-family routers only', () => {
+  it("frozen entries name bare-family routers only", () => {
     const misplaced = Object.keys(baseline.frozenEnvelopes).filter(
-      (f) => !baseline.bare.includes(f),
+      (f) => !baseline.bare.includes(f)
     );
     expect(misplaced).toEqual([]);
   });
 
-  it('an enveloped-family router keeps at least one envelope', () => {
+  it("an enveloped-family router keeps at least one envelope", () => {
     const emptied = baseline.enveloped.filter((f) => envelopeCount(f) === 0);
     // The router changed shape entirely — record the move in the baseline.
     expect(emptied).toEqual([]);

@@ -63,8 +63,7 @@ export default function HistoricalDateFields({
   // Returns how many days are in (year, month) where month is 1-12.
   // new Date(year, month, 0) gives the last day of the prior month
   // when month is treated as 1-based (JS idiom).
-  const daysInMonth = (year: number, month: number): number =>
-    new Date(year, month, 0).getDate();
+  const daysInMonth = (year: number, month: number): number => new Date(year, month, 0).getDate();
 
   const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
   const numMonth = monthValue ? parseInt(monthValue, 10) : 0;

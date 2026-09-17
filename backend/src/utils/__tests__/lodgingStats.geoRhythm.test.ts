@@ -31,8 +31,7 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   ...o,
 });
 
-const geo = (stays: LodgingStayData[]) =>
-  calculateLodgingStats(stays, "EUR", undefined, NOW).geo;
+const geo = (stays: LodgingStayData[]) => calculateLodgingStats(stays, "EUR", undefined, NOW).geo;
 const rhythm = (stays: LodgingStayData[], now: Date = NOW) =>
   calculateLodgingStats(stays, "EUR", undefined, now).rhythm;
 
@@ -186,16 +185,12 @@ describe("lodging rhythm", () => {
   it("divides the current year by the days elapsed, not by 365", () => {
     // 10 nights by 15 August. Against 365 that is 2.7%; against the 227 days
     // elapsed it is 4.4% — and only the second is a fair read in August.
-    const r = rhythm([
-      stay({ checkIn: new Date("2026-01-01"), checkOut: new Date("2026-01-11") }),
-    ]);
+    const r = rhythm([stay({ checkIn: new Date("2026-01-01"), checkOut: new Date("2026-01-11") })]);
     expect(r.awayShareByYear["2026"]).toBeCloseTo(10 / 227, 3);
   });
 
   it("divides a past year by its real length, leap years included", () => {
-    const r = rhythm([
-      stay({ checkIn: new Date("2024-01-01"), checkOut: new Date("2024-01-11") }),
-    ]);
+    const r = rhythm([stay({ checkIn: new Date("2024-01-01"), checkOut: new Date("2024-01-11") })]);
     expect(r.awayShareByYear["2024"]).toBeCloseTo(10 / 366, 4);
   });
 

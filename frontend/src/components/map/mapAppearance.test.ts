@@ -19,7 +19,11 @@ describe("normalizeAppearance", () => {
   });
 
   it("passes numeric values through unchanged", () => {
-    const out = normalizeAppearance({ cruiseRouteWidth: 1.3, cruiseMarkerSize: 0, cruiseArrowScale: 2 });
+    const out = normalizeAppearance({
+      cruiseRouteWidth: 1.3,
+      cruiseMarkerSize: 0,
+      cruiseArrowScale: 2,
+    });
     expect(out.cruiseRouteWidth).toBe(1.3);
     expect(out.cruiseMarkerSize).toBe(0);
     expect(out.cruiseArrowScale).toBe(2);

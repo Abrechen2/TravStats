@@ -1,4 +1,4 @@
-import { haversineKm } from '../shared/geo/haversine';
+import { haversineKm } from "../shared/geo/haversine";
 
 export interface CruisePortData {
   id: number;
@@ -134,14 +134,14 @@ export interface CruiseStats {
   regionVisitCounts: Record<string, number>;
 }
 
-const CANAL_UNLOCODES = new Set(['PACTB', 'EGPSD']); // Panama Colón, Port Said
-const POLAR_REGIONS = new Set(['antarctic', 'polar']);
-const COLD_WATER_COUNTRIES = new Set(['Iceland', 'Antarctica', 'Greenland']);
-const COLD_WATER_REGIONS = new Set(['alaska', 'polar', 'antarctic']);
+const CANAL_UNLOCODES = new Set(["PACTB", "EGPSD"]); // Panama Colón, Port Said
+const POLAR_REGIONS = new Set(["antarctic", "polar"]);
+const COLD_WATER_COUNTRIES = new Set(["Iceland", "Antarctica", "Greenland"]);
+const COLD_WATER_REGIONS = new Set(["alaska", "polar", "antarctic"]);
 
 export function calculateCruiseStats(
   cruises: CruiseData[],
-  userBirthday?: { month: number; day: number },
+  userBirthday?: { month: number; day: number }
 ): CruiseStats {
   const portIds = new Set<number>();
   const shipIds = new Set<number>();
@@ -179,14 +179,14 @@ export function calculateCruiseStats(
       shipIds.add(cruise.shipId);
       shipCounts.set(cruise.shipId, (shipCounts.get(cruise.shipId) ?? 0) + 1);
     }
-    if (cruise.cabinType === 'inside') insideCabinCount += 1;
+    if (cruise.cabinType === "inside") insideCabinCount += 1;
     if (cruise.cruiseLine) {
       cruiseLines.add(cruise.cruiseLine);
       cruiseLineCounts.set(cruise.cruiseLine, (cruiseLineCounts.get(cruise.cruiseLine) ?? 0) + 1);
       lineCounts.set(cruise.cruiseLine, (lineCounts.get(cruise.cruiseLine) ?? 0) + 1);
     }
-    if (cruise.cabinType === 'balcony' || cruise.cabinType === 'suite') hasBalconyCabin = true;
-    if (cruise.cabinType === 'suite') hasSuiteCabin = true;
+    if (cruise.cabinType === "balcony" || cruise.cabinType === "suite") hasBalconyCabin = true;
+    if (cruise.cabinType === "suite") hasSuiteCabin = true;
     if (cruise.deck !== null && cruise.deck > maxDeck) maxDeck = cruise.deck;
 
     // Year bucket for this cruise's ports. UTC on purpose — see the
@@ -228,8 +228,7 @@ export function calculateCruiseStats(
     const portCallCount = effectiveStops.filter((s) => !s.isAtSea && s.port).length;
     const persistedLegs = cruise.legDistancesKm;
     const usePersistedLegs =
-      Array.isArray(persistedLegs) &&
-      persistedLegs.length === Math.max(0, portCallCount - 1);
+      Array.isArray(persistedLegs) && persistedLegs.length === Math.max(0, portCallCount - 1);
     let cruisePortCount = 0;
     let portCallIndex = 0;
     let currentSeaStreak = 0;
@@ -253,8 +252,7 @@ export function calculateCruiseStats(
           }
           if (stop.port.region) {
             regions.add(stop.port.region);
-            regionVisitCounts[stop.port.region] =
-              (regionVisitCounts[stop.port.region] ?? 0) + 1;
+            regionVisitCounts[stop.port.region] = (regionVisitCounts[stop.port.region] ?? 0) + 1;
           }
           if (stop.port.unlocode && CANAL_UNLOCODES.has(stop.port.unlocode)) hasCanalTransit = true;
           if (stop.port.region && POLAR_REGIONS.has(stop.port.region)) hasPolar = true;
@@ -317,8 +315,7 @@ export function calculateCruiseStats(
       // Inclusive day count: a Sat–Sun trip counts as 2 days. Cruises
       // missing either timestamp simply don't contribute.
       const dayMs = 24 * 60 * 60 * 1000;
-      const days =
-        Math.floor((cruise.endDate.getTime() - cruise.startDate.getTime()) / dayMs) + 1;
+      const days = Math.floor((cruise.endDate.getTime() - cruise.startDate.getTime()) / dayMs) + 1;
       if (days > 0) totalCruiseDays += days;
     }
   }
@@ -377,7 +374,7 @@ export function calculateCruiseStats(
 export function rangeContainsMonthDay(
   start: Date,
   end: Date,
-  md: { month: number; day: number },
+  md: { month: number; day: number }
 ): boolean {
   const cur = new Date(start);
   cur.setUTCHours(0, 0, 0, 0);

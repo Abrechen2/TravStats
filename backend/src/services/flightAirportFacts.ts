@@ -46,7 +46,7 @@ export interface AirportFacts {
  * the whole response costs the page.
  */
 export async function enrichFlightsWithAirportFacts<T extends EnrichableFlight>(
-  flights: T[],
+  flights: T[]
 ): Promise<Array<T & AirportFacts>> {
   const codes = new Set<string>();
   for (const f of flights) {
@@ -72,7 +72,7 @@ export async function enrichFlightsWithAirportFacts<T extends EnrichableFlight>(
   const lookup = (
     map: Map<string, string>,
     iata: string | null,
-    icao: string | null,
+    icao: string | null
   ): string | null => (iata && map.get(iata)) || (icao && map.get(icao)) || null;
 
   return flights.map((f) => {
@@ -86,7 +86,7 @@ export async function enrichFlightsWithAirportFacts<T extends EnrichableFlight>(
             depTimezone,
             arrTimezone,
             f.depTimeSemantics as FlightTimeSemantics,
-            f.arrTimeSemantics as FlightTimeSemantics,
+            f.arrTimeSemantics as FlightTimeSemantics
           )
         : null;
     return {

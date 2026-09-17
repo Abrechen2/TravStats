@@ -1,14 +1,18 @@
-import { parse } from 'node-html-parser';
-import { ITextParser, ProviderAvailability, TextProvider } from '../types';
-import { ParsedBooking } from '../../bookingParser';
-import { normalizeParsedBooking, PATTERNS } from '../shared/utils';
-import logger from '../../../utils/logger';
+import { parse } from "node-html-parser";
+import { ITextParser, ProviderAvailability, TextProvider } from "../types";
+import { ParsedBooking } from "../../bookingParser";
+import { normalizeParsedBooking, PATTERNS } from "../shared/utils";
+import logger from "../../../utils/logger";
 
-import { FLIGHT_NUMBER_FALSE_PREFIXES } from './regexMappings';
-import { resolveAirlineCodes } from '../../../utils/airlineNormalize';
-import { extractAirportCodes, extractAllAirportPairs, isValidIATACode } from './regexAirportExtractor';
-import { extractAllTimePairs, extractLabeledDates } from './regexDateExtractor';
-import { extractSharedPNR, findPNRInSource } from './regexPnrExtractor';
+import { FLIGHT_NUMBER_FALSE_PREFIXES } from "./regexMappings";
+import { resolveAirlineCodes } from "../../../utils/airlineNormalize";
+import {
+  extractAirportCodes,
+  extractAllAirportPairs,
+  isValidIATACode,
+} from "./regexAirportExtractor";
+import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
+import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
 
 /**
  * Regex-based Text Parser
@@ -27,25 +31,25 @@ import { extractSharedPNR, findPNRInSource } from './regexPnrExtractor';
  * - Requires pattern updates for new airlines
  */
 export class RegexTextParser implements ITextParser {
-  readonly provider: TextProvider = 'regex';
+  readonly provider: TextProvider = "regex";
 
   async checkAvailability(): Promise<ProviderAvailability> {
     // Regex parser is always available
     return {
       available: true,
       metadata: {
-        provider: 'regex',
-        description: 'Pattern-based email parsing',
-        cost: 'free',
+        provider: "regex",
+        description: "Pattern-based email parsing",
+        cost: "free",
       },
     };
   }
 
   async parseEmail(subject: string, text: string, html?: string): Promise<ParsedBooking[]> {
-    logger.info('[Regex Parser] Starting email parsing');
+    logger.info("[Regex Parser] Starting email parsing");
 
     try {
-      const source = [subject || '', text || '', this.extractText(html)].join('\n');
+      const source = [subject || "", text || "", this.extractText(html)].join("\n");
 
       // Try to extract multiple flights (round-trip, multi-leg)
       const flights = this.parseMultipleFlights(source);
@@ -53,18 +57,18 @@ export class RegexTextParser implements ITextParser {
       logger.info(
         {
           flightCount: flights.length,
-          flights: flights.map(f => ({
+          flights: flights.map((f) => ({
             flightNumber: f.flightNumber,
             route: `${f.departureCode} → ${f.arrivalCode}`,
             missing: f.missing.length,
           })),
         },
-        '[Regex Parser] Parsing complete'
+        "[Regex Parser] Parsing complete"
       );
 
       return flights;
     } catch (error) {
-      logger.error({ error, subject }, '[Regex Parser] Unexpected error during parsing');
+      logger.error({ error, subject }, "[Regex Parser] Unexpected error during parsing");
       throw error;
     }
   }
@@ -73,13 +77,16 @@ export class RegexTextParser implements ITextParser {
    * Extract text from HTML
    */
   private extractText(html?: string): string {
-    if (!html) return '';
+    if (!html) return "";
     try {
       const root = parse(html);
-      return root.text || '';
+      return root.text || "";
     } catch (error) {
-      logger.warn({ error, htmlLength: html.length }, '[Regex Parser] HTML text extraction failed, proceeding without HTML content');
-      return '';
+      logger.warn(
+        { error, htmlLength: html.length },
+        "[Regex Parser] HTML text extraction failed, proceeding without HTML content"
+      );
+      return "";
     }
   }
 
@@ -99,7 +106,7 @@ export class RegexTextParser implements ITextParser {
     for (const pattern of flightNumberPatterns) {
       const matches = Array.from(source.matchAll(pattern));
       for (const match of matches) {
-        const potential = (match[1] + (match[2] || '')).replace(/\s+/g, '');
+        const potential = (match[1] + (match[2] || "")).replace(/\s+/g, "");
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
           if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2))) {
             flightNumbers.push({ number: potential, index: match.index || 0 });
@@ -110,7 +117,7 @@ export class RegexTextParser implements ITextParser {
 
     // Remove duplicates and sort by position
     const uniqueFlights = Array.from(
-      new Map(flightNumbers.map(f => [f.number, f])).values()
+      new Map(flightNumbers.map((f) => [f.number, f])).values()
     ).sort((a, b) => a.index - b.index);
 
     // Extract all airport code pairs
@@ -140,12 +147,9 @@ export class RegexTextParser implements ITextParser {
         if (airportPairs.length > i) {
           const departure = airportPairs[i].departure;
           const arrival = airportPairs[i].arrival;
-          flightData.departureCode = departure && isValidIATACode(departure)
-            ? departure
-            : undefined;
-          flightData.arrivalCode = arrival && isValidIATACode(arrival)
-            ? arrival
-            : undefined;
+          flightData.departureCode =
+            departure && isValidIATACode(departure) ? departure : undefined;
+          flightData.arrivalCode = arrival && isValidIATACode(arrival) ? arrival : undefined;
         }
 
         // Try to find time for this flight
@@ -163,13 +167,18 @@ export class RegexTextParser implements ITextParser {
 
     // If we found multiple airport pairs but only one flight number, it might be a round-trip
     if (flights.length === 0 && airportPairs.length >= 2) {
-      logger.debug(`[Regex Parser] Found ${airportPairs.length} airport pairs, treating as round-trip`);
+      logger.debug(
+        `[Regex Parser] Found ${airportPairs.length} airport pairs, treating as round-trip`
+      );
 
       for (let i = 0; i < airportPairs.length; i++) {
         const pair = airportPairs[i];
-        if (pair.departure && pair.arrival &&
-            isValidIATACode(pair.departure) &&
-            isValidIATACode(pair.arrival)) {
+        if (
+          pair.departure &&
+          pair.arrival &&
+          isValidIATACode(pair.departure) &&
+          isValidIATACode(pair.arrival)
+        ) {
           const flightData: Partial<ParsedBooking> = {
             departureCode: pair.departure,
             arrivalCode: pair.arrival,
@@ -214,8 +223,8 @@ export class RegexTextParser implements ITextParser {
       const hasRoute = Boolean(singleFlight.departureCode && singleFlight.arrivalCode);
       if (!hasFlightNumber && !hasRoute) {
         logger.debug({
-          operation: 'regex_parser_no_evidence',
-          message: 'Discarded a candidate with neither a flight number nor a route',
+          operation: "regex_parser_no_evidence",
+          message: "Discarded a candidate with neither a flight number nor a route",
         });
         return [];
       }
@@ -266,7 +275,7 @@ export class RegexTextParser implements ITextParser {
     for (const pattern of flightPatterns) {
       const everyMatch = new RegExp(
         pattern.source,
-        pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g'
+        pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g"
       );
       for (const match of source.matchAll(everyMatch)) {
         // Uppercased BEFORE the guard, and that alone fixed a whole class: the
@@ -274,11 +283,11 @@ export class RegexTextParser implements ITextParser {
         // "ab 380 EUR" arrived as "ab380". FLIGHT_NUMBER_FALSE_PREFIXES lists
         // "AB" — and "ab" is not "AB", so a guard written for exactly this case
         // had never once fired.
-        const candidate = (match[1] + (match[2] || '')).replace(/\s+/g, '').toUpperCase();
+        const candidate = (match[1] + (match[2] || "")).replace(/\s+/g, "").toUpperCase();
         if (!/^[A-Z]{2,3}\d{1,4}$/.test(candidate)) continue;
         // The WHOLE alphabetic prefix, not the first two characters: slicing at
         // two let "Nur 7 Tage gültig" through as NUR7 on a prefix of "NU".
-        const prefix = /^[A-Z]+/.exec(candidate)?.[0] ?? '';
+        const prefix = /^[A-Z]+/.exec(candidate)?.[0] ?? "";
         if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(prefix)) candidates.push(candidate);
       }
     }
@@ -292,7 +301,7 @@ export class RegexTextParser implements ITextParser {
     // It is a preference, not a requirement: an airline missing from the
     // catalogue must still be able to produce a flight, so an unknown candidate
     // is used when there is no known one.
-    const known = candidates.find((c) => resolveAirlineCodes(/^[A-Z]+/.exec(c)?.[0] ?? '')?.name);
+    const known = candidates.find((c) => resolveAirlineCodes(/^[A-Z]+/.exec(c)?.[0] ?? "")?.name);
     const chosen = known ?? candidates[0];
     if (chosen) {
       data.flightNumber = chosen;
@@ -303,7 +312,7 @@ export class RegexTextParser implements ITextParser {
     if (!data.flightNumber) {
       const basicMatch = sourceUpper.match(PATTERNS.FLIGHT_NUMBER);
       if (basicMatch) {
-        const potential = basicMatch[1].replace(/\s+/g, '');
+        const potential = basicMatch[1].replace(/\s+/g, "");
         // Only accept if it looks like a real flight number (airline code + 2-4 digits)
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
           const airlineCode = potential.slice(0, 2);
@@ -336,10 +345,14 @@ export class RegexTextParser implements ITextParser {
     if (!data.departureTime || !data.arrivalTime) {
       // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
       const isoTimeMatches = Array.from(
-        source.matchAll(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g)
+        source.matchAll(
+          /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g
+        )
       );
-      if (!data.departureTime && isoTimeMatches.length >= 1) data.departureTime = isoTimeMatches[0][1].replace(' ', 'T');
-      if (!data.arrivalTime && isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
+      if (!data.departureTime && isoTimeMatches.length >= 1)
+        data.departureTime = isoTimeMatches[0][1].replace(" ", "T");
+      if (!data.arrivalTime && isoTimeMatches.length >= 2)
+        data.arrivalTime = isoTimeMatches[1][1].replace(" ", "T");
     }
 
     // German/English date format — delegates to the shared extractor, which
@@ -373,7 +386,7 @@ export class RegexTextParser implements ITextParser {
     const priceMatch = source.match(PATTERNS.PRICE_EUR);
     if (priceMatch) {
       data.price = priceMatch[1];
-      data.currency = 'EUR';
+      data.currency = "EUR";
     }
 
     // Ticket number

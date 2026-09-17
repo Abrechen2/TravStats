@@ -21,7 +21,7 @@ export const verifyTwoFactorSchema = z
     // This is an OR, not an XOR: a body carrying both fields passes too. That is
     // deliberate — the route handler decides which one wins, not the schema.
     (value) => value.code !== undefined || value.recoveryCode !== undefined,
-    "Provide either a code or a recovery code",
+    "Provide either a code or a recovery code"
   );
 
 /** Switching it off is a security decision, so it costs the password. */

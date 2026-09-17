@@ -69,7 +69,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       userId,
       parsed.data.domain,
       parsed.data.source,
-      parsed.data.fileName ?? null,
+      parsed.data.fileName ?? null
     );
     res.status(201).json({ success: true, data: batch });
   } catch (err) {

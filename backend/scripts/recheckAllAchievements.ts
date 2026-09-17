@@ -45,9 +45,7 @@ async function main(): Promise<void> {
         const names = newlyUnlocked
           .map((ua) => ua.achievement?.name ?? ua.achievementId)
           .join(", ");
-        console.log(
-          `  ${user.username.padEnd(24)} +${newlyUnlocked.length}: ${names}`,
-        );
+        console.log(`  ${user.username.padEnd(24)} +${newlyUnlocked.length}: ${names}`);
       } else {
         console.log(`  ${user.username.padEnd(24)} (no new unlocks)`);
       }
@@ -57,9 +55,7 @@ async function main(): Promise<void> {
   }
 
   console.log("");
-  console.log(
-    `Done. ${totalNewUnlocks} new unlock(s) across ${usersWithUnlocks} user(s).`,
-  );
+  console.log(`Done. ${totalNewUnlocks} new unlock(s) across ${usersWithUnlocks} user(s).`);
 }
 
 main()

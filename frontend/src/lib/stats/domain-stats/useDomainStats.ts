@@ -93,10 +93,7 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       return adaptCruise({ stats: cruiseStats, cruises });
     }
     case "lodging": {
-      const [lodgingStats, lodgings] = await Promise.all([
-        getLodgingStats(),
-        listLodgings({}),
-      ]);
+      const [lodgingStats, lodgings] = await Promise.all([getLodgingStats(), listLodgings({})]);
       return adaptLodging({ stats: lodgingStats, lodgings });
     }
     case "poi": {

@@ -128,7 +128,7 @@ async function flightIdsDepartingInLocalYear(userId: string, year: number): Prom
     .filter(
       (f) =>
         f.departureTime !== null &&
-        localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year === year,
+        localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year === year
     )
     .map((f) => f.id);
 }
@@ -137,7 +137,7 @@ export async function buildWhere(
   userId: string,
   fromDate: string | undefined,
   toDate: string | undefined,
-  filterYear?: number,
+  filterYear?: number
 ): Promise<Prisma.FlightWhereInput> {
   const where: Prisma.FlightWhereInput = { userId };
 
@@ -162,7 +162,7 @@ export async function buildWhere(
 
 export async function computeSummary(
   where: Prisma.FlightWhereInput,
-  baseCurrency: string,
+  baseCurrency: string
 ): Promise<SummaryStats> {
   // EVERY headline figure describes the same population: flights that actually
   // happened. `totalFlights` and `totalCost` used to run on the unfiltered
@@ -210,19 +210,19 @@ export async function computeSummary(
       },
     }),
     prisma.flight.count({ where: geoWhere }),
-    prisma.flight.count({ where: { ...where, status: 'scheduled' } }),
+    prisma.flight.count({ where: { ...where, status: "scheduled" } }),
     prisma.flight.groupBy({
-      by: ['status'],
+      by: ["status"],
       where,
       _count: true,
     }),
     prisma.flight.groupBy({
-      by: ['airline'],
+      by: ["airline"],
       where,
       _count: true,
     }),
     prisma.flight.groupBy({
-      by: ['category'],
+      by: ["category"],
       where,
       _count: true,
     }),
@@ -267,28 +267,24 @@ export async function computeSummary(
     // timezone lookup failed — durations will use naïve diff
   }
 
-  flownFlights.forEach(flight => {
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
+  flownFlights.forEach((flight) => {
+    const distance = calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
     totalDistance += distance;
     if (distance > 0) distanceFlightCount += 1;
 
-    const depTz = (flight.depIata && tzMap.get(flight.depIata))
-      || (flight.depIcao && tzMap.get(flight.depIcao))
-      || null;
-    const arrTz = (flight.arrIata && tzMap.get(flight.arrIata))
-      || (flight.arrIcao && tzMap.get(flight.arrIcao))
-      || null;
+    const depTz =
+      (flight.depIata && tzMap.get(flight.depIata)) ||
+      (flight.depIcao && tzMap.get(flight.depIcao)) ||
+      null;
+    const arrTz =
+      (flight.arrIata && tzMap.get(flight.arrIata)) ||
+      (flight.arrIcao && tzMap.get(flight.arrIcao)) ||
+      null;
     // A `historical` row's clocks are placeholders, not evidence — see
     // `businessStats.ts` for the same guard and the reason. It contributes a
     // coordinate estimate below instead.
-    const flightTime = flight.status === 'flown'
-      ? measuredDurationMinutes(flight, depTz, arrTz)
-      : null;
+    const flightTime =
+      flight.status === "flown" ? measuredDurationMinutes(flight, depTz, arrTz) : null;
     // #106A still holds: a DATE_ONLY row must never contribute its placeholder
     // times, so `flightTime` stays null for it and no fiction is measured. What
     // changed in #268 is what happens NEXT — instead of silently adding 0, the
@@ -308,23 +304,32 @@ export async function computeSummary(
   // average down — the client already divided this way, the server did not.
   const avgDistance = distanceFlightCount > 0 ? totalDistance / distanceFlightCount : 0;
 
-  const byStatus = statusCounts.reduce((acc, item) => {
-    acc[item.status] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
+  const byStatus = statusCounts.reduce(
+    (acc, item) => {
+      acc[item.status] = item._count;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
-  const rawByAirline = airlineCounts.reduce((acc, item) => {
-    const airline = item.airline || 'Unknown';
-    acc[airline] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
+  const rawByAirline = airlineCounts.reduce(
+    (acc, item) => {
+      const airline = item.airline || "Unknown";
+      acc[airline] = item._count;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
   const byAirline = mergeAirlineCounts(rawByAirline);
 
-  const byCategory = categoryCounts.reduce((acc, item) => {
-    const cat = item.category || 'unassigned';
-    acc[cat] = item._count;
-    return acc;
-  }, {} as Record<string, number>);
+  const byCategory = categoryCounts.reduce(
+    (acc, item) => {
+      const cat = item.category || "unassigned";
+      acc[cat] = item._count;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Booking-aware: a booking's price counts once, not once per segment —
   // and grouped segments (price nulled by the import) still contribute

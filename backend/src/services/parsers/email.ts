@@ -1,19 +1,19 @@
-import { TextProvider, ParserConfig, ParserResult } from './types';
-import { keepOnlyFlightsWithEvidence } from './shared/evidence';
-import { backfillRoutesFromText } from './shared/routeFromText';
-import { preferNamedAirports } from './shared/namedAirport';
-import { airportsInCityOf } from '../airportLookup';
-import { ParsedBooking } from '../bookingParser';
-import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
-import { shouldLogParserOperations } from '../loggingConfig';
-import { extractFlightDataFromText, cleanEmailBody } from './shared/utils';
-import { getAirlineName } from '../flightLookup';
-import { checkProviderAvailability, deleteAvailabilityCacheEntry } from './config';
-import { getTextParserInstance } from './providers';
-import { calculateParserQuality } from './boardingPass';
-import { findMatchingTemplate } from './userTemplates/matcher';
-import { applyUserTemplate } from './userTemplates/engine';
-import { TemplateParser } from './text/templateParser';
+import { TextProvider, ParserConfig, ParserResult } from "./types";
+import { keepOnlyFlightsWithEvidence } from "./shared/evidence";
+import { backfillRoutesFromText } from "./shared/routeFromText";
+import { preferNamedAirports } from "./shared/namedAirport";
+import { airportsInCityOf } from "../airportLookup";
+import { ParsedBooking } from "../bookingParser";
+import logger, { parserFactoryLogger, parserTextLogger } from "../../utils/logger";
+import { shouldLogParserOperations } from "../loggingConfig";
+import { extractFlightDataFromText, cleanEmailBody } from "./shared/utils";
+import { getAirlineName } from "../flightLookup";
+import { checkProviderAvailability, deleteAvailabilityCacheEntry } from "./config";
+import { getTextParserInstance } from "./providers";
+import { calculateParserQuality } from "./boardingPass";
+import { findMatchingTemplate } from "./userTemplates/matcher";
+import { applyUserTemplate } from "./userTemplates/engine";
+import { TemplateParser } from "./text/templateParser";
 
 async function applyEmailRegexPostProcessing(
   flights: ParsedBooking[],
@@ -21,7 +21,7 @@ async function applyEmailRegexPostProcessing(
   text: string,
   html?: string
 ): Promise<ParsedBooking[]> {
-  const combinedText = `${subject}\n${text || ''}\n${html || ''}`;
+  const combinedText = `${subject}\n${text || ""}\n${html || ""}`;
   const regexData = extractFlightDataFromText(combinedText.toUpperCase());
 
   const withFields = flights.map((flight) => {
@@ -55,7 +55,8 @@ async function applyEmailRegexPostProcessing(
 
     // Extract operating carrier from "operated by X" / "durchgeführt von X" patterns
     if (!enhanced.operatingAirline) {
-      const operatedByPattern = /(?:operated\s+by|durchgeführt\s+von|betrieb(?:en)?\s+von|Durchführender\s+Carrier|operating\s+carrier)[:\s]+([^\n,;]{2,50})/i;
+      const operatedByPattern =
+        /(?:operated\s+by|durchgeführt\s+von|betrieb(?:en)?\s+von|Durchführender\s+Carrier|operating\s+carrier)[:\s]+([^\n,;]{2,50})/i;
       const opMatch = operatedByPattern.exec(combinedText);
       if (opMatch) {
         const opName = opMatch[1].trim();
@@ -116,7 +117,7 @@ export async function parseEmail(
 
   if (shouldLog) {
     log.info({
-      operation: 'parse_email_start',
+      operation: "parse_email_start",
       context: {
         subject,
         textLength: text.length,
@@ -129,14 +130,22 @@ export async function parseEmail(
 
   // Step 0: User-derived regex templates (before HTML-selector templates)
   if (config.userId) {
-
-    const userTemplate = await findMatchingTemplate(config.userId, fromAddress, subject, cleanedText);
+    const userTemplate = await findMatchingTemplate(
+      config.userId,
+      fromAddress,
+      subject,
+      cleanedText
+    );
     if (userTemplate) {
       const userResults = applyUserTemplate(userTemplate, subject, cleanedText);
       const bestConfidence = userResults[0]?.parserConfidence ?? 0;
       if (bestConfidence >= 80) {
         log.info(
-          { templateName: userTemplate.name, flights: userResults.length, confidence: bestConfidence },
+          {
+            templateName: userTemplate.name,
+            flights: userResults.length,
+            confidence: bestConfidence,
+          },
           "[Parser Factory] User-derived template matched (confidence >=80%)"
         );
         return {
@@ -151,38 +160,46 @@ export async function parseEmail(
   // Determine if Ollama should be tried before templates
   // When Ollama is explicitly configured (ollamaUrl set), it takes priority over templates.
   // Templates become the fallback when Ollama is unavailable or returns no results.
-  const ollamaConfigured = !!config.ollamaUrl && config.textFallbacks.includes('ollama');
+  const ollamaConfigured = !!config.ollamaUrl && config.textFallbacks.includes("ollama");
 
   if (ollamaConfigured) {
     // Try Ollama first (before templates) when explicitly configured
     try {
-      const ollamaParser = getTextParserInstance('ollama', config);
+      const ollamaParser = getTextParserInstance("ollama", config);
       const ollamaAvail = await checkProviderAvailability(ollamaParser);
       if (ollamaAvail.available) {
-        logger.info('[Parser Factory] Ollama configured — trying LLM before templates');
-        const ollamaFlights = await ollamaParser.parseEmail(
-          subject,
-          cleanedText,
-          html,
-          undefined,
-          { referenceDate: config.referenceDate },
-        );
+        logger.info("[Parser Factory] Ollama configured — trying LLM before templates");
+        const ollamaFlights = await ollamaParser.parseEmail(subject, cleanedText, html, undefined, {
+          referenceDate: config.referenceDate,
+        });
         if (ollamaFlights && ollamaFlights.length > 0) {
-          const finalFlights = await applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
-          logger.info({ flightCount: finalFlights.length }, '[Parser Factory] Ollama succeeded — skipping templates');
+          const finalFlights = await applyEmailRegexPostProcessing(
+            ollamaFlights,
+            subject,
+            cleanedText,
+            html
+          );
+          logger.info(
+            { flightCount: finalFlights.length },
+            "[Parser Factory] Ollama succeeded — skipping templates"
+          );
           return {
             flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama"),
-            provider: 'ollama' as const,
+            provider: "ollama" as const,
             fallbackUsed: false,
           };
         }
-        parsedWithoutFlights = 'ollama';
-        logger.info('[Parser Factory] Ollama returned no flights — falling back to templates');
+        parsedWithoutFlights = "ollama";
+        logger.info("[Parser Factory] Ollama returned no flights — falling back to templates");
       } else {
-        logger.info(`[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`);
+        logger.info(
+          `[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`
+        );
       }
     } catch (err) {
-      logger.warn(`[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`);
+      logger.warn(
+        `[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
@@ -190,15 +207,23 @@ export async function parseEmail(
   const templateParser = new TemplateParser();
   const templateAvail = await templateParser.checkAvailability();
   if (templateAvail.available) {
-    const templateResults = await templateParser.parseEmail(subject, cleanedText, html, config.userId);
+    const templateResults = await templateParser.parseEmail(
+      subject,
+      cleanedText,
+      html,
+      config.userId
+    );
     if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
       logger.info(
-        { confidence: templateResults[0].parserConfidence, parserTemplate: templateResults[0].parserTemplate },
-        '[Parser Factory] Template parser matched with sufficient confidence'
+        {
+          confidence: templateResults[0].parserConfidence,
+          parserTemplate: templateResults[0].parserTemplate,
+        },
+        "[Parser Factory] Template parser matched with sufficient confidence"
       );
       return {
         flights: keepOnlyFlightsWithEvidence(templateResults, "regex"),
-        provider: 'regex' as const,
+        provider: "regex" as const,
         fallbackUsed: false,
       };
     }
@@ -206,7 +231,7 @@ export async function parseEmail(
 
   // Regex provider chain (ollama already tried above if configured, skip it here)
   const providerChain: TextProvider[] = ollamaConfigured
-    ? config.textFallbacks.filter((p) => p !== 'ollama')
+    ? config.textFallbacks.filter((p) => p !== "ollama")
     : config.textFallbacks;
 
   // Try each provider in order
@@ -219,13 +244,15 @@ export async function parseEmail(
       if (!availability.available) {
         if (shouldLog) {
           textLog.debug({
-            operation: 'text_parser_skipped',
+            operation: "text_parser_skipped",
             context: { provider, reason: availability.reason },
           });
         } else {
-          logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`);
+          logger.debug(
+            `[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`
+          );
         }
-        errors.push({ provider, error: availability.reason || 'Unavailable' });
+        errors.push({ provider, error: availability.reason || "Unavailable" });
         continue;
       }
 
@@ -233,7 +260,7 @@ export async function parseEmail(
       const parseStartTime = Date.now();
       if (shouldLog) {
         textLog.info({
-          operation: 'text_parse_attempt',
+          operation: "text_parse_attempt",
           context: { provider, textLength: cleanedText.length, htmlLength: html ? html.length : 0 },
         });
       } else {
@@ -264,7 +291,7 @@ export async function parseEmail(
 
       if (shouldLog) {
         log.info({
-          operation: 'parse_email_complete',
+          operation: "parse_email_complete",
           context: {
             provider: finalProvider,
             fallbackUsed: finalFallbackUsed,
@@ -282,7 +309,7 @@ export async function parseEmail(
             quality: finalQuality,
             flightCount: finalFlights.length,
           },
-          `[Parser Factory] Email parse complete with: ${finalProvider}${finalFallbackUsed ? ' (fallback)' : ''}`
+          `[Parser Factory] Email parse complete with: ${finalProvider}${finalFallbackUsed ? " (fallback)" : ""}`
         );
       }
 
@@ -292,10 +319,10 @@ export async function parseEmail(
         fallbackUsed: finalFallbackUsed,
       };
     } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       if (shouldLog) {
         textLog.warn({
-          operation: 'text_parse_failed',
+          operation: "text_parse_failed",
           context: {
             provider,
             error: errorMsg,
@@ -331,13 +358,13 @@ export async function parseEmail(
   const totalDuration = Date.now() - startTime;
   if (shouldLog) {
     log.error({
-      operation: 'parse_email_failed',
+      operation: "parse_email_failed",
       context: { errors, totalDuration, triedProviders: providerChain },
     });
   } else {
-    logger.error({ errors }, '[Parser Factory] All text parsers failed');
+    logger.error({ errors }, "[Parser Factory] All text parsers failed");
   }
   throw new Error(
-    `All text parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
+    `All text parsers failed. Errors: ${errors.map((e) => `${e.provider}: ${e.error}`).join("; ")}`
   );
 }

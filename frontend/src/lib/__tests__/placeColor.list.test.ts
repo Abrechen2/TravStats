@@ -74,8 +74,9 @@ describe("resolvePlaceColor in list mode", () => {
   });
 
   it("ignores listColor in the other modes", () => {
-    expect(resolvePlaceColor({ visited: true, listColor: [1, 2, 3] }, DEFAULT_PLACE_COLOR_CONFIG))
-      .toEqual(DEFAULT_PLACE_COLORS.solid);
+    expect(
+      resolvePlaceColor({ visited: true, listColor: [1, 2, 3] }, DEFAULT_PLACE_COLOR_CONFIG)
+    ).toEqual(DEFAULT_PLACE_COLORS.solid);
   });
 });
 

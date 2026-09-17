@@ -35,7 +35,7 @@ const requestSchema = z.object({
       z.object({
         key: z.string().min(1).max(64),
         rows: z.array(z.record(z.string(), z.string())).max(MAX_ROWS_PER_SHEET),
-      }),
+      })
     )
     .min(1)
     .max(16),
@@ -68,12 +68,12 @@ router.post(
           backupId = await createBackup();
           logger.info(
             { operation: "xlsx_import_pre_backup", userId, backupId },
-            "Backup taken before destructive spreadsheet import",
+            "Backup taken before destructive spreadsheet import"
           );
         } catch (err) {
           logger.error(
             { operation: "xlsx_import_pre_backup_failed", userId, err },
-            "Refusing a replace import because the safety backup failed",
+            "Refusing a replace import because the safety backup failed"
           );
           throw new AppError("backup_failed", 503);
         }
@@ -99,14 +99,14 @@ router.post(
             errors: s.errors,
           })),
         },
-        dryRun ? "Spreadsheet import previewed" : "Spreadsheet import applied",
+        dryRun ? "Spreadsheet import previewed" : "Spreadsheet import applied"
       );
 
       res.json({ success: true, data: outcome });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

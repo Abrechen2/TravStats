@@ -1,5 +1,8 @@
-import { getParserConfig, parseBoardingPass as parseBoardingPassFromFactory } from './parsers/factory';
-import type { ParsedBooking } from './bookingParser';
+import {
+  getParserConfig,
+  parseBoardingPass as parseBoardingPassFromFactory,
+} from "./parsers/factory";
+import type { ParsedBooking } from "./bookingParser";
 
 interface BoardingPassParseResult {
   flight: ParsedBooking;
@@ -29,4 +32,3 @@ export async function parseBoardingPass(
     fallbackUsed: result.fallbackUsed,
   };
 }
-

@@ -1,5 +1,5 @@
-import { prisma } from '../../../db';
-import { readInstanceIdentity, restoreInstanceIdentity } from '../backupRestore';
+import { prisma } from "../../../db";
+import { readInstanceIdentity, restoreInstanceIdentity } from "../backupRestore";
 
 /**
  * forgejo#115. A dump carries `admin_settings` like every other table, so a
@@ -13,31 +13,31 @@ import { readInstanceIdentity, restoreInstanceIdentity } from '../backupRestore'
  * These tests drive the before/after pairing directly rather than the whole
  * restore — the psql run between them is not what was broken.
  */
-describe('restoreInstanceIdentity', () => {
+describe("restoreInstanceIdentity", () => {
   const OWN = {
-    frontendUrl: 'https://own.example',
-    publicUrl: 'https://own.example',
-    lanUrl: 'http://192.168.0.10:3010',
-    webauthnRpId: 'own.example',
-    webauthnOrigins: ['https://own.example'],
+    frontendUrl: "https://own.example",
+    publicUrl: "https://own.example",
+    lanUrl: "http://192.168.0.10:3010",
+    webauthnRpId: "own.example",
+    webauthnOrigins: ["https://own.example"],
   };
 
   const FROM_THE_ARCHIVE = {
-    frontendUrl: 'https://someone-else.example',
-    publicUrl: 'https://someone-else.example',
-    lanUrl: 'http://192.168.0.99:3010',
-    webauthnRpId: 'someone-else.example',
-    webauthnOrigins: ['https://someone-else.example'],
+    frontendUrl: "https://someone-else.example",
+    publicUrl: "https://someone-else.example",
+    lanUrl: "http://192.168.0.99:3010",
+    webauthnRpId: "someone-else.example",
+    webauthnOrigins: ["https://someone-else.example"],
   };
 
   const write = async (values: typeof OWN): Promise<void> => {
-    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: 'asc' } });
+    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
     await prisma.adminSettings.update({ where: { id: row.id }, data: values });
   };
 
   const read = async (): Promise<typeof OWN> => {
     const row = await prisma.adminSettings.findFirstOrThrow({
-      orderBy: { id: 'asc' },
+      orderBy: { id: "asc" },
       select: {
         frontendUrl: true,
         publicUrl: true,
@@ -63,7 +63,7 @@ describe('restoreInstanceIdentity', () => {
     await prisma.$disconnect();
   });
 
-  it('puts this instance back on its own address after a foreign dump', async () => {
+  it("puts this instance back on its own address after a foreign dump", async () => {
     await write(OWN);
     const before = await readInstanceIdentity();
 
@@ -75,7 +75,7 @@ describe('restoreInstanceIdentity', () => {
     expect(await read()).toEqual(OWN);
   });
 
-  it('keeps the relying-party id, which a foreign one would not merely degrade', async () => {
+  it("keeps the relying-party id, which a foreign one would not merely degrade", async () => {
     await write(OWN);
     const before = await readInstanceIdentity();
     await write(FROM_THE_ARCHIVE);
@@ -83,11 +83,11 @@ describe('restoreInstanceIdentity', () => {
     await restoreInstanceIdentity(before);
 
     const after = await read();
-    expect(after.webauthnRpId).toBe('own.example');
-    expect(after.webauthnOrigins).toEqual(['https://own.example']);
+    expect(after.webauthnRpId).toBe("own.example");
+    expect(after.webauthnOrigins).toEqual(["https://own.example"]);
   });
 
-  it('restores a cleared field as cleared, so the instance falls back to its own ENV', async () => {
+  it("restores a cleared field as cleared, so the instance falls back to its own ENV", async () => {
     await write({
       frontendUrl: null,
       publicUrl: null,
@@ -106,7 +106,7 @@ describe('restoreInstanceIdentity', () => {
     expect(after.webauthnOrigins).toEqual([]);
   });
 
-  it('leaves the row alone when the archive agreed with it', async () => {
+  it("leaves the row alone when the archive agreed with it", async () => {
     await write(OWN);
     const before = await readInstanceIdentity();
 

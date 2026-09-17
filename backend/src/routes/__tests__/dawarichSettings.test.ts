@@ -29,7 +29,7 @@ jest.mock("../../db", () => ({
 jest.mock("../../utils/encryption", () => ({
   encryptApiKey: jest.fn((v: string | null) => (v === null ? null : `enc:${v}`)),
   decryptApiKey: jest.fn((v: string | null) =>
-    typeof v === "string" ? v.replace(/^enc:/, "") : null,
+    typeof v === "string" ? v.replace(/^enc:/, "") : null
   ),
 }));
 
@@ -118,7 +118,7 @@ describe("PUT /settings/dawarich", () => {
           dawarichBaseUrl: "https://dawarich.lan",
           dawarichApiKey: "enc:k",
         },
-      }),
+      })
     );
   });
 
@@ -127,7 +127,7 @@ describe("PUT /settings/dawarich", () => {
     await request(makeApp(dawarichSettingsRouter)).put("/dawarich").send({ apiKey: null });
 
     expect(userSettingsUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { dawarichApiKey: null } }),
+      expect.objectContaining({ update: { dawarichApiKey: null } })
     );
   });
 
@@ -174,7 +174,7 @@ describe("PUT /settings/dawarich", () => {
 
     expect(res.status).toBe(200);
     expect(userSettingsUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { dawarichBaseUrl: null } }),
+      expect.objectContaining({ update: { dawarichBaseUrl: null } })
     );
   });
 
@@ -269,7 +269,7 @@ describe("PUT /admin/dawarich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalDawarichBaseUrl: "https://dawarich.lan" },
-      }),
+      })
     );
   });
 
@@ -284,7 +284,7 @@ describe("PUT /admin/dawarich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalDawarichApiKey: "enc:brand-new-key" },
-      }),
+      })
     );
   });
 
@@ -299,7 +299,7 @@ describe("PUT /admin/dawarich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalDawarichApiKey: null },
-      }),
+      })
     );
   });
 

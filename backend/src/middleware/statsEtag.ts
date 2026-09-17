@@ -62,7 +62,11 @@ function fingerprintQuery(userId: string): Prisma.Sql {
 }
 
 /** The ETag for one user and one URL at one moment. Exported for tests. */
-export async function computeStatsEtag(userId: string, url: string, now = new Date()): Promise<string> {
+export async function computeStatsEtag(
+  userId: string,
+  url: string,
+  now = new Date()
+): Promise<string> {
   const rows = await prisma.$queryRaw<FingerprintRow[]>(fingerprintQuery(userId));
   const parts = rows
     .map((r) => `${r.part}:${r.n.toString()}:${r.latest ? r.latest.toISOString() : "-"}`)
@@ -85,7 +89,11 @@ export function matchesIfNoneMatch(header: string | undefined, etag: string): bo
   return header.split(",").some((candidate) => bare(candidate) === bare(etag));
 }
 
-export async function statsEtag(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function statsEtag(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   if (req.method !== "GET" || !req.userId) {
     next();
     return;

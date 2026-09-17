@@ -38,7 +38,7 @@ const keyOf = (from: string, to: string): string => `${from}\u0000${to}`;
 
 export function planLegs(
   orderedStopIds: readonly string[],
-  existing: readonly ExistingLeg[],
+  existing: readonly ExistingLeg[]
 ): LegPlan {
   const wanted = new Map<string, LegPair>();
   for (let i = 1; i < orderedStopIds.length; i++) {

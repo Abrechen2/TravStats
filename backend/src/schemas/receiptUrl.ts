@@ -36,7 +36,7 @@ export const receiptUrlValidator = z
         const parsedUrl = new URL(url);
         const hostname = parsedUrl.hostname.toLowerCase();
         return ALLOWED_RECEIPT_DOMAINS.some(
-          (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+          (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
         );
       } catch {
         return false;
@@ -44,6 +44,6 @@ export const receiptUrlValidator = z
     },
     {
       message: `Receipt URL must be a local upload (/api/v1/uploads/) or from a trusted domain: ${ALLOWED_RECEIPT_DOMAINS.join(", ")}`,
-    },
+    }
   )
   .optional();

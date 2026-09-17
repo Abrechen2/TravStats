@@ -68,7 +68,9 @@ describe("GET /flights/next", () => {
   });
 
   it("ignores a cancelled flight", async () => {
-    await prisma.flight.create({ data: mk(1 * 24 * HOUR, { status: "cancelled", arrIata: "FRA" }) });
+    await prisma.flight.create({
+      data: mk(1 * 24 * HOUR, { status: "cancelled", arrIata: "FRA" }),
+    });
     await prisma.flight.create({ data: mk(5 * 24 * HOUR, { arrIata: "AMS" }) });
     const res = await request(app).get("/api/v1/flights/next").set("Cookie", cookie);
     expect(res.body.flight.arrIata).toBe("AMS");

@@ -27,10 +27,7 @@ import {
   type FlightAppearanceState,
   type LodgingAppearanceState,
 } from "./controlPanelKit";
-import {
-  PlaceAppearanceSection,
-  type PlaceAppearanceState,
-} from "./PlaceAppearanceSection";
+import { PlaceAppearanceSection, type PlaceAppearanceState } from "./PlaceAppearanceSection";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
 

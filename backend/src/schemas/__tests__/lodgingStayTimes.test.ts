@@ -35,12 +35,12 @@ describe("stay check-in/check-out times", () => {
     "rejects the malformed time %s",
     (bad) => {
       expect(() => createStaySchema.parse({ ...DAY_STAY, checkInTime: bad })).toThrow();
-    },
+    }
   );
 
   it("rejects a check-in time without a check-in date", () => {
     expect(() =>
-      createStaySchema.parse({ datePrecision: "NONE", status: "completed", checkInTime: "15:00" }),
+      createStaySchema.parse({ datePrecision: "NONE", status: "completed", checkInTime: "15:00" })
     ).toThrow();
   });
 
@@ -51,7 +51,7 @@ describe("stay check-in/check-out times", () => {
         datePrecision: "DAY",
         status: "scheduled",
         checkOutTime: "11:00",
-      }),
+      })
     ).toThrow();
   });
 
@@ -62,7 +62,7 @@ describe("stay check-in/check-out times", () => {
         datePrecision: "MONTH",
         status: "completed",
         checkInTime: "15:00",
-      }),
+      })
     ).toThrow();
   });
 

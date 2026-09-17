@@ -315,140 +315,144 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
  * hat, so it gets the stats bucket. The catalog, progress and tick routes
  * around it are bounded by one list's items and stay unlimited.
  */
-router.get("/:key/suggestions", statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const curated = await prisma.curatedList.findUnique({
-      where: { key: req.params.key },
-      include: { items: true },
-    });
-    if (!curated) throw new AppError("Checklist not found", 404);
+router.get(
+  "/:key/suggestions",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const curated = await prisma.curatedList.findUnique({
+        where: { key: req.params.key },
+        include: { items: true },
+      });
+      if (!curated) throw new AppError("Checklist not found", 404);
 
-    const [ticked, stays, stops, flights, places, photos] = await Promise.all([
-      prisma.place.findMany({
-        where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
-        select: { curatedItemId: true, visited: true },
-      }),
-      prisma.lodgingStay.findMany({
-        where: { userId },
-        select: {
-          status: true,
-          checkIn: true,
-          checkOut: true,
-          lodging: { select: { name: true, lat: true, lon: true } },
-        },
-      }),
-      prisma.cruiseStop.findMany({
-        where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
-        select: {
-          date: true,
-          arrivalTime: true,
-          port: { select: { name: true, lat: true, lon: true } },
-        },
-      }),
-      prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
-        select: {
-          status: true,
-          depIata: true,
-          arrIata: true,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-          arrivalTime: true,
-        },
-      }),
-      prisma.place.findMany({
-        where: { userId, visited: true },
-        select: {
-          name: true,
-          lat: true,
-          lon: true,
-          visited: true,
-          visits: { select: { visitedAt: true } },
-        },
-      }),
-      /**
-       * Geotagged trip photos — POI Phase D, piece 1.
-       *
-       * These rows already existed and were doing nothing for suggestions: an
-       * Immich import writes `lat`/`lon`/`takenAt`, so a trip with a linked
-       * album is already a list of dated, positioned points. It is the only
-       * anchor that records where the user STOOD rather than where their travel
-       * was, which is why it reaches one kilometre and outranks the rest.
-       *
-       * Filtered in the query, not afterwards: an account can hold thousands of
-       * photos and only some carry coordinates, and the ones without a position
-       * cannot become an anchor however far the code goes.
-       */
-      prisma.tripPhoto.findMany({
-        where: { trip: { userId }, lat: { not: null }, lon: { not: null } },
-        select: { lat: true, lon: true, takenAt: true, trip: { select: { name: true } } },
-      }),
-    ]);
+      const [ticked, stays, stops, flights, places, photos] = await Promise.all([
+        prisma.place.findMany({
+          where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
+          select: { curatedItemId: true, visited: true },
+        }),
+        prisma.lodgingStay.findMany({
+          where: { userId },
+          select: {
+            status: true,
+            checkIn: true,
+            checkOut: true,
+            lodging: { select: { name: true, lat: true, lon: true } },
+          },
+        }),
+        prisma.cruiseStop.findMany({
+          where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
+          select: {
+            date: true,
+            arrivalTime: true,
+            port: { select: { name: true, lat: true, lon: true } },
+          },
+        }),
+        prisma.flight.findMany({
+          where: { userId, ...countableFlightWhere() },
+          select: {
+            status: true,
+            depIata: true,
+            arrIata: true,
+            depLat: true,
+            depLon: true,
+            arrLat: true,
+            arrLon: true,
+            departureTime: true,
+            arrivalTime: true,
+          },
+        }),
+        prisma.place.findMany({
+          where: { userId, visited: true },
+          select: {
+            name: true,
+            lat: true,
+            lon: true,
+            visited: true,
+            visits: { select: { visitedAt: true } },
+          },
+        }),
+        /**
+         * Geotagged trip photos — POI Phase D, piece 1.
+         *
+         * These rows already existed and were doing nothing for suggestions: an
+         * Immich import writes `lat`/`lon`/`takenAt`, so a trip with a linked
+         * album is already a list of dated, positioned points. It is the only
+         * anchor that records where the user STOOD rather than where their travel
+         * was, which is why it reaches one kilometre and outranks the rest.
+         *
+         * Filtered in the query, not afterwards: an account can hold thousands of
+         * photos and only some carry coordinates, and the ones without a position
+         * cannot become an anchor however far the code goes.
+         */
+        prisma.tripPhoto.findMany({
+          where: { trip: { userId }, lat: { not: null }, lon: { not: null } },
+          select: { lat: true, lon: true, takenAt: true, trip: { select: { name: true } } },
+        }),
+      ]);
 
-    // Only OPEN targets. Suggesting something the user already ticked is noise
-    // that makes the list of suggestions untrustworthy.
-    const tickedIds = new Set(ticked.filter((p) => p.visited).map((p) => p.curatedItemId));
-    const targets = curated.items
-      .filter((i) => !tickedIds.has(i.id))
-      .map((i) => ({
-        itemId: i.id,
-        name: i.name,
-        country: i.isoCountryCode ?? i.country ?? null,
-        lat: i.lat,
-        lon: i.lon,
-      }));
+      // Only OPEN targets. Suggesting something the user already ticked is noise
+      // that makes the list of suggestions untrustworthy.
+      const tickedIds = new Set(ticked.filter((p) => p.visited).map((p) => p.curatedItemId));
+      const targets = curated.items
+        .filter((i) => !tickedIds.has(i.id))
+        .map((i) => ({
+          itemId: i.id,
+          name: i.name,
+          country: i.isoCountryCode ?? i.country ?? null,
+          lat: i.lat,
+          lon: i.lon,
+        }));
 
-    const anchors = buildAnchors({
-      lodgings: stays
-        .filter((s) => s.lodging !== null)
-        .map((s) => ({
-          name: s.lodging.name,
-          lat: s.lodging.lat,
-          lon: s.lodging.lon,
-          checkIn: s.checkIn,
-          checkOut: s.checkOut,
-          status: s.status,
+      const anchors = buildAnchors({
+        lodgings: stays
+          .filter((s) => s.lodging !== null)
+          .map((s) => ({
+            name: s.lodging.name,
+            lat: s.lodging.lat,
+            lon: s.lodging.lon,
+            checkIn: s.checkIn,
+            checkOut: s.checkOut,
+            status: s.status,
+          })),
+        cruiseStops: stops
+          .filter((s) => s.port !== null)
+          .map((s) => ({
+            portName: s.port?.name ?? null,
+            lat: s.port?.lat ?? null,
+            lon: s.port?.lon ?? null,
+            at: s.arrivalTime ?? s.date,
+          })),
+        flights,
+        places,
+        photos: photos.map((p) => ({
+          lat: p.lat,
+          lon: p.lon,
+          takenAt: p.takenAt,
+          tripName: p.trip?.name ?? null,
         })),
-      cruiseStops: stops
-        .filter((s) => s.port !== null)
-        .map((s) => ({
-          portName: s.port?.name ?? null,
-          lat: s.port?.lat ?? null,
-          lon: s.port?.lon ?? null,
-          at: s.arrivalTime ?? s.date,
-        })),
-      flights,
-      places,
-      photos: photos.map((p) => ({
-        lat: p.lat,
-        lon: p.lon,
-        takenAt: p.takenAt,
-        tripName: p.trip?.name ?? null,
-      })),
-    });
+      });
 
-    const suggestions = suggestVisits(targets, anchors);
+      const suggestions = suggestVisits(targets, anchors);
 
-    res.json({
-      success: true,
-      data: {
-        key: curated.key,
-        // Both numbers travel so the UI can say something honest when the list
-        // is empty: no anchors at all is "record some travel first", while
-        // anchors with no hits is "nothing of yours is near an open target".
-        anchorCount: anchors.length,
-        openCount: targets.length,
-        suggestions,
-      },
-    });
-  } catch (error) {
-    next(error);
+      res.json({
+        success: true,
+        data: {
+          key: curated.key,
+          // Both numbers travel so the UI can say something honest when the list
+          // is empty: no anchors at all is "record some travel first", while
+          // anchors with no hits is "nothing of yours is near an open target".
+          anchorCount: anchors.length,
+          openCount: targets.length,
+          suggestions,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // ---------------------------------------------------------------- tick
 
@@ -547,26 +551,29 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
   }
 });
 
-router.delete("/items/:itemId/tick", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
+router.delete(
+  "/items/:itemId/tick",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
 
-    // Unticking clears the tick and DELETES NOTHING. The row keeps its visits,
-    // its photos and any notes; it simply stops counting as visited, which is
-    // the same state a wishlist entry is in. Deleting the place here would make
-    // a mis-click destroy a photo, and no confirmation dialog is worth that.
-    const updated = await prisma.place.updateMany({
-      where: { userId, curatedItemId: req.params.itemId },
-      data: { visited: false },
-    });
-    if (updated.count === 0) throw new AppError("Checklist item not ticked", 404);
+      // Unticking clears the tick and DELETES NOTHING. The row keeps its visits,
+      // its photos and any notes; it simply stops counting as visited, which is
+      // the same state a wishlist entry is in. Deleting the place here would make
+      // a mis-click destroy a photo, and no confirmation dialog is worth that.
+      const updated = await prisma.place.updateMany({
+        where: { userId, curatedItemId: req.params.itemId },
+        data: { visited: false },
+      });
+      if (updated.count === 0) throw new AppError("Checklist item not ticked", 404);
 
-    await recheckAchievements(userId, "checklist untick");
+      await recheckAchievements(userId, "checklist untick");
 
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 export default router;

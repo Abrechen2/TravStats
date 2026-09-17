@@ -10,10 +10,6 @@
  * the two are identical ("Petra", "Machu Picchu"), so an English reader falls
  * through to a name that is already correct rather than to a duplicated row.
  */
-export function curatedText(
-  de: string,
-  en: string | null | undefined,
-  language: string
-): string {
+export function curatedText(de: string, en: string | null | undefined, language: string): string {
   return language.toLowerCase().startsWith("en") && en ? en : de;
 }

@@ -11,11 +11,7 @@
  * answer, so nobody has to rediscover the limit from a wrong passport.
  */
 
-import {
-  getCountryResolver,
-  countryCodeAt,
-  CountryResolver,
-} from "../countryFromCoordinates";
+import { getCountryResolver, countryCodeAt, CountryResolver } from "../countryFromCoordinates";
 import { loadCountryBoundaryIndex, CountryBoundaryIndex } from "../countryBoundaries";
 
 let resolver: CountryResolver;
@@ -28,11 +24,7 @@ let index: CountryBoundaryIndex;
  * real accelerations have to beat, and having it here means neither claim rests
  * on a remembered number.
  */
-function referenceCountryAt(
-  ix: CountryBoundaryIndex,
-  lat: number,
-  lon: number
-): string | null {
+function referenceCountryAt(ix: CountryBoundaryIndex, lat: number, lon: number): string | null {
   const insideRing = (ring: number): boolean => {
     let inside = false;
     for (let v = ix.ringStart[ring]; v < ix.ringStart[ring + 1] - 1; v++) {
@@ -238,9 +230,32 @@ describe("what 1:10m can and cannot represent — design §8.3", () => {
     // The countries the smaller dataset has no polygon for at all. If this ever
     // fails, the vendored resolution was quietly downgraded.
     const microstates = [
-      "LI", "MC", "SM", "VA", "AD", "MT", "SG", "BH", "MV", "KN", "GD", "VC",
-      "LC", "AG", "BB", "SC", "TV", "NR", "MH", "PW", "FM", "KI", "TO", "WS",
-      "ST", "MU",
+      "LI",
+      "MC",
+      "SM",
+      "VA",
+      "AD",
+      "MT",
+      "SG",
+      "BH",
+      "MV",
+      "KN",
+      "GD",
+      "VC",
+      "LC",
+      "AG",
+      "BB",
+      "SC",
+      "TV",
+      "NR",
+      "MH",
+      "PW",
+      "FM",
+      "KI",
+      "TO",
+      "WS",
+      "ST",
+      "MU",
     ];
     expect(microstates.filter((code) => !resolver.codes.has(code))).toEqual([]);
   });

@@ -1,13 +1,13 @@
 /**
  * Flight Update Scheduler
- * 
+ *
  * Scheduled job that periodically checks for active flights and creates pending updates.
  */
 
-import cron from 'node-cron';
-import { checkAndUpdateAllFlights } from '../services/flightAutoUpdate';
-import { cleanupExpiredUpdates } from '../services/pendingUpdateService';
-import logger from '../utils/logger';
+import cron from "node-cron";
+import { checkAndUpdateAllFlights } from "../services/flightAutoUpdate";
+import { cleanupExpiredUpdates } from "../services/pendingUpdateService";
+import logger from "../utils/logger";
 
 let schedulerRunning = false;
 let schedulerTask: cron.ScheduledTask | null = null;
@@ -18,8 +18,8 @@ let schedulerTask: cron.ScheduledTask | null = null;
 export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
   if (schedulerRunning) {
     logger.warn({
-      operation: 'start_scheduler',
-      message: 'Scheduler is already running',
+      operation: "start_scheduler",
+      message: "Scheduler is already running",
     });
     return;
   }
@@ -28,8 +28,8 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
   const cronExpression = `*/${intervalMinutes} * * * *`;
 
   logger.info({
-    operation: 'start_scheduler',
-    message: 'Starting flight update scheduler',
+    operation: "start_scheduler",
+    message: "Starting flight update scheduler",
     context: {
       intervalMinutes,
       cronExpression,
@@ -39,8 +39,8 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
   schedulerTask = cron.schedule(cronExpression, async () => {
     try {
       logger.info({
-        operation: 'scheduler_run',
-        message: 'Running scheduled flight update check',
+        operation: "scheduler_run",
+        message: "Running scheduled flight update check",
       });
 
       // Check and update flights
@@ -50,8 +50,8 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
       const expiredCount = await cleanupExpiredUpdates();
 
       logger.info({
-        operation: 'scheduler_run_complete',
-        message: 'Scheduled flight update check completed',
+        operation: "scheduler_run_complete",
+        message: "Scheduled flight update check completed",
         context: {
           updatesCreated,
           expiredCount,
@@ -59,10 +59,10 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
       });
     } catch (error) {
       logger.error({
-        operation: 'scheduler_run_error',
-        message: 'Error during scheduled flight update check',
+        operation: "scheduler_run_error",
+        message: "Error during scheduled flight update check",
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
         },
       });
@@ -81,8 +81,8 @@ export function stopFlightUpdateScheduler(): void {
   }
 
   logger.info({
-    operation: 'stop_scheduler',
-    message: 'Stopping flight update scheduler',
+    operation: "stop_scheduler",
+    message: "Stopping flight update scheduler",
   });
 
   schedulerTask.stop();
@@ -105,8 +105,8 @@ export async function runManualUpdateCheck(): Promise<{
   expiredCount: number;
 }> {
   logger.info({
-    operation: 'manual_update_check',
-    message: 'Running manual flight update check',
+    operation: "manual_update_check",
+    message: "Running manual flight update check",
   });
 
   const updatesCreated = await checkAndUpdateAllFlights();
@@ -117,7 +117,3 @@ export async function runManualUpdateCheck(): Promise<{
     expiredCount,
   };
 }
-
-
-
-

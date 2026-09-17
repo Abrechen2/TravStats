@@ -19,60 +19,61 @@ export const recordIdSchema = z.enum([
   "longest-streak",
 ]);
 
-export const recordUnitSchema = z.enum([
-  "km",
-  "minutes",
-  "flights",
-  "days",
-  "degrees-north",
-]);
+export const recordUnitSchema = z.enum(["km", "minutes", "flights", "days", "degrees-north"]);
 
-export const travelRecordSchema = z.object({
-  id: recordIdSchema,
-  value: z.number(),
-  unit: recordUnitSchema,
-  flightId: z.string().optional().openapi({
-    description: "The flight this record is about, when it is about one.",
-  }),
-  airportIata: z.string().optional().openapi({
-    description: "The airport it is about, when the record names a place rather than a leg.",
-  }),
-  depIata: z.string().nullable().optional(),
-  arrIata: z.string().nullable().optional(),
-  flightNumber: z.string().nullable().optional(),
-  durationMinutes: z.number().nullable().optional(),
-  date: z.string().optional().openapi({ description: '"YYYY-MM-DD" — a single day.' }),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  legs: z.array(z.string()).optional().openapi({
-    description: "Legs flown on the busiest day, in departure order.",
-  }),
-}).openapi({
-  description:
-    "Raw parts a client may render; never pre-composed prose. A record the data " +
-    "cannot support is absent rather than present with a zero.",
-});
+export const travelRecordSchema = z
+  .object({
+    id: recordIdSchema,
+    value: z.number(),
+    unit: recordUnitSchema,
+    flightId: z.string().optional().openapi({
+      description: "The flight this record is about, when it is about one.",
+    }),
+    airportIata: z.string().optional().openapi({
+      description: "The airport it is about, when the record names a place rather than a leg.",
+    }),
+    depIata: z.string().nullable().optional(),
+    arrIata: z.string().nullable().optional(),
+    flightNumber: z.string().nullable().optional(),
+    durationMinutes: z.number().nullable().optional(),
+    date: z.string().optional().openapi({ description: '"YYYY-MM-DD" — a single day.' }),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    legs: z.array(z.string()).optional().openapi({
+      description: "Legs flown on the busiest day, in departure order.",
+    }),
+  })
+  .openapi({
+    description:
+      "Raw parts a client may render; never pre-composed prose. A record the data " +
+      "cannot support is absent rather than present with a zero.",
+  });
 
-export const travelRecordsResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({ records: z.array(travelRecordSchema) }),
-}).openapi({
-  description:
-    "Enveloped, unlike most of this router. That is one of the twelve frozen " +
-    "leaks the response-shape ratchet records (docs/adr/0001-api-response-shape.md) " +
-    "— described here rather than quietly corrected, because a client already " +
-    "reads it this way.",
-});
+export const travelRecordsResponseSchema = z
+  .object({
+    success: z.boolean(),
+    data: z.object({ records: z.array(travelRecordSchema) }),
+  })
+  .openapi({
+    description:
+      "Enveloped, unlike most of this router. That is one of the twelve frozen " +
+      "leaks the response-shape ratchet records (docs/adr/0001-api-response-shape.md) " +
+      "— described here rather than quietly corrected, because a client already " +
+      "reads it this way.",
+  });
 
 // ─── /stats/travel-account ───────────────────────────────────────────────────
 
 export const travelAccountYearSchema = z.object({
   year: z.string(),
-  days: z.number().int().openapi({
-    description:
-      "Days the year contributes — shortened for the current year to days elapsed, " +
-      "so a year in progress is not measured against a length it has not reached.",
-  }),
+  days: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Days the year contributes — shortened for the current year to days elapsed, " +
+        "so a year in progress is not measured against a length it has not reached.",
+    }),
   hotelNights: z.number().int(),
   seaNights: z.number().int(),
   airNights: z.number().int().openapi({
@@ -83,12 +84,15 @@ export const travelAccountYearSchema = z.object({
 
 export const travelAccountSchema = z.object({
   years: z.array(travelAccountYearSchema),
-  undatedStays: z.number().int().openapi({
-    description:
-      "Stays with no usable date. They count in the totals — a hotel you cannot " +
-      "date is still one you slept in — and in no year, because a guessed " +
-      "position would be indistinguishable from a known one.",
-  }),
+  undatedStays: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Stays with no usable date. They count in the totals — a hotel you cannot " +
+        "date is still one you slept in — and in no year, because a guessed " +
+        "position would be indistinguishable from a known one.",
+    }),
   contestedNights: z.number().int().openapi({
     description: "Nights claimed by more than one record, reported rather than silently picked.",
   }),

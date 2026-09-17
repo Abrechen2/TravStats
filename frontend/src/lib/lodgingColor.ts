@@ -129,10 +129,7 @@ const TYPE_SLOT: Record<string, LodgingColorSlot> = {
  * colour, so an unknown type or a missing rating is visibly "no information",
  * not a category of its own invention.
  */
-export function resolveLodgingColor(
-  lodging: LodgingColorInput,
-  cfg: LodgingColorConfig
-): Rgb {
+export function resolveLodgingColor(lodging: LodgingColorInput, cfg: LodgingColorConfig): Rgb {
   const { mode, colors } = cfg;
   if (mode === "type") {
     const slot = TYPE_SLOT[(lodging.type ?? "").toLowerCase()];

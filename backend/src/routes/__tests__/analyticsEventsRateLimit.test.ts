@@ -22,7 +22,9 @@ describe("POST /api/v1/analytics/events — the bucket is per user, not per addr
   let cookieB: string;
 
   beforeAll(async () => {
-    await prisma.user.deleteMany({ where: { username: { in: ["analytics-rl-a", "analytics-rl-b"] } } });
+    await prisma.user.deleteMany({
+      where: { username: { in: ["analytics-rl-a", "analytics-rl-b"] } },
+    });
     for (const name of ["analytics-rl-a", "analytics-rl-b"]) {
       const u = await prisma.user.create({
         data: { username: name, passwordHash: await hashPassword("password123") },

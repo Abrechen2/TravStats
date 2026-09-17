@@ -225,7 +225,12 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
             value={
               costTotals.length > 0
                 ? costTotals
-                    .map((c) => formatCurrency(c.total, c.currency, { compact: true, language: i18n.language }))
+                    .map((c) =>
+                      formatCurrency(c.total, c.currency, {
+                        compact: true,
+                        language: i18n.language,
+                      })
+                    )
                     .join(" + ")
                 : "—"
             }

@@ -38,7 +38,6 @@ describe("commitLodgingImport", () => {
       data: { username: "lodging-import-commit-test", passwordHash: "x" },
     });
     userId = user.id;
-
   });
 
   beforeEach(() => {
@@ -84,12 +83,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "email",
-      "confirmation.msg",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "email", "confirmation.msg", rows);
 
     expect(result.createdLodgings).toBe(1);
     expect(result.createdStays).toBe(1);
@@ -327,12 +321,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "payload-join.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "payload-join.csv", rows);
 
     expect(result.failed).toEqual([]);
     expect(result.createdLodgings).toBe(1);
@@ -358,12 +347,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "payload-join-miss.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "payload-join-miss.csv", rows);
 
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0].code).toBe("missing_lodging_reference");
@@ -421,13 +405,21 @@ describe("commitLodgingImport", () => {
       {
         sourceRowIndex: 0,
         action: "create",
-        lodging: { name: "Hotel Central AUD044", city: "Berlin", externalRef: "google:aud044-berlin" },
+        lodging: {
+          name: "Hotel Central AUD044",
+          city: "Berlin",
+          externalRef: "google:aud044-berlin",
+        },
         stay: { checkIn: "2026-12-01", checkOut: "2026-12-02" },
       },
       {
         sourceRowIndex: 1,
         action: "create",
-        lodging: { name: "Hotel Central AUD044", city: "Paris", externalRef: "google:aud044-paris" },
+        lodging: {
+          name: "Hotel Central AUD044",
+          city: "Paris",
+          externalRef: "google:aud044-paris",
+        },
         stay: { checkIn: "2026-12-05", checkOut: "2026-12-06" },
       },
     ];
@@ -579,12 +571,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "fx-dedupe.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "fx-dedupe.csv", rows);
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(3);
@@ -628,12 +615,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "fx-multiday.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "fx-multiday.csv", rows);
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(2);
@@ -657,12 +639,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "fx-fail.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "fx-fail.csv", rows);
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(1);
@@ -703,12 +680,7 @@ describe("commitLodgingImport", () => {
       },
     ];
 
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "fx-throw.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "fx-throw.csv", rows);
 
     // The batch as a whole still succeeds — no row failure, no orphaned batch.
     expect(result.failed).toEqual([]);
@@ -745,11 +717,9 @@ describe("commitLodgingImport", () => {
         code: "P2003",
         clientVersion: "5.99.0",
         meta: { field_name: "chain_id" },
-      },
+      }
     );
-    const createSpy = jest
-      .spyOn(prisma.lodging, "create")
-      .mockRejectedValueOnce(prismaError);
+    const createSpy = jest.spyOn(prisma.lodging, "create").mockRejectedValueOnce(prismaError);
 
     try {
       const rows: CommitRowInput[] = [
@@ -760,12 +730,7 @@ describe("commitLodgingImport", () => {
           stay: null,
         },
       ];
-      const result = await commitLodgingImport(
-        userId,
-        "csv",
-        "unexpected.csv",
-        rows,
-      );
+      const result = await commitLodgingImport(userId, "csv", "unexpected.csv", rows);
 
       expect(result.failed).toHaveLength(1);
       expect(result.failed[0].sourceRowIndex).toBe(0);
@@ -793,12 +758,7 @@ describe("commitLodgingImport", () => {
         stay: null,
       },
     ];
-    const result = await commitLodgingImport(
-      userId,
-      "csv",
-      "ownership.csv",
-      rows,
-    );
+    const result = await commitLodgingImport(userId, "csv", "ownership.csv", rows);
 
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0].code).toBe("ownership_mismatch");
@@ -808,7 +768,7 @@ describe("commitLodgingImport", () => {
   describe("overall rating", () => {
     const commitStay = async (
       name: string,
-      stay: CommitRowInput["stay"],
+      stay: CommitRowInput["stay"]
     ): Promise<{ ratingOverall: number | null; ratingService: number | null }> => {
       const result = await commitLodgingImport(userId, "csv", "ratings.csv", [
         { sourceRowIndex: 0, action: "create", lodging: { name }, stay },

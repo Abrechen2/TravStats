@@ -8,10 +8,7 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
-import ListFilterBar, {
-  FilterField,
-  PANEL_SELECT_CLASS,
-} from "../components/table/ListFilterBar";
+import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -99,7 +96,14 @@ export default function CruisesPage(): JSX.Element {
   const [lineFilter, setLineFilter] = useState<string>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", ["date","ship","line","ports","status","price"] as const);
+  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", [
+    "date",
+    "ship",
+    "line",
+    "ports",
+    "status",
+    "price",
+  ] as const);
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
   const handleSort = (col: CruiseSortKey): void => {
@@ -244,271 +248,270 @@ export default function CruisesPage(): JSX.Element {
 
   return (
     <PageTransition>
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        <NavigationBar />
 
-      <ListFilterBar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t("filter.searchPlaceholder"),
-        }}
-        status={{
-          label: t("filter.status"),
-          value: statusFilter,
-          onChange: (v): void => setStatusFilter(v as StatusFilter),
-          allLabel: t("filter.allStatuses"),
-          options: STATUSES.map((st) => ({ value: st, label: t(`status.${st}`) })),
-        }}
-        year={{
-          label: t("filter.year"),
-          value: yearFilter === "all" ? "all" : String(yearFilter),
-          onChange: (v): void =>
-            setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
-          allLabel: t("filter.allYears"),
-          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
-        }}
-        extraActiveCount={extraActiveCount}
-        extra={
-          <FilterField label={t("filter.line")}>
-            <select
-              value={lineFilter}
-              onChange={(e): void => setLineFilter(e.target.value)}
-              className={PANEL_SELECT_CLASS}
-            >
-              <option value="all">{t("filter.allLines")}</option>
-              {availableLines.map((line) => (
-                <option key={line} value={line}>
-                  {line}
-                </option>
-              ))}
-            </select>
-          </FilterField>
-        }
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-        resultLabel={
-          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
-        }
-      />
-
-      {/* Same width budget as the flights table page — owner principle:
-          the domain list pages look the same, only the content differs. */}
-      <div className="mx-auto max-w-(--breakpoint-2xl) px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-(--text-primary)">{t("list.title")}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <ColumnPicker
-              columns={CRUISE_COLUMN_IDS.map((id) => ({
-                id,
-                label: t(`list.columns.${id}`),
-                always: (CRUISE_ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
-            <button
-              type="button"
-              onClick={() => setShowAdd(true)}
-              className="btn-primary flex items-center gap-2 whitespace-nowrap"
-            >
-              <span>+</span>
-              <span>{t("add.title")}</span>
-            </button>
-          </div>
-        </div>
-
-        <ListSummaryStrip
-          figures={summaryFigures}
-          filtered={hasActiveFilter}
-          filteredLabel={t("common:filters.filtered")}
-          unknown={loading || loadError}
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("filter.searchPlaceholder"),
+          }}
+          status={{
+            label: t("filter.status"),
+            value: statusFilter,
+            onChange: (v): void => setStatusFilter(v as StatusFilter),
+            allLabel: t("filter.allStatuses"),
+            options: STATUSES.map((st) => ({ value: st, label: t(`status.${st}`) })),
+          }}
+          year={{
+            label: t("filter.year"),
+            value: yearFilter === "all" ? "all" : String(yearFilter),
+            onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+            allLabel: t("filter.allYears"),
+            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+          }}
+          extraActiveCount={extraActiveCount}
+          extra={
+            <FilterField label={t("filter.line")}>
+              <select
+                value={lineFilter}
+                onChange={(e): void => setLineFilter(e.target.value)}
+                className={PANEL_SELECT_CLASS}
+              >
+                <option value="all">{t("filter.allLines")}</option>
+                {availableLines.map((line) => (
+                  <option key={line} value={line}>
+                    {line}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={
+            loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+          }
         />
 
-        <p className="mb-4 text-xs text-(--text-muted)">
-          {t("list.wholeListHint")}{" "}
-          <Link
-            to="/settings?section=import"
-            className="underline underline-offset-4 hover:text-(--text-primary)"
-          >
-            {t("settings:import.openHub")}
-          </Link>
-        </p>
-
-        {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("list.loadError")}
-          </div>
-        ) : loading ? (
-          <SkeletonTable rows={10} />
-        ) : filtered.length === 0 ? (
-          <div
-            className="overflow-hidden rounded-lg shadow-xs"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <ListEmptyState
-              filtered={hasActiveFilter}
-              emptyTitle={t("list.empty")}
-              emptyHint={t("list.emptyHint")}
-              onReset={resetFilters}
-            />
-          </div>
-        ) : (
-          <div
-            className="overflow-hidden rounded-lg shadow-xs"
-            style={{ border: "1px solid var(--color-border)" }}
-          >
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
-              <thead
-                style={{
-                  background: "var(--bg-elevated)",
-                  borderBottom: "1px solid var(--color-border)",
-                }}
+        {/* Same width budget as the flights table page — owner principle:
+          the domain list pages look the same, only the content differs. */}
+        <div className="mx-auto max-w-(--breakpoint-2xl) px-4 py-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold text-(--text-primary)">{t("list.title")}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <ColumnPicker
+                columns={CRUISE_COLUMN_IDS.map((id) => ({
+                  id,
+                  label: t(`list.columns.${id}`),
+                  always: (CRUISE_ALWAYS_VISIBLE as readonly string[]).includes(id),
+                }))}
+                prefs={columnPrefs}
+              />
+              <button
+                type="button"
+                onClick={() => setShowAdd(true)}
+                className="btn-primary flex items-center gap-2 whitespace-nowrap"
               >
-                <tr>
-                  {/*
+                <span>+</span>
+                <span>{t("add.title")}</span>
+              </button>
+            </div>
+          </div>
+
+          <ListSummaryStrip
+            figures={summaryFigures}
+            filtered={hasActiveFilter}
+            filteredLabel={t("common:filters.filtered")}
+            unknown={loading || loadError}
+          />
+
+          <p className="mb-4 text-xs text-(--text-muted)">
+            {t("list.wholeListHint")}{" "}
+            <Link
+              to="/settings?section=import"
+              className="underline underline-offset-4 hover:text-(--text-primary)"
+            >
+              {t("settings:import.openHub")}
+            </Link>
+          </p>
+
+          {loadError ? (
+            <div
+              role="alert"
+              className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+            >
+              {t("list.loadError")}
+            </div>
+          ) : loading ? (
+            <SkeletonTable rows={10} />
+          ) : filtered.length === 0 ? (
+            <div
+              className="overflow-hidden rounded-lg shadow-xs"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <ListEmptyState
+                filtered={hasActiveFilter}
+                emptyTitle={t("list.empty")}
+                emptyHint={t("list.emptyHint")}
+                onReset={resetFilters}
+              />
+            </div>
+          ) : (
+            <div
+              className="overflow-hidden rounded-lg shadow-xs"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[960px]">
+                  <thead
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <tr>
+                      {/*
                     One loop instead of six copied blocks. Each of those built
                     its own sort button — and showed ▼ for ascending, the
                     opposite of the shared component the lodging table uses.
                     The same sort state read differently depending on which
                     page you were on.
                   */}
-                  {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
-                    const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
-                    const label = t(`list.columns.${id}`);
-                    const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
-                    return (
-                      <th
-                        key={id}
-                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                          numeric ? "text-right" : "text-left"
-                        }`}
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {sortKey === undefined ? (
-                          label
-                        ) : (
-                          <span className={numeric ? "flex justify-end" : undefined}>
-                            <SortableHeader
-                              column={sortKey}
-                              sortBy={sortBy}
-                              sortOrder={sortOrder}
-                              onSort={handleSort}
-                              ariaLabel={t("list.sortBy", { col: label })}
-                            >
-                              {label}
-                            </SortableHeader>
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((c, i) => (
-                  <CruiseRow
-                    key={c.id}
-                    index={i}
-                    cruise={c}
-                    isColumnVisible={columnPrefs.isVisible}
-                    onOpen={() => navigate(`/cruises/${c.id}`)}
-                    actions={
-                      <CruiseRowActions
+                      {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+                        const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
+                        const label = t(`list.columns.${id}`);
+                        const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
+                        return (
+                          <th
+                            key={id}
+                            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                              numeric ? "text-right" : "text-left"
+                            }`}
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {sortKey === undefined ? (
+                              label
+                            ) : (
+                              <span className={numeric ? "flex justify-end" : undefined}>
+                                <SortableHeader
+                                  column={sortKey}
+                                  sortBy={sortBy}
+                                  sortOrder={sortOrder}
+                                  onSort={handleSort}
+                                  ariaLabel={t("list.sortBy", { col: label })}
+                                >
+                                  {label}
+                                </SortableHeader>
+                              </span>
+                            )}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((c, i) => (
+                      <CruiseRow
+                        key={c.id}
+                        index={i}
                         cruise={c}
-                        onEdit={setEditingCruise}
-                        onDuplicate={startDuplicate}
-                        onDelete={() => setCruiseToDelete(c)}
+                        isColumnVisible={columnPrefs.isVisible}
+                        onOpen={() => navigate(`/cruises/${c.id}`)}
+                        actions={
+                          <CruiseRowActions
+                            cruise={c}
+                            onEdit={setEditingCruise}
+                            onDuplicate={startDuplicate}
+                            onDelete={() => setCruiseToDelete(c)}
+                          />
+                        }
                       />
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
-            </div>
-            {/* Same closing line the flights and lodging tables carry: how many
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Same closing line the flights and lodging tables carry: how many
                 rows, and what they are sorted by. The count used to sit only in
                 the filter bar, so the table simply stopped. */}
-            <div
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs"
-              style={{
-                background: "var(--bg-elevated)",
-                borderTop: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              <span>
-                {t("list.sortedBy", {
-                  col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),
-                  dir: t(sortOrder === "asc" ? "list.ascending" : "list.descending"),
-                })}
-              </span>
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs"
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderTop: "1px solid var(--color-border)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <span>
+                  {t("list.sortedBy", {
+                    col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),
+                    dir: t(sortOrder === "asc" ? "list.ascending" : "list.descending"),
+                  })}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Cruises had their own chooser, built before the shared one existed
+          {/* Cruises had their own chooser, built before the shared one existed
             — a third copy of the same idea, with the drop zone hidden behind a
             button that swapped the view. Same rows as every other area now. */}
-        <DomainImportPanel
-          open={showAdd}
-          onClose={() => setShowAdd(false)}
-          onItemsCreated={reload}
-          adapter={importAdapter}
-        />
-        {editingCruise && (
-          <CruiseEditModal
-            mode="edit"
-            cruise={editingCruise}
-            onClose={() => setEditingCruise(null)}
-            onSaved={async () => {
-              setEditingCruise(null);
-              await reload();
-            }}
+          <DomainImportPanel
+            open={showAdd}
+            onClose={() => setShowAdd(false)}
+            onItemsCreated={reload}
+            adapter={importAdapter}
           />
-        )}
-        {duplicateSource && (
-          <CruiseEditModal
-            mode="create"
-            cruise={duplicateSource}
-            onClose={() => setDuplicateSource(null)}
-            onSaved={async () => {
-              setDuplicateSource(null);
-              await reload();
-            }}
-          />
-        )}
-        {/* The same dialog, the same sentence and the same keys the cruise
+          {editingCruise && (
+            <CruiseEditModal
+              mode="edit"
+              cruise={editingCruise}
+              onClose={() => setEditingCruise(null)}
+              onSaved={async () => {
+                setEditingCruise(null);
+                await reload();
+              }}
+            />
+          )}
+          {duplicateSource && (
+            <CruiseEditModal
+              mode="create"
+              cruise={duplicateSource}
+              onClose={() => setDuplicateSource(null)}
+              onSaved={async () => {
+                setDuplicateSource(null);
+                await reload();
+              }}
+            />
+          )}
+          {/* The same dialog, the same sentence and the same keys the cruise
             DETAIL page uses. Deleting a cruise used to read differently
             depending on which of the two you were standing on — and the
             version here never mentioned that it was permanent. */}
-        <ConfirmModal
-          isOpen={cruiseToDelete !== null}
-          onClose={() => setCruiseToDelete(null)}
-          onConfirm={() => void confirmDelete()}
-          isLoading={deleting}
-          title={t("detail.deleteConfirmTitle")}
-          message={
-            cruiseToDelete
-              ? countedDeleteMessage(
-                  t,
-                  {
-                    counted: "cruise:detail.deleteConfirmMessage",
-                    empty: "cruise:detail.deleteConfirmMessageNoStops",
-                  },
-                  cruiseName(cruiseToDelete),
-                  countPortCalls(cruiseToDelete)
-                )
-              : ""
-          }
-          confirmText={t("common:buttons.delete")}
-          confirmButtonClass={DELETE_BUTTON_CLASS}
-        />
+          <ConfirmModal
+            isOpen={cruiseToDelete !== null}
+            onClose={() => setCruiseToDelete(null)}
+            onConfirm={() => void confirmDelete()}
+            isLoading={deleting}
+            title={t("detail.deleteConfirmTitle")}
+            message={
+              cruiseToDelete
+                ? countedDeleteMessage(
+                    t,
+                    {
+                      counted: "cruise:detail.deleteConfirmMessage",
+                      empty: "cruise:detail.deleteConfirmMessageNoStops",
+                    },
+                    cruiseName(cruiseToDelete),
+                    countPortCalls(cruiseToDelete)
+                  )
+                : ""
+            }
+            confirmText={t("common:buttons.delete")}
+            confirmButtonClass={DELETE_BUTTON_CLASS}
+          />
+        </div>
       </div>
-    </div>
     </PageTransition>
   );
 }

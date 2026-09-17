@@ -48,11 +48,7 @@ export default defineConfig({
           if (!id.includes("node_modules")) return undefined;
           // Pin React + ReactDOM + scheduler into their own chunk so Rollup
           // does NOT hoist them into vendor-deck.
-          if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("/scheduler/")
-          )
+          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/"))
             return "vendor-react";
           // Preact is pulled in transitively by @deck.gl/widgets and
           // float-tooltip (deduped). Rollup hoists it into the largest
@@ -114,7 +110,7 @@ export default defineConfig({
             !d.includes("vendor-maplibre") &&
             !d.includes("vendor-jspdf") &&
             !d.includes("vendor-exceljs") &&
-            !d.includes("vendor-tesseract"),
+            !d.includes("vendor-tesseract")
         );
       },
     },

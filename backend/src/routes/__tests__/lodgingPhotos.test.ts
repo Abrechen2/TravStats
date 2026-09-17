@@ -130,9 +130,7 @@ describe("lodging photos", () => {
     expect(res.body.data).toMatchObject({ caption: "Lobby am Morgen", sortIdx: 3 });
     // The URL is built from the pairing, so a client cannot construct one that
     // reaches a photo through a lodging it does not belong to.
-    expect(res.body.data.url).toBe(
-      `/api/v1/lodging/${ownerLodgingId}/photos/${mine.id}/file`
-    );
+    expect(res.body.data.url).toBe(`/api/v1/lodging/${ownerLodgingId}/photos/${mine.id}/file`);
   });
 
   it("rejects an upload with no files rather than creating an empty row", async () => {

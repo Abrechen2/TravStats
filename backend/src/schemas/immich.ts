@@ -24,7 +24,7 @@ export const immichConnectionSchema = z
  */
 const optionalConnectionField = z.preprocess(
   (value) => (value === "" ? undefined : value),
-  z.string().min(1).max(500).optional(),
+  z.string().min(1).max(500).optional()
 );
 
 /** Test an ad-hoc pair before saving, or fall back to the stored connection. */
@@ -44,7 +44,7 @@ export const linkAlbumsSchema = z
             immichAlbumId: z.string().min(1).max(100),
             mode: immichModeSchema,
           })
-          .strict(),
+          .strict()
       )
       .min(1)
       .max(50),
@@ -60,9 +60,7 @@ export const unlinkQuerySchema = z
   })
   .strict();
 
-export const assetSizeSchema = z
-  .enum(["thumbnail", "preview", "original"])
-  .default("thumbnail");
+export const assetSizeSchema = z.enum(["thumbnail", "preview", "original"]).default("thumbnail");
 
 export const assetIdParamSchema = z.string().uuid();
 

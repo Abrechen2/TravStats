@@ -46,7 +46,10 @@ router.get(
         // third-party markup we did not read line by line. `default-src 'none'`
         // makes the file inert wherever it is opened; `nosniff` stops a browser
         // from re-interpreting a raster response as markup.
-        .setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+        .setHeader(
+          "Content-Security-Policy",
+          "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+        )
         .setHeader("X-Content-Type-Options", "nosniff")
         .send(logo.body);
     } catch (error) {

@@ -66,7 +66,7 @@ export async function replaceCountryDays(
   source: CountryDaySource,
   window: CountryDayWindow,
   observations: readonly CountryDayObservation[],
-  partialDays: ReadonlySet<string> = new Set(),
+  partialDays: ReadonlySet<string> = new Set()
 ): Promise<ReplaceCountryDaysResult> {
   const rows = observations
     .map((observation) => ({
@@ -82,7 +82,7 @@ export async function replaceCountryDays(
     .filter(
       (row) =>
         row.date.getTime() >= window.startAt.getTime() &&
-        row.date.getTime() < window.endAtExclusive.getTime(),
+        row.date.getTime() < window.endAtExclusive.getTime()
     );
 
   const [deleted] = await prisma.$transaction([

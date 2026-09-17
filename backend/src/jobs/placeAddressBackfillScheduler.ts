@@ -60,7 +60,7 @@ export async function runPlaceAddressBackfill(): Promise<{ users: number; filled
   if (groups.length > 0) {
     logger.info(
       { operation: "place_address_backfill_sweep", users: groups.length, filled },
-      "Place address backfill sweep finished",
+      "Place address backfill sweep finished"
     );
   }
   return { users: groups.length, filled };
@@ -73,7 +73,7 @@ export function startPlaceAddressBackfillScheduler(): void {
     void runPlaceAddressBackfill().catch((error) => {
       logger.warn(
         { operation: "place_address_backfill_boot_error", error },
-        "Boot place address backfill failed",
+        "Boot place address backfill failed"
       );
     });
   }, BOOT_DELAY_MS);
@@ -87,14 +87,14 @@ export function startPlaceAddressBackfillScheduler(): void {
     } catch (error) {
       logger.warn(
         { operation: "place_address_backfill_error", error },
-        "Daily place address backfill failed",
+        "Daily place address backfill failed"
       );
     }
   });
 
   logger.info(
     { operation: "place_address_backfill_scheduler_started", cron: CRON_EXPRESSION },
-    "place address backfill scheduler started",
+    "place address backfill scheduler started"
   );
 }
 

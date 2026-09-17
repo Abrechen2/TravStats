@@ -48,7 +48,6 @@ export function aggregate(
   // visible, under-reporting silently loses days.
   let activeDaysWithoutIndex = 0;
 
-
   for (const [key, stats] of Object.entries(statsMap)) {
     const domain = key as DomainKey;
     if (visible[domain] === false) continue;

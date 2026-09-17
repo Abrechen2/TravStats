@@ -1,9 +1,9 @@
-import { VisionProvider, ParserConfig, ParserResult } from './types';
-import { ParsedBooking } from '../bookingParser';
-import logger, { parserFactoryLogger, parserVisionLogger } from '../../utils/logger';
-import { shouldLogParserOperations } from '../loggingConfig';
-import { checkProviderAvailability, deleteAvailabilityCacheEntry } from './config';
-import { getVisionParserInstance } from './providers';
+import { VisionProvider, ParserConfig, ParserResult } from "./types";
+import { ParsedBooking } from "../bookingParser";
+import logger, { parserFactoryLogger, parserVisionLogger } from "../../utils/logger";
+import { shouldLogParserOperations } from "../loggingConfig";
+import { checkProviderAvailability, deleteAvailabilityCacheEntry } from "./config";
+import { getVisionParserInstance } from "./providers";
 
 /**
  * Calculate quality score for parsed booking (0-100)
@@ -37,8 +37,12 @@ export function calculateParserQuality(flights: ParsedBooking[]): number {
     if (flight.ticketNumber) score += 5;
 
     // Penalty for missing critical fields
-    const criticalMissing = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime']
-      .filter(f => flight.missing.includes(f)).length;
+    const criticalMissing = [
+      "flightNumber",
+      "departureCode",
+      "arrivalCode",
+      "departureTime",
+    ].filter((f) => flight.missing.includes(f)).length;
     score -= criticalMissing * 10;
 
     totalScore += Math.max(0, Math.min(100, score));
@@ -62,7 +66,7 @@ export async function parseBoardingPass(
 
   if (shouldLog) {
     log.info({
-      operation: 'parse_boarding_pass_start',
+      operation: "parse_boarding_pass_start",
       context: {
         imageSize: imageBase64.length,
         fallbackChain: config.visionFallbacks,
@@ -83,13 +87,15 @@ export async function parseBoardingPass(
       if (!availability.available) {
         if (shouldLog) {
           visionLog.debug({
-            operation: 'vision_parser_skipped',
+            operation: "vision_parser_skipped",
             context: { provider, reason: availability.reason },
           });
         } else {
-          logger.debug(`[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`);
+          logger.debug(
+            `[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`
+          );
         }
-        errors.push({ provider, error: availability.reason || 'Unavailable' });
+        errors.push({ provider, error: availability.reason || "Unavailable" });
         continue;
       }
 
@@ -97,7 +103,7 @@ export async function parseBoardingPass(
       const parseStartTime = Date.now();
       if (shouldLog) {
         visionLog.info({
-          operation: 'vision_parse_attempt',
+          operation: "vision_parse_attempt",
           context: { provider, imageSize: imageBase64.length },
         });
       } else {
@@ -111,7 +117,7 @@ export async function parseBoardingPass(
 
       if (shouldLog) {
         visionLog.info({
-          operation: 'vision_parse_success',
+          operation: "vision_parse_success",
           context: {
             provider,
             fallbackUsed,
@@ -123,13 +129,15 @@ export async function parseBoardingPass(
           },
         });
       } else {
-        logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+        logger.info(
+          `[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? " (fallback)" : ""}`
+        );
       }
 
       const totalDuration = Date.now() - startTime;
       if (shouldLog) {
         log.info({
-          operation: 'parse_boarding_pass_complete',
+          operation: "parse_boarding_pass_complete",
           context: {
             provider,
             fallbackUsed,
@@ -146,10 +154,10 @@ export async function parseBoardingPass(
         fallbackUsed,
       };
     } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       if (shouldLog) {
         visionLog.warn({
-          operation: 'vision_parse_failed',
+          operation: "vision_parse_failed",
           context: {
             provider,
             error: errorMsg,
@@ -173,13 +181,13 @@ export async function parseBoardingPass(
   const totalDuration = Date.now() - startTime;
   if (shouldLog) {
     log.error({
-      operation: 'parse_boarding_pass_failed',
+      operation: "parse_boarding_pass_failed",
       context: { errors, totalDuration, triedProviders: providerChain },
     });
   } else {
-    logger.error({ errors }, '[Parser Factory] All vision parsers failed');
+    logger.error({ errors }, "[Parser Factory] All vision parsers failed");
   }
   throw new Error(
-    `All vision parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
+    `All vision parsers failed. Errors: ${errors.map((e) => `${e.provider}: ${e.error}`).join("; ")}`
   );
 }

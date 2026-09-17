@@ -33,7 +33,7 @@ const generationOf = (key: string): number => generations.get(key) ?? 0;
 export async function getCachedAlbumAssets(
   userId: string,
   albumId: string,
-  load: () => Promise<ImmichAsset[]>,
+  load: () => Promise<ImmichAsset[]>
 ): Promise<ImmichAsset[]> {
   const key = keyOf(userId, albumId);
 
@@ -87,7 +87,10 @@ export function clearImmichAssetCache(): void {
 }
 
 /** Test seam. Never called from production code. Returns the promise in inFlight for a key, or undefined. */
-export function getInFlightPromise(userId: string, albumId: string): Promise<ImmichAsset[]> | undefined {
+export function getInFlightPromise(
+  userId: string,
+  albumId: string
+): Promise<ImmichAsset[]> | undefined {
   const key = keyOf(userId, albumId);
   return inFlight.get(key);
 }

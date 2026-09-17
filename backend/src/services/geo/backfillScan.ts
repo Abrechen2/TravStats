@@ -46,7 +46,7 @@ export interface ScanOptions<T> {
  * Returns fewer only when the rows run out. Never throws for an empty table.
  */
 export async function collectBackfillCandidates<T extends { id: string }>(
-  opts: ScanOptions<T>,
+  opts: ScanOptions<T>
 ): Promise<T[]> {
   const pageSize = opts.pageSize ?? BACKFILL_SCAN_PAGE;
   const out: T[] = [];

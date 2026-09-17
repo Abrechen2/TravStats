@@ -59,12 +59,10 @@ describe("InstanceSettings — beta features toggle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getInstanceSettings.mockResolvedValue({ settings, passkeyStatus: null });
-    updateInstanceSettings.mockImplementation(
-      async (patch: Record<string, unknown>) => ({
-        settings: { ...settings, ...patch },
-        passkeyStatus: null,
-      }),
-    );
+    updateInstanceSettings.mockImplementation(async (patch: Record<string, unknown>) => ({
+      settings: { ...settings, ...patch },
+      passkeyStatus: null,
+    }));
   });
 
   it("renders a control for the flag", async () => {
@@ -82,9 +80,7 @@ describe("InstanceSettings — beta features toggle", () => {
 
     render(<InstanceSettings />);
 
-    await waitFor(() =>
-      expect(screen.getByLabelText(/betaFeatures/i)).toBeChecked(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/betaFeatures/i)).toBeChecked());
   });
 
   it("sends the flag when saved", async () => {
@@ -111,8 +107,6 @@ describe("InstanceSettings — beta features toggle", () => {
     await user.click(await screen.findByLabelText(/betaFeatures/i));
     await user.click(screen.getByRole("button", { name: /save/i }));
 
-    await waitFor(() =>
-      expect(useSettingsStore.getState().betaFeaturesEnabled).toBe(true),
-    );
+    await waitFor(() => expect(useSettingsStore.getState().betaFeaturesEnabled).toBe(true));
   });
 });

@@ -65,7 +65,7 @@ export type FxSnapshotOutcome =
 
 export async function applyFxSnapshot(
   input: { totalPrice?: number | null; currency?: string | null; checkIn?: string | Date | null },
-  baseCurrency: string,
+  baseCurrency: string
 ): Promise<FxSnapshotOutcome> {
   // Thin adapter over the domain-neutral core in `services/fx/snapshot.ts`
   // (#267): the rule is shared with flights and bookings, the COLUMN NAMES are
@@ -74,7 +74,7 @@ export async function applyFxSnapshot(
   // had", and splitting that here would change behaviour this move must not.
   const outcome = await snapshotFx(
     { amount: input.totalPrice, currency: input.currency, date: input.checkIn },
-    baseCurrency,
+    baseCurrency
   );
   switch (outcome.status) {
     case "amountRemoved":
@@ -128,7 +128,7 @@ export function applyManualRate(
   manualFxRate: number,
   totalPrice: number | null,
   checkIn: string | Date,
-  baseCurrency: string,
+  baseCurrency: string
 ): FxSnapshotFields {
   if (auto.status === "snapshotted") {
     throw new AppError("A rate is already available for this currency and date", 400);

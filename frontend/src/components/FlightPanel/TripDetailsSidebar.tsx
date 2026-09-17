@@ -61,10 +61,7 @@ export function TripDetailsSidebar({
         ← {t("common:buttons.back")}
       </button>
 
-      <div
-        className="px-3 py-3 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
+      <div className="px-3 py-3 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <div className="flex items-start justify-between gap-2">
           <div className="font-bold text-sm flex-1 min-w-0 truncate" style={{ color: tripColor }}>
             {tripName}

@@ -6,8 +6,12 @@ import { prisma } from "../../db";
 // Proves the DB-backed resolver returns the SAME iata for every curated
 // carrier as the retired static list did — no resolution regression.
 describe("airlineNormalize DB parity", () => {
-  beforeAll(async () => { await preloadAirlineCatalog(); });
-  afterAll(async () => { await prisma.$disconnect(); });
+  beforeAll(async () => {
+    await preloadAirlineCatalog();
+  });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   it("resolves every curated IATA code to itself", () => {
     // resolveAirlineCodes' direct-IATA branch only fires for exactly

@@ -169,7 +169,7 @@ describe("asset proxy", () => {
 
   it("404s when the caller does not own the trip", async () => {
     const { AppError } = jest.requireActual<typeof import("../middleware/errorHandler")>(
-      "../middleware/errorHandler",
+      "../middleware/errorHandler"
     );
     resolveTrip.mockRejectedValueOnce(new AppError("Trip not found", 404));
     const res = await request(makeApp()).get(url(ASSET_ID));
@@ -178,7 +178,7 @@ describe("asset proxy", () => {
 
   it("returns a no-store placeholder PNG with 502 when Immich fails", async () => {
     const { ImmichError } = jest.requireActual<typeof import("../services/immich/types")>(
-      "../services/immich/types",
+      "../services/immich/types"
     );
     fetchAssetStream.mockRejectedValue(new ImmichError("unreachable", "down"));
 
@@ -230,7 +230,7 @@ describe("asset proxy", () => {
     // status/body after headers were already sent (ERR_HTTP_HEADERS_SENT).
     expect(mockedLogger.error).toHaveBeenCalledTimes(1);
     expect(mockedLogger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "immich_proxy_stream_error" }),
+      expect.objectContaining({ message: "immich_proxy_stream_error" })
     );
   });
 });

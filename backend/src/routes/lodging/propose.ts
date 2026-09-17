@@ -91,14 +91,14 @@ router.post(
           country: input.country,
           lat: location.lat ?? input.lat,
           lon: location.lon ?? input.lon,
-        },
+        }
       );
 
       res.json({ success: true, data: proposal });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

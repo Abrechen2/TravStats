@@ -32,16 +32,16 @@ describe("reduceToCountryDays", () => {
         at(MARCH_3 + 20 * HOUR_MS, 56.9, 24.1),
         at(MARCH_3 + DAY_MS + HOUR_MS, 56.95, 24.15),
       ],
-      countryAt,
+      countryAt
     );
 
-    expect(days.map(({ date, countryCode, pointCount }) => ({ date, countryCode, pointCount }))).toEqual(
-      [
-        { date: "2026-03-03", countryCode: "EE", pointCount: 2 },
-        { date: "2026-03-03", countryCode: "LV", pointCount: 1 },
-        { date: "2026-03-04", countryCode: "LV", pointCount: 1 },
-      ],
-    );
+    expect(
+      days.map(({ date, countryCode, pointCount }) => ({ date, countryCode, pointCount }))
+    ).toEqual([
+      { date: "2026-03-03", countryCode: "EE", pointCount: 2 },
+      { date: "2026-03-03", countryCode: "LV", pointCount: 1 },
+      { date: "2026-03-04", countryCode: "LV", pointCount: 1 },
+    ]);
   });
 
   /**
@@ -64,10 +64,7 @@ describe("reduceToCountryDays", () => {
   });
 
   it("drops a point the resolver abstains on rather than guessing a country", () => {
-    const days = reduceToCountryDays(
-      [at(MARCH_3, 59.4, -30), at(MARCH_3, 59.4, 24.7)],
-      countryAt,
-    );
+    const days = reduceToCountryDays([at(MARCH_3, 59.4, -30), at(MARCH_3, 59.4, 24.7)], countryAt);
 
     expect(days).toHaveLength(1);
     expect(days[0]).toMatchObject({ countryCode: "EE", pointCount: 1 });
@@ -84,7 +81,7 @@ describe("reduceToCountryDays", () => {
 
     const [spread] = reduceToCountryDays(
       [at(MARCH_3, 59.0, 24.0), at(MARCH_3, 59.9, 26.0)],
-      countryAt,
+      countryAt
     );
     // ~1° of latitude plus 2° of longitude at this latitude.
     expect(spread.spanKm).toBeGreaterThan(100);

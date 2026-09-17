@@ -62,10 +62,58 @@ const ISO_3166_1_ALPHA2 =
 // "Sverige", "Česko", "日本". Each locale here is one more language the field
 // may be written in; the index is built once, lazily, and then cached.
 const NAME_LOCALES = [
-  "de", "en", "fr", "it", "es", "pt", "nl", "cs", "sk", "sl", "pl", "hu", "hr",
-  "sv", "nb", "da", "fi", "et", "lv", "lt", "ro", "bg", "el", "tr", "ru", "uk",
-  "ja", "zh", "ko", "ar", "th", "id", "ms", "vi", "he", "is", "ga", "mt", "sr",
-  "lb", "ca", "eu", "gl", "cy", "sq", "mk", "bs", "af", "sw", "hi", "fa", "uz",
+  "de",
+  "en",
+  "fr",
+  "it",
+  "es",
+  "pt",
+  "nl",
+  "cs",
+  "sk",
+  "sl",
+  "pl",
+  "hu",
+  "hr",
+  "sv",
+  "nb",
+  "da",
+  "fi",
+  "et",
+  "lv",
+  "lt",
+  "ro",
+  "bg",
+  "el",
+  "tr",
+  "ru",
+  "uk",
+  "ja",
+  "zh",
+  "ko",
+  "ar",
+  "th",
+  "id",
+  "ms",
+  "vi",
+  "he",
+  "is",
+  "ga",
+  "mt",
+  "sr",
+  "lb",
+  "ca",
+  "eu",
+  "gl",
+  "cy",
+  "sq",
+  "mk",
+  "bs",
+  "af",
+  "sw",
+  "hi",
+  "fa",
+  "uz",
 ];
 
 // Every ISO 639-1 language code. Not a curated selection — the point is that
@@ -82,17 +130,17 @@ const ISO_639_1 =
 const NAME_ALIASES: Record<string, string> = {
   "tschechische republik": "CZ",
   "czech republic": "CZ",
-  "usa": "US",
+  usa: "US",
   "u.s.a.": "US",
   "united states of america": "US",
-  "großbritannien": "GB",
-  "grossbritannien": "GB",
-  "england": "GB",
-  "südkorea": "KR",
-  "suedkorea": "KR",
+  großbritannien: "GB",
+  grossbritannien: "GB",
+  england: "GB",
+  südkorea: "KR",
+  suedkorea: "KR",
   "south korea": "KR",
   "north korea": "KP",
-  "nordkorea": "KP",
+  nordkorea: "KP",
 };
 
 /**
@@ -118,8 +166,7 @@ function buildIndex(locales: readonly string[]): Map<string, string> {
       // Unsupported locale — skip it, the remaining ones still resolve.
     }
   }
-  for (const [name, cc] of Object.entries(NAME_ALIASES))
-    if (!index.has(name)) index.set(name, cc);
+  for (const [name, cc] of Object.entries(NAME_ALIASES)) if (!index.has(name)) index.set(name, cc);
   return index;
 }
 

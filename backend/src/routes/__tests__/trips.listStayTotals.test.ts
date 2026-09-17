@@ -58,9 +58,7 @@ describe("the trip list carries stay price fields", () => {
     const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie);
     expect(res.status).toBe(200);
 
-    const trip = (res.body.trips ?? res.body).find(
-      (entry: { id: string }) => entry.id === tripId
-    );
+    const trip = (res.body.trips ?? res.body).find((entry: { id: string }) => entry.id === tripId);
     expect(trip).toBeDefined();
     expect(trip.lodgingStays).toHaveLength(1);
     expect(trip.lodgingStays[0]).toMatchObject({

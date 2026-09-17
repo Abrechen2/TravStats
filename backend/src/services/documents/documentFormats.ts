@@ -51,7 +51,8 @@ function startsWith(buffer: Buffer, bytes: number[], offset = 0): boolean {
 const ascii = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
 
 function detectImage(buffer: Buffer): DetectedFormat | null {
-  if (startsWith(buffer, [0xff, 0xd8, 0xff])) return { format: "image", mimetype: "image/jpeg", extension: ".jpg" };
+  if (startsWith(buffer, [0xff, 0xd8, 0xff]))
+    return { format: "image", mimetype: "image/jpeg", extension: ".jpg" };
   if (startsWith(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
     return { format: "image", mimetype: "image/png", extension: ".png" };
   }
@@ -85,7 +86,7 @@ function looksLikeText(buffer: Buffer): boolean {
 export function detectDocumentFormat(
   buffer: Buffer,
   declaredName: string | undefined,
-  declaredMime: string | undefined,
+  declaredMime: string | undefined
 ): DetectedFormat | null {
   const name = (declaredName ?? "").toLowerCase();
   const mime = (declaredMime ?? "").toLowerCase();
@@ -93,7 +94,8 @@ export function detectDocumentFormat(
   const image = detectImage(buffer);
   if (image) return image;
 
-  if (startsWith(buffer, ascii("%PDF"))) return { format: "pdf", mimetype: "application/pdf", extension: ".pdf" };
+  if (startsWith(buffer, ascii("%PDF")))
+    return { format: "pdf", mimetype: "application/pdf", extension: ".pdf" };
 
   // A Wallet pass is a ZIP. Any ZIP is not a Wallet pass, so the declaration decides.
   if (startsWith(buffer, [0x50, 0x4b, 0x03, 0x04])) {
@@ -115,7 +117,11 @@ export function detectDocumentFormat(
 }
 
 /** Text the server received AS text — a pasted mail — which has no file name to detect from. */
-export const EMAIL_TEXT_FORMAT: DetectedFormat = { format: "emailText", mimetype: "text/plain", extension: ".txt" };
+export const EMAIL_TEXT_FORMAT: DetectedFormat = {
+  format: "emailText",
+  mimetype: "text/plain",
+  extension: ".txt",
+};
 
 /** Null when the size is acceptable for the format, otherwise the limit that was exceeded. */
 export function exceededLimit(format: DocumentFormat, sizeBytes: number): number | null {

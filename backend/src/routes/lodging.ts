@@ -56,7 +56,6 @@ router.use(authenticate);
 // cannot POST/PATCH/DELETE — consistent with routes/cruises.ts.
 router.use(requireWriteScope);
 
-
 // Exported so routes/lodgingChains.ts's chain-detail endpoint can reuse the
 // SAME include shape + aggregate derivation as the lodging list, instead of
 // re-deriving stayCount/nights/overallRating/totalSpendBase a second time.
@@ -129,29 +128,33 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // index.ts) blocking a direct browser call to the external Frankfurter API.
 // Must be registered BEFORE `/:id` below — otherwise Express would match
 // "fx-preview" as an `:id` path param instead of this literal route.
-router.get("/fx-preview", fxPreviewLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const parsed = fxPreviewQuerySchema.safeParse(req.query);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.get(
+  "/fx-preview",
+  fxPreviewLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const parsed = fxPreviewQuerySchema.safeParse(req.query);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const baseCurrency = await getBaseCurrency(userId);
-    const conv = await fx.convertToBase(
-      parsed.data.amount,
-      parsed.data.from,
-      baseCurrency,
-      new Date(`${parsed.data.date}T00:00:00.000Z`),
-    );
-    res.json({
-      success: true,
-      // null when the ECB lookup fails — the frontend must render nothing
-      // rather than guess, same contract as the persisted FX snapshot fields.
-      data: conv ? { ...conv, baseCurrency } : null,
-    });
-  } catch (err) {
-    next(err);
+      const baseCurrency = await getBaseCurrency(userId);
+      const conv = await fx.convertToBase(
+        parsed.data.amount,
+        parsed.data.from,
+        baseCurrency,
+        new Date(`${parsed.data.date}T00:00:00.000Z`)
+      );
+      res.json({
+        success: true,
+        // null when the ECB lookup fails — the frontend must render nothing
+        // rather than guess, same contract as the persisted FX snapshot fields.
+        data: conv ? { ...conv, baseCurrency } : null,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 // "Is this that house?" lives in `lodging/propose` — mounted HERE so the
 // literal path is matched before `/:id` could read "propose" as an id.
@@ -166,7 +169,10 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     });
     if (!lodging) throw new AppError("Lodging not found", 404);
     const baseCurrency = await getBaseCurrency(userId);
-    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
+    res.json({
+      success: true,
+      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+    });
   } catch (err) {
     next(err);
   }
@@ -199,9 +205,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
     const baseCurrency = await getBaseCurrency(userId);
-    res
-      .status(201)
-      .json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
+    res.status(201).json({
+      success: true,
+      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+    });
   } catch (err) {
     next(err);
   }
@@ -237,7 +244,10 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       include: LODGING_INCLUDE,
     });
     const baseCurrency = await getBaseCurrency(userId);
-    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
+    res.json({
+      success: true,
+      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+    });
   } catch (err) {
     next(err);
   }

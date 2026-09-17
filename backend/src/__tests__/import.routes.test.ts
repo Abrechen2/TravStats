@@ -21,9 +21,7 @@ describe("POST /api/v1/import/preview", () => {
   });
 
   it("rejects unauthenticated callers", async () => {
-    const r = await request(app)
-      .post("/api/v1/import/preview")
-      .send({ rows: [] });
+    const r = await request(app).post("/api/v1/import/preview").send({ rows: [] });
     expect(r.status).toBe(401);
   });
 

@@ -102,7 +102,7 @@ async function hasExistingMigrations(): Promise<boolean> {
   const prisma = new PrismaClient();
   try {
     const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-      `SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations"`,
+      `SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations"`
     );
     const count = result[0]?.count ?? 0n;
     return count > 0n;
@@ -210,10 +210,7 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
 
   fs.mkdirSync(BACKUP_PATH, { recursive: true });
 
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:.]/g, "-")
-    .replace(/Z$/, "");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
   const safeVersion = currentVersion.replace(/[^a-zA-Z0-9.-]/g, "_");
   const filename = `pre-v${safeVersion}-upgrade-${timestamp}.sql`;
   const outputPath = path.join(BACKUP_PATH, filename);

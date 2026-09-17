@@ -110,9 +110,7 @@ export interface ParseEmailLodgingResult {
 }
 
 export type ParseEmailResult =
-  | ParseEmailFlightResult
-  | ParseEmailCruiseResult
-  | ParseEmailLodgingResult;
+  ParseEmailFlightResult | ParseEmailCruiseResult | ParseEmailLodgingResult;
 
 export function isCruiseEmailResult(r: ParseEmailResult): r is ParseEmailCruiseResult {
   return r.domain === "cruise";

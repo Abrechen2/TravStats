@@ -1,4 +1,4 @@
-import { prisma } from '../src/db';
+import { prisma } from "../src/db";
 
 async function getUserIds() {
   try {
@@ -9,27 +9,27 @@ async function getUserIds() {
         createdAt: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
     if (users.length === 0) {
-      console.log('❌ No users found in database.');
-      console.log('💡 Create a user first by registering on the frontend.');
+      console.log("❌ No users found in database.");
+      console.log("💡 Create a user first by registering on the frontend.");
       process.exit(0);
     }
 
-    console.log('📋 Users in database:\n');
+    console.log("📋 Users in database:\n");
     users.forEach((user, index) => {
       console.log(`${index + 1}. Username: ${user.username}`);
       console.log(`   ID: ${user.id}`);
       console.log(`   Created: ${user.createdAt.toISOString()}`);
-      console.log('');
+      console.log("");
     });
 
-    console.log('💡 Copy the ID for use in admin tasks or scripting.');
+    console.log("💡 Copy the ID for use in admin tasks or scripting.");
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error("❌ Error:", error);
   } finally {
     await prisma.$disconnect();
   }

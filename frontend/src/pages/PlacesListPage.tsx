@@ -54,7 +54,8 @@ const PLACE_STATUS_KEY = {
 
 type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
-type PlaceSortKey = "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
+type PlaceSortKey =
+  "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
 type PlaceColumnId = PlaceSortKey | "status" | "actions";
 
 const COLUMN_IDS: readonly PlaceColumnId[] = [
@@ -103,13 +104,7 @@ const SORT_DEFAULT_ASC: Record<PlaceSortKey, boolean> = {
   lastVisit: false,
 };
 
-function compareRows(
-  a: Place,
-  b: Place,
-  key: PlaceSortKey,
-  locale: string,
-  t: Translate
-): number {
+function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: Translate): number {
   switch (key) {
     case "category":
       return a.category.localeCompare(b.category);
@@ -160,7 +155,15 @@ export default function PlacesListPage(): JSX.Element {
   const [visited, setVisited] = useState<VisitedFilter>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", ["name","category","location","country","continent","visits","lastVisit"] as const);
+  const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", [
+    "name",
+    "category",
+    "location",
+    "country",
+    "continent",
+    "visits",
+    "lastVisit",
+  ] as const);
 
   const columnPrefs = useColumnPrefs("places", ALWAYS_VISIBLE);
 
@@ -302,8 +305,7 @@ export default function PlacesListPage(): JSX.Element {
   }, [pendingDelete, addToast, t, load]);
 
   const formatDate = useCallback(
-    (iso: string | null): string =>
-      iso ? new Date(iso).toLocaleDateString(i18n.language) : "—",
+    (iso: string | null): string => (iso ? new Date(iso).toLocaleDateString(i18n.language) : "—"),
     [i18n.language]
   );
 
@@ -439,7 +441,6 @@ export default function PlacesListPage(): JSX.Element {
           </div>
         </div>
 
-
         <ListSummaryStrip
           figures={summaryFigures}
           filtered={hasActiveFilter}
@@ -545,9 +546,7 @@ export default function PlacesListPage(): JSX.Element {
                         <td className="px-4 py-3 text-[var(--text-muted)]">
                           <span className="flex items-center gap-2">
                             {p.city ?? "—"}
-                            {p.country && (
-                              <FlagImg country={p.country} />
-                            )}
+                            {p.country && <FlagImg country={p.country} />}
                           </span>
                         </td>
                       )}

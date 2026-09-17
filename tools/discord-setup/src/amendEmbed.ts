@@ -28,7 +28,11 @@ if (!channelName || !appendPath) {
 const addition = readFileSync(appendPath, "utf8").replace(/\s+$/, "");
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 await client.login(env("DISCORD_BOT_TOKEN"));
 const guild = await client.guilds.fetch(env("DISCORD_GUILD_ID"));

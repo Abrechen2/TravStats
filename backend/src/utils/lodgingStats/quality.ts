@@ -62,7 +62,7 @@ const BEST_VALUE_LIMIT = 5;
 
 export function computeRatingStats(
   entries: StayWithNights[],
-  currentBaseCurrency: string,
+  currentBaseCurrency: string
 ): LodgingRatingStats {
   const overall: Accumulator = { sum: 0, count: 0 };
   const room: Accumulator = { sum: 0, count: 0 };
@@ -145,7 +145,7 @@ export function computeRatingStats(
 function comparablePricePerNight(
   stay: LodgingStayData,
   nights: number,
-  currentBaseCurrency: string,
+  currentBaseCurrency: string
 ): number | null {
   if (nights <= 0) return null;
   if (stay.totalPriceBase === null) return null;

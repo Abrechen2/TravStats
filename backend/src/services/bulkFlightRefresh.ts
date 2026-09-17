@@ -30,10 +30,10 @@
  *     the user already typed (or that came from another provider) are never
  *     overwritten.
  */
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { lookupFlightWithHistorical } from './flightLookup';
-import { getApiKey } from './apiKeyResolver';
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { lookupFlightWithHistorical } from "./flightLookup";
+import { getApiKey } from "./apiKeyResolver";
 
 /** Max flights touched per single endpoint call. Keeps the request under the
  *  default Express 60 s timeout (≈13 s at 500 ms pacing) and gives the user
@@ -80,7 +80,7 @@ export interface BulkRefreshSummary {
   results: Array<{
     flightId: string;
     flightNumber: string;
-    outcome: 'updated' | 'no_data' | 'already_complete' | 'failed';
+    outcome: "updated" | "no_data" | "already_complete" | "failed";
     fieldsUpdated?: string[];
     /**
      * WHY nothing was written, in the provider's own vocabulary
@@ -114,7 +114,7 @@ export interface BulkRefreshCandidate {
 
 export async function findBulkRefreshCandidates(
   userId: string,
-  limit: number = MAX_PER_CALL,
+  limit: number = MAX_PER_CALL
 ): Promise<BulkRefreshCandidate[]> {
   const now = new Date();
   const earliest = new Date(now);
@@ -149,7 +149,7 @@ export async function findBulkRefreshCandidates(
         // `{ aircraft: null }` on its own would have missed every one of them
         // and looked like a fix while changing nothing.
         { aircraft: null },
-        { aircraft: '' },
+        { aircraft: "" },
       ],
     },
     select: {
@@ -159,13 +159,12 @@ export async function findBulkRefreshCandidates(
       depIata: true,
       depIcao: true,
     },
-    orderBy: { departureTime: 'desc' },
+    orderBy: { departureTime: "desc" },
     take: limit,
   });
 
   return flights.filter(
-    (f): f is BulkRefreshCandidate =>
-      f.flightNumber !== null && f.departureTime !== null,
+    (f): f is BulkRefreshCandidate => f.flightNumber !== null && f.departureTime !== null
   );
 }
 
@@ -180,8 +179,8 @@ export async function findBulkRefreshCandidates(
  */
 export async function hasHistoricalProvider(userId: string): Promise<boolean> {
   const [aviationstack, aerodatabox] = await Promise.all([
-    getApiKey('aviationstack', userId),
-    getApiKey('aerodatabox', userId),
+    getApiKey("aviationstack", userId),
+    getApiKey("aerodatabox", userId),
   ]);
   return Boolean(aviationstack || aerodatabox);
 }
@@ -200,11 +199,7 @@ export async function countBulkRefreshCandidates(userId: string): Promise<number
       userId,
       flightNumber: { not: null },
       departureTime: { gte: earliest, lte: now },
-      OR: [
-        { aircraftRegistration: null },
-        { aircraftModeS: null },
-        { isCodeshare: null },
-      ],
+      OR: [{ aircraftRegistration: null }, { aircraftModeS: null }, { isCodeshare: null }],
     },
   });
 }
@@ -236,7 +231,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         candidate.flightNumber,
         candidate.departureTime,
         userId,
-        candidate.depIata ?? candidate.depIcao ?? undefined,
+        candidate.depIata ?? candidate.depIcao ?? undefined
       );
 
       if (unavailableReason || flights.length === 0) {
@@ -244,10 +239,10 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         summary.results.push({
           flightId: candidate.id,
           flightNumber: candidate.flightNumber,
-          outcome: 'no_data',
+          outcome: "no_data",
           // The provider's own word for it where there is one — a missing key
           // and an unknown leg are different answers and were the same number.
-          reason: unavailableReason ?? 'no_match',
+          reason: unavailableReason ?? "no_match",
         });
       } else {
         // Pick the first match — provider already filtered by date.
@@ -291,31 +286,31 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
           summary.results.push({
             flightId: candidate.id,
             flightNumber: candidate.flightNumber,
-            outcome: 'no_data',
-            reason: 'flight_deleted',
+            outcome: "no_data",
+            reason: "flight_deleted",
           });
           continue;
         }
 
         if (!current.aircraftRegistration && match.aircraftRegistration) {
           patch.aircraftRegistration = match.aircraftRegistration;
-          fieldsUpdated.push('aircraftRegistration');
+          fieldsUpdated.push("aircraftRegistration");
         }
         if (!current.aircraftModeS && match.aircraftModeS) {
           patch.aircraftModeS = match.aircraftModeS;
-          fieldsUpdated.push('aircraftModeS');
+          fieldsUpdated.push("aircraftModeS");
         }
         if (current.isCodeshare === null && match.isCodeshare !== undefined) {
           patch.isCodeshare = match.isCodeshare;
-          fieldsUpdated.push('isCodeshare');
+          fieldsUpdated.push("isCodeshare");
         }
         if (!current.airlineIata && match.airlineIata) {
           patch.airlineIata = match.airlineIata;
-          fieldsUpdated.push('airlineIata');
+          fieldsUpdated.push("airlineIata");
         }
         if (!current.airlineIcao && match.airlineIcao) {
           patch.airlineIcao = match.airlineIcao;
-          fieldsUpdated.push('airlineIcao');
+          fieldsUpdated.push("airlineIcao");
         }
 
         /**
@@ -343,7 +338,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
          */
         if (!current.aircraft && match.aircraft) {
           patch.aircraft = match.aircraft;
-          fieldsUpdated.push('aircraft');
+          fieldsUpdated.push("aircraft");
         }
         // Nested, not top-level: the provider result is flattened into
         // `FlightData` on its way here, and the two actual times land beside
@@ -352,11 +347,11 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         // provider's payload, never the local one.
         if (!current.actualDeparture && match.departure?.actualTime) {
           patch.actualDeparture = new Date(match.departure.actualTime);
-          fieldsUpdated.push('actualDeparture');
+          fieldsUpdated.push("actualDeparture");
         }
         if (!current.actualArrival && match.arrival?.actualTime) {
           patch.actualArrival = new Date(match.arrival.actualTime);
-          fieldsUpdated.push('actualArrival');
+          fieldsUpdated.push("actualArrival");
         }
 
         if (fieldsUpdated.length > 0) {
@@ -368,7 +363,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
           summary.results.push({
             flightId: candidate.id,
             flightNumber: candidate.flightNumber,
-            outcome: 'updated',
+            outcome: "updated",
             fieldsUpdated,
           });
         } else {
@@ -380,7 +375,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
           summary.results.push({
             flightId: candidate.id,
             flightNumber: candidate.flightNumber,
-            outcome: 'already_complete',
+            outcome: "already_complete",
           });
         }
       }
@@ -389,17 +384,17 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
       summary.results.push({
         flightId: candidate.id,
         flightNumber: candidate.flightNumber,
-        outcome: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        outcome: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
       logger.warn(
         {
-          operation: 'bulk_flight_refresh_item_failed',
+          operation: "bulk_flight_refresh_item_failed",
           flightId: candidate.id,
           flightNumber: candidate.flightNumber,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         },
-        'Bulk refresh failed for one flight',
+        "Bulk refresh failed for one flight"
       );
     }
 
@@ -424,7 +419,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
 
   logger.info(
     {
-      operation: 'bulk_flight_refresh_complete',
+      operation: "bulk_flight_refresh_complete",
       userId,
       scanned: summary.scanned,
       updated: summary.updated,
@@ -432,7 +427,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
       failed: summary.failed,
       remaining: summary.remaining,
     },
-    'Bulk flight refresh batch complete',
+    "Bulk flight refresh batch complete"
   );
 
   return summary;

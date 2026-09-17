@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
-import { promisify } from 'util';
-import readline from 'readline';
-import zlib from 'zlib';
-import { systemLogger } from '../utils/logger';
-import { getLoggingConfig } from './loggingConfig';
+import fs from "fs";
+import path from "path";
+import { promisify } from "util";
+import readline from "readline";
+import zlib from "zlib";
+import { systemLogger } from "../utils/logger";
+import { getLoggingConfig } from "./loggingConfig";
 
 const readdir = promisify(fs.readdir);
 const stat = promisify(fs.stat);
@@ -21,7 +21,7 @@ const unlink = promisify(fs.unlink);
  * - Get statistics
  */
 
-const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
+const LOG_DIR = path.join(process.cwd(), "..", "data", "logs");
 
 export interface LogFileMetadata {
   filename: string;
@@ -66,7 +66,7 @@ export interface LogStats {
  * Format bytes to human-readable size
  */
 function formatBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
   let unitIndex = 0;
 
@@ -83,7 +83,7 @@ function formatBytes(bytes: number): string {
  */
 function extractCategory(filename: string): string {
   const match = filename.match(/^([a-z]+)(-\d{4}-\d{2}-\d{2})?\.log/);
-  return match ? match[1] : 'unknown';
+  return match ? match[1] : "unknown";
 }
 
 /**
@@ -92,7 +92,7 @@ function extractCategory(filename: string): string {
 function validateFilename(filename: string): boolean {
   // Only allow alphanumeric, dash, dot (for .log extension)
   const validPattern = /^[a-zA-Z0-9\-.]+\.log(\.gz)?$/;
-  return validPattern.test(filename) && !filename.includes('..');
+  return validPattern.test(filename) && !filename.includes("..");
 }
 
 /**
@@ -100,7 +100,7 @@ function validateFilename(filename: string): boolean {
  */
 function getLogFilePath(filename: string): string {
   if (!validateFilename(filename)) {
-    throw new Error('Invalid filename: potential path traversal detected');
+    throw new Error("Invalid filename: potential path traversal detected");
   }
   return path.join(LOG_DIR, filename);
 }
@@ -116,7 +116,7 @@ export async function listLogFiles(): Promise<LogFileMetadata[]> {
     }
 
     const files = await readdir(LOG_DIR);
-    const logFiles = files.filter((f) => f.endsWith('.log') || f.endsWith('.log.gz'));
+    const logFiles = files.filter((f) => f.endsWith(".log") || f.endsWith(".log.gz"));
 
     const metadata: LogFileMetadata[] = await Promise.all(
       logFiles.map(async (filename) => {
@@ -140,9 +140,9 @@ export async function listLogFiles(): Promise<LogFileMetadata[]> {
     return metadata;
   } catch (error) {
     systemLogger.error({
-      operation: 'list_log_files_failed',
+      operation: "list_log_files_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -153,7 +153,10 @@ export async function listLogFiles(): Promise<LogFileMetadata[]> {
 /**
  * Read log file with filtering and pagination
  */
-export async function readLogFile(filename: string, options: ReadOptions = {}): Promise<LogEntry[]> {
+export async function readLogFile(
+  filename: string,
+  options: ReadOptions = {}
+): Promise<LogEntry[]> {
   const { offset = 0, limit = 100, level, category, search } = options;
 
   try {
@@ -165,8 +168,8 @@ export async function readLogFile(filename: string, options: ReadOptions = {}): 
     }
 
     // Cannot read gzipped files directly (would need decompression)
-    if (filename.endsWith('.gz')) {
-      throw new Error('Cannot read compressed log files. Download and decompress first.');
+    if (filename.endsWith(".gz")) {
+      throw new Error("Cannot read compressed log files. Download and decompress first.");
     }
 
     const entries: LogEntry[] = [];
@@ -211,13 +214,13 @@ export async function readLogFile(filename: string, options: ReadOptions = {}): 
     return entries;
   } catch (error) {
     systemLogger.error({
-      operation: 'read_log_file_failed',
+      operation: "read_log_file_failed",
       context: {
         filename,
         options,
       },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -247,7 +250,7 @@ const DEFAULT_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB of JSON
  * payloads). The first cap to be hit wins.
  */
 export async function readLogWindow(
-  prefix: 'app' | 'error',
+  prefix: "app" | "error",
   windowMs: number,
   opts: ReadWindowOptions = {}
 ): Promise<LogEntry[]> {
@@ -264,10 +267,7 @@ export async function readLogWindow(
       // Accept either `<prefix>-<date>.log.gz` or `<date...>-<prefix>.log.gz`.
       // The dash separator prevents prefix collisions like `errorapp.log.gz`
       // matching for prefix="error".
-      return (
-        f.filename.startsWith(`${prefix}-`) ||
-        f.filename.endsWith(`-${prefix}.log.gz`)
-      );
+      return f.filename.startsWith(`${prefix}-`) || f.filename.endsWith(`-${prefix}.log.gz`);
     })
     .sort((a, b) => {
       // Active file (no extension before .log) always wins
@@ -284,7 +284,7 @@ export async function readLogWindow(
     let anyInsideWindow = false;
 
     try {
-      const stream = file.filename.endsWith('.gz')
+      const stream = file.filename.endsWith(".gz")
         ? fs.createReadStream(filepath).pipe(zlib.createGunzip())
         : fs.createReadStream(filepath);
       const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -298,13 +298,13 @@ export async function readLogWindow(
           continue;
         }
         if (
-          typeof parsed.timestamp === 'string' &&
-          typeof parsed.time === 'string' &&
+          typeof parsed.timestamp === "string" &&
+          typeof parsed.time === "string" &&
           parsed.timestamp === parsed.time
         ) {
           delete parsed.timestamp;
         }
-        const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
+        const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ""));
         if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
         anyInsideWindow = true;
 
@@ -318,10 +318,10 @@ export async function readLogWindow(
       }
     } catch (error) {
       systemLogger.warn({
-        operation: 'read_log_window_file_failed',
+        operation: "read_log_window_file_failed",
         context: { filename: file.filename },
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
         },
       });
       // Continue with the next (older) file
@@ -350,19 +350,19 @@ export async function deleteLogFile(filename: string): Promise<void> {
     await unlink(filepath);
 
     systemLogger.info({
-      operation: 'log_file_deleted',
+      operation: "log_file_deleted",
       context: {
         filename,
       },
     });
   } catch (error) {
     systemLogger.error({
-      operation: 'delete_log_file_failed',
+      operation: "delete_log_file_failed",
       context: {
         filename,
       },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -390,12 +390,12 @@ export async function cleanupOldLogs(): Promise<number> {
         } catch (error) {
           // Log error but continue cleanup
           systemLogger.warn({
-            operation: 'cleanup_file_failed',
+            operation: "cleanup_file_failed",
             context: {
               filename: file.filename,
             },
             error: {
-              message: error instanceof Error ? error.message : 'Unknown error',
+              message: error instanceof Error ? error.message : "Unknown error",
             },
           });
         }
@@ -404,7 +404,7 @@ export async function cleanupOldLogs(): Promise<number> {
 
     if (deletedCount > 0) {
       systemLogger.info({
-        operation: 'log_cleanup_completed',
+        operation: "log_cleanup_completed",
         context: {
           deletedCount,
           retentionDays: config.logRetentionDays,
@@ -415,9 +415,9 @@ export async function cleanupOldLogs(): Promise<number> {
     return deletedCount;
   } catch (error) {
     systemLogger.error({
-      operation: 'cleanup_old_logs_failed',
+      operation: "cleanup_old_logs_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -435,7 +435,7 @@ export async function getLogStats(): Promise<LogStats> {
     if (files.length === 0) {
       return {
         totalSize: 0,
-        totalSizeFormatted: '0 B',
+        totalSizeFormatted: "0 B",
         fileCount: 0,
         categoryBreakdown: {},
       };
@@ -464,9 +464,9 @@ export async function getLogStats(): Promise<LogStats> {
     };
   } catch (error) {
     systemLogger.error({
-      operation: 'get_log_stats_failed',
+      operation: "get_log_stats_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -500,7 +500,7 @@ export async function searchLogs(query: {
 
     // Search each file (limit to 10 files to prevent abuse)
     for (const file of filesToSearch.slice(0, 10)) {
-      if (file.filename.endsWith('.gz')) continue; // Skip compressed files
+      if (file.filename.endsWith(".gz")) continue; // Skip compressed files
 
       const entries = await readLogFile(file.filename, {
         limit: 1000, // Max 1000 entries per file
@@ -520,12 +520,12 @@ export async function searchLogs(query: {
     return results;
   } catch (error) {
     systemLogger.error({
-      operation: 'search_logs_failed',
+      operation: "search_logs_failed",
       context: {
         query,
       },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });

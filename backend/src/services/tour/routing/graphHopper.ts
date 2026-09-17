@@ -79,10 +79,7 @@ function isGraphHopperResponse(value: unknown): value is GraphHopperResponse {
   return true;
 }
 
-export function createGraphHopper(
-  apiKey: string,
-  fetchImpl: typeof fetch = fetch,
-): RouteProvider {
+export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetch): RouteProvider {
   return {
     id: "graphhopper",
     async route(req: RouteRequest): Promise<RouteResult | null> {
@@ -104,7 +101,7 @@ export function createGraphHopper(
       } catch (err) {
         logger.warn(
           { provider: "graphhopper", error: err instanceof Error ? err.message : String(err) },
-          "graphhopper request failed",
+          "graphhopper request failed"
         );
         return null;
       }
@@ -112,7 +109,7 @@ export function createGraphHopper(
       if (!response.ok) {
         logger.warn(
           { provider: "graphhopper", status: response.status },
-          "graphhopper returned a non-200 response",
+          "graphhopper returned a non-200 response"
         );
         return null;
       }
@@ -123,7 +120,7 @@ export function createGraphHopper(
       } catch (_err) {
         logger.warn(
           { provider: "graphhopper", status: response.status },
-          "graphhopper response body was not valid JSON",
+          "graphhopper response body was not valid JSON"
         );
         return null;
       }
@@ -131,7 +128,7 @@ export function createGraphHopper(
       if (!isGraphHopperResponse(body)) {
         logger.warn(
           { provider: "graphhopper", status: response.status },
-          "graphhopper response did not match the expected shape",
+          "graphhopper response did not match the expected shape"
         );
         return null;
       }

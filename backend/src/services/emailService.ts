@@ -1,10 +1,10 @@
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
-import type { SmtpConfig } from '@prisma/client';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { SMTP_CONFIG_ID } from '../routes/admin/smtp';
-import { decryptApiKey } from '../utils/encryption';
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
+import type { SmtpConfig } from "@prisma/client";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { SMTP_CONFIG_ID } from "../routes/admin/smtp";
+import { decryptApiKey } from "../utils/encryption";
 
 export interface SmtpConfigInput {
   host: string;
@@ -43,16 +43,13 @@ function createTransporterFromConfig(config: SmtpConfig): Transporter {
   });
 }
 
-function buildReminderHtml(
-  flight: FlightReminderData,
-  hoursUntilDeparture: number,
-): string {
-  const flightNumber = flight.flightNumber ?? 'N/A';
-  const depAirport = flight.depIata ?? flight.depName ?? 'Unknown';
-  const arrAirport = flight.arrIata ?? flight.arrName ?? 'Unknown';
+function buildReminderHtml(flight: FlightReminderData, hoursUntilDeparture: number): string {
+  const flightNumber = flight.flightNumber ?? "N/A";
+  const depAirport = flight.depIata ?? flight.depName ?? "Unknown";
+  const arrAirport = flight.arrIata ?? flight.arrName ?? "Unknown";
   const departureTime = flight.departureTime
-    ? flight.departureTime.toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
-    : 'Unknown';
+    ? flight.departureTime.toISOString().replace("T", " ").slice(0, 16) + " UTC"
+    : "Unknown";
 
   return `
 <!DOCTYPE html>
@@ -72,12 +69,12 @@ function buildReminderHtml(
 export async function sendFlightReminder(
   flight: FlightReminderData,
   user: UserReminderData,
-  hoursUntilDeparture: number,
+  hoursUntilDeparture: number
 ): Promise<void> {
   if (!user.notificationEmail) {
     logger.warn({
-      operation: 'email_reminder_skipped',
-      message: 'No notification email set for user',
+      operation: "email_reminder_skipped",
+      message: "No notification email set for user",
       flightId: flight.id,
     });
     return;
@@ -86,15 +83,15 @@ export async function sendFlightReminder(
   const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
   if (!config || !config.enabled) {
     logger.info({
-      operation: 'email_reminder_skipped',
-      message: 'SMTP not configured or disabled',
+      operation: "email_reminder_skipped",
+      message: "SMTP not configured or disabled",
     });
     return;
   }
 
   const transporter = createTransporterFromConfig(config);
   const html = buildReminderHtml(flight, hoursUntilDeparture);
-  const flightNumber = flight.flightNumber ?? 'N/A';
+  const flightNumber = flight.flightNumber ?? "N/A";
   const subject = `Flight Reminder: ${flightNumber} in ${hoursUntilDeparture}h`;
 
   try {
@@ -106,17 +103,17 @@ export async function sendFlightReminder(
     });
 
     logger.info({
-      operation: 'email_reminder_sent',
+      operation: "email_reminder_sent",
       flightId: flight.id,
       hoursUntilDeparture,
       to: user.notificationEmail,
     });
   } catch (error) {
     logger.error({
-      operation: 'email_reminder_send_failed',
+      operation: "email_reminder_send_failed",
       flightId: flight.id,
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     throw error;
@@ -140,19 +137,19 @@ export async function testSmtpConnection(config: SmtpConfigInput): Promise<void>
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string,
-  username: string,
+  username: string
 ): Promise<void> {
   const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
   if (!config || !config.enabled) {
     logger.info({
-      operation: 'password_reset_email_skipped',
-      message: 'SMTP not configured or disabled',
+      operation: "password_reset_email_skipped",
+      message: "SMTP not configured or disabled",
     });
     return;
   }
 
   const transporter = createTransporterFromConfig(config);
-  const subject = 'TravStats — Passwort zurücksetzen';
+  const subject = "TravStats — Passwort zurücksetzen";
   const html = `
 <!DOCTYPE html>
 <html>
@@ -182,15 +179,15 @@ export async function sendPasswordResetEmail(
       html,
     });
     logger.info({
-      operation: 'password_reset_email_sent',
+      operation: "password_reset_email_sent",
       to,
       username,
     });
   } catch (error) {
     logger.error({
-      operation: 'password_reset_email_failed',
+      operation: "password_reset_email_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     throw error;
@@ -200,15 +197,15 @@ export async function sendPasswordResetEmail(
 export async function sendAdminPasswordResetEmail(
   to: string,
   username: string,
-  temporaryPassword: string,
+  temporaryPassword: string
 ): Promise<void> {
   const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
   if (!config || !config.enabled) {
-    throw new Error('SMTP is not configured on this instance');
+    throw new Error("SMTP is not configured on this instance");
   }
 
   const transporter = createTransporterFromConfig(config);
-  const subject = 'TravStats — Passwort zurückgesetzt';
+  const subject = "TravStats — Passwort zurückgesetzt";
   const html = `
 <!DOCTYPE html>
 <html>
@@ -233,15 +230,15 @@ export async function sendAdminPasswordResetEmail(
       html,
     });
     logger.info({
-      operation: 'admin_password_reset_email_sent',
+      operation: "admin_password_reset_email_sent",
       to,
       username,
     });
   } catch (error) {
     logger.error({
-      operation: 'admin_password_reset_email_failed',
+      operation: "admin_password_reset_email_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     throw error;
@@ -252,19 +249,19 @@ export async function sendInvitationEmail(
   to: string,
   inviteUrl: string,
   inviterUsername: string,
-  expiresAt: Date,
+  expiresAt: Date
 ): Promise<void> {
   const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
   if (!config || !config.enabled) {
-    throw new Error('SMTP is not configured on this instance');
+    throw new Error("SMTP is not configured on this instance");
   }
 
   const transporter = createTransporterFromConfig(config);
-  const subject = 'TravStats — Einladung';
-  const expiresText = expiresAt.toLocaleDateString('de-DE', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  const subject = "TravStats — Einladung";
+  const expiresText = expiresAt.toLocaleDateString("de-DE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
   const html = `
 <!DOCTYPE html>
@@ -294,12 +291,12 @@ export async function sendInvitationEmail(
       subject,
       html,
     });
-    logger.info({ operation: 'invitation_email_sent', to, inviter: inviterUsername });
+    logger.info({ operation: "invitation_email_sent", to, inviter: inviterUsername });
   } catch (error) {
     logger.error({
-      operation: 'invitation_email_failed',
+      operation: "invitation_email_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     throw error;

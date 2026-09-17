@@ -205,7 +205,10 @@ export default function PlaceListsPage(): JSX.Element {
                     height: 22,
                     borderRadius: "50%",
                     background: c,
-                    border: newColor === c ? "2px solid var(--text-primary)" : "1px solid var(--color-border)",
+                    border:
+                      newColor === c
+                        ? "2px solid var(--text-primary)"
+                        : "1px solid var(--color-border)",
                     cursor: "pointer",
                   }}
                 />
@@ -264,7 +267,10 @@ export default function PlaceListsPage(): JSX.Element {
         {!loading && !loadError && (
           <>
             <section className="mb-10">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-sm font-semibold uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:lists.ownSection")}
               </h2>
               {ownLists.length === 0 ? (
@@ -272,7 +278,10 @@ export default function PlaceListsPage(): JSX.Element {
                   {t("places:lists.ownEmpty")}
                 </p>
               ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ listStyle: "none", padding: 0 }}>
+                <ul
+                  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                  style={{ listStyle: "none", padding: 0 }}
+                >
                   {ownLists.map((list) => (
                     <li key={list.id}>
                       <Link
@@ -313,7 +322,10 @@ export default function PlaceListsPage(): JSX.Element {
             </section>
 
             <section>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              <h2
+                className="mb-3 text-sm font-semibold uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {t("places:lists.curatedSection")}
               </h2>
               <ul className="grid gap-3 sm:grid-cols-2" style={{ listStyle: "none", padding: 0 }}>
@@ -323,7 +335,10 @@ export default function PlaceListsPage(): JSX.Element {
                     <li
                       key={c.key}
                       className="rounded-xl p-4"
-                      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+                      style={{
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--color-border)",
+                      }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -341,7 +356,10 @@ export default function PlaceListsPage(): JSX.Element {
                           <Link
                             to={`/places/checklists/${c.key}`}
                             className="shrink-0 rounded-lg px-3 py-1.5 text-xs"
-                            style={{ border: "1px solid var(--color-border)", color: "var(--accent)" }}
+                            style={{
+                              border: "1px solid var(--color-border)",
+                              color: "var(--accent)",
+                            }}
                           >
                             {t("places:lists.open")}
                           </Link>

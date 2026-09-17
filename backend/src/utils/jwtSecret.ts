@@ -1,39 +1,38 @@
-import { randomBytes } from 'crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
-import logger from './logger';
+import { randomBytes } from "crypto";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { dirname, join } from "path";
+import logger from "./logger";
 
 const PROJECT_CWD = process.cwd();
-const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
+const DEV_DATA_DIR = join(PROJECT_CWD, ".travstats-data");
 
 function resolveSecretsDir(): string {
   if (process.env.SECRETS_DIR) return process.env.SECRETS_DIR;
-  if (process.env.NODE_ENV !== 'production') return join(DEV_DATA_DIR, 'secrets');
-  const LEGACY = '/app/secrets';
-  const CURRENT = '/app/data/secrets';
-  if (existsSync(join(LEGACY, 'jwt.secret')) || existsSync(join(LEGACY, 'encryption.key'))) {
+  if (process.env.NODE_ENV !== "production") return join(DEV_DATA_DIR, "secrets");
+  const LEGACY = "/app/secrets";
+  const CURRENT = "/app/data/secrets";
+  if (existsSync(join(LEGACY, "jwt.secret")) || existsSync(join(LEGACY, "encryption.key"))) {
     return LEGACY;
   }
   return CURRENT;
 }
 const SECRETS_DIR = resolveSecretsDir();
-const RESOLVED_SECRET_FILE =
-  process.env.JWT_SECRET_FILE || join(SECRETS_DIR, 'jwt.secret');
+const RESOLVED_SECRET_FILE = process.env.JWT_SECRET_FILE || join(SECRETS_DIR, "jwt.secret");
 
 /**
  * List of known weak/default JWT secrets that should never be used in production
  */
 const KNOWN_WEAK_SECRETS = new Set(
   [
-    'change-this-in-production-use-openssl-rand-hex-32',
-    'your-secret-key-change-in-production',
-    'your-secret-key-change-in-production-MINIMUM-32-chars',
-    'changeme-in-production',
-    'changeme',
-    'secret',
-    'jwt-secret',
-    'your-secret-key',
-  ].map((secret) => secret.toLowerCase()),
+    "change-this-in-production-use-openssl-rand-hex-32",
+    "your-secret-key-change-in-production",
+    "your-secret-key-change-in-production-MINIMUM-32-chars",
+    "changeme-in-production",
+    "changeme",
+    "secret",
+    "jwt-secret",
+    "your-secret-key",
+  ].map((secret) => secret.toLowerCase())
 );
 
 /**
@@ -53,7 +52,8 @@ export function validateJWTSecret(secret: string): { isValid: boolean; message: 
   if (KNOWN_WEAK_SECRETS.has(secret.toLowerCase())) {
     return {
       isValid: false,
-      message: 'JWT_SECRET is using a known default value. Generate a strong secret with: openssl rand -hex 32',
+      message:
+        "JWT_SECRET is using a known default value. Generate a strong secret with: openssl rand -hex 32",
     };
   }
 
@@ -66,7 +66,7 @@ export function validateJWTSecret(secret: string): { isValid: boolean; message: 
     };
   }
 
-  return { isValid: true, message: 'JWT_SECRET is valid' };
+  return { isValid: true, message: "JWT_SECRET is valid" };
 }
 
 function ensureDataDirectoryExists(directory: string) {
@@ -81,7 +81,7 @@ function readPersistedSecret(secretFilePath: string): string | null {
   }
 
   try {
-    const secret = readFileSync(secretFilePath, 'utf-8').trim();
+    const secret = readFileSync(secretFilePath, "utf-8").trim();
     if (!secret || secret.length < 32) {
       return null;
     }
@@ -89,8 +89,8 @@ function readPersistedSecret(secretFilePath: string): string | null {
     const validation = validateJWTSecret(secret);
     if (!validation.isValid) {
       logger.warn({
-        operation: 'jwt_secret_weak_file',
-        message: 'Ignoring weak JWT_SECRET from file, will generate new one',
+        operation: "jwt_secret_weak_file",
+        message: "Ignoring weak JWT_SECRET from file, will generate new one",
         context: { reason: validation.message },
       });
       return null;
@@ -98,10 +98,10 @@ function readPersistedSecret(secretFilePath: string): string | null {
     return secret;
   } catch (error) {
     logger.debug({
-      operation: 'jwt_secret_read_error',
-      message: 'Failed to read JWT secret file',
+      operation: "jwt_secret_read_error",
+      message: "Failed to read JWT secret file",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     return null;
@@ -114,10 +114,10 @@ function persistSecret(secretFilePath: string, secret: string) {
     writeFileSync(secretFilePath, secret, { mode: 0o600 });
   } catch (error) {
     logger.debug({
-      operation: 'jwt_secret_save_error',
-      message: 'Failed to save JWT secret file',
+      operation: "jwt_secret_save_error",
+      message: "Failed to save JWT secret file",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
@@ -137,9 +137,9 @@ export function getJWTSecret(): string {
     const validation = validateJWTSecret(envSecret);
     if (validation.isValid) {
       logger.info({
-        operation: 'jwt_secret_source',
-        message: 'Using JWT_SECRET from environment variable',
-        context: { source: 'environment', length: envSecret.length },
+        operation: "jwt_secret_source",
+        message: "Using JWT_SECRET from environment variable",
+        context: { source: "environment", length: envSecret.length },
       });
       return envSecret;
     }
@@ -147,8 +147,8 @@ export function getJWTSecret(): string {
     // Weak secret detected - remove it from environment to prevent reuse
     delete process.env.JWT_SECRET;
     logger.warn({
-      operation: 'jwt_secret_weak_env',
-      message: 'Ignoring weak JWT_SECRET from environment',
+      operation: "jwt_secret_weak_env",
+      message: "Ignoring weak JWT_SECRET from environment",
       context: { reason: validation.message },
     });
   }
@@ -161,21 +161,21 @@ export function getJWTSecret(): string {
       process.env.JWT_SECRET = persistedSecret;
     }
     logger.info({
-      operation: 'jwt_secret_source',
-      message: 'Using JWT_SECRET from persistent file',
-      context: { source: 'file', path: RESOLVED_SECRET_FILE, length: persistedSecret.length },
+      operation: "jwt_secret_source",
+      message: "Using JWT_SECRET from persistent file",
+      context: { source: "file", path: RESOLVED_SECRET_FILE, length: persistedSecret.length },
     });
     return persistedSecret;
   }
 
   // Priority 3: Generate new secret
-  const newSecret = randomBytes(32).toString('hex');
+  const newSecret = randomBytes(32).toString("hex");
   persistSecret(RESOLVED_SECRET_FILE, newSecret);
   process.env.JWT_SECRET = newSecret;
   logger.info({
-    operation: 'jwt_secret_source',
-    message: 'Generated new JWT_SECRET and saved to file',
-    context: { source: 'generated', path: RESOLVED_SECRET_FILE, length: newSecret.length },
+    operation: "jwt_secret_source",
+    message: "Generated new JWT_SECRET and saved to file",
+    context: { source: "generated", path: RESOLVED_SECRET_FILE, length: newSecret.length },
   });
   return newSecret;
 }
@@ -191,8 +191,8 @@ const maxRetries = 3;
 
 while (!validation.isValid && retryCount < maxRetries) {
   logger.warn({
-    operation: 'jwt_secret_regeneration',
-    message: 'Generated JWT secret failed validation, regenerating...',
+    operation: "jwt_secret_regeneration",
+    message: "Generated JWT secret failed validation, regenerating...",
     context: { reason: validation.message, attempt: retryCount + 1 },
   });
 
@@ -200,7 +200,7 @@ while (!validation.isValid && retryCount < maxRetries) {
   delete process.env.JWT_SECRET;
   try {
     if (existsSync(RESOLVED_SECRET_FILE)) {
-      require('fs').unlinkSync(RESOLVED_SECRET_FILE);
+      require("fs").unlinkSync(RESOLVED_SECRET_FILE);
     }
   } catch {
     // Ignore errors deleting old secret file
@@ -230,13 +230,13 @@ if (!validation.isValid) {
 ║  3. Delete ${RESOLVED_SECRET_FILE.padEnd(49)} ║
 ║     and restart (will auto-gen)                               ║
 ║                                                               ║
-║  Current secret source: ${(process.env.JWT_SECRET ? 'JWT_SECRET env var' : 'Auto-generated').padEnd(36)}║
+║  Current secret source: ${(process.env.JWT_SECRET ? "JWT_SECRET env var" : "Auto-generated").padEnd(36)}║
 ╚═══════════════════════════════════════════════════════════════╝
 `;
 
   logger.error({
-    operation: 'jwt_secret_validation_failed',
-    message: 'JWT_SECRET validation failed - server start blocked',
+    operation: "jwt_secret_validation_failed",
+    message: "JWT_SECRET validation failed - server start blocked",
     context: {
       reason: validation.message,
       errorMessage: errorMessage.trim(),
@@ -244,27 +244,27 @@ if (!validation.isValid) {
   });
   // Use console.error here as logger might not be fully initialized in this critical error case
   console.error(errorMessage);
-  console.error('⛔ SERVER START BLOCKED - This is a critical error');
+  console.error("⛔ SERVER START BLOCKED - This is a critical error");
   process.exit(1);
 } else {
   // Log success (in both production and development)
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     if (retryCount > 0) {
       logger.info({
-        operation: 'jwt_secret_validation_passed',
+        operation: "jwt_secret_validation_passed",
         message: `JWT_SECRET validation passed (regenerated ${retryCount} time(s))`,
       });
     } else {
       logger.info({
-        operation: 'jwt_secret_validation_passed',
-        message: 'JWT_SECRET validation passed',
+        operation: "jwt_secret_validation_passed",
+        message: "JWT_SECRET validation passed",
       });
     }
   } else {
     // In development, still log but don't spam console
     logger.info({
-      operation: 'jwt_secret_validation_passed',
-      message: 'JWT_SECRET validation passed',
+      operation: "jwt_secret_validation_passed",
+      message: "JWT_SECRET validation passed",
       context: { retryCount },
     });
   }

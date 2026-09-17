@@ -45,7 +45,7 @@ export interface StayRatingComponents {
  */
 export function deriveStayOverallRating(input: StayRatingComponents): number | null {
   const given = [input.room, input.breakfast, input.service].filter(
-    (v): v is number => v !== null && v !== undefined,
+    (v): v is number => v !== null && v !== undefined
   );
   if (given.length === 0) return input.current ?? null;
   const mean = given.reduce((sum, v) => sum + v, 0) / given.length;

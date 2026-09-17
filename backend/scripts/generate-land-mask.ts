@@ -33,8 +33,8 @@
  * a one-time ~10 MB download.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from "fs";
+import path from "path";
 
 import {
   MASK_BYTES,
@@ -44,39 +44,40 @@ import {
   cellIndex,
   getBit,
   setBit,
-} from '../src/shared/geo/landMaskGrid';
+} from "../src/shared/geo/landMaskGrid";
 
-const NE_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson';
+const NE_URL =
+  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson";
 
-const OUT_PATH = path.resolve(__dirname, '..', 'data', 'land-mask.bin');
-const CACHE_DIR = path.resolve(__dirname, '..', 'data', '.cache');
-const CACHE_PATH = path.join(CACHE_DIR, 'ne_10m_land.geojson');
+const OUT_PATH = path.resolve(__dirname, "..", "data", "land-mask.bin");
+const CACHE_DIR = path.resolve(__dirname, "..", "data", ".cache");
+const CACHE_PATH = path.join(CACHE_DIR, "ne_10m_land.geojson");
 
 type Ring = [number, number][]; // [lon, lat]
 
 interface PolygonGeom {
-  type: 'Polygon';
+  type: "Polygon";
   coordinates: Ring[];
 }
 interface MultiPolygonGeom {
-  type: 'MultiPolygon';
+  type: "MultiPolygon";
   coordinates: Ring[][];
 }
 type Geom = PolygonGeom | MultiPolygonGeom;
 
 interface Feature {
-  type: 'Feature';
+  type: "Feature";
   geometry: Geom;
 }
 interface FeatureCollection {
-  type: 'FeatureCollection';
+  type: "FeatureCollection";
   features: Feature[];
 }
 
 async function downloadGeoJSON(): Promise<FeatureCollection> {
   await fs.mkdir(CACHE_DIR, { recursive: true });
   try {
-    const cached = await fs.readFile(CACHE_PATH, 'utf8');
+    const cached = await fs.readFile(CACHE_PATH, "utf8");
     process.stdout.write(`[land-mask] Using cached GeoJSON at ${CACHE_PATH}\n`);
     return JSON.parse(cached) as FeatureCollection;
   } catch {
@@ -166,7 +167,7 @@ function rasterize(fc: FeatureCollection): Uint8Array {
   for (const feature of fc.features) {
     const geom = feature.geometry;
     if (!geom) continue;
-    if (geom.type === 'Polygon') {
+    if (geom.type === "Polygon") {
       const rings = geom.coordinates;
       if (rings.length === 0) continue;
       rasterizeRing(bytes, rings[0], 1);
@@ -175,7 +176,7 @@ function rasterize(fc: FeatureCollection): Uint8Array {
         rasterizeRing(bytes, rings[i], 0);
         holeCount++;
       }
-    } else if (geom.type === 'MultiPolygon') {
+    } else if (geom.type === "MultiPolygon") {
       for (const poly of geom.coordinates) {
         if (poly.length === 0) continue;
         rasterizeRing(bytes, poly[0], 1);
@@ -188,9 +189,7 @@ function rasterize(fc: FeatureCollection): Uint8Array {
     }
   }
 
-  process.stdout.write(
-    `[land-mask] Rasterized ${polygonCount} polygons (${holeCount} holes)\n`,
-  );
+  process.stdout.write(`[land-mask] Rasterized ${polygonCount} polygons (${holeCount} holes)\n`);
   return bytes;
 }
 
@@ -207,7 +206,7 @@ async function main(): Promise<void> {
   }
   const waterCells = MASK_COLS * MASK_ROWS - landCells;
   process.stdout.write(
-    `[land-mask] Grid stats: total=${MASK_COLS * MASK_ROWS}  land=${landCells}  water=${waterCells}\n`,
+    `[land-mask] Grid stats: total=${MASK_COLS * MASK_ROWS}  land=${landCells}  water=${waterCells}\n`
   );
 
   await fs.mkdir(path.dirname(OUT_PATH), { recursive: true });

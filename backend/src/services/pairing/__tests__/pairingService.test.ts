@@ -120,7 +120,10 @@ describe("pairingService", () => {
     it("reports not-found when the code is owned by another user", async () => {
       const { code } = await generatePairingCode(userId);
       const other = await prisma.user.create({
-        data: { username: `pairingsvc-other-${Date.now()}`, passwordHash: await hashPassword("password123") },
+        data: {
+          username: `pairingsvc-other-${Date.now()}`,
+          passwordHash: await hashPassword("password123"),
+        },
       });
       try {
         expect(await getPairingStatus(code, other.id)).toEqual({ found: false, claimed: false });

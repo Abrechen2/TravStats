@@ -1,16 +1,16 @@
-import { Router, Response, NextFunction } from 'express';
-import crypto from 'crypto';
-import { Prisma } from '@prisma/client';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
+import { Router, Response, NextFunction } from "express";
+import crypto from "crypto";
+import { Prisma } from "@prisma/client";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
 import {
   createLinkInvitationSchema,
   createEmailInvitationSchema,
   listInvitationsQuerySchema,
-} from '../../schemas/invitation';
-import { sendInvitationEmail } from '../../services/emailService';
-import { getInstanceSettings } from '../../services/instanceSettingsService';
-import { AppError } from '../../middleware/errorHandler';
+} from "../../schemas/invitation";
+import { sendInvitationEmail } from "../../services/emailService";
+import { getInstanceSettings } from "../../services/instanceSettingsService";
+import { AppError } from "../../middleware/errorHandler";
 
 const router = Router();
 
@@ -24,23 +24,23 @@ async function ensureUserLimitNotReached(tx: Prisma.TransactionClient): Promise<
     },
   });
   if (userCount + activeInviteCount >= maxUsers) {
-    throw new AppError('User limit reached', 409);
+    throw new AppError("User limit reached", 409);
   }
 }
 
 async function buildInviteUrl(token: string): Promise<string> {
   const { frontendUrl } = await getInstanceSettings();
-  const base = frontendUrl ?? 'http://localhost:3000';
+  const base = frontendUrl ?? "http://localhost:3000";
   return `${base}/register?token=${token}`;
 }
 
 /**
  * POST /admin/invitations — create link-only invitation
  */
-router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { expiresInDays } = createLinkInvitationSchema.parse(req.body);
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
     const invitation = await prisma.$transaction(
@@ -54,7 +54,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
           },
         });
       },
-      { isolationLevel: 'Serializable' },
+      { isolationLevel: "Serializable" }
     );
 
     res.json({
@@ -74,10 +74,10 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 /**
  * POST /admin/invitations/email — create invitation and send via SMTP
  */
-router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/email", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { email, expiresInDays } = createEmailInvitationSchema.parse(req.body);
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
     const invitation = await prisma.$transaction(
@@ -92,7 +92,7 @@ router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction
           },
         });
       },
-      { isolationLevel: 'Serializable' },
+      { isolationLevel: "Serializable" }
     );
 
     const inviteUrl = await buildInviteUrl(invitation.token);
@@ -104,17 +104,17 @@ router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction
     let emailSent = false;
     let emailError: string | null = null;
     try {
-      await sendInvitationEmail(email, inviteUrl, creator?.username ?? 'an admin', expiresAt);
+      await sendInvitationEmail(email, inviteUrl, creator?.username ?? "an admin", expiresAt);
       emailSent = true;
       await prisma.invitation.update({
         where: { id: invitation.id },
-        data: { emailStatus: 'sent', emailSentAt: new Date(), emailError: null },
+        data: { emailStatus: "sent", emailSentAt: new Date(), emailError: null },
       });
     } catch (err) {
-      emailError = err instanceof Error ? err.message : 'Unknown send error';
+      emailError = err instanceof Error ? err.message : "Unknown send error";
       await prisma.invitation.update({
         where: { id: invitation.id },
-        data: { emailStatus: 'failed', emailError },
+        data: { emailStatus: "failed", emailError },
       });
     }
 
@@ -137,21 +137,21 @@ router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction
 /**
  * POST /admin/invitations/:id/resend — resend invitation email
  */
-router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/:id/resend", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const invitation = await prisma.invitation.findUnique({ where: { id } });
     if (!invitation) {
-      throw new AppError('Invitation not found', 404);
+      throw new AppError("Invitation not found", 404);
     }
     if (!invitation.email) {
-      throw new AppError('Invitation has no email', 400);
+      throw new AppError("Invitation has no email", 400);
     }
     if (invitation.usedAt) {
-      throw new AppError('Invitation already used', 400);
+      throw new AppError("Invitation already used", 400);
     }
     if (invitation.expiresAt <= new Date()) {
-      throw new AppError('Invitation expired', 400);
+      throw new AppError("Invitation expired", 400);
     }
 
     const inviteUrl = await buildInviteUrl(invitation.token);
@@ -166,19 +166,19 @@ router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFun
       await sendInvitationEmail(
         invitation.email,
         inviteUrl,
-        creator?.username ?? 'an admin',
-        invitation.expiresAt,
+        creator?.username ?? "an admin",
+        invitation.expiresAt
       );
       emailSent = true;
       await prisma.invitation.update({
         where: { id: invitation.id },
-        data: { emailStatus: 'sent', emailSentAt: new Date(), emailError: null },
+        data: { emailStatus: "sent", emailSentAt: new Date(), emailError: null },
       });
     } catch (err) {
-      emailError = err instanceof Error ? err.message : 'Unknown send error';
+      emailError = err instanceof Error ? err.message : "Unknown send error";
       await prisma.invitation.update({
         where: { id: invitation.id },
-        data: { emailStatus: 'failed', emailError },
+        data: { emailStatus: "failed", emailError },
       });
     }
 
@@ -191,12 +191,12 @@ router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFun
 /**
  * DELETE /admin/invitations/:id — hard-delete an invitation
  */
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const result = await prisma.invitation.deleteMany({ where: { id } });
     if (result.count === 0) {
-      throw new AppError('Invitation not found', 404);
+      throw new AppError("Invitation not found", 404);
     }
     res.json({ success: true });
   } catch (error) {
@@ -207,23 +207,23 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
 /**
  * GET /admin/invitations — list invitations (with status filter)
  */
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { status } = listInvitationsQuerySchema.parse(req.query);
     const now = new Date();
 
     const where =
-      status === 'active'
+      status === "active"
         ? { usedAt: null, expiresAt: { gt: now } }
-        : status === 'used'
+        : status === "used"
           ? { NOT: { usedAt: null } }
-          : status === 'expired'
+          : status === "expired"
             ? { usedAt: null, expiresAt: { lte: now } }
             : {};
 
     const invitations = await prisma.invitation.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         email: true,

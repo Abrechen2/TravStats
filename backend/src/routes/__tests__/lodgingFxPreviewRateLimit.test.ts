@@ -53,25 +53,21 @@ describe("GET /api/v1/lodging/fx-preview — rate limiting", () => {
     await prisma.$disconnect();
   });
 
-  it(
-    "allows up to the configured ceiling, then returns 429 for the next request in the same window",
-    async () => {
-      for (let i = 0; i < LIMIT; i++) {
-        const res = await request(app)
-          .get("/api/v1/lodging/fx-preview")
-          .query({ amount: 100, from: "USD", date: "2026-01-01" })
-          .set("Cookie", authCookie);
-        expect(res.status).toBe(200);
-      }
-
-      const blocked = await request(app)
+  it("allows up to the configured ceiling, then returns 429 for the next request in the same window", async () => {
+    for (let i = 0; i < LIMIT; i++) {
+      const res = await request(app)
         .get("/api/v1/lodging/fx-preview")
         .query({ amount: 100, from: "USD", date: "2026-01-01" })
         .set("Cookie", authCookie);
-      expect(blocked.status).toBe(429);
-    },
-    30000
-  );
+      expect(res.status).toBe(200);
+    }
+
+    const blocked = await request(app)
+      .get("/api/v1/lodging/fx-preview")
+      .query({ amount: 100, from: "USD", date: "2026-01-01" })
+      .set("Cookie", authCookie);
+    expect(blocked.status).toBe(429);
+  }, 30000);
 
   it("does not rate-limit unrelated lodging CRUD routes for the same user", async () => {
     // The limiter above already exhausted this user's fx-preview quota. A

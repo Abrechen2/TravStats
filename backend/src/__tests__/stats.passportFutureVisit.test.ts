@@ -13,14 +13,14 @@
  * Through the real endpoint, because the bug is in what the loaders select and
  * pass on; `buildPassport` never sees the difference.
  */
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { generateToken } from "../utils/jwt";
 
-const USERNAME = 'passportfuturevisit';
-const COUNTRY = 'PT';
+const USERNAME = "passportfuturevisit";
+const COUNTRY = "PT";
 
 interface PassportCountry {
   code: string;
@@ -30,13 +30,13 @@ interface PassportCountry {
   hasUndatedEvidence: boolean;
 }
 
-describe('a visit still ahead does not date a country', () => {
+describe("a visit still ahead does not date a country", () => {
   let userId: string;
   let cookie: string;
   let placeId: string;
 
   const passportCountry = async (): Promise<PassportCountry | undefined> => {
-    const res = await request(app).get('/api/v1/stats/passport').set('Cookie', cookie);
+    const res = await request(app).get("/api/v1/stats/passport").set("Cookie", cookie);
     expect(res.status).toBe(200);
     return (res.body.countries as PassportCountry[]).find((c) => c.code === COUNTRY);
   };
@@ -44,7 +44,7 @@ describe('a visit still ahead does not date a country', () => {
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: USERNAME } });
     const user = await prisma.user.create({
-      data: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     userId = user.id;
     cookie = `auth_token=${generateToken(user.id)}`;
@@ -53,7 +53,7 @@ describe('a visit still ahead does not date a country', () => {
     const place = await prisma.place.create({
       data: {
         userId,
-        name: 'Torre de Belém',
+        name: "Torre de Belém",
         visited: true,
         isoCountryCode: COUNTRY,
         lat: 38.6916,
@@ -70,7 +70,7 @@ describe('a visit still ahead does not date a country', () => {
     await prisma.$disconnect();
   });
 
-  it('starts out proved but undated', async () => {
+  it("starts out proved but undated", async () => {
     const before = await passportCountry();
 
     expect(before).toBeDefined();
@@ -79,9 +79,9 @@ describe('a visit still ahead does not date a country', () => {
     expect(before!.hasUndatedEvidence).toBe(true);
   });
 
-  it('is unchanged by a visit booked for 2099', async () => {
+  it("is unchanged by a visit booked for 2099", async () => {
     await prisma.placeVisit.create({
-      data: { userId, placeId, visitedAt: new Date('2099-01-02T00:00:00Z') },
+      data: { userId, placeId, visitedAt: new Date("2099-01-02T00:00:00Z") },
     });
 
     const after = await passportCountry();
@@ -95,10 +95,10 @@ describe('a visit still ahead does not date a country', () => {
     expect(after!.hasUndatedEvidence).toBe(true);
   });
 
-  it('is dated by a visit that has actually happened', async () => {
+  it("is dated by a visit that has actually happened", async () => {
     // The control: without this the fix could simply be "ignore all visits".
     await prisma.placeVisit.create({
-      data: { userId, placeId, visitedAt: new Date('2019-05-04T00:00:00Z') },
+      data: { userId, placeId, visitedAt: new Date("2019-05-04T00:00:00Z") },
     });
 
     const after = await passportCountry();

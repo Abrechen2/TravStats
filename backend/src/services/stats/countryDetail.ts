@@ -151,10 +151,7 @@ export type {
   CountryTimelineEntry,
   CountryDetail,
 } from "../../schemas/statsCountryDetail";
-import type {
-  CountryTimelineEntry,
-  CountryDetail,
-} from "../../schemas/statsCountryDetail";
+import type { CountryTimelineEntry, CountryDetail } from "../../schemas/statsCountryDetail";
 
 const FLOWN = new Set(["flown", "historical"]);
 

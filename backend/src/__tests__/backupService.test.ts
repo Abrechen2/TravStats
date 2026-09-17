@@ -190,7 +190,7 @@ describe("backupService", () => {
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       // backupPath itself exists but its parent dir check returns false
       mockExistsSync
-        .mockReturnValueOnce(true)  // backup.backupPath exists
+        .mockReturnValueOnce(true) // backup.backupPath exists
         .mockReturnValueOnce(false); // backupDir does not exist
 
       await deleteBackup("backup-1");
@@ -216,9 +216,7 @@ describe("backupService", () => {
       const oldBackup2 = { ...MOCK_BACKUP, id: "old-2" };
       mockBackupFindMany.mockResolvedValue([oldBackup1, oldBackup2]);
       // deleteBackup calls findUnique for each; return the corresponding backup
-      mockBackupFindUnique
-        .mockResolvedValueOnce(oldBackup1)
-        .mockResolvedValueOnce(oldBackup2);
+      mockBackupFindUnique.mockResolvedValueOnce(oldBackup1).mockResolvedValueOnce(oldBackup2);
       mockExistsSync.mockReturnValue(false);
 
       const count = await cleanupOldBackups();
@@ -249,7 +247,7 @@ describe("backupService", () => {
             status: "completed",
             createdAt: expect.objectContaining({ lt: expect.any(Date) }),
           }),
-        }),
+        })
       );
     });
 
@@ -260,7 +258,7 @@ describe("backupService", () => {
 
       // First findUnique for failing backup returns null → deleteBackup throws
       mockBackupFindUnique
-        .mockResolvedValueOnce(null)           // failing-1: not found → throws
+        .mockResolvedValueOnce(null) // failing-1: not found → throws
         .mockResolvedValueOnce(successBackup); // success-2: found → deletes
       mockExistsSync.mockReturnValue(false);
 

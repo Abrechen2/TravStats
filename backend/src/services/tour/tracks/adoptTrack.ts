@@ -63,7 +63,7 @@ export type AdoptionBasis = "raw" | "simplified";
 /** The index of `track`'s point nearest `target`, and how far away it is. */
 function nearestPoint(
   track: ReadonlyArray<[number, number]>,
-  target: Coord,
+  target: Coord
 ): { index: number; km: number } {
   let bestIndex = 0;
   let bestKm = Infinity;
@@ -112,7 +112,7 @@ export function adoptSegment(
      *  malformed reads as one continuous recording, which is what every row
      *  written before the boundaries existed effectively is. */
     segmentStarts?: number[] | null;
-  },
+  }
 ): AdoptionResult | null {
   const maxAnchorKm = opts?.maxAnchorKm ?? ANCHOR_TOLERANCE_KM;
   if (track.length < 2) return null;
@@ -146,7 +146,9 @@ export function adoptSegment(
     waypoints,
     // Measured on the adopted segment, NOT the whole track — the track
     // may run for hours before and after this leg's two stops.
-    distanceKm: usable ? Math.max(0, cumulative[hi] - cumulative[lo]) : polylineDistanceKm(waypoints),
+    distanceKm: usable
+      ? Math.max(0, cumulative[hi] - cumulative[lo])
+      : polylineDistanceKm(waypoints),
     basis: usable ? "raw" : "simplified",
     spansRecordingGap: crossesSegmentBoundary(opts?.segmentStarts, lo, hi),
   };
@@ -156,7 +158,7 @@ export function adoptSegment(
 function crossesSegmentBoundary(
   segmentStarts: number[] | null | undefined,
   lo: number,
-  hi: number,
+  hi: number
 ): boolean {
   if (!Array.isArray(segmentStarts)) return false;
   return segmentStarts.some((start) => start > lo && start <= hi);

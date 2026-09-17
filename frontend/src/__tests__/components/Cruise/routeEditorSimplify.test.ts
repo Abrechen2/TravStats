@@ -21,10 +21,7 @@ describe("simplifyForEditing", () => {
 
   it("reduces a dense line to at most the handle budget", () => {
     // 178 points along a gentle arc — the measured Nassau→Vancouver case.
-    const input: LonLat[] = Array.from({ length: 178 }, (_, i) => [
-      i * 0.5,
-      Math.sin(i / 10) * 5,
-    ]);
+    const input: LonLat[] = Array.from({ length: 178 }, (_, i) => [i * 0.5, Math.sin(i / 10) * 5]);
     const out = simplifyForEditing(input);
     expect(out.length).toBeLessThanOrEqual(25);
     expect(out.length).toBeGreaterThan(2);

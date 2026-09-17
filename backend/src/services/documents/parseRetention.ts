@@ -45,11 +45,14 @@ export const multipartRetain = z
 export async function readDocumentForParse(
   userId: string,
   documentId: string,
-  accepted: readonly DocumentFormat[],
+  accepted: readonly DocumentFormat[]
 ): Promise<{ document: Document; buffer: Buffer }> {
   const document = await getOwnDocument(userId, documentId);
   if (!accepted.includes(document.format as DocumentFormat)) {
-    throw new AppError(`This route reads ${accepted.join(" or ")}; the document is ${document.format}.`, 415);
+    throw new AppError(
+      `This route reads ${accepted.join(" or ")}; the document is ${document.format}.`,
+      415
+    );
   }
   try {
     return { document, buffer: await fsp.readFile(documentPath(document.storedName)) };

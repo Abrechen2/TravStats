@@ -1,5 +1,5 @@
-import { prisma } from '../db';
-import { checkAndUpdateAchievements } from '../utils/achievements';
+import { prisma } from "../db";
+import { checkAndUpdateAchievements } from "../utils/achievements";
 
 /**
  * Regression: scheduled flights must not contribute to "general" achievements
@@ -215,21 +215,18 @@ describe("Achievements — scheduled-flight leak regression", () => {
 
     // Build a friendly diagnostic message for any leak that slips through.
     const leaked = newlyUnlocked.filter(
-      (ua) =>
-        !ALLOWED_SCHEDULED_REQUIREMENT_TYPES.has(
-          ua.achievement.requirementType,
-        ),
+      (ua) => !ALLOWED_SCHEDULED_REQUIREMENT_TYPES.has(ua.achievement.requirementType)
     );
 
     if (leaked.length > 0) {
       const summary = leaked
         .map(
           (ua) =>
-            `${ua.achievement.code} (${ua.achievement.requirementType}, req=${ua.achievement.requirement})`,
+            `${ua.achievement.code} (${ua.achievement.requirementType}, req=${ua.achievement.requirement})`
         )
         .join(", ");
       throw new Error(
-        `Scheduled-flight leak detected — these non-scheduled achievements unlocked: ${summary}`,
+        `Scheduled-flight leak detected — these non-scheduled achievements unlocked: ${summary}`
       );
     }
 
@@ -240,9 +237,7 @@ describe("Achievements — scheduled-flight leak regression", () => {
     // varies across environments — but if anything DID unlock it must be one
     // of the allowed scheduled requirementTypes.
     for (const ua of newlyUnlocked) {
-      expect(ALLOWED_SCHEDULED_REQUIREMENT_TYPES.has(
-        ua.achievement.requirementType,
-      )).toBe(true);
+      expect(ALLOWED_SCHEDULED_REQUIREMENT_TYPES.has(ua.achievement.requirementType)).toBe(true);
     }
   });
 });

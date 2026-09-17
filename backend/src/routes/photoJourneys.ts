@@ -48,9 +48,7 @@ const patchBodySchema = z.object({
 });
 
 /** The user's home airport, for the "this is not daily life" floor. */
-async function homePosition(
-  userId: string,
-): Promise<{ lat: number; lon: number } | null> {
+async function homePosition(userId: string): Promise<{ lat: number; lon: number } | null> {
   // The most-departed airport is the honest stand-in for "home": it needs
   // no setting, no prompt, and it is already how the rest of the app
   // decides what counts as a home base.
@@ -68,24 +66,21 @@ async function homePosition(
   return { lat: top.depLat, lon: top.depLon };
 }
 
-router.get(
-  "/",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parsed = listQuerySchema.safeParse(req.query);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-      const journeys = await prisma.photoJourney.findMany({
-        where: { userId: req.userId!, status: parsed.data.status },
-        orderBy: { startDate: "desc" },
-      });
+    const journeys = await prisma.photoJourney.findMany({
+      where: { userId: req.userId!, status: parsed.data.status },
+      orderBy: { startDate: "desc" },
+    });
 
-      res.json({ success: true, data: journeys });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+    res.json({ success: true, data: journeys });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * The scan is the expensive one and the only route here that is limited.
@@ -119,8 +114,8 @@ router.post(
             Date.UTC(
               until.getUTCFullYear() - DEFAULT_LOOKBACK_YEARS,
               until.getUTCMonth(),
-              until.getUTCDate(),
-            ),
+              until.getUTCDate()
+            )
           );
       if (since >= until) {
         throw new AppError("since must be before until", 400);
@@ -147,36 +142,33 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
-router.patch(
-  "/:id",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parsed = patchBodySchema.safeParse(req.body);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = patchBodySchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-      // Scoped by userId in the WHERE, not checked after loading: a
-      // journey belonging to someone else must be a 404, never a row we
-      // fetched and then decided not to show.
-      const { count } = await prisma.photoJourney.updateMany({
-        where: { id: req.params.id, userId: req.userId! },
-        data: {
-          status: parsed.data.status,
-          createdTripId: parsed.data.createdTripId ?? null,
-          resolvedAt: new Date(),
-        },
-      });
-      if (count === 0) {
-        throw new AppError("Photo journey not found", 404);
-      }
-
-      res.json({ success: true });
-    } catch (err) {
-      next(err);
+    // Scoped by userId in the WHERE, not checked after loading: a
+    // journey belonging to someone else must be a 404, never a row we
+    // fetched and then decided not to show.
+    const { count } = await prisma.photoJourney.updateMany({
+      where: { id: req.params.id, userId: req.userId! },
+      data: {
+        status: parsed.data.status,
+        createdTripId: parsed.data.createdTripId ?? null,
+        resolvedAt: new Date(),
+      },
+    });
+    if (count === 0) {
+      throw new AppError("Photo journey not found", 404);
     }
-  },
-);
+
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

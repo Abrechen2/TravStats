@@ -119,10 +119,7 @@ class TemplateRegistry {
         if (isValidAirlineTemplate(template)) {
           this.templates.set(template.iata, template);
           this.templateSources.set(template.iata, "cached");
-          fs.writeFileSync(
-            path.join(CACHE_DIR, `${template.iata}.json`),
-            JSON.stringify(template),
-          );
+          fs.writeFileSync(path.join(CACHE_DIR, `${template.iata}.json`), JSON.stringify(template));
         }
       }
       logger.info({ count: index.airlines.length }, "Templates synced from GitHub");

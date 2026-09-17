@@ -48,18 +48,14 @@ const ALBUM: LinkedAlbum = {
 
 describe("TripGallery — uploaded-photos section visibility (#179)", () => {
   it("shows the empty-state box when there are no uploads and no linked Immich albums", () => {
-    render(
-      <TripGallery tripId="trip-1" photos={[]} immichAlbums={[]} onChange={vi.fn()} />
-    );
+    render(<TripGallery tripId="trip-1" photos={[]} immichAlbums={[]} onChange={vi.fn()} />);
 
     expect(screen.getByText("trips:gallery.empty")).toBeInTheDocument();
     expect(screen.getByText("immich:gallery.uploaded")).toBeInTheDocument();
   });
 
   it("hides the uploaded-photos section entirely when there are no uploads but at least one linked album", () => {
-    render(
-      <TripGallery tripId="trip-1" photos={[]} immichAlbums={[ALBUM]} onChange={vi.fn()} />
-    );
+    render(<TripGallery tripId="trip-1" photos={[]} immichAlbums={[ALBUM]} onChange={vi.fn()} />);
 
     expect(screen.queryByText("trips:gallery.empty")).not.toBeInTheDocument();
     expect(screen.queryByText("immich:gallery.uploaded")).not.toBeInTheDocument();
@@ -67,9 +63,7 @@ describe("TripGallery — uploaded-photos section visibility (#179)", () => {
   });
 
   it("shows the photo grid (not the empty box) when uploads exist and there are no linked albums", () => {
-    render(
-      <TripGallery tripId="trip-1" photos={[PHOTO]} immichAlbums={[]} onChange={vi.fn()} />
-    );
+    render(<TripGallery tripId="trip-1" photos={[PHOTO]} immichAlbums={[]} onChange={vi.fn()} />);
 
     expect(screen.getByText("immich:gallery.uploaded")).toBeInTheDocument();
     expect(screen.queryByText("trips:gallery.empty")).not.toBeInTheDocument();

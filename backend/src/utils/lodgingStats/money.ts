@@ -8,7 +8,12 @@
  * so those land in `unpricedStays` instead.
  */
 import type { StayTiming } from "../../shared/lodgingTiming";
-import type { LodgingPriceGroup, LodgingPricedNight, LodgingPriceStats, LodgingStayData } from "./types";
+import type {
+  LodgingPriceGroup,
+  LodgingPricedNight,
+  LodgingPriceStats,
+  LodgingStayData,
+} from "./types";
 
 export interface StayWithNights {
   stay: LodgingStayData;
@@ -28,10 +33,7 @@ function round2(n: number): number {
  * A same-day stay has a total but no per-night rate — dividing by zero nights
  * is how an average becomes Infinity.
  */
-function perNightPrice(
-  entry: StayWithNights,
-  currentBaseCurrency: string,
-): number | null {
+function perNightPrice(entry: StayWithNights, currentBaseCurrency: string): number | null {
   const { stay, nights } = entry;
   if (nights <= 0) return null;
   if (stay.totalPriceBase === null) return null;
@@ -44,7 +46,12 @@ interface Accumulator {
   totalBase: number;
 }
 
-function addTo(map: Map<string, Accumulator>, key: string, nights: number, totalBase: number): void {
+function addTo(
+  map: Map<string, Accumulator>,
+  key: string,
+  nights: number,
+  totalBase: number
+): void {
   const cur = map.get(key);
   if (cur) {
     cur.nights += nights;
@@ -87,7 +94,7 @@ function toPricedNight(entry: StayWithNights, pricePerNight: number): LodgingPri
 export function computePriceStats(
   entries: StayWithNights[],
   currentBaseCurrency: string,
-  awardNights: number,
+  awardNights: number
 ): LodgingPriceStats {
   const byYear = new Map<string, Accumulator>();
   const byCountry = new Map<string, Accumulator>();
@@ -174,9 +181,7 @@ export function computePriceStats(
     byType: toGroups(byType, "nights"),
     byBoard: toGroups(byBoard, "nights"),
     awardNightsValue:
-      avgPaidPerNight !== null && awardNights > 0
-        ? round2(avgPaidPerNight * awardNights)
-        : null,
+      avgPaidPerNight !== null && awardNights > 0 ? round2(avgPaidPerNight * awardNights) : null,
   };
 }
 
@@ -185,7 +190,5 @@ function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return round2(
-    sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid],
-  );
+  return round2(sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]);
 }

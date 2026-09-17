@@ -186,7 +186,10 @@ function sanitizeOriginalName(name: string | undefined): string | null {
   return base ? base.slice(0, 200) : null;
 }
 
-export type FormatCheckInput = Pick<CreateDocumentInput, "buffer" | "originalName" | "declaredMime" | "forceFormat" | "declaredFormat">;
+export type FormatCheckInput = Pick<
+  CreateDocumentInput,
+  "buffer" | "originalName" | "declaredMime" | "forceFormat" | "declaredFormat"
+>;
 
 /**
  * What the bytes are, or the 415/413 a client can act on. Exported so a parse
@@ -196,26 +199,34 @@ export type FormatCheckInput = Pick<CreateDocumentInput, "buffer" | "originalNam
 export function checkDocumentFormat(input: FormatCheckInput): DetectedFormat {
   const hintMime = input.declaredFormat ? FORMAT_HINT_MIME[input.declaredFormat] : undefined;
   const detected =
-    input.forceFormat ?? detectDocumentFormat(input.buffer, input.originalName, hintMime ?? input.declaredMime);
+    input.forceFormat ??
+    detectDocumentFormat(input.buffer, input.originalName, hintMime ?? input.declaredMime);
   if (detected && input.declaredFormat && detected.format !== input.declaredFormat) {
-    throw new AppError(`Document declared as ${input.declaredFormat} but its content is ${detected.format}.`, 415);
+    throw new AppError(
+      `Document declared as ${input.declaredFormat} but its content is ${detected.format}.`,
+      415
+    );
   }
   if (!detected) {
     throw new AppError(
       "Unsupported document. Accepted: JPEG, PNG, WebP or HEIC images, PDF, .eml mail files, plain text, Wallet passes (.pkpass).",
-      415,
+      415
     );
   }
   const limit = exceededLimit(detected.format, input.buffer.length);
   if (limit !== null) {
-    throw new AppError(`Document too large: ${detected.format} may be at most ${limit / (1024 * 1024)} MB.`, 413);
+    throw new AppError(
+      `Document too large: ${detected.format} may be at most ${limit / (1024 * 1024)} MB.`,
+      413
+    );
   }
   return detected;
 }
 
 export async function createDocument(input: CreateDocumentInput): Promise<CreateDocumentResult> {
   const detected = checkDocumentFormat(input);
-  if (input.kind && !DOCUMENT_KINDS.includes(input.kind)) throw new AppError("Unknown document kind", 400);
+  if (input.kind && !DOCUMENT_KINDS.includes(input.kind))
+    throw new AppError("Unknown document kind", 400);
 
   const entry = input.entry ?? null;
   if (entry) await assertEntryOwned(input.userId, entry);
@@ -231,9 +242,14 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   // A retried offline send may arrive with a target after the first attempt
   // went up unfiled: file that one rather than keeping two copies.
   if (entry) {
-    const unfiled = await prisma.document.findFirst({ where: { userId: input.userId, sha256, ...NO_OWNER } });
+    const unfiled = await prisma.document.findFirst({
+      where: { userId: input.userId, sha256, ...NO_OWNER },
+    });
     if (unfiled) {
-      const document = await prisma.document.update({ where: { id: unfiled.id }, data: ownerData(entry) });
+      const document = await prisma.document.update({
+        where: { id: unfiled.id },
+        data: ownerData(entry),
+      });
       return { document, created: false };
     }
   }
@@ -259,8 +275,13 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
       },
     });
     logger.info(
-      { operation: "document_created", documentId: document.id, format: document.format, sizeBytes: document.sizeBytes },
-      "Document kept",
+      {
+        operation: "document_created",
+        documentId: document.id,
+        format: document.format,
+        sizeBytes: document.sizeBytes,
+      },
+      "Document kept"
     );
     return { document, created: true };
   } catch (error) {
@@ -274,7 +295,11 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
  * or already filed there. Run BEFORE an entry is created, so a bad id fails the
  * create instead of leaving an entry whose documents never attached.
  */
-export async function assertLinkable(userId: string, ids: readonly string[], entry?: EntryRef): Promise<void> {
+export async function assertLinkable(
+  userId: string,
+  ids: readonly string[],
+  entry?: EntryRef
+): Promise<void> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return;
   const documents = await prisma.document.findMany({ where: { id: { in: unique }, userId } });
@@ -296,14 +321,19 @@ export async function assertLinkable(userId: string, ids: readonly string[], ent
  */
 export async function takeDocumentIds(userId: string, body: unknown): Promise<string[]> {
   const parsed = documentIdsBodySchema.safeParse(body ?? {});
-  if (!parsed.success) throw new AppError("documentIds must be a list of at most 20 document ids", 400);
+  if (!parsed.success)
+    throw new AppError("documentIds must be a list of at most 20 document ids", 400);
   const ids = parsed.data.documentIds ?? [];
   await assertLinkable(userId, ids);
   return ids;
 }
 
 /** Files documents with an entry. Idempotent: already filed there is fine. */
-export async function linkDocuments(userId: string, ids: readonly string[], entry: EntryRef): Promise<Document[]> {
+export async function linkDocuments(
+  userId: string,
+  ids: readonly string[],
+  entry: EntryRef
+): Promise<Document[]> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return [];
   await assertEntryOwned(userId, entry);
@@ -312,7 +342,10 @@ export async function linkDocuments(userId: string, ids: readonly string[], entr
     where: { id: { in: unique }, userId, ...NO_OWNER },
     data: ownerData(entry),
   });
-  return prisma.document.findMany({ where: { id: { in: unique }, userId }, orderBy: { createdAt: "asc" } });
+  return prisma.document.findMany({
+    where: { id: { in: unique }, userId },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
 /** Takes a document off its entry; it becomes unfiled and expires unless filed again. */
@@ -334,9 +367,14 @@ export interface UpdateDocumentInput {
  * them (format, sha256, size) are not editable — a different file is a
  * different document.
  */
-export async function updateDocument(userId: string, id: string, input: UpdateDocumentInput): Promise<Document> {
+export async function updateDocument(
+  userId: string,
+  id: string,
+  input: UpdateDocumentInput
+): Promise<Document> {
   const document = await getOwnDocument(userId, id);
-  if (input.kind && !DOCUMENT_KINDS.includes(input.kind)) throw new AppError("Unknown document kind", 400);
+  if (input.kind && !DOCUMENT_KINDS.includes(input.kind))
+    throw new AppError("Unknown document kind", 400);
 
   let owner: Partial<OwnerColumns> = {};
   if (input.entry === null) {
@@ -381,7 +419,10 @@ export async function deleteDocument(userId: string, id: string): Promise<void> 
   const document = await getOwnDocument(userId, id);
   await prisma.document.delete({ where: { id: document.id } });
   await removeDocumentFile(document.storedName);
-  logger.info({ operation: "document_deleted", documentId: document.id, format: document.format }, "Document deleted");
+  logger.info(
+    { operation: "document_deleted", documentId: document.id, format: document.format },
+    "Document deleted"
+  );
 }
 
 /**
@@ -411,7 +452,8 @@ export interface SweepResult {
  */
 export async function sweepDocuments(
   now = new Date(),
-  fileAgeMs: (name: string) => Promise<number | null> = (name) => documentFileAgeMs(name, now.getTime()),
+  fileAgeMs: (name: string) => Promise<number | null> = (name) =>
+    documentFileAgeMs(name, now.getTime())
 ): Promise<SweepResult> {
   const cutoff = new Date(now.getTime() - UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
   const expired = await prisma.document.findMany({
@@ -425,9 +467,12 @@ export async function sweepDocuments(
 
   const onDisk = await listStoredNames();
   const known = new Set(
-    (await prisma.document.findMany({ where: { storedName: { in: onDisk } }, select: { storedName: true } })).map(
-      (d) => d.storedName,
-    ),
+    (
+      await prisma.document.findMany({
+        where: { storedName: { in: onDisk } },
+        select: { storedName: true },
+      })
+    ).map((d) => d.storedName)
   );
   let orphanFiles = 0;
   for (const name of onDisk) {
@@ -442,7 +487,7 @@ export async function sweepDocuments(
   if (expired.length > 0 || orphanFiles > 0) {
     logger.info(
       { operation: "document_sweep", expiredUnfiled: expired.length, orphanFiles },
-      "Document sweep removed unfiled uploads and orphan files",
+      "Document sweep removed unfiled uploads and orphan files"
     );
   }
   return { expiredUnfiled: expired.length, orphanFiles };

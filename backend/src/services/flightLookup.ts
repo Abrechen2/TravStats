@@ -12,21 +12,21 @@
  * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
-import { createHash } from 'crypto';
-import axios from 'axios';
-import NodeCache from 'node-cache';
-import { findOrCreateAirport } from './airportLookup';
-import { getApiKey, getOpenSkyCredentials, OpenSkyCredentials } from './apiKeyResolver';
-import { lookupFlightAerodatabox } from './aerodataboxLookup';
+import { createHash } from "crypto";
+import axios from "axios";
+import NodeCache from "node-cache";
+import { findOrCreateAirport } from "./airportLookup";
+import { getApiKey, getOpenSkyCredentials, OpenSkyCredentials } from "./apiKeyResolver";
+import { lookupFlightAerodatabox } from "./aerodataboxLookup";
 import {
   convertAviationstackTimeToUtc,
   convertAirlabsTimeToUtc,
   getAirportTimezone,
   toLocalDateString,
-} from '../utils/timezone';
-import { dayDiff, getAirlineName, markUtc, parseFlightNumber } from './flightLookup/fieldReaders';
-import { toProviderFlightNumber } from '../schemas/flight';
-import logger from '../utils/logger';
+} from "../utils/timezone";
+import { dayDiff, getAirlineName, markUtc, parseFlightNumber } from "./flightLookup/fieldReaders";
+import { toProviderFlightNumber } from "../schemas/flight";
+import logger from "../utils/logger";
 import {
   isInLiveWindow,
   currentUtcDay,
@@ -38,7 +38,7 @@ import {
   aviationstackCooldownUntil,
   isAviationstackDateFilterRestricted,
   markAviationstackDateFilterRestricted,
-} from './flightLookup/aviationstackBudget';
+} from "./flightLookup/aviationstackBudget";
 
 // The budget state moved to its own module; its public surface stays
 // reachable here because every caller and test imports it from this path.
@@ -47,7 +47,7 @@ export {
   getAviationstackCallCountToday,
   __resetAviationstackBudgetForTests,
   __setAviationstackDateFilterRestrictedForTests,
-} from './flightLookup/aviationstackBudget';
+} from "./flightLookup/aviationstackBudget";
 
 /** AirLabs API response flight record */
 interface AirLabsFlightRecord {
@@ -135,7 +135,11 @@ interface AirportInfo {
 const CACHE_TTL_SECONDS = 6 * 60 * 60; // 6 hours for historical flights
 const RECENT_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes for recent/future flights
 const MAX_CACHE_KEYS = 500;
-const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACHE_KEYS, checkperiod: 600 });
+const flightCache = new NodeCache({
+  stdTTL: CACHE_TTL_SECONDS,
+  maxKeys: MAX_CACHE_KEYS,
+  checkperiod: 600,
+});
 
 /**
  * OpenSky OAuth tokens, keyed by the credential that minted them.
@@ -154,7 +158,9 @@ const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACH
 const openSkyTokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 function openSkyTokenKey(clientId: string, clientSecret: string): string {
-  return createHash("sha256").update(`${clientId.length}:${clientId}:${clientSecret}`).digest("hex");
+  return createHash("sha256")
+    .update(`${clientId.length}:${clientId}:${clientSecret}`)
+    .digest("hex");
 }
 
 export interface FlightData {
@@ -208,43 +214,52 @@ export async function lookupFlightByNumber(
   date?: Date,
   userId?: string
 ): Promise<FlightData[]> {
-  const apiKey = await getApiKey('airlabs', userId);
+  const apiKey = await getApiKey("airlabs", userId);
 
   if (!apiKey) {
-    logger.warn({ operation: 'flight_lookup', message: 'AIRLABS_API_KEY not configured - flight lookup disabled' });
+    logger.warn({
+      operation: "flight_lookup",
+      message: "AIRLABS_API_KEY not configured - flight lookup disabled",
+    });
     return [];
   }
 
   // Generate cache key
-  const dateStr = date ? date.toISOString().split('T')[0] : 'nodate';
+  const dateStr = date ? date.toISOString().split("T")[0] : "nodate";
   const cacheKey = `${flightNumber.toUpperCase()}_${dateStr}`;
 
   // Check cache
   const cached = flightCache.get<FlightData[]>(cacheKey);
   if (cached !== undefined) {
-    logger.info({ flightNumber, date: dateStr, operation: 'airlabs_cache_hit' },
-      `AirLabs cache hit for ${flightNumber} on ${dateStr}`);
+    logger.info(
+      { flightNumber, date: dateStr, operation: "airlabs_cache_hit" },
+      `AirLabs cache hit for ${flightNumber} on ${dateStr}`
+    );
     return cached;
   }
 
   try {
-    logger.info({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_call_start' },
-      `Calling AirLabs API for ${flightNumber} on ${dateStr}`);
+    logger.info(
+      { flightNumber, date: dateStr, api: "airlabs", operation: "api_call_start" },
+      `Calling AirLabs API for ${flightNumber} on ${dateStr}`
+    );
     // AirLabs API endpoint for flight schedules. The query uses the UNPADDED
     // IATA form — "EK051" returns zero records where "EK51" returns the
     // flight (see toProviderFlightNumber).
-    const response = await axios.get('https://airlabs.co/api/v9/schedules', {
+    const response = await axios.get("https://airlabs.co/api/v9/schedules", {
       params: {
         api_key: apiKey,
         flight_iata: toProviderFlightNumber(flightNumber) ?? flightNumber,
-        ...(date && { dep_date: date.toISOString().split('T')[0] }),
+        ...(date && { dep_date: date.toISOString().split("T")[0] }),
       },
       timeout: 5000,
     });
 
     if (!response.data || !response.data.response) {
-      logger.info({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_empty_response' },
-        `AirLabs returned no data for ${flightNumber} on ${dateStr}`);
+      logger.info(
+        { flightNumber, date: dateStr, api: "airlabs", operation: "api_empty_response" },
+        `AirLabs returned no data for ${flightNumber} on ${dateStr}`
+      );
       const isHistorical = date && date < new Date();
       flightCache.set(cacheKey, [], isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
       return [];
@@ -256,7 +271,11 @@ export async function lookupFlightByNumber(
       // change, which auto-apply would write — silently renaming the user's
       // flight to the provider's padding convention.
       flightNumber,
-      airline: flight.airline_name || getAirlineName(flight.airline_iata || '') || flight.airline_icao || 'Unknown',
+      airline:
+        flight.airline_name ||
+        getAirlineName(flight.airline_iata || "") ||
+        flight.airline_icao ||
+        "Unknown",
       airlineIata: flight.airline_iata,
       airlineIcao: flight.airline_icao,
       departure: {
@@ -283,12 +302,19 @@ export async function lookupFlightByNumber(
       distance: flight.distance,
     }));
 
-    logger.info({ flightNumber, date: dateStr, api: 'airlabs', resultCount: flights.length,
-      hasGate: flights.some(f => f.departure?.gate || f.arrival?.gate),
-      hasTerminal: flights.some(f => f.departure?.terminal || f.arrival?.terminal),
-      hasAircraft: flights.some(f => f.aircraft),
-      operation: 'api_call_success' },
-      `AirLabs returned ${flights.length} result(s) for ${flightNumber} on ${dateStr}`);
+    logger.info(
+      {
+        flightNumber,
+        date: dateStr,
+        api: "airlabs",
+        resultCount: flights.length,
+        hasGate: flights.some((f) => f.departure?.gate || f.arrival?.gate),
+        hasTerminal: flights.some((f) => f.departure?.terminal || f.arrival?.terminal),
+        hasAircraft: flights.some((f) => f.aircraft),
+        operation: "api_call_success",
+      },
+      `AirLabs returned ${flights.length} result(s) for ${flightNumber} on ${dateStr}`
+    );
 
     // Cache the results with appropriate TTL
     const isHistorical = date && date < new Date();
@@ -297,14 +323,16 @@ export async function lookupFlightByNumber(
     return flights;
   } catch (_error: unknown) {
     const errMsg = _error instanceof Error ? _error.message : String(_error);
-    logger.warn({ flightNumber, date: dateStr, api: 'airlabs', error: errMsg, operation: 'api_call_error' },
-      `AirLabs lookup failed for ${flightNumber}: ${errMsg}`);
+    logger.warn(
+      { flightNumber, date: dateStr, api: "airlabs", error: errMsg, operation: "api_call_error" },
+      `AirLabs lookup failed for ${flightNumber}: ${errMsg}`
+    );
     return [];
   }
 }
 
 /** Provider that actually served a lookup result. */
-export type FlightLookupSource = 'aviationstack' | 'aerodatabox' | 'airlabs' | 'opensky';
+export type FlightLookupSource = "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
 
 /**
  * Aviationstack + enrichment (preferred when key is set), AirLabs fallback.
@@ -369,7 +397,7 @@ export interface FlightLookupResult {
  * Resolve OpenSky auth headers (prefers OAuth2 client credentials, falls back to basic)
  */
 async function getOpenSkyAuthHeaders(
-  opts: OpenSkyCredentials,
+  opts: OpenSkyCredentials
 ): Promise<Record<string, string> | null> {
   // OAuth2 client credentials
   if (opts.clientId && opts.clientSecret) {
@@ -382,16 +410,16 @@ async function getOpenSkyAuthHeaders(
 
     try {
       const params = new URLSearchParams({
-        grant_type: 'client_credentials',
+        grant_type: "client_credentials",
         client_id: opts.clientId,
         client_secret: opts.clientSecret,
       });
 
       const response = await axios.post(
-        'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
+        "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token",
         params.toString(),
         {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
           timeout: 5000,
         }
       );
@@ -404,7 +432,11 @@ async function getOpenSkyAuthHeaders(
         return { Authorization: `Bearer ${token}` };
       }
     } catch (err) {
-      logger.warn({ operation: 'opensky_token_fetch', message: 'OpenSky OAuth token fetch failed', error: err instanceof Error ? err.message : String(err) });
+      logger.warn({
+        operation: "opensky_token_fetch",
+        message: "OpenSky OAuth token fetch failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
       // fallback to basic if provided
     }
   }
@@ -417,7 +449,7 @@ async function getOpenSkyAuthHeaders(
   // an all-optional inline literal let the mismatch compile.
   if (opts.username && opts.password) {
     const pair = `${opts.username}:${opts.password}`;
-    const b64 = Buffer.from(pair).toString('base64');
+    const b64 = Buffer.from(pair).toString("base64");
     return { Authorization: `Basic ${b64}` };
   }
 
@@ -432,7 +464,7 @@ export async function lookupFlightDetails(
   arrivalTime?: Date | string | null,
   /** Our flight's departure airport, where the caller knows it — see the
    *  AeroDataBox adapter for why a flight number alone is not unique. */
-  depAirportCode?: string,
+  depAirportCode?: string
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
@@ -447,10 +479,8 @@ export async function lookupFlightDetails(
   //   (4) we haven't yet used today's configured budget
   // If the caller didn't pass a departureTime (manual ad-hoc lookup via UI),
   // treat as "live" so on-demand user actions still reach Aviationstack.
-  const aviationstackKey = await getApiKey('aviationstack', userId);
-  const inLiveWindow = departureTime
-    ? isInLiveWindow(departureTime, arrivalTime)
-    : true;
+  const aviationstackKey = await getApiKey("aviationstack", userId);
+  const inLiveWindow = departureTime ? isInLiveWindow(departureTime, arrivalTime) : true;
   const budgetOk = aviationstackKey ? await hasAviationstackBudget() : false;
   // Once the plan is known to reject the `flight_date` filter, a lookup for
   // another day can't be served — skip up-front instead of burning a budget
@@ -480,9 +510,7 @@ export async function lookupFlightDetails(
   // and a user typing a date from last May is asking a historical question
   // that the free plan genuinely cannot answer. The exception here needs a
   // MEASURED position in the air, so it asks for a departure time and gets one.
-  const flyingRightNow = departureTime
-    ? isInLiveWindow(departureTime, arrivalTime)
-    : false;
+  const flyingRightNow = departureTime ? isInLiveWindow(departureTime, arrivalTime) : false;
   const requestedDateIsToday = !date || date === currentUtcDay();
   const dateFilterBlocked =
     isAviationstackDateFilterRestricted() && !requestedDateIsToday && !flyingRightNow;
@@ -495,20 +523,25 @@ export async function lookupFlightDetails(
 
   let skipReason: string | undefined;
   if (aviationstackKey && !aviationstackAvailable) {
-    if (isAviationstackCooledDown()) skipReason = 'cooldown';
-    else if (!inLiveWindow) skipReason = 'outside_live_window';
-    else if (!budgetOk) skipReason = 'daily_budget_exceeded';
-    else if (dateFilterBlocked) skipReason = 'date_filter_restricted';
+    if (isAviationstackCooledDown()) skipReason = "cooldown";
+    else if (!inLiveWindow) skipReason = "outside_live_window";
+    else if (!budgetOk) skipReason = "daily_budget_exceeded";
+    else if (dateFilterBlocked) skipReason = "date_filter_restricted";
   }
 
-  logger.info({ flightNumber: trimmedNumber, date,
-    hasAviationstack: !!aviationstackKey,
-    aviationstackAvailable,
-    aviationstackSkipReason: skipReason,
-    aviationstackCallsToday: getAviationstackCallCountToday(),
-    hasOpenSky: !!openSkyCredentials,
-    operation: 'lookup_start' },
-    `Looking up ${trimmedNumber} (date=${date ?? 'none'}, apis: ${aviationstackAvailable ? 'aviationstack' : ''}${openSkyCredentials ? '+opensky' : ''} +airlabs)`);
+  logger.info(
+    {
+      flightNumber: trimmedNumber,
+      date,
+      hasAviationstack: !!aviationstackKey,
+      aviationstackAvailable,
+      aviationstackSkipReason: skipReason,
+      aviationstackCallsToday: getAviationstackCallCountToday(),
+      hasOpenSky: !!openSkyCredentials,
+      operation: "lookup_start",
+    },
+    `Looking up ${trimmedNumber} (date=${date ?? "none"}, apis: ${aviationstackAvailable ? "aviationstack" : ""}${openSkyCredentials ? "+opensky" : ""} +airlabs)`
+  );
   if (aviationstackAvailable) {
     // Up to two attempts: the second fires only when the first reveals a
     // Free-tier date-filter restriction on a same-day lookup — the retry
@@ -522,7 +555,7 @@ export async function lookupFlightDetails(
       // Use HTTPS + params to avoid signature/order issues
       const params: Record<string, string> = {
         access_key: aviationstackKey,
-        limit: '1',
+        limit: "1",
       };
       // Unpadded IATA form for the same reason as AirLabs (see
       // toProviderFlightNumber) — providers do not carry leading zeros.
@@ -537,7 +570,7 @@ export async function lookupFlightDetails(
       }
 
       try {
-        const response = await axios.get('https://api.aviationstack.com/v1/flights', {
+        const response = await axios.get("https://api.aviationstack.com/v1/flights", {
           params,
           timeout: 6000,
         });
@@ -547,9 +580,15 @@ export async function lookupFlightDetails(
         // A date-less (real-time) query returns the latest known flight for
         // the number — guard against it belonging to a different service day.
         if (result && date && omitDateFilter && result.flight_date && result.flight_date !== date) {
-          logger.warn({ flightNumber: trimmedNumber, date, resultDate: result.flight_date,
-            operation: 'aviationstack_date_mismatch' },
-            `Aviationstack real-time result for ${trimmedNumber} is for ${result.flight_date}, not ${date} — discarding`);
+          logger.warn(
+            {
+              flightNumber: trimmedNumber,
+              date,
+              resultDate: result.flight_date,
+              operation: "aviationstack_date_mismatch",
+            },
+            `Aviationstack real-time result for ${trimmedNumber} is for ${result.flight_date}, not ${date} — discarding`
+          );
           result = undefined;
         }
 
@@ -612,7 +651,7 @@ export async function lookupFlightDetails(
             : undefined;
 
           return {
-            source: 'aviationstack',
+            source: "aviationstack",
             airline: result.airline?.name,
             // Caller's spelling — see the AirLabs mapping: echoing the
             // provider's unpadded form would auto-rename a stored "EK051".
@@ -628,24 +667,26 @@ export async function lookupFlightDetails(
         }
         break; // no usable result — fall through to the other providers
       } catch (err) {
-        const errResponse = (err as {
-          response?: { status?: number; data?: { error?: { code?: string } } };
-        })?.response;
+        const errResponse = (
+          err as {
+            response?: { status?: number; data?: { error?: { code?: string } } };
+          }
+        )?.response;
         const status = errResponse?.status;
         if (status === 429) {
           // Quota exhausted — back off for an hour so we don't burn through the
           // free tier's monthly budget on rapid-fire retries.
           markAviationstack429();
           logger.warn({
-            operation: 'aviationstack_rate_limited',
-            message: 'Aviationstack returned 429 — backing off for 1 hour',
+            operation: "aviationstack_rate_limited",
+            message: "Aviationstack returned 429 — backing off for 1 hour",
             context: { cooldownUntil: aviationstackCooldownUntil()?.toISOString() },
           });
           break;
         }
         if (
           status === 403 &&
-          errResponse?.data?.error?.code === 'function_access_restricted' &&
+          errResponse?.data?.error?.code === "function_access_restricted" &&
           !omitDateFilter &&
           date
         ) {
@@ -654,16 +695,25 @@ export async function lookupFlightDetails(
           // requested date is today (real-time data still matches). Past or
           // future dates can't be served — fall through to other providers.
           markAviationstackDateFilterRestricted();
-          logger.warn({ flightNumber: trimmedNumber, date,
-            operation: 'aviationstack_date_filter_restricted' },
-            'Aviationstack plan rejects the flight_date filter — skipping it from now on');
+          logger.warn(
+            {
+              flightNumber: trimmedNumber,
+              date,
+              operation: "aviationstack_date_filter_restricted",
+            },
+            "Aviationstack plan rejects the flight_date filter — skipping it from now on"
+          );
           if (date === currentUtcDay()) {
             omitDateFilter = true;
             continue;
           }
           break;
         }
-        logger.error({ operation: 'aviationstack_lookup', message: 'Aviationstack lookup failed', error: err instanceof Error ? err.message : String(err) });
+        logger.error({
+          operation: "aviationstack_lookup",
+          message: "Aviationstack lookup failed",
+          error: err instanceof Error ? err.message : String(err),
+        });
         break;
       }
     }
@@ -682,14 +732,19 @@ export async function lookupFlightDetails(
       trimmedNumber,
       date,
       userId,
-      depAirportCode,
+      depAirportCode
     );
     if (aerodataboxResult) {
       logger.info(
-        { flightNumber: trimmedNumber, date, api: 'aerodatabox', operation: 'lookup_aerodatabox_hit' },
-        `AeroDataBox served ${trimmedNumber} on ${date}`,
+        {
+          flightNumber: trimmedNumber,
+          date,
+          api: "aerodatabox",
+          operation: "lookup_aerodatabox_hit",
+        },
+        `AeroDataBox served ${trimmedNumber} on ${date}`
       );
-      return { ...aerodataboxResult, source: 'aerodatabox' };
+      return { ...aerodataboxResult, source: "aerodatabox" };
     }
   }
 
@@ -703,14 +758,18 @@ export async function lookupFlightDetails(
   // at this point. Ad-hoc UI lookups (no departureTime) still treat
   // AirLabs as the live-window fallback.
   if (departureTime && !inLiveWindow) {
-    logger.info({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
-      `No data found for ${trimmedNumber} from any API (outside live window, AirLabs skipped)`);
+    logger.info(
+      { flightNumber: trimmedNumber, date, operation: "lookup_no_result" },
+      `No data found for ${trimmedNumber} from any API (outside live window, AirLabs skipped)`
+    );
     return null;
   }
 
   // Fallback to AirLabs (live window, or ad-hoc lookup with no departureTime)
-  logger.info({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
-    `Falling back to AirLabs for ${trimmedNumber}`);
+  logger.info(
+    { flightNumber: trimmedNumber, date, api: "airlabs", operation: "fallback_airlabs" },
+    `Falling back to AirLabs for ${trimmedNumber}`
+  );
   const fallbackDate = date ? new Date(date) : undefined;
   // `userId` is not optional decoration here: `lookupFlightByNumber` resolves
   // its own key with `getApiKey('airlabs', userId)`, so dropping it silently
@@ -721,14 +780,18 @@ export async function lookupFlightDetails(
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
     if (openSkyCredentials) {
-      logger.info({ flightNumber: trimmedNumber, date, api: 'opensky', operation: 'fallback_opensky' },
-        `Falling back to OpenSky for ${trimmedNumber}`);
+      logger.info(
+        { flightNumber: trimmedNumber, date, api: "opensky", operation: "fallback_opensky" },
+        `Falling back to OpenSky for ${trimmedNumber}`
+      );
       const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
       const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
-      if (openSky) return { ...openSky, source: 'opensky' };
+      if (openSky) return { ...openSky, source: "opensky" };
     }
-    logger.info({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
-      `No data found for ${trimmedNumber} from any API`);
+    logger.info(
+      { flightNumber: trimmedNumber, date, operation: "lookup_no_result" },
+      `No data found for ${trimmedNumber} from any API`
+    );
     return null;
   }
 
@@ -752,9 +815,7 @@ export async function lookupFlightDetails(
       departureTimeRaw
         ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
         : Promise.resolve(null),
-      arrivalTimeRaw
-        ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode)
-        : Promise.resolve(null),
+      arrivalTimeRaw ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode) : Promise.resolve(null),
       actualDepartureRaw
         ? convertAirlabsTimeToUtc(actualDepartureRaw, departureCode)
         : Promise.resolve(null),
@@ -791,8 +852,11 @@ export async function lookupFlightDetails(
     : undefined;
 
   return {
-    source: 'airlabs',
-    airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) || first.airlineIcao,
+    source: "airlabs",
+    airline:
+      first.airline ||
+      (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) ||
+      first.airlineIcao,
     flightNumber: first.flightNumber,
     aircraft: first.aircraft || first.aircraftIcao,
     departure: departureWithLive,
@@ -827,8 +891,12 @@ async function lookupOpenSkyFlight(
     if (!result) return null;
 
     const [departureAirport, arrivalAirport] = await Promise.all([
-      result.estDepartureAirport ? findOrCreateAirport(result.estDepartureAirport) : Promise.resolve(null),
-      result.estArrivalAirport ? findOrCreateAirport(result.estArrivalAirport) : Promise.resolve(null),
+      result.estDepartureAirport
+        ? findOrCreateAirport(result.estDepartureAirport)
+        : Promise.resolve(null),
+      result.estArrivalAirport
+        ? findOrCreateAirport(result.estArrivalAirport)
+        : Promise.resolve(null),
     ]);
 
     return {
@@ -840,7 +908,11 @@ async function lookupOpenSkyFlight(
       arrivalTime: result.lastSeen ? new Date(result.lastSeen * 1000).toISOString() : undefined,
     };
   } catch (err) {
-    logger.warn({ operation: 'opensky_fallback', message: 'OpenSky fallback failed', error: err instanceof Error ? err.message : String(err) });
+    logger.warn({
+      operation: "opensky_fallback",
+      message: "OpenSky fallback failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
@@ -863,7 +935,7 @@ export interface LookupWithHistoricalResult {
    *   the issue-#82 symptom). The flight just isn't covered by the API
    *   for that date; do not blame the user for a typo.
    */
-  unavailableReason?: 'not_configured' | 'no_provider' | 'no_match' | 'no_match_api_gap';
+  unavailableReason?: "not_configured" | "no_provider" | "no_match" | "no_match_api_gap";
 }
 
 /** Coerce `string | null | undefined` -> `string | undefined` (FlightData fields don't accept null). */
@@ -873,11 +945,11 @@ const toUndef = (value: string | null | undefined): string | undefined =>
 /** Map a `lookupFlightDetails` result onto the legacy `FlightData` shape. */
 function flightLookupResultToFlightData(
   result: FlightLookupResult,
-  fallbackFlightNumber: string,
+  fallbackFlightNumber: string
 ): FlightData {
   return {
     flightNumber: result.flightNumber || fallbackFlightNumber,
-    airline: result.airline || 'Unknown',
+    airline: result.airline || "Unknown",
     airlineIata: result.airlineIata,
     airlineIcao: result.airlineIcao,
     operatingAirline: result.operatingAirline,
@@ -932,7 +1004,7 @@ export async function lookupFlightWithHistorical(
   flightNumber: string,
   date: Date | undefined,
   userId?: string,
-  depAirportCode?: string,
+  depAirportCode?: string
 ): Promise<LookupWithHistoricalResult> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return { flights: [] };
@@ -974,9 +1046,9 @@ export async function lookupFlightWithHistorical(
   // the wrong answer, because it implies the free providers are set up and
   // merely limited.
   const [anyAirlabs, anyAviationstack, anyAerodatabox, anyOpenSky] = await Promise.all([
-    getApiKey('airlabs', userId),
-    getApiKey('aviationstack', userId),
-    getApiKey('aerodatabox', userId),
+    getApiKey("airlabs", userId),
+    getApiKey("aviationstack", userId),
+    getApiKey("aerodatabox", userId),
     getOpenSkyCredentials(userId),
   ]);
   if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyOpenSky) {
@@ -984,11 +1056,11 @@ export async function lookupFlightWithHistorical(
       {
         flightNumber: trimmed,
         date: requestedStr,
-        operation: 'lookup_unavailable_not_configured',
+        operation: "lookup_unavailable_not_configured",
       },
-      `Lookup requested for ${trimmed} but no flight-data provider is configured`,
+      `Lookup requested for ${trimmed} but no flight-data provider is configured`
     );
-    return { flights: [], unavailableReason: 'not_configured' };
+    return { flights: [], unavailableReason: "not_configured" };
   }
 
   // Capability gate: any non-today request needs Aviationstack OR
@@ -998,20 +1070,20 @@ export async function lookupFlightWithHistorical(
   // and near-future schedules.
   if (isOutsideLiveWindow) {
     const [aviationstackKey, aerodataboxKey] = await Promise.all([
-      getApiKey('aviationstack', userId),
-      getApiKey('aerodatabox', userId),
+      getApiKey("aviationstack", userId),
+      getApiKey("aerodatabox", userId),
     ]);
     if (!aviationstackKey && !aerodataboxKey) {
       logger.info(
         {
           flightNumber: trimmed,
           date: requestedStr,
-          direction: dayDelta > 0 ? 'future' : 'past',
-          operation: 'lookup_unavailable_no_provider',
+          direction: dayDelta > 0 ? "future" : "past",
+          operation: "lookup_unavailable_no_provider",
         },
-        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? 'future' : 'past'}) but neither Aviationstack nor AeroDataBox is configured`,
+        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? "future" : "past"}) but neither Aviationstack nor AeroDataBox is configured`
       );
-      return { flights: [], unavailableReason: 'no_provider' };
+      return { flights: [], unavailableReason: "no_provider" };
     }
   }
 
@@ -1022,12 +1094,12 @@ export async function lookupFlightWithHistorical(
     userId,
     undefined,
     undefined,
-    depAirportCode,
+    depAirportCode
   );
 
   if (!result) {
     if (isOutsideLiveWindow) {
-      return { flights: [], unavailableReason: 'no_match_api_gap' };
+      return { flights: [], unavailableReason: "no_match_api_gap" };
     }
     return { flights: [] };
   }
@@ -1057,11 +1129,11 @@ export async function lookupFlightWithHistorical(
           requestedDate: dateStr,
           returnedDate,
           today: todayStr,
-          operation: 'lookup_date_mismatch',
+          operation: "lookup_date_mismatch",
         },
-        `Provider ignored requested date ${dateStr} for ${trimmed} (returned ${returnedDate}); treating as no_match_api_gap`,
+        `Provider ignored requested date ${dateStr} for ${trimmed} (returned ${returnedDate}); treating as no_match_api_gap`
       );
-      return { flights: [], unavailableReason: 'no_match_api_gap' };
+      return { flights: [], unavailableReason: "no_match_api_gap" };
     }
   }
 

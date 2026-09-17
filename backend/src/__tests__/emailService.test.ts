@@ -207,7 +207,7 @@ describe("emailService", () => {
       mockTransporter.sendMail.mockRejectedValue(new Error("SMTP error"));
 
       await expect(
-        sendPasswordResetEmail("u@example.com", "https://app.test/reset", "alice"),
+        sendPasswordResetEmail("u@example.com", "https://app.test/reset", "alice")
       ).rejects.toThrow("SMTP error");
     });
   });
@@ -219,7 +219,7 @@ describe("emailService", () => {
       mockFindUnique.mockResolvedValue(null);
 
       await expect(
-        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT),
+        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT)
       ).rejects.toThrow(/SMTP is not configured/i);
     });
 
@@ -227,7 +227,7 @@ describe("emailService", () => {
       mockFindUnique.mockResolvedValue({ ...MOCK_SMTP_CONFIG, enabled: false });
 
       await expect(
-        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT),
+        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT)
       ).rejects.toThrow(/SMTP is not configured/i);
     });
 
@@ -239,7 +239,7 @@ describe("emailService", () => {
         "newuser@example.com",
         "https://app.test/invite?t=xyz",
         "admin",
-        EXPIRES_AT,
+        EXPIRES_AT
       );
 
       expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
@@ -256,7 +256,7 @@ describe("emailService", () => {
       mockFindUnique.mockResolvedValue(null);
 
       await expect(
-        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!")
       ).rejects.toThrow(/SMTP is not configured/i);
     });
 
@@ -264,7 +264,7 @@ describe("emailService", () => {
       mockFindUnique.mockResolvedValue({ ...MOCK_SMTP_CONFIG, enabled: false });
 
       await expect(
-        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!")
       ).rejects.toThrow(/SMTP is not configured/i);
     });
 
@@ -287,7 +287,7 @@ describe("emailService", () => {
       mockTransporter.sendMail.mockRejectedValue(new Error("Send failed"));
 
       await expect(
-        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!")
       ).rejects.toThrow("Send failed");
     });
   });

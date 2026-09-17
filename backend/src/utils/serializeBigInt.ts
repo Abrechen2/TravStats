@@ -14,7 +14,7 @@ export function serializeBigInt<T>(obj: T): T {
     return obj;
   }
 
-  if (typeof obj === 'bigint') {
+  if (typeof obj === "bigint") {
     return String(obj) as unknown as T;
   }
 
@@ -24,7 +24,7 @@ export function serializeBigInt<T>(obj: T): T {
 
   // Preserve Date and other non-plain objects unchanged. Express's res.json
   // will call Date.prototype.toJSON for wire serialization.
-  if (typeof obj === 'object') {
+  if (typeof obj === "object") {
     const proto = Object.getPrototypeOf(obj);
     if (proto !== Object.prototype && proto !== null) {
       return obj;

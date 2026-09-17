@@ -57,12 +57,7 @@ export interface ImmichAsset {
  * misleads a user who fat-fingered their URL into debugging their Immich
  * version, so they stay separate kinds.
  */
-export type ImmichErrorKind =
-  | "unreachable"
-  | "auth"
-  | "notFound"
-  | "protocol"
-  | "invalidUrl";
+export type ImmichErrorKind = "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl";
 
 export class ImmichError extends Error {
   public readonly kind: ImmichErrorKind;

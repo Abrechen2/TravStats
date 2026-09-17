@@ -108,10 +108,7 @@ describe("compareTimelineEvents", () => {
   it("does NOT drag a diary entry across days", () => {
     // The rule is "last of ITS day", not "last overall" — a diary on the 1st
     // must still precede everything on the 2nd.
-    const events = [
-      ev("2026-05-02T09:00:00.000Z"),
-      ev("2026-05-01T23:00:00.000Z", "journal"),
-    ];
+    const events = [ev("2026-05-02T09:00:00.000Z"), ev("2026-05-01T23:00:00.000Z", "journal")];
     expect(events.sort(compareTimelineEvents).map((e) => e.date.slice(0, 10))).toEqual([
       "2026-05-01",
       "2026-05-02",

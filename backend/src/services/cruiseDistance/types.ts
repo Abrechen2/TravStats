@@ -7,11 +7,7 @@
  * bumps). See backend/prisma/migrations/20260428120000_add_cruise_legs.
  */
 
-export type DistanceMethod =
-  | "haversine"
-  | "eurostat"
-  | "river-osm"
-  | "canal-heuristic";
+export type DistanceMethod = "haversine" | "eurostat" | "river-osm" | "canal-heuristic";
 
 export type Confidence = "high" | "medium" | "low";
 

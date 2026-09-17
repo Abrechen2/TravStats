@@ -70,7 +70,7 @@ export function channelForType(type: AnnounceType): string {
 export function buildAnnounceEmbed(
   type: AnnounceType,
   version: string,
-  notes: string | null,
+  notes: string | null
 ): EmbedBuilder {
   const style = STYLE[type];
   const body = notes && notes.trim().length > 0 ? notes.trim() : "See the changelog for details.";
@@ -105,7 +105,7 @@ export async function runAnnounce(
   type: AnnounceType,
   version: string,
   notes: string | null,
-  dryRun = false,
+  dryRun = false
 ): Promise<void> {
   const channelName = channelForType(type);
 

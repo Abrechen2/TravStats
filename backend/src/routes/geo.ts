@@ -1,10 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import {
-  authenticate,
-  requireWriteScope,
-  AuthRequest,
-} from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { photonSearchLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { reversePlacesDetailed, searchPlacesDetailed } from "../services/geo/photon";
@@ -48,7 +44,7 @@ router.get(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 const reverseQuerySchema = z.object({
@@ -75,7 +71,7 @@ router.get(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 const reversePlacesQuerySchema = z.object({
@@ -104,7 +100,7 @@ router.get(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 export default router;

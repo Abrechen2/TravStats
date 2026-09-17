@@ -22,9 +22,7 @@ export async function seedAircraftFromData(): Promise<number> {
   const seed = buildAircraftSeed(raw);
 
   const existing = await prisma.aircraft.findMany({ select: { icao: true } });
-  const existingIcaos = new Set(
-    existing.map((a) => a.icao).filter((i): i is string => Boolean(i)),
-  );
+  const existingIcaos = new Set(existing.map((a) => a.icao).filter((i): i is string => Boolean(i)));
 
   const toInsert = seed
     .filter((r) => !existingIcaos.has(r.icao))

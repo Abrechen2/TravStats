@@ -69,9 +69,18 @@ for (const f of files) {
       file: f,
       matched: false,
       hotel: `EXTRACT FAILED: ${err instanceof Error ? err.message : String(err)}`,
-      checkIn: null, checkOut: null, nights: null, city: null, country: null,
-      postcode: null, address: null, price: null, currency: null, ref: null,
-      room: null, textLen: 0,
+      checkIn: null,
+      checkOut: null,
+      nights: null,
+      city: null,
+      country: null,
+      postcode: null,
+      address: null,
+      price: null,
+      currency: null,
+      ref: null,
+      room: null,
+      textLen: 0,
     });
     continue;
   }
@@ -103,7 +112,9 @@ for (const f of files) {
 const matched = rows.filter((r) => r.matched);
 const missed = rows.filter((r) => !r.matched);
 
-console.log(`=== ${rows.length} sample(s) — template hit ${matched.length}, miss ${missed.length} ===\n`);
+console.log(
+  `=== ${rows.length} sample(s) — template hit ${matched.length}, miss ${missed.length} ===\n`
+);
 
 function pct(n: number): string {
   return `${Math.round((n / Math.max(matched.length, 1)) * 100)}%`;
@@ -111,8 +122,23 @@ function pct(n: number): string {
 const field = (k: keyof Row): number => matched.filter((r) => r[k] !== null && r[k] !== "").length;
 
 console.log("Field coverage across template hits:");
-for (const k of ["hotel", "checkIn", "checkOut", "nights", "address", "postcode", "city", "country", "price", "currency", "ref", "room"] as const) {
-  console.log(`  ${k.padEnd(12)} ${String(field(k)).padStart(3)}/${matched.length}  ${pct(field(k))}`);
+for (const k of [
+  "hotel",
+  "checkIn",
+  "checkOut",
+  "nights",
+  "address",
+  "postcode",
+  "city",
+  "country",
+  "price",
+  "currency",
+  "ref",
+  "room",
+] as const) {
+  console.log(
+    `  ${k.padEnd(12)} ${String(field(k)).padStart(3)}/${matched.length}  ${pct(field(k))}`
+  );
 }
 
 console.log("\n--- MISSES (template did not match) ---");
@@ -121,9 +147,10 @@ for (const r of missed) console.log(`  ${r.file}  [text ${r.textLen} chars]  ${r
 console.log("\n--- HITS with a gap ---");
 for (const r of matched) {
   const gaps = (["checkIn", "checkOut", "city", "country", "price", "ref"] as const).filter(
-    (k) => r[k] === null || r[k] === "",
+    (k) => r[k] === null || r[k] === ""
   );
-  if (gaps.length > 0) console.log(`  ${r.file}\n      missing: ${gaps.join(", ")}  | hotel=${r.hotel}`);
+  if (gaps.length > 0)
+    console.log(`  ${r.file}\n      missing: ${gaps.join(", ")}  | hotel=${r.hotel}`);
 }
 
 console.log("\n--- FULL TABLE ---");
@@ -136,7 +163,7 @@ for (const r of matched) {
       [r.postcode, r.city, r.country].filter(Boolean).join(" ") || "?",
       r.price != null ? `${r.price} ${r.currency ?? ""}` : "?",
       r.ref ?? "?",
-    ].join(" | "),
+    ].join(" | ")
   );
 }
 

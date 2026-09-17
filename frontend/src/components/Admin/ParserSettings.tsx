@@ -112,7 +112,6 @@ export default function ParserSettings({
         </button>
       </div>
 
-
       {/* Parser Info */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-(--text-primary) mb-2">

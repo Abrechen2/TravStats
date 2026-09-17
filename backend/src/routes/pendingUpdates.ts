@@ -4,10 +4,10 @@
  * API endpoints for managing pending flight updates
  */
 
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { AppError } from '../middleware/errorHandler';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { AppError } from "../middleware/errorHandler";
 import {
   getPendingUpdates,
   getPendingUpdateById,
@@ -15,9 +15,9 @@ import {
   rejectPendingUpdate,
   updatePendingUpdate,
   previewStatisticsImpact,
-} from '../services/pendingUpdateService';
-import { prisma } from '../db';
-import logger from '../utils/logger';
+} from "../services/pendingUpdateService";
+import { prisma } from "../db";
+import logger from "../utils/logger";
 
 const router = Router();
 
@@ -38,20 +38,22 @@ router.use(requireWriteScope);
 
 // Schema for updating pending update
 const updatePendingUpdateSchema = z.object({
-  editedData: z.object({
-    airline: z.string().optional(),
-    aircraft: z.string().optional(),
-    gate: z.string().optional(),
-    terminal: z.string().optional(),
-    depIata: z.string().optional(),
-    depIcao: z.string().optional(),
-    arrIata: z.string().optional(),
-    arrIcao: z.string().optional(),
-    // Real timestamps, not "any string". These are applied straight onto the
-    // flight, so an unparseable value became a stored `Invalid Date` (AUD-093).
-    departureTime: z.string().datetime({ offset: true }).optional(),
-    arrivalTime: z.string().datetime({ offset: true }).optional(),
-  }).optional(),
+  editedData: z
+    .object({
+      airline: z.string().optional(),
+      aircraft: z.string().optional(),
+      gate: z.string().optional(),
+      terminal: z.string().optional(),
+      depIata: z.string().optional(),
+      depIcao: z.string().optional(),
+      arrIata: z.string().optional(),
+      arrIcao: z.string().optional(),
+      // Real timestamps, not "any string". These are applied straight onto the
+      // flight, so an unparseable value became a stored `Invalid Date` (AUD-093).
+      departureTime: z.string().datetime({ offset: true }).optional(),
+      arrivalTime: z.string().datetime({ offset: true }).optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -77,12 +79,12 @@ const bulkIdsSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(200),
 });
 
-type BulkOutcome = { id: string; status: 'applied' | 'rejected' | 'failed'; error?: string };
+type BulkOutcome = { id: string; status: "applied" | "rejected" | "failed"; error?: string };
 
 async function runBulk(
   ids: string[],
   userId: string,
-  action: 'apply' | 'reject'
+  action: "apply" | "reject"
 ): Promise<BulkOutcome[]> {
   const results: BulkOutcome[] = [];
   // Sequential on purpose: applying mutates the underlying flight, and running
@@ -92,27 +94,27 @@ async function runBulk(
     try {
       const existing = await getPendingUpdateById(id, userId);
       if (!existing) {
-        results.push({ id, status: 'failed', error: 'Not found' });
+        results.push({ id, status: "failed", error: "Not found" });
         continue;
       }
-      if (action === 'apply') {
+      if (action === "apply") {
         const flight = await applyPendingUpdate(id, userId);
         results.push(
           flight
-            ? { id, status: 'applied' }
-            : { id, status: 'failed', error: 'Could not be applied' }
+            ? { id, status: "applied" }
+            : { id, status: "failed", error: "Could not be applied" }
         );
       } else {
         const ok = await rejectPendingUpdate(id, userId);
         results.push(
-          ok ? { id, status: 'rejected' } : { id, status: 'failed', error: 'Could not be rejected' }
+          ok ? { id, status: "rejected" } : { id, status: "failed", error: "Could not be rejected" }
         );
       }
     } catch (error) {
       results.push({
         id,
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -120,16 +122,16 @@ async function runBulk(
 }
 
 // Bulk apply — registered before the /:id routes so the literal path wins
-router.post('/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/apply", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { ids } = bulkIdsSchema.parse(req.body);
-    const results = await runBulk(ids, userId, 'apply');
-    const applied = results.filter((r) => r.status === 'applied').length;
+    const results = await runBulk(ids, userId, "apply");
+    const applied = results.filter((r) => r.status === "applied").length;
 
     logger.info({
-      operation: 'bulk_apply_pending_updates',
-      message: 'Pending updates applied in bulk',
+      operation: "bulk_apply_pending_updates",
+      message: "Pending updates applied in bulk",
       context: { userId, requested: ids.length, applied, failed: ids.length - applied },
     });
 
@@ -140,16 +142,16 @@ router.post('/apply', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Bulk reject
-router.post('/reject', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/reject", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { ids } = bulkIdsSchema.parse(req.body);
-    const results = await runBulk(ids, userId, 'reject');
-    const rejected = results.filter((r) => r.status === 'rejected').length;
+    const results = await runBulk(ids, userId, "reject");
+    const rejected = results.filter((r) => r.status === "rejected").length;
 
     logger.info({
-      operation: 'bulk_reject_pending_updates',
-      message: 'Pending updates rejected in bulk',
+      operation: "bulk_reject_pending_updates",
+      message: "Pending updates rejected in bulk",
       context: { userId, requested: ids.length, rejected, failed: ids.length - rejected },
     });
 
@@ -160,7 +162,7 @@ router.post('/reject', async (req: AuthRequest, res: Response, next: NextFunctio
 });
 
 // Get all pending updates for the authenticated user
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { status, flightId } = req.query;
@@ -181,7 +183,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 });
 
 // Get statistics for pending updates
-router.get('/statistics', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/statistics", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
 
@@ -216,7 +218,7 @@ router.get('/statistics', async (req: AuthRequest, res: Response, next: NextFunc
 });
 
 // Get a single pending update by ID
-router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -224,7 +226,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     const update = await getPendingUpdateById(id, userId);
 
     if (!update) {
-      throw new AppError('Pending update not found', 404);
+      throw new AppError("Pending update not found", 404);
     }
 
     res.json(update);
@@ -234,33 +236,33 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 });
 
 // Update a pending update (edit it)
-router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
     const data = updatePendingUpdateSchema.parse(req.body);
 
     if (!data.editedData) {
-      throw new AppError('editedData is required', 400);
+      throw new AppError("editedData is required", 400);
     }
 
     const updated = await updatePendingUpdate(id, userId, data.editedData);
 
     if (!updated) {
-      throw new AppError('Failed to update pending update', 500);
+      throw new AppError("Failed to update pending update", 500);
     }
 
     res.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return next(new AppError('Invalid request data', 400));
+      return next(new AppError("Invalid request data", 400));
     }
     next(error);
   }
 });
 
 // Preview statistics impact
-router.post('/:id/preview', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -270,7 +272,7 @@ router.post('/:id/preview', async (req: AuthRequest, res: Response, next: NextFu
     const impact = await previewStatisticsImpact(id, userId, parsedEditedData);
 
     if (!impact) {
-      throw new AppError('Failed to calculate statistics impact', 500);
+      throw new AppError("Failed to calculate statistics impact", 500);
     }
 
     res.json(impact);
@@ -280,25 +282,25 @@ router.post('/:id/preview', async (req: AuthRequest, res: Response, next: NextFu
 });
 
 // Apply a pending update
-router.post('/:id/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/:id/apply", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
 
     const existing = await getPendingUpdateById(id, userId);
     if (!existing) {
-      throw new AppError('Pending update not found', 404);
+      throw new AppError("Pending update not found", 404);
     }
 
     const flight = await applyPendingUpdate(id, userId);
 
     if (!flight) {
-      throw new AppError('Failed to apply pending update', 500);
+      throw new AppError("Failed to apply pending update", 500);
     }
 
     logger.info({
-      operation: 'apply_pending_update_api',
-      message: 'Pending update applied via API',
+      operation: "apply_pending_update_api",
+      message: "Pending update applied via API",
       context: {
         pendingUpdateId: id,
         userId,
@@ -316,7 +318,7 @@ router.post('/:id/apply', async (req: AuthRequest, res: Response, next: NextFunc
 });
 
 // Reject a pending update
-router.post('/:id/reject', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/:id/reject", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -324,12 +326,12 @@ router.post('/:id/reject', async (req: AuthRequest, res: Response, next: NextFun
     const success = await rejectPendingUpdate(id, userId);
 
     if (!success) {
-      throw new AppError('Failed to reject pending update', 500);
+      throw new AppError("Failed to reject pending update", 500);
     }
 
     logger.info({
-      operation: 'reject_pending_update_api',
-      message: 'Pending update rejected via API',
+      operation: "reject_pending_update_api",
+      message: "Pending update rejected via API",
       context: {
         pendingUpdateId: id,
         userId,
@@ -345,7 +347,7 @@ router.post('/:id/reject', async (req: AuthRequest, res: Response, next: NextFun
 });
 
 // Delete a pending update
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -353,7 +355,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     // Verify ownership
     const update = await getPendingUpdateById(id, userId);
     if (!update) {
-      throw new AppError('Pending update not found', 404);
+      throw new AppError("Pending update not found", 404);
     }
 
     await prisma.pendingFlightUpdate.delete({

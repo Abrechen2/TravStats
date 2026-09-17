@@ -114,9 +114,7 @@ export function ExpandableEventCard({
       {/* A closed card says nothing about what opening it costs; the label above
           is the accessible name, and this is its visible counterpart only when
           the card is open, so the row stays quiet when collapsed. */}
-      {expanded && (
-        <span className="sr-only">{t("trips:detail.timeline.expandedHint")}</span>
-      )}
+      {expanded && <span className="sr-only">{t("trips:detail.timeline.expandedHint")}</span>}
     </div>
   );
 }

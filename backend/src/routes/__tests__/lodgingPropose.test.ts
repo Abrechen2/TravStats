@@ -129,15 +129,16 @@ describe("POST /lodging/propose", () => {
     }).expect(200);
 
     expect(res.body.data.match.stayCount).toBe(1);
-    expect(res.body.data.match.fillsFields).toEqual(
-      expect.arrayContaining(["address", "country"])
-    );
+    expect(res.body.data.match.fillsFields).toEqual(expect.arrayContaining(["address", "country"]));
   });
 
   it("does not answer for another account's houses", async () => {
     await storeDormero();
     const other = await prisma.user.create({
-      data: { username: `lodgingpropose-other-${Date.now()}`, passwordHash: await hashPassword("password123") },
+      data: {
+        username: `lodgingpropose-other-${Date.now()}`,
+        passwordHash: await hashPassword("password123"),
+      },
     });
     resolveLocationMock.mockResolvedValue({ lat: 47.4303, lon: 8.571 });
 

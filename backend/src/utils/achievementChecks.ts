@@ -1,9 +1,9 @@
 // Achievement dispatch + per-type helpers. Extracted from `achievements.ts`
 // so the orchestrator module stays under CLAUDE.md's 800-line limit.
 
-import type { Achievement } from '@prisma/client';
-import { calculateDistance } from './geo';
-import type { FlightData, UserStats } from './achievementStats';
+import type { Achievement } from "@prisma/client";
+import { calculateDistance } from "./geo";
+import type { FlightData, UserStats } from "./achievementStats";
 
 /**
  * A checklist achievement has to name WHICH checklist, and `Achievement` has no
@@ -22,7 +22,7 @@ import type { FlightData, UserStats } from './achievementStats';
  * the requirement happens to equal the list size, which is what the two wonder
  * badges are.
  */
-const CURATED_LIST_PREFIX = 'curated_list_ticked:';
+const CURATED_LIST_PREFIX = "curated_list_ticked:";
 
 export function checkAchievement(
   achievement: Achievement,
@@ -39,377 +39,375 @@ export function checkAchievement(
   }
 
   switch (achievement.requirementType) {
-    case 'flights_count':
+    case "flights_count":
       progress = stats.flightsCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'distance_km':
+    case "distance_km":
       progress = Math.round(stats.totalDistance);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'countries':
+    case "countries":
       progress = stats.countries.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'airlines':
+    case "airlines":
       progress = stats.airlines.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'airports':
+    case "airports":
       progress = stats.airports.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'continents':
+    case "continents":
       progress = stats.continents.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'aircraft_types':
+    case "aircraft_types":
       progress = stats.aircraftTypes.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'single_flight_distance':
+    case "single_flight_distance":
       progress = Math.round(stats.longestSingleFlight);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'night_flights':
+    case "night_flights":
       progress = stats.nightFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'weekend_flights':
+    case "weekend_flights":
       progress = stats.weekendFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'consecutive_months':
+    case "consecutive_months":
       progress = checkConsecutiveMonths(stats.monthsWithFlights);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'same_route':
+    case "same_route":
       progress = Math.max(0, ...Array.from(stats.routeCounts.values()));
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'airline_loyalty':
+    case "airline_loyalty":
       progress = Math.max(0, ...Array.from(stats.airlineCounts.values()));
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'flights_per_month':
+    case "flights_per_month":
       progress = Math.max(0, ...Array.from(stats.flightsByMonth.values()));
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'flights_per_year':
+    case "flights_per_year":
       progress = Math.max(0, ...Array.from(stats.flightsByYear.values()));
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'flight_hours':
+    case "flight_hours":
       progress = Math.round(stats.totalFlightHours);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'ocean_crossing':
+    case "ocean_crossing":
       progress = checkOceanCrossing(flights) ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'time_travel':
+    case "time_travel":
       progress = checkTimeTravel(flights) ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'arctic_flight':
+    case "arctic_flight":
       progress = checkArcticFlight(flights) ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'equator_crossing':
+    case "equator_crossing":
       progress = checkEquatorCrossing(flights) ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'all_seasons':
+    case "all_seasons":
       progress = checkAllSeasons(flights);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'scheduled_count':
+    case "scheduled_count":
       progress = stats.scheduledCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'scheduled_continents':
+    case "scheduled_continents":
       progress = stats.scheduledContinents.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'scheduled_advance_days':
+    case "scheduled_advance_days":
       progress = stats.scheduledMaxAdvanceDays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cancelled_count':
+    case "cancelled_count":
       progress = stats.cancelledCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // v1.1 expansion
-    case 'duplicated_count':
+    case "duplicated_count":
       progress = stats.duplicatedCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'island_flights':
+    case "island_flights":
       progress = stats.islandFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'micro_states_visited':
+    case "micro_states_visited":
       progress = stats.microStatesVisited.size;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'scandinavia_set':
+    case "scandinavia_set":
       progress = stats.scandinaviaSet.size;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'high_altitude_airports':
+    case "high_altitude_airports":
       progress = stats.highAltitudeFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'pilgrim_airports':
+    case "pilgrim_airports":
       progress = stats.pilgrimFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'micro_flight':
+    case "micro_flight":
       progress = stats.hasMicroFlight;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'wide_body_count':
+    case "wide_body_count":
       progress = stats.wideBodyCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'turbo_prop_count':
+    case "turbo_prop_count":
       progress = stats.turboPropCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'airline_alliances':
+    case "airline_alliances":
       progress = stats.airlineAlliances.size;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'jumbo_count':
+    case "jumbo_count":
       progress = stats.jumboCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'airport_alphabet':
+    case "airport_alphabet":
       progress = stats.airportAlphabet.size;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'lowcost_count':
+    case "lowcost_count":
       progress = stats.lowcostCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'first_class_flights':
+    case "first_class_flights":
       progress = stats.firstClassFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'premium_trifecta':
+    case "premium_trifecta":
       progress = stats.premiumTrifecta.size;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'red_eye_flights':
+    case "red_eye_flights":
       progress = stats.redEyeFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'early_morning_flights':
+    case "early_morning_flights":
       progress = stats.earlyMorningFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'window_streak':
+    case "window_streak":
       progress = stats.windowStreak;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'middle_streak':
+    case "middle_streak":
       progress = stats.middleStreak;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'notes_count':
+    case "notes_count":
       progress = stats.notesCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'groundhog_route':
+    case "groundhog_route":
       progress = stats.groundhogRoute;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'scheduled_30d':
+    case "scheduled_30d":
       progress = stats.scheduled30d;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'delayed_flights':
+    case "delayed_flights":
       progress = stats.delayedFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'tight_connection':
+    case "tight_connection":
       progress = stats.tightConnection;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'birthday_flights':
+    case "birthday_flights":
       progress = stats.birthdayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'nye_airborne':
+    case "nye_airborne":
       progress = stats.nyeAirborne;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'leap_day_flights':
+    case "leap_day_flights":
       progress = stats.leapDayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'icao_day_flights':
+    case "icao_day_flights":
       progress = stats.icaoDayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'wright_day_flights':
+    case "wright_day_flights":
       progress = stats.wrightDayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'may_fourth_flights':
+    case "may_fourth_flights":
       progress = stats.mayFourthFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'pi_day_flights':
+    case "pi_day_flights":
       progress = stats.piDayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'pi_precision_flights':
+    case "pi_precision_flights":
       progress = stats.piPrecisionFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'halloween_flights':
+    case "halloween_flights":
       progress = stats.halloweenFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // ── Kurios expansion (2.7) ────────────────────────────────────
-    case 'friday13_flights':
+    case "friday13_flights":
       progress = stats.friday13Flights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'xmas_flights':
+    case "xmas_flights":
       progress = stats.xmasFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'palindrome_day_flights':
+    case "palindrome_day_flights":
       progress = stats.palindromeFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'flights_one_day_max':
+    case "flights_one_day_max":
       progress = stats.maxFlightsOneDay;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'same_day_return':
+    case "same_day_return":
       progress = stats.hasSameDayReturn;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'flight_number_666':
+    case "flight_number_666":
       progress = stats.flight666Count;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'flight_number_777_on_777':
+    case "flight_number_777_on_777":
       progress = stats.jackpot777Count;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'timezone_span':
+    case "timezone_span":
       progress = stats.maxTimezoneSpan;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'aisle_streak':
+    case "aisle_streak":
       progress = stats.aisleStreak;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'antarctic_flight':
+    case "antarctic_flight":
       progress = checkAntarcticFlight(flights) ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // --- Cruise cases ---
-    case 'cruises_count':
+    case "cruises_count":
       progress = stats.cruisesCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_ports_unique':
+    case "cruise_ports_unique":
       progress = stats.cruisePortsUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_ports_single':
+    case "cruise_ports_single":
       progress = stats.cruisePortsSingleMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_ships_unique':
+    case "cruise_ships_unique":
       progress = stats.cruiseShipsUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_lines_unique':
+    case "cruise_lines_unique":
       progress = stats.cruiseLinesUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_line_loyalty':
+    case "cruise_line_loyalty":
       progress = stats.cruiseLineLoyaltyMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'sea_days':
+    case "sea_days":
       progress = stats.seaDays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'sea_days_streak':
+    case "sea_days_streak":
       progress = stats.seaDaysStreak;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_region_mediterranean':
-      progress = stats.cruiseRegions.has('mediterranean') ? 1 : 0;
+    case "cruise_region_mediterranean":
+      progress = stats.cruiseRegions.has("mediterranean") ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_region_caribbean':
-      progress = stats.cruiseRegions.has('caribbean') ? 1 : 0;
+    case "cruise_region_caribbean":
+      progress = stats.cruiseRegions.has("caribbean") ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_region_baltic_or_fjords':
+    case "cruise_region_baltic_or_fjords":
       progress =
-        stats.cruiseRegions.has('baltic') || stats.cruiseRegions.has('norwegian_fjords')
-          ? 1
-          : 0;
+        stats.cruiseRegions.has("baltic") || stats.cruiseRegions.has("norwegian_fjords") ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_canal_transit':
+    case "cruise_canal_transit":
       progress = stats.hasCanalTransit ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_polar':
+    case "cruise_polar":
       progress = stats.hasPolar ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_distance_km':
+    case "cruise_distance_km":
       // Sum of great-circle distances between consecutive port calls
       // across all cruises (km). Approximation that ignores at-sea
       // routing detours but is close enough for milestone unlocks.
@@ -417,78 +415,78 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_longest_leg_km':
+    case "cruise_longest_leg_km":
       // Longest single leg across any cruise. Off-chart navigator hits
       // when the user has at least one true open-water crossing.
       progress = Math.floor(stats.cruiseLongestLegKm);
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_dateline_crossing':
+    case "cruise_dateline_crossing":
       progress = stats.hasCruiseDatelineCrossing ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_equator_crossing':
+    case "cruise_equator_crossing":
       progress = stats.hasCruiseEquatorCrossing ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_ship_loyalty':
+    case "cruise_ship_loyalty":
       progress = stats.cruiseShipLoyaltyMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_cabin_inside_count':
+    case "cruise_cabin_inside_count":
       progress = stats.cruiseInsideCabinCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'fly_and_sail_7d':
+    case "fly_and_sail_7d":
       progress = stats.hasFlyAndSail7d ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_cabin_balcony':
+    case "cruise_cabin_balcony":
       progress = stats.hasBalconyCabin ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_cabin_suite':
+    case "cruise_cabin_suite":
       progress = stats.hasSuiteCabin ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_deck_min':
+    case "cruise_deck_min":
       progress = stats.cruiseMaxDeck;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_birthday_at_sea':
+    case "cruise_birthday_at_sea":
       progress = stats.hasCruiseBirthdayAtSea ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_new_years_at_sea':
+    case "cruise_new_years_at_sea":
       progress = stats.hasNewYearsAtSea ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'cruise_cold_water':
+    case "cruise_cold_water":
       progress = stats.hasColdWater ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'carnival_brands_all': {
+    case "carnival_brands_all": {
       const CARNIVAL_BRANDS = new Set([
-        'Carnival Cruise Line',
-        'Costa Cruises',
-        'AIDA Cruises',
-        'Princess Cruises',
-        'Holland America Line',
-        'Cunard',
-        'Seabourn',
-        'P&O Cruises',
+        "Carnival Cruise Line",
+        "Costa Cruises",
+        "AIDA Cruises",
+        "Princess Cruises",
+        "Holland America Line",
+        "Cunard",
+        "Seabourn",
+        "P&O Cruises",
       ]);
       let covered = 0;
       for (const brand of CARNIVAL_BRANDS) {
@@ -499,147 +497,147 @@ export function checkAchievement(
       break;
     }
 
-    case 'fly_and_sail_trip':
+    case "fly_and_sail_trip":
       progress = stats.hasFlyAndSailTrip ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // ── Sonder-Flüge ──────────────────────────────────────────────
-    case 'special_sightseeing_count':
+    case "special_sightseeing_count":
       progress = stats.specialSightseeingCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'special_zerog_count':
+    case "special_zerog_count":
       progress = stats.specialZerogCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'special_eclipse_count':
+    case "special_eclipse_count":
       progress = stats.specialEclipseCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'special_rocket_count':
+    case "special_rocket_count":
       progress = stats.specialRocketCount;
       isUnlocked = progress >= achievement.requirement;
       break;
-    case 'special_variety':
+    case "special_variety":
       progress = stats.specialVariety;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // --- Lodging cases ---
-    case 'lodgings_count':
+    case "lodgings_count":
       progress = stats.lodgingsCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_stays_count':
+    case "lodging_stays_count":
       progress = stats.lodgingStaysCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_nights':
+    case "lodging_nights":
       progress = stats.lodgingNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_chains_unique':
+    case "lodging_chains_unique":
       progress = stats.lodgingChainsUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_countries':
+    case "lodging_countries":
       progress = stats.lodgingCountries.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_chain_loyalty':
+    case "lodging_chain_loyalty":
       progress = stats.lodgingChainLoyaltyMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_award_nights':
+    case "lodging_award_nights":
       progress = stats.lodgingAwardNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_same_hotel_repeat':
+    case "lodging_same_hotel_repeat":
       progress = stats.lodgingSameHotelRepeatMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_longest_stay':
+    case "lodging_longest_stay":
       progress = stats.lodgingLongestStayNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_types_unique':
+    case "lodging_types_unique":
       progress = stats.lodgingTypesUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_cities_unique':
+    case "lodging_cities_unique":
       progress = stats.lodgingCitiesUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_continents':
+    case "lodging_continents":
       progress = stats.lodgingContinents;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_five_star_nights':
+    case "lodging_five_star_nights":
       progress = stats.lodgingFiveStarNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_all_inclusive_nights':
+    case "lodging_all_inclusive_nights":
       progress = stats.lodgingAllInclusiveNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_perfect_stays':
+    case "lodging_perfect_stays":
       progress = stats.lodgingPerfectStays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_endured_stays':
+    case "lodging_endured_stays":
       progress = stats.lodgingEnduredStays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_rated_stays':
+    case "lodging_rated_stays":
       progress = stats.lodgingRatedStays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_one_night_stays':
+    case "lodging_one_night_stays":
       progress = stats.lodgingOneNightStays;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_streak_nights':
+    case "lodging_streak_nights":
       progress = stats.lodgingStreakNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // Requirement is a PERCENTAGE (e.g. 25 = a quarter of the year away).
-    case 'lodging_away_share_pct':
+    case "lodging_away_share_pct":
       progress = stats.lodgingAwaySharePct;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_independent_nights':
+    case "lodging_independent_nights":
       progress = stats.lodgingIndependentNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_programme_year_nights':
+    case "lodging_programme_year_nights":
       progress = stats.lodgingProgrammeYearNights;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // Requirement is a latitude in whole degrees (66 = the Arctic Circle).
-    case 'lodging_northern_lat':
+    case "lodging_northern_lat":
       progress = Math.floor(stats.lodgingNorthernmostLat);
       isUnlocked = progress >= achievement.requirement;
       break;
@@ -647,103 +645,103 @@ export function checkAchievement(
     // Requirement is a SOUTHERN latitude in whole degrees (45 = 45°S).
     // The stat stores the raw (negative) latitude; flip the sign so a
     // northern-hemisphere-only traveller clamps to 0, never unlocks.
-    case 'lodging_southern_lat':
+    case "lodging_southern_lat":
       progress = Math.max(0, Math.floor(-stats.lodgingSouthernmostLat));
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_birthday_stay':
+    case "lodging_birthday_stay":
       progress = stats.hasLodgingBirthdayStay ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'lodging_xmas_stay':
+    case "lodging_xmas_stay":
       progress = stats.hasLodgingXmasStay ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'trips_fully_documented':
+    case "trips_fully_documented":
       progress = stats.tripsFullyDocumented;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'fly_and_stay':
+    case "fly_and_stay":
       progress = stats.flyAndStay ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'grand_tour':
+    case "grand_tour":
       progress = stats.grandTour ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
     // --- POI cases ---
-    case 'places_count':
+    case "places_count":
       progress = stats.placesCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_visits_count':
+    case "place_visits_count":
       progress = stats.placeVisitsCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_countries':
+    case "place_countries":
       progress = stats.placeCountries.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'places_in_category':
+    case "places_in_category":
       progress = stats.placesInCategoryMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_cities':
+    case "place_cities":
       progress = stats.placeCities.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_continents':
+    case "place_continents":
       progress = stats.placeContinents.size;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_categories_unique':
+    case "place_categories_unique":
       progress = stats.placeCategoriesUnique;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_same_repeat':
+    case "place_same_repeat":
       progress = stats.placeSameRepeatMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'places_one_day':
+    case "places_one_day":
       progress = stats.placesInOneDayMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_visit_streak':
+    case "place_visit_streak":
       progress = stats.placeVisitStreakMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_visits_in_year':
+    case "place_visits_in_year":
       progress = stats.placeVisitsInYearMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_countries_in_year':
+    case "place_countries_in_year":
       progress = stats.placeCountriesInYearMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_rated_visits':
+    case "place_rated_visits":
       progress = stats.placeRatedVisits;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_trip_visits':
+    case "place_trip_visits":
       progress = stats.placeTripVisits;
       isUnlocked = progress >= achievement.requirement;
       break;
@@ -751,12 +749,12 @@ export function checkAchievement(
     // Latitude thresholds are absolute degrees, so one requirement reads the
     // same in both hemispheres. A place at 66.6°N and one at 66.6°S each clear
     // "polar circle" on their own side; neither is compared to the other.
-    case 'place_northern_lat':
+    case "place_northern_lat":
       progress = stats.placeNorthernLat !== null ? Math.floor(stats.placeNorthernLat) : 0;
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case 'place_southern_lat':
+    case "place_southern_lat":
       progress =
         stats.placeSouthernLat !== null && stats.placeSouthernLat < 0
           ? Math.floor(Math.abs(stats.placeSouthernLat))
@@ -780,8 +778,8 @@ function checkConsecutiveMonths(monthsWithFlights: Set<string>): number {
   let currentConsecutive = 1;
 
   for (let i = 1; i < sortedMonths.length; i++) {
-    const prevDate = new Date(sortedMonths[i - 1] + '-01');
-    const currDate = new Date(sortedMonths[i] + '-01');
+    const prevDate = new Date(sortedMonths[i - 1] + "-01");
+    const currDate = new Date(sortedMonths[i] + "-01");
 
     // Check if next month
     const monthDiff =
@@ -801,12 +799,7 @@ function checkConsecutiveMonths(monthsWithFlights: Set<string>): number {
 
 function checkOceanCrossing(flights: FlightData[]): boolean {
   for (const flight of flights) {
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
+    const distance = calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
     // Simple heuristic: flights over 5000km likely cross an ocean
     if (distance > 5000) {
       return true;
@@ -848,10 +841,7 @@ function checkAntarcticFlight(flights: FlightData[]): boolean {
 function checkEquatorCrossing(flights: FlightData[]): boolean {
   for (const flight of flights) {
     // Check if flight crosses equator (one hemisphere to another)
-    if (
-      (flight.depLat > 0 && flight.arrLat < 0) ||
-      (flight.depLat < 0 && flight.arrLat > 0)
-    ) {
+    if ((flight.depLat > 0 && flight.arrLat < 0) || (flight.depLat < 0 && flight.arrLat > 0)) {
       return true;
     }
   }

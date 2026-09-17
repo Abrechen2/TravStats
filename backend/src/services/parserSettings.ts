@@ -2,8 +2,8 @@
  * Helper functions for loading and decrypting parser settings
  */
 
-import { prisma } from '../db';
-import { decryptApiKey } from '../utils/encryption';
+import { prisma } from "../db";
+import { decryptApiKey } from "../utils/encryption";
 
 export interface UserParserSettings {
   preferredVisionParser?: string | null;
@@ -86,7 +86,9 @@ export interface ParserConfigWithSettings {
  * User settings take precedence over admin settings
  * Returns config ready to pass to getParserConfig
  */
-export async function getParserConfigWithSettings(userId: string): Promise<ParserConfigWithSettings> {
+export async function getParserConfigWithSettings(
+  userId: string
+): Promise<ParserConfigWithSettings> {
   const userSettings = await getUserParserSettings(userId);
   const adminSettings = await getAdminParserSettings();
 
@@ -111,7 +113,7 @@ export interface AdminFxSettings {
  */
 export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   const settings = await prisma.adminSettings.findFirst({
-      orderBy: { id: "asc" },
+    orderBy: { id: "asc" },
     select: { fxCdnFallbackEnabled: true },
   });
   return { cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true };

@@ -60,7 +60,7 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
       userId,
       parsed.data.source,
       parsed.data.fileName,
-      parsed.data.rows,
+      parsed.data.rows
     );
 
     // Fire-and-forget: the rows are already committed and usable. Geocoding is
@@ -102,7 +102,7 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
         triggerDataQualityChecks(userId, {
           trigger: "lodging_import",
           batchId: result.batchId,
-        }),
+        })
       );
 
     res.status(201).json({ success: true, data: result });

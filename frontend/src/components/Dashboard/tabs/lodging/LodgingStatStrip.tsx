@@ -40,7 +40,10 @@ const INLINE_CELL_STYLE: CSSProperties = {
  * Shared between the Dashboard map tab (`variant="overlay"`) and the
  * `/lodging` list page (`variant="inline"`).
  */
-export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStripProps): JSX.Element {
+export function LodgingStatStrip({
+  stats,
+  variant = "overlay",
+}: LodgingStatStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "lodging"]);
   // `spendBaseTotal` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`, ECB rate applied per stay's
@@ -62,7 +65,9 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
   const spendSubParts = [
     otherSpend
       ? t("dashboard:lodgingTab.stats.spendOtherCurrency", {
-          orig: otherSpend.currencies.map(({ currency, amount }) => formatCurrency(amount, currency)).join(" + "),
+          orig: otherSpend.currencies
+            .map(({ currency, amount }) => formatCurrency(amount, currency))
+            .join(" + "),
           converted: formatCurrency(otherSpend.convertedTotal, baseCurrency),
         })
       : null,
@@ -134,7 +139,11 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
       {cells.map((cell) => (
         <div key={cell.key} style={cellStyle}>
           <strong
-            style={{ fontSize: valueFontSize, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}
+            style={{
+              fontSize: valueFontSize,
+              color: "var(--text-primary)",
+              fontVariantNumeric: "tabular-nums",
+            }}
           >
             {cell.value}
           </strong>

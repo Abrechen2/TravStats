@@ -55,17 +55,14 @@ export function calculateLodgingStats(
   stays: LodgingStayData[],
   currentBaseCurrency = "EUR",
   lodgings?: LodgingRecord[],
-  now?: Date,
+  now?: Date
 ): LodgingStats {
   // Classify once, up front — every figure below reads the verdict rather than
   // re-deriving it, so "counts as visited" cannot mean two things in one file.
   const stayStates = new Map<LodgingStayData, LodgingCountState>();
   const statesByLodgingId = new Map<string, LodgingCountState[]>();
   for (const s of stays) {
-    const state = classifyStay(
-      { status: s.status, checkIn: s.checkIn, checkOut: s.checkOut },
-      now,
-    );
+    const state = classifyStay({ status: s.status, checkIn: s.checkIn, checkOut: s.checkOut }, now);
     stayStates.set(s, state);
     const bucket = statesByLodgingId.get(s.lodgingId);
     if (bucket) bucket.push(state);
@@ -248,7 +245,7 @@ export function calculateLodgingStats(
     countries,
     countriesCount: countries.size,
     countriesByYear: Object.fromEntries(
-      [...countriesByYear.entries()].map(([year, set]) => [year, [...set].sort()]),
+      [...countriesByYear.entries()].map(([year, set]) => [year, [...set].sort()])
     ),
     spendBaseTotal: spendBaseByCurrency[currentBaseCurrency] ?? 0,
     spendByCurrency,

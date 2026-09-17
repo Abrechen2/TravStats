@@ -17,7 +17,10 @@ import { resolveTrip } from "../trips";
 import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
 import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
-import { getCachedAlbumAssets, invalidateAlbumAssets } from "../../services/immich/immichAssetCache";
+import {
+  getCachedAlbumAssets,
+  invalidateAlbumAssets,
+} from "../../services/immich/immichAssetCache";
 import {
   deleteImportedPhotoFiles,
   estimateAlbumImport,
@@ -25,7 +28,12 @@ import {
   isImportInFlight,
   startAlbumImport,
 } from "../../services/immich/immichImport";
-import { ImmichAsset, ImmichConnection, ImmichError, ImmichMode } from "../../services/immich/types";
+import {
+  ImmichAsset,
+  ImmichConnection,
+  ImmichError,
+  ImmichMode,
+} from "../../services/immich/types";
 import { immichImportLimiter, immichProxyLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
 
@@ -74,7 +82,7 @@ async function requireConnection(userId: string, res: Response): Promise<ImmichC
 /** The link must exist AND belong to the trip the caller already proved they own. */
 async function resolveLink(
   tripId: string,
-  linkId: string,
+  linkId: string
 ): Promise<{ id: string; immichAlbumId: string; mode: string }> {
   const link = await prisma.tripImmichAlbum.findFirst({
     where: { id: linkId, tripId },
@@ -143,7 +151,7 @@ router.get(
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
-  },
+  }
 );
 
 /* ─── Link ─── */
@@ -217,7 +225,7 @@ router.post(
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
-  },
+  }
 );
 
 /* ─── Unlink ─── */
@@ -276,7 +284,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /* ─── Assets of one linked album ─── */
@@ -322,7 +330,7 @@ router.get(
       if (!conn) return;
 
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId),
+        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
       );
 
       res.json({
@@ -345,7 +353,7 @@ router.get(
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
-  },
+  }
 );
 
 /* ─── Import job: estimate, kick, poll ─── */
@@ -366,7 +374,7 @@ router.get(
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
-  },
+  }
 );
 
 router.post(
@@ -392,7 +400,13 @@ router.post(
       // and report the run in progress.
       if (isImportInFlight(link.id)) {
         res.status(202).json({
-          job: { status: "running", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
+          job: {
+            status: "running",
+            totalAssets: 0,
+            processedAssets: 0,
+            failedAssets: 0,
+            error: null,
+          },
         });
         return;
       }
@@ -407,10 +421,22 @@ router.post(
       if (!conn) {
         await prisma.immichImportJob.upsert({
           where: { albumLinkId: link.id },
-          update: { status: "failed", error: "notConfigured", completedAt: new Date(), startedAt: null },
-          create: { albumLinkId: link.id, status: "failed", error: "notConfigured", completedAt: new Date() },
+          update: {
+            status: "failed",
+            error: "notConfigured",
+            completedAt: new Date(),
+            startedAt: null,
+          },
+          create: {
+            albumLinkId: link.id,
+            status: "failed",
+            error: "notConfigured",
+            completedAt: new Date(),
+          },
         });
-        res.status(409).json({ error: "notConfigured", message: "No Immich connection configured" });
+        res
+          .status(409)
+          .json({ error: "notConfigured", message: "No Immich connection configured" });
         return;
       }
 
@@ -443,12 +469,18 @@ router.post(
       void startAlbumImport(userId, link.id);
 
       res.status(202).json({
-        job: { status: "pending", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
+        job: {
+          status: "pending",
+          totalAssets: 0,
+          processedAssets: 0,
+          failedAssets: 0,
+          error: null,
+        },
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 router.get(
@@ -465,7 +497,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

@@ -39,7 +39,7 @@ async function startMockOllama(): Promise<MockOllamaServer> {
     url: `http://127.0.0.1:${address.port}`,
     close: () =>
       new Promise<void>((resolve, reject) =>
-        server.close((err) => (err ? reject(err) : resolve())),
+        server.close((err) => (err ? reject(err) : resolve()))
       ),
     setResponse(body: object) {
       nextResponse = body;
@@ -82,9 +82,20 @@ describe("CruiseBookingParser", () => {
           price: 2499.0,
           currency: "EUR",
           stops: [
-            { dayNumber: 1, isAtSea: false, portName: "Hamburg", departureTime: "2025-12-19T18:00" },
+            {
+              dayNumber: 1,
+              isAtSea: false,
+              portName: "Hamburg",
+              departureTime: "2025-12-19T18:00",
+            },
             { dayNumber: 2, isAtSea: true },
-            { dayNumber: 3, isAtSea: false, portName: "Bergen", arrivalTime: "2025-12-21T08:00", departureTime: "2025-12-21T17:00" },
+            {
+              dayNumber: 3,
+              isAtSea: false,
+              portName: "Bergen",
+              arrivalTime: "2025-12-21T08:00",
+              departureTime: "2025-12-21T17:00",
+            },
             { dayNumber: 4, isAtSea: false, portName: "Hamburg", arrivalTime: "2025-12-26T08:00" },
           ],
         },
@@ -153,27 +164,31 @@ describe("CruiseBookingParser", () => {
   it("populates `missing` when critical fields are absent", async () => {
     mock.setResponse({ response: JSON.stringify([{ stops: [] }]) });
     const [cruise] = await parser.parseText("…");
-    expect(cruise.missing).toEqual(expect.arrayContaining(["shipName", "startDate", "endDate", "stops"]));
+    expect(cruise.missing).toEqual(
+      expect.arrayContaining(["shipName", "startDate", "endDate", "stops"])
+    );
   });
 
   it("strips <think> blocks and ```json fences before extracting JSON", async () => {
     mock.setResponse({
       response:
-        "<think>Let me think about this…</think>\n```json\n[{\"shipName\":\"Test Ship\",\"stops\":[]}]\n```",
+        '<think>Let me think about this…</think>\n```json\n[{"shipName":"Test Ship","stops":[]}]\n```',
     });
     const [cruise] = await parser.parseText("…");
     expect(cruise.shipName).toBe("Test Ship");
   });
 
   it("throws when Ollama returns a payload that doesn't unwrap to a cruise array", async () => {
-    mock.setResponse({ response: "{\"oops\":true}" });
+    mock.setResponse({ response: '{"oops":true}' });
     await expect(parser.parseText("…")).rejects.toThrow(/cruise array/);
   });
 
   it("unwraps a top-level object with a 'cruises' wrapper key (format:json mode)", async () => {
     mock.setResponse({
       response: JSON.stringify({
-        cruises: [{ shipName: "Mein Schiff 5", startDate: "2026-05-01", endDate: "2026-05-08", stops: [] }],
+        cruises: [
+          { shipName: "Mein Schiff 5", startDate: "2026-05-01", endDate: "2026-05-08", stops: [] },
+        ],
       }),
     });
     const [cruise] = await parser.parseText("…");
@@ -182,7 +197,12 @@ describe("CruiseBookingParser", () => {
 
   it("treats a single-cruise object as a length-1 array", async () => {
     mock.setResponse({
-      response: JSON.stringify({ shipName: "Solo Ship", startDate: "2026-07-01", endDate: "2026-07-08", stops: [] }),
+      response: JSON.stringify({
+        shipName: "Solo Ship",
+        startDate: "2026-07-01",
+        endDate: "2026-07-08",
+        stops: [],
+      }),
     });
     const [cruise] = await parser.parseText("…");
     expect(cruise.shipName).toBe("Solo Ship");
@@ -365,4 +385,3 @@ describe("CruiseBookingParser — extraction truthfulness", () => {
     });
   });
 });
-

@@ -11,12 +11,12 @@
 
 /** NFKC + trim + collapse inner whitespace + lowercase. Accents preserved. */
 export function canonicalizeCompanionName(raw: string): string {
-  return raw.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  return raw.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 /** The canonical form with combining marks stripped. Search only. */
 export function searchableCompanionName(raw: string): string {
   return canonicalizeCompanionName(raw)
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '');
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
 }

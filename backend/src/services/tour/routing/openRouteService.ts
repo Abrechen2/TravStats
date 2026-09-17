@@ -81,7 +81,7 @@ function isOrsGeoJsonResponse(value: unknown): value is OrsGeoJsonResponse {
 
 export function createOpenRouteService(
   apiKey: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
 ): RouteProvider {
   return {
     id: "openrouteservice",
@@ -110,7 +110,7 @@ export function createOpenRouteService(
       } catch (err) {
         logger.warn(
           { provider: "openrouteservice", error: err instanceof Error ? err.message : String(err) },
-          "openrouteservice request failed",
+          "openrouteservice request failed"
         );
         return null;
       }
@@ -118,7 +118,7 @@ export function createOpenRouteService(
       if (!response.ok) {
         logger.warn(
           { provider: "openrouteservice", status: response.status },
-          "openrouteservice returned a non-200 response",
+          "openrouteservice returned a non-200 response"
         );
         return null;
       }
@@ -129,7 +129,7 @@ export function createOpenRouteService(
       } catch (_err) {
         logger.warn(
           { provider: "openrouteservice", status: response.status },
-          "openrouteservice response body was not valid JSON",
+          "openrouteservice response body was not valid JSON"
         );
         return null;
       }
@@ -137,7 +137,7 @@ export function createOpenRouteService(
       if (!isOrsGeoJsonResponse(body)) {
         logger.warn(
           { provider: "openrouteservice", status: response.status },
-          "openrouteservice response did not match the expected shape",
+          "openrouteservice response did not match the expected shape"
         );
         return null;
       }

@@ -4,7 +4,8 @@ import type { AirportStats } from "../../../types";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (k: string, opts?: { total?: number }) => (opts?.total !== undefined ? `${k}:${opts.total}` : k),
+    t: (k: string, opts?: { total?: number }) =>
+      opts?.total !== undefined ? `${k}:${opts.total}` : k,
   }),
 }));
 

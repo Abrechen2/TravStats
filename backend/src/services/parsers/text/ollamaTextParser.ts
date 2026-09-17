@@ -76,7 +76,9 @@ function fetchJson(url: string, body: string): Promise<string> {
     const lib = isHttps ? https : http;
     const req = lib.request(options, (res) => {
       let data = "";
-      res.on("data", (chunk: string) => { data += chunk; });
+      res.on("data", (chunk: string) => {
+        data += chunk;
+      });
       res.on("end", () => resolve(data));
     });
     req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
@@ -102,7 +104,9 @@ function fetchGet(url: string): Promise<string> {
       },
       (res) => {
         let data = "";
-        res.on("data", (chunk: string) => { data += chunk; });
+        res.on("data", (chunk: string) => {
+          data += chunk;
+        });
         res.on("end", () => resolve(data));
       }
     );
@@ -198,7 +202,7 @@ export class OllamaTextParser implements ITextParser {
     text: string,
     _html?: string,
     _apiKey?: string,
-    options?: TextParseOptions,
+    options?: TextParseOptions
   ): Promise<ParsedBooking[]> {
     // 12k chars ≈ 3k tokens — comfortably within every deployed model's
     // context alongside the system prompt. The old 5000 cap sat 300 chars
@@ -234,7 +238,10 @@ export class OllamaTextParser implements ITextParser {
       options: { temperature: 0.1, num_ctx: 8192 },
     });
 
-    logger.info({ model: this.model, url: this.url }, "[Ollama Text Parser] Sending email to Ollama");
+    logger.info(
+      { model: this.model, url: this.url },
+      "[Ollama Text Parser] Sending email to Ollama"
+    );
 
     const raw = await fetchJson(`${this.url}/api/generate`, body);
     const response: unknown = JSON.parse(raw);
@@ -274,7 +281,11 @@ export class OllamaTextParser implements ITextParser {
     } catch (err) {
       const preview = jsonMatch[0].slice(0, 500).replace(/\s+/g, " ");
       logger.warn(
-        { model: this.model, matchPreview: preview, error: err instanceof Error ? err.message : String(err) },
+        {
+          model: this.model,
+          matchPreview: preview,
+          error: err instanceof Error ? err.message : String(err),
+        },
         "[Ollama Text Parser] JSON.parse failed on matched array"
       );
       throw new Error("Ollama response JSON parse failed");
@@ -302,7 +313,10 @@ export class OllamaTextParser implements ITextParser {
       if (f.seatClass) booking.seatClass = mapSeatClass(f.seatClass);
       if (f.airline) booking.airline = f.airline;
       if (f.operatingAirline) booking.operatingAirline = f.operatingAirline;
-      if (f.pnr) { booking.pnr = f.pnr; booking.bookingReference = f.pnr; }
+      if (f.pnr) {
+        booking.pnr = f.pnr;
+        booking.bookingReference = f.pnr;
+      }
       if (f.ticketNumber) booking.ticketNumber = f.ticketNumber;
       // The prompt demands a JSON number (dot-decimal), so a string here means
       // the model ignored the format rule — drop it rather than risk the
@@ -317,7 +331,13 @@ export class OllamaTextParser implements ITextParser {
       const inferred = sanitizeInferredFields(f.inferredFields);
       if (inferred) booking.inferredFields = inferred;
 
-      const critical = ["flightNumber", "departureCode", "arrivalCode", "departureTime", "arrivalTime"] as const;
+      const critical = [
+        "flightNumber",
+        "departureCode",
+        "arrivalCode",
+        "departureTime",
+        "arrivalTime",
+      ] as const;
       for (const field of critical) {
         if (!booking[field]) booking.missing.push(field);
       }

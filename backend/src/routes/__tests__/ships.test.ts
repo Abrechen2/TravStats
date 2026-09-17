@@ -32,8 +32,7 @@ describe("Ships API", () => {
       expect(
         res.body.data.every(
           (s: { name: string; cruiseLine: string }) =>
-            s.name.toLowerCase().includes("aida") ||
-            s.cruiseLine.toLowerCase().includes("aida")
+            s.name.toLowerCase().includes("aida") || s.cruiseLine.toLowerCase().includes("aida")
         )
       ).toBe(true);
     });

@@ -16,9 +16,7 @@ describe("settingsStore.setBaseCurrency", () => {
   });
 
   it("updates local state immediately and persists via settingsApi.update — the settings API write, not units.currency", async () => {
-    const updateSpy = vi
-      .spyOn(settingsApi, "update")
-      .mockResolvedValue({} as UserSettings);
+    const updateSpy = vi.spyOn(settingsApi, "update").mockResolvedValue({} as UserSettings);
 
     useSettingsStore.getState().setBaseCurrency("CHF");
 

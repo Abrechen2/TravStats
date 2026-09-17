@@ -322,7 +322,9 @@ export function MembershipManager({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-medium text-[var(--text-primary)]">{m.programName}</span>
-                  {m.tier && <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>}
+                  {m.tier && (
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>
+                  )}
                   {m.membershipNumber && (
                     <span className="ml-2 text-xs text-[var(--text-muted)]">
                       #{m.membershipNumber}
@@ -404,10 +406,7 @@ export function MembershipManager({
           )}
 
           {leavesScopeChain && (
-            <p
-              data-testid="membership-leaves-chain"
-              className="text-xs text-[var(--text-muted)]"
-            >
+            <p data-testid="membership-leaves-chain" className="text-xs text-[var(--text-muted)]">
               {t("lodging:membership.leavesThisChain")}
             </p>
           )}

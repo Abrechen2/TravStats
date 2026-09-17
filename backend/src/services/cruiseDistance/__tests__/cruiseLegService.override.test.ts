@@ -27,7 +27,11 @@ describe("recomputeLegsForCruise with a hand-drawn route", () => {
   const legRow = async (ordinal: number) =>
     prisma.cruiseLeg.findFirst({ where: { cruiseId, ordinal } });
 
-  const writeOverride = async (fromRef: number, toRef: number, waypoints: Array<[number, number]>) =>
+  const writeOverride = async (
+    fromRef: number,
+    toRef: number,
+    waypoints: Array<[number, number]>
+  ) =>
     prisma.cruiseLegRoute.create({
       data: {
         cruiseId,

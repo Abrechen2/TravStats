@@ -113,7 +113,7 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
 export async function exportWorkbook(
   t: T,
   input: ExportInput,
-  locale = "de",
+  locale = "de"
 ): Promise<Blob | null> {
   const sheets = buildSheets(t, input, locale);
   if (sheets.length === 0) return null;

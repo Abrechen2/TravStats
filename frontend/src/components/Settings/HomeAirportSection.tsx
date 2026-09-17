@@ -88,7 +88,6 @@ export default function HomeAirportSection(): JSX.Element {
         description={t("settings:homeAirport.description")}
       />
 
-
       {loading ? (
         <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : (
@@ -135,7 +134,9 @@ export default function HomeAirportSection(): JSX.Element {
           {/* History */}
           {past.length > 0 && (
             <div>
-              <FieldLabel help={t("settings:homeAirport.help.historyExplained")}>{t("settings:homeAirport.historyLabel")}</FieldLabel>
+              <FieldLabel help={t("settings:homeAirport.help.historyExplained")}>
+                {t("settings:homeAirport.historyLabel")}
+              </FieldLabel>
               <ul className="space-y-1">
                 {past.map((entry) => {
                   const trueIndex = history.indexOf(entry);

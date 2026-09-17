@@ -241,244 +241,240 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       }
     >
       <>
-          <div>
-            <Section title={`${t("field.ship")} & ${t("field.line")}`}>
-              <ShipPicker value={ship} onChange={onShipPicked} />
+        <div>
+          <Section title={`${t("field.ship")} & ${t("field.line")}`}>
+            <ShipPicker value={ship} onChange={onShipPicked} />
+            <input
+              className={`mt-3 ${INPUT_CLASS}`}
+              aria-label={t("field.line")}
+              value={cruiseLine}
+              onChange={(e): void => setCruiseLine(e.target.value)}
+              placeholder={t("field.line")}
+            />
+            <input
+              className={`mt-3 ${INPUT_CLASS}`}
+              aria-label={t("field.routeName")}
+              value={routeName}
+              onChange={(e): void => setRouteName(e.target.value)}
+              placeholder={t("field.routeName")}
+            />
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <input
-                className={`mt-3 ${INPUT_CLASS}`}
-                aria-label={t("field.line")}
-                value={cruiseLine}
-                onChange={(e): void => setCruiseLine(e.target.value)}
-                placeholder={t("field.line")}
+                type="date"
+                aria-label={t("field.depart")}
+                className={INPUT_CLASS}
+                style={DARK_PICKER_STYLE}
+                value={startDate}
+                onChange={(e): void => setStartDate(e.target.value)}
               />
               <input
-                className={`mt-3 ${INPUT_CLASS}`}
-                aria-label={t("field.routeName")}
-                value={routeName}
-                onChange={(e): void => setRouteName(e.target.value)}
-                placeholder={t("field.routeName")}
+                type="date"
+                aria-label={t("field.arrive")}
+                className={INPUT_CLASS}
+                style={DARK_PICKER_STYLE}
+                value={endDate}
+                onChange={(e): void => setEndDate(e.target.value)}
               />
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <input
-                  type="date"
-                  aria-label={t("field.depart")}
-                  className={INPUT_CLASS}
-                  style={DARK_PICKER_STYLE}
-                  value={startDate}
-                  onChange={(e): void => setStartDate(e.target.value)}
-                />
-                <input
-                  type="date"
-                  aria-label={t("field.arrive")}
-                  className={INPUT_CLASS}
-                  style={DARK_PICKER_STYLE}
-                  value={endDate}
-                  onChange={(e): void => setEndDate(e.target.value)}
-                />
-              </div>
-              {/* #status-from-dates: cruise write paths derive scheduled/
+            </div>
+            {/* #status-from-dates: cruise write paths derive scheduled/
                   in_progress/flown from the dates — a select just let the UI
                   set a value the backend would immediately overwrite. Only
                   "cancelled" stays user-controlled, via the checkbox below. */}
-              <div className="mt-3">
-                <span
-                  className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-                  style={cruiseStatusPillStyle(status)}
-                >
-                  {t(`status.${status}`, { defaultValue: status })}
-                </span>
-              </div>
-              <label className="mt-2 flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={status === "cancelled"}
-                  onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
-                />
-                {t("status.cancelledCheckbox")}
-              </label>
-            </Section>
-
-            <Section title={t("detail.mapColor")}>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(): void => setColor(null)}
-                  aria-label={t("field.colorAuto")}
-                  title={t("field.colorAuto")}
-                  aria-pressed={color === null}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed text-xs transition-transform hover:scale-110"
-                  style={{
-                    borderColor: color === null ? "var(--accent)" : "var(--color-border)",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  ×
-                </button>
-                {COLOR_PALETTE.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={(): void => setColor(c)}
-                    aria-label={c}
-                    aria-pressed={color === c}
-                    className="h-7 w-7 rounded-full transition-transform hover:scale-110"
-                    style={{
-                      background: c,
-                      outline: color === c ? `2px solid ${c}` : "none",
-                      outlineOffset: "2px",
-                    }}
-                  />
-                ))}
-                <input
-                  type="color"
-                  aria-label={t("field.color")}
-                  value={color ?? "#000000"}
-                  onChange={(e): void => setColor(e.target.value)}
-                  className="h-7 w-9 cursor-pointer rounded-sm border border-border bg-transparent p-0"
-                />
-              </div>
-            </Section>
-
-            <Section title={t("stops.title")}>
-              <div className="grid grid-cols-2 gap-3">
-                <PortPicker
-                  value={departurePort}
-                  onChange={setDeparturePort}
-                  label={t("field.departure_port")}
-                />
-                <PortPicker
-                  value={arrivalPort}
-                  onChange={setArrivalPort}
-                  label={t("field.arrival_port")}
-                />
-              </div>
-              <div className="mt-3">
-                <CruiseStopsEditor stops={stops} onChange={setStops} />
-              </div>
-            </Section>
-
-            <Section title={t("detail.cabin")}>
-              <div className="grid grid-cols-3 gap-3">
-                <input
-                  aria-label={t("field.cabin")}
-                  className={INPUT_CLASS}
-                  value={cabinNumber}
-                  onChange={(e): void => setCabinNumber(e.target.value)}
-                  placeholder={t("field.cabin")}
-                />
-                <select
-                  aria-label={t("field.cabinType")}
-                  className={INPUT_CLASS}
-                  value={cabinType}
-                  onChange={(e): void => setCabinType(e.target.value as CabinType | "")}
-                >
-                  <option value="">—</option>
-                  {CABIN_TYPES.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`cabinType.${c}`)}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  aria-label={t("field.deck")}
-                  className={INPUT_CLASS}
-                  value={deck}
-                  onChange={(e): void => setDeck(e.target.value)}
-                  placeholder={t("field.deck")}
-                />
-              </div>
-            </Section>
-
-            <Section title={t("detail.costs")}>
-              <div className="grid grid-cols-3 gap-3">
-                <input
-                  aria-label={t("field.bookingReference")}
-                  className={INPUT_CLASS}
-                  value={bookingReference}
-                  onChange={(e): void => setBookingReference(e.target.value)}
-                  placeholder={t("field.bookingReference")}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  step={10 ** -minorUnits(currency)}
-                  aria-label={t("field.price")}
-                  className={INPUT_CLASS}
-                  value={price}
-                  onChange={(e): void => setPrice(e.target.value)}
-                  placeholder={t("field.price")}
-                />
-                <CurrencySelect
-                  aria-label={t("field.currency")}
-                  value={currency}
-                  recent={recentCurrencies}
-                  onChange={setCurrency}
-                />
-              </div>
-            </Section>
-
-            <Section title={t("detail.meta")}>
+            <div className="mt-3">
+              <span
+                className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
+                style={cruiseStatusPillStyle(status)}
+              >
+                {t(`status.${status}`, { defaultValue: status })}
+              </span>
+            </div>
+            <label className="mt-2 flex items-center gap-2 text-sm">
               <input
-                aria-label={t("field.tags")}
+                type="checkbox"
+                checked={status === "cancelled"}
+                onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+              />
+              {t("status.cancelledCheckbox")}
+            </label>
+          </Section>
+
+          <Section title={t("detail.mapColor")}>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={(): void => setColor(null)}
+                aria-label={t("field.colorAuto")}
+                title={t("field.colorAuto")}
+                aria-pressed={color === null}
+                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed text-xs transition-transform hover:scale-110"
+                style={{
+                  borderColor: color === null ? "var(--accent)" : "var(--color-border)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                ×
+              </button>
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={(): void => setColor(c)}
+                  aria-label={c}
+                  aria-pressed={color === c}
+                  className="h-7 w-7 rounded-full transition-transform hover:scale-110"
+                  style={{
+                    background: c,
+                    outline: color === c ? `2px solid ${c}` : "none",
+                    outlineOffset: "2px",
+                  }}
+                />
+              ))}
+              <input
+                type="color"
+                aria-label={t("field.color")}
+                value={color ?? "#000000"}
+                onChange={(e): void => setColor(e.target.value)}
+                className="h-7 w-9 cursor-pointer rounded-sm border border-border bg-transparent p-0"
+              />
+            </div>
+          </Section>
+
+          <Section title={t("stops.title")}>
+            <div className="grid grid-cols-2 gap-3">
+              <PortPicker
+                value={departurePort}
+                onChange={setDeparturePort}
+                label={t("field.departure_port")}
+              />
+              <PortPicker
+                value={arrivalPort}
+                onChange={setArrivalPort}
+                label={t("field.arrival_port")}
+              />
+            </div>
+            <div className="mt-3">
+              <CruiseStopsEditor stops={stops} onChange={setStops} />
+            </div>
+          </Section>
+
+          <Section title={t("detail.cabin")}>
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                aria-label={t("field.cabin")}
                 className={INPUT_CLASS}
-                value={tagsInput}
-                onChange={(e): void => setTagsInput(e.target.value)}
-                placeholder={t("field.tags")}
+                value={cabinNumber}
+                onChange={(e): void => setCabinNumber(e.target.value)}
+                placeholder={t("field.cabin")}
               />
-              <div className="mt-3">
-                <label className="label">{t("field.companions")}</label>
-                <CompanionPicker value={companions} onChange={setCompanions} />
-              </div>
-              <div className="mt-3">
-                <label className="label" htmlFor="cruise-edit-trip">
-                  {t("field.trip")}
-                </label>
-                <select
-                  id="cruise-edit-trip"
-                  aria-label={t("field.trip")}
-                  className={INPUT_CLASS}
-                  value={tripId}
-                  onChange={(e): void => setTripId(e.target.value)}
-                >
-                  <option value="">{t("field.noTrip")}</option>
-                  {trips.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {trip.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <textarea
-                aria-label={t("field.notes")}
-                rows={3}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={notes}
-                onChange={(e): void => setNotes(e.target.value)}
-                placeholder={t("field.notes")}
+              <select
+                aria-label={t("field.cabinType")}
+                className={INPUT_CLASS}
+                value={cabinType}
+                onChange={(e): void => setCabinType(e.target.value as CabinType | "")}
+              >
+                <option value="">—</option>
+                {CABIN_TYPES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`cabinType.${c}`)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                aria-label={t("field.deck")}
+                className={INPUT_CLASS}
+                value={deck}
+                onChange={(e): void => setDeck(e.target.value)}
+                placeholder={t("field.deck")}
               />
-            </Section>
+            </div>
+          </Section>
 
-            {error !== null && (
-              <div className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)">
-                {error}
-              </div>
-            )}
-          </div>
+          <Section title={t("detail.costs")}>
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                aria-label={t("field.bookingReference")}
+                className={INPUT_CLASS}
+                value={bookingReference}
+                onChange={(e): void => setBookingReference(e.target.value)}
+                placeholder={t("field.bookingReference")}
+              />
+              <input
+                type="number"
+                min={0}
+                step={10 ** -minorUnits(currency)}
+                aria-label={t("field.price")}
+                className={INPUT_CLASS}
+                value={price}
+                onChange={(e): void => setPrice(e.target.value)}
+                placeholder={t("field.price")}
+              />
+              <CurrencySelect
+                aria-label={t("field.currency")}
+                value={currency}
+                recent={recentCurrencies}
+                onChange={setCurrency}
+              />
+            </div>
+          </Section>
 
-        </>
+          <Section title={t("detail.meta")}>
+            <input
+              aria-label={t("field.tags")}
+              className={INPUT_CLASS}
+              value={tagsInput}
+              onChange={(e): void => setTagsInput(e.target.value)}
+              placeholder={t("field.tags")}
+            />
+            <div className="mt-3">
+              <label className="label">{t("field.companions")}</label>
+              <CompanionPicker value={companions} onChange={setCompanions} />
+            </div>
+            <div className="mt-3">
+              <label className="label" htmlFor="cruise-edit-trip">
+                {t("field.trip")}
+              </label>
+              <select
+                id="cruise-edit-trip"
+                aria-label={t("field.trip")}
+                className={INPUT_CLASS}
+                value={tripId}
+                onChange={(e): void => setTripId(e.target.value)}
+              >
+                <option value="">{t("field.noTrip")}</option>
+                {trips.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              aria-label={t("field.notes")}
+              rows={3}
+              className={`mt-3 ${INPUT_CLASS}`}
+              value={notes}
+              onChange={(e): void => setNotes(e.target.value)}
+              placeholder={t("field.notes")}
+            />
+          </Section>
+
+          {error !== null && (
+            <div className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)">
+              {error}
+            </div>
+          )}
+        </div>
+      </>
     </Modal>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (
-    <details
-      open
-      className="mb-4 rounded-md border border-border bg-(--bg-surface)/50 p-3"
-    >
+    <details open className="mb-4 rounded-md border border-border bg-(--bg-surface)/50 p-3">
       <summary className="cursor-pointer text-sm font-medium text-(--text-primary)">
         {title}
       </summary>

@@ -81,7 +81,7 @@ describe("checkHealth", () => {
     const fetchMock = jest
       .fn()
       .mockResolvedValue(
-        fakeResponse({ body: { status: "ok" }, headers: { "x-dawarich-version": "1.9.2" } }),
+        fakeResponse({ body: { status: "ok" }, headers: { "x-dawarich-version": "1.9.2" } })
       );
     global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -149,9 +149,7 @@ describe("checkHealth", () => {
 
 describe("getPoints", () => {
   it("sends the Bearer header and the start_at/end_at/page/per_page params, never from/to", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(fakeResponse({ body: [] }));
+    const fetchMock = jest.fn().mockResolvedValue(fakeResponse({ body: [] }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const startAt = new Date("2026-08-25T00:00:00Z");
@@ -219,9 +217,7 @@ describe("getPoints", () => {
     // This assertion would fail (order 1,2,3,4) if the client handed points
     // onward in Dawarich's own newest-first response order.
     expect(points.map((p) => p.id)).toEqual([4, 3, 2, 1]);
-    expect(points.map((p) => p.timestampMs)).toEqual([
-      1000000, 1001000, 1002000, 1003000,
-    ]);
+    expect(points.map((p) => p.timestampMs)).toEqual([1000000, 1001000, 1002000, 1003000]);
   });
 
   it("rejects a point whose latitude/longitude cannot be parsed, dropping only that point", async () => {
@@ -231,7 +227,7 @@ describe("getPoints", () => {
           { ...REAL_POINT, id: 1, latitude: "not-a-number" },
           { ...REAL_POINT, id: 2 },
         ],
-      }),
+      })
     ) as unknown as typeof fetch;
 
     const { points } = await createDawarichClient(CONN).getPoints({
@@ -244,9 +240,11 @@ describe("getPoints", () => {
   });
 
   it("rejects a point with a non-finite timestamp", async () => {
-    global.fetch = jest.fn().mockResolvedValue(
-      fakeResponse({ body: [{ ...REAL_POINT, timestamp: null }] }),
-    ) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        fakeResponse({ body: [{ ...REAL_POINT, timestamp: null }] })
+      ) as unknown as typeof fetch;
 
     const { points } = await createDawarichClient(CONN).getPoints({
       startAt: new Date(0),
@@ -261,7 +259,7 @@ describe("getPoints", () => {
       .mockResolvedValue(fakeResponse({ body: { points: [] } })) as unknown as typeof fetch;
 
     await expect(
-      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() }),
+      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() })
     ).rejects.toMatchObject({ kind: "protocol" });
   });
 
@@ -341,7 +339,7 @@ describe("getPoints", () => {
       .mockResolvedValue(fakeResponse({ ok: false, status })) as unknown as typeof fetch;
 
     await expect(
-      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() }),
+      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() })
     ).rejects.toMatchObject({ kind, status });
   });
 
@@ -349,7 +347,7 @@ describe("getPoints", () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("timeout")) as unknown as typeof fetch;
 
     await expect(
-      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() }),
+      createDawarichClient(CONN).getPoints({ startAt: new Date(0), endAt: new Date() })
     ).rejects.toBeInstanceOf(DawarichError);
   });
 });

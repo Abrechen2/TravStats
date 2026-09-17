@@ -90,7 +90,7 @@ describe("place address backfill", () => {
     await completePlaceAddress(place.id);
 
     expect(mockComplete).toHaveBeenCalledWith(
-      expect.objectContaining({ address: "Meine eigene Adresse", city: "Meine Stadt" }),
+      expect.objectContaining({ address: "Meine eigene Adresse", city: "Meine Stadt" })
     );
     const after = await prisma.place.findUnique({ where: { id: place.id } });
     expect(after?.address).toBe("Meine eigene Adresse");
@@ -237,7 +237,7 @@ describe("unreadable fields are refetched", () => {
     // The helper is handed nulls for the unreadable fields — that is what makes
     // a fill-only-gaps function replace them.
     expect(mockComplete).toHaveBeenCalledWith(
-      expect.objectContaining({ city: null, country: null, address: null }),
+      expect.objectContaining({ city: null, country: null, address: null })
     );
     const after = await prisma.place.findUnique({ where: { id: place.id } });
     expect(after?.city).toBe("Nikko");
@@ -255,7 +255,7 @@ describe("unreadable fields are refetched", () => {
     await completeMissingPlaceAddresses(scriptUserId);
 
     expect(mockComplete).toHaveBeenCalledWith(
-      expect.objectContaining({ city: "Lëtzebuerg", country: "Lëtzebuerg", address: null }),
+      expect.objectContaining({ city: "Lëtzebuerg", country: "Lëtzebuerg", address: null })
     );
     const after = await prisma.place.findUnique({ where: { id: place.id } });
     expect(after?.city).toBe("Lëtzebuerg");

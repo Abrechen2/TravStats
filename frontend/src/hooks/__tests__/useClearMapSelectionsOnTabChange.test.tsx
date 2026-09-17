@@ -26,9 +26,12 @@ describe("useClearMapSelectionsOnTabChange", () => {
   });
 
   it("clears the flight selection when the tab changes", () => {
-    const { rerender } = renderHook(({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab), {
-      initialProps: { tab: "flight" as DashboardTab },
-    });
+    const { rerender } = renderHook(
+      ({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab),
+      {
+        initialProps: { tab: "flight" as DashboardTab },
+      }
+    );
 
     act(() => {
       useFlightSelectionStore.getState().setSelection([flight]);
@@ -42,9 +45,12 @@ describe("useClearMapSelectionsOnTabChange", () => {
   });
 
   it("clears the cruise selection when the tab changes", () => {
-    const { rerender } = renderHook(({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab), {
-      initialProps: { tab: "cruise" as DashboardTab },
-    });
+    const { rerender } = renderHook(
+      ({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab),
+      {
+        initialProps: { tab: "cruise" as DashboardTab },
+      }
+    );
 
     act(() => {
       useCruiseSelectionStore.getState().showDetails(cruise);
@@ -58,9 +64,12 @@ describe("useClearMapSelectionsOnTabChange", () => {
   });
 
   it("keeps a selection alive while the tab stays the same (mode switches)", () => {
-    const { rerender } = renderHook(({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab), {
-      initialProps: { tab: "flight" as DashboardTab },
-    });
+    const { rerender } = renderHook(
+      ({ tab }: { tab: DashboardTab }) => useClearMapSelectionsOnTabChange(tab),
+      {
+        initialProps: { tab: "flight" as DashboardTab },
+      }
+    );
 
     act(() => {
       useFlightSelectionStore.getState().setSelection([flight]);

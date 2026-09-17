@@ -1,10 +1,10 @@
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
-import logger from '../../utils/logger';
-import { DATABASE_URL } from '../../utils/database';
-import { DOCKER_DB_CONTAINER } from './backupConfig';
+import { exec, spawn } from "child_process";
+import { promisify } from "util";
+import * as fs from "fs";
+import * as path from "path";
+import logger from "../../utils/logger";
+import { DATABASE_URL } from "../../utils/database";
+import { DOCKER_DB_CONTAINER } from "./backupConfig";
 
 const execAsync = promisify(exec);
 
@@ -12,52 +12,64 @@ const execAsync = promisify(exec);
  * Extract database connection info from DATABASE_URL
  * Uses URL class for robust parsing, especially with special characters in passwords
  */
-export function parseDatabaseUrl(url: string): { host: string; port: string; user: string; password: string; database: string } {
+export function parseDatabaseUrl(url: string): {
+  host: string;
+  port: string;
+  user: string;
+  password: string;
+  database: string;
+} {
   try {
     // Replace postgresql:// with http:// for URL parsing (URL class doesn't support postgresql://)
-    const httpUrl = url.replace(/^postgresql:\/\//, 'http://');
+    const httpUrl = url.replace(/^postgresql:\/\//, "http://");
     const dbUrl = new URL(httpUrl);
 
     return {
       user: decodeURIComponent(dbUrl.username),
       password: decodeURIComponent(dbUrl.password),
       host: dbUrl.hostname,
-      port: dbUrl.port || '5432',
+      port: dbUrl.port || "5432",
       database: dbUrl.pathname.slice(1), // Remove leading /
     };
   } catch (error) {
-    throw new Error(`Invalid DATABASE_URL format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Invalid DATABASE_URL format: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
 /**
  * Execute pg_dump to create database backup
  */
-export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string): Promise<void> {
+export async function createDatabaseDump(
+  outputPath: string,
+  targetDatabaseUrl?: string
+): Promise<void> {
   const dbUrl = targetDatabaseUrl || DATABASE_URL;
   const dbInfo = parseDatabaseUrl(dbUrl);
 
   // Check if we're in Docker or if database is in Docker
-  const isDocker = process.env.DOCKER === 'true';
+  const isDocker = process.env.DOCKER === "true";
   const dbContainer = process.env.DOCKER_DB_CONTAINER || DOCKER_DB_CONTAINER;
-  const isWindows = process.platform === 'win32';
+  const isWindows = process.platform === "win32";
 
   // Check if we're running inside Docker by checking for /.dockerenv or docker hostname
-  const isRunningInDocker = fs.existsSync('/.dockerenv') ||
-                            fs.existsSync('/proc/self/cgroup') &&
-                            fs.readFileSync('/proc/self/cgroup', 'utf8').includes('docker');
+  const isRunningInDocker =
+    fs.existsSync("/.dockerenv") ||
+    (fs.existsSync("/proc/self/cgroup") &&
+      fs.readFileSync("/proc/self/cgroup", "utf8").includes("docker"));
 
   // Check if database is in Docker (docker hostname) or localhost
-  const isDockerHostname = dbInfo.host === 'db' || dbInfo.host === 'travstats-db-dev';
-  const isLocalhost = dbInfo.host === 'localhost' || dbInfo.host === '127.0.0.1';
+  const isDockerHostname = dbInfo.host === "db" || dbInfo.host === "travstats-db-dev";
+  const isLocalhost = dbInfo.host === "localhost" || dbInfo.host === "127.0.0.1";
 
   // If database is not localhost and not a docker hostname, it's likely remote
   // In this case, we should use direct pg_dump connection, not docker exec
   const isRemoteDatabase = !isDockerHostname && !isLocalhost;
 
   logger.info({
-    operation: 'backup_db_check',
-    message: 'Checking database connection method',
+    operation: "backup_db_check",
+    message: "Checking database connection method",
     isDocker,
     isRunningInDocker,
     dbContainer,
@@ -77,40 +89,40 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
   if (isDockerHostname) {
     // Database might be in Docker, check if Docker is available
     try {
-      await execAsync('docker --version');
+      await execAsync("docker --version");
       dockerCommandAvailable = true;
       logger.info({
-        operation: 'backup_docker_command_available',
-        message: 'Docker command is available',
+        operation: "backup_docker_command_available",
+        message: "Docker command is available",
       });
 
       // Check if Docker daemon is actually running
       try {
-        await execAsync('docker ps');
+        await execAsync("docker ps");
         dockerDaemonRunning = true;
         logger.info({
-          operation: 'backup_docker_daemon_running',
-          message: 'Docker daemon is running',
+          operation: "backup_docker_daemon_running",
+          message: "Docker daemon is running",
         });
       } catch (error) {
         logger.warn({
-          operation: 'backup_docker_daemon_not_running',
-          message: 'Docker command available but daemon not running',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          operation: "backup_docker_daemon_not_running",
+          message: "Docker command available but daemon not running",
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     } catch (error) {
       logger.warn({
-        operation: 'backup_docker_command_not_available',
-        message: 'Docker command not available',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        operation: "backup_docker_command_not_available",
+        message: "Docker command not available",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   } else {
     // Database is clearly remote, skip Docker check
     logger.info({
-      operation: 'backup_db_remote',
-      message: 'Database is remote, skipping Docker check',
+      operation: "backup_db_remote",
+      message: "Database is remote, skipping Docker check",
       dbHost: dbInfo.host,
     });
   }
@@ -120,21 +132,17 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
   let actualContainerName = dbContainer;
 
   if (dockerCommandAvailable && dockerDaemonRunning) {
-    const possibleContainers = [
-      dbContainer,
-      'travstats-db-dev',
-      'travstats-db',
-    ];
+    const possibleContainers = [dbContainer, "travstats-db-dev", "travstats-db"];
 
     // Remove duplicates
-    const uniqueContainers = [...new Set(possibleContainers.filter(c => c))];
+    const uniqueContainers = [...new Set(possibleContainers.filter((c) => c))];
 
     // If DB host is 'db' (Docker internal hostname), we're likely in Docker
     // and the container name might match the service name
-    if (dbInfo.host === 'db' || dbInfo.host === 'travstats-db-dev') {
+    if (dbInfo.host === "db" || dbInfo.host === "travstats-db-dev") {
       logger.info({
-        operation: 'backup_db_host_docker',
-        message: 'Database host suggests Docker environment',
+        operation: "backup_db_host_docker",
+        message: "Database host suggests Docker environment",
         dbHost: dbInfo.host,
       });
     }
@@ -143,23 +151,26 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
       try {
         // First try to list all containers and search for matching names
         const allContainersResult = await execAsync('docker ps --format "{{.Names}}"');
-        const allContainers = allContainersResult.stdout.trim().split('\n').filter(c => c);
+        const allContainers = allContainersResult.stdout
+          .trim()
+          .split("\n")
+          .filter((c) => c);
 
         logger.debug({
-          operation: 'backup_docker_list_containers',
-          message: 'Listed all running containers',
+          operation: "backup_docker_list_containers",
+          message: "Listed all running containers",
           containers: allContainers,
           searchingFor: container,
         });
 
         // Check for exact match
-        const exactMatch = allContainers.find(c => c === container);
+        const exactMatch = allContainers.find((c) => c === container);
         if (exactMatch) {
           actualContainerName = exactMatch;
           dockerAvailable = true;
           logger.info({
-            operation: 'backup_docker_detected',
-            message: 'Docker container detected (exact match), using docker exec',
+            operation: "backup_docker_detected",
+            message: "Docker container detected (exact match), using docker exec",
             container: actualContainerName,
             checked: container,
           });
@@ -167,13 +178,15 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         }
 
         // Check for partial match (container name contains search term)
-        const partialMatch = allContainers.find(c => c.includes(container) || container.includes(c));
+        const partialMatch = allContainers.find(
+          (c) => c.includes(container) || container.includes(c)
+        );
         if (partialMatch) {
           actualContainerName = partialMatch;
           dockerAvailable = true;
           logger.info({
-            operation: 'backup_docker_detected',
-            message: 'Docker container detected (partial match), using docker exec',
+            operation: "backup_docker_detected",
+            message: "Docker container detected (partial match), using docker exec",
             container: actualContainerName,
             checked: container,
           });
@@ -182,9 +195,9 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
       } catch (error) {
         // Continue to next container name
         logger.debug({
-          operation: 'backup_docker_container_check',
+          operation: "backup_docker_container_check",
           message: `Container ${container} not found`,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         });
         continue;
       }
@@ -194,21 +207,21 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
   if (!dockerAvailable) {
     if (dockerCommandAvailable && !dockerDaemonRunning) {
       logger.warn({
-        operation: 'backup_docker_daemon_not_running',
-        message: 'Docker daemon not running, will try direct connection',
+        operation: "backup_docker_daemon_not_running",
+        message: "Docker daemon not running, will try direct connection",
       });
     } else if (!dockerCommandAvailable) {
       logger.info({
-        operation: 'backup_docker_not_available',
-        message: 'Docker not available, will use direct connection',
+        operation: "backup_docker_not_available",
+        message: "Docker not available, will use direct connection",
       });
     } else {
       logger.warn({
-        operation: 'backup_docker_check_failed',
-        message: 'Docker container not found, will try direct connection',
+        operation: "backup_docker_check_failed",
+        message: "Docker container not found, will try direct connection",
         dockerCommandAvailable,
         dockerDaemonRunning,
-        checkedContainers: ['travstats-db-dev', 'travstats-db', dbContainer].filter(c => c),
+        checkedContainers: ["travstats-db-dev", "travstats-db", dbContainer].filter((c) => c),
       });
     }
   }
@@ -219,29 +232,25 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
     // If database is remote, we need pg_dump locally - this is expected
     if (isRemoteDatabase || !isDockerHostname) {
       logger.info({
-        operation: 'backup_using_local_pg_dump',
-        message: 'Using local pg_dump for remote database',
+        operation: "backup_using_local_pg_dump",
+        message: "Using local pg_dump for remote database",
         dbHost: dbInfo.host,
       });
       // Continue with local pg_dump - this is expected for remote databases
     } else if (dockerCommandAvailable && dockerDaemonRunning && !dockerAvailable) {
       // Docker is running but container not found - this is unexpected
-      const checkedContainers = [
-        dbContainer,
-        'travstats-db-dev',
-        'travstats-db',
-      ].filter(c => c);
+      const checkedContainers = [dbContainer, "travstats-db-dev", "travstats-db"].filter((c) => c);
       throw new Error(
         `Docker is available and running but database container not found. ` +
-        `Checked containers: ${checkedContainers.join(', ')}. ` +
-        `Please ensure the database container is running and the container name matches one of the expected names. ` +
-        `You can set DOCKER_DB_CONTAINER environment variable to specify the correct container name.`
+          `Checked containers: ${checkedContainers.join(", ")}. ` +
+          `Please ensure the database container is running and the container name matches one of the expected names. ` +
+          `You can set DOCKER_DB_CONTAINER environment variable to specify the correct container name.`
       );
     } else if (!dockerCommandAvailable || !dockerDaemonRunning) {
       // Docker not available or not running - we need pg_dump locally
       logger.info({
-        operation: 'backup_docker_not_available_fallback',
-        message: 'Docker not available, using local pg_dump',
+        operation: "backup_docker_not_available_fallback",
+        message: "Docker not available, using local pg_dump",
         dockerCommandAvailable,
         dockerDaemonRunning,
       });
@@ -256,36 +265,45 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
       }
 
       const outputFile = fs.createWriteStream(outputPath);
-      const pgDump = spawn('pg_dump', [
-        '-h', dbInfo.host,
-        '-p', dbInfo.port.toString(),
-        '-U', dbInfo.user,
-        '-F', 'p',
-        // See the note above spawnRestore in backupRestore.ts: without --clean a
-        // dump only ever ADDS, so restoring over a live database left it as it
-        // was and reported success (audit finding AUD-007).
-        '--clean', '--if-exists',
-        dbInfo.database,
-      ], {
-        env: {
-          ...process.env,
-          PGPASSWORD: dbInfo.password,
-        },
-      });
+      const pgDump = spawn(
+        "pg_dump",
+        [
+          "-h",
+          dbInfo.host,
+          "-p",
+          dbInfo.port.toString(),
+          "-U",
+          dbInfo.user,
+          "-F",
+          "p",
+          // See the note above spawnRestore in backupRestore.ts: without --clean a
+          // dump only ever ADDS, so restoring over a live database left it as it
+          // was and reported success (audit finding AUD-007).
+          "--clean",
+          "--if-exists",
+          dbInfo.database,
+        ],
+        {
+          env: {
+            ...process.env,
+            PGPASSWORD: dbInfo.password,
+          },
+        }
+      );
 
       pgDump.stdout.pipe(outputFile);
 
-      let stderrData = '';
-      pgDump.stderr.on('data', (data) => {
+      let stderrData = "";
+      pgDump.stderr.on("data", (data) => {
         stderrData += data.toString();
         logger.warn({
-          operation: 'backup_db_stderr',
-          message: 'pg_dump stderr output',
+          operation: "backup_db_stderr",
+          message: "pg_dump stderr output",
           data: data.toString(),
         });
       });
 
-      pgDump.on('error', (error) => {
+      pgDump.on("error", (error) => {
         outputFile.close();
         try {
           if (fs.existsSync(outputPath)) {
@@ -294,30 +312,32 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         } catch (_unlinkError) {
           // Ignore unlink errors
         }
-        reject(new Error(
-          `Failed to start pg_dump: ${error.message}. ` +
-          `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
-        ));
+        reject(
+          new Error(
+            `Failed to start pg_dump: ${error.message}. ` +
+              `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
+          )
+        );
       });
 
-      outputFile.on('error', (error) => {
+      outputFile.on("error", (error) => {
         pgDump.kill();
         reject(new Error(`Failed to write backup file: ${error.message}`));
       });
 
-      pgDump.on('close', (code) => {
+      pgDump.on("close", (code) => {
         outputFile.end(() => {
           if (code === 0) {
             // Verify file was created and has content
             if (fs.existsSync(outputPath)) {
               const stats = fs.statSync(outputPath);
               if (stats.size === 0) {
-                reject(new Error('Backup file is empty'));
+                reject(new Error("Backup file is empty"));
               } else {
                 resolve();
               }
             } else {
-              reject(new Error('Backup file was not created'));
+              reject(new Error("Backup file was not created"));
             }
           } else {
             try {
@@ -327,7 +347,9 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
             } catch (_unlinkError) {
               // Ignore unlink errors
             }
-            reject(new Error(`pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+            reject(
+              new Error(`pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`)
+            );
           }
         });
       });
@@ -348,39 +370,47 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         }
 
         const outputFile = fs.createWriteStream(outputPath);
-        const dockerExec = spawn('docker', [
-          'exec',
-          '-i',
-          actualContainerName,
-          'pg_dump',
-          '-U', dbInfo.user,
-          '-F', 'p',
-          '--clean', '--if-exists',
-        // See the note above spawnRestore in backupRestore.ts: without --clean a
-        // dump only ever ADDS, so restoring over a live database left it as it
-        // was and reported success (audit finding AUD-007).
-        '--clean', '--if-exists',
-          dbInfo.database,
-        ], {
-          env: {
-            ...process.env,
-            PGPASSWORD: dbInfo.password,
-          },
-        });
+        const dockerExec = spawn(
+          "docker",
+          [
+            "exec",
+            "-i",
+            actualContainerName,
+            "pg_dump",
+            "-U",
+            dbInfo.user,
+            "-F",
+            "p",
+            "--clean",
+            "--if-exists",
+            // See the note above spawnRestore in backupRestore.ts: without --clean a
+            // dump only ever ADDS, so restoring over a live database left it as it
+            // was and reported success (audit finding AUD-007).
+            "--clean",
+            "--if-exists",
+            dbInfo.database,
+          ],
+          {
+            env: {
+              ...process.env,
+              PGPASSWORD: dbInfo.password,
+            },
+          }
+        );
 
         dockerExec.stdout.pipe(outputFile);
 
-        let stderrData = '';
-        dockerExec.stderr.on('data', (data) => {
+        let stderrData = "";
+        dockerExec.stderr.on("data", (data) => {
           stderrData += data.toString();
           logger.warn({
-            operation: 'backup_db_docker_stderr',
-            message: 'docker exec pg_dump stderr output',
+            operation: "backup_db_docker_stderr",
+            message: "docker exec pg_dump stderr output",
             data: data.toString(),
           });
         });
 
-        dockerExec.on('error', (error) => {
+        dockerExec.on("error", (error) => {
           outputFile.close();
           try {
             if (fs.existsSync(outputPath)) {
@@ -392,24 +422,24 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
           reject(new Error(`Failed to start docker exec: ${error.message}`));
         });
 
-        outputFile.on('error', (error) => {
+        outputFile.on("error", (error) => {
           dockerExec.kill();
           reject(new Error(`Failed to write backup file: ${error.message}`));
         });
 
-        dockerExec.on('close', (code) => {
+        dockerExec.on("close", (code) => {
           outputFile.end(() => {
             if (code === 0) {
               // Verify file was created and has content
               if (fs.existsSync(outputPath)) {
                 const stats = fs.statSync(outputPath);
                 if (stats.size === 0) {
-                  reject(new Error('Backup file is empty'));
+                  reject(new Error("Backup file is empty"));
                 } else {
                   resolve();
                 }
               } else {
-                reject(new Error('Backup file was not created'));
+                reject(new Error("Backup file was not created"));
               }
             } else {
               try {
@@ -419,7 +449,11 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
               } catch (_unlinkError) {
                 // Ignore unlink errors
               }
-              reject(new Error(`docker exec pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+              reject(
+                new Error(
+                  `docker exec pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`
+                )
+              );
             }
           });
         });
@@ -433,52 +467,77 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         }
 
         const outputFile = fs.createWriteStream(outputPath);
-        const dockerExec = spawn('docker', [
-          'exec', '-i', actualContainerName,
-          'pg_dump', '-U', dbInfo.user, '-F', 'p', '--clean', '--if-exists', dbInfo.database,
-        ], {
-          env: { ...process.env, PGPASSWORD: dbInfo.password },
-        });
+        const dockerExec = spawn(
+          "docker",
+          [
+            "exec",
+            "-i",
+            actualContainerName,
+            "pg_dump",
+            "-U",
+            dbInfo.user,
+            "-F",
+            "p",
+            "--clean",
+            "--if-exists",
+            dbInfo.database,
+          ],
+          {
+            env: { ...process.env, PGPASSWORD: dbInfo.password },
+          }
+        );
 
         dockerExec.stdout.pipe(outputFile);
 
-        let stderrData = '';
-        dockerExec.stderr.on('data', (data) => {
+        let stderrData = "";
+        dockerExec.stderr.on("data", (data) => {
           stderrData += data.toString();
           logger.warn({
-            operation: 'backup_db_docker_stderr',
-            message: 'docker exec pg_dump stderr output',
+            operation: "backup_db_docker_stderr",
+            message: "docker exec pg_dump stderr output",
             data: data.toString(),
           });
         });
 
-        dockerExec.on('error', (error) => {
+        dockerExec.on("error", (error) => {
           outputFile.close();
-          try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
+          try {
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+          } catch {
+            /* ignore */
+          }
           reject(new Error(`Failed to start docker exec: ${error.message}`));
         });
 
-        outputFile.on('error', (error) => {
+        outputFile.on("error", (error) => {
           dockerExec.kill();
           reject(new Error(`Failed to write backup file: ${error.message}`));
         });
 
-        dockerExec.on('close', (code) => {
+        dockerExec.on("close", (code) => {
           outputFile.end(() => {
             if (code === 0) {
               if (fs.existsSync(outputPath)) {
                 const stats = fs.statSync(outputPath);
                 if (stats.size === 0) {
-                  reject(new Error('Backup file is empty'));
+                  reject(new Error("Backup file is empty"));
                 } else {
                   resolve();
                 }
               } else {
-                reject(new Error('Backup file was not created'));
+                reject(new Error("Backup file was not created"));
               }
             } else {
-              try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
-              reject(new Error(`docker exec pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+              try {
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+              } catch {
+                /* ignore */
+              }
+              reject(
+                new Error(
+                  `docker exec pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`
+                )
+              );
             }
           });
         });
@@ -493,62 +552,83 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
       }
 
       const outputFile = fs.createWriteStream(outputPath);
-      const pgDump = spawn('pg_dump', [
-        '-h', dbInfo.host,
-        '-p', dbInfo.port.toString(),
-        '-U', dbInfo.user,
-        '-F', 'p',
-        // See the note above spawnRestore in backupRestore.ts: without --clean a
-        // dump only ever ADDS, so restoring over a live database left it as it
-        // was and reported success (audit finding AUD-007).
-        '--clean', '--if-exists',
-        dbInfo.database,
-      ], {
-        env: { ...process.env, PGPASSWORD: dbInfo.password },
-      });
+      const pgDump = spawn(
+        "pg_dump",
+        [
+          "-h",
+          dbInfo.host,
+          "-p",
+          dbInfo.port.toString(),
+          "-U",
+          dbInfo.user,
+          "-F",
+          "p",
+          // See the note above spawnRestore in backupRestore.ts: without --clean a
+          // dump only ever ADDS, so restoring over a live database left it as it
+          // was and reported success (audit finding AUD-007).
+          "--clean",
+          "--if-exists",
+          dbInfo.database,
+        ],
+        {
+          env: { ...process.env, PGPASSWORD: dbInfo.password },
+        }
+      );
 
       pgDump.stdout.pipe(outputFile);
 
-      let stderrData = '';
-      pgDump.stderr.on('data', (data) => {
+      let stderrData = "";
+      pgDump.stderr.on("data", (data) => {
         stderrData += data.toString();
         logger.warn({
-          operation: 'backup_db_stderr',
-          message: 'pg_dump stderr output',
+          operation: "backup_db_stderr",
+          message: "pg_dump stderr output",
           data: data.toString(),
         });
       });
 
-      pgDump.on('error', (error) => {
+      pgDump.on("error", (error) => {
         outputFile.close();
-        try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
-        reject(new Error(
-          `Failed to start pg_dump: ${error.message}. ` +
-          `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
-        ));
+        try {
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        } catch {
+          /* ignore */
+        }
+        reject(
+          new Error(
+            `Failed to start pg_dump: ${error.message}. ` +
+              `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
+          )
+        );
       });
 
-      outputFile.on('error', (error) => {
+      outputFile.on("error", (error) => {
         pgDump.kill();
         reject(new Error(`Failed to write backup file: ${error.message}`));
       });
 
-      pgDump.on('close', (code) => {
+      pgDump.on("close", (code) => {
         outputFile.end(() => {
           if (code === 0) {
             if (fs.existsSync(outputPath)) {
               const stats = fs.statSync(outputPath);
               if (stats.size === 0) {
-                reject(new Error('Backup file is empty'));
+                reject(new Error("Backup file is empty"));
               } else {
                 resolve();
               }
             } else {
-              reject(new Error('Backup file was not created'));
+              reject(new Error("Backup file was not created"));
             }
           } else {
-            try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
-            reject(new Error(`pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+            try {
+              if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            } catch {
+              /* ignore */
+            }
+            reject(
+              new Error(`pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`)
+            );
           }
         });
       });

@@ -118,9 +118,7 @@ describe("GET /api/v1/stats/lodging", () => {
   });
 
   it("returns real totalNights and spendBaseTotal for a user with a lodging + stay", async () => {
-    const res = await request(app)
-      .get("/api/v1/stats/lodging")
-      .set("Cookie", authCookie);
+    const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -131,9 +129,7 @@ describe("GET /api/v1/stats/lodging", () => {
   });
 
   it("serializes countries as a real array, not an empty object", async () => {
-    const res = await request(app)
-      .get("/api/v1/stats/lodging")
-      .set("Cookie", authCookie);
+    const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.countries)).toBe(true);
@@ -145,9 +141,7 @@ describe("GET /api/v1/stats/lodging", () => {
   });
 
   it("does not leak another user's stays into the totals", async () => {
-    const res = await request(app)
-      .get("/api/v1/stats/lodging")
-      .set("Cookie", authCookie);
+    const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
     // Only the 3-night CHF stay belongs to this user — the other user's
@@ -158,18 +152,14 @@ describe("GET /api/v1/stats/lodging", () => {
     // joins on the code, so "Schweiz" and "Switzerland" are one country.
     expect(res.body.data.countries).toEqual(["CH"]);
 
-    const otherRes = await request(app)
-      .get("/api/v1/stats/lodging")
-      .set("Cookie", otherAuthCookie);
+    const otherRes = await request(app).get("/api/v1/stats/lodging").set("Cookie", otherAuthCookie);
     expect(otherRes.status).toBe(200);
     expect(otherRes.body.data.totalNights).toBe(9);
     expect(otherRes.body.data.countries).toEqual(["FR"]);
   });
 
   it("returns sane zeros/empty values for a user with no lodgings", async () => {
-    const res = await request(app)
-      .get("/api/v1/stats/lodging")
-      .set("Cookie", emptyAuthCookie);
+    const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", emptyAuthCookie);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -250,9 +240,7 @@ describe("GET /api/v1/stats/lodging", () => {
       // Finding 1 (2026-08-15) and the country-counting design §1.4
       // (2026-09-02): a saved house without a stay counts, as a house and as
       // its country. forgejo#80 asked for the opposite; the decision stands.
-      const res = await request(app)
-        .get("/api/v1/stats/lodging")
-        .set("Cookie", noStayAuthCookie);
+      const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", noStayAuthCookie);
 
       expect(res.status).toBe(200);
       expect(res.body.data.lodgingsCount).toBe(2);
@@ -323,9 +311,7 @@ describe("GET /api/v1/stats/lodging", () => {
     });
 
     it("sums spendBaseTotal only for the CURRENT base currency and exposes the rest via spendBaseByCurrency", async () => {
-      const res = await request(app)
-        .get("/api/v1/stats/lodging")
-        .set("Cookie", mixedAuthCookie);
+      const res = await request(app).get("/api/v1/stats/lodging").set("Cookie", mixedAuthCookie);
 
       expect(res.status).toBe(200);
       // Only the CHF-snapshotted stay counts toward the current-base total —

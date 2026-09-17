@@ -4,7 +4,7 @@ import type { ParsedLodgingBooking } from "./bookingComTemplate";
 /** Join the street with the postcode so the geocoder has a full address line. */
 function composeAddress(booking: ParsedLodgingBooking): string | null {
   const parts = [booking.address, booking.postcode].filter(
-    (p): p is string => typeof p === "string" && p.length > 0,
+    (p): p is string => typeof p === "string" && p.length > 0
   );
   return parts.length > 0 ? parts.join(", ") : null;
 }

@@ -56,9 +56,7 @@ function isDateOnly(data: ChronologyInput): boolean {
   return (
     data.depTimeSemantics === "DATE_ONLY" ||
     data.arrTimeSemantics === "DATE_ONLY" ||
-    Boolean(
-      data.departureLocal?.endsWith("T12:00") && data.arrivalLocal?.endsWith("T12:00"),
-    )
+    Boolean(data.departureLocal?.endsWith("T12:00") && data.arrivalLocal?.endsWith("T12:00"))
   );
 }
 
@@ -114,7 +112,7 @@ export function chronologyProblem(data: ChronologyInput): ChronologyProblem | nu
 export function departsInFuture(
   departureLocal: string | null | undefined,
   depTimezone: string | null | undefined,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): boolean {
   if (!departureLocal) return false;
   const instant = toInstant(departureLocal, depTimezone);

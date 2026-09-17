@@ -74,7 +74,7 @@ const normalizeFlightNumber = (value: string | null): string =>
 async function findExisting(
   userId: string,
   data: CreateFlightInput,
-  departureUtc: Date | null,
+  departureUtc: Date | null
 ): Promise<{ existing: DedupeCandidate | null; sameBooking: boolean }> {
   if (data.bookingReference && data.departure.iata && data.arrival.iata) {
     const byBooking = await prisma.flight.findFirst({
@@ -123,7 +123,7 @@ async function mergeInto(
   userId: string,
   existing: DedupeCandidate,
   data: CreateFlightInput,
-  sameBooking: boolean,
+  sameBooking: boolean
 ): Promise<DuplicateOutcome> {
   const existingFull = await prisma.flight.findUnique({ where: { id: existing.id } });
   if (!existingFull) {

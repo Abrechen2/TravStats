@@ -81,7 +81,12 @@ export default function StatsBusinessSection({
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.totalCostDesc", {
                   cost: formatCurrency(businessStats.totalCost, baseCurrency),
-                  distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
+                  distance: formatDistance(
+                    businessStats.totalDistance,
+                    units.distanceUnit,
+                    t,
+                    lang
+                  ),
                 })}
           </p>
         </div>

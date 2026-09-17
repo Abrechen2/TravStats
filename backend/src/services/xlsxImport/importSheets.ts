@@ -76,7 +76,7 @@ function keepDespiteError(seen: Set<string>, id: string | undefined): void {
 async function pruneMissing(
   model: "place" | "cruise" | "lodging" | "flight",
   seen: Set<string>,
-  ctx: Ctx,
+  ctx: Ctx
 ): Promise<number> {
   if (ctx.mode !== "replace") return 0;
 
@@ -110,7 +110,7 @@ async function pruneMissing(
     await removeAll();
     logger.warn(
       { operation: "xlsx_import_replace_deleted", model, userId: ctx.userId, deleted: doomed },
-      "Spreadsheet import in replace mode deleted rows absent from the file",
+      "Spreadsheet import in replace mode deleted rows absent from the file"
     );
   }
   return doomed;
@@ -172,7 +172,7 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
       // Only the keys the sheet actually carried. An untouched column must not
       // become a null that erases a stored value.
       const data = Object.fromEntries(
-        Object.entries(fields).filter(([, v]) => v !== undefined),
+        Object.entries(fields).filter(([, v]) => v !== undefined)
       ) as Record<string, unknown>;
       if (data.country) data.isoCountryCode = resolveCountryCode(String(data.country));
 
@@ -506,8 +506,13 @@ async function pruneMissingVisits(seen: Set<string>, ctx: Ctx): Promise<number> 
   if (!ctx.dryRun) {
     await prisma.placeVisit.deleteMany({ where });
     logger.warn(
-      { operation: "xlsx_import_replace_deleted", model: "placeVisit", userId: ctx.userId, deleted: doomed },
-      "Spreadsheet import in replace mode deleted visits absent from the file",
+      {
+        operation: "xlsx_import_replace_deleted",
+        model: "placeVisit",
+        userId: ctx.userId,
+        deleted: doomed,
+      },
+      "Spreadsheet import in replace mode deleted visits absent from the file"
     );
   }
   return doomed;
@@ -735,10 +740,7 @@ export function isImportable(key: string): boolean {
  * Sheets are processed in a fixed order so a preview reads the same way twice,
  * and sequentially because the row handlers hit the database per row.
  */
-export async function importSheets(
-  sheets: IncomingSheet[],
-  ctx: Ctx,
-): Promise<SheetOutcome[]> {
+export async function importSheets(sheets: IncomingSheet[], ctx: Ctx): Promise<SheetOutcome[]> {
   const results: SheetOutcome[] = [];
 
   for (const key of Object.keys(HANDLERS)) {

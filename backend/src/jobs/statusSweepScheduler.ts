@@ -20,10 +20,7 @@ export function startStatusSweepScheduler(): void {
     try {
       await sweepStatuses();
     } catch (error) {
-      logger.warn(
-        { operation: "status_sweep_error", error },
-        "Hourly status sweep failed"
-      );
+      logger.warn({ operation: "status_sweep_error", error }, "Hourly status sweep failed");
     }
   });
   logger.info(

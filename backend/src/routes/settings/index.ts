@@ -1,15 +1,15 @@
-import { Router } from 'express';
-import { authenticate, requireWriteScope } from '../../middleware/auth';
-import generalRouter from './general';
-import parserRouter from './parser';
-import apiKeysRouter from './apiKeys';
-import notificationsRouter from './notifications';
-import homeAirportsRouter from './homeAirports';
-import profileRouter from './profile';
-import profilePictureRouter from './profilePicture';
-import tokensRouter from './tokens';
-import immichRouter from './immich';
-import dawarichRouter from './dawarich';
+import { Router } from "express";
+import { authenticate, requireWriteScope } from "../../middleware/auth";
+import generalRouter from "./general";
+import parserRouter from "./parser";
+import apiKeysRouter from "./apiKeys";
+import notificationsRouter from "./notifications";
+import homeAirportsRouter from "./homeAirports";
+import profileRouter from "./profile";
+import profilePictureRouter from "./profilePicture";
+import tokensRouter from "./tokens";
+import immichRouter from "./immich";
+import dawarichRouter from "./dawarich";
 
 const router = Router();
 
@@ -28,15 +28,15 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 // Mount sub-routers
-router.use('/', generalRouter);
-router.use('/parser', parserRouter);
-router.use('/api-keys', apiKeysRouter);
-router.use('/notifications', notificationsRouter);
-router.use('/home-airports', homeAirportsRouter);
-router.use('/profile', profileRouter);
-router.use('/profile-picture', profilePictureRouter);
-router.use('/tokens', tokensRouter);
-router.use('/immich', immichRouter);
-router.use('/dawarich', dawarichRouter);
+router.use("/", generalRouter);
+router.use("/parser", parserRouter);
+router.use("/api-keys", apiKeysRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/home-airports", homeAirportsRouter);
+router.use("/profile", profileRouter);
+router.use("/profile-picture", profilePictureRouter);
+router.use("/tokens", tokensRouter);
+router.use("/immich", immichRouter);
+router.use("/dawarich", dawarichRouter);
 
 export default router;

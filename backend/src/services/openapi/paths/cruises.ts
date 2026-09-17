@@ -56,7 +56,10 @@ const cruise = registry.register(
       shipId: z.number().int().nullable(),
       shipNameOverride: z.string().nullable(),
       cruiseLine: z.string().nullable(),
-      routeName: z.string().nullable().describe("Itinerary name from the booking, e.g. 'Kanaren mit Marokko'"),
+      routeName: z
+        .string()
+        .nullable()
+        .describe("Itinerary name from the booking, e.g. 'Kanaren mit Marokko'"),
       departurePortId: z.number().int().nullable(),
       arrivalPortId: z.number().int().nullable(),
       startDate: z.string().datetime().nullable(),
@@ -73,7 +76,10 @@ const cruise = registry.register(
       companions: z.array(z.string()),
       tripId: z.string().uuid().nullable(),
       bookingId: z.string().uuid().nullable(),
-      color: z.string().nullable().describe("User-chosen map colour; null falls back to the auto-derived one"),
+      color: z
+        .string()
+        .nullable()
+        .describe("User-chosen map colour; null falls back to the auto-derived one"),
       stops: z.array(cruiseStop).optional(),
       createdAt: z.string().datetime(),
     })
@@ -133,7 +139,13 @@ registry.registerPath({
     "and lets the server derive the provenance key itself.",
   tags: ["Cruises"],
   request: {
-    body: { content: { "application/json": { schema: createCruiseSchema.openapi("CruiseCreateInput").and(documentIdsBodySchema) } } },
+    body: {
+      content: {
+        "application/json": {
+          schema: createCruiseSchema.openapi("CruiseCreateInput").and(documentIdsBodySchema),
+        },
+      },
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },
@@ -152,7 +164,9 @@ registry.registerPath({
   tags: ["Cruises"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: updateCruiseSchema.openapi("CruiseUpdateInput") } } },
+    body: {
+      content: { "application/json": { schema: updateCruiseSchema.openapi("CruiseUpdateInput") } },
+    },
   },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: envelope(cruise) } } },
@@ -206,7 +220,10 @@ registry.registerPath({
   tags: ["Cruises"],
   request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
-    200: { description: "Route geometry", content: { "application/json": { schema: envelope(geometry) } } },
+    200: {
+      description: "Route geometry",
+      content: { "application/json": { schema: envelope(geometry) } },
+    },
     404: { description: "Not found", content: errorContent },
   },
 });
@@ -215,7 +232,8 @@ registry.registerPath({
   method: "post",
   path: "/cruises/geometry/batch",
   summary: "Sea route geometry for several cruises",
-  description: "Same payload as the per-cruise endpoint, keyed by cruise id — one round trip for a map view.",
+  description:
+    "Same payload as the per-cruise endpoint, keyed by cruise id — one round trip for a map view.",
   tags: ["Cruises"],
   request: {
     body: {
@@ -247,7 +265,11 @@ registry.registerPath({
   tags: ["Cruises"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: routeOverrideSchema.openapi("CruiseRouteOverride") } } },
+    body: {
+      content: {
+        "application/json": { schema: routeOverrideSchema.openapi("CruiseRouteOverride") },
+      },
+    },
   },
   responses: {
     200: { description: "Override replaced" },

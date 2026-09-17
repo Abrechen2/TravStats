@@ -8,23 +8,23 @@
  * by the rest of the codebase.
  */
 
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { seedsPartA } from './achievementSeeds/partA';
-import { seedsPartB } from './achievementSeeds/partB';
-import { seedsPartC } from './achievementSeeds/partC';
-import { seedsPartD } from './achievementSeeds/partD';
-import { seedsPartE } from './achievementSeeds/partE';
-import { seedsPartF } from './achievementSeeds/partF';
-import { seedsPartG } from './achievementSeeds/partG';
-import { seedsPartH } from './achievementSeeds/partH';
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { seedsPartA } from "./achievementSeeds/partA";
+import { seedsPartB } from "./achievementSeeds/partB";
+import { seedsPartC } from "./achievementSeeds/partC";
+import { seedsPartD } from "./achievementSeeds/partD";
+import { seedsPartE } from "./achievementSeeds/partE";
+import { seedsPartF } from "./achievementSeeds/partF";
+import { seedsPartG } from "./achievementSeeds/partG";
+import { seedsPartH } from "./achievementSeeds/partH";
 
 export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
   category: string;
-  domain: 'flight' | 'cruise' | 'lodging' | 'poi' | 'shared';
+  domain: "flight" | "cruise" | "lodging" | "poi" | "shared";
   icon: string;
   tier: string;
   requirement: number;
@@ -50,7 +50,10 @@ export const achievements: AchievementDefinition[] = [
  * It will create missing achievements and update existing ones
  */
 export async function ensureAchievements(): Promise<void> {
-  logger.info({ operation: 'ensure_achievements_start', message: 'Ensuring achievements are present in database' });
+  logger.info({
+    operation: "ensure_achievements_start",
+    message: "Ensuring achievements are present in database",
+  });
 
   try {
     const existingCount = await prisma.achievement.count();
@@ -63,7 +66,7 @@ export async function ensureAchievements(): Promise<void> {
     // this loop is what makes it true.
     if (existingCount > 0) {
       logger.info({
-        operation: 'ensure_achievements_updating',
+        operation: "ensure_achievements_updating",
         message: `Found ${existingCount} existing achievements, upserting all definitions...`,
         context: { existingCount, expectedCount: achievements.length },
       });
@@ -104,34 +107,37 @@ export async function ensureAchievements(): Promise<void> {
     }
 
     logger.info({
-      operation: 'ensure_achievements_processed',
+      operation: "ensure_achievements_processed",
       message: `Processed ${achievements.length} achievements`,
       context: { total: achievements.length, created, updated },
     });
 
     // Show summary by category
-    const categoryCounts = achievements.reduce((acc, ach) => {
-      acc[ach.category] = (acc[ach.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const categoryCounts = achievements.reduce(
+      (acc, ach) => {
+        acc[ach.category] = (acc[ach.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     logger.info({
-      operation: 'ensure_achievements_by_category',
-      message: 'Achievements by category',
+      operation: "ensure_achievements_by_category",
+      message: "Achievements by category",
       context: { categoryCounts },
     });
 
     logger.info({
-      operation: 'ensure_achievements_complete',
-      message: 'Achievement initialization completed successfully',
+      operation: "ensure_achievements_complete",
+      message: "Achievement initialization completed successfully",
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorStack = error instanceof Error ? error.stack : undefined;
 
     logger.error({
-      operation: 'ensure_achievements_error',
-      message: 'Error ensuring achievements',
+      operation: "ensure_achievements_error",
+      message: "Error ensuring achievements",
       error: {
         message: errorMessage,
         stack: errorStack,

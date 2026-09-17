@@ -25,7 +25,7 @@ const flight = (
   from: { iata: string; lat: number; lon: number },
   to: { iata: string; lat: number; lon: number },
   date: string | null,
-  status = "flown",
+  status = "flown"
 ): PassportFlight => ({
   depIata: from.iata,
   depLat: from.lat,
@@ -57,12 +57,7 @@ describe("buildPassport", () => {
   });
 
   it("leaves out a booked flight", () => {
-    const p = buildPassport(
-      [flight(MUC, NRT, "2027-01-01", "scheduled")],
-      COUNTRIES,
-      [],
-      NOW,
-    );
+    const p = buildPassport([flight(MUC, NRT, "2027-01-01", "scheduled")], COUNTRIES, [], NOW);
     expect(p.countries).toHaveLength(0);
     expect(p.summary.entries).toBe(0);
   });
@@ -76,7 +71,7 @@ describe("buildPassport", () => {
       ],
       COUNTRIES,
       [],
-      NOW,
+      NOW
     );
 
     expect(p.stamps.map((s) => s.iata).sort()).toEqual(["JFK", "MUC"]);
@@ -108,7 +103,7 @@ describe("buildPassport", () => {
       [flight(MUC, JFK, "2005-07-16"), flight(MUC, NRT, "2026-02-02")],
       COUNTRIES,
       ["MUC"],
-      NOW,
+      NOW
     );
 
     expect(p.countries.find((c) => c.code === "DE")?.isHome).toBe(true);

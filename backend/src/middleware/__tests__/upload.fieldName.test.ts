@@ -34,7 +34,7 @@ describe("uploadReceipt — a hostile multipart field name cannot throw past Exp
       `Content-Disposition: form-data; name="a[4294967294]"\r\n\r\nx\r\n` +
       `--${BOUNDARY}\r\n` +
       `Content-Disposition: form-data; name="a"\r\n\r\ny\r\n` +
-      `--${BOUNDARY}--\r\n`,
+      `--${BOUNDARY}--\r\n`
   );
 
   /** Builds an app that records whatever error multer hands to Express. */
@@ -45,15 +45,10 @@ describe("uploadReceipt — a hostile multipart field name cannot throw past Exp
       res.status(200).json({ ok: true });
     });
     app.use(
-      (
-        err: Error,
-        _req: express.Request,
-        res: express.Response,
-        _next: express.NextFunction,
-      ) => {
+      (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
         seen.push(err);
         res.status(400).json({ error: err.message });
-      },
+      }
     );
     return { app, seen };
   }

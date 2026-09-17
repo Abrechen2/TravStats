@@ -80,7 +80,12 @@ function renderPanel(over: Partial<DomainImportAdapter> = {}): void {
 describe("DomainImportPanel", () => {
   it("renders nothing when closed", () => {
     const { container } = render(
-      <DomainImportPanel open={false} onClose={vi.fn()} onItemsCreated={vi.fn()} adapter={adapter} />
+      <DomainImportPanel
+        open={false}
+        onClose={vi.fn()}
+        onItemsCreated={vi.fn()}
+        adapter={adapter}
+      />
     );
     expect(container.firstChild).toBeNull();
   });
@@ -127,9 +132,7 @@ describe("DomainImportPanel", () => {
 
   it("calls onClose when the close (×) button is clicked", () => {
     const onClose = vi.fn();
-    render(
-      <DomainImportPanel open onClose={onClose} onItemsCreated={vi.fn()} adapter={adapter} />
-    );
+    render(<DomainImportPanel open onClose={onClose} onItemsCreated={vi.fn()} adapter={adapter} />);
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

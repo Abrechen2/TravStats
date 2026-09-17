@@ -5,8 +5,8 @@
  * Defaults: admin / admin123
  */
 
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
@@ -25,12 +25,12 @@ async function createAdmin() {
     }
 
     // No users exist - create admin
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
     if (adminPassword.length < 8) {
-      console.error('ERROR: Admin password must be at least 8 characters');
-      console.error('Please set ADMIN_PASSWORD environment variable with a secure password');
+      console.error("ERROR: Admin password must be at least 8 characters");
+      console.error("Please set ADMIN_PASSWORD environment variable with a secure password");
       await prisma.$disconnect();
       process.exit(1);
     }
@@ -47,15 +47,15 @@ async function createAdmin() {
       },
     });
 
-    console.log('✅ Admin user created');
+    console.log("✅ Admin user created");
     console.log(`   Username: ${adminUsername}`);
     console.log(`   Password: ${adminPassword}`);
-    console.log('   ⚠️  Please change the password after first login!');
+    console.log("   ⚠️  Please change the password after first login!");
 
     await prisma.$disconnect();
     process.exit(0);
   } catch (error) {
-    console.error('ERROR creating admin user:', error);
+    console.error("ERROR creating admin user:", error);
     await prisma.$disconnect();
     process.exit(1);
   }

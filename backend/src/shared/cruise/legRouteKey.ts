@@ -12,7 +12,12 @@
  */
 
 /** The key under which one leg's hand-drawn route is stored and found. */
-export function legRouteKey(fromKind: string, fromRef: string, toKind: string, toRef: string): string {
+export function legRouteKey(
+  fromKind: string,
+  fromRef: string,
+  toKind: string,
+  toRef: string
+): string {
   return `${fromKind}:${fromRef}:${toKind}:${toRef}`;
 }
 
@@ -44,7 +49,7 @@ function isCoordinatePolyline(value: unknown): value is Array<[number, number]> 
       Array.isArray(point) &&
       point.length === 2 &&
       typeof point[0] === "number" &&
-      typeof point[1] === "number",
+      typeof point[1] === "number"
   );
 }
 
@@ -55,7 +60,7 @@ function isCoordinatePolyline(value: unknown): value is Array<[number, number]> 
  * in it.
  */
 export function buildLegRouteOverrideMap(
-  rows: ReadonlyArray<LegRouteRow>,
+  rows: ReadonlyArray<LegRouteRow>
 ): Map<string, Array<[number, number]>> {
   const overrideByLeg = new Map<string, Array<[number, number]>>();
   for (const row of rows) {

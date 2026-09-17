@@ -156,10 +156,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
       <div className="grid grid-cols-7 gap-1 mb-4">
         {/* Week day headers */}
         {weekDays.map((day) => (
-          <div
-            key={day}
-            className="text-center text-sm font-semibold text-(--text-muted) py-2"
-          >
+          <div key={day} className="text-center text-sm font-semibold text-(--text-muted) py-2">
             {day}
           </div>
         ))}

@@ -114,7 +114,11 @@ export function buildLodgingPins(
   zoom: number = LODGING_LABEL_DEFAULT_ZOOM,
   appearance: LodgingPinsAppearance = {}
 ): Layer[] | null {
-  const { onPinClick, labelsMode = "important", colors = DEFAULT_LODGING_COLOR_CONFIG } = appearance;
+  const {
+    onPinClick,
+    labelsMode = "important",
+    colors = DEFAULT_LODGING_COLOR_CONFIG,
+  } = appearance;
   const data: LodgingPinDatum[] = [];
   for (const lodging of lodgings) {
     if (lodging.lat === null || lodging.lon === null) continue;
@@ -139,7 +143,8 @@ export function buildLodgingPins(
     data,
     getPosition: (d) => d.position,
     ...markerDotRadiusProps(sizeScale),
-    getFillColor: (d) => [...resolveLodgingColor(d, colors), 220] as [number, number, number, number],
+    getFillColor: (d) =>
+      [...resolveLodgingColor(d, colors), 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",
     getLineWidth: 1,

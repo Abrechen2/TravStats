@@ -62,7 +62,7 @@ describe("a trip with no flight and no cruise", () => {
     // would then see the row change under it.
     expect(res.body.trip.status).toBe("planned");
     expect((await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } })).status).toBe(
-      "planned",
+      "planned"
     );
   });
 
@@ -80,7 +80,7 @@ describe("a trip with no flight and no cruise", () => {
     await recomputeTripStatus(trip.id);
 
     expect((await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } })).status).toBe(
-      "planned",
+      "planned"
     );
   });
 
@@ -105,7 +105,7 @@ describe("a trip with no flight and no cruise", () => {
     await recomputeTripStatus(trip.id);
 
     expect((await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } })).status).toBe(
-      "completed",
+      "completed"
     );
   });
 
@@ -138,7 +138,7 @@ describe("a trip with no flight and no cruise", () => {
     await recomputeTripStatus(trip.id);
 
     expect((await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } })).status).toBe(
-      "completed",
+      "completed"
     );
   });
 });

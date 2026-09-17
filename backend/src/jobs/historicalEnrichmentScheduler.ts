@@ -5,16 +5,16 @@
  * for users who have auto-processing enabled.
  */
 
-import cron from 'node-cron';
-import { prisma } from '../db';
-import logger from '../utils/logger';
+import cron from "node-cron";
+import { prisma } from "../db";
+import logger from "../utils/logger";
 import {
   getUserEnrichmentSettings,
   findEnrichmentCandidates,
   aggregateFlightData,
   createHistoricalEnrichment,
-} from '../services/flightEnrichmentService';
-import { applyPendingUpdate } from '../services/pendingUpdateService';
+} from "../services/flightEnrichmentService";
+import { applyPendingUpdate } from "../services/pendingUpdateService";
 
 let schedulerRunning = false;
 let schedulerTask: cron.ScheduledTask | null = null;
@@ -93,10 +93,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
         }
 
         // Create pending update
-        const pendingUpdateId = await createHistoricalEnrichment(
-          flight.id,
-          aggregatedData
-        );
+        const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData);
 
         if (pendingUpdateId) {
           created++;
@@ -105,8 +102,8 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
             const applied = await applyPendingUpdate(pendingUpdateId, userId);
             if (applied) {
               logger.info({
-                operation: 'historical_enrichment_auto_applied',
-                message: 'Auto-applied historical enrichment (requireApproval=false)',
+                operation: "historical_enrichment_auto_applied",
+                message: "Auto-applied historical enrichment (requireApproval=false)",
                 context: {
                   pendingUpdateId,
                   flightId: flight.id,
@@ -116,8 +113,8 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
               });
             } else {
               logger.warn({
-                operation: 'historical_enrichment_auto_apply_failed',
-                message: 'Auto-apply failed for historical enrichment',
+                operation: "historical_enrichment_auto_apply_failed",
+                message: "Auto-apply failed for historical enrichment",
                 context: {
                   pendingUpdateId,
                   flightId: flight.id,
@@ -131,14 +128,14 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
         }
       } catch (error) {
         logger.error({
-          operation: 'process_historical_enrichment_candidate_error',
-          message: 'Failed to process enrichment candidate',
+          operation: "process_historical_enrichment_candidate_error",
+          message: "Failed to process enrichment candidate",
           context: {
             userId,
             candidateId: candidate.flightId,
           },
           error: {
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message: error instanceof Error ? error.message : "Unknown error",
             stack: error instanceof Error ? error.stack : undefined,
           },
         });
@@ -147,8 +144,8 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
     }
 
     logger.info({
-      operation: 'process_user_historical_enrichment',
-      message: 'Processed historical enrichment for user',
+      operation: "process_user_historical_enrichment",
+      message: "Processed historical enrichment for user",
       context: {
         userId,
         processed: candidatesToProcess.length,
@@ -164,11 +161,11 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
     };
   } catch (error) {
     logger.error({
-      operation: 'process_user_historical_enrichment_error',
-      message: 'Failed to process historical enrichment for user',
+      operation: "process_user_historical_enrichment_error",
+      message: "Failed to process historical enrichment for user",
       context: { userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -208,8 +205,8 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
     }
 
     logger.info({
-      operation: 'process_all_users_historical_enrichment',
-      message: 'Processed historical enrichment for all eligible users',
+      operation: "process_all_users_historical_enrichment",
+      message: "Processed historical enrichment for all eligible users",
       context: {
         usersProcessed: users.length,
         totalProcessed,
@@ -226,10 +223,10 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
     };
   } catch (error) {
     logger.error({
-      operation: 'process_all_users_historical_enrichment_error',
-      message: 'Failed to process historical enrichment for all users',
+      operation: "process_all_users_historical_enrichment_error",
+      message: "Failed to process historical enrichment for all users",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -249,18 +246,18 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
 export function startHistoricalEnrichmentScheduler(): void {
   if (schedulerRunning) {
     logger.warn({
-      operation: 'start_historical_enrichment_scheduler',
-      message: 'Historical enrichment scheduler is already running',
+      operation: "start_historical_enrichment_scheduler",
+      message: "Historical enrichment scheduler is already running",
     });
     return;
   }
 
   // Run daily at 2 AM
-  const cronExpression = '0 2 * * *';
+  const cronExpression = "0 2 * * *";
 
   logger.info({
-    operation: 'start_historical_enrichment_scheduler',
-    message: 'Starting historical enrichment scheduler',
+    operation: "start_historical_enrichment_scheduler",
+    message: "Starting historical enrichment scheduler",
     context: {
       cronExpression,
     },
@@ -269,22 +266,22 @@ export function startHistoricalEnrichmentScheduler(): void {
   schedulerTask = cron.schedule(cronExpression, async () => {
     try {
       logger.info({
-        operation: 'historical_enrichment_scheduler_run',
-        message: 'Running scheduled historical enrichment',
+        operation: "historical_enrichment_scheduler_run",
+        message: "Running scheduled historical enrichment",
       });
 
       await processAllUsersHistoricalEnrichment();
 
       logger.info({
-        operation: 'historical_enrichment_scheduler_run_complete',
-        message: 'Scheduled historical enrichment completed',
+        operation: "historical_enrichment_scheduler_run_complete",
+        message: "Scheduled historical enrichment completed",
       });
     } catch (error) {
       logger.error({
-        operation: 'historical_enrichment_scheduler_run_error',
-        message: 'Error during scheduled historical enrichment',
+        operation: "historical_enrichment_scheduler_run_error",
+        message: "Error during scheduled historical enrichment",
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
         },
       });
@@ -303,8 +300,8 @@ export function stopHistoricalEnrichmentScheduler(): void {
   }
 
   logger.info({
-    operation: 'stop_historical_enrichment_scheduler',
-    message: 'Stopping historical enrichment scheduler',
+    operation: "stop_historical_enrichment_scheduler",
+    message: "Stopping historical enrichment scheduler",
   });
 
   schedulerTask.stop();

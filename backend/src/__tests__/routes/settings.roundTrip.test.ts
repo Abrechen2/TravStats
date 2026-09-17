@@ -1,8 +1,8 @@
-import request from 'supertest';
-import app from '../../index';
-import { prisma } from '../../db';
-import { hashPassword } from '../../utils/password';
-import { generateToken } from '../../utils/jwt';
+import request from "supertest";
+import app from "../../index";
+import { prisma } from "../../db";
+import { hashPassword } from "../../utils/password";
+import { generateToken } from "../../utils/jwt";
 
 /**
  * A visible switch has to survive save → GET → fresh client, or it is not a
@@ -22,7 +22,7 @@ import { generateToken } from '../../utils/jwt';
  * so the next block added to the UI without a schema entry fails here rather
  * than in somebody's second browser.
  */
-describe('settings round-trip', () => {
+describe("settings round-trip", () => {
   let token: string;
   let userId: string;
 
@@ -30,7 +30,7 @@ describe('settings round-trip', () => {
     const user = await prisma.user.create({
       data: {
         username: `settings-round-trip-${Date.now()}`,
-        passwordHash: await hashPassword('password123'),
+        passwordHash: await hashPassword("password123"),
         isAdmin: false,
         isActive: true,
       },
@@ -44,16 +44,16 @@ describe('settings round-trip', () => {
     await prisma.user.delete({ where: { id: userId } }).catch(() => {});
   });
 
-  it('keeps the feature toggles the settings page shows', async () => {
+  it("keeps the feature toggles the settings page shows", async () => {
     const put = await request(app)
-      .put('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`])
+      .put("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`])
       .send({ features: { enableCostTracking: true, trackAircraftRegistration: false } });
     expect(put.status).toBe(200);
 
     const get = await request(app)
-      .get('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`]);
+      .get("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`]);
 
     expect(get.status).toBe(200);
     expect(get.body.features).toEqual(
@@ -61,23 +61,23 @@ describe('settings round-trip', () => {
     );
   });
 
-  it('keeps the cruise defaults', async () => {
+  it("keeps the cruise defaults", async () => {
     const put = await request(app)
-      .put('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`])
+      .put("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`])
       .send({
-        cruise: { defaultLine: 'AIDA', defaultCabinType: 'balcony', showCruiseArcs: false },
+        cruise: { defaultLine: "AIDA", defaultCabinType: "balcony", showCruiseArcs: false },
       });
     expect(put.status).toBe(200);
 
     const get = await request(app)
-      .get('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`]);
+      .get("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`]);
 
     expect(get.body.cruise).toEqual(
       expect.objectContaining({
-        defaultLine: 'AIDA',
-        defaultCabinType: 'balcony',
+        defaultLine: "AIDA",
+        defaultCabinType: "balcony",
         showCruiseArcs: false,
       })
     );
@@ -86,19 +86,19 @@ describe('settings round-trip', () => {
   // Saving one block must not quietly reset another. This is the mechanism by
   // which a client that holds stale defaults for a block it never loaded can
   // overwrite the server's good values.
-  it('does not disturb a block it was not asked about', async () => {
+  it("does not disturb a block it was not asked about", async () => {
     await request(app)
-      .put('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`])
-      .send({ display: { language: 'en' } });
+      .put("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`])
+      .send({ display: { language: "en" } });
 
     const get = await request(app)
-      .get('/api/v1/settings')
-      .set('Cookie', [`auth_token=${token}`]);
+      .get("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`]);
 
     expect(get.body.features).toEqual(
       expect.objectContaining({ enableCostTracking: true, trackAircraftRegistration: false })
     );
-    expect(get.body.cruise).toEqual(expect.objectContaining({ defaultLine: 'AIDA' }));
+    expect(get.body.cruise).toEqual(expect.objectContaining({ defaultLine: "AIDA" }));
   });
 });

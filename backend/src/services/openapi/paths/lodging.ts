@@ -294,7 +294,10 @@ registry.registerPath({
   tags: ["Lodging"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: stayCreateInput.and(documentIdsBodySchema) } }, required: true },
+    body: {
+      content: { "application/json": { schema: stayCreateInput.and(documentIdsBodySchema) } },
+      required: true,
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: stay } } },

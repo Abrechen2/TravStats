@@ -53,7 +53,8 @@ export function totp(secret: string, at = Date.now()): string {
  */
 export async function freshTotp(secret: string): Promise<string> {
   const intoStep = (Date.now() / 1000) % 30;
-  if (intoStep > 25) await new Promise((resolve) => setTimeout(resolve, (30 - intoStep + 0.5) * 1000));
+  if (intoStep > 25)
+    await new Promise((resolve) => setTimeout(resolve, (30 - intoStep + 0.5) * 1000));
   return totp(secret);
 }
 
@@ -65,7 +66,10 @@ export async function anonymousApi(baseURL: string): Promise<APIRequestContext> 
   return request.newContext({ baseURL });
 }
 
-async function ok<T>(response: Awaited<ReturnType<APIRequestContext["get"]>>, what: string): Promise<T> {
+async function ok<T>(
+  response: Awaited<ReturnType<APIRequestContext["get"]>>,
+  what: string
+): Promise<T> {
   if (!response.ok()) {
     throw new Error(`${what}: HTTP ${response.status()} ${await response.text()}`);
   }
@@ -81,7 +85,10 @@ export interface TestAccount {
 }
 
 /** A plain account, created by the admin. */
-export async function createAccount(admin: APIRequestContext, prefix: string): Promise<TestAccount> {
+export async function createAccount(
+  admin: APIRequestContext,
+  prefix: string
+): Promise<TestAccount> {
   const username = `${prefix}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
   const password = `E2e-${crypto.randomBytes(9).toString("base64url")}`;
   const body = await ok<{ user: { id: string } }>(
@@ -130,7 +137,10 @@ export async function forcePasswordChange(
   return { ...account, password };
 }
 
-export async function deleteAccount(admin: APIRequestContext, account: TestAccount | undefined): Promise<void> {
+export async function deleteAccount(
+  admin: APIRequestContext,
+  account: TestAccount | undefined
+): Promise<void> {
   if (!account) return;
   await admin.delete(`/api/v1/admin/users/${account.id}`);
 }

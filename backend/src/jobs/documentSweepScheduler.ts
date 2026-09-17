@@ -45,7 +45,10 @@ export function startDocumentSweepScheduler(): void {
   schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
     void runDocumentSweep();
   });
-  logger.info({ operation: "document_sweep_scheduler_started", cron: CRON_EXPRESSION }, "Document sweep scheduler started");
+  logger.info(
+    { operation: "document_sweep_scheduler_started", cron: CRON_EXPRESSION },
+    "Document sweep scheduler started"
+  );
 }
 
 export function stopDocumentSweepScheduler(): void {

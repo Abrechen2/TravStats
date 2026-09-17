@@ -28,8 +28,7 @@ describe("derivePatternFromSelection", () => {
   });
 
   it("extracts context-anchored regex for a 3-letter IATA code", () => {
-    const fullText =
-      "IATA-Code des Abflughafens MUC\nIATA-Code des Ankunftsflughafens HEL";
+    const fullText = "IATA-Code des Abflughafens MUC\nIATA-Code des Ankunftsflughafens HEL";
     const pattern = derivePatternFromSelection(
       { text: "MUC", label: "departureCode", start: 27, end: 30 },
       fullText

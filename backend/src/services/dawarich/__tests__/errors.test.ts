@@ -12,9 +12,7 @@ describe("normalizeDawarichBaseUrl", () => {
 
   it("accepts a plain private-LAN http address without any egress block", () => {
     // Deliberate non-restriction — see the comment on normalizeDawarichBaseUrl.
-    expect(normalizeDawarichBaseUrl("http://192.168.1.50:3000")).toBe(
-      "http://192.168.1.50:3000",
-    );
+    expect(normalizeDawarichBaseUrl("http://192.168.1.50:3000")).toBe("http://192.168.1.50:3000");
   });
 
   it("rejects a non-http(s) scheme as invalidUrl", () => {

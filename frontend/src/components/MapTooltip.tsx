@@ -64,7 +64,10 @@ export function MapTooltip({
 
   return (
     <TooltipContainer screenX={screenX} screenY={screenY} minWidth="220px">
-      <div className="flex items-center gap-1.5 font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
+      <div
+        className="flex items-center gap-1.5 font-mono font-bold text-sm"
+        style={{ color: "var(--accent)" }}
+      >
         <FlagImg country={depCountry} height={14} />
         <span>{flight.depIata ?? flight.depIcao ?? "?"}</span>
         <span className="opacity-60">→</span>

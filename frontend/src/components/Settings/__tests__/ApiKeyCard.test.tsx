@@ -44,7 +44,7 @@ describe("ApiKeyCard — logostream", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     const button = await screen.findByRole("button", { name: "settings:apiKeys.test" });
@@ -62,7 +62,7 @@ describe("ApiKeyCard — logostream", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     await userEvent.click(await screen.findByRole("button", { name: "settings:apiKeys.test" }));
@@ -85,7 +85,7 @@ describe("ApiKeyCard — googlePlaces", () => {
         hasAccess
         value="abcd****wxyz"
         isAdmin={true}
-      />,
+      />
     );
 
     const button = await screen.findByRole("button", { name: "settings:apiKeys.test" });

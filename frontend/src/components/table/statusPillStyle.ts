@@ -16,13 +16,7 @@ import type { CSSProperties } from "react";
  * for.
  */
 export type DomainStatus =
-  | "flown"
-  | "completed"
-  | "scheduled"
-  | "booked"
-  | "in_progress"
-  | "cancelled"
-  | "historical";
+  "flown" | "completed" | "scheduled" | "booked" | "in_progress" | "cancelled" | "historical";
 
 export interface StatusPillStyle {
   background: string;

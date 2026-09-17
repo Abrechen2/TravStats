@@ -1,4 +1,4 @@
-import { z } from './zod';
+import { z } from "./zod";
 
 /**
  * Manual airport creation (#191) — the flight-side mirror of
@@ -18,13 +18,13 @@ export const createAirportSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z0-9]{3}$/, 'IATA code must be exactly 3 letters/digits')
+    .regex(/^[A-Z0-9]{3}$/, "IATA code must be exactly 3 letters/digits")
     .optional(),
   icao: z
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z0-9]{4}$/, 'ICAO code must be exactly 4 letters/digits')
+    .regex(/^[A-Z0-9]{4}$/, "ICAO code must be exactly 4 letters/digits")
     .optional(),
   city: z.string().trim().max(120).optional(),
   country: z.string().trim().max(80).optional(),

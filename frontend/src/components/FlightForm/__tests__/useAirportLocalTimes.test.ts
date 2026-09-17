@@ -15,14 +15,21 @@ import { useAirportLocalTimes } from "../useAirportLocalTimes";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getByCode.mockImplementation(async (code: string) =>
-    code === "HND" ? { iata: "HND", timezone: "Asia/Tokyo" } : { iata: "JFK", timezone: "America/New_York" }
+    code === "HND"
+      ? { iata: "HND", timezone: "Asia/Tokyo" }
+      : { iata: "JFK", timezone: "America/New_York" }
   );
 });
 
 describe("useAirportLocalTimes", () => {
   it("starts on the browser zone and reports not hydrated", () => {
     const { result } = renderHook(() =>
-      useAirportLocalTimes({ isOpen: true, depCode: "HND", arrCode: "JFK", browserTimezone: "Europe/Berlin" })
+      useAirportLocalTimes({
+        isOpen: true,
+        depCode: "HND",
+        arrCode: "JFK",
+        browserTimezone: "Europe/Berlin",
+      })
     );
     expect(result.current.hydrated).toBe(false);
     expect(result.current.depTimezone).toBe("Europe/Berlin");
@@ -30,7 +37,12 @@ describe("useAirportLocalTimes", () => {
 
   it("moves BOTH zones to airport-local together, never one alone", async () => {
     const { result } = renderHook(() =>
-      useAirportLocalTimes({ isOpen: true, depCode: "HND", arrCode: "JFK", browserTimezone: "Europe/Berlin" })
+      useAirportLocalTimes({
+        isOpen: true,
+        depCode: "HND",
+        arrCode: "JFK",
+        browserTimezone: "Europe/Berlin",
+      })
     );
     await waitFor(() => expect(result.current.hydrated).toBe(true));
     expect(result.current.depTimezone).toBe("Asia/Tokyo");
@@ -44,7 +56,12 @@ describe("useAirportLocalTimes", () => {
       throw new Error("not found");
     });
     const { result } = renderHook(() =>
-      useAirportLocalTimes({ isOpen: true, depCode: "HND", arrCode: "JFK", browserTimezone: "Europe/Berlin" })
+      useAirportLocalTimes({
+        isOpen: true,
+        depCode: "HND",
+        arrCode: "JFK",
+        browserTimezone: "Europe/Berlin",
+      })
     );
     await waitFor(() => expect(mocks.getByCode).toHaveBeenCalledTimes(2));
     expect(result.current.hydrated).toBe(false);
@@ -54,7 +71,12 @@ describe("useAirportLocalTimes", () => {
   it("re-resolves when the departure airport changes", async () => {
     const { result, rerender } = renderHook(
       (props: { depCode: string }) =>
-        useAirportLocalTimes({ isOpen: true, depCode: props.depCode, arrCode: "JFK", browserTimezone: "Europe/Berlin" }),
+        useAirportLocalTimes({
+          isOpen: true,
+          depCode: props.depCode,
+          arrCode: "JFK",
+          browserTimezone: "Europe/Berlin",
+        }),
       { initialProps: { depCode: "HND" } }
     );
     await waitFor(() => expect(result.current.hydrated).toBe(true));
@@ -76,7 +98,12 @@ describe("useAirportLocalTimes", () => {
   it("does not un-hydrate while re-resolving after a code change", async () => {
     const { result, rerender } = renderHook(
       (props: { depCode: string }) =>
-        useAirportLocalTimes({ isOpen: true, depCode: props.depCode, arrCode: "JFK", browserTimezone: "Europe/Berlin" }),
+        useAirportLocalTimes({
+          isOpen: true,
+          depCode: props.depCode,
+          arrCode: "JFK",
+          browserTimezone: "Europe/Berlin",
+        }),
       { initialProps: { depCode: "HND" } }
     );
     await waitFor(() => expect(result.current.hydrated).toBe(true));
@@ -126,7 +153,12 @@ describe("useAirportLocalTimes", () => {
 
     const { result, rerender } = renderHook(
       (props: { depCode: string }) =>
-        useAirportLocalTimes({ isOpen: true, depCode: props.depCode, arrCode: "JFK", browserTimezone: "Europe/Berlin" }),
+        useAirportLocalTimes({
+          isOpen: true,
+          depCode: props.depCode,
+          arrCode: "JFK",
+          browserTimezone: "Europe/Berlin",
+        }),
       { initialProps: { depCode: "HND" } }
     );
 

@@ -59,7 +59,7 @@ export interface StayPeriodParts {
 export function formatStayPeriod(
   stay: DisplayableStay,
   locale: string,
-  t: (key: string) => string,
+  t: (key: string) => string
 ): StayPeriodParts {
   const checkIn = toDate(stay.checkIn);
   const checkOut = toDate(stay.checkOut);
@@ -71,7 +71,12 @@ export function formatStayPeriod(
   });
 
   const day = (d: Date): string =>
-    d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+    d.toLocaleDateString(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    });
 
   switch (timing.precision) {
     case "DAY": {
@@ -88,7 +93,11 @@ export function formatStayPeriod(
     case "MONTH": {
       const anchor = timing.anchor!;
       return {
-        label: anchor.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" }),
+        label: anchor.toLocaleDateString(locale, {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
         precision: "MONTH",
       };
     }

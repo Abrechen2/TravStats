@@ -176,9 +176,7 @@ describe("cross-account references", () => {
       .send({ tripId: ownerTripId });
 
     // `{ trip: ... }` — this router answers bare, and the wrapper is named.
-    const res = await request(app)
-      .get(`/api/v1/trips/${ownerTripId}`)
-      .set("Cookie", ownerCookie);
+    const res = await request(app).get(`/api/v1/trips/${ownerTripId}`).set("Cookie", ownerCookie);
 
     expect(res.status).toBe(200);
     const stays: Array<{ id: string }> = res.body.trip.lodgingStays;

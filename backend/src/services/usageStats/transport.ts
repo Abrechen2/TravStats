@@ -23,7 +23,7 @@ export async function sendPing(payload: UsagePayload, baseUrl: string): Promise<
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         signal,
-      }),
+      })
     );
     return response.ok;
   } catch (error) {
@@ -39,7 +39,7 @@ export async function sendErasure(installId: string, baseUrl: string): Promise<b
       fetch(`${baseUrl}/v1/install/${encodeURIComponent(installId)}`, {
         method: "DELETE",
         signal,
-      }),
+      })
     );
     return response.ok;
   } catch (error) {

@@ -60,7 +60,9 @@ describe("Tour route sections — stop assignment", () => {
     const res = await put([stopIds.kristiansand, stopIds.bergen, stopIds.oslo]);
 
     expect(res.status).toBe(200);
-    expect(res.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([0, 1, 2]);
+    expect(res.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([
+      0, 1, 2,
+    ]);
     expect(res.body.legs).toHaveLength(2);
     expect(res.body.route.distanceKm).toBeGreaterThan(0);
     for (const leg of res.body.legs) {
@@ -115,7 +117,9 @@ describe("Tour route sections — stop assignment", () => {
       [5.32, 60.39],
     ];
     const override = await request(app)
-      .put(`/api/v1/trips/${tripId}/routes/${routeId}/legs/${stopIds.kristiansand}/${stopIds.bergen}`)
+      .put(
+        `/api/v1/trips/${tripId}/routes/${routeId}/legs/${stopIds.kristiansand}/${stopIds.bergen}`
+      )
       .set("Cookie", cookie)
       .send({ source: "drawn", waypoints: line });
     expect(override.status).toBe(200);
@@ -125,7 +129,7 @@ describe("Tour route sections — stop assignment", () => {
     // survive untouched. This is the endpoint-keying promise.
     const after = await put([stopIds.kristiansand, stopIds.bergen, stopIds.lom, stopIds.oslo]);
     const survivor = after.body.legs.find(
-      (l: { fromStopId: string }) => l.fromStopId === stopIds.kristiansand,
+      (l: { fromStopId: string }) => l.fromStopId === stopIds.kristiansand
     );
     expect(survivor.source).toBe("drawn");
     expect(survivor.distanceKm).toBeCloseTo(drawnKm, 6);
@@ -162,7 +166,9 @@ describe("Tour route sections — stop assignment", () => {
     const res = await put([stopIds.lom, stopIds.bergen, back.id]);
     expect(res.status).toBe(200);
     expect(res.body.legs).toHaveLength(2);
-    expect(res.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([0, 1, 2]);
+    expect(res.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([
+      0, 1, 2,
+    ]);
   });
 
   it("refuses the same stop twice", async () => {

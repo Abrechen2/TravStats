@@ -52,18 +52,14 @@ describe("Photon place search", () => {
   afterEach(() => {
     global.fetch = realFetch;
     jest.clearAllMocks();
-    if (realTimeoutEnv === undefined)
-      delete process.env.PHOTON_SEARCH_TIMEOUT_MS;
+    if (realTimeoutEnv === undefined) delete process.env.PHOTON_SEARCH_TIMEOUT_MS;
     else process.env.PHOTON_SEARCH_TIMEOUT_MS = realTimeoutEnv;
-    if (realMaxBytesEnv === undefined)
-      delete process.env.PHOTON_SEARCH_MAX_BYTES;
+    if (realMaxBytesEnv === undefined) delete process.env.PHOTON_SEARCH_MAX_BYTES;
     else process.env.PHOTON_SEARCH_MAX_BYTES = realMaxBytesEnv;
   });
 
   it("normalizes a feature, respecting GeoJSON [lon, lat] coordinate order", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
     const results = await searchPlaces("Zürich");
     expect(results).toEqual([
       {
@@ -80,24 +76,22 @@ describe("Photon place search", () => {
   });
 
   it("skips features without a name or without coordinates", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(
-        jsonResponse(
-          featureCollection([
-            {
-              properties: { city: "No Name" },
-              geometry: { coordinates: [1, 2] },
-            },
-            { properties: { name: "No Coords" }, geometry: {} },
-            {
-              properties: { name: "Bad Coords" },
-              geometry: { coordinates: [1] },
-            },
-            zurichFeature,
-          ]),
-        ),
-      );
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        featureCollection([
+          {
+            properties: { city: "No Name" },
+            geometry: { coordinates: [1, 2] },
+          },
+          { properties: { name: "No Coords" }, geometry: {} },
+          {
+            properties: { name: "Bad Coords" },
+            geometry: { coordinates: [1] },
+          },
+          zurichFeature,
+        ])
+      )
+    );
     const results = await searchPlaces("test");
     expect(results).toHaveLength(1);
     expect(results[0].name).toBe("Zürich");
@@ -126,17 +120,13 @@ describe("Photon place search", () => {
   });
 
   it("degrades to [] on a garbage/wrong-shape JSON response", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(jsonResponse({ features: "not-an-array" }));
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ features: "not-an-array" }));
     expect(await searchPlaces("Berlin")).toEqual([]);
   });
 
   it("degrades to [] when the response exceeds the size cap", async () => {
     process.env.PHOTON_SEARCH_MAX_BYTES = "10";
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
     expect(await searchPlaces("Berlin")).toEqual([]);
   });
 
@@ -147,9 +137,7 @@ describe("Photon place search", () => {
 
   it("degrades to [] when resolveGeocoderUrls rejects, falling back to the default URL", async () => {
     mockResolveGeocoderUrls.mockRejectedValue(new Error("DB down"));
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
     global.fetch = fetchMock as unknown as typeof fetch;
     const results = await searchPlaces("Berlin");
     expect(results).toHaveLength(1);
@@ -169,9 +157,7 @@ describe("Photon place search", () => {
       const results = await searchPlaces("Berlin");
       expect(results).toHaveLength(1);
       const url = fetchMock.mock.calls[0][0] as string;
-      expect(url).toMatch(
-        /^https:\/\/photon\.env-configured\.example\/api\/\?/,
-      );
+      expect(url).toMatch(/^https:\/\/photon\.env-configured\.example\/api\/\?/);
     } finally {
       if (realEnv === undefined) delete process.env.PHOTON_URL;
       else process.env.PHOTON_URL = realEnv;
@@ -183,9 +169,7 @@ describe("Photon place search", () => {
       photonUrl: "https://photon.self-hosted.example",
       nominatimUrl: "https://nominatim.openstreetmap.org",
     });
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
     global.fetch = fetchMock as unknown as typeof fetch;
     await searchPlaces("Berlin");
     const url = fetchMock.mock.calls[0][0] as string;
@@ -193,9 +177,7 @@ describe("Photon place search", () => {
   });
 
   it("passes q, limit and lang as query params", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([])));
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse(featureCollection([])));
     global.fetch = fetchMock as unknown as typeof fetch;
     await searchPlaces("Berlin", { limit: 3, lang: "de" });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
@@ -249,9 +231,7 @@ describe("Photon place search", () => {
   // ——— #263: the OSM path returned nothing on some self-hosted instances ———
 
   it("sends a descriptive User-Agent (anonymous requests are what OSM infrastructure blocks)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
     global.fetch = fetchMock;
 
     await searchPlaces("Zürich");
@@ -263,9 +243,7 @@ describe("Photon place search", () => {
   });
 
   it("strips a trailing /api from an admin-entered base URL instead of requesting /api/api/", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([])));
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse(featureCollection([])));
     global.fetch = fetchMock;
     mockResolveGeocoderUrls.mockResolvedValue({
       photonUrl: "https://photon.example.com/api",
@@ -313,9 +291,7 @@ describe("Photon place search", () => {
     const failed = await searchPlacesDetailed("Berlin");
     expect(failed).toEqual({ results: [], degraded: true });
 
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(featureCollection([])));
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse(featureCollection([])));
     const empty = await searchPlacesDetailed("Berlin");
     expect(empty).toEqual({ results: [], degraded: false });
   });

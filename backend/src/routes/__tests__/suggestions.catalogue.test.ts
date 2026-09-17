@@ -11,7 +11,10 @@ describe("Suggestions API (DB-backed catalogue)", () => {
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: "suggestionscataloguetest" } });
     const user = await prisma.user.create({
-      data: { username: "suggestionscataloguetest", passwordHash: await hashPassword("password123") },
+      data: {
+        username: "suggestionscataloguetest",
+        passwordHash: await hashPassword("password123"),
+      },
     });
     userId = user.id;
     authCookie = `auth_token=${generateToken(user.id)}`;
@@ -62,9 +65,7 @@ describe("Suggestions API (DB-backed catalogue)", () => {
 
   describe("GET /api/v1/suggestions/airlines without q", () => {
     it("does not dump the whole static catalogue (capped)", async () => {
-      const res = await request(app)
-        .get("/api/v1/suggestions/airlines")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/suggestions/airlines").set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.suggestions.length).toBeLessThanOrEqual(50);
     });

@@ -42,21 +42,29 @@ describe("documentService", () => {
   beforeAll(async () => {
     const passwordHash = await hashPassword("password123");
     userId = (await prisma.user.create({ data: { username: `${PREFIX}-a`, passwordHash } })).id;
-    otherUserId = (await prisma.user.create({ data: { username: `${PREFIX}-b`, passwordHash } })).id;
+    otherUserId = (await prisma.user.create({ data: { username: `${PREFIX}-b`, passwordHash } }))
+      .id;
     flightId = (await prisma.flight.create({ data: flightData(userId) })).id;
     otherFlightId = (await prisma.flight.create({ data: flightData(otherUserId) })).id;
-    tripId = (await prisma.trip.create({ data: { userId, name: "Doc trip", status: "completed" } })).id;
+    tripId = (await prisma.trip.create({ data: { userId, name: "Doc trip", status: "completed" } }))
+      .id;
   });
 
   afterAll(async () => {
-    const rows = await prisma.document.findMany({ where: { userId: { in: [userId, otherUserId] } } });
+    const rows = await prisma.document.findMany({
+      where: { userId: { in: [userId, otherUserId] } },
+    });
     for (const row of rows) fs.rmSync(documentPath(row.storedName), { force: true });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     await prisma.$disconnect();
   });
 
   it("keeps the bytes on disk and a row that describes them", async () => {
-    const { document, created } = await createDocument({ userId, buffer: PDF("keep"), originalName: "Rechnung.pdf" });
+    const { document, created } = await createDocument({
+      userId,
+      buffer: PDF("keep"),
+      originalName: "Rechnung.pdf",
+    });
     expect(created).toBe(true);
     expect(document.format).toBe("pdf");
     expect(document.sha256).toMatch(/^[0-9a-f]{64}$/);
@@ -65,16 +73,30 @@ describe("documentService", () => {
   });
 
   it("returns the same document for a retried upload to the same target", async () => {
-    const first = await createDocument({ userId, buffer: PDF("retry"), entry: { type: "flight", id: flightId } });
-    const second = await createDocument({ userId, buffer: PDF("retry"), entry: { type: "flight", id: flightId } });
+    const first = await createDocument({
+      userId,
+      buffer: PDF("retry"),
+      entry: { type: "flight", id: flightId },
+    });
+    const second = await createDocument({
+      userId,
+      buffer: PDF("retry"),
+      entry: { type: "flight", id: flightId },
+    });
     expect(second.created).toBe(false);
     expect(second.document.id).toBe(first.document.id);
-    expect(await prisma.document.count({ where: { userId, sha256: first.document.sha256 } })).toBe(1);
+    expect(await prisma.document.count({ where: { userId, sha256: first.document.sha256 } })).toBe(
+      1
+    );
   });
 
   it("files an earlier unfiled copy instead of storing the bytes twice", async () => {
     const unfiled = await createDocument({ userId, buffer: PDF("late-link") });
-    const filed = await createDocument({ userId, buffer: PDF("late-link"), entry: { type: "trip", id: tripId } });
+    const filed = await createDocument({
+      userId,
+      buffer: PDF("late-link"),
+      entry: { type: "trip", id: tripId },
+    });
     expect(filed.created).toBe(false);
     expect(filed.document.id).toBe(unfiled.document.id);
     expect(filed.document.tripId).toBe(tripId);
@@ -89,33 +111,55 @@ describe("documentService", () => {
   });
 
   it("refuses to move a document that is filed elsewhere", async () => {
-    const { document } = await createDocument({ userId, buffer: PDF("filed"), entry: { type: "trip", id: tripId } });
-    await expect(assertLinkable(userId, [document.id], { type: "flight", id: flightId })).rejects.toMatchObject({
+    const { document } = await createDocument({
+      userId,
+      buffer: PDF("filed"),
+      entry: { type: "trip", id: tripId },
+    });
+    await expect(
+      assertLinkable(userId, [document.id], { type: "flight", id: flightId })
+    ).rejects.toMatchObject({
       statusCode: 409,
     });
   });
 
   it("treats another user's entry and another user's document as not found", async () => {
     await expect(
-      createDocument({ userId, buffer: PDF("stranger"), entry: { type: "flight", id: otherFlightId } }),
+      createDocument({
+        userId,
+        buffer: PDF("stranger"),
+        entry: { type: "flight", id: otherFlightId },
+      })
     ).rejects.toMatchObject({ statusCode: 404 });
     const theirs = await createDocument({ userId: otherUserId, buffer: PDF("theirs") });
-    await expect(assertLinkable(userId, [theirs.document.id])).rejects.toMatchObject({ statusCode: 404 });
+    await expect(assertLinkable(userId, [theirs.document.id])).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 
   it("rejects what it cannot recognise, and what is too large", async () => {
-    await expect(createDocument({ userId, buffer: Buffer.from([1, 2, 3, 4]), originalName: "x.bin" })).rejects.toMatchObject({
+    await expect(
+      createDocument({ userId, buffer: Buffer.from([1, 2, 3, 4]), originalName: "x.bin" })
+    ).rejects.toMatchObject({
       statusCode: 415,
     });
     const bigMail = Buffer.alloc(2 * 1024 * 1024 + 1, "a");
-    await expect(createDocument({ userId, buffer: bigMail, originalName: "big.eml" })).rejects.toMatchObject({
+    await expect(
+      createDocument({ userId, buffer: bigMail, originalName: "big.eml" })
+    ).rejects.toMatchObject({
       statusCode: 413,
     });
   });
 
   it("enforces a single owner in the database itself", async () => {
-    const { document } = await createDocument({ userId, buffer: PDF("check"), entry: { type: "flight", id: flightId } });
-    await expect(prisma.document.update({ where: { id: document.id }, data: { tripId } })).rejects.toThrow();
+    const { document } = await createDocument({
+      userId,
+      buffer: PDF("check"),
+      entry: { type: "flight", id: flightId },
+    });
+    await expect(
+      prisma.document.update({ where: { id: document.id }, data: { tripId } })
+    ).rejects.toThrow();
   });
 
   it("deletes the row and the file", async () => {
@@ -126,7 +170,11 @@ describe("documentService", () => {
   });
 
   it("unlinking returns a document to unfiled", async () => {
-    const { document } = await createDocument({ userId, buffer: PDF("unlink"), entry: { type: "trip", id: tripId } });
+    const { document } = await createDocument({
+      userId,
+      buffer: PDF("unlink"),
+      entry: { type: "trip", id: tripId },
+    });
     const unlinked = await unlinkDocument(userId, document.id);
     expect(unlinked.tripId).toBeNull();
     expect(unlinked.linkedAt).toBeNull();
@@ -134,9 +182,16 @@ describe("documentService", () => {
 
   it("sweeps unfiled uploads past their TTL and files without a row, but not filed ones", async () => {
     const stale = await createDocument({ userId, buffer: PDF("stale") });
-    const filed = await createDocument({ userId, buffer: PDF("keep-filed"), entry: { type: "flight", id: flightId } });
+    const filed = await createDocument({
+      userId,
+      buffer: PDF("keep-filed"),
+      entry: { type: "flight", id: flightId },
+    });
     const old = new Date(Date.now() - (UNLINKED_TTL_DAYS + 1) * 24 * 60 * 60 * 1000);
-    await prisma.document.updateMany({ where: { id: { in: [stale.document.id, filed.document.id] } }, data: { createdAt: old } });
+    await prisma.document.updateMany({
+      where: { id: { in: [stale.document.id, filed.document.id] } },
+      data: { createdAt: old },
+    });
     const orphanName = `orphan-${PREFIX}.pdf`;
     fs.writeFileSync(documentPath(orphanName), "%PDF orphan");
 
@@ -152,7 +207,9 @@ describe("documentService", () => {
   it("leaves a file alone that is younger than an hour, even without a row", async () => {
     const youngName = `young-${PREFIX}.pdf`;
     fs.writeFileSync(documentPath(youngName), "%PDF young");
-    await sweepDocuments(new Date(), async (name) => (name === youngName ? 5 * 60 * 1000 : 2 * 60 * 60 * 1000));
+    await sweepDocuments(new Date(), async (name) =>
+      name === youngName ? 5 * 60 * 1000 : 2 * 60 * 60 * 1000
+    );
     expect(fs.existsSync(documentPath(youngName))).toBe(true);
     fs.rmSync(documentPath(youngName), { force: true });
   });

@@ -1,9 +1,9 @@
-import { z } from './zod';
-import { currencyField } from './lodging';
+import { z } from "./zod";
+import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 
-const CABIN_TYPES = ['inside', 'oceanview', 'balcony', 'suite'] as const;
-const STATUSES = ['scheduled', 'flown', 'cancelled', 'historical'] as const;
+const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
+const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
 
 // "" and null both mean "clear" on the wire; undefined means "don't change"
 // on update. The old empty->undefined transform made clearing impossible:
@@ -12,28 +12,25 @@ const emptyToNull = z
   .string()
   .nullable()
   .optional()
-  .transform((v) => (v === '' ? null : v));
+  .transform((v) => (v === "" ? null : v));
 
 // Accept partial datetimes and coerce them to full ISO 8601. The cruise
 // booking parser emits times like "2026-06-17T08:00" (no seconds/offset),
 // which a strict `z.string().datetime()` rejects — and unedited stops in the
 // import preview keep that raw value. Coerce any parseable string to a full
 // ISO string; genuinely invalid strings fall through to the strict check.
-const isoDateTime = z.preprocess(
-  (v) => {
-    // An OMITTED field and an explicit "clear this" are different requests, and
-    // collapsing both to `undefined` made the second impossible: a PATCH with
-    // `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
-    // `null` and the empty string both mean the user removed the value — an
-    // emptied input arrives as "" — so both become an explicit null, and only a
-    // genuinely absent key stays `undefined`.
-    if (v === null || v === '') return null;
-    if (typeof v !== 'string') return undefined;
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? v : d.toISOString();
-  },
-  z.string().datetime().nullable().optional(),
-);
+const isoDateTime = z.preprocess((v) => {
+  // An OMITTED field and an explicit "clear this" are different requests, and
+  // collapsing both to `undefined` made the second impossible: a PATCH with
+  // `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
+  // `null` and the empty string both mean the user removed the value — an
+  // emptied input arrives as "" — so both become an explicit null, and only a
+  // genuinely absent key stays `undefined`.
+  if (v === null || v === "") return null;
+  if (typeof v !== "string") return undefined;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? v : d.toISOString();
+}, z.string().datetime().nullable().optional());
 
 const stopSchema = z
   .object({
@@ -61,22 +58,22 @@ const stopSchema = z
     if (!s.isAtSea && !hasPort && !hasUnresolved) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A stop must be at sea, reference a port, or carry an unresolved port name',
-        path: ['portId'],
+        message: "A stop must be at sea, reference a port, or carry an unresolved port name",
+        path: ["portId"],
       });
     }
     if (hasPort && hasUnresolved) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A stop cannot be both a matched port and an unresolved port',
-        path: ['unresolvedPortName'],
+        message: "A stop cannot be both a matched port and an unresolved port",
+        path: ["unresolvedPortName"],
       });
     }
     if (s.isAtSea && (hasPort || hasUnresolved)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A sea day cannot reference a port or an unresolved port name',
-        path: ['isAtSea'],
+        message: "A sea day cannot reference a port or an unresolved port name",
+        path: ["isAtSea"],
       });
     }
   });
@@ -97,7 +94,7 @@ const baseCruiseSchema = z.object({
   arrivalPortId: z.number().int().positive().nullable().optional(),
   startDate: isoDateTime,
   endDate: isoDateTime,
-  status: z.enum(STATUSES).default('scheduled'),
+  status: z.enum(STATUSES).default("scheduled"),
   cabinNumber: z.string().max(20).nullable().optional(),
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
   deck: z.number().int().min(1).max(30).nullable().optional(),
@@ -138,13 +135,15 @@ export const createCruiseSchema = baseCruiseSchema.refine(
     if (!data.startDate || !data.endDate) return true;
     return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
   },
-  { message: 'endDate must not precede startDate', path: ['endDate'] },
+  { message: "endDate must not precede startDate", path: ["endDate"] }
 );
 
-export const updateCruiseSchema = partialForUpdate(baseCruiseSchema)
-  .refine((data) => Object.keys(data).length > 0, {
-    message: 'At least one field must be provided for update',
-  });
+export const updateCruiseSchema = partialForUpdate(baseCruiseSchema).refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided for update",
+  }
+);
 
 export const cruiseQuerySchema = z.object({
   status: z.union([z.enum(STATUSES), z.array(z.enum(STATUSES))]).optional(),
@@ -154,17 +153,14 @@ export const cruiseQuerySchema = z.object({
   tripId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  sort: z.enum(['date', 'ship', 'line', 'ports', 'status']).optional(),
+  sort: z.enum(["date", "ship", "line", "ports", "status"]).optional(),
 });
 
 export type CruiseInput = z.infer<typeof baseCruiseSchema>;
 export type CruiseQueryInput = z.infer<typeof cruiseQuerySchema>;
 
 /** One `[lon, lat]` pair, in GeoJSON order. */
-const waypointSchema = z.tuple([
-  z.number().min(-180).max(180),
-  z.number().min(-90).max(90),
-]);
+const waypointSchema = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]);
 
 /**
  * A hand-corrected line for one leg.
@@ -177,9 +173,9 @@ const waypointSchema = z.tuple([
  * 3–8 waypoints and a person correcting a line by hand adds a handful more.
  */
 export const routeOverrideSchema = z.object({
-  fromKind: z.literal('port'),
+  fromKind: z.literal("port"),
   fromRef: z.string().min(1).max(64),
-  toKind: z.literal('port'),
+  toKind: z.literal("port"),
   toRef: z.string().min(1).max(64),
   waypoints: z.array(waypointSchema).min(2).max(64),
 });

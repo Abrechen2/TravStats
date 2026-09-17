@@ -86,7 +86,7 @@ async function ensureDerivedShadowDatabase(databaseUrl: string): Promise<void> {
   } catch (error) {
     fail(
       `Could not prepare the shadow database: ${error instanceof Error ? error.message : String(error)}`,
-      "The DATABASE_URL role needs CREATEDB, or set SHADOW_DATABASE_URL to an existing empty database.",
+      "The DATABASE_URL role needs CREATEDB, or set SHADOW_DATABASE_URL to an existing empty database."
     );
   } finally {
     await client.$disconnect();
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
         "  cd backend && DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \\\n" +
         "    npx prisma migrate deploy\n" +
         "  DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \\\n" +
-        "    npm run check:drift",
+        "    npm run check:drift"
     );
   }
 
@@ -145,7 +145,9 @@ async function main(): Promise<void> {
 
   const code = result.status ?? 1;
   if (code === 0) {
-    process.stdout.write("[check:drift] OK — the migration history produces exactly schema.prisma.\n");
+    process.stdout.write(
+      "[check:drift] OK — the migration history produces exactly schema.prisma.\n"
+    );
     process.exit(0);
   }
   if (code === 2) {
@@ -153,7 +155,7 @@ async function main(): Promise<void> {
       "\n[check:drift] DRIFT DETECTED — DB state does not match schema.prisma.\n" +
         "[check:drift] Either generate a migration that brings the DB to schema state\n" +
         "[check:drift] (`npx prisma migrate dev --name <slug>` or hand-write one with\n" +
-        "[check:drift] backfills / IF EXISTS guards), or revert the schema change.\n",
+        "[check:drift] backfills / IF EXISTS guards), or revert the schema change.\n"
     );
     process.exit(2);
   }

@@ -95,10 +95,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
   });
 
   it("derives the countries of the trip's flights on the LIST endpoint", async () => {
-    const res = await request(app)
-      .get("/api/v1/trips")
-      .set("Cookie", authCookie)
-      .expect(200);
+    const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
 
     const trip = res.body.trips.find((t: { id: string }) => t.id === tripId);
     expect(trip).toBeDefined();
@@ -121,10 +118,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
       data: { countries: ["Japan"] },
     });
     try {
-      const res = await request(app)
-        .get("/api/v1/trips")
-        .set("Cookie", authCookie)
-        .expect(200);
+      const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
       const trip = res.body.trips.find((t: { id: string }) => t.id === tripId);
       expect(trip.countries).toEqual(["Japan"]);
     } finally {
@@ -147,8 +141,8 @@ describe("trip countries are derived on the list, not only on the detail", () =>
           update: { country: p.country },
           create: { ...p, lat: 0, lon: 0 },
           select: { id: true },
-        }),
-      ),
+        })
+      )
     );
 
     const trip = await prisma.trip.create({
@@ -174,10 +168,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
     });
 
     try {
-      const res = await request(app)
-        .get("/api/v1/trips")
-        .set("Cookie", authCookie)
-        .expect(200);
+      const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
       const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
       // Departure/arrival port + both calls, folded to ISO, deduplicated and
       // sorted. The sea day contributes nothing, as it should.
@@ -304,10 +295,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
     });
 
     try {
-      const res = await request(app)
-        .get("/api/v1/trips")
-        .set("Cookie", authCookie)
-        .expect(200);
+      const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
       const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
       // DE once, not "DE" plus "Germany".
       expect(listed.countries).toEqual(["DE", "ES"]);
@@ -342,10 +330,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
       select: { id: true },
     });
     try {
-      const res = await request(app)
-        .get("/api/v1/trips")
-        .set("Cookie", authCookie)
-        .expect(200);
+      const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
       const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
       expect(listed.countries).toEqual(["Freedonia"]);
     } finally {
@@ -360,10 +345,7 @@ describe("trip countries are derived on the list, not only on the detail", () =>
       data: { userId, name: "No segments", status: "planned" },
     });
     try {
-      const res = await request(app)
-        .get("/api/v1/trips")
-        .set("Cookie", authCookie)
-        .expect(200);
+      const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie).expect(200);
       const trip = res.body.trips.find((t: { id: string }) => t.id === empty.id);
       expect(trip.countries).toEqual([]);
     } finally {

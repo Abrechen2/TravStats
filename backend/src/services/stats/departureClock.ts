@@ -86,7 +86,7 @@ export async function withDepartureClock<
 export function airportCalendarDay(
   stored: Date,
   timezone: string | null,
-  semantics: FlightTimeSemantics,
+  semantics: FlightTimeSemantics
 ): Date {
   return new Date(`${localWallClockOf(stored, timezone, semantics).date}T00:00:00Z`);
 }

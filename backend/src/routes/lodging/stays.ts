@@ -73,7 +73,7 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
             // stay cannot have one, and applyFxSnapshot has already refused
             // the conversion above — this argument is then never read.
             input.checkIn ?? new Date(),
-            baseCurrency,
+            baseCurrency
           )
         : resolveFxFields(fxOutcome);
 
@@ -111,7 +111,12 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
 
     await linkDocuments(userId, documentIds, { type: "lodgingStay", id: stay.id });
     await recheckAchievements(userId, "lodging");
-    logger.info({ operation: "lodging_stay_create", stayId: stay.id, lodgingId: lodging.id, userId });
+    logger.info({
+      operation: "lodging_stay_create",
+      stayId: stay.id,
+      lodgingId: lodging.id,
+      userId,
+    });
     res.status(201).json({ success: true, data: stay });
   } catch (err) {
     next(err);
@@ -159,7 +164,9 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       throw new AppError("checkOutTime requires a DAY-precision check-out date", 400);
     }
     const timeClears = {
-      ...(input.checkInTime === undefined && stay.checkInTime !== null && !supportsTime(effectiveCheckIn)
+      ...(input.checkInTime === undefined &&
+      stay.checkInTime !== null &&
+      !supportsTime(effectiveCheckIn)
         ? { checkInTime: null }
         : {}),
       ...(input.checkOutTime === undefined &&
@@ -237,7 +244,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
           currency: input.currency ?? stay.currency,
           checkIn: effectiveCheckIn,
         },
-        baseCurrency,
+        baseCurrency
       );
       if (fxOutcome.status === "lookupFailed") {
         logger.warn({ operation: "lodging_fx_lookup_failed", stayId: stay.id, userId });
@@ -252,7 +259,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
               manualFxRate,
               effectiveTotalPrice,
               effectiveCheckIn ?? new Date(),
-              baseCurrency,
+              baseCurrency
             )
           : resolveFxFields(fxOutcome);
     }
@@ -264,7 +271,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     // a cleared component silently keep its old score.
     const effectiveRating = (
       sent: number | null | undefined,
-      stored: number | null,
+      stored: number | null
     ): number | null => (sent !== undefined ? sent : stored);
 
     const updated = await prisma.lodgingStay.update({

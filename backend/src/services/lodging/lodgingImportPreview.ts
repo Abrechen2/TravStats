@@ -230,7 +230,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
       // same-day match — it falls through to being treated as a new row rather
       // than silently absorbing an incoming dated one.
       const sameDay = existing.find(
-        (s) => s.checkIn !== null && dayKey(s.checkIn) === stay.checkIn,
+        (s) => s.checkIn !== null && dayKey(s.checkIn) === stay.checkIn
       );
       if (sameDay) {
         dedupeHint = "stay_same_dates";
@@ -277,7 +277,7 @@ const ACTION_RANK: Record<LodgingImportAction, number> = {
 
 export async function buildLodgingPreviewRows(
   userId: string,
-  candidates: LodgingImportCandidate[],
+  candidates: LodgingImportCandidate[]
 ): Promise<{ rows: LodgingImportPreviewRow[]; summary: LodgingImportSummary }> {
   const [lodgings, stays, chains] = await Promise.all([
     prisma.lodging.findMany({
@@ -306,10 +306,7 @@ export async function buildLodgingPreviewRows(
   const staysByLodging = new Map<string, ExistingStay[]>();
   for (const s of stays) {
     if (s.externalRef) staysByExternalRef.set(s.externalRef, s);
-    staysByLodging.set(s.lodgingId, [
-      ...(staysByLodging.get(s.lodgingId) ?? []),
-      s,
-    ]);
+    staysByLodging.set(s.lodgingId, [...(staysByLodging.get(s.lodgingId) ?? []), s]);
   }
 
   // Lodgings THIS payload will create — a stays-only row may legitimately point
@@ -350,7 +347,7 @@ export async function buildLodgingPreviewRows(
 
   logger.info(
     { operation: "lodging_import_preview", userId, ...summary },
-    "Lodging import preview built",
+    "Lodging import preview built"
   );
 
   return { rows: sorted, summary };

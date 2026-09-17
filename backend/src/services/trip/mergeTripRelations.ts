@@ -40,7 +40,7 @@ export type TripTx = Prisma.TransactionClient;
 export async function mergeImmichAlbums(
   tx: TripTx,
   sourceIds: string[],
-  targetId: string,
+  targetId: string
 ): Promise<number> {
   const [sourceAlbums, targetAlbums] = await Promise.all([
     tx.tripImmichAlbum.findMany({
@@ -103,7 +103,7 @@ export interface MergedPhotos {
 export async function mergeTripPhotos(
   tx: TripTx,
   sourceIds: string[],
-  targetId: string,
+  targetId: string
 ): Promise<MergedPhotos> {
   const imported = await tx.tripPhoto.findMany({
     where: { tripId: { in: [targetId, ...sourceIds] }, immichAssetId: { not: null } },
@@ -113,7 +113,8 @@ export async function mergeTripPhotos(
 
   const survivorByAsset = new Map<string, string>();
   for (const row of imported) {
-    if (row.tripId === targetId && row.immichAssetId) survivorByAsset.set(row.immichAssetId, row.id);
+    if (row.tripId === targetId && row.immichAssetId)
+      survivorByAsset.set(row.immichAssetId, row.id);
   }
   const survivorFor = new Map<string, string>();
   for (const row of imported) {
@@ -161,7 +162,7 @@ export function retargetCoverUrl(
   url: string | null | undefined,
   sourceIds: string[],
   targetId: string,
-  survivorFor: ReadonlyMap<string, string> = new Map(),
+  survivorFor: ReadonlyMap<string, string> = new Map()
 ): string | null {
   if (!url) return null;
   const match = INTERNAL_COVER.exec(url);

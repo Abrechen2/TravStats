@@ -16,7 +16,7 @@
  * well-placed checks capture everything the user cares about at ~90% less cost.
  */
 
-import { FLIGHT_ARRIVAL_SLACK_HOURS } from '../shared/statusDerivation';
+import { FLIGHT_ARRIVAL_SLACK_HOURS } from "../shared/statusDerivation";
 
 const PRE_DEPARTURE_LEAD_MS = 30 * 60 * 1000;
 const PRE_ARRIVAL_LEAD_MS = 60 * 60 * 1000;
@@ -66,12 +66,14 @@ export function calculateNextApiCheckAt(
   tracking: ObservedTracking = {}
 ): Date | null {
   if (!flightNumber) return null;
-  if (status !== 'scheduled') return null;
+  if (status !== "scheduled") return null;
   if (!departureTime) return null;
 
-  const dep = typeof departureTime === 'string' ? new Date(departureTime) : departureTime;
+  const dep = typeof departureTime === "string" ? new Date(departureTime) : departureTime;
   const arr = arrivalTime
-    ? (typeof arrivalTime === 'string' ? new Date(arrivalTime) : arrivalTime)
+    ? typeof arrivalTime === "string"
+      ? new Date(arrivalTime)
+      : arrivalTime
     : new Date(dep.getTime() + FALLBACK_FLIGHT_DURATION_MS);
 
   const nowMs = now.getTime();

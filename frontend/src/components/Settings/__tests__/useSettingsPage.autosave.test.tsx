@@ -24,7 +24,9 @@ vi.mock("../../../store/authStore", () => ({
 
 // setup.ts globally stubs `useSettingsStore` down to a selector-only mock. This
 // file drives the real store through the hook, so it needs the real thing.
-vi.mock("../../../store/settingsStore", async () => vi.importActual("../../../store/settingsStore"));
+vi.mock("../../../store/settingsStore", async () =>
+  vi.importActual("../../../store/settingsStore")
+);
 
 import { useSettingsPage } from "../useSettingsPage";
 import { useSettingsStore } from "../../../store/settingsStore";

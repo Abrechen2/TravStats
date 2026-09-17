@@ -37,7 +37,11 @@ const MAPPINGS: KeyMapping[] = [
   { envVar: "AVIATIONSTACK_API_KEY", column: "globalAviationstackApiKey", label: "Aviationstack" },
   { envVar: "AERODATABOX_API_KEY", column: "globalAerodataboxApiKey", label: "AeroDataBox" },
   { envVar: "OPENSKY_CLIENT_ID", column: "globalOpenskyClientId", label: "OpenSky Client ID" },
-  { envVar: "OPENSKY_CLIENT_SECRET", column: "globalOpenskyClientSecret", label: "OpenSky Client Secret" },
+  {
+    envVar: "OPENSKY_CLIENT_SECRET",
+    column: "globalOpenskyClientSecret",
+    label: "OpenSky Client Secret",
+  },
 ];
 
 async function seedDevAdminKeys(): Promise<void> {

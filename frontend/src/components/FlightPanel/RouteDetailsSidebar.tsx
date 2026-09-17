@@ -91,10 +91,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
         ← {t("common:buttons.back")}
       </button>
 
-      <div
-        className="px-3 py-3 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
+      <div className="px-3 py-3 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
           {depName}
         </div>

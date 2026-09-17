@@ -1,14 +1,14 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
-import logger from '../utils/logger';
-import { FILE_LIMITS, CLEANUP } from '../config/constants';
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import { PrismaClient } from "@prisma/client";
+import logger from "../utils/logger";
+import { FILE_LIMITS, CLEANUP } from "../config/constants";
 
 // Upload directories
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/receipts');
-const EMAIL_UPLOAD_DIR = path.join(__dirname, '../../uploads/emails');
+const UPLOAD_DIR = path.join(__dirname, "../../uploads/receipts");
+const EMAIL_UPLOAD_DIR = path.join(__dirname, "../../uploads/emails");
 
 // Ensure upload directories exist
 // Wrap in try-catch to prevent startup failures if permissions are missing
@@ -16,7 +16,7 @@ try {
   if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     logger.info({
-      operation: 'upload_dir_created',
+      operation: "upload_dir_created",
       message: `Created upload directory: ${UPLOAD_DIR}`,
       context: { directory: UPLOAD_DIR },
     });
@@ -25,9 +25,9 @@ try {
   // Log warning but don't prevent startup - directory will be created on first upload attempt
   const errMsg = error instanceof Error ? error.message : String(error);
   console.warn(`[Upload] Could not create upload directory ${UPLOAD_DIR}:`, errMsg);
-  console.warn('[Upload] Uploads may fail until directory permissions are fixed');
+  console.warn("[Upload] Uploads may fail until directory permissions are fixed");
   logger.warn({
-    operation: 'upload_dir_creation_failed',
+    operation: "upload_dir_creation_failed",
     message: `Could not create upload directory: ${UPLOAD_DIR}`,
     context: { directory: UPLOAD_DIR, error: errMsg },
   });
@@ -37,7 +37,7 @@ try {
   if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
     fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
     logger.info({
-      operation: 'upload_email_dir_created',
+      operation: "upload_email_dir_created",
       message: `Created email upload directory: ${EMAIL_UPLOAD_DIR}`,
       context: { directory: EMAIL_UPLOAD_DIR },
     });
@@ -46,9 +46,9 @@ try {
   // Log warning but don't prevent startup - directory will be created on first upload attempt
   const errMsg = error instanceof Error ? error.message : String(error);
   console.warn(`[Upload] Could not create email upload directory ${EMAIL_UPLOAD_DIR}:`, errMsg);
-  console.warn('[Upload] Email uploads may fail until directory permissions are fixed');
+  console.warn("[Upload] Email uploads may fail until directory permissions are fixed");
   logger.warn({
-    operation: 'upload_email_dir_creation_failed',
+    operation: "upload_email_dir_creation_failed",
     message: `Could not create email upload directory: ${EMAIL_UPLOAD_DIR}`,
     context: { directory: EMAIL_UPLOAD_DIR, error: errMsg },
   });
@@ -61,27 +61,31 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Generate unique filename: timestamp-random-originalname
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname);
     const basename = path.basename(file.originalname, ext);
-    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_");
     cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
   },
 });
 
 // File filter - only allow images and PDFs with magic number validation
-const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
+const fileFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+): void => {
   const allowedMimeTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
   ];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(', ')}`));
+    return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`));
   }
 
   // Note: Magic number validation happens after file is saved
@@ -107,16 +111,16 @@ export function deleteReceiptFile(filename: string): void {
     try {
       fs.unlinkSync(filePath);
       logger.debug({
-        operation: 'upload_receipt_deleted',
+        operation: "upload_receipt_deleted",
         message: `Deleted receipt file: ${filename}`,
         context: { filename },
       });
     } catch (error) {
       // Log warning but don't throw - file might already be deleted
       logger.warn({
-        operation: 'upload_receipt_delete_error',
+        operation: "upload_receipt_delete_error",
         message: `Failed to delete receipt file: ${filename}`,
-        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }
   }
@@ -156,16 +160,16 @@ export async function cleanupOldReceipts(prisma: PrismaClient): Promise<number> 
         fs.unlinkSync(filePath);
         deletedCount++;
         logger.debug({
-          operation: 'upload_receipt_cleanup',
+          operation: "upload_receipt_cleanup",
           message: `Cleaned up orphaned receipt: ${file}`,
           context: { filename: file },
         });
       } catch (error) {
         // Log warning but don't fail cleanup process
         logger.warn({
-          operation: 'upload_receipt_cleanup_error',
+          operation: "upload_receipt_cleanup_error",
           message: `Failed to delete receipt file: ${file}`,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
           context: { filename: file },
         });
       }
@@ -188,24 +192,28 @@ const emailStorage = multer.diskStorage({
     cb(null, EMAIL_UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname);
     const basename = path.basename(file.originalname, ext);
-    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_");
     cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
   },
 });
 
 // Email file filter - allow .eml, .txt, .msg
-const emailFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
+const emailFileFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+): void => {
   const allowedMimeTypes = [
-    'message/rfc822', // .eml files
-    'text/plain', // .txt files
-    'application/vnd.ms-outlook', // .msg files
-    'application/octet-stream', // fallback for .msg
+    "message/rfc822", // .eml files
+    "text/plain", // .txt files
+    "application/vnd.ms-outlook", // .msg files
+    "application/octet-stream", // fallback for .msg
   ];
 
-  const allowedExtensions = ['.eml', '.txt', '.msg'];
+  const allowedExtensions = [".eml", ".txt", ".msg"];
   const ext = path.extname(file.originalname).toLowerCase();
 
   if (allowedMimeTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
@@ -232,7 +240,7 @@ export function getEmailUploadDir(): string {
 
 // =============== Trip photos (iter 7) ===============
 
-const TRIP_PHOTO_DIR = path.join(__dirname, '../../uploads/trip-photos');
+const TRIP_PHOTO_DIR = path.join(__dirname, "../../uploads/trip-photos");
 
 try {
   if (!fs.existsSync(TRIP_PHOTO_DIR)) {
@@ -241,7 +249,7 @@ try {
 } catch (error: unknown) {
   const errMsg = error instanceof Error ? error.message : String(error);
   logger.warn({
-    operation: 'upload_trip_photo_dir_creation_failed',
+    operation: "upload_trip_photo_dir_creation_failed",
     message: `Could not create trip photo directory: ${TRIP_PHOTO_DIR}`,
     context: { directory: TRIP_PHOTO_DIR, error: errMsg },
   });
@@ -252,10 +260,10 @@ const tripPhotoStorage = multer.diskStorage({
     cb(null, TRIP_PHOTO_DIR);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname).toLowerCase();
     const basename = path.basename(file.originalname, ext);
-    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
     cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
   },
 });
@@ -263,11 +271,11 @@ const tripPhotoStorage = multer.diskStorage({
 const tripPhotoFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback,
+  cb: multer.FileFilterCallback
 ): void => {
-  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(', ')}`));
+    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
@@ -300,9 +308,9 @@ export function deleteTripPhotoFile(filename: string): void {
       fs.unlinkSync(filePath);
     } catch (error) {
       logger.warn({
-        operation: 'upload_trip_photo_delete_error',
+        operation: "upload_trip_photo_delete_error",
         message: `Failed to delete trip photo file: ${filename}`,
-        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }
   }
@@ -316,7 +324,7 @@ export function deleteTripPhotoFile(filename: string): void {
 // cleanup sweep have to know which rows point where before it may delete a
 // byte. Same storage and filter rules otherwise; a photo is a photo.
 
-const PLACE_PHOTO_DIR = path.join(__dirname, '../../uploads/place-photos');
+const PLACE_PHOTO_DIR = path.join(__dirname, "../../uploads/place-photos");
 
 try {
   if (!fs.existsSync(PLACE_PHOTO_DIR)) {
@@ -325,7 +333,7 @@ try {
 } catch (error: unknown) {
   const errMsg = error instanceof Error ? error.message : String(error);
   logger.warn({
-    operation: 'upload_place_photo_dir_creation_failed',
+    operation: "upload_place_photo_dir_creation_failed",
     message: `Could not create place photo directory: ${PLACE_PHOTO_DIR}`,
     context: { directory: PLACE_PHOTO_DIR, error: errMsg },
   });
@@ -336,10 +344,10 @@ const placePhotoStorage = multer.diskStorage({
     cb(null, PLACE_PHOTO_DIR);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname).toLowerCase();
     const basename = path.basename(file.originalname, ext);
-    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
     cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
   },
 });
@@ -364,9 +372,9 @@ export function deletePlacePhotoFile(filename: string): void {
       fs.unlinkSync(filePath);
     } catch (error) {
       logger.warn({
-        operation: 'upload_place_photo_delete_error',
+        operation: "upload_place_photo_delete_error",
         message: `Failed to delete place photo file: ${filename}`,
-        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }
   }
@@ -383,7 +391,7 @@ export function deletePlacePhotoFile(filename: string): void {
 // list and nothing else — three directories were once missing from it, so every
 // photo ROW came back from a restore with none of the bytes.
 
-const LODGING_PHOTO_DIR = path.join(__dirname, '../../uploads/lodging-photos');
+const LODGING_PHOTO_DIR = path.join(__dirname, "../../uploads/lodging-photos");
 
 try {
   if (!fs.existsSync(LODGING_PHOTO_DIR)) {
@@ -392,7 +400,7 @@ try {
 } catch (error: unknown) {
   const errMsg = error instanceof Error ? error.message : String(error);
   logger.warn({
-    operation: 'upload_lodging_photo_dir_creation_failed',
+    operation: "upload_lodging_photo_dir_creation_failed",
     message: `Could not create lodging photo directory: ${LODGING_PHOTO_DIR}`,
     context: { directory: LODGING_PHOTO_DIR, error: errMsg },
   });
@@ -403,10 +411,10 @@ const lodgingPhotoStorage = multer.diskStorage({
     cb(null, LODGING_PHOTO_DIR);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname).toLowerCase();
     const basename = path.basename(file.originalname, ext);
-    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
     cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
   },
 });
@@ -431,9 +439,9 @@ export function deleteLodgingPhotoFile(filename: string): void {
       fs.unlinkSync(filePath);
     } catch (error) {
       logger.warn({
-        operation: 'upload_lodging_photo_delete_error',
+        operation: "upload_lodging_photo_delete_error",
         message: `Failed to delete lodging photo file: ${filename}`,
-        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }
   }
@@ -441,7 +449,7 @@ export function deleteLodgingPhotoFile(filename: string): void {
 
 // =============== Profile pictures (issue #186) ===============
 
-const PROFILE_PICTURE_DIR = path.join(__dirname, '../../uploads/profile-pictures');
+const PROFILE_PICTURE_DIR = path.join(__dirname, "../../uploads/profile-pictures");
 
 try {
   if (!fs.existsSync(PROFILE_PICTURE_DIR)) {
@@ -450,7 +458,7 @@ try {
 } catch (error: unknown) {
   const errMsg = error instanceof Error ? error.message : String(error);
   logger.warn({
-    operation: 'upload_profile_picture_dir_creation_failed',
+    operation: "upload_profile_picture_dir_creation_failed",
     message: `Could not create profile picture directory: ${PROFILE_PICTURE_DIR}`,
     context: { directory: PROFILE_PICTURE_DIR, error: errMsg },
   });
@@ -465,8 +473,8 @@ const profilePictureStorage = multer.diskStorage({
     cb(null, PROFILE_PICTURE_DIR);
   },
   filename: (req, file, cb) => {
-    const userId = (req as { userId?: string }).userId ?? 'unknown';
-    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const userId = (req as { userId?: string }).userId ?? "unknown";
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `${userId}_${uniqueSuffix}${ext}`);
   },
@@ -475,11 +483,11 @@ const profilePictureStorage = multer.diskStorage({
 const profilePictureFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback,
+  cb: multer.FileFilterCallback
 ): void => {
-  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(', ')}`));
+    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
@@ -503,9 +511,9 @@ export function deleteProfilePictureFile(filename: string): void {
       fs.unlinkSync(filePath);
     } catch (error) {
       logger.warn({
-        operation: 'upload_profile_picture_delete_error',
+        operation: "upload_profile_picture_delete_error",
         message: `Failed to delete profile picture file: ${filename}`,
-        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }
   }

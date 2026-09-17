@@ -96,7 +96,12 @@ describe("buildLodgingPreviewRows", () => {
       const { rows } = await buildLodgingPreviewRows(userId, [
         {
           sourceRowIndex: 0,
-          lodging: { name: "Emirates Palace, Abu Dhabi", externalRef: "gmaps:123", lat: null, lon: null },
+          lodging: {
+            name: "Emirates Palace, Abu Dhabi",
+            externalRef: "gmaps:123",
+            lat: null,
+            lon: null,
+          },
           stay: null,
         },
       ]);
@@ -377,10 +382,7 @@ describe("buildLodgingPreviewRows", () => {
       ];
       // Run the preview for user 1 (`userId`), whose data has none of this —
       // it all belongs to `otherUser`. Nothing should dedupe.
-      const { rows, summary } = await buildLodgingPreviewRows(
-        userId,
-        candidates,
-      );
+      const { rows, summary } = await buildLodgingPreviewRows(userId, candidates);
       expect(rows[0].matchedLodgingId).toBeNull();
       expect(rows[0].matchedStayId).toBeNull();
       expect(rows[0].dedupeHint).toBe("none");

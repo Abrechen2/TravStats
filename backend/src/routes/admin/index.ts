@@ -1,18 +1,18 @@
-import { Router } from 'express';
-import { authenticate, requireAdmin, requireWriteScope } from '../../middleware/auth';
-import systemRouter from './system';
-import usersRouter from './users';
-import invitationsRouter from './invitations';
-import parseLogsRouter from './parseLogs';
-import apiKeysRouter from './apiKeys';
-import loggingRouter from './logging';
-import parserSettingsRouter from './parserSettings';
-import smtpRouter from './smtp';
-import backupSettingsRouter from './backupSettings';
-import instanceSettingsRouter from './instanceSettings';
-import immichAdminRouter from './immich';
-import dawarichAdminRouter from './dawarich';
-import usageStatsRouter from './usageStats';
+import { Router } from "express";
+import { authenticate, requireAdmin, requireWriteScope } from "../../middleware/auth";
+import systemRouter from "./system";
+import usersRouter from "./users";
+import invitationsRouter from "./invitations";
+import parseLogsRouter from "./parseLogs";
+import apiKeysRouter from "./apiKeys";
+import loggingRouter from "./logging";
+import parserSettingsRouter from "./parserSettings";
+import smtpRouter from "./smtp";
+import backupSettingsRouter from "./backupSettings";
+import instanceSettingsRouter from "./instanceSettings";
+import immichAdminRouter from "./immich";
+import dawarichAdminRouter from "./dawarich";
+import usageStatsRouter from "./usageStats";
 
 const router = Router();
 
@@ -36,18 +36,18 @@ router.use(requireAdmin);
 router.use(requireWriteScope);
 
 // Mount sub-routers
-router.use('/', systemRouter);
-router.use('/', usersRouter);
-router.use('/invitations', invitationsRouter);
-router.use('/', parseLogsRouter);
-router.use('/', apiKeysRouter);
-router.use('/logging', loggingRouter);
-router.use('/', parserSettingsRouter);
-router.use('/smtp', smtpRouter);
-router.use('/', backupSettingsRouter);
-router.use('/', instanceSettingsRouter);
-router.use('/immich', immichAdminRouter);
-router.use('/dawarich', dawarichAdminRouter);
-router.use('/', usageStatsRouter);
+router.use("/", systemRouter);
+router.use("/", usersRouter);
+router.use("/invitations", invitationsRouter);
+router.use("/", parseLogsRouter);
+router.use("/", apiKeysRouter);
+router.use("/logging", loggingRouter);
+router.use("/", parserSettingsRouter);
+router.use("/smtp", smtpRouter);
+router.use("/", backupSettingsRouter);
+router.use("/", instanceSettingsRouter);
+router.use("/immich", immichAdminRouter);
+router.use("/dawarich", dawarichAdminRouter);
+router.use("/", usageStatsRouter);
 
 export default router;

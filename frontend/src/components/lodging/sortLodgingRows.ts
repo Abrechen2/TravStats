@@ -10,15 +10,7 @@ import { LIFECYCLE_SORT_RANK, lodgingLifecycleStatus } from "./lodgingLifecycle"
  * paginated slice (the trap the old server-side-only comment warned about).
  */
 export type LodgingSortKey =
-  | "lastStay"
-  | "name"
-  | "chain"
-  | "location"
-  | "status"
-  | "stays"
-  | "nights"
-  | "rating"
-  | "spend";
+  "lastStay" | "name" | "chain" | "location" | "status" | "stays" | "nights" | "rating" | "spend";
 
 /** Columns that read naturally ascending on first click; the rest start descending. */
 export const LODGING_SORT_DEFAULT_ASC: readonly LodgingSortKey[] = [

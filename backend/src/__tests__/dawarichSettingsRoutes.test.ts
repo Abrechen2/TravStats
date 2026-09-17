@@ -25,7 +25,7 @@ jest.mock("../db", () => ({
 jest.mock("../utils/encryption", () => ({
   encryptApiKey: jest.fn((v: string | null) => (v === null ? null : `enc:${v}`)),
   decryptApiKey: jest.fn((v: string | null) =>
-    typeof v === "string" ? v.replace(/^enc:/, "") : null,
+    typeof v === "string" ? v.replace(/^enc:/, "") : null
   ),
 }));
 
@@ -71,7 +71,7 @@ describe("POST /settings/dawarich/test", () => {
     expect(res.status).toBe(200);
     expect(testDawarichConnection).toHaveBeenCalledWith(
       "https://dawarich.lan",
-      "instance-wide-secret",
+      "instance-wide-secret"
     );
   });
 
@@ -127,7 +127,7 @@ describe("POST /settings/dawarich/test", () => {
       expect(res.status).toBe(200);
       expect(testDawarichConnection).toHaveBeenCalledWith(
         "https://dawarich.lan",
-        "instance-wide-secret",
+        "instance-wide-secret"
       );
     });
 
@@ -154,16 +154,14 @@ describe("POST /settings/dawarich/test", () => {
       expect(res.status).toBe(200);
       expect(testDawarichConnection).toHaveBeenCalledWith(
         "https://my-new-box.lan",
-        "instance-wide-secret",
+        "instance-wide-secret"
       );
     });
 
     it("rejects a malformed target with invalidUrl rather than keyRequired", async () => {
       getDawarichConnection.mockResolvedValue(SHARED);
 
-      const res = await request(makeApp())
-        .post("/dawarich/test")
-        .send({ baseUrl: "not-a-url" });
+      const res = await request(makeApp()).post("/dawarich/test").send({ baseUrl: "not-a-url" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("invalidUrl");

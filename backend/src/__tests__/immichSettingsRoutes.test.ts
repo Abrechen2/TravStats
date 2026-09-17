@@ -27,7 +27,7 @@ jest.mock("../db", () => ({
 jest.mock("../utils/encryption", () => ({
   encryptApiKey: jest.fn((v: string | null) => (v === null ? null : `enc:${v}`)),
   decryptApiKey: jest.fn((v: string | null) =>
-    typeof v === "string" ? v.replace(/^enc:/, "") : null,
+    typeof v === "string" ? v.replace(/^enc:/, "") : null
   ),
 }));
 
@@ -121,7 +121,7 @@ describe("PUT /settings/immich", () => {
           immichApiKey: "enc:k",
           immichDefaultMode: "import",
         },
-      }),
+      })
     );
   });
 
@@ -130,7 +130,7 @@ describe("PUT /settings/immich", () => {
     await request(makeApp(immichSettingsRouter)).put("/immich").send({ apiKey: null });
 
     expect(userSettingsUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { immichApiKey: null } }),
+      expect.objectContaining({ update: { immichApiKey: null } })
     );
   });
 
@@ -227,7 +227,11 @@ describe("POST /settings/immich/test", () => {
    * knowledge of the key needed.
    */
   describe("a shared key stays bound to the target it was configured for", () => {
-    const shared = { baseUrl: "https://immich.lan", apiKey: "instance-wide-secret", source: "global" };
+    const shared = {
+      baseUrl: "https://immich.lan",
+      apiKey: "instance-wide-secret",
+      source: "global",
+    };
 
     it("refuses to spend an admin-global key on a target the caller chose", async () => {
       getImmichConnection.mockResolvedValue(shared);
@@ -266,7 +270,10 @@ describe("POST /settings/immich/test", () => {
         .send({ baseUrl: "https://immich.lan/" });
 
       expect(res.status).toBe(200);
-      expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "instance-wide-secret");
+      expect(testImmichConnection).toHaveBeenCalledWith(
+        "https://immich.lan",
+        "instance-wide-secret"
+      );
     });
 
     it("allows a different target once the caller supplies their own key", async () => {
@@ -293,7 +300,10 @@ describe("POST /settings/immich/test", () => {
         .send({ baseUrl: "https://my-new-box.lan" });
 
       expect(res.status).toBe(200);
-      expect(testImmichConnection).toHaveBeenCalledWith("https://my-new-box.lan", "instance-wide-secret");
+      expect(testImmichConnection).toHaveBeenCalledWith(
+        "https://my-new-box.lan",
+        "instance-wide-secret"
+      );
     });
 
     it("rejects a malformed target with invalidUrl rather than keyRequired", async () => {
@@ -335,7 +345,7 @@ describe("PUT /admin/immich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalImmichBaseUrl: "https://immich.lan" },
-      }),
+      })
     );
   });
 
@@ -350,7 +360,7 @@ describe("PUT /admin/immich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalImmichApiKey: "enc:brand-new-key" },
-      }),
+      })
     );
   });
 
@@ -365,7 +375,7 @@ describe("PUT /admin/immich", () => {
       expect.objectContaining({
         where: { id: 1 },
         data: { globalImmichApiKey: null },
-      }),
+      })
     );
   });
 

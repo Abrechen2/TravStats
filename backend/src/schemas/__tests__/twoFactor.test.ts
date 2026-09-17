@@ -21,7 +21,7 @@ describe("two-factor schemas", () => {
   it("takes either a code or a recovery code at login, but not neither", () => {
     expect(verifyTwoFactorSchema.parse({ code: "123456" }).code).toBe("123456");
     expect(verifyTwoFactorSchema.parse({ recoveryCode: "abcde-12345" }).recoveryCode).toBe(
-      "abcde-12345",
+      "abcde-12345"
     );
     expect(() => verifyTwoFactorSchema.parse({})).toThrow();
   });

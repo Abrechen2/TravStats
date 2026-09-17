@@ -72,14 +72,11 @@ async function readForum(forum: ForumChannel, perThreadLimit: number): Promise<v
   const active = await forum.threads.fetchActive();
   const archived = await forum.threads.fetchArchived().catch((err: unknown) => {
     log(
-      `WARNING: failed to fetch archived threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`,
+      `WARNING: failed to fetch archived threads in #${forum.name}: ${err instanceof Error ? err.message : String(err)}`
     );
     return null;
   });
-  const threads = [
-    ...active.threads.values(),
-    ...(archived ? [...archived.threads.values()] : []),
-  ];
+  const threads = [...active.threads.values(), ...(archived ? [...archived.threads.values()] : [])];
   if (threads.length === 0) {
     log(`#${forum.name} has no posts yet.`);
     return;
@@ -93,12 +90,9 @@ async function readForum(forum: ForumChannel, perThreadLimit: number): Promise<v
     const messages = await thread.messages.fetch({ limit: perThreadLimit });
     for (const message of [...messages.values()].reverse()) {
       log(
-        formatMessage(
-          message.author.tag,
-          message.createdAt.toISOString(),
-          message.content,
-          [...message.embeds]
-        )
+        formatMessage(message.author.tag, message.createdAt.toISOString(), message.content, [
+          ...message.embeds,
+        ])
       );
     }
   }
@@ -123,7 +117,7 @@ export async function runRead(
   token: string,
   guildId: string,
   channelName: string,
-  limit: number,
+  limit: number
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     client.once("clientReady", async () => {
@@ -152,7 +146,7 @@ export async function runRead(
                   message.createdAt.toISOString(),
                   message.content,
                   [...message.embeds]
-                ),
+                )
               );
             }
           }

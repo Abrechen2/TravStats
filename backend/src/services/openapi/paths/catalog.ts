@@ -105,7 +105,10 @@ registry.registerPath({
   tags: ["Catalogue"],
   request: { query: z.object({ q: z.string().max(200) }) },
   responses: {
-    200: { description: "Candidate ports", content: { "application/json": { schema: envelope(z.array(port)) } } },
+    200: {
+      description: "Candidate ports",
+      content: { "application/json": { schema: envelope(z.array(port)) } },
+    },
   },
 });
 
@@ -113,7 +116,8 @@ registry.registerPath({
   method: "post",
   path: "/ports",
   summary: "Add a port to the catalogue",
-  description: "Stored with `isUserAdded: true`, which protects it from being overwritten by a re-seed.",
+  description:
+    "Stored with `isUserAdded: true`, which protects it from being overwritten by a re-seed.",
   tags: ["Catalogue"],
   request: {
     body: {
@@ -164,7 +168,8 @@ registry.registerPath({
   method: "post",
   path: "/ships",
   summary: "Add a ship to the catalogue",
-  description: "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates.",
+  description:
+    "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates.",
   tags: ["Catalogue"],
   request: {
     body: {
@@ -203,7 +208,10 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Airlines", content: { "application/json": { schema: listEnvelope(airline) } } },
+    200: {
+      description: "Airlines",
+      content: { "application/json": { schema: listEnvelope(airline) } },
+    },
     400: { description: "Validation failed", content: errorContent },
   },
 });
@@ -249,7 +257,10 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Aircraft types", content: { "application/json": { schema: listEnvelope(aircraftType) } } },
+    200: {
+      description: "Aircraft types",
+      content: { "application/json": { schema: listEnvelope(aircraftType) } },
+    },
     400: { description: "Validation failed", content: errorContent },
   },
 });
@@ -272,7 +283,10 @@ registry.registerPath({
     },
   },
   responses: {
-    201: { description: "Created", content: { "application/json": { schema: envelope(aircraftType) } } },
+    201: {
+      description: "Created",
+      content: { "application/json": { schema: envelope(aircraftType) } },
+    },
     400: { description: "Validation failed", content: errorContent },
     403: { description: "Read-scoped token", content: errorContent },
   },
@@ -288,11 +302,15 @@ registry.registerPath({
   method: "get",
   path: "/suggestions/airlines",
   summary: "Type-ahead for airlines you have flown",
-  description: "Drawn from your own flights, most used first — unlike /airlines, which searches the global catalogue.",
+  description:
+    "Drawn from your own flights, most used first — unlike /airlines, which searches the global catalogue.",
   tags: ["Catalogue"],
   request: { query: z.object({ q: z.string().max(100).optional() }) },
   responses: {
-    200: { description: "Suggestions", content: { "application/json": { schema: suggestionList } } },
+    200: {
+      description: "Suggestions",
+      content: { "application/json": { schema: suggestionList } },
+    },
   },
 });
 
@@ -303,7 +321,10 @@ registry.registerPath({
   tags: ["Catalogue"],
   request: { query: z.object({ q: z.string().max(100).optional() }) },
   responses: {
-    200: { description: "Suggestions", content: { "application/json": { schema: suggestionList } } },
+    200: {
+      description: "Suggestions",
+      content: { "application/json": { schema: suggestionList } },
+    },
   },
 });
 
@@ -323,7 +344,9 @@ const degradedEnvelope = <T extends z.ZodTypeAny>(data: T) =>
     data,
     degraded: z
       .boolean()
-      .describe("True when the upstream geocoder was unavailable and the result set is incomplete rather than empty"),
+      .describe(
+        "True when the upstream geocoder was unavailable and the result set is incomplete rather than empty"
+      ),
   });
 
 registry.registerPath({
@@ -342,7 +365,10 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Matches", content: { "application/json": { schema: degradedEnvelope(z.array(geoResult)) } } },
+    200: {
+      description: "Matches",
+      content: { "application/json": { schema: degradedEnvelope(z.array(geoResult)) } },
+    },
     400: { description: "Validation failed", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
   },
@@ -397,7 +423,10 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Nearby places", content: { "application/json": { schema: degradedEnvelope(z.array(geoResult)) } } },
+    200: {
+      description: "Nearby places",
+      content: { "application/json": { schema: degradedEnvelope(z.array(geoResult)) } },
+    },
     400: { description: "Validation failed", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
   },

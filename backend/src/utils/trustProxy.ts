@@ -52,7 +52,7 @@ export function resolveTrustProxy(raw: string | undefined): number | string {
     const hops = Number(value);
     if (hops < 1) {
       throw new Error(
-        "TRUST_PROXY=0 would ignore the container's own nginx and give every visitor the same address. Use 'loopback' or a hop count of 1 or more.",
+        "TRUST_PROXY=0 would ignore the container's own nginx and give every visitor the same address. Use 'loopback' or a hop count of 1 or more."
       );
     }
     return hops;
@@ -60,7 +60,7 @@ export function resolveTrustProxy(raw: string | undefined): number | string {
 
   if (/^(true|false)$/i.test(value)) {
     throw new Error(
-      `TRUST_PROXY=${value} is not accepted: 'true' believes any X-Forwarded-For a client sends, 'false' ignores the container's nginx. Name your proxy instead, e.g. "loopback, 192.168.1.10".`,
+      `TRUST_PROXY=${value} is not accepted: 'true' believes any X-Forwarded-For a client sends, 'false' ignores the container's nginx. Name your proxy instead, e.g. "loopback, 192.168.1.10".`
     );
   }
 
@@ -71,7 +71,7 @@ export function resolveTrustProxy(raw: string | undefined): number | string {
   const invalid = tokens.filter((t) => !NAMED_RANGES.has(t) && !isAddressOrCidr(t));
   if (tokens.length === 0 || invalid.length > 0) {
     throw new Error(
-      `TRUST_PROXY contains ${invalid.length > 0 ? `unrecognised entries (${invalid.join(", ")})` : "no entries"}. Allowed: loopback, linklocal, uniquelocal, IP addresses, CIDR ranges, or a hop count.`,
+      `TRUST_PROXY contains ${invalid.length > 0 ? `unrecognised entries (${invalid.join(", ")})` : "no entries"}. Allowed: loopback, linklocal, uniquelocal, IP addresses, CIDR ranges, or a hop count.`
     );
   }
   return tokens.join(", ");

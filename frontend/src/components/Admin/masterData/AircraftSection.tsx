@@ -104,7 +104,9 @@ export default function AircraftSection(): JSX.Element {
           disabled={creating}
           className="rounded-md bg-(--accent) px-3 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
         >
-          {creating ? t("common:buttons.saving") : t("admin:airlineAircraftMasterData.aircraft.add")}
+          {creating
+            ? t("common:buttons.saving")
+            : t("admin:airlineAircraftMasterData.aircraft.add")}
         </button>
       </div>
 

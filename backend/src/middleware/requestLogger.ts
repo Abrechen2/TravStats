@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { httpLogger, generateRequestId } from '../utils/logger';
-import { shouldLogHttpRequests } from '../services/loggingConfig';
+import { Request, Response, NextFunction } from "express";
+import { httpLogger, generateRequestId } from "../utils/logger";
+import { shouldLogHttpRequests } from "../services/loggingConfig";
 
 // Cache for shouldLogHttpRequests result (5 min TTL)
 let cachedShouldLog: boolean | null = null;
@@ -42,14 +42,14 @@ export async function requestLoggerMiddleware(
   const startMemory = process.memoryUsage().heapUsed;
 
   // Capture response finish event
-  res.on('finish', async () => {
+  res.on("finish", async () => {
     const duration = Date.now() - startTime;
     const endMemory = process.memoryUsage().heapUsed;
     const memoryDelta = endMemory - startMemory;
 
     // Only log if HTTP request logging is enabled (with caching)
     const now = Date.now();
-    if (cachedShouldLog === null || (now - cacheTimestamp) > CACHE_TTL_MS) {
+    if (cachedShouldLog === null || now - cacheTimestamp > CACHE_TTL_MS) {
       cachedShouldLog = await shouldLogHttpRequests();
       cacheTimestamp = now;
     }
@@ -64,13 +64,13 @@ export async function requestLoggerMiddleware(
         status: res.statusCode,
         statusClass: getStatusClass(res.statusCode),
         ip: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get("user-agent"),
         userId: req.user?.id,
         username: req.user?.username,
         isAdmin: req.user?.isAdmin,
         requestId: req.requestId,
         // Optionally log request body for non-GET requests (excluding sensitive fields)
-        ...(req.method !== 'GET' &&
+        ...(req.method !== "GET" &&
           req.body && {
             bodyKeys: Object.keys(req.body),
           }),
@@ -85,7 +85,7 @@ export async function requestLoggerMiddleware(
       const logLevel = getLogLevel(res.statusCode);
 
       httpLogger[logLevel]({
-        operation: 'http_request',
+        operation: "http_request",
         message: `${req.method} ${req.url} ${res.statusCode}`,
         context,
         performance,
@@ -100,20 +100,20 @@ export async function requestLoggerMiddleware(
  * Get status code class (2xx, 4xx, 5xx)
  */
 function getStatusClass(statusCode: number): string {
-  if (statusCode >= 200 && statusCode < 300) return '2xx_success';
-  if (statusCode >= 300 && statusCode < 400) return '3xx_redirect';
-  if (statusCode >= 400 && statusCode < 500) return '4xx_client_error';
-  if (statusCode >= 500) return '5xx_server_error';
-  return 'unknown';
+  if (statusCode >= 200 && statusCode < 300) return "2xx_success";
+  if (statusCode >= 300 && statusCode < 400) return "3xx_redirect";
+  if (statusCode >= 400 && statusCode < 500) return "4xx_client_error";
+  if (statusCode >= 500) return "5xx_server_error";
+  return "unknown";
 }
 
 /**
  * Get appropriate log level based on status code
  */
-function getLogLevel(statusCode: number): 'info' | 'warn' | 'error' {
-  if (statusCode >= 500) return 'error';
-  if (statusCode >= 400) return 'warn';
-  return 'info';
+function getLogLevel(statusCode: number): "info" | "warn" | "error" {
+  if (statusCode >= 500) return "error";
+  if (statusCode >= 400) return "warn";
+  return "info";
 }
 
 /**

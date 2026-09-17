@@ -10,7 +10,10 @@ import { autoMapHeaders } from "../../../components/import/ColumnMappingWizard";
 
 /** What the wizard does when the user drops the file: heuristic first, then confirm. */
 const mapFor = (headers: string[]) =>
-  autoMapHeaders(buildLodgingMappingFields((f) => f), headers);
+  autoMapHeaders(
+    buildLodgingMappingFields((f) => f),
+    headers
+  );
 
 /**
  * A Google Maps saved-places export — the owner's real "Hotels.csv": 237 houses
@@ -103,7 +106,10 @@ describe("what kind of house the name describes", () => {
 
   it("never overrules a type the file actually states", () => {
     const headers = ["Titel", "Typ"];
-    const mapping = autoMapHeaders(buildLodgingMappingFields((f) => f), headers);
+    const mapping = autoMapHeaders(
+      buildLodgingMappingFields((f) => f),
+      headers
+    );
     const { candidates } = buildLodgingCandidates(
       [{ Titel: "Camping Plitvice", Typ: "hotel" }],
       mapping

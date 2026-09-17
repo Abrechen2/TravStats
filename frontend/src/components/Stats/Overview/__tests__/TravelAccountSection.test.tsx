@@ -57,9 +57,7 @@ describe("TravelAccountSection", () => {
   });
 
   it("renders nothing when there is no year with data", async () => {
-    getTravelAccount.mockResolvedValue(
-      response({ account: { years: [], contestedNights: 0 } })
-    );
+    getTravelAccount.mockResolvedValue(response({ account: { years: [], contestedNights: 0 } }));
     const { container } = render(<TravelAccountSection />);
     await waitFor(() => {
       expect(container.querySelector("section")).toBeNull();

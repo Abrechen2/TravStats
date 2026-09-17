@@ -6,8 +6,14 @@ import { api } from "../../../lib/api/client";
 import AirlineWordmarkCell from "../AirlineWordmarkCell";
 
 const flight = {
-  id: "1", airline: "Lufthansa", airlineIata: "LH", flightNumber: "LH2462",
-  depLat: 0, depLon: 0, arrLat: 0, arrLon: 0,
+  id: "1",
+  airline: "Lufthansa",
+  airlineIata: "LH",
+  flightNumber: "LH2462",
+  depLat: 0,
+  depLon: 0,
+  arrLat: 0,
+  arrLon: 0,
 } as unknown as Flight;
 
 it("requests the wordmark variant from the proxy", () => {
@@ -18,7 +24,11 @@ it("requests the wordmark variant from the proxy", () => {
 
 it("resolves the logo from the stored airline NAME when no structured code exists", () => {
   // Most stored flights carry only the name — the catalogue maps it to LH.
-  render(<AirlineWordmarkCell flight={{ ...flight, airlineIata: undefined, flightNumber: undefined } as unknown as Flight} />);
+  render(
+    <AirlineWordmarkCell
+      flight={{ ...flight, airlineIata: undefined, flightNumber: undefined } as unknown as Flight}
+    />
+  );
   const img = screen.getByRole("img") as HTMLImageElement;
   expect(img.src).toContain("/api/v1/airline-logos/LH?variant=logo");
 });
@@ -55,8 +65,17 @@ it("falls back to the airline name when no logo resolves", () => {
 });
 
 it("falls back to the name immediately when nothing resolves", () => {
-  render(<AirlineWordmarkCell flight={{
-    ...flight, airline: "Some Unknown Carrier", airlineIata: undefined, flightNumber: undefined,
-  } as unknown as Flight} />);
+  render(
+    <AirlineWordmarkCell
+      flight={
+        {
+          ...flight,
+          airline: "Some Unknown Carrier",
+          airlineIata: undefined,
+          flightNumber: undefined,
+        } as unknown as Flight
+      }
+    />
+  );
   expect(screen.getByText("Some Unknown Carrier")).toBeInTheDocument();
 });

@@ -9,45 +9,45 @@
  * tail — there is no persistence.
  */
 
-import { getLogStats, listLogFiles, readLogWindow, LogEntry } from './logManager';
-import logger from '../utils/logger';
-import { prisma } from '../db';
-import { appVersion, buildVersion } from '../utils/version';
+import { getLogStats, listLogFiles, readLogWindow, LogEntry } from "./logManager";
+import logger from "../utils/logger";
+import { prisma } from "../db";
+import { appVersion, buildVersion } from "../utils/version";
 
 /**
  * Fields that may contain PII or credentials. If a log entry has any of these
  * as keys (at any nesting depth) they are stripped entirely.
  */
 const SENSITIVE_KEYS = new Set([
-  'ip',
-  'ipAddress',
-  'userAgent',
-  'email',
-  'notificationEmail',
-  'password',
-  'passwordHash',
-  'token',
-  'auth_token',
-  'authorization',
-  'cookie',
-  'cookies',
-  'resetToken',
-  'changeToken',
-  'apiKey',
-  'api_key',
-  'openaiApiKey',
-  'claudeApiKey',
-  'globalOpenaiApiKey',
-  'globalClaudeApiKey',
-  'airlabsApiKey',
-  'aviationstackApiKey',
-  'aerodataboxApiKey',
-  'globalAirlabsApiKey',
-  'globalAviationstackApiKey',
-  'globalAerodataboxApiKey',
-  'clientSecret',
-  'accessToken',
-  'refreshToken',
+  "ip",
+  "ipAddress",
+  "userAgent",
+  "email",
+  "notificationEmail",
+  "password",
+  "passwordHash",
+  "token",
+  "auth_token",
+  "authorization",
+  "cookie",
+  "cookies",
+  "resetToken",
+  "changeToken",
+  "apiKey",
+  "api_key",
+  "openaiApiKey",
+  "claudeApiKey",
+  "globalOpenaiApiKey",
+  "globalClaudeApiKey",
+  "airlabsApiKey",
+  "aviationstackApiKey",
+  "aerodataboxApiKey",
+  "globalAirlabsApiKey",
+  "globalAviationstackApiKey",
+  "globalAerodataboxApiKey",
+  "clientSecret",
+  "accessToken",
+  "refreshToken",
 ]);
 
 /**
@@ -57,15 +57,18 @@ const SENSITIVE_KEYS = new Set([
  */
 const STRING_REDACTION_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
   // JWT-like tokens (three base64 segments separated by dots)
-  { regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, replacement: '<redacted:jwt>' },
+  {
+    regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+    replacement: "<redacted:jwt>",
+  },
   // Email addresses
-  { regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, replacement: '<redacted:email>' },
+  { regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, replacement: "<redacted:email>" },
   // IPv4 addresses (both raw and ipv6-mapped prefixes)
-  { regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, replacement: '<redacted:ip>' },
+  { regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, replacement: "<redacted:ip>" },
   // UUID-looking values (user IDs, flight IDs, …) — keep last 4 chars for correlation
   {
     regex: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g,
-    replacement: '<redacted:uuid>',
+    replacement: "<redacted:uuid>",
   },
 ];
 
@@ -75,7 +78,7 @@ const STRING_REDACTION_PATTERNS: Array<{ regex: RegExp; replacement: string }> =
 function scrub(value: unknown): unknown {
   if (value === null || value === undefined) return value;
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     let s = value;
     for (const { regex, replacement } of STRING_REDACTION_PATTERNS) {
       s = s.replace(regex, replacement);
@@ -87,13 +90,13 @@ function scrub(value: unknown): unknown {
     return value.map(scrub);
   }
 
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       if (SENSITIVE_KEYS.has(k)) continue;
       // userId gets hashed to a short opaque marker so cross-line correlation
       // is still possible inside a single bundle, but the real id never leaves.
-      if (k === 'userId' && typeof v === 'string') {
+      if (k === "userId" && typeof v === "string") {
         out[k] = `<user:${hashPrefix(v)}>`;
         continue;
       }
@@ -203,10 +206,7 @@ export async function collectFlightState(userId: string): Promise<FlightStateSec
     prisma.flight.count({
       where: {
         userId,
-        OR: [
-          { actualDeparture: { not: null } },
-          { actualArrival: { not: null } },
-        ],
+        OR: [{ actualDeparture: { not: null } }, { actualArrival: { not: null } }],
       },
     }),
     prisma.flight.count({
@@ -269,21 +269,18 @@ export interface DiagnosticBundle {
   notes: string;
 }
 
-const APP_WINDOW_MS = 24 * 60 * 60 * 1000;        // 24h
-const ERROR_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;  // 7d
+const APP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const ERROR_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 
-async function safeCollect<T>(
-  section: string,
-  fn: () => Promise<T>,
-): Promise<T | SectionError> {
+async function safeCollect<T>(section: string, fn: () => Promise<T>): Promise<T | SectionError> {
   try {
     return await fn();
   } catch (error: unknown) {
     logger.warn({
-      operation: 'diagnostic_export_section_failed',
+      operation: "diagnostic_export_section_failed",
       context: { section },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     return { error: `failed to collect ${section}` };
@@ -292,9 +289,9 @@ async function safeCollect<T>(
 
 function isSectionError(value: unknown): value is SectionError {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
-    typeof (value as { error?: unknown }).error === 'string'
+    typeof (value as { error?: unknown }).error === "string"
   );
 }
 
@@ -304,23 +301,21 @@ function isSectionError(value: unknown): value is SectionError {
  */
 export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticBundle> {
   const [stats, files, settings, flightState, appTail, errorTail] = await Promise.all([
-    safeCollect('stats', () => getLogStats()),
-    safeCollect('files', () => listLogFiles()),
-    safeCollect('settings', () => collectSettings(userId)),
-    safeCollect('flightState', () => collectFlightState(userId)),
-    safeCollect('appTail', () => readLogWindow('app', APP_WINDOW_MS)),
-    safeCollect('errorTail', () => readLogWindow('error', ERROR_WINDOW_MS)),
+    safeCollect("stats", () => getLogStats()),
+    safeCollect("files", () => listLogFiles()),
+    safeCollect("settings", () => collectSettings(userId)),
+    safeCollect("flightState", () => collectFlightState(userId)),
+    safeCollect("appTail", () => readLogWindow("app", APP_WINDOW_MS)),
+    safeCollect("errorTail", () => readLogWindow("error", ERROR_WINDOW_MS)),
   ]);
 
-  const scrubbedAppTail = Array.isArray(appTail)
-    ? appTail.map(e => scrub(e) as LogEntry)
-    : [];
+  const scrubbedAppTail = Array.isArray(appTail) ? appTail.map((e) => scrub(e) as LogEntry) : [];
   const scrubbedErrorTail = Array.isArray(errorTail)
-    ? errorTail.map(e => scrub(e) as LogEntry)
+    ? errorTail.map((e) => scrub(e) as LogEntry)
     : [];
 
   const filesList = Array.isArray(files)
-    ? files.map(f => ({
+    ? files.map((f) => ({
         name: f.filename,
         sizeBytes: f.size,
         lastModified: f.modified.toISOString(),
@@ -328,7 +323,7 @@ export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticB
     : [];
 
   const statsObj = isSectionError(stats)
-    ? { totalSize: 0, totalSizeFormatted: '0 B', fileCount: 0, categoryBreakdown: {} }
+    ? { totalSize: 0, totalSizeFormatted: "0 B", fileCount: 0, categoryBreakdown: {} }
     : stats;
 
   return {
@@ -351,10 +346,10 @@ export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticB
       errorTail: scrubbedErrorTail,
     },
     notes:
-      'This bundle was scrubbed client-side by TravStats before export. IP addresses, ' +
-      'email addresses, JWT tokens and UUIDs have been replaced with placeholders. ' +
-      'User IDs are hashed to short opaque markers so distinct users remain ' +
-      'distinguishable within the bundle without being identifiable.',
+      "This bundle was scrubbed client-side by TravStats before export. IP addresses, " +
+      "email addresses, JWT tokens and UUIDs have been replaced with placeholders. " +
+      "User IDs are hashed to short opaque markers so distinct users remain " +
+      "distinguishable within the bundle without being identifiable.",
   };
 }
 

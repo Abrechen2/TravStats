@@ -292,7 +292,14 @@ describe("PortPicker", () => {
   it("shows an error when persisting a geocoder candidate fails", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([]);
     vi.mocked(portsApi.geocode).mockResolvedValue([
-      { name: "Portoferraio", city: null, country: null, lat: 42.81, lon: 10.31, source: "geocoder" },
+      {
+        name: "Portoferraio",
+        city: null,
+        country: null,
+        lat: 42.81,
+        lon: 10.31,
+        source: "geocoder",
+      },
     ]);
     vi.mocked(portsApi.create).mockRejectedValue(new Error("500"));
     render(<PortPicker value={null} onChange={vi.fn()} />);

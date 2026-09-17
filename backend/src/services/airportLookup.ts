@@ -640,9 +640,7 @@ export async function backfillAirportTimezones(): Promise<number> {
  * is read off the code's own rows; an unknown code has no city and yields
  * nothing, so the caller changes nothing.
  */
-export async function airportsInCityOf(
-  code: string
-): Promise<
+export async function airportsInCityOf(code: string): Promise<
   Array<{
     iata: string | null;
     icao: string | null;

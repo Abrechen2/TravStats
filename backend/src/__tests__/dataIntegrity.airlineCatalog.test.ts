@@ -10,19 +10,16 @@
  * (airlines.dat or the curated airlines.ts) but forgets to regenerate.
  */
 
-import { readFileSync } from 'fs';
-import path from 'path';
-import { buildAirlineSeed } from '../data/openflights/buildAirlineSeed';
+import { readFileSync } from "fs";
+import path from "path";
+import { buildAirlineSeed } from "../data/openflights/buildAirlineSeed";
 import {
   generateAirlineCatalogContents,
   type Airline,
-} from '../../scripts/generate-airline-catalog';
+} from "../../scripts/generate-airline-catalog";
 
 function loadSeed(): Airline[] {
-  const raw = readFileSync(
-    path.join(__dirname, '../../data/openflights/airlines.dat'),
-    'utf-8',
-  );
+  const raw = readFileSync(path.join(__dirname, "../../data/openflights/airlines.dat"), "utf-8");
   return buildAirlineSeed(raw).map((r) => ({
     iata: r.iata,
     icao: r.icao ?? undefined,
@@ -30,8 +27,8 @@ function loadSeed(): Airline[] {
   }));
 }
 
-describe('dataIntegrity: airline catalogue drift guard', () => {
-  it('should match the committed frontend catalogue with the seed builder', () => {
+describe("dataIntegrity: airline catalogue drift guard", () => {
+  it("should match the committed frontend catalogue with the seed builder", () => {
     const seed = loadSeed();
 
     // Generate what the catalogue SHOULD contain right now
@@ -40,16 +37,16 @@ describe('dataIntegrity: airline catalogue drift guard', () => {
     // Read what is actually committed in the frontend
     const catalogPath = path.join(
       __dirname,
-      '../../../frontend/src/lib/generated/airlineCatalog.ts',
+      "../../../frontend/src/lib/generated/airlineCatalog.ts"
     );
     let actualContents: string;
     try {
-      actualContents = readFileSync(catalogPath, 'utf-8');
+      actualContents = readFileSync(catalogPath, "utf-8");
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(
           `Generated catalogue not found at ${catalogPath}. ` +
-            'Run: cd backend && npm run generate:airline-catalog',
+            "Run: cd backend && npm run generate:airline-catalog"
         );
       }
       throw err;
@@ -58,15 +55,15 @@ describe('dataIntegrity: airline catalogue drift guard', () => {
     // Compare
     if (actualContents !== expectedContents) {
       throw new Error(
-        'The generated airline catalogue is out of sync.\n\n' +
-          'The DB seed builder (buildAirlineSeed over backend/data/openflights/airlines.dat) ' +
-          'does not match the committed frontend file ' +
-          '(frontend/src/lib/generated/airlineCatalog.ts).\n\n' +
-          'Fix: Run the following and commit the result:\n' +
-          '  cd backend && npm run generate:airline-catalog\n\n' +
-          'Why: The previous hand-maintained copy drifted to 60 entries with zero ' +
-          'ICAO codes while the backend had 146 with ICAO. ' +
-          'This test prevents a repeat.',
+        "The generated airline catalogue is out of sync.\n\n" +
+          "The DB seed builder (buildAirlineSeed over backend/data/openflights/airlines.dat) " +
+          "does not match the committed frontend file " +
+          "(frontend/src/lib/generated/airlineCatalog.ts).\n\n" +
+          "Fix: Run the following and commit the result:\n" +
+          "  cd backend && npm run generate:airline-catalog\n\n" +
+          "Why: The previous hand-maintained copy drifted to 60 entries with zero " +
+          "ICAO codes while the backend had 146 with ICAO. " +
+          "This test prevents a repeat."
       );
     }
 

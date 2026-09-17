@@ -1,11 +1,11 @@
-import * as fs from 'fs';
+import * as fs from "fs";
 
-import request from 'supertest';
-import app from '../../index';
-import { prisma } from '../../db';
-import { hashPassword } from '../../utils/password';
-import { generateToken } from '../../utils/jwt';
-import { getEmailUploadDir } from '../../middleware/upload';
+import request from "supertest";
+import app from "../../index";
+import { prisma } from "../../db";
+import { hashPassword } from "../../utils/password";
+import { generateToken } from "../../utils/jwt";
+import { getEmailUploadDir } from "../../middleware/upload";
 
 /**
  * A rejected upload does not stay on disk.
@@ -25,13 +25,13 @@ const USERNAME = `email-parse-cleanup-${Date.now()}`;
 const countUploads = (): number =>
   fs.existsSync(getEmailUploadDir()) ? fs.readdirSync(getEmailUploadDir()).length : 0;
 
-describe('parse-email-file cleans up after itself', () => {
+describe("parse-email-file cleans up after itself", () => {
   let token: string;
   let userId: string;
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { username: USERNAME, passwordHash: await hashPassword('password123') },
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     userId = user.id;
     token = generateToken(userId);
@@ -41,16 +41,16 @@ describe('parse-email-file cleans up after itself', () => {
     await prisma.user.delete({ where: { id: userId } }).catch(() => {});
   });
 
-  it('leaves nothing behind when the domain is invalid', async () => {
+  it("leaves nothing behind when the domain is invalid", async () => {
     const before = countUploads();
 
     const res = await request(app)
-      .post('/api/v1/parse-email-file')
-      .set('Cookie', [`auth_token=${token}`])
-      .field('domain', 'not-a-domain')
-      .attach('email', Buffer.from('Subject: test\r\n\r\nhello'), {
-        filename: 'test.eml',
-        contentType: 'message/rfc822',
+      .post("/api/v1/parse-email-file")
+      .set("Cookie", [`auth_token=${token}`])
+      .field("domain", "not-a-domain")
+      .attach("email", Buffer.from("Subject: test\r\n\r\nhello"), {
+        filename: "test.eml",
+        contentType: "message/rfc822",
       });
 
     expect(res.status).toBe(400);
@@ -60,17 +60,17 @@ describe('parse-email-file cleans up after itself', () => {
   // The shape of the damage was a slow leak, not one lost file: every rejected
   // request left one behind. Ten in a row must still leave the directory as it
   // was.
-  it('does not leak one file per rejected request', async () => {
+  it("does not leak one file per rejected request", async () => {
     const before = countUploads();
 
     for (let i = 0; i < 5; i++) {
       await request(app)
-        .post('/api/v1/parse-email-file')
-        .set('Cookie', [`auth_token=${token}`])
-        .field('domain', `nonsense-${i}`)
-        .attach('email', Buffer.from('Subject: test\r\n\r\nhello'), {
-          filename: 'test.eml',
-          contentType: 'message/rfc822',
+        .post("/api/v1/parse-email-file")
+        .set("Cookie", [`auth_token=${token}`])
+        .field("domain", `nonsense-${i}`)
+        .attach("email", Buffer.from("Subject: test\r\n\r\nhello"), {
+          filename: "test.eml",
+          contentType: "message/rfc822",
         });
     }
 

@@ -195,7 +195,7 @@ function cellToString(value: unknown): string {
  */
 export async function parseWorkbook(
   file: ArrayBuffer,
-  specs: SheetSpec<never>[],
+  specs: SheetSpec<never>[]
 ): Promise<ParsedSheet[]> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();

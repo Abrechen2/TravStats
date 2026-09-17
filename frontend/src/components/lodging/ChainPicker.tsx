@@ -170,7 +170,9 @@ export function ChainPicker({ value, onChange }: ChainPickerProps): JSX.Element 
               }}
               className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
             >
-              {saving ? t("common:buttons.saving") : t("lodging:chainPicker.addMissing", { name: trimmedQuery })}
+              {saving
+                ? t("common:buttons.saving")
+                : t("lodging:chainPicker.addMissing", { name: trimmedQuery })}
             </button>
           </div>
         </div>

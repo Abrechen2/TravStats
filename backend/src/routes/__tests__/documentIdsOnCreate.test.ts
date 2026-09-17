@@ -41,20 +41,28 @@ describe("documentIds on the create routes", () => {
 
   beforeAll(async () => {
     const passwordHash = await hashPassword("test-password");
-    userId = (await prisma.user.create({ data: { username: `doc-ids-${stamp}`, passwordHash } })).id;
-    strangerId = (await prisma.user.create({ data: { username: `doc-ids-other-${stamp}`, passwordHash } })).id;
+    userId = (await prisma.user.create({ data: { username: `doc-ids-${stamp}`, passwordHash } }))
+      .id;
+    strangerId = (
+      await prisma.user.create({ data: { username: `doc-ids-other-${stamp}`, passwordHash } })
+    ).id;
     cookie = `auth_token=${generateToken(userId)}`;
   });
 
   afterAll(async () => {
-    const rows = await prisma.document.findMany({ where: { userId: { in: [userId, strangerId] } } });
+    const rows = await prisma.document.findMany({
+      where: { userId: { in: [userId, strangerId] } },
+    });
     for (const row of rows) fs.rmSync(documentPath(row.storedName), { force: true });
     await prisma.user.deleteMany({ where: { id: { in: [userId, strangerId] } } });
   });
 
   it("files documents with a new flight", async () => {
     const ids = [await upload("flight-a"), await upload("flight-b")];
-    const res = await request(app).post("/api/v1/flights").set("Cookie", cookie).send(flightBody("2007-07-26", ids));
+    const res = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send(flightBody("2007-07-26", ids));
 
     expect(res.status).toBe(201);
     const filed = await prisma.document.findMany({ where: { id: { in: ids } } });
@@ -80,7 +88,9 @@ describe("documentIds on the create routes", () => {
       });
 
     expect(res.status).toBe(201);
-    expect((await prisma.document.findUniqueOrThrow({ where: { id } })).cruiseId).toBe(res.body.data.id);
+    expect((await prisma.document.findUniqueOrThrow({ where: { id } })).cruiseId).toBe(
+      res.body.data.id
+    );
   });
 
   it("refuses a flight whose documentIds name another user's document, and writes no flight", async () => {
@@ -123,7 +133,11 @@ describe("documentIds on the create routes", () => {
   });
 
   it("files documents with a new trip, stay and place visit", async () => {
-    const [tripDoc, stayDoc, visitDoc] = [await upload("trip"), await upload("stay"), await upload("visit")];
+    const [tripDoc, stayDoc, visitDoc] = [
+      await upload("trip"),
+      await upload("stay"),
+      await upload("visit"),
+    ];
 
     const trip = await request(app)
       .post("/api/v1/trips")
@@ -131,21 +145,27 @@ describe("documentIds on the create routes", () => {
       .send({ name: "With bill", documentIds: [tripDoc] });
     expect(trip.status).toBe(201);
 
-    const lodging = await prisma.lodging.create({ data: { userId, name: "Doc Hotel", type: "hotel" } });
+    const lodging = await prisma.lodging.create({
+      data: { userId, name: "Doc Hotel", type: "hotel" },
+    });
     const stay = await request(app)
       .post(`/api/v1/lodging/${lodging.id}/stays`)
       .set("Cookie", cookie)
       .send({ documentIds: [stayDoc] });
     expect(stay.status).toBe(201);
 
-    const place = await prisma.place.create({ data: { userId, name: "Doc Place", lat: 41.9, lon: 12.5 } });
+    const place = await prisma.place.create({
+      data: { userId, name: "Doc Place", lat: 41.9, lon: 12.5 },
+    });
     const visit = await request(app)
       .post(`/api/v1/places/${place.id}/visits`)
       .set("Cookie", cookie)
       .send({ visitedAt: "2024-05-01", documentIds: [visitDoc] });
     expect(visit.status).toBe(201);
 
-    const rows = await prisma.document.findMany({ where: { id: { in: [tripDoc, stayDoc, visitDoc] } } });
+    const rows = await prisma.document.findMany({
+      where: { id: { in: [tripDoc, stayDoc, visitDoc] } },
+    });
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get(tripDoc)?.tripId).toBe(trip.body.trip.id);
     expect(byId.get(stayDoc)?.lodgingStayId).toBe(stay.body.data.id);

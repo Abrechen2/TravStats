@@ -1,20 +1,20 @@
-import { Router, Response } from 'express';
-import { z } from 'zod';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { boardingPassParseLimiter } from '../middleware/rateLimit';
-import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
-import { getTesseractParser } from '../services/parsers/vision/tesseractParser';
-import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
-import { describeParserError } from '../utils/parserErrors';
-import { FILE_LIMITS } from '../config/constants';
-import logger from '../utils/logger';
+import { Router, Response } from "express";
+import { z } from "zod";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { boardingPassParseLimiter } from "../middleware/rateLimit";
+import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
+import { getTesseractParser } from "../services/parsers/vision/tesseractParser";
+import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
+import { describeParserError } from "../utils/parserErrors";
+import { FILE_LIMITS } from "../config/constants";
+import logger from "../utils/logger";
 import {
   assertRetainable,
   parseRetentionFields,
   readDocumentForParse,
   recordParse,
   sendAppError,
-} from '../services/documents/parseRetention';
+} from "../services/documents/parseRetention";
 
 const router = Router();
 
@@ -45,15 +45,15 @@ const parseImageSchema = z
   .object({
     imageBase64: z
       .string()
-      .min(1, 'Image data is required')
-      .max(MAX_IMAGE_BASE64_LENGTH, 'Image too large')
+      .min(1, "Image data is required")
+      .max(MAX_IMAGE_BASE64_LENGTH, "Image too large")
       .optional(),
-    domain: z.enum(REQUESTABLE_DOMAINS).optional().default('auto'),
+    domain: z.enum(REQUESTABLE_DOMAINS).optional().default("auto"),
     // Keep the photograph, or read one already kept (forgejo#116).
     ...parseRetentionFields,
   })
   .refine((b) => !b.imageBase64 !== !b.documentId, {
-    message: 'Send imageBase64 or documentId, exactly one of them',
+    message: "Send imageBase64 or documentId, exactly one of them",
   });
 
 /**
@@ -78,7 +78,7 @@ const parseImageSchema = z
  * that is the whole premise of Forgejo #57.
  */
 router.post(
-  '/parse-image',
+  "/parse-image",
   authenticate,
   // Deliberately the SAME bucket as the boarding-pass scanner rather than a
   // second one of its own: both spend a Tesseract worker per request, and what
@@ -90,7 +90,9 @@ router.post(
       const parsed = parseImageSchema.parse(req.body);
       const userId = req.userId!;
       const imageBase64 = parsed.documentId
-        ? (await readDocumentForParse(userId, parsed.documentId, ['image'])).buffer.toString('base64')
+        ? (await readDocumentForParse(userId, parsed.documentId, ["image"])).buffer.toString(
+            "base64"
+          )
         : parsed.imageBase64!;
 
       // The same validation the boarding pass scanner applies: magic-number
@@ -99,19 +101,16 @@ router.post(
       // to "is this an image we accept".
       const validation = validateBoardingPassImageBase64(imageBase64);
       if (!validation.valid) {
-        logger.warn(
-          { userId, reason: validation.reason },
-          '[Image Parse] Image validation failed',
-        );
+        logger.warn({ userId, reason: validation.reason }, "[Image Parse] Image validation failed");
         return res.status(400).json({
-          error: 'Validation failed',
+          error: "Validation failed",
           message: `Image validation failed: ${validation.reason}`,
         });
       }
 
       const retainInput = {
-        buffer: Buffer.from(validation.base64 ?? imageBase64, 'base64'),
-        declaredFormat: 'image' as const,
+        buffer: Buffer.from(validation.base64 ?? imageBase64, "base64"),
+        declaredFormat: "image" as const,
       };
       if (parsed.retain && !parsed.documentId) assertRetainable(retainInput);
 
@@ -122,18 +121,18 @@ router.post(
       let confidence: number;
       try {
         ({ text, confidence } = await getTesseractParser().recognizeText(
-          validation.base64 ?? imageBase64,
+          validation.base64 ?? imageBase64
         ));
       } catch (error) {
         // A payload the OCR cannot decode is a CLIENT error. It used to end the
         // process, so the caller saw a 502 from nginx and everyone else lost
         // the service; even contained, a 500 would blame the server for a file
         // the user chose.
-        logger.warn({ userId, err: error }, '[Image Parse] OCR could not read the image');
+        logger.warn({ userId, err: error }, "[Image Parse] OCR could not read the image");
         return res.status(422).json({
-          error: 'Unreadable image',
+          error: "Unreadable image",
           message:
-            'This file could not be read as an image. A JPEG or PNG photograph of the whole page usually works.',
+            "This file could not be read as an image. A JPEG or PNG photograph of the whole page usually works.",
         });
       }
       // One measure of "how much was read", used for BOTH the gate below and
@@ -145,31 +144,31 @@ router.post(
       if (readableLength < MIN_USABLE_TEXT_LENGTH) {
         logger.info(
           { userId, textLength: readableLength, confidence },
-          '[Image Parse] Too little text to parse',
+          "[Image Parse] Too little text to parse"
         );
         return res.status(422).json({
-          error: 'No readable text',
+          error: "No readable text",
           message:
-            'Almost no text could be read from this image. A sharper, straighter photograph of the whole page usually helps.',
+            "Almost no text could be read from this image. A sharper, straighter photograph of the whole page usually helps.",
           ocrConfidence: confidence,
         });
       }
 
       logger.info(
         { userId, chars: text.length, confidence, domain: parsed.domain },
-        '[Image Parse] OCR complete, parsing...',
+        "[Image Parse] OCR complete, parsing..."
       );
 
       const outcome = await parseDocument({
         text,
         domain: parsed.domain,
-        source: 'document',
+        source: "document",
         userId,
       });
 
       logger.info(
         { userId, domain: outcome.domain, domainSource: outcome.domainSource },
-        '[Image Parse] Parsing complete',
+        "[Image Parse] Parsing complete"
       );
 
       const documentId = await recordParse({
@@ -193,23 +192,23 @@ router.post(
          */
         ocrConfidence: confidence,
         ocrTextLength: readableLength,
-        ...(outcome.domainSource === 'detected'
+        ...(outcome.domainSource === "detected"
           ? { domainSource: outcome.domainSource, detection: outcome.detection }
           : {}),
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Validation failed', details: error.issues });
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
       }
       if (sendAppError(res, error)) return;
-      logger.error({ error }, '[Image Parse] Parsing failed');
+      logger.error({ error }, "[Image Parse] Parsing failed");
       const described = describeParserError(error);
       res.status(described.status).json({
-        error: 'Image parsing failed',
+        error: "Image parsing failed",
         message: described.message,
       });
     }
-  },
+  }
 );
 
 export default router;

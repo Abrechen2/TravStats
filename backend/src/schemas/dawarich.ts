@@ -14,7 +14,7 @@ import { z } from "./zod";
  */
 const clearableBaseUrlField = z.preprocess(
   (value) => (value === "" ? null : value),
-  z.string().min(1).max(500).nullable().optional(),
+  z.string().min(1).max(500).nullable().optional()
 );
 
 /** Partial update — an omitted field is untouched, an explicit null clears it. */
@@ -35,7 +35,7 @@ export const dawarichConnectionSchema = z
  */
 const optionalConnectionField = z.preprocess(
   (value) => (value === "" ? undefined : value),
-  z.string().min(1).max(500).optional(),
+  z.string().min(1).max(500).optional()
 );
 
 /** Test an ad-hoc pair before saving, or fall back to the stored connection. */

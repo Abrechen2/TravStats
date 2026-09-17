@@ -1,8 +1,8 @@
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  preset: "ts-jest",
+  testEnvironment: "node",
   globals: {
-    'ts-jest': {
+    "ts-jest": {
       diagnostics: false, // Skip type-checking in tests; production code is checked via tsc --noEmit
     },
   },
@@ -22,26 +22,26 @@ module.exports = {
   // Recycling the worker is the fix rather than a bigger heap: raising the
   // ceiling only buys time as suites are added, and each suite is already
   // written to stand alone.
-  workerIdleMemoryLimit: '1200MB',
+  workerIdleMemoryLimit: "1200MB",
   // Fail once, loudly, when Postgres is unreachable — see jest.globalSetup.ts.
-  globalSetup: '<rootDir>/jest.globalSetup.ts',
+  globalSetup: "<rootDir>/jest.globalSetup.ts",
   // Caps the Prisma pool before any client is built — see jest.setup.ts.
-  setupFiles: ['<rootDir>/jest.setup.ts'],
-  roots: ['<rootDir>/src'],
-  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  setupFiles: ["<rootDir>/jest.setup.ts"],
+  roots: ["<rootDir>/src"],
+  testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
   collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/**/*.test.ts',
-    '!src/**/*.spec.ts',
-    '!src/__tests__/**',
-    '!src/__mocks__/**',
-    '!src/index.ts',
-    '!src/init.ts',
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.spec.ts",
+    "!src/__tests__/**",
+    "!src/__mocks__/**",
+    "!src/index.ts",
+    "!src/init.ts",
   ],
   // No fixed threshold: the floor is scripts/coverage-baseline.json, checked by
   // scripts/check-coverage.mjs, which only ever tightens (forgejo#62).
-  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+  coverageReporters: ["text", "lcov", "html", "json-summary"],
   // otplib 13 pulls in @scure/base, which ships ONLY as ESM (no `require`
   // export). Node itself is fine with that — `require(esm)` has been
   // unflagged since 22.12, and both the tsx dev path and the compiled
@@ -51,16 +51,19 @@ module.exports = {
   // the pattern to the ESM-only packages: transforming all of node_modules
   // would turn a four-minute suite into a much longer one.
   transform: {
-    '^.+\.tsx?$': ['ts-jest', { diagnostics: false }],
-    '^.+\.js$': ['ts-jest', { diagnostics: false, tsconfig: { allowJs: true, module: 'commonjs' } }],
+    "^.+\.tsx?$": ["ts-jest", { diagnostics: false }],
+    "^.+\.js$": [
+      "ts-jest",
+      { diagnostics: false, tsconfig: { allowJs: true, module: "commonjs" } },
+    ],
   },
   // @noble/hashes 2 sits nested under @otplib/plugin-crypto-noble and is
   // reached through an ESM-only subpath, so it is on the list too; @otplib
   // itself ships .cjs and passes through the `.js` transform untouched.
-  transformIgnorePatterns: ['node_modules/(?!(@scure/base|@noble/hashes|@otplib)/)'],
+  transformIgnorePatterns: ["node_modules/(?!(@scure/base|@noble/hashes|@otplib)/)"],
   // Mock modules to avoid ESM issues
   moduleNameMapper: {
-    '^uuid$': '<rootDir>/src/__mocks__/uuid.ts',
-    '^webdav$': '<rootDir>/src/__mocks__/webdav.ts',
+    "^uuid$": "<rootDir>/src/__mocks__/uuid.ts",
+    "^webdav$": "<rootDir>/src/__mocks__/webdav.ts",
   },
 };

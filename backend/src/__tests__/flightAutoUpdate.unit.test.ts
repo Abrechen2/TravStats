@@ -37,7 +37,7 @@ const BASE_SNAPSHOT = {
 // ─── calculateChanges: empty-string semantics ───────────────────────────────
 
 describe("calculateChanges empty-string handling", () => {
-  it("treats \"\" → value as type=added (first fill)", () => {
+  it('treats "" → value as type=added (first fill)', () => {
     const original = { ...BASE_SNAPSHOT, gate: "" };
     const proposed = { ...BASE_SNAPSHOT, gate: "42A" };
 
@@ -61,7 +61,7 @@ describe("calculateChanges empty-string handling", () => {
     expect(changes[0]).toMatchObject({ field: "aircraft", type: "added" });
   });
 
-  it("treats value → \"\" as type=removed", () => {
+  it('treats value → "" as type=removed', () => {
     const original = { ...BASE_SNAPSHOT, terminal: "1" };
     const proposed = { ...BASE_SNAPSHOT, terminal: "" };
 
@@ -89,15 +89,24 @@ describe("calculateChanges empty-string handling", () => {
     const proposed = { ...BASE_SNAPSHOT, gate: "", terminal: "" };
 
     const changes = calculateChanges(original, proposed);
-    expect(changes.filter(c => c.field === "gate" || c.field === "terminal")).toHaveLength(0);
+    expect(changes.filter((c) => c.field === "gate" || c.field === "terminal")).toHaveLength(0);
   });
 });
 
 // ─── hasSignificantChanges ──────────────────────────────────────────────────
 
 describe("hasSignificantChanges", () => {
-  const change = (field: string, type: FlightChange["type"], oldValue: unknown = "x", newValue: unknown = "y"): FlightChange =>
-    ({ field, type, oldValue: oldValue as FlightChange["oldValue"], newValue: newValue as FlightChange["newValue"] });
+  const change = (
+    field: string,
+    type: FlightChange["type"],
+    oldValue: unknown = "x",
+    newValue: unknown = "y"
+  ): FlightChange => ({
+    field,
+    type,
+    oldValue: oldValue as FlightChange["oldValue"],
+    newValue: newValue as FlightChange["newValue"],
+  });
 
   it("returns false for zero changes", () => {
     expect(hasSignificantChanges([])).toBe(false);
@@ -125,7 +134,7 @@ describe("hasSignificantChanges", () => {
       hasSignificantChanges([
         change("gate", "changed", "A21", "B07"),
         change("terminal", "changed", "1", "2"),
-      ]),
+      ])
     ).toBe(true);
   });
 });
@@ -142,7 +151,7 @@ describe("calculateChanges actual_* time fields", () => {
 
     const changes = calculateChanges(original, proposed);
 
-    expect(changes.find(c => c.field === "actualDeparture")).toMatchObject({
+    expect(changes.find((c) => c.field === "actualDeparture")).toMatchObject({
       type: "added",
       newValue: "2026-05-01T10:07:00.000Z",
     });
@@ -159,7 +168,7 @@ describe("calculateChanges actual_* time fields", () => {
     };
 
     const changes = calculateChanges(original, proposed);
-    expect(changes.find(c => c.field === "actualDeparture")).toBeUndefined();
+    expect(changes.find((c) => c.field === "actualDeparture")).toBeUndefined();
   });
 
   it("includes actualArrival as critical — single change is significant", () => {

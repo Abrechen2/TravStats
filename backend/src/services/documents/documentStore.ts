@@ -49,8 +49,12 @@ export async function removeDocumentFile(storedName: string): Promise<void> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
     // Logged by stored name only — never the user's file name or content.
     logger.warn(
-      { operation: "document_file_remove_failed", storedName, error: { message: (error as Error).message } },
-      "Could not remove a document file; the nightly sweep will retry",
+      {
+        operation: "document_file_remove_failed",
+        storedName,
+        error: { message: (error as Error).message },
+      },
+      "Could not remove a document file; the nightly sweep will retry"
     );
   }
 }
@@ -60,7 +64,10 @@ export async function removeDocumentFile(storedName: string): Promise<void> {
  * orphan sweep needs it: a file with no row may be an upload whose row is being
  * inserted right now.
  */
-export async function documentFileAgeMs(storedName: string, now = Date.now()): Promise<number | null> {
+export async function documentFileAgeMs(
+  storedName: string,
+  now = Date.now()
+): Promise<number | null> {
   try {
     return now - (await fsp.stat(documentPath(storedName))).mtimeMs;
   } catch {

@@ -8,18 +8,15 @@
  * the test independent of Postgres.
  */
 
-import { calculateUserStats, type FlightData } from '../utils/achievementStats';
+import { calculateUserStats, type FlightData } from "../utils/achievementStats";
 
-const AIRPORT_DB: Record<
-  string,
-  { country: string | null; lat: number; lon: number }
-> = {
-  FRA: { country: 'Germany', lat: 50.0379, lon: 8.5622 },
-  MUC: { country: 'Germany', lat: 48.3538, lon: 11.7861 },
-  JFK: { country: 'United States', lat: 40.6398, lon: -73.7789 },
+const AIRPORT_DB: Record<string, { country: string | null; lat: number; lon: number }> = {
+  FRA: { country: "Germany", lat: 50.0379, lon: 8.5622 },
+  MUC: { country: "Germany", lat: 48.3538, lon: 11.7861 },
+  JFK: { country: "United States", lat: 40.6398, lon: -73.7789 },
 };
 
-jest.mock('../services/airportCache', () => ({
+jest.mock("../services/airportCache", () => ({
   getCachedAirports: jest.fn(async (codes: string[]) => {
     const map = new Map<string, unknown>();
     for (const code of codes) {
@@ -31,7 +28,7 @@ jest.mock('../services/airportCache', () => ({
 }));
 
 function makeFlight(opts: {
-  status: 'flown' | 'historical' | 'scheduled' | 'cancelled';
+  status: "flown" | "historical" | "scheduled" | "cancelled";
   depIata: keyof typeof AIRPORT_DB;
   arrIata: keyof typeof AIRPORT_DB;
   departureTime: Date | null;
@@ -40,7 +37,7 @@ function makeFlight(opts: {
   const dep = AIRPORT_DB[opts.depIata];
   const arr = AIRPORT_DB[opts.arrIata];
   return {
-    id: `${opts.depIata}-${opts.arrIata}-${opts.departureTime?.toISOString() ?? 'na'}`,
+    id: `${opts.depIata}-${opts.arrIata}-${opts.departureTime?.toISOString() ?? "na"}`,
     status: opts.status,
     depIata: opts.depIata,
     depIcao: null,
@@ -52,7 +49,7 @@ function makeFlight(opts: {
     arrLon: arr.lon,
     departureTime: opts.departureTime,
     arrivalTime: opts.arrivalTime ?? null,
-    airline: 'Lufthansa',
+    airline: "Lufthansa",
     aircraft: null,
     flightNumber: null,
     seatNumber: null,
@@ -63,22 +60,22 @@ function makeFlight(opts: {
   };
 }
 
-describe('calculateUserStats — historical flight inclusion', () => {
-  it('counts historical flights in flightsCount', async () => {
+describe("calculateUserStats — historical flight inclusion", () => {
+  it("counts historical flights in flightsCount", async () => {
     const flights: FlightData[] = [
       makeFlight({
-        status: 'flown',
-        depIata: 'FRA',
-        arrIata: 'MUC',
-        departureTime: new Date('2024-04-10T08:00:00Z'),
-        arrivalTime: new Date('2024-04-10T09:00:00Z'),
+        status: "flown",
+        depIata: "FRA",
+        arrIata: "MUC",
+        departureTime: new Date("2024-04-10T08:00:00Z"),
+        arrivalTime: new Date("2024-04-10T09:00:00Z"),
       }),
       makeFlight({
-        status: 'historical',
-        depIata: 'FRA',
-        arrIata: 'JFK',
-        departureTime: new Date('1989-03-15T12:00:00Z'),
-        arrivalTime: new Date('1989-03-15T20:00:00Z'),
+        status: "historical",
+        depIata: "FRA",
+        arrIata: "JFK",
+        departureTime: new Date("1989-03-15T12:00:00Z"),
+        arrivalTime: new Date("1989-03-15T20:00:00Z"),
       }),
     ];
     const stats = await calculateUserStats(flights);
@@ -90,16 +87,16 @@ describe('calculateUserStats — historical flight inclusion', () => {
     expect(stats.countries.size).toBe(2); // Germany + United States
   });
 
-  it('excludes historical flights from time-of-day buckets', async () => {
+  it("excludes historical flights from time-of-day buckets", async () => {
     const flights: FlightData[] = [
       // Historical placeholder at midnight on a Saturday — would otherwise
       // bump nightFlights AND weekendFlights AND redEyeFlights.
       makeFlight({
-        status: 'historical',
-        depIata: 'FRA',
-        arrIata: 'JFK',
-        departureTime: new Date('1989-03-18T03:00:00Z'), // Saturday 03:00
-        arrivalTime: new Date('1989-03-18T11:00:00Z'),
+        status: "historical",
+        depIata: "FRA",
+        arrIata: "JFK",
+        departureTime: new Date("1989-03-18T03:00:00Z"), // Saturday 03:00
+        arrivalTime: new Date("1989-03-18T11:00:00Z"),
       }),
     ];
     const stats = await calculateUserStats(flights);

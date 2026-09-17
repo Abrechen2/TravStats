@@ -1,54 +1,58 @@
-import { Router, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
-import { prisma } from '../db';
-import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
-import type { FlightQueryInput } from '../schemas/flight';
-import logger from '../utils/logger';
-import { AppError } from '../middleware/errorHandler';
-import { applyDepartureTimesAndDelay, applyExtendedFlightFields, type ExtendedFlightInput } from '../services/flights/extendedFlightFields';
-import { calculateDistance, generateArcPoints } from '../utils/geo';
-import { checkAndUpdateAchievements } from '../utils/achievements';
-import { enrichFlightAirports } from '../services/airportLookup';
-import { flightCreationLimiter, statsLimiter } from '../middleware/rateLimit';
+import { Router, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
+import type { FlightQueryInput } from "../schemas/flight";
+import logger from "../utils/logger";
+import { AppError } from "../middleware/errorHandler";
+import {
+  applyDepartureTimesAndDelay,
+  applyExtendedFlightFields,
+  type ExtendedFlightInput,
+} from "../services/flights/extendedFlightFields";
+import { calculateDistance, generateArcPoints } from "../utils/geo";
+import { checkAndUpdateAchievements } from "../utils/achievements";
+import { enrichFlightAirports } from "../services/airportLookup";
+import { flightCreationLimiter, statsLimiter } from "../middleware/rateLimit";
 import {
   findEnrichmentCandidates,
   getUserEnrichmentSettings,
   aggregateFlightData,
   createHistoricalEnrichment,
-} from '../services/flightEnrichmentService';
+} from "../services/flightEnrichmentService";
 import {
   countBulkRefreshCandidates,
   hasHistoricalProvider,
   runBulkRefresh,
-} from '../services/bulkFlightRefresh';
-import { getProviderQuota } from '../services/apiQuota';
-import { estimateRoute } from '../services/routeEstimationService';
-import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
-import { getCachedAirports, compareAirportAuthority } from '../services/airportCache';
+} from "../services/bulkFlightRefresh";
+import { getProviderQuota } from "../services/apiQuota";
+import { estimateRoute } from "../services/routeEstimationService";
+import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
+import { getCachedAirports, compareAirportAuthority } from "../services/airportCache";
 import {
   enrichFlightsWithAirportFacts,
   type AirportFacts,
   type EnrichableFlight,
-} from '../services/flightAirportFacts';
-import { withAirportTimezones } from '../services/flightTimezoneDefaults';
+} from "../services/flightAirportFacts";
+import { withAirportTimezones } from "../services/flightTimezoneDefaults";
 import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
-} from '../services/airportCoordinates';
-import { assertMergedChronology, toUtcDate } from '../services/flights/mergedChronology';
-import { sharedFlightCreateFields } from '../services/flights/flightCreateFields';
-import { warnIfScheduledInPast } from '../services/flights/scheduledInPastWarning';
-import { linkDocuments, takeDocumentIds } from '../services/documents/documentService';
-import { resolveAirlineCodes } from '../utils/airlineNormalize';
-import { normalizeAircraft } from '../utils/aircraftNormalize';
-import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
-import { resolveDuplicateFlight } from '../services/flights/duplicateResolution';
-import batchRouter from './flightsBatch';
-import { flightExternalRef, isDocumentImport } from '../services/importProvenance';
-import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
-import { resolveCompanions, linkRowsFor } from '../services/companionService';
-import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from '../services/fx/snapshot';
+} from "../services/airportCoordinates";
+import { assertMergedChronology, toUtcDate } from "../services/flights/mergedChronology";
+import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
+import { warnIfScheduledInPast } from "../services/flights/scheduledInPastWarning";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { resolveAirlineCodes } from "../utils/airlineNormalize";
+import { normalizeAircraft } from "../utils/aircraftNormalize";
+import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { resolveDuplicateFlight } from "../services/flights/duplicateResolution";
+import batchRouter from "./flightsBatch";
+import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
+import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from "../services/fx/snapshot";
 
 const router = Router();
 
@@ -138,11 +142,13 @@ router.use(requireWriteScope);
 router.use(batchRouter);
 
 // Normalize query params coming from axios (arrays are sent as foo[] by default)
-const normalizeQueryParams = (query: Record<string, string | string[] | undefined>): Record<string, string | string[] | undefined> => {
+const normalizeQueryParams = (
+  query: Record<string, string | string[] | undefined>
+): Record<string, string | string[] | undefined> => {
   const normalized: Record<string, string | string[] | undefined> = {};
 
   Object.entries(query).forEach(([key, value]) => {
-    const normalizedKey = key.endsWith('[]') ? key.slice(0, -2) : key;
+    const normalizedKey = key.endsWith("[]") ? key.slice(0, -2) : key;
     normalized[normalizedKey] = value;
   });
 
@@ -153,43 +159,40 @@ const normalizeQueryParams = (query: Record<string, string | string[] | undefine
 const splitMultiValue = (value?: string | string[]) => {
   if (!value) return [];
 
-  const raw = Array.isArray(value) ? value : value.split(',');
+  const raw = Array.isArray(value) ? value : value.split(",");
 
   return raw
-    .flatMap(v => v.split('|'))
-    .map(v => v.trim())
+    .flatMap((v) => v.split("|"))
+    .map((v) => v.trim())
     .filter(Boolean);
 };
 
-const buildFlightWhere = (
-  query: (FlightQueryInput & { tags?: string[] }),
-  userId: string
-) => {
+const buildFlightWhere = (query: FlightQueryInput & { tags?: string[] }, userId: string) => {
   const andConditions: Prisma.FlightWhereInput[] = [{ userId }];
   let noResults = false;
 
   // Airlines (allow multiple selections)
   const airlines = splitMultiValue(query.airline);
   if (airlines.length === 1) {
-    andConditions.push({ airline: { contains: airlines[0], mode: 'insensitive' } });
+    andConditions.push({ airline: { contains: airlines[0], mode: "insensitive" } });
   } else if (airlines.length > 1) {
     andConditions.push({
-      OR: airlines.map(airline => ({
-        airline: { contains: airline, mode: 'insensitive' },
+      OR: airlines.map((airline) => ({
+        airline: { contains: airline, mode: "insensitive" },
       })),
     });
   }
 
   if (query.flightNumber) {
-    andConditions.push({ flightNumber: { contains: query.flightNumber, mode: 'insensitive' } });
+    andConditions.push({ flightNumber: { contains: query.flightNumber, mode: "insensitive" } });
   }
 
   if (query.departureAirport) {
     andConditions.push({
       OR: [
-        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depIata: { contains: query.departureAirport, mode: "insensitive" } },
+        { depIcao: { contains: query.departureAirport, mode: "insensitive" } },
+        { depName: { contains: query.departureAirport, mode: "insensitive" } },
       ],
     });
   }
@@ -197,16 +200,16 @@ const buildFlightWhere = (
   if (query.arrivalAirport) {
     andConditions.push({
       OR: [
-        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrIata: { contains: query.arrivalAirport, mode: "insensitive" } },
+        { arrIcao: { contains: query.arrivalAirport, mode: "insensitive" } },
+        { arrName: { contains: query.arrivalAirport, mode: "insensitive" } },
       ],
     });
   }
 
   // Status (allow multiple selections, explicit empty means no results)
   const statuses = splitMultiValue(query.status) as Array<
-    'scheduled' | 'flown' | 'cancelled' | 'historical' | 'duplicated'
+    "scheduled" | "flown" | "cancelled" | "historical" | "duplicated"
   >;
   if (Array.isArray(query.status) && query.status.length === 0) {
     noResults = true;
@@ -249,281 +252,289 @@ const buildFlightWhere = (
 };
 
 // Create flight (rate limited to prevent abuse)
-router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const data = createFlightSchema.parse(await withAirportTimezones(req.body));
-    const documentIds = await takeDocumentIds(userId, req.body);
+router.post(
+  "/",
+  flightCreationLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const data = createFlightSchema.parse(await withAirportTimezones(req.body));
+      const documentIds = await takeDocumentIds(userId, req.body);
 
-    // A mail carrying ONE flight comes through here rather than the batch
-    // route, so provenance has to live in both places or half of every
-    // mail-imported logbook stays unrecorded.
-    let importBatchId: string | null = null;
-    if (data.importBatchId) {
-      const batch = await prisma.importBatch.findFirst({
-        where: { id: data.importBatchId, userId, domain: 'flight' },
-        select: { id: true },
-      });
-      importBatchId = batch?.id ?? null;
-    }
-    const externalRef = isDocumentImport(data.dataSource)
-      ? flightExternalRef({
-          flightNumber: data.flightNumber,
-          departureLocal: data.departureLocal,
-          depIata: data.departure.iata,
-          arrIata: data.arrival.iata,
-        })
-      : null;
-    if (externalRef) {
-      const existing = await prisma.flight.findFirst({
-        where: { userId, externalRef },
-        select: { id: true },
-      });
-      if (existing) {
-        // Re-reading a forwarded confirmation is ordinary. 409 says what
-        // happened; a 500 from the unique index would say the import broke.
-        res.status(409).json({
-          success: false,
-          error: 'already_imported',
-          data: { id: existing.id },
+      // A mail carrying ONE flight comes through here rather than the batch
+      // route, so provenance has to live in both places or half of every
+      // mail-imported logbook stays unrecorded.
+      let importBatchId: string | null = null;
+      if (data.importBatchId) {
+        const batch = await prisma.importBatch.findFirst({
+          where: { id: data.importBatchId, userId, domain: "flight" },
+          select: { id: true },
         });
-        return;
+        importBatchId = batch?.id ?? null;
       }
-    }
-
-    warnIfScheduledInPast(userId, data);
-
-    const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
-    const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
-    const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
-    const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
-
-    // The status field is a client-sent HINT, not the source of truth (spec
-    // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
-    // historical, duplicated) are assigned verbatim, everything else is
-    // derived from the actual departure/arrival dates being written.
-    const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? '')
-      ? data.status!
-      : deriveFlightStatus({
-          departureTime: departureUtc,
-          arrivalTime: arrivalUtc,
-          current: data.status ?? 'scheduled',
+      const externalRef = isDocumentImport(data.dataSource)
+        ? flightExternalRef({
+            flightNumber: data.flightNumber,
+            departureLocal: data.departureLocal,
+            depIata: data.departure.iata,
+            arrIata: data.arrival.iata,
+          })
+        : null;
+      if (externalRef) {
+        const existing = await prisma.flight.findFirst({
+          where: { userId, externalRef },
+          select: { id: true },
         });
-
-    // Resolve airline codes if name provided but IATA/ICAO missing
-    let airlineIata = data.airlineIata;
-    let airlineIcao = data.airlineIcao;
-    if (data.airline && !airlineIata && !airlineIcao) {
-      const resolved = resolveAirlineCodes(data.airline);
-      if (resolved) {
-        airlineIata = resolved.iata ?? null;
-        airlineIcao = resolved.icao ?? null;
-      }
-    }
-
-    // ?force=true → bypass the duplicate check and create a real second row
-    //   (user opt-in). ?merge=true → fold the incoming data into the flight
-    //   the user already has. force wins if both are set.
-    //
-    // The decision itself, and the merge, live in `resolveDuplicateFlight` —
-    // two lookups, a merge patch, a companion resolution and a transaction are
-    // database choreography, not routing.
-    const forceCreate = req.query['force'] === 'true';
-    const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
-    if (!forceCreate) {
-      const outcome = await resolveDuplicateFlight({
-        userId,
-        data,
-        departureUtc,
-        merge: mergeIntoExisting,
-      });
-
-      if (outcome.kind === 'merged') {
-        await linkDocuments(userId, documentIds, { type: 'flight', id: outcome.flight.id });
-        res.status(200).json({
-          flight: await withAirportFacts(outcome.flight),
-          mergedFields: outcome.mergedFields,
-        });
-        return;
+        if (existing) {
+          // Re-reading a forwarded confirmation is ordinary. 409 says what
+          // happened; a 500 from the unique index would say the import broke.
+          res.status(409).json({
+            success: false,
+            error: "already_imported",
+            data: { id: existing.id },
+          });
+          return;
+        }
       }
 
-      if (outcome.kind === 'duplicate') {
-        res.status(409).json({
-          error: 'DUPLICATE_FLIGHT',
-          message: outcome.message,
-          existingFlight: outcome.existing,
-        });
-        return;
+      warnIfScheduledInPast(userId, data);
+
+      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
+      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+      const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+      const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+
+      // The status field is a client-sent HINT, not the source of truth (spec
+      // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
+      // historical, duplicated) are assigned verbatim, everything else is
+      // derived from the actual departure/arrival dates being written.
+      const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? "")
+        ? data.status!
+        : deriveFlightStatus({
+            departureTime: departureUtc,
+            arrivalTime: arrivalUtc,
+            current: data.status ?? "scheduled",
+          });
+
+      // Resolve airline codes if name provided but IATA/ICAO missing
+      let airlineIata = data.airlineIata;
+      let airlineIcao = data.airlineIcao;
+      if (data.airline && !airlineIata && !airlineIcao) {
+        const resolved = resolveAirlineCodes(data.airline);
+        if (resolved) {
+          airlineIata = resolved.iata ?? null;
+          airlineIcao = resolved.icao ?? null;
+        }
       }
-    }
 
-    // Enrich airport data with missing information from database
-    const enriched = await enrichFlightAirports({
-      departure: {
-        iata: data.departure.iata ?? undefined,
-        icao: data.departure.icao ?? undefined,
-        name: data.departure.name ?? undefined,
-        lat: data.departure.lat,
-        lon: data.departure.lon,
-      },
-      arrival: {
-        iata: data.arrival.iata ?? undefined,
-        icao: data.arrival.icao ?? undefined,
-        name: data.arrival.name ?? undefined,
-        lat: data.arrival.lat,
-        lon: data.arrival.lon,
-      },
-    });
-
-    // Resolve companion names to Companion entities up front (find-or-create
-    // is idempotent via companionService, so it's safe to run outside the
-    // transaction below). The flight row and its links are written together
-    // inside a transaction so a failure never leaves the legacy `companions`
-    // array and the `companionLinks` table disagreeing.
-    const companionNames = data.companions ?? [];
-    const resolvedCompanions = await resolveCompanions(userId, companionNames);
-
-    const fxColumns = await fxColumnsFor(
-      {
-        amount: flightOwnAmount(data),
-        currency: data.currency,
-        date: departureUtc,
-      },
-      await getBaseCurrency(userId),
-    );
-
-    const flight = await prisma.$transaction(async (tx) => {
-      const created = await tx.flight.create({
-        data: {
+      // ?force=true → bypass the duplicate check and create a real second row
+      //   (user opt-in). ?merge=true → fold the incoming data into the flight
+      //   the user already has. force wins if both are set.
+      //
+      // The decision itself, and the merge, live in `resolveDuplicateFlight` —
+      // two lookups, a merge patch, a companion resolution and a transaction are
+      // database choreography, not routing.
+      const forceCreate = req.query["force"] === "true";
+      const mergeIntoExisting = !forceCreate && req.query["merge"] === "true";
+      if (!forceCreate) {
+        const outcome = await resolveDuplicateFlight({
           userId,
-          externalRef,
-          importBatchId,
-          airline: data.airline,
-          airlineIata,
-          airlineIcao,
-          operatingAirline: data.operatingAirline,
-          operatingAirlineIata: data.operatingAirlineIata,
-          operatingAirlineIcao: data.operatingAirlineIcao,
-          isCodeshare: data.isCodeshare,
-          flightNumber: data.flightNumber,
-          callsign: data.callsign,
-          aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-          // Use enriched departure data (fills in missing IATA/ICAO/names)
-          depIcao: enriched.departure.icao,
-          depIata: enriched.departure.iata,
-          depName: enriched.departure.name,
-          depLat: enriched.departure.lat,
-          depLon: enriched.departure.lon,
-          // Use enriched arrival data (fills in missing IATA/ICAO/names)
-          arrIcao: enriched.arrival.icao,
-          arrIata: enriched.arrival.iata,
-          arrName: enriched.arrival.name,
-          arrLat: enriched.arrival.lat,
-          arrLon: enriched.arrival.lon,
-          departureTime: departureUtc,
-          arrivalTime: arrivalUtc,
-          actualDeparture: actualDepartureUtc,
-          actualArrival: actualArrivalUtc,
-          // Default to 'UTC' (the canonical contract). Bulk-import callers can
-          // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
-          // a placeholder so downstream display/aggregation knows to estimate.
-          depTimeSemantics: data.depTimeSemantics ?? 'UTC',
-          arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
-          delayMinutes:
-            actualDepartureUtc && departureUtc
-              ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
-              : null,
-          co2Kg: calculateCo2Kg({
-            depLat: enriched.departure.lat,
-            depLon: enriched.departure.lon,
-            arrLat: enriched.arrival.lat,
-            arrLon: enriched.arrival.lon,
-            seatClass: toSeatClass(data.seatClass),
-          }),
-          // Haversine route distance — see flightsBatch.ts for context.
-          routeDistance: haversineKm(
-            enriched.departure.lat,
-            enriched.departure.lon,
-            enriched.arrival.lat,
-            enriched.arrival.lon,
-          ),
-          status: effectiveStatus,
-          notes: data.notes,
-          price: data.price,
-          taxes: data.taxes,
-          fees: data.fees,
-          currency: data.currency,
-          // FX snapshot (#267). Converted at write time against the DEPARTURE
-          // day, so a historical total never moves when the ECB publishes.
-          // All-null where no honest rate exists — the statistics then report
-          // this amount in its own currency rather than folding it into a sum.
-          ...fxColumns,
-          category: data.category,
-          tags: data.tags ?? [],
-          // Dual write: resolved display names keep this legacy array in
-          // agreement with `companionLinks` below (trimmed, blanks dropped,
-          // newest spelling wins) — the previous image still reads this column.
-          companions: resolvedCompanions.map((c) => c.displayName),
-          receiptUrl: data.receiptUrl,
-          // Boarding pass / email import fields
-          seatNumber: data.seatNumber,
-          boardingGroup: data.boardingGroup,
-          gate: data.gate,
-          terminal: data.terminal,
-          bookingReference: data.bookingReference,
-          ticketNumber: data.ticketNumber,
-          baggageAllowance: data.baggageAllowance,
-          frequentFlyerNumber: data.frequentFlyerNumber,
-          bookingClassLetter: data.bookingClassLetter,
-          coPassengers: data.coPassengers ?? [],
-          // The columns both create paths must write — see the module. The
-          // cabin is one of them: it was missing from the batch while its own
-          // CO2 was priced from it (AUD-022).
-          ...sharedFlightCreateFields(data),
-          // Data source tracking
-          dataSource: data.dataSource ?? 'manual',
-          lastModifiedBy: 'user',
-          nextApiCheckAt: calculateNextApiCheckAt(
-            departureUtc,
-            arrivalUtc,
-            effectiveStatus,
-            data.flightNumber,
-          ),
+          data,
+          departureUtc,
+          merge: mergeIntoExisting,
+        });
+
+        if (outcome.kind === "merged") {
+          await linkDocuments(userId, documentIds, { type: "flight", id: outcome.flight.id });
+          res.status(200).json({
+            flight: await withAirportFacts(outcome.flight),
+            mergedFields: outcome.mergedFields,
+          });
+          return;
+        }
+
+        if (outcome.kind === "duplicate") {
+          res.status(409).json({
+            error: "DUPLICATE_FLIGHT",
+            message: outcome.message,
+            existingFlight: outcome.existing,
+          });
+          return;
+        }
+      }
+
+      // Enrich airport data with missing information from database
+      const enriched = await enrichFlightAirports({
+        departure: {
+          iata: data.departure.iata ?? undefined,
+          icao: data.departure.icao ?? undefined,
+          name: data.departure.name ?? undefined,
+          lat: data.departure.lat,
+          lon: data.departure.lon,
+        },
+        arrival: {
+          iata: data.arrival.iata ?? undefined,
+          icao: data.arrival.icao ?? undefined,
+          name: data.arrival.name ?? undefined,
+          lat: data.arrival.lat,
+          lon: data.arrival.lon,
         },
       });
 
-      if (resolvedCompanions.length > 0) {
-        await tx.flightCompanion.createMany({
-          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
-            ...row,
-            flightId: created.id,
-          })),
-          skipDuplicates: true,
+      // Resolve companion names to Companion entities up front (find-or-create
+      // is idempotent via companionService, so it's safe to run outside the
+      // transaction below). The flight row and its links are written together
+      // inside a transaction so a failure never leaves the legacy `companions`
+      // array and the `companionLinks` table disagreeing.
+      const companionNames = data.companions ?? [];
+      const resolvedCompanions = await resolveCompanions(userId, companionNames);
+
+      const fxColumns = await fxColumnsFor(
+        {
+          amount: flightOwnAmount(data),
+          currency: data.currency,
+          date: departureUtc,
+        },
+        await getBaseCurrency(userId)
+      );
+
+      const flight = await prisma.$transaction(async (tx) => {
+        const created = await tx.flight.create({
+          data: {
+            userId,
+            externalRef,
+            importBatchId,
+            airline: data.airline,
+            airlineIata,
+            airlineIcao,
+            operatingAirline: data.operatingAirline,
+            operatingAirlineIata: data.operatingAirlineIata,
+            operatingAirlineIcao: data.operatingAirlineIcao,
+            isCodeshare: data.isCodeshare,
+            flightNumber: data.flightNumber,
+            callsign: data.callsign,
+            aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
+            // Use enriched departure data (fills in missing IATA/ICAO/names)
+            depIcao: enriched.departure.icao,
+            depIata: enriched.departure.iata,
+            depName: enriched.departure.name,
+            depLat: enriched.departure.lat,
+            depLon: enriched.departure.lon,
+            // Use enriched arrival data (fills in missing IATA/ICAO/names)
+            arrIcao: enriched.arrival.icao,
+            arrIata: enriched.arrival.iata,
+            arrName: enriched.arrival.name,
+            arrLat: enriched.arrival.lat,
+            arrLon: enriched.arrival.lon,
+            departureTime: departureUtc,
+            arrivalTime: arrivalUtc,
+            actualDeparture: actualDepartureUtc,
+            actualArrival: actualArrivalUtc,
+            // Default to 'UTC' (the canonical contract). Bulk-import callers can
+            // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+            // a placeholder so downstream display/aggregation knows to estimate.
+            depTimeSemantics: data.depTimeSemantics ?? "UTC",
+            arrTimeSemantics: data.arrTimeSemantics ?? "UTC",
+            delayMinutes:
+              actualDepartureUtc && departureUtc
+                ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
+                : null,
+            co2Kg: calculateCo2Kg({
+              depLat: enriched.departure.lat,
+              depLon: enriched.departure.lon,
+              arrLat: enriched.arrival.lat,
+              arrLon: enriched.arrival.lon,
+              seatClass: toSeatClass(data.seatClass),
+            }),
+            // Haversine route distance — see flightsBatch.ts for context.
+            routeDistance: haversineKm(
+              enriched.departure.lat,
+              enriched.departure.lon,
+              enriched.arrival.lat,
+              enriched.arrival.lon
+            ),
+            status: effectiveStatus,
+            notes: data.notes,
+            price: data.price,
+            taxes: data.taxes,
+            fees: data.fees,
+            currency: data.currency,
+            // FX snapshot (#267). Converted at write time against the DEPARTURE
+            // day, so a historical total never moves when the ECB publishes.
+            // All-null where no honest rate exists — the statistics then report
+            // this amount in its own currency rather than folding it into a sum.
+            ...fxColumns,
+            category: data.category,
+            tags: data.tags ?? [],
+            // Dual write: resolved display names keep this legacy array in
+            // agreement with `companionLinks` below (trimmed, blanks dropped,
+            // newest spelling wins) — the previous image still reads this column.
+            companions: resolvedCompanions.map((c) => c.displayName),
+            receiptUrl: data.receiptUrl,
+            // Boarding pass / email import fields
+            seatNumber: data.seatNumber,
+            boardingGroup: data.boardingGroup,
+            gate: data.gate,
+            terminal: data.terminal,
+            bookingReference: data.bookingReference,
+            ticketNumber: data.ticketNumber,
+            baggageAllowance: data.baggageAllowance,
+            frequentFlyerNumber: data.frequentFlyerNumber,
+            bookingClassLetter: data.bookingClassLetter,
+            coPassengers: data.coPassengers ?? [],
+            // The columns both create paths must write — see the module. The
+            // cabin is one of them: it was missing from the batch while its own
+            // CO2 was priced from it (AUD-022).
+            ...sharedFlightCreateFields(data),
+            // Data source tracking
+            dataSource: data.dataSource ?? "manual",
+            lastModifiedBy: "user",
+            nextApiCheckAt: calculateNextApiCheckAt(
+              departureUtc,
+              arrivalUtc,
+              effectiveStatus,
+              data.flightNumber
+            ),
+          },
         });
+
+        if (resolvedCompanions.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+              ...row,
+              flightId: created.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return created;
+      });
+      await linkDocuments(userId, documentIds, { type: "flight", id: flight.id });
+
+      // Check achievements after creating a flight and return newly unlocked ones
+      let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
+      if (flight) {
+        try {
+          newAchievements = await checkAndUpdateAchievements(userId);
+        } catch (err: unknown) {
+          logger.error({
+            type: "achievement_check_failed",
+            userId,
+            error: err instanceof Error ? err.message : "Unknown error",
+          });
+        }
       }
 
-      return created;
-    });
-    await linkDocuments(userId, documentIds, { type: 'flight', id: flight.id });
-
-    // Check achievements after creating a flight and return newly unlocked ones
-    let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-    if (flight) {
-      try {
-        newAchievements = await checkAndUpdateAchievements(userId);
-      } catch (err: unknown) {
-        logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
-      }
+      res.status(201).json({
+        flight: flight ? await withAirportFacts(flight) : flight,
+        newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
+      });
+    } catch (error) {
+      next(error);
     }
-
-    res.status(201).json({
-      flight: flight ? await withAirportFacts(flight) : flight,
-      newAchievements: newAchievements.length > 0 ? newAchievements : undefined
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 /**
  * The single soonest upcoming flight for the dashboard "next flight" block.
@@ -537,16 +548,16 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
  *
  * Returns { flight: null } when there is nothing ahead — the block hides.
  */
-router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/next", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const flight = await prisma.flight.findFirst({
       where: {
         userId,
-        status: { not: 'cancelled' },
+        status: { not: "cancelled" },
         departureTime: { gte: new Date() },
       },
-      orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+      orderBy: [{ departureTime: "asc" }, { id: "asc" }],
       select: {
         id: true,
         airline: true,
@@ -616,18 +627,18 @@ router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) 
  * `/stats/records`, which passes a deliberately narrow projection. The column
  * keeps earning its place where the catalogue is NOT already loaded.
  */
-async function withAirportFacts<T extends EnrichableFlight>(
-  flight: T,
-): Promise<T & AirportFacts> {
+async function withAirportFacts<T extends EnrichableFlight>(flight: T): Promise<T & AirportFacts> {
   const [enriched] = await enrichFlightsWithAirportFacts([flight]);
   return enriched;
 }
 
 // Get flights with filters
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
+    const normalizedQuery = normalizeQueryParams(
+      req.query as Record<string, string | string[] | undefined>
+    );
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
     const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
     // ?all=true bypasses the 500-row cap entirely so API consumers can sync
@@ -660,7 +671,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         // Deterministic tie-breaker: departureTime is nullable and not unique,
         // so paginating on it alone (skip/take) can skip or duplicate rows at
         // page boundaries. The id keeps the total order stable.
-        orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
+        orderBy: [{ departureTime: "desc" }, { id: "asc" }],
         skip: query.offset,
         take,
         include: {
@@ -691,10 +702,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 });
 
 // Get flights as GeoJSON
-router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
+    const normalizedQuery = normalizeQueryParams(
+      req.query as Record<string, string | string[] | undefined>
+    );
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
     const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
     const query = {
@@ -706,7 +719,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     if (noResults) {
       return res.json({
-        type: 'FeatureCollection',
+        type: "FeatureCollection",
         features: [],
       });
     }
@@ -717,7 +730,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       // paginating getAllGeoJSON on it alone would skip/duplicate rows at the
       // 500-row page boundaries. The id keeps the total order stable, so every
       // flight is plotted exactly once across all pages.
-      orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
+      orderBy: [{ departureTime: "desc" }, { id: "asc" }],
       skip: query.offset,
       take: query.limit,
     });
@@ -771,7 +784,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       (iata ? infoByIata.get(iata) : undefined) ??
       (icao ? infoByIcao.get(icao) : undefined) ?? { country: null, city: null };
 
-    const features = flights.map(flight => {
+    const features = flights.map((flight) => {
       // Draw from the catalogue, not from the flight's own copy of the
       // coordinates. Those copies disagree between flights for the same
       // airport, and the map derives its airport DOT from the first-seen flight
@@ -796,7 +809,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       const arcPoints = generateArcPoints(depPosition, arrPosition);
 
       return {
-        type: 'Feature',
+        type: "Feature",
         properties: {
           id: flight.id,
           tripId: flight.tripId,
@@ -828,22 +841,17 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
           currency: flight.currency,
           taxes: flight.taxes,
           fees: flight.fees,
-          distance: calculateDistance(
-            flight.depLat,
-            flight.depLon,
-            flight.arrLat,
-            flight.arrLon
-          ),
+          distance: calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon),
         },
         geometry: {
-          type: 'LineString',
+          type: "LineString",
           coordinates: arcPoints,
         },
       };
     });
 
     res.json({
-      type: 'FeatureCollection',
+      type: "FeatureCollection",
       features,
     });
   } catch (error) {
@@ -859,109 +867,122 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 // dev demo from draining real RapidAPI quota. Hard-capped at
 // `MAX_PER_CALL` flights per request — the frontend re-clicks until the
 // returned `remaining` hits zero.
-router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isDemo: true },
-    });
-    if (user?.isDemo) {
-      return res.status(403).json({
-        error: 'DEMO_ACCOUNT_FORBIDDEN',
-        message:
-          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+router.get(
+  "/refresh-historical-bulk/preview",
+  flightCreationLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isDemo: true },
       });
+      if (user?.isDemo) {
+        return res.status(403).json({
+          error: "DEMO_ACCOUNT_FORBIDDEN",
+          message:
+            "Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.",
+        });
+      }
+      const [remaining, hasProvider] = await Promise.all([
+        countBulkRefreshCandidates(userId),
+        hasHistoricalProvider(userId),
+      ]);
+      const adbQuota = getProviderQuota("aerodatabox", userId);
+      const quota = adbQuota.kind === "observed" ? adbQuota : null;
+      res.json({
+        remaining,
+        hasHistoricalProvider: hasProvider,
+        aerodataboxQuota: quota,
+      });
+    } catch (error) {
+      next(error);
     }
-    const [remaining, hasProvider] = await Promise.all([
-      countBulkRefreshCandidates(userId),
-      hasHistoricalProvider(userId),
-    ]);
-    const adbQuota = getProviderQuota('aerodatabox', userId);
-    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
-    res.json({
-      remaining,
-      hasHistoricalProvider: hasProvider,
-      aerodataboxQuota: quota,
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
-router.post('/refresh-historical-bulk', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isDemo: true },
-    });
-    if (user?.isDemo) {
-      return res.status(403).json({
-        error: 'DEMO_ACCOUNT_FORBIDDEN',
-        message:
-          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+router.post(
+  "/refresh-historical-bulk",
+  flightCreationLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isDemo: true },
       });
-    }
+      if (user?.isDemo) {
+        return res.status(403).json({
+          error: "DEMO_ACCOUNT_FORBIDDEN",
+          message:
+            "Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.",
+        });
+      }
 
-    if (!(await hasHistoricalProvider(userId))) {
-      return res.status(409).json({
-        error: 'NO_HISTORICAL_PROVIDER',
-        message:
-          'Bulk refresh needs an AeroDataBox or Aviationstack key to look up flights older than today. Configure one in the API keys section above.',
-      });
-    }
+      if (!(await hasHistoricalProvider(userId))) {
+        return res.status(409).json({
+          error: "NO_HISTORICAL_PROVIDER",
+          message:
+            "Bulk refresh needs an AeroDataBox or Aviationstack key to look up flights older than today. Configure one in the API keys section above.",
+        });
+      }
 
-    const summary = await runBulkRefresh(userId);
-    const adbQuota = getProviderQuota('aerodatabox', userId);
-    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
-    res.json({ ...summary, aerodataboxQuota: quota });
-  } catch (error) {
-    next(error);
+      const summary = await runBulkRefresh(userId);
+      const adbQuota = getProviderQuota("aerodatabox", userId);
+      const quota = adbQuota.kind === "observed" ? adbQuota : null;
+      res.json({ ...summary, aerodataboxQuota: quota });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Get enrichment candidates
-router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const rawLimit = req.query.limit;
-    const limit = rawLimit !== undefined
-      ? Math.min(500, Math.max(1, parseInt(String(rawLimit), 10) || 10))
-      : undefined;
+router.get(
+  "/enrichment-candidates",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const rawLimit = req.query.limit;
+      const limit =
+        rawLimit !== undefined
+          ? Math.min(500, Math.max(1, parseInt(String(rawLimit), 10) || 10))
+          : undefined;
 
-    // Get user settings
-    const settings = await getUserEnrichmentSettings(userId);
-    if (!settings || !settings.enabled) {
-      return res.json({
-        candidates: [],
-        settings: null,
-        message: 'Historical enrichment is disabled. Enable it in settings.',
+      // Get user settings
+      const settings = await getUserEnrichmentSettings(userId);
+      if (!settings || !settings.enabled) {
+        return res.json({
+          candidates: [],
+          settings: null,
+          message: "Historical enrichment is disabled. Enable it in settings.",
+        });
+      }
+
+      // Find candidates
+      let candidates = await findEnrichmentCandidates(userId, settings);
+
+      // Apply limit if provided
+      if (limit !== undefined) {
+        candidates = candidates.slice(0, limit);
+      }
+
+      res.json({
+        candidates,
+        settings,
       });
+    } catch (error) {
+      next(error);
     }
-
-    // Find candidates
-    let candidates = await findEnrichmentCandidates(userId, settings);
-
-    // Apply limit if provided
-    if (limit !== undefined) {
-      candidates = candidates.slice(0, limit);
-    }
-
-    res.json({
-      candidates,
-      settings,
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 // Get a single flight by id — added for API consumers (AI agents,
 // scripts) that PATCH/PUT and want to read back the freshly-updated
 // state without re-listing every flight. Returns the flight directly
 // (not wrapped) so curl-piped jq filters stay simple.
-router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -970,7 +991,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       include: { trip: { select: { id: true, name: true, color: true } } },
     });
     if (!flight) {
-      throw new AppError('Flight not found', 404);
+      throw new AppError("Flight not found", 404);
     }
     // The detail page renders each end in ITS airport's clock from these
     // fields. Without them it falls back to UTC and contradicts the list.
@@ -981,7 +1002,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 });
 
 // Update flight
-router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -993,7 +1014,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     });
 
     if (!existingFlight) {
-      throw new AppError('Flight not found', 404);
+      throw new AppError("Flight not found", 404);
     }
 
     // The schema can only see the BODY. A PUT that moves only the departure
@@ -1010,32 +1031,36 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     if (data.departure || data.arrival) {
       const enriched = await enrichFlightAirports({
-        departure: data.departure ? {
-          iata: data.departure.iata ?? undefined,
-          icao: data.departure.icao ?? undefined,
-          name: data.departure.name ?? undefined,
-          lat: data.departure.lat,
-          lon: data.departure.lon,
-        } : {
-          iata: existingFlight.depIata ?? undefined,
-          icao: existingFlight.depIcao ?? undefined,
-          name: existingFlight.depName ?? undefined,
-          lat: existingFlight.depLat,
-          lon: existingFlight.depLon,
-        },
-        arrival: data.arrival ? {
-          iata: data.arrival.iata ?? undefined,
-          icao: data.arrival.icao ?? undefined,
-          name: data.arrival.name ?? undefined,
-          lat: data.arrival.lat,
-          lon: data.arrival.lon,
-        } : {
-          iata: existingFlight.arrIata ?? undefined,
-          icao: existingFlight.arrIcao ?? undefined,
-          name: existingFlight.arrName ?? undefined,
-          lat: existingFlight.arrLat,
-          lon: existingFlight.arrLon,
-        },
+        departure: data.departure
+          ? {
+              iata: data.departure.iata ?? undefined,
+              icao: data.departure.icao ?? undefined,
+              name: data.departure.name ?? undefined,
+              lat: data.departure.lat,
+              lon: data.departure.lon,
+            }
+          : {
+              iata: existingFlight.depIata ?? undefined,
+              icao: existingFlight.depIcao ?? undefined,
+              name: existingFlight.depName ?? undefined,
+              lat: existingFlight.depLat,
+              lon: existingFlight.depLon,
+            },
+        arrival: data.arrival
+          ? {
+              iata: data.arrival.iata ?? undefined,
+              icao: data.arrival.icao ?? undefined,
+              name: data.arrival.name ?? undefined,
+              lat: data.arrival.lat,
+              lon: data.arrival.lon,
+            }
+          : {
+              iata: existingFlight.arrIata ?? undefined,
+              icao: existingFlight.arrIcao ?? undefined,
+              name: existingFlight.arrName ?? undefined,
+              lat: existingFlight.arrLat,
+              lon: existingFlight.arrLon,
+            },
       });
 
       if (data.departure) {
@@ -1052,7 +1077,11 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     // keep logos and stats pointing at an airline the row no longer names.
     if (data.airline !== undefined) {
       updateData.airline = data.airline;
-      if (data.airline === null && data.airlineIata === undefined && data.airlineIcao === undefined) {
+      if (
+        data.airline === null &&
+        data.airlineIata === undefined &&
+        data.airlineIcao === undefined
+      ) {
         updateData.airlineIata = null;
         updateData.airlineIcao = null;
       }
@@ -1083,13 +1112,17 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         updateData.operatingAirlineIcao = null;
       }
     }
-    if (data.operatingAirlineIata !== undefined) updateData.operatingAirlineIata = data.operatingAirlineIata;
-    if (data.operatingAirlineIcao !== undefined) updateData.operatingAirlineIcao = data.operatingAirlineIcao;
+    if (data.operatingAirlineIata !== undefined)
+      updateData.operatingAirlineIata = data.operatingAirlineIata;
+    if (data.operatingAirlineIcao !== undefined)
+      updateData.operatingAirlineIcao = data.operatingAirlineIcao;
     if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
     if (data.flightNumber !== undefined) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
-    if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
-    if (data.aircraftRegistration !== undefined) updateData.aircraftRegistration = data.aircraftRegistration;
+    if (data.aircraft !== undefined)
+      updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
+    if (data.aircraftRegistration !== undefined)
+      updateData.aircraftRegistration = data.aircraftRegistration;
     if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;
@@ -1140,8 +1173,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.bookingReference !== undefined) updateData.bookingReference = data.bookingReference;
     if (data.ticketNumber !== undefined) updateData.ticketNumber = data.ticketNumber;
     if (data.baggageAllowance !== undefined) updateData.baggageAllowance = data.baggageAllowance;
-    if (data.frequentFlyerNumber !== undefined) updateData.frequentFlyerNumber = data.frequentFlyerNumber;
-    if (data.bookingClassLetter !== undefined) updateData.bookingClassLetter = data.bookingClassLetter;
+    if (data.frequentFlyerNumber !== undefined)
+      updateData.frequentFlyerNumber = data.frequentFlyerNumber;
+    if (data.bookingClassLetter !== undefined)
+      updateData.bookingClassLetter = data.bookingClassLetter;
     if (data.coPassengers !== undefined) updateData.coPassengers = data.coPassengers;
     applyExtendedFlightFields(data, updateData);
     if (data.dataSource !== undefined) updateData.dataSource = data.dataSource;
@@ -1180,13 +1215,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       updateData.departureTime = incomingDepUtc ?? undefined;
       // Don't overwrite an explicit semantics override the client sent.
       if (data.depTimeSemantics === undefined) {
-        updateData.depTimeSemantics = 'UTC';
+        updateData.depTimeSemantics = "UTC";
       }
     }
     if (data.arrivalLocal !== undefined) {
       updateData.arrivalTime = incomingArrUtc ?? undefined;
       if (data.arrTimeSemantics === undefined) {
-        updateData.arrTimeSemantics = 'UTC';
+        updateData.arrTimeSemantics = "UTC";
       }
     }
 
@@ -1200,7 +1235,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       requestedStatus !== undefined &&
       (FLIGHT_PASSTHROUGH as readonly string[]).includes(requestedStatus);
     const currentIsPassthrough = (FLIGHT_PASSTHROUGH as readonly string[]).includes(
-      existingFlight.status,
+      existingFlight.status
     );
     if (isRequestedPassthrough) {
       // Passthrough statuses are always assigned verbatim.
@@ -1220,8 +1255,19 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
 
     // Actual times and delay — one call, because either time changes the delay (AUD-021).
-    const sentTimes = { actualDepartureSent: data.actualDepartureLocal !== undefined, scheduledSent: data.departureLocal !== undefined };
-    applyDepartureTimesAndDelay(sentTimes, { incomingActualDep: incomingActualDepUtc, incomingScheduledDep: incomingDepUtc, existing: existingFlight }, updateData);
+    const sentTimes = {
+      actualDepartureSent: data.actualDepartureLocal !== undefined,
+      scheduledSent: data.departureLocal !== undefined,
+    };
+    applyDepartureTimesAndDelay(
+      sentTimes,
+      {
+        incomingActualDep: incomingActualDepUtc,
+        incomingScheduledDep: incomingDepUtc,
+        existing: existingFlight,
+      },
+      updateData
+    );
     if (data.actualArrivalLocal !== undefined) {
       updateData.actualArrival = incomingActualArrUtc;
     }
@@ -1230,8 +1276,8 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     // update (always keep both in sync — same source of truth).
     const depLat = enrichedDeparture?.lat ?? existingFlight.depLat;
     const depLon = enrichedDeparture?.lon ?? existingFlight.depLon;
-    const arrLat = enrichedArrival?.lat  ?? existingFlight.arrLat;
-    const arrLon = enrichedArrival?.lon  ?? existingFlight.arrLon;
+    const arrLat = enrichedArrival?.lat ?? existingFlight.arrLat;
+    const arrLon = enrichedArrival?.lon ?? existingFlight.arrLon;
     updateData.co2Kg = calculateCo2Kg({
       depLat,
       depLon,
@@ -1240,12 +1286,14 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       // `!== undefined`, not `??`: an explicit null means the user CLEARED the
       // seat class, so CO₂ must recompute with the default multiplier — `??`
       // would resurrect the old class for exactly that case.
-      seatClass: toSeatClass(data.seatClass !== undefined ? data.seatClass : existingFlight.seatClass),
+      seatClass: toSeatClass(
+        data.seatClass !== undefined ? data.seatClass : existingFlight.seatClass
+      ),
     });
     updateData.routeDistance = haversineKm(depLat, depLon, arrLat, arrLon);
 
     // Set lastModifiedBy when user updates
-    updateData.lastModifiedBy = 'user';
+    updateData.lastModifiedBy = "user";
 
     // Recalculate smart API check schedule when departure time or status changes
     if (
@@ -1254,12 +1302,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       data.status ||
       data.flightNumber
     ) {
-      const effectiveDep = data.departureLocal !== undefined
-        ? incomingDepUtc
-        : existingFlight.departureTime;
-      const effectiveArr = data.arrivalLocal !== undefined
-        ? incomingArrUtc
-        : existingFlight.arrivalTime;
+      const effectiveDep =
+        data.departureLocal !== undefined ? incomingDepUtc : existingFlight.departureTime;
+      const effectiveArr =
+        data.arrivalLocal !== undefined ? incomingArrUtc : existingFlight.arrivalTime;
       // updateData.status already carries the derived value from the block
       // above (or is absent when the passthrough-preserved branch fired, in
       // which case existingFlight.status is still accurate).
@@ -1269,7 +1315,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         effectiveDep,
         effectiveArr,
         effectiveStatus,
-        effectiveFn,
+        effectiveFn
       );
     }
 
@@ -1292,11 +1338,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       const fxColumns = await fxColumnsFor(
         {
           amount: flightOwnAmount(merged),
-          currency:
-            data.currency !== undefined ? data.currency : existingFlight.currency,
+          currency: data.currency !== undefined ? data.currency : existingFlight.currency,
           date: updateData.departureTime ?? existingFlight.departureTime,
         },
-        await getBaseCurrency(userId),
+        await getBaseCurrency(userId)
       );
       Object.assign(updateData, fxColumns);
     }
@@ -1326,17 +1371,21 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     // derived (spec 2026-07-17-status-from-dates), so a date-only edit can flip
     // a flight to 'flown' with no status field in the payload at all.
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-    if (flight.status === 'flown' && existingFlight.status !== 'flown') {
+    if (flight.status === "flown" && existingFlight.status !== "flown") {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {
-        logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
+        logger.error({
+          type: "achievement_check_failed",
+          userId,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
       }
     }
 
     res.json({
       flight: await withAirportFacts(flight),
-      newAchievements: newAchievements.length > 0 ? newAchievements : undefined
+      newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
     });
   } catch (error) {
     next(error);
@@ -1344,7 +1393,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 });
 
 // Delete flight
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -1355,7 +1404,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     });
 
     if (!existingFlight) {
-      throw new AppError('Flight not found', 404);
+      throw new AppError("Flight not found", 404);
     }
 
     await prisma.flight.delete({
@@ -1369,70 +1418,80 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Enrich a specific flight historically
-router.post('/:id/enrich-historical', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const { id } = req.params;
+router.post(
+  "/:id/enrich-historical",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const { id } = req.params;
 
-    // Check if flight exists and belongs to user
-    const flight = await prisma.flight.findFirst({
-      where: { id, userId },
-    });
-
-    if (!flight) {
-      throw new AppError('Flight not found', 404);
-    }
-
-    // Get user settings
-    const settings = await getUserEnrichmentSettings(userId);
-    if (!settings || !settings.enabled) {
-      throw new AppError('Historical enrichment is disabled. Enable it in settings.', 400);
-    }
-
-    if (!flight.flightNumber) {
-      throw new AppError('Flight number is required for historical enrichment', 400);
-    }
-
-    // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
-    const aggregatedData = await aggregateFlightData(flight.flightNumber, flight.id, 5, 'full', userId);
-
-    if (!aggregatedData) {
-      return res.status(404).json({
-        error: 'No reference flights found',
-        message: 'Could not find enough live-tracked flights with the same flight number to enrich this flight.',
+      // Check if flight exists and belongs to user
+      const flight = await prisma.flight.findFirst({
+        where: { id, userId },
       });
-    }
 
-    // Check confidence threshold
-    if (aggregatedData.confidence < settings.minConfidence) {
-      return res.status(400).json({
-        error: 'Confidence too low',
-        message: `Confidence (${aggregatedData.confidence}%) is below your minimum threshold (${settings.minConfidence}%).`,
+      if (!flight) {
+        throw new AppError("Flight not found", 404);
+      }
+
+      // Get user settings
+      const settings = await getUserEnrichmentSettings(userId);
+      if (!settings || !settings.enabled) {
+        throw new AppError("Historical enrichment is disabled. Enable it in settings.", 400);
+      }
+
+      if (!flight.flightNumber) {
+        throw new AppError("Flight number is required for historical enrichment", 400);
+      }
+
+      // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
+      const aggregatedData = await aggregateFlightData(
+        flight.flightNumber,
+        flight.id,
+        5,
+        "full",
+        userId
+      );
+
+      if (!aggregatedData) {
+        return res.status(404).json({
+          error: "No reference flights found",
+          message:
+            "Could not find enough live-tracked flights with the same flight number to enrich this flight.",
+        });
+      }
+
+      // Check confidence threshold
+      if (aggregatedData.confidence < settings.minConfidence) {
+        return res.status(400).json({
+          error: "Confidence too low",
+          message: `Confidence (${aggregatedData.confidence}%) is below your minimum threshold (${settings.minConfidence}%).`,
+          confidence: aggregatedData.confidence,
+          minConfidence: settings.minConfidence,
+        });
+      }
+
+      // Create pending update
+      const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData, userId);
+
+      if (!pendingUpdateId) {
+        throw new AppError("Failed to create historical enrichment", 500);
+      }
+
+      res.json({
+        pendingUpdateId,
         confidence: aggregatedData.confidence,
-        minConfidence: settings.minConfidence,
+        sourceFlightsCount: aggregatedData.sourceFlightsCount,
+        anomalies: aggregatedData.anomalies,
       });
+    } catch (error) {
+      next(error);
     }
-
-    // Create pending update
-    const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData, userId);
-
-    if (!pendingUpdateId) {
-      throw new AppError('Failed to create historical enrichment', 500);
-    }
-
-    res.json({
-      pendingUpdateId,
-      confidence: aggregatedData.confidence,
-      sourceFlightsCount: aggregatedData.sourceFlightsCount,
-      anomalies: aggregatedData.anomalies,
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 // Get route estimation for a flight
-router.get('/:id/route-estimation', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/:id/route-estimation", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -1443,7 +1502,7 @@ router.get('/:id/route-estimation', async (req: AuthRequest, res: Response, next
     });
 
     if (!flight) {
-      throw new AppError('Flight not found', 404);
+      throw new AppError("Flight not found", 404);
     }
 
     // If flight already has a route, return it
@@ -1464,7 +1523,7 @@ router.get('/:id/route-estimation', async (req: AuthRequest, res: Response, next
       flight.depLon,
       flight.arrLat,
       flight.arrLon,
-      flight.flightNumber || '',
+      flight.flightNumber || "",
       flight.departureTime ?? new Date()
     );
 

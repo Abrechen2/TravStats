@@ -38,7 +38,7 @@ describe("the passport carries the number the old rule would give", () => {
       countries,
       [],
       new Date("2024-06-01T00:00:00Z"),
-      [{ country: "Italy", at: new Date("2023-07-04T00:00:00Z") }],
+      [{ country: "Italy", at: new Date("2023-07-04T00:00:00Z") }]
     );
     expect(passport.summary.countries).toBe(2);
     expect(passport.summary.legacyCountries).toBe(1);
@@ -62,7 +62,7 @@ describe("the passport carries the number the old rule would give", () => {
       [],
       [],
       [],
-      "visited",
+      "visited"
     );
     const us = passport.countries.find((c) => c.code === "US");
     expect(us).toBeDefined();

@@ -56,7 +56,7 @@ export function expectedLegCount(cruise: ExpectedLegInput): number {
   const sequence = buildEffectivePortSequence(
     cruise.departurePortId !== null ? { id: cruise.departurePortId } : null,
     portCalls,
-    cruise.arrivalPortId !== null ? { id: cruise.arrivalPortId } : null,
+    cruise.arrivalPortId !== null ? { id: cruise.arrivalPortId } : null
   );
   return Math.max(0, sequence.length - 1);
 }
@@ -115,7 +115,7 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
       stats.failed += 1;
       console.error(
         `[backfill] cruise ${cruise.id} failed:`,
-        err instanceof Error ? err.message : err,
+        err instanceof Error ? err.message : err
       );
     }
   }
@@ -125,7 +125,9 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
 
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");
-  console.log(`[backfill] mode=${apply ? "APPLY" : "dry-run"} orchestrator=${ORCHESTRATOR_VERSION}`);
+  console.log(
+    `[backfill] mode=${apply ? "APPLY" : "dry-run"} orchestrator=${ORCHESTRATOR_VERSION}`
+  );
   const stats = await backfill(apply);
   console.log("[backfill] result:", stats);
   await prisma.$disconnect();

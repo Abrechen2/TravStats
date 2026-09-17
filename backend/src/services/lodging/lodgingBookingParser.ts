@@ -129,7 +129,7 @@ function getText(url: string): Promise<string> {
  * (tests) must never be overridden by whatever is in the database.
  */
 async function resolveOptions(
-  options?: LodgingBookingParserOptions,
+  options?: LodgingBookingParserOptions
 ): Promise<Required<LodgingBookingParserOptions>> {
   let adminUrl: string | undefined;
   let adminModel: string | undefined;
@@ -174,7 +174,7 @@ const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizeBooking(
   raw: Record<string, unknown>,
-  documentText: string,
+  documentText: string
 ): ParsedLodgingBooking | null {
   const hotelName = asString(raw.hotelName);
   const checkIn = asString(raw.checkIn);
@@ -198,14 +198,14 @@ function normalizeBooking(
           !checkOut ? "checkOut" : null,
         ].filter(Boolean),
       },
-      "[Lodging Parser] Discarded a model answer that was missing a required field",
+      "[Lodging Parser] Discarded a model answer that was missing a required field"
     );
     return null;
   }
   if (!ISO_DAY_RE.test(checkIn) || !ISO_DAY_RE.test(checkOut)) {
     logger.info(
       { operation: "lodging_candidate_discarded", checkIn, checkOut },
-      "[Lodging Parser] Discarded a model answer whose dates were not ISO days",
+      "[Lodging Parser] Discarded a model answer whose dates were not ISO days"
     );
     return null;
   }
@@ -215,8 +215,8 @@ function normalizeBooking(
     0,
     Math.round(
       (Date.parse(`${checkOut}T00:00:00.000Z`) - Date.parse(`${checkIn}T00:00:00.000Z`)) /
-        (24 * 60 * 60 * 1000),
-    ),
+        (24 * 60 * 60 * 1000)
+    )
   );
   // The model copies the city "as printed", and confirmations print the
   // postcode in front of it (forgejo#85). Take the code off; keep it as the
@@ -261,7 +261,7 @@ function normalizeBooking(
   if (reconciled.source === "document" && modelPrice !== null) {
     logger.info(
       { operation: "lodging_total_from_document" },
-      "[Lodging Parser] The document's labelled total overruled the model's figure",
+      "[Lodging Parser] The document's labelled total overruled the model's figure"
     );
   }
 
@@ -334,7 +334,7 @@ const LODGING_SNIPPET_MAX_CHARS = 12_000;
 async function parseWithOllama(
   text: string,
   url: string,
-  model: string,
+  model: string
 ): Promise<ParsedLodgingBooking[]> {
   // Same window as the flight parser, and — like it since 2.5.2 — a truncation
   // is LOGGED. The lodging side cut silently, so a confirmation whose booking
@@ -344,7 +344,7 @@ async function parseWithOllama(
   if (text.length > LODGING_SNIPPET_MAX_CHARS) {
     logger.warn(
       { totalChars: text.length, keptChars: LODGING_SNIPPET_MAX_CHARS },
-      "[Lodging Parser] Document truncated before the model saw it",
+      "[Lodging Parser] Document truncated before the model saw it"
     );
   }
   const body = JSON.stringify({
@@ -383,9 +383,9 @@ async function parseWithOllama(
         documentSectionFor(
           snippet,
           names[i],
-          names.filter((n, j): n is string => j !== i && n !== null),
-        ),
-      ),
+          names.filter((n, j): n is string => j !== i && n !== null)
+        )
+      )
     )
     .filter((b): b is ParsedLodgingBooking => b !== null);
 }
@@ -408,7 +408,7 @@ function firstLineAsSubject(text: string): string | undefined {
  */
 export async function parseLodgingBookingText(
   text: string,
-  options?: LodgingBookingParserOptions,
+  options?: LodgingBookingParserOptions
 ): Promise<LodgingParseResult> {
   const templateHit = isBookingComConfirmation(undefined, text)
     ? parseBookingComEmail(firstLineAsSubject(text), text)
@@ -416,7 +416,7 @@ export async function parseLodgingBookingText(
   if (templateHit) {
     logger.info(
       { template: templateHit.parserTemplate, confidence: templateHit.parserConfidence },
-      "[Lodging Parser] Template match",
+      "[Lodging Parser] Template match"
     );
     return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
   }
@@ -464,7 +464,7 @@ export async function parseLodgingBookingText(
   } catch (err) {
     logger.warn(
       { err: err instanceof Error ? err.message : String(err), model },
-      "[Lodging Parser] Ollama parse failed — falling back to manual entry",
+      "[Lodging Parser] Ollama parse failed — falling back to manual entry"
     );
     return {
       bookings: [],

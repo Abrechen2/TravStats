@@ -260,9 +260,7 @@ describe("Tour routing provider settings (Phase 3)", () => {
         .set("Cookie", regularCookie);
       expect(getRes.status).toBe(200);
       expect(JSON.stringify(getRes.body)).not.toContain("super-secret-plaintext-user-ors");
-      expect(getRes.body.openrouteservice).toEqual(
-        expect.objectContaining({ hasKey: true })
-      );
+      expect(getRes.body.openrouteservice).toEqual(expect.objectContaining({ hasKey: true }));
     });
   });
 
@@ -276,7 +274,9 @@ describe("Tour routing provider settings (Phase 3)", () => {
       expect(putRes.body.apiKeys.graphhopper.hasKey).toBe(true);
       expect(putRes.body.apiKeys.graphhopper.isShared).toBe(false);
 
-      const row = await prisma.userSettings.findUniqueOrThrow({ where: { userId: regularUser.id } });
+      const row = await prisma.userSettings.findUniqueOrThrow({
+        where: { userId: regularUser.id },
+      });
       expect(decryptApiKey(row.graphhopperApiKey)).toBe("a-real-user-gh-key");
 
       const getRes = await request(app)

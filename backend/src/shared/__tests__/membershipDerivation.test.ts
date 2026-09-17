@@ -1,7 +1,4 @@
-import {
-  deriveStayMembership,
-  type MembershipCoverage,
-} from "../membershipDerivation";
+import { deriveStayMembership, type MembershipCoverage } from "../membershipDerivation";
 
 const chainCard: MembershipCoverage = {
   id: "m-chain",
@@ -52,7 +49,7 @@ describe("deriveStayMembership", () => {
         ...base,
         lodgingChainId: 7,
         overrideId: "m-hotel",
-      }),
+      })
     ).toEqual({ membershipId: "m-hotel", source: "override" });
   });
 
@@ -63,7 +60,7 @@ describe("deriveStayMembership", () => {
         lodgingChainId: 7,
         overrideId: "m-hotel",
         optOut: true,
-      }),
+      })
     ).toEqual({ membershipId: null, source: "none" });
   });
 
@@ -80,7 +77,7 @@ describe("deriveStayMembership", () => {
         ...base,
         lodgingChainId: 7,
         memberships: [younger, chainCard],
-      }).membershipId,
+      }).membershipId
     ).toBe("m-chain");
   });
 
@@ -104,14 +101,14 @@ describe("deriveStayMembership", () => {
         ...base,
         lodgingChainId: 7,
         memberships: [tiedA, tiedB],
-      }).membershipId,
+      }).membershipId
     ).toBe("m-tied-a");
     expect(
       deriveStayMembership({
         ...base,
         lodgingChainId: 7,
         memberships: [tiedB, tiedA],
-      }).membershipId,
+      }).membershipId
     ).toBe("m-tied-a");
   });
 
@@ -121,7 +118,7 @@ describe("deriveStayMembership", () => {
         ...base,
         lodgingId: "lodging-9",
         lodgingChainId: 99,
-      }),
+      })
     ).toEqual({ membershipId: null, source: "none" });
   });
 
@@ -133,7 +130,7 @@ describe("deriveStayMembership", () => {
         ...base,
         lodgingChainId: 7,
         overrideId: "m-deleted",
-      }).source,
+      }).source
     ).toBe("chain");
   });
 });

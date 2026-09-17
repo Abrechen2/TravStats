@@ -45,7 +45,7 @@ const previewIndexSchema = z.coerce.number().int().min(0).max(63);
 /** 1x1 transparent PNG — painted instead of a broken-image icon on failure. */
 const PLACEHOLDER_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
+  "base64"
 );
 
 function sendPlaceholder(res: Response, status: number): void {
@@ -86,7 +86,7 @@ async function streamAsset(
   client: ReturnType<typeof createImmichClient>,
   assetId: string,
   size: "thumbnail" | "preview" | "original",
-  etag: string,
+  etag: string
 ): Promise<void> {
   const upstream = await client.fetchAssetStream(assetId, size);
 
@@ -163,7 +163,7 @@ router.get(
 
       const client = createImmichClient(conn);
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        client.listAlbumAssets(link.immichAlbumId),
+        client.listAlbumAssets(link.immichAlbumId)
       );
       if (!assets.some((a) => a.id === assetId.data)) {
         throw new AppError("notFound", 404);
@@ -178,7 +178,7 @@ router.get(
       }
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -246,7 +246,7 @@ router.get(
       }
       next(error);
     }
-  },
+  }
 );
 
 export default router;

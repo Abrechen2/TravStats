@@ -17,8 +17,6 @@ import {
   createdApiTokenSchema,
 } from "../../../schemas/apiToken";
 
-
-
 export const errorResponse = registry.register(
   "Error",
   z
@@ -146,8 +144,6 @@ registry.register("ApiTokenScope", apiTokenScopeSchema.openapi("ApiTokenScope"))
 registry.register("CreateApiTokenInput", createApiTokenSchema.openapi("CreateApiTokenInput"));
 registry.register("ApiToken", sanitizedApiTokenSchema.openapi("ApiToken"));
 registry.register("CreatedApiToken", createdApiTokenSchema.openapi("CreatedApiToken"));
-
-
 
 export const errorContent = {
   "application/json": { schema: errorResponse },
