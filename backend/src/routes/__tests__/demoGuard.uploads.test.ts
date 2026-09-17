@@ -49,6 +49,12 @@ describe("upload routes and the shared demo account", () => {
     ["place visit photos", `/api/v1/places/visits/${NIL}/photos`],
     ["lodging photos", `/api/v1/lodging/${NIL}/photos`],
     ["parser training sample", "/api/v1/training/upload"],
+    // Found by an independent review on 2026-09-17 (finding A5): the GPX
+    // upload for a tour route section was the one upload route this list had
+    // missed, and it reaches multer and an XML parser. A track is location
+    // history, which is worse than a photograph to accept from a stranger and
+    // then show to the next one.
+    ["tour route GPX", `/api/v1/trips/${NIL}/routes/${NIL}/tracks`],
   ];
 
   it.each(uploads)("refuses the %s upload for the shared demo account", async (_name, path) => {

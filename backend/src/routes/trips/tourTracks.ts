@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
+import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import { FILE_LIMITS } from "../../config/constants";
 import { TRACK_SOURCES, pullDawarichTrackSchema } from "../../schemas/tour";
@@ -170,11 +171,19 @@ export async function resolveTrack(routeId: string, trackId: string): Promise<Tr
  * or unrelated XML); `ingestTrack` returning `null` means the file parsed
  * fine but has no timestamps, so it cannot be placed in time. One is "wrong
  * or broken file", the other is "valid file we cannot use yet".
+ *
+ * `rejectDemo` sits ABOVE `handleGpxUpload`, which is the whole point of its
+ * position: an independent review on 2026-09-17 (finding A5) found this to be
+ * the one upload route the demo guard had missed, and a refusal below multer
+ * would already have read the body. A track is location history — worse to
+ * accept from one stranger and show to the next than a photograph, which the
+ * other six upload routes already refuse for this account.
  */
 router.post(
   "/trips/:id/routes/:routeId/tracks",
   authenticate,
   requireWriteScope,
+  rejectDemo,
   handleGpxUpload,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
