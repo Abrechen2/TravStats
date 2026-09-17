@@ -9,6 +9,7 @@ import {
 import { prisma } from "../../db";
 import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
+import { isSharedDemoAccount } from "../../utils/sharedDemo";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie } from "../../utils/session";
@@ -260,6 +261,9 @@ router.post("/login/verify", authLimiter, async (req: AuthRequest, res, next) =>
         id: stored.user.id,
         username: stored.user.username,
         isAdmin: stored.user.isAdmin,
+        // Same shape as the password and two-factor login responses: the
+        // client decides from this which controls it may offer.
+        isSharedDemo: isSharedDemoAccount(stored.user),
         firstName: stored.user.firstName,
         lastName: stored.user.lastName,
       },

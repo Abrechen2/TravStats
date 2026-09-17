@@ -3,6 +3,7 @@ import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
+import { isSharedDemoAccount } from "../../utils/sharedDemo";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie, issuePasswordChangeChallenge } from "../../utils/session";
@@ -219,7 +220,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
-        isDemo: user.isDemo,
+        isSharedDemo: isSharedDemoAccount(user),
         firstName: user.firstName,
         lastName: user.lastName,
       },

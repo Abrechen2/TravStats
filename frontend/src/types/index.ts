@@ -6,8 +6,8 @@ export interface User {
   id: string;
   username: string;
   isAdmin: boolean;
-  /** The shared demo account of a public instance — settings that the server refuses are explained, not offered. */
-  isDemo?: boolean;
+  /** The SHARED demo account of a public instance — settings the server refuses are explained, not offered. NOT the raw `isDemo` column, which `seedDemoUser` sets on ordinary accounts too (backend utils/sharedDemo.ts). */
+  isSharedDemo?: boolean;
 }
 
 export interface Airport {

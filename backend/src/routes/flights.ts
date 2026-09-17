@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { rejectDemo } from '../middleware/demoGuard';
+import { rejectDemoQuota } from '../middleware/demoGuard';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
@@ -869,7 +869,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 // dev demo from draining real RapidAPI quota. Hard-capped at
 // `MAX_PER_CALL` flights per request — the frontend re-clicks until the
 // returned `remaining` hits zero.
-router.get('/refresh-historical-bulk/preview', flightCreationLimiter, rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/refresh-historical-bulk/preview', flightCreationLimiter, rejectDemoQuota, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const [remaining, hasProvider] = await Promise.all([
@@ -888,7 +888,7 @@ router.get('/refresh-historical-bulk/preview', flightCreationLimiter, rejectDemo
   }
 });
 
-router.post('/refresh-historical-bulk', flightCreationLimiter, rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/refresh-historical-bulk', flightCreationLimiter, rejectDemoQuota, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     if (!(await hasHistoricalProvider(userId))) {
