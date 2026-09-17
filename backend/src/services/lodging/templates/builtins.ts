@@ -151,4 +151,66 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
     },
     required: ["hotelName", "checkIn", "checkOut"],
   },
+  {
+    id: "lodging:check24",
+    name: "check24",
+    // A German OTA whose confirmation wears Booking.com's stacked layout and
+    // is not one: it says "Buchungsnummer", the label the Booking.com reader
+    // deliberately refuses because that is what a hotel's OWN confirmation
+    // uses. So it gets its own reader rather than a widened one.
+    match: {
+      markers: ["check24"],
+      anchors: ["buchungsinformationen", "buchungsnummer"],
+    },
+    classify: { type: "hotel" },
+    fields: {
+      // Buchungsbestätigung "Novina Sleep Inn Herzogenaurach" (260308233983)
+      hotelName: { patterns: ['Buchungsbestätigung\\s*"([^"]+)"'], transform: "text" },
+      // The value line opens with a zero-width non-joiner the mail inserts to
+      // stop the number being linkified; `\\D*` steps over it without naming it.
+      confirmationNumber: { patterns: ["Buchungsnummer\\s*\\n\\s*\\D*(\\d{6,})"] },
+      // "Anreise" / "Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)" — the
+      // weekday is optional because only some of them carry it.
+      checkIn: {
+        patterns: [
+          "Anreise\\s*\\n\\s*(?:[A-Za-zÄÖÜäöü]+\\.?\\s*)?(\\d{1,2}\\.?\\s*[A-Za-zÄÖÜäöüß]+\\s+\\d{4})",
+        ],
+        transform: "germanDate",
+      },
+      checkOut: {
+        patterns: [
+          "Abreise\\s*\\n\\s*(?:[A-Za-zÄÖÜäöü]+\\.?\\s*)?(\\d{1,2}\\.?\\s*[A-Za-zÄÖÜäöüß]+\\s+\\d{4})",
+        ],
+        transform: "germanDate",
+      },
+      totalPrice: {
+        patterns: ["Buchungspreis\\s*\\n\\s*([\\d.,]+)\\s*[A-Z]{3}"],
+        transform: "money",
+      },
+      currency: {
+        patterns: ["Buchungspreis\\s*\\n\\s*[\\d.,]+\\s*([A-Z]{3})"],
+        transform: "currency",
+      },
+      roomCategory: {
+        patterns: ["Zimmername\\s*\\n\\s*([^\\n]+)", "Zimmerkategorie\\s*\\n\\s*([^\\n]+)"],
+        transform: "text",
+      },
+      guests: { patterns: ["Anzahl der Gäste\\s*\\n\\s*(\\d+)"], transform: "integer" },
+      // "60 Erlanger Straße, 91074 Herzogenaurach, Deutschland <https://maps…>"
+      address: {
+        patterns: ["\\n([^\\n,]+),\\s*\\d{5}\\s+[^,\\n]+,\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],
+        transform: "text",
+      },
+      postcode: { patterns: [",\\s*(\\d{5})\\s+[^,\\n]+,\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"] },
+      city: {
+        patterns: [",\\s*\\d{5}\\s+([^,\\n]+),\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],
+        transform: "text",
+      },
+      country: {
+        patterns: [",\\s*\\d{5}\\s+[^,\\n]+,\\s*([A-Za-zÄÖÜäöüß ]+?)\\s*<"],
+        transform: "text",
+      },
+    },
+    required: ["hotelName", "checkIn", "checkOut"],
+  },
 ]);

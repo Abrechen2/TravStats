@@ -2,6 +2,7 @@ import { isCurrencyCode } from "../../../shared/currencies";
 import { parseAmount } from "../documentTotal";
 import {
   CURRENCY_SYMBOLS,
+  parseGermanDate,
   type LodgingCurrency,
   type ParsedLodgingBooking,
 } from "../bookingComTemplate";
@@ -74,6 +75,11 @@ function applyTransform(
   switch (transform) {
     case "englishDate":
       return parseEnglishDate(text, fallbackYear);
+    // The German reader lives in `bookingComTemplate.ts` and is reused rather
+    // than copied: two month tables that must agree is how the continents
+    // helper's two copies drifted.
+    case "germanDate":
+      return parseGermanDate(text);
     case "money":
       return parseAmount(text);
     case "integer": {

@@ -378,6 +378,48 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(parseBookingComEmail("Buchungsbestätigung Musterhotel", direct)).toBeNull();
   });
 
+  // Measured 2026-09-17 on the owner's corpus: the same sender writes the
+  // date BOTH ways, and the reader demanded the ordinal dot. One missing
+  // character cost the whole mail — `checkIn` came back null and the template
+  // declined a confirmation it understood in every other respect.
+  it("reads a German date written without the ordinal dot", () => {
+    const dotless = stacked
+      .replace("Montag, 5. Januar 2026 (ab 15:00)", "Samstag, 26 November 2022 (15:00 - 00:00)")
+      .replace("Mittwoch, 7. Januar 2026 (bis 11:00)", "Sonntag, 27 November 2022 (bis 13:00)");
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", dotless);
+    expect(r?.checkIn).toBe("2022-11-26");
+    expect(r?.checkOut).toBe("2022-11-27");
+    // Nights are not asserted here: this fixture states them on its own
+    // "Ihre Buchung" line, which the reader prefers over the span — that
+    // preference is pinned elsewhere, and repeating it would hide what this
+    // test is actually about.
+  });
+
+  // A North American address defeats the European rule: the HOUSE NUMBER has
+  // four digits, so "4949 Regent Boulevard" was read as postcode 4949 in the
+  // city "Regent Boulevard". A real Courtyard confirmation imported that way.
+  it("reads the city off a US address, not the street", () => {
+    const us = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "4949 Regent Boulevard, Irving, TX 75063, USA"
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", us);
+    expect(r?.city).toBe("Irving");
+    expect(r?.postcode).toBe("75063");
+    expect(r?.address).toBe("4949 Regent Boulevard");
+    expect(r?.country).toBe("USA");
+  });
+
+  it("reads a Canadian address the same way", () => {
+    const ca = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "123 Front Street West, Toronto, ON M5V 2T6, Kanada"
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", ca);
+    expect(r?.city).toBe("Toronto");
+    expect(r?.postcode).toBe("M5V 2T6");
+  });
+
   it("returns null for text that is not a Booking.com confirmation", () => {
     expect(
       parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")

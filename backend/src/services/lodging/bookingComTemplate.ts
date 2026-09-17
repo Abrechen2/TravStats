@@ -175,9 +175,22 @@ function findValue(lines: string[], label: string): string | null {
 }
 
 /** "Donnerstag, 4. Juni 2026 (ab 14:00)" -> "2026-06-04". */
-function parseGermanDate(value: string | null): string | null {
+/**
+ * "Mittwoch, 26. Juni 2024" — and "Samstag, 26 November 2022", which is the
+ * same sender writing the same field without the ordinal dot.
+ *
+ * The dot was required until 2026-09-17, and one missing character cost the
+ * WHOLE mail: `checkIn` came back null, the template declined, and a
+ * confirmation the reader understood in every other respect fell through to
+ * the LLM — or, with no LLM, to manual entry. Measured on the owner's corpus,
+ * where exactly this shape was one of the two mails nothing could read.
+ *
+ * Widening it is safe because the shape stays tight: a 1-2 digit day, a word
+ * that must be in the month table, and a four-digit year.
+ */
+export function parseGermanDate(value: string | null): string | null {
   if (!value) return null;
-  const m = value.match(/(\d{1,2})\.\s*([A-Za-zÄÖÜäöüß]+)\s+(\d{4})/);
+  const m = value.match(/(\d{1,2})\.?\s*([A-Za-zÄÖÜäöüß]+)\s+(\d{4})/);
   if (!m) return null;
   const month = GERMAN_MONTHS[m[2].toLowerCase()];
   if (!month) return null;
@@ -240,6 +253,25 @@ function parseLage(raw: string | null): AddressParts {
 
   const country = segments.length > 1 ? segments[segments.length - 1] : null;
   const rest = country ? segments.slice(0, -1) : segments;
+
+  // North America first, because its shape defeats the European one below.
+  // "4949 Regent Boulevard, Irving, TX 75063, USA" has a HOUSE NUMBER of four
+  // digits, which the European pattern reads as a postal code and the street
+  // name as the city — measured on a real Courtyard confirmation, which
+  // imported with the city "Regent Boulevard". A state or province code
+  // followed by a ZIP is unambiguous, and the city is the segment before it.
+  const statePostcodeRe = /^([A-Z]{2})\s+(\d{5}(?:-\d{4})?|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/;
+  for (let i = rest.length - 1; i >= 1; i--) {
+    const m = rest[i].match(statePostcodeRe);
+    if (!m) continue;
+    const address = rest.slice(0, i - 1).join(", ");
+    return {
+      address: address.length > 0 ? address : null,
+      postcode: m[2],
+      city: rest[i - 1],
+      country,
+    };
+  }
 
   // NL codes look like "2718 RL"; DE/AT/CH are 4-5 digits.
   const postcodeRe = /^(\d{4,5}(?:\s+[A-Z]{2})?)\s+(.+)$/;

@@ -473,8 +473,14 @@ describe("parseLodgingBookingText", () => {
     }
   });
 
-  describeSamples("real sample: direct hotel booking (LLM fully mocked)", () => {
-    it("does not match the Booking.com template and reaches the mocked LLM fallback", async () => {
+  // This mail used to be the example of "no template can read it, so the LLM
+  // must" — a CHECK24 confirmation, which says "Buchungsnummer" and is
+  // therefore refused by the Booking.com reader on purpose. Since 2026-09-17
+  // it has a reader of its own (`lodging:check24`), and the assertion that
+  // survives is the one that was always the point: the Booking.com reader
+  // still refuses it, and the mail no longer needs a model at all.
+  describeSamples("real sample: a CHECK24 confirmation", () => {
+    it("is refused by the Booking.com reader and read by its own, without the LLM", async () => {
       const file = fs
         .readdirSync(SAMPLE_DIR)
         .find((f) => f.includes("Novina") && f.endsWith(".msg"));
@@ -483,6 +489,8 @@ describe("parseLodgingBookingText", () => {
       const extracted = extractEmailFromFile(buffer, file);
       const text = `${extracted.subject}\n\n${extracted.text}`;
 
+      // A model that would answer with something recognisably wrong, so a
+      // result that came from it could not pass for a template read.
       const server = await createMockOllamaServer((req, res) => {
         if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
         respondJson(res, {
@@ -500,9 +508,11 @@ describe("parseLodgingBookingText", () => {
       });
       try {
         const result = await parseLodgingBookingText(text, { url: server.url, model: "mock" });
-        expect(result.parserUsed).toBe("ollama");
+        expect(result.parserUsed).toBe("template");
         expect(result.bookings).toHaveLength(1);
-        expect(result.bookings[0].hotelName).toBe("Mocked Fallback Hotel");
+        expect(result.bookings[0].parserTemplate).toBe("check24");
+        expect(result.bookings[0].hotelName).toBe("Novina Sleep Inn Herzogenaurach");
+        expect(result.bookings[0].checkIn).toBe("2026-03-10");
       } finally {
         await server.close();
       }

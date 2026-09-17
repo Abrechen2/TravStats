@@ -85,6 +85,8 @@ export interface FieldRule {
 export type TransformName =
   /** "November 25, 2022" and "25 November 2022" and "Nov 01". */
   | "englishDate"
+  /** "10. März 2026", with or without the ordinal dot — the Booking.com reader's own. */
+  | "germanDate"
   /** "1.234,56" / "1,234.56" / "47.87" -> a number. */
   | "money"
   /** A three-letter ISO code or one of the symbols the tables know. */

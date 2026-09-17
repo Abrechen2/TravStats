@@ -157,6 +157,54 @@ describe("the declarative lodging readers", () => {
     });
   });
 
+  // CHECK24 wears Booking.com's stacked layout and is not Booking.com: it
+  // says "Buchungsnummer", the label that reader deliberately refuses. It was
+  // the last mail in the owner's corpus that nothing could read.
+  describe("CHECK24", () => {
+    const mail = [
+      'Buchungsbestätigung "Novina Sleep Inn Herzogenaurach" (260308233983)',
+      "Novina Sleep Inn Herzogenaurach",
+      "60 Erlanger Straße, 91074 Herzogenaurach, Deutschland <https://maps.google.com/?q=x>",
+      "Buchungsinformationen",
+      "Buchungsnummer",
+      "260308233983 (gebucht am Mo. 9. März 2026)",
+      "Anreise",
+      "Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)",
+      "Abreise",
+      "Mi. 11. März 2026 (Check-out bis 11:00 Uhr)",
+      "Anzahl der Gäste",
+      "1 Erwachsener",
+      "Zimmername",
+      "Appartement",
+      "Buchungspreis",
+      "156,60 EUR",
+      "Ihre Buchung wurde über CHECK24 gebucht.",
+    ].join("\n");
+
+    it("reads the stacked German labels, the price and the address", () => {
+      const r = applyLodgingTemplate(byId("lodging:check24"), mail.split("\n")[0], mail);
+      expect(r).not.toBeNull();
+      expect(r?.hotelName).toBe("Novina Sleep Inn Herzogenaurach");
+      expect(r?.checkIn).toBe("2026-03-10");
+      expect(r?.checkOut).toBe("2026-03-11");
+      expect(r?.nights).toBe(1);
+      expect(r?.confirmationNumber).toBe("260308233983");
+      expect(r?.totalPrice).toBeCloseTo(156.6, 2);
+      expect(r?.currency).toBe("EUR");
+      expect(r?.guests).toBe(1);
+      expect(r?.city).toBe("Herzogenaurach");
+      expect(r?.postcode).toBe("91074");
+      expect(r?.country).toBe("Deutschland");
+    });
+
+    it("does not read a Booking.com confirmation, which has its own reader", () => {
+      const bookingCom = mail.replace("CHECK24", "booking.com");
+      expect(
+        applyLodgingTemplate(byId("lodging:check24"), bookingCom.split("\n")[0], bookingCom)
+      ).toBeNull();
+    });
+  });
+
   describe("the shape every reader keeps", () => {
     it("declines when a required field is missing, rather than proposing half a stay", () => {
       // A name and no dates is not a stay, and a proposal costs the user more
