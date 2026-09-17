@@ -76,6 +76,20 @@ describe("the declarative lodging readers", () => {
       expect(r?.chainName).toBe("KOA");
     });
 
+    // Cold review round two: the bound that catches a date read wrongly. A
+    // year of campground nights is not a booking, and a reader that proposes
+    // one has understood nothing — the Hilton path cannot even express this,
+    // because its dates carry no year of their own.
+    it("declines a span longer than a year", () => {
+      const fourYears = mail.replace(
+        "Friday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)",
+        "Friday, November 25, 2022 - Saturday, November 26, 2026 (1 Night)"
+      );
+      expect(
+        applyLodgingTemplate(byId("lodging:koa"), fourYears.split("\n")[0], fourYears)
+      ).toBeNull();
+    });
+
     it("declines a mail that mentions KOA but carries no stay", () => {
       const newsletter = [
         "KOA Reservation Confirmation tips for your next trip",
@@ -126,6 +140,28 @@ describe("the declarative lodging readers", () => {
       );
       expect(r?.checkIn).toBe("2026-12-30");
       expect(r?.checkOut).toBe("2027-01-02");
+      expect(r?.nights).toBe(3);
+    });
+
+    // Cold review round two asked what happens when the subject's year belongs
+    // to the CHECK-OUT rather than the arrival. Measured: Hilton's subject
+    // carries the ARRIVAL date ("Your 01 Oct 2018 Confirmation" for a stay
+    // starting 1 October), so the year-less check-out is the half that moves,
+    // and the repair lands on the right days. Pinned, because the reasoning
+    // rests on that convention — if a sender ever dates its subject by the
+    // departure, this test is where it will show.
+    it("moves the check-out, since the subject dates the arrival", () => {
+      const overNewYear = mail
+        .replace("Your 01 Oct 2018 Confirmation", "Your 30 Dec 2025 Confirmation")
+        .replace("Check In:\t Oct 01 3:00 PM", "Check In:\t Dec 30 3:00 PM")
+        .replace("Check Out:\t Oct 07 12:00 PM", "Check Out:\t Jan 02 12:00 PM");
+      const r = applyLodgingTemplate(
+        byId("lodging:hilton"),
+        "Your 30 Dec 2025 Confirmation #3451920609",
+        overNewYear
+      );
+      expect(r?.checkIn).toBe("2025-12-30");
+      expect(r?.checkOut).toBe("2026-01-02");
       expect(r?.nights).toBe(3);
     });
 
@@ -202,6 +238,49 @@ describe("the declarative lodging readers", () => {
       expect(
         applyLodgingTemplate(byId("lodging:check24"), bookingCom.split("\n")[0], bookingCom)
       ).toBeNull();
+    });
+  });
+
+  // Cold review round two, 2026-09-17. A stacked read has to step over the
+  // blank line CHECK24 puts between label and value — and must not keep
+  // stepping into the NEXT label's value when its own is missing. Both halves
+  // are pinned here, because a regex can satisfy one or the other, never both.
+  describe("a stacked value belongs to its own label", () => {
+    const withLabels = (anreise: string): string =>
+      [
+        'Buchungsbestätigung "Musterhotel" (123456789012)',
+        "CHECK24",
+        "Buchungsinformationen",
+        "Buchungsnummer",
+        "",
+        "123456789012 (gebucht am Mo. 9. März 2026)",
+        "Anreise",
+        anreise,
+        "Abreise",
+        "",
+        "Mi. 11. März 2026 (Check-out bis 11:00 Uhr)",
+      ].join("\n");
+
+    it("crosses a blank line to find its value", () => {
+      const r = applyLodgingTemplate(
+        byId("lodging:check24"),
+        'Buchungsbestätigung "Musterhotel" (123456789012)',
+        withLabels("")
+      );
+      // "Anreise" has nothing under it, so the reader declines rather than
+      // reporting Abreise's date as the arrival.
+      expect(r).toBeNull();
+    });
+
+    it("reads the value that is really there", () => {
+      const r = applyLodgingTemplate(
+        byId("lodging:check24"),
+        'Buchungsbestätigung "Musterhotel" (123456789012)',
+        withLabels("Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)")
+      );
+      expect(r?.checkIn).toBe("2026-03-10");
+      expect(r?.checkOut).toBe("2026-03-11");
+      expect(r?.confirmationNumber).toBe("123456789012");
     });
   });
 

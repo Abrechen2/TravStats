@@ -32,6 +32,14 @@ export interface LodgingTemplate {
    * CONFIRMATION" in the same year.
    */
   match: { markers: string[]; anchors: string[] };
+  /**
+   * Every label this sender puts on a line of its own, used ONLY as a stop
+   * list: a `stacked` read never returns another label as a value. Without it
+   * a field the mail left empty reports the next field's content — a
+   * plausible wrong value, which is worse than the honest gap. The Booking.com
+   * reader keeps the same list for the same reason.
+   */
+  labels?: string[];
   /** Judgement about the place itself, where the sender's identity settles it. */
   classify?: { type?: ParsedLodgingBooking["type"]; chainName?: string };
   /** How to read each field. A field with no rule is simply not read. */
@@ -70,7 +78,27 @@ export type LodgingFieldRules = Partial<
  * a sender that changed its wording keeps one template instead of two.
  */
 export interface FieldRule {
-  patterns: string[];
+  patterns?: string[];
+  /**
+   * The label whose value sits on its own line, below it.
+   *
+   * A regex cannot do this safely. Written as `Anreise\s*\n\s*(…)` it reaches
+   * across blank lines into the NEXT label's value, so a label with nothing
+   * under it silently reports its neighbour's — measured, and exactly the bug
+   * the Booking.com reader carries a stop-list against. Written tightly
+   * (`[ \t]*\r?\n[ \t]*`) it cannot cross the blank line that CHECK24 really
+   * puts between label and value, and reads nothing at all.
+   *
+   * So the engine walks: find the label on a line of its own, step over blank
+   * lines, and take the first line with content — unless that line is another
+   * of this template's `labels`, in which case the field is absent and says so.
+   */
+  stacked?: string;
+  /**
+   * Drop a leading word before transforming — "Di. 10. März 2026" → the date.
+   * Only meaningful with `stacked`.
+   */
+  dropLeadingWord?: boolean;
   /** Regex flags. `i` is the default; `s` where a value spans lines. */
   flags?: string;
   transform?: TransformName;
@@ -93,5 +121,12 @@ export type TransformName =
   | "currency"
   /** Collapse inner whitespace, drop a trailing comma. */
   | "text"
-  /** First integer in the capture. */
-  | "integer";
+  /** First integer in the capture, as a number. */
+  | "integer"
+  /**
+   * The first run of digits, kept as TEXT — a booking reference is an
+   * identifier, not a quantity. "260308233983 (gebucht am Mo. 9. Mrz 2026)"
+   * yields "260308233983", and a leading zero would survive, which `integer`
+   * would eat.
+   */
+  | "digits";

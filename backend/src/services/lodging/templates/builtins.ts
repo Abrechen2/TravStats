@@ -59,7 +59,11 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
       },
       pricePerNight: { patterns: ["\\$\\s*([\\d.,]+)\\s*/\\s*Night"], transform: "money" },
       // "Your Campsite:\nPull Thru, 50/30/20 Amps, Full Hookups"
-      roomCategory: { patterns: ["Your Campsite:\\s*\\n\\s*(.+)"], flags: "i", transform: "text" },
+      roomCategory: {
+        patterns: ["Your Campsite:[ \\t]*\\r?\\n[ \\t]*(.+)"],
+        flags: "i",
+        transform: "text",
+      },
       guests: { patterns: ["(\\d+)\\s+Adults?"], transform: "integer" },
     },
     required: ["hotelName", "checkIn", "checkOut"],
@@ -162,40 +166,42 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
       markers: ["check24"],
       anchors: ["buchungsinformationen", "buchungsnummer"],
     },
+    // The stop list for every stacked read below. A real confirmation puts a
+    // blank line between label and value, so the walk has to step over blank
+    // lines — and this is what stops it stepping into the next field.
+    labels: [
+      "Buchungsnummer",
+      "PIN-Code",
+      "Anreise",
+      "Abreise",
+      "Anzahl der Gäste",
+      "Zimmername",
+      "Zimmerkategorie",
+      "Verpflegung",
+      "Zahlungsart",
+      "Zahlung beim Buchen",
+      "Belastung durch",
+      "Buchungspreis",
+      "Hinweis zu Ihrer Zahlung",
+      "Buchungsinformationen",
+      "Kontakt zur Unterkunft",
+    ],
     classify: { type: "hotel" },
     fields: {
       // Buchungsbestätigung "Novina Sleep Inn Herzogenaurach" (260308233983)
       hotelName: { patterns: ['Buchungsbestätigung\\s*"([^"]+)"'], transform: "text" },
-      // The value line opens with a zero-width non-joiner the mail inserts to
-      // stop the number being linkified; `\\D*` steps over it without naming it.
-      confirmationNumber: { patterns: ["Buchungsnummer\\s*\\n\\s*\\D*(\\d{6,})"] },
-      // "Anreise" / "Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)" — the
-      // weekday is optional because only some of them carry it.
-      checkIn: {
-        patterns: [
-          "Anreise\\s*\\n\\s*(?:[A-Za-zÄÖÜäöü]+\\.?\\s*)?(\\d{1,2}\\.?\\s*[A-Za-zÄÖÜäöüß]+\\s+\\d{4})",
-        ],
-        transform: "germanDate",
-      },
-      checkOut: {
-        patterns: [
-          "Abreise\\s*\\n\\s*(?:[A-Za-zÄÖÜäöü]+\\.?\\s*)?(\\d{1,2}\\.?\\s*[A-Za-zÄÖÜäöüß]+\\s+\\d{4})",
-        ],
-        transform: "germanDate",
-      },
-      totalPrice: {
-        patterns: ["Buchungspreis\\s*\\n\\s*([\\d.,]+)\\s*[A-Z]{3}"],
-        transform: "money",
-      },
-      currency: {
-        patterns: ["Buchungspreis\\s*\\n\\s*[\\d.,]+\\s*([A-Z]{3})"],
-        transform: "currency",
-      },
-      roomCategory: {
-        patterns: ["Zimmername\\s*\\n\\s*([^\\n]+)", "Zimmerkategorie\\s*\\n\\s*([^\\n]+)"],
-        transform: "text",
-      },
-      guests: { patterns: ["Anzahl der Gäste\\s*\\n\\s*(\\d+)"], transform: "integer" },
+      // Every field below is a LABEL, not a pattern: the value sits on its own
+      // line under it, with a blank line in between more often than not, and
+      // the engine's walk is the only safe way across that gap.
+      confirmationNumber: { stacked: "Buchungsnummer", transform: "digits" },
+      // "Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)" — the weekday goes
+      // first, and the German date reader takes the rest.
+      checkIn: { stacked: "Anreise", dropLeadingWord: true, transform: "germanDate" },
+      checkOut: { stacked: "Abreise", dropLeadingWord: true, transform: "germanDate" },
+      totalPrice: { stacked: "Buchungspreis", transform: "money" },
+      currency: { stacked: "Buchungspreis", transform: "currency" },
+      roomCategory: { stacked: "Zimmername", transform: "text" },
+      guests: { stacked: "Anzahl der Gäste", transform: "integer" },
       // "60 Erlanger Straße, 91074 Herzogenaurach, Deutschland <https://maps…>"
       address: {
         patterns: ["\\n([^\\n,]+),\\s*\\d{5}\\s+[^,\\n]+,\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],

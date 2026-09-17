@@ -196,6 +196,13 @@ export function parseGermanDate(value: string | null): string | null {
   if (!month) return null;
   const day = Number(m[1]);
   if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+  const year = Number(m[3]);
+  // A day the calendar does not have. "31 April 2026" passed the range check
+  // above and came back as "2026-04-31", which `Date.parse` then quietly
+  // normalises to the first of May — so a line that is not a date produced a
+  // stay that looked read. The round trip is the only honest check.
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
   return `${m[3]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
@@ -260,15 +267,21 @@ function parseLage(raw: string | null): AddressParts {
   // name as the city — measured on a real Courtyard confirmation, which
   // imported with the city "Regent Boulevard". A state or province code
   // followed by a ZIP is unambiguous, and the city is the segment before it.
+  //
+  // Only the LAST segment before the country counts, which is where that form
+  // always puts it. Scanning for it anywhere would let a European address
+  // whose middle segment happens to read "IT 00186" hand back the segment
+  // before it as the city and drop the real one that follows — two capitals
+  // and five digits is not rare enough to trust out of position.
   const statePostcodeRe = /^([A-Z]{2})\s+(\d{5}(?:-\d{4})?|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/;
-  for (let i = rest.length - 1; i >= 1; i--) {
-    const m = rest[i].match(statePostcodeRe);
-    if (!m) continue;
-    const address = rest.slice(0, i - 1).join(", ");
+  const last = rest.length - 1;
+  const stateMatch = last >= 1 ? rest[last].match(statePostcodeRe) : null;
+  if (stateMatch) {
+    const address = rest.slice(0, last - 1).join(", ");
     return {
       address: address.length > 0 ? address : null,
-      postcode: m[2],
-      city: rest[i - 1],
+      postcode: stateMatch[2],
+      city: rest[last - 1],
       country,
     };
   }

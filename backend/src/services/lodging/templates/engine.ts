@@ -25,6 +25,15 @@ const MONTHS: Record<string, number> = {
 
 const DAY_MS = 86_400_000;
 
+/**
+ * The longest span a lodging confirmation can plausibly describe.
+ *
+ * A year of hotel nights is not a booking; it is a date read wrongly. The
+ * number is deliberately generous — long stays exist — and it exists only to
+ * catch a repair that produced something worse than the problem.
+ */
+const MAX_PLAUSIBLE_NIGHTS = 365;
+
 function iso(year: number, month: number, day: number): string | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -82,13 +91,30 @@ function applyTransform(
       return parseGermanDate(text);
     case "money":
       return parseAmount(text);
+    case "digits": {
+      const digits = /\d+/.exec(text);
+      return digits ? digits[0] : null;
+    }
     case "integer": {
       const digits = /\d+/.exec(text);
       return digits ? Number(digits[0]) : null;
     }
     case "currency": {
-      const token = text.toUpperCase();
-      return CURRENCY_SYMBOLS[text] ?? (isCurrencyCode(token) ? token : null);
+      // The capture is sometimes the code alone ("AED") and sometimes the
+      // whole money line ("156,60 EUR"), because a stacked read takes the
+      // line rather than a group. Try the exact token first, then look inside
+      // — an ISO code validated against the registry, or a symbol from the
+      // shared table. Anything else is no currency, and a price without one
+      // is dropped by the caller.
+      const exact = text.toUpperCase();
+      if (CURRENCY_SYMBOLS[text]) return CURRENCY_SYMBOLS[text];
+      if (isCurrencyCode(exact)) return exact;
+      const code = /\b([A-Z]{3})\b/.exec(text.toUpperCase());
+      if (code && isCurrencyCode(code[1])) return code[1];
+      for (const [symbol, iso] of Object.entries(CURRENCY_SYMBOLS)) {
+        if (text.includes(symbol)) return iso;
+      }
+      return null;
     }
     case "text":
     default:
@@ -96,12 +122,51 @@ function applyTransform(
   }
 }
 
+/**
+ * The value that belongs to a label sitting on a line of its own.
+ *
+ * Walks rather than matches, because neither regex shape is safe: a loose one
+ * (`Anreise\s*\n\s*…`) crosses blank lines into the NEXT label's value, and a
+ * tight one cannot cross the blank line CHECK24 really puts between label and
+ * value. Walking makes the stop explicit — the first line with content, unless
+ * that line is another of this sender's labels, in which case the field is
+ * absent and the reader says so.
+ */
+function readStacked(lines: string[], label: string, labels: string[]): string | null {
+  const norm = (s: string): string => s.trim().toLowerCase().replace(/:$/, "");
+  const wanted = norm(label);
+  const stops = new Set(labels.map(norm));
+  for (let i = 0; i < lines.length; i++) {
+    if (norm(lines[i]) !== wanted) continue;
+    for (let j = i + 1; j < lines.length; j++) {
+      const value = lines[j].trim();
+      if (value.length === 0) continue;
+      return stops.has(norm(value)) ? null : value;
+    }
+    return null;
+  }
+  return null;
+}
+
 function readField(
   haystack: string,
   rule: FieldRule,
-  subjectYear: number | undefined
+  subjectYear: number | undefined,
+  lines: string[],
+  labels: string[]
 ): string | number | null {
-  for (const pattern of rule.patterns) {
+  if (rule.stacked) {
+    const raw = readStacked(lines, rule.stacked, labels);
+    if (raw === null) return null;
+    const value = rule.dropLeadingWord ? raw.replace(/^\S+\s+/, "") : raw;
+    return applyTransform(
+      value,
+      rule.transform,
+      rule.yearFrom === "subjectYear" ? subjectYear : undefined
+    );
+  }
+
+  for (const pattern of rule.patterns ?? []) {
     const match = new RegExp(pattern, rule.flags ?? "i").exec(haystack);
     if (!match) continue;
     // Capture 1 by convention; a rule that needs more builds them into one
@@ -147,11 +212,13 @@ export function applyLodgingTemplate(
   if (!templateMatches(template, haystack)) return null;
 
   const subjectYear = yearFromSubject(subject);
+  const lines = haystack.split("\n").map((l) => l.replace(/\r$/, ""));
+  const labels = template.labels ?? [];
   const read: Partial<Record<keyof LodgingFieldRules, string | number>> = {};
   for (const [field, rule] of Object.entries(template.fields) as Array<
     [keyof LodgingFieldRules, FieldRule]
   >) {
-    const value = readField(haystack, rule, subjectYear);
+    const value = readField(haystack, rule, subjectYear, lines, labels);
     if (value !== null) read[field] = value;
   }
 
@@ -187,6 +254,14 @@ export function applyLodgingTemplate(
   if (Date.parse(checkOut) < Date.parse(checkIn)) return null;
 
   const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY_MS);
+
+  // The repair above turns one wrong year into a plausible-looking stay when
+  // the year it borrowed belonged to the CHECK-OUT: "Your Jan 02 2025
+  // Confirmation" over "Dec 30"/"Jan 02" becomes 2025-12-30 → 2026-01-02, a
+  // 368-night booking that reads like data. Nobody books a hotel for a year,
+  // so a span that long is the misread saying so, and the document falls
+  // through to a reader — or a human — that can do better.
+  if (nights > MAX_PLAUSIBLE_NIGHTS) return null;
 
   const currency = str("currency") as LodgingCurrency | null;
   const totalPrice = num("totalPrice");

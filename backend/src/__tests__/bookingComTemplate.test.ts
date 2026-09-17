@@ -420,6 +420,31 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r?.postcode).toBe("M5V 2T6");
   });
 
+  // Cold review round two: the day range said 1..31, so "31. April 2026"
+  // produced "2026-04-31" — which `Date.parse` quietly normalises to 1 May.
+  // A line that is not a date must not become a stay that looks read.
+  it("refuses a day the calendar does not have", () => {
+    const impossible = stacked.replace(
+      "Montag, 5. Januar 2026 (ab 15:00)",
+      "Montag, 31. April 2026 (ab 15:00)"
+    );
+    expect(parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", impossible)).toBeNull();
+  });
+
+  // The North-American rule only holds for the LAST segment before the
+  // country. Scanning for it anywhere would let a European address whose
+  // middle segment reads "IT 00186" hand back the segment before it as the
+  // city and drop the real one that follows.
+  it("leaves a European address alone when a middle segment looks like a state code", () => {
+    const italian = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "Via Roma 1, Centro Storico, IT 00186, Roma, Italien"
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", italian);
+    expect(r?.city).toBe("Roma");
+    expect(r?.country).toBe("Italien");
+  });
+
   it("returns null for text that is not a Booking.com confirmation", () => {
     expect(
       parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")
