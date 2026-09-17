@@ -65,6 +65,11 @@ stays, lodgings, journal entries, trip stops, trip routes (legs cascade),
 companions and their links — before the rows it already deletes. The user row
 itself stays, as today. Running the seed twice yields the same counts.
 
+`ensureUser` also restores the account itself on every run: password back to
+`demo123`, `mustChangePassword` false, two-factor secrets, recovery codes,
+passkeys and API tokens removed. The guards in section 3 should make that a
+no-op; the reset is the second line if a guard is ever missed.
+
 ### 2.5 Layout
 
 `seedDemoAccount.ts` keeps `main()`, `ensureUser`, flights, cruises and the
@@ -127,9 +132,8 @@ demo user.
    as on 2026-09-17).
 2. Set `PUBLIC_DEMO_LOGIN=true` in the slot's compose environment and the beta
    switch on in `admin_settings`.
-3. Run the seed in the container once; set the `demo` password to `demo123`
-   (the seed does this for a new user; the existing row gets it reset).
-   `admin`, `alex` and `claude` are not touched.
+3. Run the seed in the container once; it resets the existing `demo` row to
+   `demo123` (section 2.4). `admin`, `alex` and `claude` are not touched.
 4. A cron entry on CT134 runs the seed in `preview-beta` nightly at 04:00 UTC and
    logs to `/opt/preview/beta/demo-reset.log`.
 5. Leitstand `expect` for the preview instance follows the deployed tag.
