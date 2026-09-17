@@ -156,4 +156,76 @@ describe("Wave A demo guards", () => {
       expect(res.status).toBe(200);
     });
   });
+
+  /**
+   * A6. `coverImageUrl` accepts any URL and the image is then rendered on the
+   * trip for every later visitor — the same harm the profile picture already
+   * carries, plus one more: the owner of that URL learns the IP of everybody
+   * who opens the trip. The trip's other fields stay editable, because keeping
+   * a journey is what a visitor came to try.
+   */
+  describe("A6 trip cover image URL", () => {
+    let demoTripId: string;
+
+    beforeAll(async () => {
+      const trip = await prisma.trip.create({
+        data: { userId: ids[0], name: "Cover trip", startDate: new Date("2026-02-01") },
+        select: { id: true },
+      });
+      demoTripId = trip.id;
+    });
+
+    afterAll(async () => {
+      await prisma.trip.deleteMany({ where: { userId: ids[0] } });
+      await prisma.trip.deleteMany({ where: { userId: ids[1] } });
+    });
+
+    it("refuses a cover image URL on trip create for the shared demo account", async () => {
+      const res = await request(app)
+        .post("/api/v1/trips")
+        .set("Cookie", demoCookie)
+        .send({ name: "Tracked", coverImageUrl: "https://tracker.example/pixel.png" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+
+    it("refuses a cover image URL on trip update for the shared demo account", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/trips/${demoTripId}`)
+        .set("Cookie", demoCookie)
+        .send({ coverImageUrl: "https://tracker.example/pixel.png" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+
+    it("still lets the shared demo account create and edit a trip otherwise", async () => {
+      const created = await request(app)
+        .post("/api/v1/trips")
+        .set("Cookie", demoCookie)
+        .send({ name: "An ordinary journey" });
+      expect(created.status).toBe(201);
+
+      const edited = await request(app)
+        .patch(`/api/v1/trips/${demoTripId}`)
+        .set("Cookie", demoCookie)
+        .send({ name: "Renamed" });
+      expect(edited.status).toBe(200);
+    });
+
+    it("does not refuse a cover image URL for a normal account", async () => {
+      const created = await request(app)
+        .post("/api/v1/trips")
+        .set("Cookie", userCookie)
+        .send({ name: "Real trip", coverImageUrl: "https://example.com/cover.png" });
+      expect(created.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+      expect(created.status).toBe(201);
+
+      const edited = await request(app)
+        .patch(`/api/v1/trips/${created.body.trip.id}`)
+        .set("Cookie", userCookie)
+        .send({ coverImageUrl: "https://example.com/other.png" });
+      expect(edited.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+      expect(edited.status).toBe(200);
+    });
+  });
 });
