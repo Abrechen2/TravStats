@@ -62,7 +62,7 @@ describe("buildLodgingPreviewRows", () => {
     expect(rows[0].dedupeHint).toBe("lodging_exact_ref");
     expect(rows[0].action).toBe("skip");
     expect(rows[0].matchedLodgingId).toBe(existingId);
-    expect(summary).toEqual({ newRows: 0, alreadyPresent: 1, needsInput: 0 });
+    expect(summary).toEqual({ newRows: 0, alreadyPresent: 1, needsInput: 0, changedRows: 0 });
   });
 
   // forgejo#84 — five pairs on the owner's account became ten houses because
@@ -148,6 +148,75 @@ describe("buildLodgingPreviewRows", () => {
     expect(rows[0].dedupeHint).toBe("stay_exact_ref");
     expect(rows[0].action).toBe("skip");
     expect(summary.alreadyPresent).toBe(1);
+  });
+
+  // forgejo#122 — a CHANGED booking carries the same reference and different
+  // dates. Until 2026-09-17 the proven-identity rule made that a silent skip,
+  // so the stay kept the dates the first mail had and nothing said so.
+  describe("a changed booking under an existing reference", () => {
+    const changed = (stay: Record<string, unknown>): LodgingImportCandidate[] => [
+      {
+        sourceRowIndex: 0,
+        lodging: { name: "NH Ludwigsburg", city: "Ludwigsburg" },
+        lodgingName: "NH Ludwigsburg",
+        stay: {
+          checkIn: "2026-03-30",
+          checkOut: "2026-03-31",
+          externalRef: "booking:5087376273",
+          ...stay,
+        },
+      } as LodgingImportCandidate,
+    ];
+
+    it("offers an update and names what moved", async () => {
+      const { rows, summary } = await buildLodgingPreviewRows(
+        userId,
+        changed({ checkOut: "2026-04-02" })
+      );
+      expect(rows[0].dedupeHint).toBe("stay_exact_ref");
+      expect(rows[0].action).toBe("update");
+      expect(rows[0].changes).toEqual([
+        { field: "checkOut", from: "2026-03-31", to: "2026-04-02" },
+      ]);
+      expect(summary.changedRows).toBe(1);
+      expect(summary.alreadyPresent).toBe(0);
+    });
+
+    it("stays a skip when the mail restates the same values", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, changed({}));
+      expect(rows[0].action).toBe("skip");
+      expect(rows[0].changes).toEqual([]);
+    });
+
+    // The rule `stayPatchMerge.ts` states for a PATCH, applied here: a parsed
+    // mail sets every field it did not find to null. Reading that as "clear
+    // it" would let a sparse confirmation erase a price the user typed in.
+    it("does not read an absent field as a cleared one", async () => {
+      const { rows } = await buildLodgingPreviewRows(
+        userId,
+        changed({ totalPrice: null, currency: null, roomCategory: null })
+      );
+      expect(rows[0].action).toBe("skip");
+      expect(rows[0].changes).toEqual([]);
+    });
+
+    it("offers the price only with its currency, and puts a changed row before a settled one", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        ...changed({ totalPrice: 98.1, currency: "EUR" }),
+        {
+          sourceRowIndex: 1,
+          lodging: { name: "Somewhere Else", city: "Bremen" },
+          stay: null,
+        } as LodgingImportCandidate,
+      ]);
+      // The update sorts ahead of the plain create.
+      expect(rows[0].sourceRowIndex).toBe(0);
+      expect(rows[0].action).toBe("update");
+      // Only the amount: the stored row already says EUR (the column's own
+      // default), so the currency did not move. A "change" from EUR to EUR is
+      // the kind of noise that makes a diff worth ignoring.
+      expect(rows[0].changes.map((c) => c.field)).toEqual(["totalPrice"]);
+    });
   });
 
   it("flags a name+city match for confirmation instead of silently skipping", async () => {
@@ -387,7 +456,7 @@ describe("buildLodgingPreviewRows", () => {
       expect(rows[0].matchedStayId).toBeNull();
       expect(rows[0].dedupeHint).toBe("none");
       expect(rows[0].action).toBe("create");
-      expect(summary).toEqual({ newRows: 1, alreadyPresent: 0, needsInput: 0 });
+      expect(summary).toEqual({ newRows: 1, alreadyPresent: 0, needsInput: 0, changedRows: 0 });
     } finally {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
@@ -419,6 +488,6 @@ describe("buildLodgingPreviewRows", () => {
     ];
     const { rows, summary } = await buildLodgingPreviewRows(userId, candidates);
     expect(rows.map((r) => r.sourceRowIndex)).toEqual([1, 0, 2, 3]);
-    expect(summary).toEqual({ newRows: 2, alreadyPresent: 1, needsInput: 1 });
+    expect(summary).toEqual({ newRows: 2, alreadyPresent: 1, needsInput: 1, changedRows: 0 });
   });
 });

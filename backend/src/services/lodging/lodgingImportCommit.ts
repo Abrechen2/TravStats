@@ -14,7 +14,7 @@ import type {
   LodgingImportSource,
   StayCandidateFields,
 } from "../../schemas/lodgingImport";
-import { normalizeLodgingName } from "./lodgingImportPreview";
+import { normalizeLodgingName, stayChanges } from "./lodgingImportPreview";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { minorUnits } from "../../shared/currencies";
 
@@ -31,10 +31,14 @@ import { minorUnits } from "../../shared/currencies";
  * string is generic.
  */
 export type LodgingImportRowFailureCode =
-  "ownership_mismatch" | "missing_lodging_reference" | "unexpected_error";
+  | "ownership_mismatch"
+  | "missing_lodging_reference"
+  | "missing_stay_reference"
+  | "unexpected_error";
 
 const FAILURE_MESSAGES: Record<LodgingImportRowFailureCode, string> = {
   ownership_mismatch: "This lodging does not belong to your account.",
+  missing_stay_reference: "This row names no stay of yours to update.",
   missing_lodging_reference: "This row has no lodging to create or attach to.",
   unexpected_error: "This row could not be imported due to an unexpected error.",
 };
@@ -44,6 +48,23 @@ class OwnershipMismatchError extends Error {
   constructor() {
     super("matchedLodgingId does not belong to this user");
     this.name = "OwnershipMismatchError";
+  }
+}
+
+/**
+ * Thrown when an `update` row names no stay of this user's.
+ *
+ * `matchedStayId` comes back from the preview the CLIENT controls, and
+ * `LodgingStay` carries its own `userId` with no compound FK — so an id that
+ * exists proves nothing about whose it is. Same reasoning as
+ * `OwnershipMismatchError` one row up; a separate code because "you sent no
+ * stay" and "that stay is not yours" are different answers, and the second
+ * must not hint that the id was real.
+ */
+class MissingStayReferenceError extends Error {
+  constructor() {
+    super("matchedStayId names no stay of this user");
+    this.name = "MissingStayReferenceError";
   }
 }
 
@@ -58,6 +79,7 @@ class MissingLodgingReferenceError extends Error {
 function classifyFailure(err: unknown): LodgingImportRowFailureCode {
   if (err instanceof OwnershipMismatchError) return "ownership_mismatch";
   if (err instanceof MissingLodgingReferenceError) return "missing_lodging_reference";
+  if (err instanceof MissingStayReferenceError) return "missing_stay_reference";
   return "unexpected_error";
 }
 
@@ -65,6 +87,8 @@ export interface CommitResult {
   batchId: string;
   createdLodgings: number;
   createdStays: number;
+  /** Stays already stored that a changed booking moved (forgejo#122). */
+  updatedStays: number;
   skipped: number;
   failed: {
     sourceRowIndex: number;
@@ -183,6 +207,9 @@ async function resolveFxOutcomes(
 ): Promise<Map<string, FxSnapshotOutcome>> {
   const outcomes = new Map<string, FxSnapshotOutcome>();
   for (const row of rows) {
+    // `update` rows need a snapshot too: a changed booking often changes the
+    // price, and the re-snapshot has to use the pre-resolved cache like every
+    // other row rather than opening its own outbound call inside the loop.
     if (row.action === "skip" || !row.stay || row.stay.totalPrice == null) continue;
     // A priced row with no currency has nothing to look up — `applyFxSnapshot`
     // would answer `missingCurrency` anyway, and defaulting to EUR here would
@@ -341,6 +368,105 @@ async function createStay(
   });
 }
 
+/**
+ * Move a stored stay onto the values a CHANGED booking carries.
+ *
+ * Two rules, both of which the preview already states and neither of which
+ * may be taken on the client's word:
+ *
+ *  - The diff is recomputed HERE from the stored row. The client sends the
+ *    action and the fields, not the verdict; trusting a client-sent diff would
+ *    let a caller rewrite any field of its own stay through an import, and
+ *    would silently write whatever the preview happened to say minutes ago.
+ *  - Only the fields `stayChanges` names are written. A parsed mail sets every
+ *    field it did not find to null, so writing the whole row would let a
+ *    sparse confirmation erase a price, a rating or a note the user typed.
+ *
+ * The FX snapshot is re-taken only when the money moved, against the same
+ * pre-resolved cache the create path uses.
+ */
+async function updateStay(
+  userId: string,
+  stayId: string,
+  fields: StayCandidateFields,
+  fxOutcome: FxSnapshotOutcome
+): Promise<boolean> {
+  const stored = await prisma.lodgingStay.findFirst({
+    where: { id: stayId, userId },
+    select: {
+      id: true,
+      lodgingId: true,
+      externalRef: true,
+      checkIn: true,
+      checkOut: true,
+      roomCategory: true,
+      board: true,
+      guests: true,
+      totalPrice: true,
+      pricePerNight: true,
+      currency: true,
+      bookingReference: true,
+    },
+  });
+  if (!stored) throw new MissingStayReferenceError();
+
+  const changes = stayChanges(fields, stored);
+  if (changes.length === 0) return false;
+
+  const data: Prisma.LodgingStayUpdateInput = {};
+  for (const change of changes) {
+    switch (change.field) {
+      case "checkIn":
+        data.checkIn = toDate(fields.checkIn);
+        break;
+      case "checkOut":
+        data.checkOut = toDate(fields.checkOut);
+        break;
+      case "roomCategory":
+        data.roomCategory = fields.roomCategory ?? null;
+        break;
+      case "board":
+        data.board = fields.board ?? null;
+        break;
+      case "guests":
+        data.guests = fields.guests ?? null;
+        break;
+      case "totalPrice":
+        data.totalPrice = fields.totalPrice ?? null;
+        break;
+      case "pricePerNight":
+        data.pricePerNight = fields.pricePerNight ?? null;
+        break;
+      case "currency":
+        data.currency = fields.currency ?? undefined;
+        break;
+      case "bookingReference":
+        data.bookingReference = fields.bookingReference ?? null;
+        break;
+    }
+  }
+
+  // A price that moved carries its snapshot with it. Left alone otherwise, so
+  // a date-only change keeps the rate day the stay was booked against.
+  const moneyMoved = changes.some(
+    (c) => c.field === "totalPrice" || c.field === "pricePerNight" || c.field === "currency"
+  );
+  if (moneyMoved) Object.assign(data, resolveFxFields(fxOutcome));
+
+  await prisma.lodgingStay.update({ where: { id: stored.id }, data });
+  logger.info(
+    {
+      operation: "lodging_import_stay_updated",
+      stayId: stored.id,
+      // The FIELD NAMES, never the values: a stay's dates and price are the
+      // user's data, not diagnostics.
+      fields: changes.map((c) => c.field),
+    },
+    "[Lodging Import] Changed booking moved a stored stay"
+  );
+  return true;
+}
+
 /** A house this run created, with what identifies it beyond its name. */
 interface CreatedHouse {
   id: string;
@@ -414,6 +540,7 @@ export async function commitLodgingImport(
 
   let createdLodgings = 0;
   let createdStays = 0;
+  let updatedStays = 0;
   let skipped = 0;
   const failed: {
     sourceRowIndex: number;
@@ -424,6 +551,35 @@ export async function commitLodgingImport(
   for (const row of inDependencyOrder(rows)) {
     if (row.action === "skip") {
       skipped++;
+      continue;
+    }
+
+    // A changed booking touches ONE stored stay and creates nothing — no
+    // lodging, no batch row, no dependency on any other row of this run.
+    if (row.action === "update") {
+      try {
+        if (!row.stay || !row.matchedStayId) throw new MissingStayReferenceError();
+        const fx =
+          row.stay.totalPrice != null && row.stay.currency
+            ? (fxOutcomes.get(fxOutcomeKey(row.stay.currency, row.stay.checkIn)) ?? {
+                status: "lookupFailed" as const,
+              })
+            : { status: "missingCurrency" as const };
+        const moved = await updateStay(userId, row.matchedStayId, row.stay, fx);
+        if (moved) updatedStays++;
+        else skipped++;
+      } catch (err) {
+        const code = classifyFailure(err);
+        logger.warn(
+          { operation: "lodging_import_row_failed", sourceRowIndex: row.sourceRowIndex, code, err },
+          "[Lodging Import] Row failed"
+        );
+        failed.push({
+          sourceRowIndex: row.sourceRowIndex,
+          code,
+          error: FAILURE_MESSAGES[code],
+        });
+      }
       continue;
     }
 
@@ -559,5 +715,5 @@ export async function commitLodgingImport(
     "Lodging import committed"
   );
 
-  return { batchId: batch.id, createdLodgings, createdStays, skipped, failed };
+  return { batchId: batch.id, createdLodgings, createdStays, updatedStays, skipped, failed };
 }

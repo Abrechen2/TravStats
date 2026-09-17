@@ -164,7 +164,39 @@ export type LodgingDedupeHint =
   | "stay_exact_ref"
   | "stay_same_dates";
 
-export type LodgingImportAction = "create" | "skip" | "needs_input";
+export type LodgingImportAction = "create" | "skip" | "needs_input" | "update";
+
+/**
+ * The stay fields a re-import may carry a NEW value for.
+ *
+ * Deliberately short: these are the fields a booking mail restates when the
+ * booking changes. Ratings, notes and the batch are the user's own work and
+ * an import never overwrites them.
+ */
+export const UPDATABLE_STAY_FIELDS = [
+  "checkIn",
+  "checkOut",
+  "roomCategory",
+  "board",
+  "guests",
+  "totalPrice",
+  "pricePerNight",
+  "currency",
+  "bookingReference",
+] as const;
+export type UpdatableStayField = (typeof UPDATABLE_STAY_FIELDS)[number];
+
+/**
+ * One field a proven-identical stay would change, with both values so the
+ * user can see WHAT moved rather than being told "this differs".
+ *
+ * `from` is the stored value, `to` the incoming one; a date is an ISO day.
+ */
+export interface LodgingStayChange {
+  field: UpdatableStayField;
+  from: string | number | null;
+  to: string | number | null;
+}
 
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
@@ -178,6 +210,14 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
+  /**
+   * Non-empty only on `action: "update"`: what a changed booking would move.
+   *
+   * Until 2026-09-17 a proven `externalRef` hit was always `skip`, which is
+   * right for a re-upload and wrong for the mail that says the dates moved:
+   * the stay kept its old dates and nothing said so (forgejo#122).
+   */
+  changes: LodgingStayChange[];
 }
 
 export interface LodgingImportSummary {
@@ -187,6 +227,8 @@ export interface LodgingImportSummary {
   alreadyPresent: number;
   /** rows the user must resolve */
   needsInput: number;
+  /** rows whose stay is already stored and would change */
+  changedRows: number;
 }
 
 export interface LodgingImportBatchSummary {
@@ -209,8 +251,14 @@ export const lodgingImportPreviewRequestSchema = z.object({
 // a valid *commit* action — the schema for the commit boundary rejects it.
 export const commitRowSchema = z.object({
   sourceRowIndex: z.number().int().nonnegative(),
-  action: z.enum(["create", "skip"]),
+  action: z.enum(["create", "skip", "update"]),
   matchedLodgingId: z.string().uuid().nullable().optional(),
+  /**
+   * The stay an `update` row patches. Client-supplied like
+   * `matchedLodgingId`, so the commit re-checks ownership: `LodgingStay`
+   * carries its own `userId` and a plain id lookup proves only existence.
+   */
+  matchedStayId: z.string().uuid().nullable().optional(),
   lodging: lodgingCandidateFieldsSchema.nullable(),
   // Free-text hotel name for an UNEDITED stays-only row the preview matched
   // by name against another candidate in the SAME payload (`lodging` stays

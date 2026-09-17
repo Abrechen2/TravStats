@@ -9,6 +9,8 @@ import type {
   LodgingImportFlag,
   LodgingImportPreviewRow,
   LodgingImportSummary,
+  LodgingStayChange,
+  StayCandidateFields,
 } from "../../schemas/lodgingImport";
 
 /**
@@ -56,6 +58,18 @@ interface ExistingStay {
   externalRef: string | null;
   /** Nullable since 2.7 — an undated stay is still a stay a re-import could duplicate. */
   checkIn: Date | null;
+  // The rest are read ONLY to answer "would this re-import change anything?"
+  // (forgejo#122). A booking mail that restates the same values is a
+  // re-upload and stays a silent skip; one that restates different ones is
+  // the mail saying the booking moved.
+  checkOut: Date | null;
+  roomCategory: string | null;
+  board: string | null;
+  guests: number | null;
+  totalPrice: number | null;
+  pricePerNight: number | null;
+  currency: string;
+  bookingReference: string | null;
 }
 
 function dayKey(date: Date): string {
@@ -69,6 +83,8 @@ interface RowVerdict {
   matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
+  /** Non-empty only when the action is `update` — see `stayChanges`. */
+  changes: LodgingStayChange[];
 }
 
 interface Indexes {
@@ -82,6 +98,71 @@ interface Indexes {
   chainNames: Set<string>;
   staysByExternalRef: Map<string, ExistingStay>;
   staysByLodging: Map<string, ExistingStay[]>;
+}
+
+/**
+ * What a re-import of a PROVEN-identical stay would change.
+ *
+ * The rule that makes this safe is the one `stayPatchMerge.ts` states for a
+ * PATCH: a value the source does not carry is not a value. A parsed mail sets
+ * every field it did not find to `null`, so treating null as "clear this"
+ * would let a sparse confirmation wipe a price the user typed in. Only a
+ * field the incoming row actually carries can count as changed.
+ *
+ * Dates are compared as calendar days: the stored column is a UTC midnight and
+ * the incoming value an ISO day, so `Date` equality would report a change on
+ * every re-upload.
+ *
+ * Returns [] when nothing moved — which is the ordinary re-upload, and stays a
+ * silent skip.
+ */
+export function stayChanges(
+  incoming: StayCandidateFields,
+  stored: ExistingStay
+): LodgingStayChange[] {
+  const changes: LodgingStayChange[] = [];
+  const day = (d: Date | null): string | null => (d ? dayKey(d) : null);
+
+  const text = (
+    field: Extract<
+      LodgingStayChange["field"],
+      "roomCategory" | "board" | "currency" | "bookingReference"
+    >,
+    to: string | null | undefined,
+    from: string | null
+  ): void => {
+    if (to == null || to === "") return;
+    if (to !== from) changes.push({ field, from, to });
+  };
+  const number = (
+    field: Extract<LodgingStayChange["field"], "guests" | "totalPrice" | "pricePerNight">,
+    to: number | null | undefined,
+    from: number | null
+  ): void => {
+    if (to == null) return;
+    // Money is stored as a float; comparing 451.7 to 451.70000000000005 as a
+    // change would offer an update that changes nothing.
+    if (from == null || Math.abs(to - from) > 0.005) changes.push({ field, from, to });
+  };
+
+  if (incoming.checkIn && incoming.checkIn !== day(stored.checkIn)) {
+    changes.push({ field: "checkIn", from: day(stored.checkIn), to: incoming.checkIn });
+  }
+  if (incoming.checkOut && incoming.checkOut !== day(stored.checkOut)) {
+    changes.push({ field: "checkOut", from: day(stored.checkOut), to: incoming.checkOut });
+  }
+  text("roomCategory", incoming.roomCategory, stored.roomCategory);
+  text("board", incoming.board, stored.board);
+  number("guests", incoming.guests, stored.guests);
+  number("totalPrice", incoming.totalPrice, stored.totalPrice);
+  number("pricePerNight", incoming.pricePerNight, stored.pricePerNight);
+  // A price without its unit states nothing (the same guard the commit
+  // applies), so a currency alone is not a change worth offering.
+  if (incoming.totalPrice != null || incoming.pricePerNight != null) {
+    text("currency", incoming.currency, stored.currency);
+  }
+  text("bookingReference", incoming.bookingReference, stored.bookingReference);
+  return changes;
 }
 
 /**
@@ -102,6 +183,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   let dedupeHint: LodgingDedupeHint = "none";
   let matchedLodgingId: string | null = null;
   let matchedStayId: string | null = null;
+  let changes: LodgingStayChange[] = [];
 
   const lodging = candidate.lodging;
   const joinName = candidate.lodgingName ?? lodging?.name ?? null;
@@ -221,6 +303,10 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
         dedupeHint = "stay_exact_ref";
         matchedStayId = hit.id;
         matchedLodgingId = hit.lodgingId;
+        // ...but "the same booking" is not "the same values". A changed
+        // booking carries the same reference and different dates, and it was
+        // skipped in silence until 2026-09-17 (forgejo#122).
+        changes = stayChanges(stay, hit);
       }
     }
 
@@ -252,7 +338,11 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   ) {
     action = "needs_input";
   } else if (dedupeHint === "stay_exact_ref") {
-    action = "skip";
+    // Proven identity: a re-upload is a skip, a changed booking is an offer.
+    // Never a silent write — the fields are the user's data, and an import
+    // that quietly moved a stay's dates would be indistinguishable from a
+    // parser mistake.
+    action = changes.length > 0 ? "update" : "skip";
   } else if (dedupeHint === "lodging_exact_ref" && !stay) {
     action = "skip";
   } else {
@@ -266,13 +356,24 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     ? (idx.allLodgings.find((l) => l.id === matchedLodgingId)?.name ?? null)
     : null;
 
-  return { flags, dedupeHint, matchedLodgingId, matchedLodgingName, matchedStayId, action };
+  return {
+    flags,
+    dedupeHint,
+    matchedLodgingId,
+    matchedLodgingName,
+    matchedStayId,
+    action,
+    changes,
+  };
 }
 
+// Questionable first, settled last. An `update` sits between: it is a
+// decision to take, but a smaller one than a row that cannot be placed at all.
 const ACTION_RANK: Record<LodgingImportAction, number> = {
   needs_input: 0,
-  create: 1,
-  skip: 2,
+  update: 1,
+  create: 2,
+  skip: 3,
 };
 
 export async function buildLodgingPreviewRows(
@@ -286,7 +387,20 @@ export async function buildLodgingPreviewRows(
     }),
     prisma.lodgingStay.findMany({
       where: { userId },
-      select: { id: true, lodgingId: true, externalRef: true, checkIn: true },
+      select: {
+        id: true,
+        lodgingId: true,
+        externalRef: true,
+        checkIn: true,
+        checkOut: true,
+        roomCategory: true,
+        board: true,
+        guests: true,
+        totalPrice: true,
+        pricePerNight: true,
+        currency: true,
+        bookingReference: true,
+      },
     }),
     prisma.lodgingChain.findMany({ select: { name: true } }),
   ]);
@@ -343,6 +457,7 @@ export async function buildLodgingPreviewRows(
     newRows: sorted.filter((r) => r.action === "create").length,
     alreadyPresent: sorted.filter((r) => r.action === "skip").length,
     needsInput: sorted.filter((r) => r.action === "needs_input").length,
+    changedRows: sorted.filter((r) => r.action === "update").length,
   };
 
   logger.info(

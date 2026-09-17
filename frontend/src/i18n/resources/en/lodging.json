@@ -261,7 +261,8 @@
       "commit": "Commit",
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",
-      "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported."
+      "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported.",
+      "changedLabel": "changed"
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "matchedAs": "Matched to:",
@@ -295,7 +296,8 @@
     "actions": {
       "choose": "— choose —",
       "create": "Create",
-      "skip": "Skip"
+      "skip": "Skip",
+      "update": "Update"
     },
     "flags": {
       "missing_name": "Missing name",
@@ -344,8 +346,10 @@
       "failureCodes": {
         "ownership_mismatch": "belongs to another account",
         "missing_lodging_reference": "missing hotel reference",
-        "unexpected_error": "unexpected error"
-      }
+        "unexpected_error": "unexpected error",
+        "missing_stay_reference": "not a stay of your account"
+      },
+      "updatedSuffix": " {{count}} stored stays updated."
     },
     "batches": {
       "title": "Previous imports",
@@ -381,7 +385,8 @@
       "noRows": "No row in this file carries a name — is it really a saved list from Takeout?",
       "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
     },
-    "createChain": "Create “{{name}}”"
+    "createChain": "Create “{{name}}”",
+    "changedHint": "Changed"
   },
   "stats": {
     "more": "+ {{count}} more",

@@ -45,6 +45,77 @@ const rows: LodgingImportPreviewRow[] = [
 
 const summary: LodgingImportSummary = { newRows: 1, alreadyPresent: 1, needsInput: 1 };
 
+// forgejo#122 — a changed booking: the same reference, moved dates. The row
+// arrives as `update`, and what moves has to be visible before the user
+// commits to it.
+describe("LodgingImportPreviewModal — a changed booking", () => {
+  const changedRow: LodgingImportPreviewRow = {
+    sourceRowIndex: 0,
+    lodging: { name: "City Premiere", city: "Dubai" },
+    stay: { checkIn: "2026-04-02", checkOut: "2026-04-09" },
+    flags: [],
+    dedupeHint: "stay_exact_ref",
+    matchedLodgingId: "lodging-1",
+    matchedLodgingName: "City Premiere",
+    matchedStayId: "stay-1",
+    action: "update",
+    changes: [{ field: "checkOut", from: "2026-04-07", to: "2026-04-09" }],
+  };
+
+  it("names the field that moved, with both values", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={[changedRow]}
+        summary={{ newRows: 0, alreadyPresent: 0, needsInput: 0, changedRows: 1 }}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    const badge = screen.getByTestId("lodging-import-changes-0");
+    expect(badge.textContent).toContain("checkOut");
+    expect(badge.textContent).toContain("2026-04-07");
+    expect(badge.textContent).toContain("2026-04-09");
+  });
+
+  it("commits it as an update and carries the stay it patches", async () => {
+    const onCommit = vi.fn();
+    render(
+      <LodgingImportPreviewModal
+        rows={[changedRow]}
+        summary={{ newRows: 0, alreadyPresent: 0, needsInput: 0, changedRows: 1 }}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+    await waitFor(() => expect(onCommit).toHaveBeenCalled());
+    const payload = onCommit.mock.calls[0][0];
+    expect(payload).toHaveLength(1);
+    expect(payload[0].action).toBe("update");
+    expect(payload[0].matchedStayId).toBe("stay-1");
+  });
+
+  it("lets the user decline it, and then sends no stay id", async () => {
+    const onCommit = vi.fn();
+    render(
+      <LodgingImportPreviewModal
+        rows={[changedRow]}
+        summary={{ newRows: 0, alreadyPresent: 0, needsInput: 0, changedRows: 1 }}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByTestId("lodging-import-action-0"), {
+      target: { value: "skip" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+    await waitFor(() => expect(onCommit).toHaveBeenCalled());
+    const payload = onCommit.mock.calls[0][0];
+    expect(payload[0].action).toBe("skip");
+    expect(payload[0].matchedStayId).toBeNull();
+  });
+});
+
 describe("LodgingImportPreviewModal", () => {
   it("shows the three counts and keeps the questionable row first", () => {
     render(

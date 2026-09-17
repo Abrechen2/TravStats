@@ -748,6 +748,141 @@ describe("commitLodgingImport", () => {
     }
   });
 
+  // forgejo#122 — a CHANGED booking. Same reference, moved dates: the import
+  // used to skip it in silence and the stay kept the first mail's dates.
+  describe("a changed booking moves the stored stay", () => {
+    async function storedStay(ref: string): Promise<{ lodgingId: string; stayId: string }> {
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: `Hotel Changed ${ref}`, city: "Lissabon" },
+      });
+      const stay = await prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: lodging.id,
+          checkIn: new Date("2026-04-02T00:00:00.000Z"),
+          checkOut: new Date("2026-04-07T00:00:00.000Z"),
+          externalRef: `booking:${ref}`,
+          bookingReference: ref,
+          totalPrice: 640,
+          currency: "EUR",
+          roomCategory: "Deluxe",
+          notes: "typed by the user",
+          ratingOverall: 4,
+        },
+      });
+      return { lodgingId: lodging.id, stayId: stay.id };
+    }
+
+    it("writes only the fields that moved and leaves the user's own work alone", async () => {
+      const { lodgingId, stayId } = await storedStay("changed-1");
+      try {
+        const rows: CommitRowInput[] = [
+          {
+            sourceRowIndex: 0,
+            action: "update",
+            matchedLodgingId: lodgingId,
+            matchedStayId: stayId,
+            lodging: null,
+            stay: {
+              checkIn: "2026-04-02",
+              checkOut: "2026-04-09",
+              externalRef: "booking:changed-1",
+              // Not restated by the mail — must not clear the stored values.
+              roomCategory: null,
+              totalPrice: null,
+            },
+          },
+        ];
+        const result = await commitLodgingImport(userId, "email", null, rows);
+        expect(result.updatedStays).toBe(1);
+        expect(result.createdStays).toBe(0);
+        expect(result.failed).toEqual([]);
+
+        const after = await prisma.lodgingStay.findUnique({ where: { id: stayId } });
+        expect(after?.checkOut?.toISOString().slice(0, 10)).toBe("2026-04-09");
+        expect(after?.checkIn?.toISOString().slice(0, 10)).toBe("2026-04-02");
+        expect(after?.roomCategory).toBe("Deluxe");
+        expect(after?.totalPrice).toBe(640);
+        expect(after?.notes).toBe("typed by the user");
+        expect(after?.ratingOverall).toBe(4);
+      } finally {
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+      }
+    });
+
+    it("counts a row that turns out to change nothing as skipped, and writes nothing", async () => {
+      const { lodgingId, stayId } = await storedStay("changed-2");
+      try {
+        const rows: CommitRowInput[] = [
+          {
+            sourceRowIndex: 0,
+            action: "update",
+            matchedLodgingId: lodgingId,
+            matchedStayId: stayId,
+            lodging: null,
+            stay: {
+              checkIn: "2026-04-02",
+              checkOut: "2026-04-07",
+              externalRef: "booking:changed-2",
+            },
+          },
+        ];
+        const before = await prisma.lodgingStay.findUnique({ where: { id: stayId } });
+        const result = await commitLodgingImport(userId, "email", null, rows);
+        expect(result.updatedStays).toBe(0);
+        expect(result.skipped).toBe(1);
+        const after = await prisma.lodgingStay.findUnique({ where: { id: stayId } });
+        expect(after?.updatedAt.getTime()).toBe(before?.updatedAt.getTime());
+      } finally {
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+      }
+    });
+
+    // `matchedStayId` comes back from the preview the CLIENT controls, and a
+    // stay id that exists proves nothing about whose it is.
+    it("refuses to touch another account's stay", async () => {
+      const other = await prisma.user.create({
+        data: { username: `lodging-commit-other-${Date.now()}`, passwordHash: "x" },
+      });
+      const otherLodging = await prisma.lodging.create({
+        data: { userId: other.id, name: "Someone Else's Hotel", city: "Porto" },
+      });
+      const otherStay = await prisma.lodgingStay.create({
+        data: {
+          userId: other.id,
+          lodgingId: otherLodging.id,
+          checkIn: new Date("2026-05-01T00:00:00.000Z"),
+          checkOut: new Date("2026-05-03T00:00:00.000Z"),
+          externalRef: "booking:not-yours",
+        },
+      });
+      try {
+        const rows: CommitRowInput[] = [
+          {
+            sourceRowIndex: 0,
+            action: "update",
+            matchedStayId: otherStay.id,
+            lodging: null,
+            stay: {
+              checkIn: "2026-05-01",
+              checkOut: "2026-05-30",
+              externalRef: "booking:not-yours",
+            },
+          },
+        ];
+        const result = await commitLodgingImport(userId, "email", null, rows);
+        expect(result.updatedStays).toBe(0);
+        expect(result.failed).toHaveLength(1);
+        expect(result.failed[0].code).toBe("missing_stay_reference");
+
+        const after = await prisma.lodgingStay.findUnique({ where: { id: otherStay.id } });
+        expect(after?.checkOut?.toISOString().slice(0, 10)).toBe("2026-05-03");
+      } finally {
+        await prisma.user.delete({ where: { id: other.id } });
+      }
+    });
+  });
+
   it("keeps ownership failures on their own stable code, distinct from unexpected errors", async () => {
     const rows: CommitRowInput[] = [
       {

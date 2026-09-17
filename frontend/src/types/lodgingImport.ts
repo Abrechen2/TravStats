@@ -90,7 +90,26 @@ export type LodgingDedupeHint =
   | "stay_exact_ref"
   | "stay_same_dates";
 
-export type LodgingImportAction = "create" | "skip" | "needs_input";
+export type LodgingImportAction = "create" | "skip" | "needs_input" | "update";
+
+/** The stay fields a re-import may carry a new value for (forgejo#122). */
+export type UpdatableStayField =
+  | "checkIn"
+  | "checkOut"
+  | "roomCategory"
+  | "board"
+  | "guests"
+  | "totalPrice"
+  | "pricePerNight"
+  | "currency"
+  | "bookingReference";
+
+/** One field a changed booking would move: the stored value and the new one. */
+export interface LodgingStayChange {
+  field: UpdatableStayField;
+  from: string | number | null;
+  to: string | number | null;
+}
 
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
@@ -100,6 +119,9 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
+  /** Non-empty only on `action: "update"` — what a changed booking would move.
+   *  Absent on a backend older than 2.7 (forgejo#122). */
+  changes?: LodgingStayChange[];
 }
 
 export interface LodgingImportSummary {
@@ -109,6 +131,9 @@ export interface LodgingImportSummary {
   alreadyPresent: number;
   /** rows the user must resolve */
   needsInput: number;
+  /** rows whose stay is already stored and would change. Absent on a backend
+   *  older than 2.7. */
+  changedRows?: number;
 }
 
 // `needs_input` is deliberately NOT accepted on a commit row: the preview
@@ -116,8 +141,10 @@ export interface LodgingImportSummary {
 // see lodgingImportCommitRequestSchema's commitRowSchema on the backend.
 export interface LodgingImportCommitRow {
   sourceRowIndex: number;
-  action: "create" | "skip";
+  action: "create" | "skip" | "update";
   matchedLodgingId?: string | null;
+  /** The stay an `update` row patches. The server re-checks that it is yours. */
+  matchedStayId?: string | null;
   lodging: LodgingCandidateFields | null;
   /** Free-text hotel name used to join a stays-only row against a lodging
    *  ANOTHER row in this same commit payload creates (see
@@ -133,12 +160,17 @@ export interface LodgingImportCommitRow {
  * a raw exception message — branch UI behaviour on `code`, not on `error`.
  */
 export type LodgingImportRowFailureCode =
-  "ownership_mismatch" | "missing_lodging_reference" | "unexpected_error";
+  | "ownership_mismatch"
+  | "missing_lodging_reference"
+  | "missing_stay_reference"
+  | "unexpected_error";
 
 export interface LodgingImportCommitResult {
   batchId: string;
   createdLodgings: number;
   createdStays: number;
+  /** Stored stays a changed booking moved. Absent on a backend older than 2.7. */
+  updatedStays?: number;
   skipped: number;
   failed: {
     sourceRowIndex: number;
