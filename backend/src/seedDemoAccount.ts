@@ -16,8 +16,12 @@
  *   - Prices, taxes, fees, delays, CO₂, actual-times, parser-template metadata
  *   - 22 cruises across every cruise line in seed data + varied regions
  *   - Cruise stops incl. sea days, renumbered consecutively per cruise
- *   - Trips + bookings linking flights + cruises
- *   - Both domains enabled on user settings
+ *   - Bulk trips + bookings linking flights + cruises
+ *   - A handful of narrated trips (seedStories) — coherent flights, lodging
+ *     stays, places, a tour route and a journal per trip
+ *   - Bulk lodging stays + places outside the narrated trips, plus place lists
+ *     (seedBulk)
+ *   - Flight, cruise, lodging and places domains enabled on user settings
  *   - Achievements recomputed at the end
  */
 
@@ -28,6 +32,8 @@ import { hashPassword } from "./utils/password";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "./services/companionService";
+import { seedStories } from "./seedDemo/seedStories";
+import { seedBulk } from "./seedDemo/seedBulk";
 
 export type AirportRow = {
   id: number;
@@ -526,7 +532,7 @@ async function ensureUserSettings(userId: string): Promise<void> {
   await prisma.userSettings.upsert({
     where: { userId },
     update: {
-      enabledDomains: ["flight", "cruise"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi"],
       data: {
         unitsSystem: "metric",
         defaultCategory: "vacation",
@@ -536,7 +542,7 @@ async function ensureUserSettings(userId: string): Promise<void> {
     },
     create: {
       userId,
-      enabledDomains: ["flight", "cruise"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi"],
       data: {
         unitsSystem: "metric",
         defaultCategory: "vacation",
@@ -951,13 +957,17 @@ async function seedTripsAndBookings(userId: string): Promise<void> {
     select: { id: true, startDate: true },
   });
 
+  // "Tokio Kurztrip" and "Adria-Kreuzfahrt" — NOT "Japan 2022" / "Mittelmeer-
+  // Kreuzfahrt" — because those names are already narrated trips in
+  // seedDemo/stories.ts ("Japan – Tokio bis Kyoto", "Mittelmeer-Kreuzfahrt");
+  // a duplicate name here would look like the same trip seeded twice.
   const tripDefs = [
     { name: "USA Roadtrip", color: "#38bdf8", tagCount: 6 },
-    { name: "Japan 2022", color: "#f472b6", tagCount: 4 },
+    { name: "Tokio Kurztrip", color: "#f472b6", tagCount: 4 },
     { name: "Südostasien Rundreise", color: "#fb923c", tagCount: 8 },
     { name: "Skandinavien im Sommer", color: "#818cf8", tagCount: 5 },
     { name: "Wochenende Barcelona", color: "#34d399", tagCount: 2 },
-    { name: "Mittelmeer-Kreuzfahrt", color: "#fbbf24", tagCount: 0 },
+    { name: "Adria-Kreuzfahrt", color: "#fbbf24", tagCount: 0 },
     { name: "Karibik-Auszeit", color: "#fb7185", tagCount: 0 },
     { name: "Alaska Expedition", color: "#60a5fa", tagCount: 0 },
   ];
@@ -1004,17 +1014,18 @@ async function seedTripsAndBookings(userId: string): Promise<void> {
   console.log(`   → created ${tripDefs.length} trips`);
 }
 
-async function main(): Promise<void> {
-  console.log("🌱 Seeding demo account (demo / demo123) ...");
+/**
+ * Runs the full standard demo seed and returns the userId plus final row
+ * counts per domain. Idempotent: a second call wipes and re-creates
+ * everything, landing on exactly the same counts (see
+ * `seedDemo.full.test.ts`) — every seeder here is deterministic in row
+ * COUNT (only attributes use `Math.random`), except `seedTripsAndBookings`'s
+ * optional per-trip `Booking`, which is not part of the counts returned here.
+ */
+export async function runDemoSeed(): Promise<{ userId: string; counts: Record<string, number> }> {
   const userId = await ensureUser();
-  console.log(`   user id = ${userId}`);
-
   await ensureUserSettings(userId);
-  console.log("   ✓ user settings — flight + cruise domains enabled");
-
   const { airports, ships, ports } = await loadPools();
-  console.log(`   pools: ${airports.size} airports, ${ships.size} ships, ${ports.size} ports`);
-
   if (airports.size < 60) {
     throw new Error(
       `Expected 60+ airports in pool, got ${airports.size}. Run seedAirportsFromCSV first.`,
@@ -1024,8 +1035,9 @@ async function main(): Promise<void> {
   await seedFlights(userId, airports);
   await seedCruises(userId, ships, ports);
   await seedTripsAndBookings(userId);
+  await seedStories(userId, airports);
+  await seedBulk(userId);
 
-  console.log("   recomputing achievements ...");
   try {
     await checkAndUpdateAchievements(userId);
   } catch (err) {
@@ -1033,24 +1045,29 @@ async function main(): Promise<void> {
     console.warn("   ! achievement recompute failed:", err);
   }
 
-  // Final counts
-  const [fc, cc, tc, bc, ac] = await Promise.all([
+  const [flights, cruises, trips, stays, places, placeLists, tours, journal] = await Promise.all([
     prisma.flight.count({ where: { userId } }),
     prisma.cruise.count({ where: { userId } }),
     prisma.trip.count({ where: { userId } }),
-    prisma.booking.count({ where: { userId } }),
-    prisma.userAchievement.count({ where: { userId } }),
+    prisma.lodgingStay.count({ where: { userId } }),
+    prisma.place.count({ where: { userId } }),
+    prisma.placeList.count({ where: { userId } }),
+    prisma.tripRoute.count({ where: { trip: { userId } } }),
+    prisma.tripJournalEntry.count({ where: { trip: { userId } } }),
   ]);
 
+  return { userId, counts: { flights, cruises, trips, stays, places, placeLists, tours, journal } };
+}
+
+async function main(): Promise<void> {
+  console.log("🌱 Seeding demo account (demo / demo123) ...");
+  const { userId, counts } = await runDemoSeed();
   console.log("");
   console.log("✅ Demo seed complete");
   console.log(`   Username: ${DEMO_USERNAME}`);
   console.log(`   Password: ${DEMO_PASSWORD}`);
-  console.log(`   Flights:      ${fc}`);
-  console.log(`   Cruises:      ${cc}`);
-  console.log(`   Trips:        ${tc}`);
-  console.log(`   Bookings:     ${bc}`);
-  console.log(`   Achievements: ${ac}`);
+  console.log(`   user id: ${userId}`);
+  for (const [k, v] of Object.entries(counts)) console.log(`   ${k}: ${v}`);
 }
 
 // Only auto-run the full demo seed when executed directly (npm run seed:demo).
