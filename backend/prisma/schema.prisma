@@ -1764,40 +1764,40 @@ model Port {
 }
 
 model Lodging {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  type           String   @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
-  name           String
-  chainId        Int?     @map("chain_id")
-  address        String?
-  city           String?
-  country        String?
+  id                 String    @id @default(uuid())
+  userId             String    @map("user_id")
+  type               String    @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
+  name               String
+  chainId            Int?      @map("chain_id")
+  address            String?
+  city               String?
+  country            String?
   /// ISO 3166-1 alpha-2, derived from `country`. The text field keeps whatever
   /// the source wrote ("Deutschland", "Germany", "Schweiz/Suisse/Svizzera/Svizra");
   /// everything that GROUPS or COUNTS joins on this instead. Null when the text
   /// resolves to no country — a finding, not a gap ("Dubai" is a city).
-  isoCountryCode String?  @map("iso_country_code")
-  lat            Float?
-  lon            Float?
+  isoCountryCode     String?   @map("iso_country_code")
+  lat                Float?
+  lon                Float?
   /// When the coordinate backfill last TRIED this row, successful or not.
   /// Ordering the batch by it gives every row a turn: ordering by `createdAt`
   /// handed the same oldest 500 unresolvable rows to the geocoder on every
   /// run, so a hotel added afterwards was never reached at all (AUD-070).
   geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
-  stars          Int? // official 1–5
-  amenities      String[] @default([])
-  notes          String?
+  stars              Int? // official 1–5
+  amenities          String[]  @default([])
+  notes              String?
   /// Has the user actually been here, or is it only noted down? A saved-places
   /// export mixes both, and only the user knows which is which — so the import
   /// asks once instead of inferring. Defaults to true: everything created
   /// before this column existed, and everything entered by hand or parsed from
   /// a booking, describes a place the user really went to.
-  visited        Boolean  @default(true)
-  dataSource     String?  @map("data_source") // parser | manual | enriched
-  externalRef    String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
-  batchId        String?  @map("batch_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  visited            Boolean   @default(true)
+  dataSource         String?   @map("data_source") // parser | manual | enriched
+  externalRef        String?   @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
+  batchId            String?   @map("batch_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   chain           LodgingChain?              @relation(fields: [chainId], references: [id], onDelete: SetNull)
@@ -2060,10 +2060,11 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batch       ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  visits      PlaceVisit[]
-  listEntries PlaceListEntry[]
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch         ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  visits        PlaceVisit[]
+  listEntries   PlaceListEntry[]
+  photoJourneys PhotoJourney[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -2490,14 +2491,38 @@ model PhotoJourney {
   /// the user, the start date and the rounded position.
   fingerprint String
 
+  /// What the burst is taken for (forgejo#94), ranked by how much it proves:
+  /// `place` — photos at an own place with no visit that day; `trip` — away
+  /// from home near an own, flown airport; `stay` — nights away with no dated
+  /// stay. One burst, one reading. The rule is `shared/photoScan.ts`.
+  kind        String  @default("trip")
+  /// `place`: the place the photos were taken at. `stay`: the own place that
+  /// names where the nights were. Null for a trip.
+  placeId     String? @map("place_id")
+  /// `place`: how far the nearest photo was from it, shown rather than hidden.
+  /// `trip`: how far the nearest own airport was.
+  distanceKm  Float?  @map("distance_km")
+  /// Whole nights the burst spans.
+  nights      Int?
+  /// `trip`: the nearest own airport the burst reached (not home).
+  airportIata String? @map("airport_iata")
+  /// `trip`: how far apart the burst's coordinates lie, home left out — a
+  /// Rundreise is not a point.
+  spreadKm    Float?  @map("spread_km")
+
   /// Set when the user accepted it and something was created from it.
-  createdTripId String? @map("created_trip_id")
+  createdTripId        String? @map("created_trip_id")
+  /// Accepting a `place` finding records a visit; a `stay` finding, a stay.
+  createdPlaceVisitId  String? @map("created_place_visit_id")
+  createdLodgingStayId String? @map("created_lodging_stay_id")
 
   resolvedAt DateTime? @map("resolved_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// A finding about a place that no longer exists asks about nothing.
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, fingerprint])
   @@index([userId, status])

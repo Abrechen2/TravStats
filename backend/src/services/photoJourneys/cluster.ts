@@ -37,6 +37,11 @@ export interface PhotoCluster {
   position: { lat: number; lon: number } | null;
   /** How many photos actually carried a coordinate. */
   locatedCount: number;
+  /**
+   * Every place the burst touched, one coordinate per ~1 km cell. A journey is
+   * not a point: the readings in `shared/photoScan.ts` look at all of them.
+   */
+  samples: readonly { lat: number; lon: number }[];
 }
 
 /** A stretch of time already explained by something the user recorded. */
@@ -106,7 +111,25 @@ function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
     photoCount: run.length,
     position: representativePosition(located),
     locatedCount: located.length,
+    samples: distinctCells(located),
   };
+}
+
+/**
+ * One coordinate per ~1 km cell, first photo wins. A fortnight's two thousand
+ * photos stand in a few dozen places; comparing each of them against every own
+ * airport and place would be the same answer, thousands of times slower.
+ */
+function distinctCells(located: readonly { lat: number; lon: number }[]): { lat: number; lon: number }[] {
+  const seen = new Set<string>();
+  const cells: { lat: number; lon: number }[] = [];
+  for (const { lat, lon } of located) {
+    const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cells.push({ lat, lon });
+  }
+  return cells;
 }
 
 /**

@@ -2,15 +2,23 @@ import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { reverseGeocode } from "../geo/nominatim";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import {
+  PHOTO_SCAN_GAP_HOURS,
+  PHOTO_SCAN_MIN_PHOTOS,
+  PHOTO_SCAN_PAD_DAYS,
+  homeCoordinate,
+  mostVisitedIata,
+  nightsBetween,
+  rankReadings,
+  whereItWas,
+  type DatedStay,
+  type FlightEndpoints,
+  type LocatedCluster,
+  type PlaceWithVisits,
+} from "../../shared/photoScan";
 import { createImmichClient } from "../immich/immichClient";
 import { getImmichConnection } from "../immich/immichResolver";
-import {
-  clusterPhotosByTime,
-  distanceKm,
-  findUncoveredClusters,
-  type PhotoCluster,
-  type ScanPhoto,
-} from "./cluster";
+import { clusterPhotosByTime, findUncoveredClusters, type PhotoCluster, type ScanPhoto } from "./cluster";
 import { journeyFingerprint } from "./fingerprint";
 import { travelWindows } from "./windows";
 
@@ -24,24 +32,18 @@ import { travelWindows } from "./windows";
  * The result is always a SUGGESTION. A photograph proves where a camera
  * was, which is usually but not always where its owner was: a shared
  * album, a picture someone else took, an import from a friend's holiday.
- * Nothing here writes a trip.
+ * Nothing here writes a trip, a visit or a stay.
+ *
+ * The expensive half — reading the library, clustering, dropping what
+ * recorded travel explains — happens here. What each surviving burst is
+ * taken for (a visit to an own place, a forgotten trip, nights away) is the
+ * pure rule in `shared/photoScan.ts`, the one the Companion also reads
+ * (forgejo#94).
  */
 
-/** A pause longer than this starts a new journey. */
-const GAP_HOURS = 48;
-/** Fewer photos than this is a moment, not a journey. */
-const MIN_PHOTOS = 6;
-/** Slack around recorded travel, for the taxi and the evening before. */
-const PAD_DAYS = 3;
-/**
- * Closer to home than this is daily life.
- *
- * Without it the scan reports every wedding, every weekend at the coast
- * and every busy Saturday in town, and the real finds drown in them.
- */
-const MIN_DISTANCE_FROM_HOME_KM = 250;
 /** Reverse lookups per scan. Nominatim is throttled to 1 req/s upstream,
- * so this is also the scan's floor in seconds. */
+ * so this is also the scan's floor in seconds. Only a trip finding needs
+ * one: a place or stay finding is named by the account's own place. */
 const MAX_LOOKUPS = 40;
 /** Asset ids kept per journey for the preview strip. */
 const PREVIEW_ASSETS = 3;
@@ -61,8 +63,17 @@ export interface ScanOptions {
   /** How far back to look. */
   since: Date;
   until: Date;
-  /** Where the user lives, for the distance floor. Omitted = no floor. */
-  home?: { lat: number; lon: number } | null;
+}
+
+/** One burst, and what the strongest fitting reading took it for. */
+export interface Finding {
+  cluster: PhotoCluster;
+  located: LocatedCluster;
+  kind: "place" | "trip" | "stay";
+  placeId: string | null;
+  distanceKm: number | null;
+  airportIata: string | null;
+  spreadKm: number | null;
 }
 
 /**
@@ -72,10 +83,7 @@ export interface ScanOptions {
  * duplicated, and a journey the user already answered stays answered:
  * re-scanning must never re-ask a dismissed question.
  */
-export async function scanPhotoJourneys(
-  userId: string,
-  { since, until, home }: ScanOptions,
-): Promise<ScanOutcome> {
+export async function scanPhotoJourneys(userId: string, { since, until }: ScanOptions): Promise<ScanOutcome> {
   const connection = await getImmichConnection(userId);
   if (connection === null) {
     return { kind: "no-immich" };
@@ -95,14 +103,24 @@ export async function scanPhotoJourneys(
   }));
 
   const clusters = clusterPhotosByTime(photos, {
-    gapHours: GAP_HOURS,
-    minPhotos: MIN_PHOTOS,
+    gapHours: PHOTO_SCAN_GAP_HOURS,
+    minPhotos: PHOTO_SCAN_MIN_PHOTOS,
   });
 
-  const [flights, trips, cruises, stays] = await Promise.all([
+  const [flights, trips, cruises, stays, places] = await Promise.all([
     prisma.flight.findMany({
       where: { userId },
-      select: { departureTime: true, arrivalTime: true, status: true },
+      select: {
+        departureTime: true,
+        arrivalTime: true,
+        status: true,
+        depIata: true,
+        depLat: true,
+        depLon: true,
+        arrIata: true,
+        arrLat: true,
+        arrLon: true,
+      },
     }),
     prisma.trip.findMany({
       where: { userId },
@@ -116,29 +134,27 @@ export async function scanPhotoJourneys(
       where: { userId },
       select: { checkIn: true, checkOut: true },
     }),
+    prisma.place.findMany({
+      where: { userId },
+      select: { id: true, name: true, lat: true, lon: true, visits: { select: { visitedAt: true } } },
+    }),
   ]);
 
-  const uncovered = findUncoveredClusters(
-    clusters,
-    travelWindows({ flights, trips, cruises, stays }),
-    { padDays: PAD_DAYS },
-  );
+  const uncovered = findUncoveredClusters(clusters, travelWindows({ flights, trips, cruises, stays }), {
+    padDays: PHOTO_SCAN_PAD_DAYS,
+  });
 
-  const candidates = uncovered
-    // Without a position there is nothing to geocode and nothing to
-    // check against home, so the row could only ever say "some days in
-    // May with 30 photos" — true, and not worth interrupting anyone for.
-    .filter((cluster) => cluster.position !== null)
-    .filter((cluster) => isAwayFromHome(cluster, home))
-    // Biggest first: if the lookup budget runs out, it should run out on
-    // the journeys that matter least.
-    .sort((a, b) => b.photoCount - a.photoCount)
-    .slice(0, MAX_LOOKUPS);
+  const findings = readFindings(uncovered, flights, places, stays);
 
   let created = 0;
   let updated = 0;
+  let lookups = 0;
 
-  for (const cluster of candidates) {
+  for (const finding of findings) {
+    const { cluster, located } = finding;
+    // The fingerprint stays on the MEDIAN position it has always used, not on
+    // the displayed coordinate: a key that moved with the rule would re-ask
+    // every question the user has already dismissed.
     const fingerprint = journeyFingerprint(cluster);
     const existing = await prisma.photoJourney.findUnique({
       where: { userId_fingerprint: { userId, fingerprint } },
@@ -151,15 +167,28 @@ export async function scanPhotoJourneys(
       continue;
     }
 
-    const place = await lookupPlace(cluster.position!);
+    let place: Awaited<ReturnType<typeof lookupPlace>> = null;
+    if (finding.kind === "trip") {
+      // Findings arrive biggest first: if the lookup budget runs out, it runs
+      // out on the journeys that matter least.
+      if (lookups >= MAX_LOOKUPS) continue;
+      lookups += 1;
+      place = await lookupPlace(located);
+    }
 
     const data = {
+      kind: finding.kind,
+      placeId: finding.placeId,
+      distanceKm: finding.distanceKm,
+      nights: located.nights,
+      airportIata: finding.airportIata,
+      spreadKm: finding.spreadKm,
       startDate: new Date(cluster.startMs),
       endDate: new Date(cluster.endMs),
       photoCount: cluster.photoCount,
       locatedCount: cluster.locatedCount,
-      lat: cluster.position!.lat,
-      lon: cluster.position!.lon,
+      lat: located.lat,
+      lon: located.lon,
       countryCode: place?.countryCode ?? null,
       countryName: place?.countryName ?? null,
       city: place?.city ?? null,
@@ -187,7 +216,8 @@ export async function scanPhotoJourneys(
       photosSeen: photos.length,
       clusters: clusters.length,
       uncovered: uncovered.length,
-      candidates: candidates.length,
+      findings: findings.length,
+      lookups,
       created,
       updated,
       truncated,
@@ -203,14 +233,57 @@ export async function scanPhotoJourneys(
   };
 }
 
-function isAwayFromHome(
-  cluster: PhotoCluster,
-  home: { lat: number; lon: number } | null | undefined,
-): boolean {
-  if (home == null || cluster.position === null) {
-    return true;
+/**
+ * The bursts nothing recorded explains, each taken for the strongest reading
+ * that fits, biggest first.
+ *
+ * A burst with no coordinate at all falls away here: without a position there
+ * is no place, no airport and nothing to name, so the row could only ever say
+ * "some days in May with 30 photos" — true, and not worth interrupting anyone
+ * for. Exported for its test.
+ */
+export function readFindings(
+  uncovered: readonly PhotoCluster[],
+  flights: readonly FlightEndpoints[],
+  places: readonly PlaceWithVisits[],
+  stays: readonly DatedStay[],
+): Finding[] {
+  const home = homeCoordinate(flights, mostVisitedIata(flights));
+  const clusterOf = new Map<LocatedCluster, PhotoCluster>();
+  for (const cluster of uncovered) {
+    const at = whereItWas(cluster.samples, home);
+    if (at === null) continue;
+    clusterOf.set(
+      {
+        startMs: cluster.startMs,
+        endMs: cluster.endMs,
+        nights: nightsBetween(cluster.startMs, cluster.endMs),
+        photoIds: cluster.photoIds,
+        lat: at.lat,
+        lon: at.lon,
+        samples: cluster.samples,
+      },
+      cluster,
+    );
   }
-  return distanceKm(cluster.position, home) >= MIN_DISTANCE_FROM_HOME_KM;
+
+  const readings = rankReadings([...clusterOf.keys()], flights, places, stays);
+  const finding = (
+    located: LocatedCluster,
+    rest: Omit<Finding, "cluster" | "located">,
+  ): Finding => ({ cluster: clusterOf.get(located)!, located, ...rest });
+
+  return [
+    ...readings.place.map((h) =>
+      finding(h.cluster, { kind: "place", placeId: h.placeId, distanceKm: h.distanceKm, airportIata: null, spreadKm: null }),
+    ),
+    ...readings.trip.map((h) =>
+      finding(h.cluster, { kind: "trip", placeId: null, distanceKm: h.distanceKm, airportIata: h.iata, spreadKm: h.spreadKm }),
+    ),
+    ...readings.stay.map((h) =>
+      finding(h.cluster, { kind: "stay", placeId: h.placeId, distanceKm: null, airportIata: null, spreadKm: null }),
+    ),
+  ].sort((a, b) => b.cluster.photoCount - a.cluster.photoCount);
 }
 
 /**
