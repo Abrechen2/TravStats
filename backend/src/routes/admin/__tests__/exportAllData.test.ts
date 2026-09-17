@@ -92,6 +92,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "placeVisits",
       "placeLists",
       "companions",
+      "documents",
       "userAchievements",
     ]) {
       expect(Object.prototype.hasOwnProperty.call(user, domain)).toBe(true);
