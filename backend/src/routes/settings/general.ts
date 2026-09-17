@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { AuthRequest } from '../../middleware/auth';
+import { isSharedDemoUser } from '../../middleware/demoGuard';
 import { prisma } from '../../db';
 import logger from '../../utils/logger';
 import {
@@ -332,6 +333,22 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
+
+    // The shared demo account cannot write the profile block. It is not a
+    // preference: `profilePicture` accepts any http(s) URL and the avatar is
+    // drawn in the navigation bar for every other visitor, so this PUT was a
+    // second door to the picture that `/settings/profile-picture` already
+    // refuses (finding C2); the name beside it greets everyone from the header.
+    // The rest of the block — display, units, map colours — stays open, which
+    // is why the refusal is here and not on the whole route.
+    if (payload.profile !== undefined && (await isSharedDemoUser(userId))) {
+      res.status(403).json({
+        error: 'DEMO_ACCOUNT_FORBIDDEN',
+        message: 'The demo account cannot change this. Use your own account on your own instance.',
+      });
+      return;
+    }
+
     const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
     const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
       await getInstanceSettings();

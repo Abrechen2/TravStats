@@ -161,65 +161,77 @@ export default function ProfileSection({
             {t("settings:profile.usernameHint")}
           </p>
         </div>
-        <div>
-          <label className="label" htmlFor="profile-first-name">
-            {t("settings:profile.firstName")}
-          </label>
-          <input
-            id="profile-first-name"
-            type="text"
-            value={profile.firstName ?? ""}
-            onChange={(e) => onSetProfile({ firstName: e.target.value })}
-            className="input"
-            autoComplete="given-name"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-last-name">
-            {t("settings:profile.lastName")}
-          </label>
-          <input
-            id="profile-last-name"
-            type="text"
-            value={profile.lastName ?? ""}
-            onChange={(e) => onSetProfile({ lastName: e.target.value })}
-            className="input"
-            autoComplete="family-name"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-email">
-            {t("settings:profile.email")}
-          </label>
-          <input
-            id="profile-email"
-            type="email"
-            value={profile.email}
-            onChange={(e) => onSetProfile({ email: e.target.value })}
-            className="input"
-            autoComplete="email"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-birthdate">
-            {t("settings:profile.birthdate")}
-          </label>
-          <input
-            id="profile-birthdate"
-            type="date"
-            value={profile.birthdate ?? ""}
-            onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
-            className="input"
-            aria-describedby="profile-birthdate-hint"
-          />
-          <p
-            id="profile-birthdate-hint"
-            className="text-xs mt-1"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {t("settings:profile.birthdateHint")}
-          </p>
-        </div>
+        {/* The name greets every visitor from the header, the e-mail address
+            is a password-reset vector, and the birthdate drives an
+            achievement — all three are shown to or used by whoever logs in
+            next, so the server refuses them for the shared demo account. The
+            notice above the fold says so once; repeating it per field would
+            say it four times. The username stays: a visitor still needs to
+            see which account they are looking at, and it is read-only for
+            everybody anyway. */}
+        {!isDemo && (
+          <>
+            <div>
+              <label className="label" htmlFor="profile-first-name">
+                {t("settings:profile.firstName")}
+              </label>
+              <input
+                id="profile-first-name"
+                type="text"
+                value={profile.firstName ?? ""}
+                onChange={(e) => onSetProfile({ firstName: e.target.value })}
+                className="input"
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-last-name">
+                {t("settings:profile.lastName")}
+              </label>
+              <input
+                id="profile-last-name"
+                type="text"
+                value={profile.lastName ?? ""}
+                onChange={(e) => onSetProfile({ lastName: e.target.value })}
+                className="input"
+                autoComplete="family-name"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-email">
+                {t("settings:profile.email")}
+              </label>
+              <input
+                id="profile-email"
+                type="email"
+                value={profile.email}
+                onChange={(e) => onSetProfile({ email: e.target.value })}
+                className="input"
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-birthdate">
+                {t("settings:profile.birthdate")}
+              </label>
+              <input
+                id="profile-birthdate"
+                type="date"
+                value={profile.birthdate ?? ""}
+                onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
+                className="input"
+                aria-describedby="profile-birthdate-hint"
+              />
+              <p
+                id="profile-birthdate-hint"
+                className="text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("settings:profile.birthdateHint")}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </SectionCard>
   );

@@ -12,6 +12,7 @@ import { AppError } from '../middleware/errorHandler';
 import { SMTP_CONFIG_ID } from './admin/smtp';
 import { sendPasswordResetEmail } from '../services/emailService';
 import { getInstanceSettings } from '../services/instanceSettingsService';
+import { isSharedDemoAccount } from '../utils/sharedDemo';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -73,7 +74,17 @@ router.post(
 
       const user = await prisma.user.findUnique({ where: { username } });
 
-      if (user && user.isActive && user.notificationEmail) {
+      // The shared demo account never gets a reset link. Its login is
+      // published, so whoever asks for one is not its owner — and whoever
+      // received it would set a password of their own and lock every other
+      // visitor out of the account the front page advertises (finding C3).
+      // The address it would go to is refused at /settings/notifications now,
+      // but a row upgraded from before that guard can still carry a stale one.
+      //
+      // The answer below is the same sentence an unknown username gets, on
+      // purpose: a distinct refusal would be an enumeration oracle, and there
+      // is nothing to hide about an account whose name is on the login page.
+      if (user && user.isActive && user.notificationEmail && !isSharedDemoAccount(user)) {
         const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
 
         if (config?.enabled) {

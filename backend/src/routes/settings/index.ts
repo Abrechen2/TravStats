@@ -28,8 +28,20 @@ router.use(authenticate);
 // for every other settings sub-router.
 router.use(requireWriteScope);
 
-// Shared demo account: no keys, tokens, outbound URLs or pictures (spec §3).
-router.use(['/api-keys', '/tokens', '/immich', '/dawarich', '/profile-picture'], rejectDemoWrites);
+// Shared demo account: no keys, tokens, outbound URLs, pictures, notification
+// addresses or profile fields (spec §3).
+//
+// `/notifications` is on the list because it is a password-reset vector, not
+// merely a preference: a visitor who writes the shared account's
+// `notificationEmail` can then ask `/auth/forgot-password` for a link to their
+// own inbox and take the account over, locking every other visitor out
+// (finding C3). `/profile` carries the birthdate, which — like the name in
+// the settings profile block — is shown to everybody and survived every
+// reseed (I1).
+router.use(
+  ['/api-keys', '/tokens', '/immich', '/dawarich', '/profile-picture', '/notifications', '/profile'],
+  rejectDemoWrites,
+);
 
 // Mount sub-routers
 router.use('/', generalRouter);

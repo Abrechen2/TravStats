@@ -20,8 +20,16 @@ const passkeyApiMock = vi.hoisted(() => ({
 // only way to change what useIsDemoAccount() returns between cases.
 const isDemoMock = vi.hoisted(() => ({ current: true }));
 
+const notificationsApiMock = vi.hoisted(() => ({
+  getPreferences: vi.fn(),
+  updatePreferences: vi.fn(),
+}));
+
 vi.mock("../../../lib/api/tokens", () => ({ apiTokensApi: tokensApi }));
-vi.mock("../../../lib/api", () => ({ passkeyApi: passkeyApiMock }));
+vi.mock("../../../lib/api", () => ({
+  passkeyApi: passkeyApiMock,
+  notificationsApi: notificationsApiMock,
+}));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "en" } }),
 }));
@@ -31,6 +39,8 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({
 
 import ApiTokensSection from "../ApiTokensSection";
 import PasskeySection from "../PasskeySection";
+import NotificationsSection from "../NotificationsSection";
+import ProfileSection from "../ProfileSection";
 
 // Each case's locked control: the button the section offers a normal
 // account, and which the demo account must never see.
@@ -53,6 +63,12 @@ describe("settings sections on the demo account", () => {
     passkeyApiMock.registerOptions.mockReset();
     passkeyApiMock.registerVerify.mockReset();
     passkeyApiMock.remove.mockReset();
+    notificationsApiMock.getPreferences.mockReset().mockResolvedValue({
+      notificationEmail: null,
+      notifyBefore24h: false,
+      notifyBefore2h: false,
+    });
+    notificationsApiMock.updatePreferences.mockReset();
   });
 
   it.each(CASES)(
@@ -86,4 +102,86 @@ describe("settings sections on the demo account", () => {
       expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
     }
   );
+});
+
+/**
+ * The notification address is not a preference on this account: whoever writes
+ * it can ask /auth/forgot-password for a reset link to their own inbox and
+ * lock every other visitor out (finding C3). The server refuses the write, so
+ * the section says so instead of offering a field that silently fails.
+ */
+describe("NotificationsSection on the demo account", () => {
+  beforeEach(() => {
+    isDemoMock.current = true;
+    notificationsApiMock.getPreferences.mockReset().mockResolvedValue({
+      notificationEmail: null,
+      notifyBefore24h: false,
+      notifyBefore2h: false,
+    });
+    notificationsApiMock.updatePreferences.mockReset();
+  });
+
+  it("explains instead of offering the address field", async () => {
+    render(<NotificationsSection />);
+    expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:notifications.email")).not.toBeInTheDocument();
+    // Not merely hidden: the section must not fetch the shared account's
+    // address either.
+    expect(notificationsApiMock.getPreferences).not.toHaveBeenCalled();
+  });
+
+  it("offers the field for a normal account — the case above is not vacuous", async () => {
+    isDemoMock.current = false;
+    render(<NotificationsSection />);
+    expect(await screen.findByLabelText("settings:notifications.email")).toBeInTheDocument();
+    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Finding I1: the name and the birthdate were left editable while the picture
+ * was locked. The name greets every visitor from the header, the birthdate
+ * drives an achievement, and both survived the nightly reseed.
+ */
+describe("ProfileSection on the demo account", () => {
+  const profile = {
+    username: "demo",
+    email: "",
+    firstName: null,
+    lastName: null,
+    birthdate: null,
+  };
+  const renderProfile = (): void => {
+    render(
+      <ProfileSection
+        profile={profile}
+        uploadingProfilePicture={false}
+        removingProfilePicture={false}
+        onAvatarUpload={() => {}}
+        onAvatarDelete={() => {}}
+        onSetProfile={() => {}}
+      />
+    );
+  };
+
+  it("explains instead of offering the name and birthdate fields", () => {
+    isDemoMock.current = true;
+    renderProfile();
+    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:profile.firstName")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:profile.lastName")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:profile.birthdate")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:profile.email")).not.toBeInTheDocument();
+    // The username is read-only for everybody and stays visible: a visitor
+    // still needs to see which account they are looking at.
+    expect(screen.getByLabelText("settings:profile.username")).toBeInTheDocument();
+  });
+
+  it("offers them for a normal account — the case above is not vacuous", () => {
+    isDemoMock.current = false;
+    renderProfile();
+    expect(screen.getByLabelText("settings:profile.firstName")).toBeInTheDocument();
+    expect(screen.getByLabelText("settings:profile.birthdate")).toBeInTheDocument();
+    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+  });
 });
