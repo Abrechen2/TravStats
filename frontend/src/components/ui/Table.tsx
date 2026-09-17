@@ -233,13 +233,18 @@ export function Table({
       const style = getComputedStyle(head);
       const gap = parseFloat(style.columnGap) || 0;
       const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
-      const next = pickHidden(columns, table.clientWidth, gap, padding);
+      // Below 640px the CSS draws rows, not columns: nothing steps aside and
+      // nothing scrolls, so neither hint may be said (CT106 design-6 M01).
+      const rowLayout = window.matchMedia?.("(max-width: 639px)").matches ?? false;
+      const next = rowLayout
+        ? new Set<string>()
+        : pickHidden(columns, table.clientWidth, gap, padding);
       const shown = columns.filter((column) => !next.has(column.key));
       // A new Set every measure would re-render every row on every resize tick.
       setHiddenKeys((current) =>
         current.size === next.size && [...next].every((key) => current.has(key)) ? current : next
       );
-      setScrolls(tableMinWidth(shown, gap, padding) > table.clientWidth);
+      setScrolls(!rowLayout && tableMinWidth(shown, gap, padding) > table.clientWidth);
     };
     measure();
     const observer = new ResizeObserver(measure);
