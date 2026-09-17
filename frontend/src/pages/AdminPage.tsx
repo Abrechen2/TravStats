@@ -517,6 +517,23 @@ export default function AdminPage(): JSX.Element {
     }
   }, [loading, deepLinkedSection]);
 
+  // Tracks when the deep-linked section itself has actually mounted its real
+  // content (a `LazySection` fires its `onVisible` for this — see the map
+  // below). Wave C finding C1 (independent review, 2026-09-17): the effect
+  // above scrolls using whatever height every section — INCLUDING the ones
+  // above the target — happens to have at that moment, which for a lazy one
+  // is only the placeholder until it has been near the viewport. Once the
+  // target mounts, the page's layout has settled around it, so the scroll is
+  // re-run to correct for whatever drifted while sections above it expanded.
+  const [deepLinkTargetMounted, setDeepLinkTargetMounted] = useState(false);
+  useEffect(() => {
+    if (!deepLinkTargetMounted || !deepLinkedSection) return;
+    const el = document.getElementById(`admin-${deepLinkedSection}`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }, [deepLinkTargetMounted, deepLinkedSection]);
+
   const jump = useCallback(
     (id: ActiveSection): void => {
       setSearchParams(
@@ -703,7 +720,10 @@ export default function AdminPage(): JSX.Element {
                 key={section.id}
                 id={`admin-${section.id}`}
                 ariaLabel={section.label}
-                onVisible={sectionOnVisible[section.id]}
+                onVisible={() => {
+                  sectionOnVisible[section.id]?.();
+                  if (section.id === deepLinkedSection) setDeepLinkTargetMounted(true);
+                }}
               >
                 <AdminSectionSwitch section={section.id} {...switchProps} />
               </LazySection>

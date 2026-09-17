@@ -13,6 +13,19 @@ interface LazySectionProps {
 const SCROLL_MARGIN_TOP = "calc(var(--ts-size-web-header) + 16px)";
 
 /**
+ * Placeholder height reserved for a section before it mounts (Wave C finding
+ * C1, independent review 2026-09-17): at height 0 every unmounted section on
+ * a tab collapsed to the same point, which put ALL of them inside the
+ * observer's 200px root margin at once — the very first paint fired every
+ * section's onVisible/fetch, so "lazy" bought nothing. 240px approximates
+ * the shortest real admin card: `Card`'s own padding is 2x`--ts-space-xxl`
+ * (56px total) plus a heading line and one row of controls — enough to keep
+ * sections spread out roughly the way their real content will, without
+ * reserving so much that the page balloons before anything has loaded.
+ */
+const PLACEHOLDER_HEIGHT_PX = 240;
+
+/**
  * Defers a section's real content until it has been near the viewport at
  * least once, so that mounting every admin section on one page (round 4)
  * does not fire every section's on-mount fetch at page load — ships, ports,
@@ -75,7 +88,12 @@ export function LazySection({ id, ariaLabel, onVisible, children }: LazySectionP
       ref={containerRef}
       id={id}
       aria-label={ariaLabel}
-      style={{ scrollMarginTop: SCROLL_MARGIN_TOP }}
+      style={{
+        scrollMarginTop: SCROLL_MARGIN_TOP,
+        // Only reserved before mount — real content decides its own height
+        // once it is there, rather than being floored at the placeholder.
+        ...(visible ? {} : { minHeight: PLACEHOLDER_HEIGHT_PX }),
+      }}
     >
       {visible ? children : null}
     </section>
