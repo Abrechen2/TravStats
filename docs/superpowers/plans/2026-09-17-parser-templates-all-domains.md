@@ -2,8 +2,8 @@
 
 Owner decision, 2026-09-17: **build both** — open the template workshop to
 every domain, and extend the GitHub-synced loader beyond airlines, cruises
-included. This document is the plan; nothing below is built yet except Phase 0,
-which was the measurement that produced it.
+included. This document is the plan. Phases 1 and 4 were built the same night — §8 says
+what they delivered and what the measurement changed about the rest.
 
 Written with Codex (`gpt-5.5`) as a cold second opinion on the data model and
 the order of work. Its structure is kept where it was better than mine; three
@@ -221,7 +221,52 @@ throwing).
 - **Four confidence scales** (§2.2). No cross-domain comparison until they mean
   one thing.
 
-## 8. What we deliberately do not build
+## 8. What the first night delivered (2026-09-17, `fix/bookingcom-changed-booking`)
+
+Phases 1 and 4 are done; 2, 3 and 5 are not started, for the reasons in §6.
+
+| | before | after |
+|---|---|---|
+| lodging, template-read | 97 of 108 | **108 of 108** |
+| lodging, read by nothing | 11 | **0** |
+| pinned expectations | 96 of 96 | 96 of 96 |
+
+**Phase 1** made `findMatchingTemplate` require a domain and gave it the index
+the query asks for. **Phase 4** added three declarative readers (KOA, Hilton,
+travelclick) and then a fourth (CHECK24) — but two of the nine mails that came
+in were not coverage at all, they were defects in the oldest reader:
+
+- `parseGermanDate` demanded the ordinal dot, so "26 November 2022" returned
+  null and the whole confirmation was declined.
+- `parseLage` read a four-digit US HOUSE NUMBER as a European postcode and
+  imported the city as "Regent Boulevard". Name-plus-city is what the import
+  dedupes on, so that would have split one hotel into two.
+
+**Who actually carries the load**, now that the corpus can say (the tool
+reported only "template"/"regex" before):
+
+| domain | readers |
+|---|---|
+| flight, 31 mails | `LH-old` 19, `LH` 8, generic regex 4 |
+| lodging, 108 mails | `booking.com` 98, `koa` 6, `travelclick` 2, `hilton` 1, `check24` 1 |
+| cruise, 4 mails | the TUI reader, 4 |
+
+Two things that changes about the plan:
+
+1. The airline templates are **load-bearing** — 27 of 31 flight mails — which
+   is the premise phases 2 and 3 rest on. Good.
+2. The flight corpus is **all Lufthansa**. Seven of the nine built-in airline
+   templates (EW, FR, LX, OS, SN, U2, W6) are unmeasured, and a registry
+   change that broke one of them would pass every check we have.
+
+A cold review (Codex) of the night's work found five defects, all fixed with
+tests: a price restated without its unit was written against the STORED
+currency; the commit took the client's word for WHICH booking a row updates;
+a date-only change left the FX snapshot on the old rate day; a stay over New
+Year dated without years ended before it began; and under `llm_first` a model
+that THREW lost a document its template could read.
+
+## 9. What we deliberately do not build
 
 - One universal regex language that replaces the two hardcoded readers.
   Re-creating TypeScript badly, in JSON.
