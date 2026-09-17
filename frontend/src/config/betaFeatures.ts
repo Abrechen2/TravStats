@@ -72,8 +72,9 @@ export const BETA_FEATURES = Object.freeze({
    * URL-reachability by dropping `devices` from the section model.
    */
   devicePairing: Object.freeze({
-    why: "Pairing a phone works end to end, but the Companion app and the flows behind it are unfinished. The three came off the switch on 2026-09-01 on the strength of their own release conditions; on 2026-09-05, reading the 2.6.0 announcement, the owner ruled all three beta and put them back. Off means the Devices section, the only place a claim code is minted, is not offered.",
-    returnsWhen: "The owner accepts the Companion pairing for release.",
+    why: "Pairing a phone works end to end; what is unfinished is the phone. Measured 2026-09-17: the Companion is version 0.1.0, build 23, handed out through TestFlight to one tester, and still gaining features daily. A Devices section offered to everybody would mint claim codes for an app they cannot install. The three came off the switch on 2026-09-01 on the strength of their own release conditions; on 2026-09-05, reading the 2.6.0 announcement, the owner ruled all three beta and put them back.",
+    returnsWhen:
+      "The Companion is installable outside TestFlight — a public build a reader of the release notes can actually get — and the owner accepts the pairing flow for release.",
     reason: "advanced",
   }),
 
