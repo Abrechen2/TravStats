@@ -1,11 +1,5 @@
 module.exports = {
-  preset: "ts-jest",
   testEnvironment: "node",
-  globals: {
-    "ts-jest": {
-      diagnostics: false, // Skip type-checking in tests; production code is checked via tsc --noEmit
-    },
-  },
   // Integration tests hit a shared Postgres database and a lot of them do
   // `prisma.user.deleteMany()` / `prisma.invitation.deleteMany()` in
   // beforeEach/beforeAll. Running workers in parallel against one DB makes
@@ -46,15 +40,29 @@ module.exports = {
   // export). Node itself is fine with that — `require(esm)` has been
   // unflagged since 22.12, and both the tsx dev path and the compiled
   // CommonJS build load it — but Jest's own module loader is not, and dies
-  // on its first `export`. So that one package is handed to ts-jest with
-  // allowJs instead of being skipped like the rest of node_modules. Keep
-  // the pattern to the ESM-only packages: transforming all of node_modules
-  // would turn a four-minute suite into a much longer one.
+  // on its first `export`. So that one package goes through the `.js`
+  // transform to CommonJS instead of being skipped like the rest of
+  // node_modules. Keep the pattern to the ESM-only packages: transforming all
+  // of node_modules would turn the suite into a much longer one.
+  //
+  // `isolatedModules` (2026-09-17): each file is transpiled on its own, without
+  // building a TypeScript program over it and everything it imports. The type
+  // information that program produced was thrown away anyway — diagnostics
+  // are off, because `tsc --noEmit` is the type gate in CI and in the
+  // pre-commit hook. Measured on 46 route and shared suites without a cache:
+  // 108 s before, 75 s after, same 435 tests green. swc was faster still
+  // (68 s) and was tried first; it emits exports as non-configurable getters,
+  // so every `jest.spyOn(module, "export")` in the suite fails with "Cannot
+  // redefine property", which ts-jest's output does not.
   transform: {
-    "^.+\.tsx?$": ["ts-jest", { diagnostics: false }],
+    "^.+\.tsx?$": ["ts-jest", { diagnostics: false, isolatedModules: true }],
     "^.+\.js$": [
       "ts-jest",
-      { diagnostics: false, tsconfig: { allowJs: true, module: "commonjs" } },
+      {
+        diagnostics: false,
+        isolatedModules: true,
+        tsconfig: { allowJs: true, module: "commonjs" },
+      },
     ],
   },
   // @noble/hashes 2 sits nested under @otplib/plugin-crypto-noble and is
