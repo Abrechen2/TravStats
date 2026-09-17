@@ -5,6 +5,7 @@ import type { Document, Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import { documentIdsBodySchema } from "../../schemas/document";
 import {
   DOCUMENT_KINDS,
   ENTRY_TYPES,
@@ -285,6 +286,20 @@ export async function assertLinkable(userId: string, ids: readonly string[], ent
       throw new AppError("Document is already filed with another entry", 409);
     }
   }
+}
+
+/**
+ * The `documentIds` of a create request, checked BEFORE the entry is written: an
+ * unknown, foreign or already-filed id fails the create rather than leaving an
+ * entry whose documents never attached. File them with `linkDocuments` once the
+ * entry exists.
+ */
+export async function takeDocumentIds(userId: string, body: unknown): Promise<string[]> {
+  const parsed = documentIdsBodySchema.safeParse(body ?? {});
+  if (!parsed.success) throw new AppError("documentIds must be a list of at most 20 document ids", 400);
+  const ids = parsed.data.documentIds ?? [];
+  await assertLinkable(userId, ids);
+  return ids;
 }
 
 /** Files documents with an entry. Idempotent: already filed there is fine. */

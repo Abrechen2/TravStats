@@ -5,7 +5,7 @@
     "backend/src/routes/stats.ts": 1845,
     "frontend/src/components/GlobeView.tsx": 1672,
     "frontend/src/pages/TripDetailPage.tsx": 1589,
-    "backend/src/routes/flights.ts": 1491,
+    "backend/src/routes/flights.ts": 1482,
     "backend/src/services/schematicRouter.ts": 1114,
     "backend/src/services/flightLookup.ts": 1073,
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 1038,

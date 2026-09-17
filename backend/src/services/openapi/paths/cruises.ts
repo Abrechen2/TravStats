@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
   createCruiseSchema,
@@ -132,7 +133,7 @@ registry.registerPath({
     "and lets the server derive the provenance key itself.",
   tags: ["Cruises"],
   request: {
-    body: { content: { "application/json": { schema: createCruiseSchema.openapi("CruiseCreateInput") } } },
+    body: { content: { "application/json": { schema: createCruiseSchema.openapi("CruiseCreateInput").and(documentIdsBodySchema) } } },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },

@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { statsLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
+import { linkDocuments, takeDocumentIds } from '../services/documents/documentService';
 import { assertReferencesOwned } from '../utils/ownedReferences';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -342,6 +343,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     // so without this a cruise could be filed under a stranger's trip and
     // would show up on their timeline (AUD-038).
     await assertReferencesOwned(userId, { tripId, bookingId });
+    const documentIds = await takeDocumentIds(userId, req.body);
 
     // A batch id means "this came from an import". It is client-supplied, so
     // ownership is checked here — otherwise it is a handle into someone
@@ -455,6 +457,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       await recomputeLegsForCruise(created.id, tx);
       return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
     });
+    await linkDocuments(userId, documentIds, { type: 'cruise', id: cruise.id });
 
     // Status derivation (spec 2026-07-17-status-from-dates) needs to read
     // the cruise it just linked, so recomputeTripStatus() runs AFTER the

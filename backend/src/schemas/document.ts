@@ -33,6 +33,19 @@ export const parseRetentionFields = {
     .describe("Parse a document already kept (POST /documents) instead of content in the body"),
 };
 
+/**
+ * `documentIds` on the five create routes: documents uploaded before their entry
+ * existed, filed with it in the same request. Read apart from the entry's own
+ * schema, so the list can never reach a Prisma spread of that schema's output.
+ */
+export const documentIdsBodySchema = z.object({
+  documentIds: z
+    .array(z.string().uuid())
+    .max(20)
+    .optional()
+    .describe("Kept documents (POST /documents) to file with the new entry"),
+});
+
 export const entryRefSchema = z.object({ type: z.enum(ENTRY_TYPES), id: uuid });
 
 /** Multipart text fields arrive as strings; an empty one means "not sent". */

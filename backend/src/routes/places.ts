@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 // A visit must never attach itself to someone else's trip by id. The rule
 // lived here first and now serves every domain that links to a trip (AUD-038).
 import { assertTripOwned } from "../utils/ownedReferences";
@@ -428,6 +429,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
+    const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
     // promotes the place out of the wishlist in the SAME transaction. Leaving
@@ -465,6 +467,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
       writes.push(prisma.place.update({ where: { id: place.id }, data: { visited: true } }));
     }
     const [visit] = await prisma.$transaction(writes);
+    await linkDocuments(userId, documentIds, { type: "placeVisit", id: (visit as { id: string }).id });
 
     await recheckAchievements(userId, "visit create");
 

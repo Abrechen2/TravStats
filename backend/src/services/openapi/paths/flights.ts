@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent, flightCreateInput, flightUpdateInput, flightResponse } from "./shared";
+import { documentIdsBodySchema } from "../../../schemas/document";
 
 registry.registerPath({
   method: "get",
@@ -73,7 +74,7 @@ registry.registerPath({
       force: z.enum(["true", "false"]).optional(),
     }),
     body: {
-      content: { "application/json": { schema: flightCreateInput } },
+      content: { "application/json": { schema: flightCreateInput.and(documentIdsBodySchema) } },
     },
   },
   responses: {

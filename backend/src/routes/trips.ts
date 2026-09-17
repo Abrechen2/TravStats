@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { Prisma } from "@prisma/client";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import {
   createTripSchema,
   updateTripSchema,
@@ -468,6 +469,7 @@ router.post(
     try {
       const userId = req.userId!;
       const body = createTripSchema.parse(req.body);
+      const documentIds = await takeDocumentIds(userId, req.body);
 
       let color = body.color;
       if (!color) {
@@ -536,6 +538,7 @@ router.post(
 
         return created;
       });
+      await linkDocuments(userId, documentIds, { type: "trip", id: trip.id });
 
       logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
       res.status(201).json({ trip });
