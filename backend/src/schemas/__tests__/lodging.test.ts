@@ -112,6 +112,47 @@ describe("lodging schemas", () => {
     expect(r.success).toBe(true);
   });
 
+  // An independent Codex review (2026-09-17) found that only the EXPLICIT
+  // `nights` field was capped at 3650 — the checkIn/checkOut SPAN had no
+  // bound beyond `checkOut >= checkIn`. A stay saved with
+  // checkIn="0001-01-01" / checkOut="9999-12-31" made `walkNights` loop
+  // ~3.6M times on every later lodging-statistics request, building
+  // ~3.6M-entry maps. Bounding the span here, the same way the explicit
+  // count is bounded, refuses the row at the API boundary.
+  describe("checkIn/checkOut span cap (3650 nights, mirrors the explicit `nights` cap)", () => {
+    it("rejects a span longer than 3650 nights on create", () => {
+      const r = createStaySchema.safeParse({
+        checkIn: "0001-01-01T00:00:00.000Z",
+        checkOut: "9999-12-31T00:00:00.000Z",
+      });
+      expect(r.success).toBe(false);
+      if (!r.success) {
+        expect(r.error.issues.some((i) => i.path.includes("checkOut"))).toBe(true);
+      }
+    });
+
+    it("accepts a span of exactly 3650 nights on create", () => {
+      // 2020-01-01 + 3650*86,400,000 ms = 2029-12-29, computed rather than
+      // guessed at a calendar distance — leap years make "+10 years" 3653 days.
+      const r = createStaySchema.safeParse({
+        checkIn: "2020-01-01T00:00:00.000Z",
+        checkOut: "2029-12-29T00:00:00.000Z",
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("rejects a span longer than 3650 nights on update", () => {
+      const r = updateStaySchema.safeParse({
+        checkIn: "0001-01-01T00:00:00.000Z",
+        checkOut: "9999-12-31T00:00:00.000Z",
+      });
+      expect(r.success).toBe(false);
+      if (!r.success) {
+        expect(r.error.issues.some((i) => i.path.includes("checkOut"))).toBe(true);
+      }
+    });
+  });
+
   it("accepts a local-upload receiptUrl", () => {
     const r = createStaySchema.safeParse({
       checkIn: "2024-05-14T15:00:00.000Z",
