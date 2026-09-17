@@ -22,6 +22,7 @@ import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import { classifyVisit } from "../shared/placeCounting";
 import { splitDateTimeInput } from "../lib/tripTimeline";
 import type { Place, PlaceVisit } from "../types/place";
+import { formatDate } from "../lib/displayFormat";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -162,9 +163,7 @@ export default function PlaceDetailPage(): JSX.Element {
     (v: PlaceVisit): string => {
       if (!v.visitedAt) return t("places:detail.undated");
       const { date, time } = splitDateTimeInput(v.visitedAt);
-      const d = new Date(`${date}T00:00:00.000Z`).toLocaleDateString(i18n.language, {
-        timeZone: "UTC",
-      });
+      const d = formatDate(`${date}T00:00:00.000Z`, { timeZone: "UTC" });
       return time ? `${d}, ${time}` : d;
     },
     [i18n.language, t]

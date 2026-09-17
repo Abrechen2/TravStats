@@ -1,6 +1,7 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { escapeHtml } from "../../lib/escapeHtml";
 import { flagImgHtml, countryName, resolveCountryCode } from "../../lib/countryFlag";
+import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
 // Marker layer ids that should surface a hover tooltip with the rich
 // content (short label + full name + visit count + last visit date).
@@ -135,16 +136,9 @@ const SURFACE_STYLE: Record<string, string> = {
   lineHeight: "1.35",
 };
 
-function formatDate(iso: string, locale: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso.slice(0, 10);
-  }
+/** In the user's date format (Settings → Display); the locale no longer decides. */
+function formatDate(iso: string, _locale: string): string {
+  return formatUserDate(iso) || iso.slice(0, 10);
 }
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;

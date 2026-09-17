@@ -1,6 +1,7 @@
 import type { FunStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
+import { formatDate } from "../../lib/displayFormat";
 
 interface StatsFunSectionProps {
   funStats: FunStats;
@@ -62,7 +63,7 @@ export default function StatsFunSection({ funStats }: StatsFunSectionProps): JSX
             value={funStats.fastestDayFlights}
             valueSize="sm"
             description={t("stats:fun.fastestDayDesc", {
-              date: new Date(funStats.fastestDay).toLocaleDateString(),
+              date: formatDate(funStats.fastestDay),
               count: funStats.fastestDayFlights,
             })}
           />

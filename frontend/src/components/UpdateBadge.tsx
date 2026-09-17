@@ -5,6 +5,7 @@ import { versionApi, type VersionInfo } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
+import { formatDate as formatUserDate } from "../lib/displayFormat";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const DISMISS_KEY = "travstats.updateBadge.dismissedVersion";
@@ -33,13 +34,9 @@ function truncateNotes(notes: string): string {
   return (lastBreak > NOTES_PREVIEW_LIMIT / 2 ? cut.slice(0, lastBreak) : cut) + "…";
 }
 
-function formatDate(iso: string | null, locale: string): string {
+function formatDate(iso: string | null, _locale: string): string {
   if (!iso) return "";
-  try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatUserDate(iso) || iso;
 }
 
 export default function UpdateBadge(): JSX.Element | null {

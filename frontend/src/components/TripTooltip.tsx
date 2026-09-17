@@ -4,6 +4,7 @@ import { formatDuration } from "../lib/formatters";
 import { useTranslation } from "../hooks/useTranslation";
 import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
+import { formatDate } from "../lib/displayFormat";
 
 interface TripTooltipProps {
   flights: Flight[];
@@ -34,26 +35,19 @@ function getRouteEndpoints(sorted: Flight[]): {
   return { depName, depIata, arrName, arrIata };
 }
 
-function formatDateRange(sorted: Flight[], locale: string): string {
+function formatDateRange(sorted: Flight[], _locale: string): string {
   const times = sorted
     .map((f) => (f.departureTime ? new Date(f.departureTime).getTime() : NaN))
     .filter((t) => !isNaN(t));
   if (times.length === 0) return "";
   const d1 = new Date(Math.min(...times));
   const d2 = new Date(Math.max(...times));
-  const opts = (year?: boolean): Intl.DateTimeFormatOptions => ({
-    day: "numeric",
-    month: "short",
-    ...(year ? { year: "numeric" } : {}),
-  });
-  if (d1.getTime() === d2.getTime()) return d1.toLocaleDateString(locale, opts(true));
+  // The user's date format (Settings → Display); the locale no longer decides.
+  if (d1.getTime() === d2.getTime()) return formatDate(d1);
   if (d1.getFullYear() === d2.getFullYear()) {
-    if (d1.getMonth() === d2.getMonth()) {
-      return `${d1.getDate()}. – ${d2.toLocaleDateString(locale, opts(true))}`;
-    }
-    return `${d1.toLocaleDateString(locale, opts())} – ${d2.toLocaleDateString(locale, opts(true))}`;
+    return `${formatDate(d1, { omitYear: true })} – ${formatDate(d2)}`;
   }
-  return `${d1.toLocaleDateString(locale, opts(true))} – ${d2.toLocaleDateString(locale, opts(true))}`;
+  return `${formatDate(d1)} – ${formatDate(d2)}`;
 }
 
 export function TripTooltip({

@@ -1,3 +1,5 @@
+import { formatDate, formatTime } from "./displayFormat";
+
 /**
  * Date + time handling for the trip timeline (#175).
  *
@@ -66,27 +68,16 @@ export function utcDayOf(iso: string): string {
 }
 
 /**
- * "01.05.2026" or "01.05.2026, 14:30" — always in UTC, per the time model
+ * "01.05.2026" or "01.05.2026, 14:30" in the user's format — always in UTC, per the time model
  * above. Falls back to the raw string rather than rendering "Invalid Date".
  */
-export function formatTimelineDate(iso: string, language: string | undefined): string {
+export function formatTimelineDate(iso: string, _language: string | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  const locale = language?.toLowerCase().startsWith("en") ? "en-US" : "de-DE";
-  const datePart = new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(d);
+  // The user's date and clock format (Settings → Display), still in UTC.
+  const datePart = formatDate(d, { timeZone: "UTC" });
   if (!hasExplicitTime(iso)) return datePart;
-  const timePart = new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    hour12: false,
-  }).format(d);
-  return `${datePart}, ${timePart}`;
+  return `${datePart}, ${formatTime(d, { timeZone: "UTC" })}`;
 }
 
 /** The kinds the timeline sorts, as far as ordering cares. */

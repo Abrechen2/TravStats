@@ -4,6 +4,7 @@ import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
+import { formatDate } from "../../lib/displayFormat";
 
 interface TripCardProps {
   trip: Trip;
@@ -365,12 +366,11 @@ function formatDistance(km: number): string {
   return String(km);
 }
 
-function formatDateRange(start: Date | null, end: Date | null, locale: string): string | null {
+function formatDateRange(start: Date | null, end: Date | null, _locale: string): string | null {
   if (!start && !end) return null;
-  const fmtShort = (d: Date): string =>
-    d.toLocaleDateString(locale, { day: "2-digit", month: "short" });
-  const fmtLong = (d: Date): string =>
-    d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  // The user's date format (Settings → Display); the locale no longer decides.
+  const fmtShort = (d: Date): string => formatDate(d, { omitYear: true });
+  const fmtLong = (d: Date): string => formatDate(d);
   if (start && end) {
     return start.getFullYear() === end.getFullYear()
       ? `${fmtShort(start)} – ${fmtLong(end)}`

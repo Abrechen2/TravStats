@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { GlobeLoader } from "../GlobeLoader";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
+import { formatDate } from "../../lib/displayFormat";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
@@ -131,7 +132,7 @@ export default function MyTemplates(): JSX.Element {
                 </>
               )}
               <span>
-                {t("parser:myTemplates.created")} {new Date(tmpl.createdAt).toLocaleDateString()}
+                {t("parser:myTemplates.created")} {formatDate(tmpl.createdAt)}
               </span>
             </div>
           </div>

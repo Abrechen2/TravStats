@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { FlagImg } from "../../lib/countryFlag";
 import { curatedText } from "../../lib/curatedCopy";
 import type { CuratedProgressItem, VisitSuggestion } from "../../types/placeList";
+import { formatDate } from "../../lib/displayFormat";
 
 interface Props {
   item: CuratedProgressItem;
@@ -38,7 +39,7 @@ export function ChecklistRow({
   onToggle,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
-  const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" });
+  const dateFormat = { format: (date: Date): string => formatDate(date) };
   const name = curatedText(item.name, item.nameEn, i18n.language);
 
   const suggestedDate = suggestion?.visitedAt

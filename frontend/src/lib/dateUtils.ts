@@ -1,3 +1,5 @@
+import { formatDate, formatDateTime, formatTime } from "./displayFormat";
+
 const FALLBACK = "—";
 
 function toDate(input: Date | string): Date | null {
@@ -6,31 +8,32 @@ function toDate(input: Date | string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function formatWith(
-  date: Date,
-  options: Omit<Intl.DateTimeFormatOptions, "timeZone">,
-  timezone: string
-): string {
+/**
+ * The user's format (Settings → Display) in `timezone`, or in UTC when the zone
+ * name is not one Intl knows. These helpers were hard-wired to de-DE, so an
+ * English reader with MM/DD/YYYY and a 12h clock saw 14.05.2024, 14:30.
+ */
+function inZone(timezone: string, write: (zone: string) => string): string {
   try {
-    return new Intl.DateTimeFormat("de-DE", { ...options, timeZone: timezone }).format(date);
+    return write(timezone);
   } catch {
-    return new Intl.DateTimeFormat("de-DE", { ...options, timeZone: "UTC" }).format(date);
+    return write("UTC");
   }
 }
 
 /**
- * Format a date as "dd.MM.yyyy" in the given timezone.
+ * Format a date in the user's date format, in the given timezone.
  */
 export function formatDateInTimezone(input: Date | string, timezone: string): string {
   const date = toDate(input);
   if (!date) return FALLBACK;
-  return formatWith(date, { year: "numeric", month: "2-digit", day: "2-digit" }, timezone);
+  return inZone(timezone, (timeZone) => formatDate(date, { timeZone }));
 }
 
 export type TimeSemantics = "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
 
 /**
- * Format a date+time as "dd.MM.yyyy, HH:mm" in the given timezone.
+ * Format a date+time in the user's date and clock format, in the given timezone.
  *
  * When `semantics === 'DATE_ONLY'` the time component is a placeholder
  * (typically 12:00 noon-local) that would mislead the reader, so the
@@ -44,17 +47,13 @@ export function formatDateTimeInTimezone(
   const date = toDate(input);
   if (!date) return FALLBACK;
   if (semantics === "DATE_ONLY") {
-    return formatWith(date, { year: "numeric", month: "2-digit", day: "2-digit" }, timezone);
+    return inZone(timezone, (timeZone) => formatDate(date, { timeZone }));
   }
-  return formatWith(
-    date,
-    { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" },
-    timezone
-  );
+  return inZone(timezone, (timeZone) => formatDateTime(date, { timeZone }));
 }
 
 /**
- * Format a time-only as "HH:mm" in the given timezone.
+ * Format a time-only on the user's clock (24h / 12h), in the given timezone.
  *
  * When `semantics === 'DATE_ONLY'` returns the fallback marker `"—"` —
  * a date-only row has no meaningful time component to render.
@@ -67,5 +66,5 @@ export function formatTimeInTimezone(
   if (semantics === "DATE_ONLY") return FALLBACK;
   const date = toDate(input);
   if (!date) return FALLBACK;
-  return formatWith(date, { hour: "2-digit", minute: "2-digit" }, timezone);
+  return inZone(timezone, (timeZone) => formatTime(date, { timeZone }));
 }

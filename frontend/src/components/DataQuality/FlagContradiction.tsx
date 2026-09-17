@@ -5,6 +5,7 @@ import { countryName } from "../../shared/geo/countryCode";
 import type { DataQualityFlag, FlaggedRecord } from "../../types/dataQuality";
 
 import { flaggedRecordPath } from "./flagLinks";
+import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
 /**
  * The two values a flag holds against each other — both shown, neither marked
@@ -73,10 +74,8 @@ export function RecordLink({ record }: { record: FlaggedRecord }): JSX.Element {
 }
 
 /** A date as stored, in the app's language. Never reformatted into a guess. */
-function formatDate(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(locale, { year: "numeric", month: "2-digit", day: "2-digit" });
+function formatDate(iso: string, _locale: string): string {
+  return formatUserDate(iso) || iso;
 }
 
 /** A country as `code — Localised Name`, falling back to the bare code. */

@@ -11,6 +11,7 @@ import {
 import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { formatDate } from "../../lib/displayFormat";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -209,7 +210,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                     {batch.fileName && <span> · {batch.fileName}</span>}
                   </div>
                   <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    <span>{new Date(batch.createdAt).toLocaleDateString()}</span>
+                    <span>{formatDate(batch.createdAt)}</span>
                     {" · "}
                     <span>{describeCounts(batch, t)}</span>
                   </div>
@@ -263,10 +264,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                           >
                             <span style={{ color: "var(--text-primary)" }}>{item.label}</span>
                             <span style={{ color: "var(--text-muted)" }}>
-                              {[
-                                item.detail,
-                                item.date ? new Date(item.date).toLocaleDateString() : null,
-                              ]
+                              {[item.detail, item.date ? formatDate(item.date) : null]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>

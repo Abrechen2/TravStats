@@ -11,6 +11,7 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import type { DomainKey } from "../shared/domains";
+import { formatDate } from "../lib/displayFormat";
 
 /**
  * Filter achievements down to the ones the user should currently see based on
@@ -633,7 +634,7 @@ export default function AchievementsPage(): JSX.Element {
                                     {t("achievements:progress.unlocked", {
                                       date:
                                         achievement.unlockedAt &&
-                                        new Date(achievement.unlockedAt).toLocaleDateString(),
+                                        formatDate(achievement.unlockedAt),
                                     })}
                                   </span>
                                   <span

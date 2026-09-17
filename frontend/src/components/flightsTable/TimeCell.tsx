@@ -1,23 +1,7 @@
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { dayShift } from "../../lib/dayShift";
-
-const dateFmt = (iso: string, tz: string, lang: string): string =>
-  new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    timeZone: tz,
-  })
-    .format(new Date(iso))
-    // de-DE renders "Mo., 09.11.26" — the mockup wants the bare "Mo 09.11.26".
-    .replace(".,", "");
-
-const timeFmt = (iso: string, tz: string): string =>
-  new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(
-    new Date(iso)
-  );
+import { useDisplayFormat } from "../../lib/displayFormat";
 
 type DelayState = "late" | "early" | "onTime";
 
@@ -39,7 +23,13 @@ const DELAY_COLOR: Record<DelayState, string> = {
 
 /** One ab/an row pair: weekday + compact date + airport-local time, +N overnight marker. */
 export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
-  const { t, i18n } = useTranslation(["flights"]);
+  const { t } = useTranslation(["flights"]);
+  // The user's date and clock format (Settings → Display), in the airport's zone.
+  // Weekday and two-digit year stay: the column is dense.
+  const format = useDisplayFormat();
+  const dateFmt = (iso: string, tz: string): string =>
+    format.date(iso, { timeZone: tz, weekday: true, shortYear: true });
+  const timeFmt = (iso: string, tz: string): string => format.time(iso, { timeZone: tz });
   const isDateOnly = (s: Flight["depTimeSemantics"]) => s === "DATE_ONLY" || s === "UNKNOWN";
   const depDateOnly = isDateOnly(flight.depTimeSemantics);
   const arrDateOnly = isDateOnly(flight.arrTimeSemantics);
@@ -71,7 +61,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
       </span>
       {iso ? (
         <>
-          <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
+          <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz)}</span>
           {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
           {/* The recorded time, beside the planned one rather than replacing
               it — the point is the difference between the two. Formatted in

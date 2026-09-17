@@ -73,6 +73,7 @@ import {
   type CruiseLegDates,
   type MonthBucket,
 } from "./Globe/timeSliderUtils";
+import { formatDate as formatUserDate } from "../lib/displayFormat";
 
 /**
  * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
@@ -128,16 +129,9 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-function formatTooltipDate(iso: string, locale: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso.slice(0, 10);
-  }
+/** In the user's date format (Settings → Display); the locale no longer decides. */
+function formatTooltipDate(iso: string, _locale: string): string {
+  return formatUserDate(iso) || iso.slice(0, 10);
 }
 
 interface DeckOverlayProps {

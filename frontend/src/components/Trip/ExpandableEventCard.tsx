@@ -16,6 +16,7 @@
 
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatDate } from "../../lib/displayFormat";
 
 export interface ExpandableEventCardProps {
   icon: string;
@@ -83,7 +84,7 @@ export function ExpandableEventCard({
             style={{ color: "var(--text-muted)" }}
             dateTime={date}
           >
-            {dateLabel ?? new Date(date).toLocaleDateString()}
+            {dateLabel ?? formatDate(date)}
           </time>
           <span
             aria-hidden="true"

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
+import { formatDate } from "../lib/displayFormat";
 
 interface YearHeatmapProps {
   flights: Flight[];
@@ -14,7 +15,7 @@ interface DayCell {
 }
 
 export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [hoveredCell, setHoveredCell] = useState<DayCell | null>(null);
 
@@ -198,7 +199,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                         onMouseEnter={() => setHoveredCell(day)}
                         onMouseLeave={() => setHoveredCell(null)}
                         title={t("stats:heatmap.dayTooltip", {
-                          date: day.date.toLocaleDateString(),
+                          date: formatDate(day.date),
                           count: day.flightCount,
                         })}
                       />
@@ -215,7 +216,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       {hoveredCell && hoveredCell.flightCount > 0 && (
         <div className="mt-4 p-3 bg-(--bg-base) rounded-lg border border-border">
           <p className="text-sm font-semibold text-(--text-primary) mb-2">
-            {hoveredCell.date.toLocaleDateString("de-DE", {
+            {hoveredCell.date.toLocaleDateString(i18n.language, {
               weekday: "long",
               year: "numeric",
               month: "long",

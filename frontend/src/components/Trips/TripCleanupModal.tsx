@@ -4,6 +4,7 @@ import { tripsApi, type MicroTripCandidate } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import { formatDate } from "../../lib/displayFormat";
 
 interface TripCleanupModalProps {
   onClose(): void;
@@ -73,9 +74,9 @@ export default function TripCleanupModal({
 
   const formatRange = (c: MicroTripCandidate): string => {
     if (!c.startDate) return "—";
-    const from = new Date(c.startDate).toLocaleDateString();
+    const from = formatDate(c.startDate);
     if (!c.endDate) return from;
-    return `${from} – ${new Date(c.endDate).toLocaleDateString()}`;
+    return `${from} – ${formatDate(c.endDate)}`;
   };
 
   return (

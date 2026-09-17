@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
-import { formatDateInTimezone } from "../lib/dateUtils";
+import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
+import { formatDate } from "../lib/displayFormat";
 import { logger } from "../lib/logger";
 import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
 import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
-import { formatDateTimeInTimezone } from "../lib/dateUtils";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
@@ -547,8 +547,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         date: c.startDate,
         title: c.cruiseLine ?? "Kreuzfahrt",
         subtitle: c.endDate
-          ? `${new Date(c.startDate).toLocaleDateString()} → ${new Date(c.endDate).toLocaleDateString()}`
-          : new Date(c.startDate).toLocaleDateString(),
+          ? `${formatDate(c.startDate)} → ${formatDate(c.endDate)}`
+          : formatDate(c.startDate),
         cruise: c,
       });
     }
@@ -918,7 +918,7 @@ function EventCard({
           style={{ color: "var(--text-muted)" }}
           dateTime={date}
         >
-          {dateLabel ?? new Date(date).toLocaleDateString()}
+          {dateLabel ?? formatDate(date)}
         </time>
         {actions}
       </div>
@@ -1370,7 +1370,7 @@ function LogisticsTab({
                     className="px-4 py-2.5 whitespace-nowrap"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    {f.departureTime ? new Date(f.departureTime).toLocaleDateString() : "—"}
+                    {f.departureTime ? formatDate(f.departureTime) : "—"}
                   </td>
                   <td className="px-4 py-2.5 font-mono">
                     {f.depIata ?? "???"} → {f.arrIata ?? "???"}
@@ -1413,7 +1413,7 @@ function LogisticsTab({
                     className="px-4 py-2.5 whitespace-nowrap"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    {c.startDate ? new Date(c.startDate).toLocaleDateString() : "—"}
+                    {c.startDate ? formatDate(c.startDate) : "—"}
                   </td>
                   <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
                   <td className="px-4 py-2.5 text-right">

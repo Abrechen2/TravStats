@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip, TripStatus } from "../../types";
+import { formatDate } from "../../lib/displayFormat";
 
 const STATUS_PILL_CLASS: Record<TripStatus, { bg: string; color: string }> = {
   planned: { bg: "rgba(96,165,250,0.18)", color: "#93c5fd" },
@@ -128,13 +129,13 @@ function StatusPill({
   );
 }
 
-function formatDateRange(start: Date | null, end: Date | null, locale: string): string | null {
+function formatDateRange(start: Date | null, end: Date | null, _locale: string): string | null {
   if (!start && !end) return null;
-  const fmt = (d: Date): string =>
-    d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  // The user's date format (Settings → Display); the locale no longer decides.
+  const fmt = (d: Date): string => formatDate(d);
   if (start && end) {
     return start.getFullYear() === end.getFullYear()
-      ? `${start.toLocaleDateString(locale, { day: "2-digit", month: "short" })} – ${fmt(end)}`
+      ? `${formatDate(start, { omitYear: true })} – ${fmt(end)}`
       : `${fmt(start)} – ${fmt(end)}`;
   }
   return fmt((start ?? end) as Date);

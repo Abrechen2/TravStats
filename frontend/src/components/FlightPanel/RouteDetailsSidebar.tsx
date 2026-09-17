@@ -5,6 +5,7 @@ import { calculateDistance } from "../../lib/geo";
 import { formatDuration } from "../../lib/formatters";
 import type { Flight } from "../../types";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { formatDate } from "../../lib/displayFormat";
 
 interface RouteDetailsSidebarProps {
   flights: Flight[];
@@ -135,13 +136,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
             style={{ borderBottom: "1px solid var(--color-border)" }}
           >
             <span className="w-20 shrink-0" style={{ color: "var(--text-muted)" }}>
-              {f.departureTime
-                ? new Date(f.departureTime).toLocaleDateString(locale, {
-                    day: "2-digit",
-                    month: "short",
-                    year: "2-digit",
-                  })
-                : "—"}
+              {f.departureTime ? formatDate(f.departureTime, { shortYear: true }) : "—"}
             </span>
             <span
               className="w-16 shrink-0 font-mono font-medium"

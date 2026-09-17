@@ -1,6 +1,7 @@
 import { formatCurrency } from "./units";
 import { classifyStay, type LodgingCountState } from "../shared/lodgingCounting";
 import type { LodgingType } from "../types/lodging";
+import { formatDate } from "./displayFormat";
 
 const FALLBACK = "—";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -92,21 +93,14 @@ function formatRate(rate: number, locale: string): string {
   }).format(rate);
 }
 
-/** Short "dd.MM.yy" style date (e.g. "12.05.24") for the compact FX readout line. */
-function formatShortDate(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return FALLBACK;
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    timeZone: "UTC",
-  }).format(date);
+/** Short date with a two-digit year for the compact FX readout line, in the user's format. */
+function formatShortDate(iso: string, _locale: string): string {
+  return formatDate(iso, { timeZone: "UTC", shortYear: true }) || FALLBACK;
 }
 
 /**
- * A calendar day ("YYYY-MM-DD") written the way the reader writes it —
- * 10.05.2023 in German, 05/10/2023 in English. Empty string in, empty string
+ * A calendar day ("YYYY-MM-DD") written the way the reader chose in Settings →
+ * Display — 10.05.2023, 05/10/2023 or 2023-05-10. Empty string in, empty string
  * out, so a caller can render it before a date has been picked.
  *
  * Parsed as UTC (the `T00:00:00Z` suffix): a bare "2023-05-10" is already UTC
@@ -118,15 +112,8 @@ export function formatDayForLocale(day: string, language: string | undefined): s
   return formatFullDate(`${day.slice(0, 10)}T00:00:00.000Z`, localeForLanguage(language));
 }
 
-function formatFullDate(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return FALLBACK;
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+function formatFullDate(iso: string, _locale: string): string {
+  return formatDate(iso, { timeZone: "UTC" }) || FALLBACK;
 }
 
 /**

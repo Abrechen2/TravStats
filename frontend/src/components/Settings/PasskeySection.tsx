@@ -13,6 +13,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { useTranslation } from "../../hooks/useTranslation";
 import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { formatDate } from "../../lib/displayFormat";
 
 /** Cancelling the OS or password-manager dialog rejects with this. It is a
  *  normal user action, not an error worth showing. */
@@ -23,7 +24,7 @@ function isUserCancellation(error: unknown): boolean {
 }
 
 export default function PasskeySection(): JSX.Element {
-  const { t, i18n } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings", "common"]);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [reason, setReason] = useState<PasskeyUnavailableReason | null>(null);
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
@@ -135,9 +136,7 @@ export default function PasskeySection(): JSX.Element {
                     <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                       {t("settings:passkeys.rpIdLabel")}: {key.rpId}
                       {key.lastUsedAt
-                        ? ` · ${t("settings:passkeys.lastUsed")} ${new Date(
-                            key.lastUsedAt
-                          ).toLocaleDateString(i18n.language)}`
+                        ? ` · ${t("settings:passkeys.lastUsed")} ${formatDate(key.lastUsedAt)}`
                         : ` · ${t("settings:passkeys.neverUsed")}`}
                     </p>
                   </div>

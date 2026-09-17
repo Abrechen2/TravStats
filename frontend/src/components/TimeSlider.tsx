@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
+import { formatDate } from "../lib/displayFormat";
 
 interface TimeSliderProps {
   min: number;
@@ -50,7 +51,7 @@ export function TimeSlider({
     };
   }, [playing, min, max, onChange]);
 
-  const displayDate = new Date(current * 1000).toLocaleDateString();
+  const displayDate = formatDate(current * 1000);
 
   return (
     <div

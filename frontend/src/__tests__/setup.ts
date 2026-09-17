@@ -25,23 +25,29 @@ vi.mock("react-i18next", () => ({
 // Global settingsStore mock for useTranslation hook
 vi.mock("../store/settingsStore", async () => {
   const actual = await vi.importActual("../store/settingsStore");
-  return {
-    ...actual,
-    useSettingsStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
-      const defaultState = {
-        display: { language: "en" },
-        units: { currency: "EUR", distanceUnit: "kilometers" },
-        baseCurrency: "EUR",
-        defaults: {
-          flightCategory: "business",
-          seatClass: "economy",
-        },
-      };
+  // One date and clock format for the whole suite, so an assertion on a date
+  // does not depend on the machine's locale (lib/displayFormat.ts).
+  const defaultState = {
+    display: { language: "en", dateFormat: "DD.MM.YYYY", timeFormat: "24h" },
+    units: { currency: "EUR", distanceUnit: "kilometers" },
+    baseCurrency: "EUR",
+    defaults: {
+      flightCategory: "business",
+      seatClass: "economy",
+    },
+  };
+  const useSettingsStore = Object.assign(
+    vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
       if (typeof selector === "function") {
         return selector(defaultState);
       }
       return defaultState;
     }),
+    { getState: () => defaultState }
+  );
+  return {
+    ...actual,
+    useSettingsStore,
   };
 });
 

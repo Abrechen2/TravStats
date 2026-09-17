@@ -6,14 +6,10 @@ import { statsApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import type { AircraftProfileResponse } from "../types";
+import { formatDate as formatUserDate } from "../lib/displayFormat";
 
-function formatDate(iso: string | null, locale: string): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(locale, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
+function formatDate(iso: string | null, _locale: string): string {
+  return iso ? formatUserDate(iso) || "—" : "—";
 }
 
 export default function AircraftPage(): JSX.Element {

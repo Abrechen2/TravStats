@@ -1,5 +1,6 @@
 import type { Flight } from "../types";
 import { calculateDistance } from "./geo";
+import { formatDate } from "./displayFormat";
 
 interface YearReportOptions {
   year: number;
@@ -29,7 +30,7 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
 
   doc.setFontSize(10);
   doc.setTextColor(107, 114, 128);
-  doc.text(`${userName} · Generated on ${new Date().toLocaleDateString()}`, pageW / 2, 48, {
+  doc.text(`${userName} · Generated on ${formatDate(new Date())}`, pageW / 2, 48, {
     align: "center",
   });
 
@@ -94,7 +95,7 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
   doc.text("Flight Overview", 14, 20);
 
   const tableRows = flights.map((f) => {
-    const date = f.departureTime ? new Date(f.departureTime).toLocaleDateString() : "—";
+    const date = f.departureTime ? formatDate(f.departureTime) : "—";
     const dep = f.depIata ?? f.depIcao ?? "?";
     const arr = f.arrIata ?? f.arrIcao ?? "?";
     const dist = Math.round(

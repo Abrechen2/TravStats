@@ -30,6 +30,7 @@ import { classifyPlace } from "../shared/placeCounting";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { formatDate as formatUserDate } from "../lib/displayFormat";
 
 type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
@@ -305,8 +306,8 @@ export default function PlacesListPage(): JSX.Element {
   }, [pendingDelete, addToast, t, load]);
 
   const formatDate = useCallback(
-    (iso: string | null): string => (iso ? new Date(iso).toLocaleDateString(i18n.language) : "—"),
-    [i18n.language]
+    (iso: string | null): string => (iso ? formatUserDate(iso) : "—"),
+    []
   );
 
   if (access === "denied") {

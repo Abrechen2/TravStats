@@ -6,6 +6,7 @@ import { statsApi } from "../../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../../lib/api/loadFailure";
 import { logger } from "../../lib/logger";
 import type { CountryDetail, CountryTimelineEntry } from "../../types/passport";
+import { formatDate } from "../../lib/displayFormat";
 
 /**
  * The records that put one country in the passport — named AND opened.
@@ -42,10 +43,8 @@ import type { CountryDetail, CountryTimelineEntry } from "../../types/passport";
  * kept apart, and only `loadError` says the request failed.
  */
 
-const isoDate = (iso: string | null, locale: string): string | null =>
-  iso
-    ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit" })
-    : null;
+const isoDate = (iso: string | null, _locale: string): string | null =>
+  iso ? formatDate(iso) : null;
 
 /** Where the record lives, so a reader can correct it. */
 const linkFor = (entry: CountryTimelineEntry): string => {
