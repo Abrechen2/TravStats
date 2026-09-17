@@ -91,6 +91,7 @@ model User {
   dawarichSweepState     DawarichSweepState?
 
   documents Document[]
+
   @@map("users")
 }
 
@@ -429,6 +430,7 @@ model Flight {
   companionLinks FlightCompanion[]
 
   documents Document[]
+
   @@unique([userId, externalRef])
   // Composite indexes for the two shapes that actually dominate reads.
   // Everything else below is a single-column index kept for a single,
@@ -1278,6 +1280,7 @@ model Trip {
   companionLinks TripCompanion[]
 
   documents Document[]
+
   @@index([userId])
   @@index([userId, status])
   @@map("trips")
@@ -1618,6 +1621,7 @@ model Cruise {
   importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   documents Document[]
+
   @@unique([userId, externalRef])
   @@index([userId])
   @@index([startDate])
@@ -1908,6 +1912,7 @@ model LodgingStay {
   batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
   documents Document[]
+
   @@unique([userId, externalRef])
   @@index([lodgingId])
   @@index([userId, checkIn])
@@ -2118,6 +2123,7 @@ model PlaceVisit {
   photos PlaceVisitPhoto[]
 
   documents Document[]
+
   @@index([userId])
   @@index([placeId])
   @@index([tripId])
