@@ -74,8 +74,17 @@ export interface CruiseParseResult {
    * tried first, so an instance without Ollama can still import the formats it
    * covers.
    */
-  parserUsed: "template" | "ollama";
+  parserUsed: "template" | "ollama" | "none";
   ollamaAvailable: boolean;
+  /**
+   * Why nothing was read, when `parserUsed` is "none". Same shape the lodging
+   * parser answers with, and for the same reason: an unreadable document is
+   * not a server fault. Until 2026-09-17 this path THREW, and the route turned
+   * that into a 503 — so a cruise line no template covers, on an instance with
+   * no model, met an error page where a hotel in the same position offered
+   * manual entry.
+   */
+  fallbackReason?: string;
 }
 
 // Exported for the prompt-contract tests — extraction truthfulness rules
@@ -536,10 +545,14 @@ export async function parseCruiseBookingText(
     if (templated.length > 0) {
       return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
     }
-    throw new Error(
-      `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
-        `Check the parser configuration in Settings (Ollama URL / model).`
-    );
+    return {
+      cruises: [],
+      parserUsed: "none",
+      ollamaAvailable: false,
+      fallbackReason:
+        `Ollama is not reachable at ${parser.endpoint} — ` +
+        `check the parser configuration in Settings (Ollama URL / model).`,
+    };
   }
   const cruises = await parser.parseText(text);
   if (cruises.length === 0 && order === "llm_first") {

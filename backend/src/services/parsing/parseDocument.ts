@@ -71,6 +71,8 @@ type CruiseBody = {
   cruises: Awaited<ReturnType<typeof hydrateResolvedCruises>>;
   parserUsed: string;
   ollamaAvailable: boolean;
+  /** Present when nothing was read — the same field lodging answers with. */
+  fallbackReason?: string;
 };
 
 type LodgingBody = {
@@ -151,6 +153,7 @@ async function parseAs(
       cruises: await hydrateResolvedCruises(resolved, input.userId),
       parserUsed: result.parserUsed,
       ollamaAvailable: result.ollamaAvailable,
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
     };
   }
 

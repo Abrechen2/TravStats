@@ -45,14 +45,15 @@ export function useCruiseImportAdapter(): DomainImportAdapter {
     renderReviewModal: (props) => (
       <CruiseReviewSlot
         {...props}
-        onEmpty={() => addToast("error", t("cruise:import.noCruises"))}
+        onEmpty={(reason) => addToast("error", reason ?? t("cruise:import.noCruises"))}
       />
     ),
   };
 }
 
 interface CruiseReviewSlotProps extends ReviewModalProps {
-  onEmpty: () => void;
+  /** Called with the server's own reason when it has one. */
+  onEmpty: (reason?: string) => void;
 }
 
 function CruiseReviewSlot({
@@ -73,7 +74,12 @@ function CruiseReviewSlot({
   }
 
   if (cruises.length === 0) {
-    onEmpty();
+    // The server says WHY when it can — since 2026-09-17 a cruise the parser
+    // could not read is an ordinary empty result with a reason, not a 503.
+    // Repeating "no cruise found" over an unreachable model would send the
+    // user looking at their mail instead of at their parser settings.
+    const reason = (result as { fallbackReason?: string }).fallbackReason;
+    onEmpty(reason);
     onCancel();
     return null;
   }
