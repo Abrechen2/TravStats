@@ -52,15 +52,18 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
     // Monospace, not just tabular-nums: the digits already lined up, but the
     // weekday abbreviations ("Mi" vs "Fr") differ in width in a proportional
     // face, which shifted the whole row and broke the column.
+    // The values wrap as a group beside the label: planned + actual time plus
+    // the UTC and +1 markers are wider than any sane column minimum, and one
+    // nowrap line ran 16px into the status column (CT106 design-6 R03).
     <div
-      className="flex items-baseline gap-2 whitespace-nowrap font-mono text-[12.5px]"
+      className="flex items-baseline gap-2 font-mono text-[12.5px]"
       style={{ fontVariantNumeric: "tabular-nums" }}
     >
-      <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>
+      <span className="w-4 shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>
       {iso ? (
-        <>
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 whitespace-nowrap">
           <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
           {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
           {/* The recorded time, beside the planned one rather than replacing
@@ -94,7 +97,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
               +{marker}
             </span>
           )}
-        </>
+        </span>
       ) : (
         <span style={{ color: "var(--text-muted)" }}>—</span>
       )}
