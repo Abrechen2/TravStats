@@ -492,6 +492,11 @@ export async function ensureUser(): Promise<string> {
         twoFactorEnabledAt: null,
         twoFactorToken: null,
         twoFactorTokenExpiry: null,
+        // A reset of a shared public login must end sessions issued before
+        // it, exactly like every other credential reset (routes/auth.ts,
+        // routes/admin/users.ts, routes/passwordReset.ts) — otherwise a
+        // visitor's live demo JWT survives this reset.
+        sessionEpoch: { increment: 1 },
       },
     });
     await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: existing.id } });

@@ -72,13 +72,40 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
 
   it("restores the demo credentials on every run", async () => {
     const id = await ensureUser();
+    const before = await prisma.user.findUnique({
+      where: { id },
+      select: { sessionEpoch: true },
+    });
     await prisma.user.update({
       where: { id },
       data: {
         passwordHash: await hashPassword("changed-by-a-visitor"),
         mustChangePassword: true,
         twoFactorSecret: "PENDINGSECRET",
+        twoFactorPendingSecret: "PENDINGSECRETTOO",
         twoFactorEnabledAt: new Date(),
+        twoFactorToken: "some-hashed-login-challenge",
+        twoFactorTokenExpiry: new Date(),
+      },
+    });
+    await prisma.twoFactorRecoveryCode.create({
+      data: { userId: id, codeHash: "some-recovery-code-hash" },
+    });
+    await prisma.webAuthnCredential.create({
+      data: {
+        userId: id,
+        credentialId: "some-credential-id",
+        publicKey: "some-public-key",
+        name: "A visitor's device",
+        rpId: "example.com",
+      },
+    });
+    await prisma.apiToken.create({
+      data: {
+        userId: id,
+        label: "A visitor's token",
+        lookupHash: "some-lookup-hash",
+        hash: "some-token-hash",
       },
     });
 
@@ -88,7 +115,22 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     expect(after?.mustChangePassword).toBe(false);
     expect(after?.twoFactorEnabledAt).toBeNull();
     expect(after?.twoFactorSecret).toBeNull();
+    expect(after?.twoFactorPendingSecret).toBeNull();
+    expect(after?.twoFactorToken).toBeNull();
+    expect(after?.twoFactorTokenExpiry).toBeNull();
+    // A reset of a shared public login must end sessions issued before it —
+    // otherwise a visitor's live demo JWT would survive the reset.
+    expect(after?.sessionEpoch).toBeGreaterThan(before!.sessionEpoch);
     const { comparePassword } = await import("../utils/password");
     expect(await comparePassword("demo123", after!.passwordHash)).toBe(true);
+
+    const [recoveryCodes, webauthnCredentials, apiTokens] = await Promise.all([
+      prisma.twoFactorRecoveryCode.count({ where: { userId: id } }),
+      prisma.webAuthnCredential.count({ where: { userId: id } }),
+      prisma.apiToken.count({ where: { userId: id } }),
+    ]);
+    expect(recoveryCodes).toBe(0);
+    expect(webauthnCredentials).toBe(0);
+    expect(apiTokens).toBe(0);
   });
 });
