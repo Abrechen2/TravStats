@@ -28,6 +28,29 @@ describe("StatsTabStrip — arriving from a Details link", () => {
     expect(active).toHaveFocus();
   });
 
+  // Measured in a browser: the strip first renders with the tab it had, and
+  // the page hands it the new one a render later — focus went to "Gesamt".
+  it("focuses the tab it opened even when that tab becomes active a render later", () => {
+    const { rerender } = render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/stats", search: "?tab=flight", state: STATS_TAB_ARRIVAL }]}
+      >
+        <StatsTabStrip tabs={["flight", "cruise"]} active="all" onSelect={vi.fn()} />
+      </MemoryRouter>
+    );
+    rerender(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/stats", search: "?tab=flight", state: STATS_TAB_ARRIVAL }]}
+      >
+        <StatsTabStrip tabs={["flight", "cruise"]} active="flight" onSelect={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    const active = screen.getAllByRole("button").find((b) => b.getAttribute("aria-current"));
+    expect(active).toHaveTextContent("common:");
+    expect(active).toHaveFocus();
+  });
+
   it("leaves the scroll position alone on any other visit", () => {
     renderAt(undefined);
 

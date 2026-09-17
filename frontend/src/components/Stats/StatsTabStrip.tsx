@@ -36,7 +36,9 @@ export default function StatsTabStrip({ tabs, active, onSelect }: Props): JSX.El
     if (!arrived) return;
     window.scrollTo({ top: 0 });
     rowRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.focus();
-  }, [arrived, location.key]);
+    // `active` too: the page passes the opened tab a render after the URL
+    // changed, and focusing on the first run landed on "Gesamt".
+  }, [arrived, location.key, active]);
 
   return (
     <div style={{ background: "var(--ts-bg)", borderBottom: "1px solid var(--ts-border)" }}>
