@@ -67,8 +67,23 @@ itself stays, as today. Running the seed twice yields the same counts.
 
 `ensureUser` also restores the account itself on every run: password back to
 `demo123`, `mustChangePassword` false, two-factor secrets, recovery codes,
-passkeys and API tokens removed. The guards in section 3 should make that a
-no-op; the reset is the second line if a guard is ever missed.
+passkeys and API tokens removed, and — because all of these are shown to or
+usable by the next visitor — `firstName`, `lastName`, `birthdate`, the
+`notificationEmail` a reset link would go to, and any outstanding
+`resetToken` / `changeToken` cleared. `profilePicture` lives in the settings
+JSON, which `ensureUserSettings` rewrites wholesale. The guards in section 3
+should make all of that a no-op; the reset is the second line if a guard is
+ever missed, and the only line for an instance upgraded from before a guard.
+
+The account is locked down **before** the wipe, not after: restoring the
+password and bumping `sessionEpoch` ends every live session, so the several
+thousand deletes that follow run against an account no visitor can still write
+to. Reversed, a visitor keeps writing for the whole of the wipe and leaves rows
+behind the delete has already passed.
+
+`ensureUserSettings` leaves `historicalEnrichmentEnabled` **false**. It is a
+background job spending the instance's flight-API quota, and on a public
+instance nobody is watching the shared account.
 
 ### 2.5 Layout
 
@@ -93,10 +108,18 @@ leaves the place unlinked instead of failing.
 
 ## 3. Protection of the demo account
 
-Everything below applies only when `user.isDemo` is true. A shared helper
-(`middleware/demoGuard.ts`, exporting `rejectDemo`) answers
-`403 { error: "DEMO_ACCOUNT_FORBIDDEN" }`, the code the two existing guards in
-`routes/flights.ts` already use; those two move onto the helper.
+Everything below applies to the **shared** demo account, which is
+`isSharedDemoAccount(user)` in `utils/sharedDemo.ts`: `user.isDemo` AND
+`user.username === "demo"`. The flag alone is the wrong question — `seedDemoUser`
+sets it on every account it creates, so the public preview's `admin`, `alex` and
+`claude` and the local dev `admin:admin123` all carry it, and they own their
+accounts. A shared helper (`middleware/demoGuard.ts`, exporting `rejectDemo`
+and `rejectDemoWrites`) answers `403 { error: "DEMO_ACCOUNT_FORBIDDEN" }`.
+
+The two bulk-refresh guards in `routes/flights.ts` keep the OTHER question and
+their own message: `rejectDemoQuota` refuses every `isDemo` account, shared or
+not, because all of them are sample data and none should spend real RapidAPI
+calls.
 
 Locked, because a visitor could lock out or harm every other visitor:
 
@@ -110,11 +133,22 @@ Locked, because a visitor could lock out or harm every other visitor:
 | Provider keys | `PUT /api/v1/settings/api-keys` and its `/test/*` routes |
 | Outbound connections | `PUT` and `POST /test` on `/api/v1/settings/immich` and `/api/v1/settings/dawarich` — a shared account must not point the server at an arbitrary URL |
 | Profile picture | `POST` and `DELETE /api/v1/settings/profile-picture` — an uploaded image is shown to every other visitor |
+| Notification address | `PUT /api/v1/settings/notifications` — and `POST /auth/forgot-password` mints no token for the shared account. Setting the address and then asking for a reset link is a full takeover of the published login |
+| Profile fields | `PUT /api/v1/settings/profile` (birthdate) and any `PUT /api/v1/settings` carrying a `profile` block (name, e-mail, picture URL). The name greets every visitor from the header; the picture URL was a second door to the locked picture |
+| File uploads | `POST /api/v1/uploads/receipt`, `/trips/:id/photos`, `/trips/:id/cover`, `/places/visits/:id/photos`, `/lodging/:id/photos`, `/training/upload` — each guard sits ABOVE multer, so a refused request writes no bytes. Reads and deletes of existing files are untouched |
 
 Not locked: editing, adding and deleting travel data, display settings, map
 colours, imports. The nightly reset puts the data back.
 
-The frontend reads `isDemo` from `/auth/me` and, for the demo account, replaces
+Accepted, not fixed: every per-user rate limit is one bucket for all demo
+visitors, because the limiter keys on the user id. Two people trying the
+importer at the same time can 429 each other. A public showcase is the one
+place where that is a nuisance rather than a defence being bypassed, and
+splitting the bucket per session would weaken the limit for everyone else.
+
+The frontend reads `isSharedDemo` from `/auth/me` (and from the login,
+register and two-factor/passkey verify responses, which carry the same field)
+and, for the shared demo account, replaces
 each locked control with one sentence saying the demo account cannot change it
 (DE and EN). The server check is the protection; the UI only avoids offering a
 button that always fails.
@@ -124,7 +158,12 @@ button that always fails.
 A new environment variable `PUBLIC_DEMO_LOGIN` (default `false`, parsed in
 `config/env.ts`) is added as `publicDemoLogin` to the unauthenticated
 `GET /api/v1/setup/status`, which the app already calls before any login
-(`App.tsx`). The OpenAPI schema of that route gains the field. When true, the login page shows a short line with
+(`App.tsx`). No OpenAPI change: the whole `setup` mount is excluded from the
+coverage ratchet (`services/openapi/coverage.ts`, `UNDOCUMENTED_MOUNTS`:
+"first-boot wizard — unauthenticated, single-use, not an integration
+surface"), so the route has no documented schema to extend. An earlier draft
+of this section claimed one was added; nothing of the sort exists.
+When true, the login page shows a short line with
 `demo` / `demo123` and a button that fills both fields. Without the variable an
 install never displays credentials, even though a first install seeds the same
 demo user.

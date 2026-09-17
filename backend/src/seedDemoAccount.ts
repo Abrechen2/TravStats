@@ -29,6 +29,7 @@ import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
+import { DEMO_USERNAME } from "./utils/sharedDemo";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "./services/companionService";
@@ -55,7 +56,6 @@ type PortRow = {
   unlocode: string | null;
 };
 
-const DEMO_USERNAME = "demo";
 const DEMO_PASSWORD = "demo123";
 
 // ------------------------------------------------------------------ utilities
@@ -481,12 +481,18 @@ export async function ensureUser(): Promise<string> {
     where: { username: DEMO_USERNAME },
   });
   if (existing) {
-    await wipeDemoUser(existing.id);
-    // Restore the account itself, not only its data. The route guards added
-    // in Tasks 1-3 should already refuse a credential/2FA/token change on the
-    // demo account server-side — this is the second line of defence, in case
-    // one of those guards is ever missed or bypassed: every re-seed puts the
-    // account back to a known-good, publicly-documented login.
+    // Restore the account itself BEFORE its data. The route guards should
+    // already refuse a credential/2FA/token change on the demo account
+    // server-side — this is the second line of defence, in case one of those
+    // guards is ever missed or bypassed: every re-seed puts the account back
+    // to a known-good, publicly-documented login.
+    //
+    // The order matters and used to be the other way round. `wipeDemoUser`
+    // deletes a few thousand rows across twenty tables; a visitor whose
+    // session is still live goes on writing for the whole of that window and
+    // leaves rows behind the delete has already passed. Bumping `sessionEpoch`
+    // first ends every session issued before this instant, so the wipe runs
+    // against an account nobody can reach (final review finding I4).
     await prisma.user.update({
       where: { id: existing.id },
       data: {
@@ -498,6 +504,22 @@ export async function ensureUser(): Promise<string> {
         twoFactorEnabledAt: null,
         twoFactorToken: null,
         twoFactorTokenExpiry: null,
+        // Whatever a visitor typed about themselves. The name is read by the
+        // header greeting on every page and the birthdate feeds an
+        // achievement, so both are shown to the next visitor and both
+        // survived every reseed until now (finding I1).
+        firstName: null,
+        lastName: null,
+        birthdate: null,
+        // The account-takeover chain: set the notification address, ask
+        // /auth/forgot-password for a link, own the shared login (finding C3).
+        // Both guards that close it are newer than some installs, so the
+        // address and any outstanding token are cleared here as well.
+        notificationEmail: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        changeToken: null,
+        changeTokenExpiry: null,
         // A reset of a shared public login must end sessions issued before
         // it, exactly like every other credential reset (routes/auth.ts,
         // routes/admin/users.ts, routes/passwordReset.ts) — otherwise a
@@ -508,6 +530,7 @@ export async function ensureUser(): Promise<string> {
     await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: existing.id } });
     await prisma.webAuthnCredential.deleteMany({ where: { userId: existing.id } });
     await prisma.apiToken.deleteMany({ where: { userId: existing.id } });
+    await wipeDemoUser(existing.id);
     return existing.id;
   }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
@@ -528,7 +551,13 @@ export async function ensureUser(): Promise<string> {
   return user.id;
 }
 
-async function ensureUserSettings(userId: string): Promise<void> {
+/**
+ * Historical enrichment stays OFF. It is a background job that spends the
+ * instance's flight-API quota, and on a public instance the shared account is
+ * unattended by definition — the admin who pays for the key is not the person
+ * clicking around in it (final review finding I5).
+ */
+export async function ensureUserSettings(userId: string): Promise<void> {
   await prisma.userSettings.upsert({
     where: { userId },
     update: {
@@ -538,7 +567,7 @@ async function ensureUserSettings(userId: string): Promise<void> {
         defaultCategory: "vacation",
         welcomeSeen: true,
       } as Prisma.InputJsonValue,
-      historicalEnrichmentEnabled: true,
+      historicalEnrichmentEnabled: false,
     },
     create: {
       userId,
@@ -548,7 +577,7 @@ async function ensureUserSettings(userId: string): Promise<void> {
         defaultCategory: "vacation",
         welcomeSeen: true,
       } as Prisma.InputJsonValue,
-      historicalEnrichmentEnabled: true,
+      historicalEnrichmentEnabled: false,
     },
   });
 }

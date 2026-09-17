@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
-import { ensureUser } from "../seedDemoAccount";
+import { ensureUser, ensureUserSettings } from "../seedDemoAccount";
 
 /**
  * `seedDemoAccount` is the seeder the Docker entrypoint runs when
@@ -132,5 +132,91 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     expect(recoveryCodes).toBe(0);
     expect(webauthnCredentials).toBe(0);
     expect(apiTokens).toBe(0);
+  });
+
+  /**
+   * Findings I1 and C3: the reset put the credentials back but left everything
+   * a visitor could still show or use — the name in the header greeting, the
+   * birthdate, the notification address a reset link would go to, and any
+   * reset/change token already outstanding.
+   */
+  it("clears the identity a visitor could leave behind", async () => {
+    const id = await ensureUser();
+    await prisma.user.update({
+      where: { id },
+      data: {
+        firstName: "A",
+        lastName: "Visitor",
+        birthdate: new Date("1990-05-05T12:00:00.000Z"),
+        notificationEmail: "attacker@example.com",
+        resetToken: "a-reset-token-hash",
+        resetTokenExpiry: new Date(Date.now() + 60_000),
+        changeToken: "a-change-token-hash",
+        changeTokenExpiry: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await ensureUser();
+
+    const after = await prisma.user.findUnique({ where: { id } });
+    expect(after?.firstName).toBeNull();
+    expect(after?.lastName).toBeNull();
+    expect(after?.birthdate).toBeNull();
+    expect(after?.notificationEmail).toBeNull();
+    expect(after?.resetToken).toBeNull();
+    expect(after?.resetTokenExpiry).toBeNull();
+    expect(after?.changeToken).toBeNull();
+    expect(after?.changeTokenExpiry).toBeNull();
+  });
+
+  /**
+   * Ruling R12 (finding I4). The wipe deletes a few thousand rows; a visitor
+   * whose session is still live writes into that window and leaves rows the
+   * wipe has already passed. Bumping `sessionEpoch` and restoring the password
+   * FIRST ends every live session before the first delete runs.
+   */
+  it("ends live sessions before deleting the data, not after", async () => {
+    await ensureUser();
+
+    const order: string[] = [];
+    const realUpdate = prisma.user.update.bind(prisma.user);
+    const realWipe = prisma.placeVisit.deleteMany.bind(prisma.placeVisit);
+    const updateSpy = jest
+      .spyOn(prisma.user, "update")
+      .mockImplementation(((args: never) => {
+        order.push("lock");
+        return realUpdate(args);
+      }) as never);
+    // The first statement of `wipeDemoUser`.
+    const wipeSpy = jest
+      .spyOn(prisma.placeVisit, "deleteMany")
+      .mockImplementation(((args: never) => {
+        order.push("wipe");
+        return realWipe(args);
+      }) as never);
+
+    try {
+      await ensureUser();
+    } finally {
+      updateSpy.mockRestore();
+      wipeSpy.mockRestore();
+    }
+
+    expect(order).toEqual(["lock", "wipe"]);
+  });
+
+  /**
+   * Finding I5: the demo settings switched historical enrichment ON, so a
+   * public instance's shared account spent the admin's flight-API quota
+   * enriching sample flights in the background, unattended.
+   */
+  it("leaves historical enrichment off", async () => {
+    const id = await ensureUser();
+    await ensureUserSettings(id);
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: id },
+      select: { historicalEnrichmentEnabled: true },
+    });
+    expect(settings?.historicalEnrichmentEnabled).toBe(false);
   });
 });
