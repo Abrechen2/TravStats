@@ -4,7 +4,6 @@ import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 export interface NavLeaf {
   kind: "leaf";
@@ -56,7 +55,6 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
   const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
   const placesVisible = usePlacesVisible();
   const isAdmin = user?.isAdmin ?? false;
 
@@ -132,21 +130,17 @@ export function useNavItems(inboxCount: number): { center: NavNode[]; system: Na
       ...(isAdmin
         ? [
             { kind: "leaf" as const, id: "admin", path: "/admin", label: t("dashboard:admin") },
-            // The badge and the gate now agree: the page is offered only while
-            // the instance beta switch is on (owner decision 2026-09-05, see
-            // `parserTemplates` in config/betaFeatures.ts). Before that the
-            // badge was a label with nothing behind it.
-            ...(isFeatureVisible("parserTemplates")
-              ? [
-                  {
-                    kind: "leaf" as const,
-                    id: "parser",
-                    path: "/parser",
-                    label: t("dashboard:parser"),
-                    betaBadge: true,
-                  },
-                ]
-              : []),
+            // Out of beta on 2026-09-17 (owner decision): the gate asked for
+            // the template and regex parsers to be measured against the
+            // sample set, and they were — 31 of 31 flight mails, 97 of 108
+            // lodging, 4 of 4 cruise, without an LLM. Admin-only, as it has
+            // always been; no badge, because there is no gate behind it.
+            {
+              kind: "leaf" as const,
+              id: "parser",
+              path: "/parser",
+              label: t("dashboard:parser"),
+            },
           ]
         : []),
     ];
