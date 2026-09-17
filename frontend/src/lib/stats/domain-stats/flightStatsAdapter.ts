@@ -94,7 +94,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     summaryByYear[year] = {
       headlineKpis: [
         { labelKey: "overviewCard.kpi.distance", value: Math.round(y.distanceKm), unit: "km" },
-        { labelKey: "overviewCard.kpi.flightTime", value: Math.round(y.hours), unit: "h" },
+        { labelKey: "overviewCard.kpi.flightTime", value: roundHours(y.hours), unit: "h" },
         { labelKey: "overviewCard.kpi.airlines", value: groups.length },
       ],
       topItems: {
@@ -125,7 +125,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
         { labelKey: "overviewCard.kpi.distance", value: Math.round(totalDistanceKm), unit: "km" },
         {
           labelKey: "overviewCard.kpi.flightTime",
-          value: Math.round(totalDurationHours),
+          value: roundHours(totalDurationHours),
           unit: "h",
         },
         { labelKey: "overviewCard.kpi.airlines", value: airlineGroups.length },
@@ -134,6 +134,14 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
       detailRoute: "/stats?tab=flight",
     },
   };
+}
+
+/**
+ * One decimal, not whole hours: a single 90-minute flight rounded to "2 h" on
+ * the overview while the flight tab said 1.5 (CT106 design-6 R09).
+ */
+function roundHours(hours: number): number {
+  return Math.round(hours * 10) / 10;
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

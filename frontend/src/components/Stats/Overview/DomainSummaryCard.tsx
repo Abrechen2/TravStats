@@ -38,7 +38,8 @@ export default function DomainSummaryCard({
   const formatKpi = (kpi: DomainKpi): string => {
     const value =
       typeof kpi.value === "number"
-        ? kpi.value.toLocaleString(locale, { maximumFractionDigits: 0 })
+        ? // A duration keeps its half hour; counts and distances stay whole (R09).
+          kpi.value.toLocaleString(locale, { maximumFractionDigits: kpi.unit === "h" ? 1 : 0 })
         : kpi.value;
     return kpi.unit ? `${value} ${t(`stats:overviewCard.unit.${kpi.unit}`)}` : value;
   };

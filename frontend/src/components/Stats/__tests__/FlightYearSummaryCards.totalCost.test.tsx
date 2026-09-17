@@ -65,3 +65,13 @@ describe("FlightYearSummaryCards — total cost", () => {
     expect(screen.queryByText(/noPricesRecorded/)).toBeNull();
   });
 });
+
+// CT106 design-6 R09: the overview card and this tile must say the same thing
+// about one 90-minute flight, in the reader's language — "1,5" on a German page.
+describe("FlightYearSummaryCards — flight time", () => {
+  it("prints hours with one localised decimal", () => {
+    renderWith(summary({ totalFlightTime: 90 }));
+
+    expect(screen.getByText("1,5")).toBeInTheDocument();
+  });
+});

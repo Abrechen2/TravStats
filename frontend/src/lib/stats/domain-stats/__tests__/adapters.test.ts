@@ -476,6 +476,21 @@ describe("summaryByYear", () => {
     ).toBe(23);
   });
 
+  // CT106 design-6 R09: a 90-minute flight is 1.5 h, not "2 h".
+  it("flights: flight time keeps its half hour", () => {
+    const stats = adaptFlight({
+      flights: [
+        makeFlight({ id: "a", departureTime: "2005-05-01T10:00:00Z", durationMinutes: 90 }),
+      ],
+      countries: [],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    const time = (kpis: { labelKey: string; value: unknown }[]): unknown =>
+      kpis.find((k) => k.labelKey === "overviewCard.kpi.flightTime")?.value;
+    expect(time(stats.summaryByYear[2005].headlineKpis)).toBe(1.5);
+    expect(time(stats.summary.headlineKpis)).toBe(1.5);
+  });
+
   it("cruises: nights, sea days and ports per start year", () => {
     const stats = adaptCruise({
       stats: { ...baseStats, cruisesCount: 2 },

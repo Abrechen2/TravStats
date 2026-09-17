@@ -27,8 +27,14 @@ export default function FlightYearSummaryCards({
   yearSummary,
   compareSummary,
 }: FlightYearSummaryCardsProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
+  // Same rule as the overview card: one decimal, in the reader's language.
+  // `toFixed(1)` printed "1.5" on a German page beside a card that said "2 h"
+  // for the same flight (CT106 design-6 R09).
+  const hoursLocale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const formatHours = (minutes: number): string =>
+    (minutes / 60).toLocaleString(hoursLocale, { maximumFractionDigits: 1 });
 
   return (
     <>
@@ -140,7 +146,7 @@ export default function FlightYearSummaryCards({
               </h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {(yearSummary.totalFlightTime / 60).toFixed(1)}
+                  {formatHours(yearSummary.totalFlightTime)}
                   <span className="text-lg ml-1">{t("stats:overview.hours")}</span>
                 </p>
                 {compareSummary !== null && (
@@ -152,7 +158,7 @@ export default function FlightYearSummaryCards({
               </div>
               {compareSummary !== null && (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                  {(compareSummary.totalFlightTime / 60).toFixed(1)} {t("stats:overview.hours")} (
+                  {formatHours(compareSummary.totalFlightTime)} {t("stats:overview.hours")} (
                   {compareYear})
                 </p>
               )}

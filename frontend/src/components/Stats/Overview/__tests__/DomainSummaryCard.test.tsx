@@ -104,6 +104,32 @@ describe("DomainSummaryCard", () => {
     expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise&year=all");
   });
 
+  // CT106 design-6 R09: one 1.5 h flight read "2 h" here and "1.5 h" on the
+  // detail tab. A duration keeps one decimal; a distance stays whole.
+  it("keeps one decimal on a duration but none on a distance", () => {
+    render(
+      <DomainSummaryCard
+        domain="flight"
+        stats={{
+          ...cruiseStats,
+          domain: "flight",
+          summary: {
+            ...cruiseStats.summary,
+            headlineKpis: [
+              { labelKey: "overviewCard.kpi.distance", value: 486.4, unit: "km" },
+              { labelKey: "overviewCard.kpi.flightTime", value: 1.5, unit: "h" },
+            ],
+          },
+        }}
+        selectedYear={null}
+        compareYear={null}
+        compareEnabled={false}
+      />
+    );
+    expect(screen.getByText("486 stats:overviewCard.unit.km")).toBeInTheDocument();
+    expect(screen.getByText("1.5 stats:overviewCard.unit.h")).toBeInTheDocument();
+  });
+
   // CT106 audit, B04: year 2005 → "Details" opened the tab on 2026.
   it("carries the selected year into the tab it opens", () => {
     render(
