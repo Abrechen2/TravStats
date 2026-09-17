@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "@prisma/client";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
-import { isSharedDemoUser } from "../middleware/demoGuard";
+import { isSharedDemoUser, rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import {
   createTripSchema,
@@ -751,10 +751,21 @@ const summarizeBodySchema = z.object({
   language: z.enum(["de", "en"]).optional(),
 });
 
-/** POST /trips/:id/summarize — generate + persist a 3-paragraph summary */
+/**
+ * POST /trips/:id/summarize — generate + persist a 3-paragraph summary
+ *
+ * Refused for the SHARED demo account, for the same reason the Immich and
+ * Dawarich resolvers hand it nothing (independent review 2026-09-17, A2): the
+ * target below is the OPERATOR's Ollama, lent to every account on the
+ * instance. That is a fair loan to the people they invited, and an open
+ * compute endpoint for the `demo` login whose password is printed on a public
+ * login page. The frontend stops offering the card for that account, so this
+ * is the door behind the hidden button, not the user-facing refusal.
+ */
 router.post(
   "/trips/:id/summarize",
   authenticate,
+  rejectDemo,
   requireWriteScope,
   emailParseLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

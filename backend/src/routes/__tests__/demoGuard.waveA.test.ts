@@ -212,6 +212,36 @@ describe("Wave A demo guards", () => {
       expect(edited.status).toBe(200);
     });
 
+    /**
+     * The trip summary runs on the OPERATOR's Ollama — the same loan the
+     * Immich and Dawarich resolvers refuse the shared account (A2). Found in
+     * the public-preview walk-through after the wave A fixes had landed: the
+     * card was on screen for `demo` and the route behind it was open.
+     */
+    it("refuses the AI trip summary for the shared demo account", async () => {
+      const res = await request(app)
+        .post(`/api/v1/trips/${demoTripId}/summarize`)
+        .set("Cookie", demoCookie)
+        .send({ language: "de" });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
+    });
+
+    it("does not refuse the AI trip summary for a normal account", async () => {
+      const trip = await prisma.trip.create({
+        data: { userId: ids[1], name: "Summarised trip", startDate: new Date("2026-02-01") },
+        select: { id: true },
+      });
+      // No Ollama in the test environment, so the route answers 503 — what
+      // matters is that it gets past the guard to reach that answer.
+      const res = await request(app)
+        .post(`/api/v1/trips/${trip.id}/summarize`)
+        .set("Cookie", userCookie)
+        .send({ language: "de" });
+      expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+      expect(res.status).not.toBe(403);
+    });
+
     it("does not refuse a cover image URL for a normal account", async () => {
       const created = await request(app)
         .post("/api/v1/trips")

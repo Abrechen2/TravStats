@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 
@@ -38,9 +39,19 @@ export function TripSummaryPanel({
 }): JSX.Element | null {
   const addToast = useToastStore((s) => s.addToast);
   const { isFeatureVisible } = useBetaFeatures();
+  const isSharedDemo = useIsDemoAccount();
   const [generating, setGenerating] = useState(false);
 
-  const canGenerate = isFeatureVisible("tripAiSummary");
+  /**
+   * The shared demo account is offered no generation at all — the server
+   * refuses it (`rejectDemo` on `/trips/:id/summarize`), because generating
+   * spends the operator's Ollama. No locked notice here, unlike the settings
+   * sections: those describe facts about the account that must stay on screen,
+   * whereas this card is nothing but the call to action, and repeating a
+   * refusal on all fourteen demo trips is noise. A summary that already exists
+   * is still shown below — it is content, not a control.
+   */
+  const canGenerate = isFeatureVisible("tripAiSummary") && !isSharedDemo;
 
   const generate = async (): Promise<void> => {
     setGenerating(true);
