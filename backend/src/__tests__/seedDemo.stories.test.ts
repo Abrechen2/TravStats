@@ -48,6 +48,19 @@ describe("seedStories", () => {
     }
   });
 
+  it("dual-writes FlightCompanion and CruiseCompanion join rows alongside the denormalized arrays", async () => {
+    for (const story of STORIES) {
+      if (story.companions.length === 0) continue;
+      const trip = await prisma.trip.findFirst({
+        where: { userId, name: story.name },
+        include: { flights: { include: { companionLinks: true } }, cruises: { include: { companionLinks: true } } },
+      });
+      if (!trip) throw new Error(`${story.name}: trip not found`);
+      for (const flight of trip.flights) expect(flight.companionLinks).toHaveLength(story.companions.length);
+      for (const cruise of trip.cruises) expect(cruise.companionLinks).toHaveLength(story.companions.length);
+    }
+  });
+
   it("marks planned stories' flights and stays as not yet taken", async () => {
     const planned = STORIES.filter((s) => s.status === "planned").map((s) => s.name);
     const trips = await prisma.trip.findMany({ where: { userId, name: { in: planned } }, include: { flights: true, lodgingStays: true } });

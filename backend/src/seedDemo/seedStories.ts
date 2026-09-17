@@ -30,7 +30,7 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
   for (const f of story.flights) {
     const dep = airportByIata(airports, f.from);
     const arr = airportByIata(airports, f.to);
-    await prisma.flight.create({
+    const flight = await prisma.flight.create({
       data: {
         userId, tripId: trip.id, airline: f.airline, flightNumber: f.flightNumber,
         depIcao: dep.icao, depIata: dep.iata, depName: dep.name, depLat: dep.lat, depLon: dep.lon,
@@ -41,6 +41,15 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
         co2Kg: calculateCo2Kg({ depLat: dep.lat, depLon: dep.lon, arrLat: arr.lat, arrLon: arr.lon, seatClass: "economy" }),
       },
     });
+    // Dual write, same as seedDemoAccount.ts's linkFlightCompanions: without
+    // the join rows a seeded instance shows companion chips (from the
+    // denormalized array above) but an empty suggestion list.
+    if (companions.length > 0) {
+      await prisma.flightCompanion.createMany({
+        data: linkRowsFor(companions.map((c) => c.id)).map((l) => ({ flightId: flight.id, companionId: l.companionId, position: l.position })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   for (const s of story.stays) {
@@ -89,6 +98,13 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
         cabinType: c.cabinType, price: c.price, currency: "EUR", companions: story.companions, tags: story.tags, dataSource: "manual",
       },
     });
+    // Same dual write as seedCruises's per-cruise cruiseCompanion.createMany.
+    if (companions.length > 0) {
+      await prisma.cruiseCompanion.createMany({
+        data: linkRowsFor(companions.map((c) => c.id)).map((l) => ({ cruiseId: cruise.id, companionId: l.companionId, position: l.position })),
+        skipDuplicates: true,
+      });
+    }
     for (const [i, portId] of portIds.entries()) {
       const day = new Date(Date.parse(c.start) + i * 86_400_000);
       await prisma.cruiseStop.create({
