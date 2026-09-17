@@ -168,6 +168,26 @@ describeSamples("Booking.com template parser (real samples)", () => {
     expect(r.postcode).toBe("L-5836");
     expect(r.country).toBe("Luxemburg");
   });
+
+  // forgejo#122 — this one read as NOTHING until 2026-09-17, and it is the
+  // kind of mail that matters most: the stay already exists and its dates have
+  // moved. Same brand, same inline layout; only the number's label differs
+  // ("Reservierungsnummer", no colon) and the property is named in the subject
+  // as prose rather than after "bestätigt:".
+  it("parses a CHANGED booking (Reservierungsnummer, property named in prose)", () => {
+    const r = parseSample("nderte Buchung");
+    expect(r.hotelName).toBe("City Premiere Hotel Apartments");
+    expect(r.confirmationNumber).toBe("369011280");
+    expect(r.checkIn).toBe("2015-04-02");
+    expect(r.checkOut).toBe("2015-04-07");
+    expect(r.nights).toBe(5);
+    // A changed booking writes "Adresse:" over two lines instead of the single
+    // "Lage" line the template reads, so the city stays null and says so.
+    // Guessing one out of "Dubai, , Vereinigte Arabische Emirate" would be a
+    // plausible-looking wrong value in 97 other mails' worth of code.
+    expect(r.city).toBeNull();
+    expect(r.missing).toContain("city");
+  });
 });
 
 // These run everywhere — they use synthetic text, not the private samples.
@@ -330,6 +350,32 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r?.city).toBe("Luxemburg (Stadt)");
     expect(r?.postcode).toBe("L-5836");
     expect(r?.country).toBe("Luxemburg");
+  });
+
+  // forgejo#122. The synthetic twin of the sample above, so the rule holds
+  // where the private corpus is absent.
+  it("accepts a changed booking's 'Reservierungsnummer' and its prose subject", () => {
+    const changed = stacked.replace(
+      "Bestätigungsnummer: 1234567890",
+      "Reservierungsnummer\t 1234567890"
+    );
+    const r = parseBookingComEmail("Ihre geänderte Buchung in der Unterkunft Musterhotel", changed);
+    expect(r?.hotelName).toBe("Musterhotel");
+    expect(r?.confirmationNumber).toBe("1234567890");
+    expect(r?.checkIn).toBe("2026-01-05");
+    expect(r?.nights).toBe(2);
+  });
+
+  it("still declines a direct hotel booking's 'Buchungsnummer'", () => {
+    // The label a hotel's own confirmation uses must NOT open this template —
+    // widening the number's label is not a licence to read foreign mails.
+    const direct = stacked
+      .replace(
+        "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+        "Buchungsnummer: 1234567890"
+      )
+      .replace("Lage", "Lage");
+    expect(parseBookingComEmail("Buchungsbestätigung Musterhotel", direct)).toBeNull();
   });
 
   it("returns null for text that is not a Booking.com confirmation", () => {

@@ -80,7 +80,23 @@ const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
   R$: "BRL",
 };
 
-const CONFIRMATION_RE = /Bestätigungsnummer:\s*‌?\s*(\d{6,})/;
+/**
+ * A confirmation says "Bestätigungsnummer:"; a CHANGED booking says
+ * "Reservierungsnummer" and no colon.
+ *
+ * Measured 2026-09-17 (forgejo#122): of the twelve lodging mails the template
+ * path reads nothing from, one is a Booking.com mail the template would parse
+ * perfectly — "Ihre geänderte Buchung in der Unterkunft …". Same brand, same
+ * inline layout, same `Anreise`/`Abreise`/`Ihre Buchung`/`Gesamtpreis` lines;
+ * only the number's label differs. That is the one kind of mail a user most
+ * needs read, because the stay already exists and the dates have moved.
+ *
+ * "Buchungsnummer" stays out on purpose — that is what a direct hotel booking
+ * says, and those must fall through rather than be read by a Booking.com
+ * template. The brand check below is what actually keeps them out, but the
+ * label list should not invite them either.
+ */
+const CONFIRMATION_RE = /(?:Bestätigungs|Reservierungs)nummer:?\s*‌?\s*(\d{6,})/;
 
 function toLines(body: string): string[] {
   return body
@@ -119,6 +135,12 @@ const KNOWN_LABELS = new Set([
   "Gesamtpreis",
   "Buchungsinformationen",
   "Zahlungsangaben",
+  // Only a changed booking carries these four, and they sit directly above
+  // "Ihre Buchung" — a stacked read of that label must not return one of them.
+  "Reservierungsnummer",
+  "PIN-Code",
+  "Gebucht von",
+  "Ihre Änderungen",
 ]);
 
 /**
@@ -321,7 +343,13 @@ function findTotal(lines: string[]): { amount: number; currency: LodgingCurrency
 function hotelNameFromSubject(subject: string | undefined): string | null {
   if (!subject) return null;
   const m = subject.match(/bestätigt:\s*(.+)$/i);
-  return m ? m[1].trim() : null;
+  if (m) return m[1].trim();
+  // A changed booking names the property in prose instead: "Ihre geänderte
+  // Buchung in der Unterkunft City Premiere Hotel Apartments". The body
+  // fallback cannot help there — that mail puts the name on the SAME line as
+  // the property link, so the line after it is the hotel's name in Arabic.
+  const changed = subject.match(/in der Unterkunft\s+(.+)$/i);
+  return changed ? changed[1].trim() : null;
 }
 
 /** Fallback: the first non-empty line after the property's booking.com link. */
