@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging, LodgingStats, LodgingStay } from "../../types/lodging";
+import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
 
 const listLodgingsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
@@ -620,5 +621,26 @@ describe("LodgingListPage", () => {
       // also open the very lodging it is about to remove.
       expect(navigateMock).not.toHaveBeenCalled();
     });
+  });
+
+  // Review finding (Alex T7, round 1): nothing tested that the wiring
+  // actually pages the rows — reverting `filtered.map` -> `pagination.paged.map`
+  // or dropping `<TablePagination>` would have left the suite green.
+  it("shows only one page of rows while the summary strip keeps the full count", async () => {
+    // stayCount/nights zeroed so the "lodgings" figure (63) cannot coincide
+    // with the "stays"/"nights" figures, which would otherwise also sum to 63.
+    const lodgings = Array.from({ length: 63 }, (_, i) =>
+      makeLodging({ id: `l-${i}`, name: `Hotel ${i}`, stayCount: 0, nights: 0 })
+    );
+    listLodgingsMock.mockResolvedValue(lodgings);
+
+    const { container } = renderListPage();
+
+    await waitFor(() => {
+      expect(countRenderedRows(container)).toBe(50); // default page size
+    });
+    expect(paginationControlsRendered()).toBe(true);
+    // The FULL filtered count (63), not the 50 rows the page renders.
+    expect(screen.getByText("63")).toBeInTheDocument();
   });
 });

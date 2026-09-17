@@ -1,10 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
-// Re-exported so a page that needs both can do it in one import line — the
-// flights list needed the saved line to stay under the 800-line ratchet.
-export { usePagination } from "./usePagination";
-
 /**
  * The control row under a paginated table: range text, first/prev/next/last,
  * and the page-size choice. Pure and stateless — `usePagination` owns the
