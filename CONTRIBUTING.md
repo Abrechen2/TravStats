@@ -97,7 +97,10 @@ Full developer reference: [CLAUDE.md](CLAUDE.md).
 
 ## Code style (short version)
 
-- TypeScript `strict: true`, ESLint + Prettier (printWidth 100, double quotes)
+- TypeScript `strict: true`, ESLint + Prettier (printWidth 100, double quotes) —
+  one `.prettierrc` at the root for the whole tree; `npm run format` from the
+  root. After cloning, run `git config blame.ignoreRevsFile .git-blame-ignore-revs`
+  once, so `git blame` skips the commits that only reformatted.
 - `unknown` instead of `any`; cast via type guards
 - `async / await`, never `.then()`
 - Pino structured logging, never `console.log`

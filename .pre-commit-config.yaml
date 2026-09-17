@@ -33,11 +33,15 @@ repos:
 
   - repo: local
     hooks:
-      - id: prettier-frontend
-        name: Prettier (frontend)
+      # The whole tree since forgejo#61, not frontend/src alone. Prettier
+      # skips anything in the root .prettierignore even when a hook hands it
+      # the path, so the exclusions live in one place, not in this regex.
+      # Pre-commit runs from the root, which is where that file is read.
+      - id: prettier
+        name: Prettier
         language: node
-        entry: npx --prefix frontend prettier --write
-        files: ^frontend/src/.*\.(ts|tsx|css)$
+        entry: npx --prefix frontend prettier --write --ignore-unknown
+        files: \.(ts|tsx|js|jsx|mjs|cjs|css|json|ya?ml)$
         pass_filenames: true
 
       # ------------------------------------------------------------------

@@ -466,23 +466,25 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------
-  # SAFE TO REQUIRE — but note it only checks files the change touched.
+  # SAFE TO REQUIRE — the whole tree, since forgejo#61.
   #
-  # Scoped on purpose: ~95 files under frontend/src have never been
-  # Prettier-formatted (mostly since the Tailwind 4 migration), so a
-  # repo-wide check would fail on every PR regardless of its content, and
-  # a badge that is always red carries no information. Scoping keeps the
-  # signal about the change under review. A mass `prettier --write` is the
-  # alternative whenever the maintainer wants to take that diff.
+  # This job used to check only the frontend files a change touched, and
+  # said why: ~95 frontend files and nearly the whole backend had never been
+  # formatted, so a repo-wide check would have been red on every push
+  # whatever it contained. `9349b975` formatted the tree once (and is listed
+  # in .git-blame-ignore-revs), which removes the reason. A full check is
+  # also the cheaper one to reason about: nothing depends on a diff range.
+  #
+  # Scope is `.prettierignore` at the root — every exclusion there says why.
+  # Run from the root, because that is where Prettier reads the ignore file.
+  # prettier comes from frontend's lockfile, the same pinned version the
+  # pre-commit hook uses.
   # ---------------------------------------------------------------------
   format:
-    name: Frontend format check
+    name: Format check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Need history on both sides of the change to diff against.
-          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -493,53 +495,5 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Collect changed frontend files
-        id: changed
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          BEFORE_SHA: ${{ github.event.before }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            range="origin/$BASE_REF...HEAD"
-          elif [ "$EVENT_NAME" = "push" ] && \
-               [ -n "${BEFORE_SHA:-}" ] && \
-               [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-            range="$BEFORE_SHA..HEAD"
-          else
-            # workflow_dispatch, or a first push with no "before" commit:
-            # nothing meaningful to diff against, so check the last commit.
-            range="HEAD~1..HEAD"
-          fi
-          echo "Diffing $range"
-          # ACMR: skip deletions — prettier cannot check a file that is gone.
-          #
-          # Single `*`, not `**`: in a git pathspec (no :(glob) magic) `*`
-          # already crosses directory separators, while `src/**/*.tsx`
-          # requires at least one intermediate directory and therefore
-          # silently misses frontend/src/App.tsx and its siblings. Measured,
-          # not assumed — that miss is exactly the kind of quiet hole this
-          # job exists to close.
-          git diff --name-only --diff-filter=ACMR "$range" -- \
-            'frontend/src/*.ts' \
-            'frontend/src/*.tsx' \
-            'frontend/src/*.css' > changed.txt || true
-          # Guard against a file deleted later in the range.
-          : > files.txt
-          while IFS= read -r f; do
-            [ -f "$f" ] && printf '%s\n' "${f#frontend/}" >> files.txt
-          done < changed.txt
-          count=$(wc -l < files.txt | tr -d ' ')
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Changed frontend files to check: $count"
-          cat files.txt
-
-      - name: Prettier check (changed files only)
-        if: steps.changed.outputs.count != '0'
-        run: cd frontend && xargs -a ../files.txt npx prettier --check
-
-      - name: Nothing to check
-        if: steps.changed.outputs.count == '0'
-        run: echo "No frontend source files changed — skipping Prettier."
+      - name: Prettier check (whole tree)
+        run: npx --prefix frontend prettier --check --ignore-unknown .

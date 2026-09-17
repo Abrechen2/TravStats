@@ -1,0 +1,13 @@
+# Commits that changed formatting and nothing else. `git blame` steps over
+# them, so a line keeps pointing at the change that gave it its meaning.
+#
+# GitHub reads this file by itself. Locally, once per clone:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only list a commit here if it is pure formatting. A commit that also
+# changes behaviour would hide that change from blame, which is worse than the
+# noise this file exists to remove.
+
+# style: format the whole tree once (forgejo#61)
+51348f587da6d8e1d57718e01a171d87108ba1c0

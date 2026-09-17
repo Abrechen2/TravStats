@@ -11,8 +11,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "format": "cd .. && npm run format",
+    "format:check": "cd .. && npm run format:check",
     "dead-code": "ts-prune | grep -v \"(used in module)\""
   },
   "dependencies": {
