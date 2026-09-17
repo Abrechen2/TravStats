@@ -2,7 +2,9 @@ import { prisma } from "../db";
 import type { AirportRow } from "../seedDemoAccount";
 import { calculateCo2Kg } from "../services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "../services/companionService";
+import { getBaseCurrency } from "../services/fx/snapshot";
 import { stopTimesForDay } from "./cruiseTiming";
+import { seedFxColumns } from "./stayFx";
 import { airportByIata, curatedIdIfPresent, portIdByLocode, shipByName } from "./lookup";
 import { seedTour } from "./seedTours";
 import { STORIES, type Story } from "./stories";
@@ -53,6 +55,9 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
     }
   }
 
+  // See seedBulk: a priced stay with no snapshot into the base currency is a
+  // stay the money statistics report as "not converted" (finding B4).
+  const baseCurrency = story.stays.length > 0 ? await getBaseCurrency(userId) : "EUR";
   for (const s of story.stays) {
     const lodging = await prisma.lodging.create({
       data: {
@@ -71,6 +76,7 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
         lodgingId: lodging.id, userId, tripId: trip.id, checkIn: new Date(s.checkIn), checkOut: new Date(s.checkOut),
         nights: nightsBetween(s.checkIn, s.checkOut), status: planned ? "scheduled" : "completed", board: s.board,
         guests: 1 + story.companions.length, currency: s.currency, totalPrice: s.price,
+        ...seedFxColumns({ totalPrice: s.price, currency: s.currency, checkIn: new Date(s.checkIn) }, baseCurrency),
         ratingOverall: s.rating, companions: story.companions, dataSource: "manual",
       },
     });

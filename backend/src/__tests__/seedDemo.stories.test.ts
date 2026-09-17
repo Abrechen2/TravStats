@@ -116,6 +116,18 @@ describe("seedStories", () => {
     }
   });
 
+  /** The narrated side of finding B4 — see seedDemo.bulk.test.ts. */
+  it("snapshots every narrated stay into the base currency", async () => {
+    const stays = await prisma.lodgingStay.findMany({ where: { userId, totalPrice: { not: null } } });
+    expect(stays.length).toBeGreaterThan(0);
+    for (const stay of stays) {
+      expect(stay.totalPriceBase).not.toBeNull();
+      expect(stay.fxBaseCurrency).toBe("EUR");
+      expect(stay.fxRate).not.toBeNull();
+      expect(stay.fxSource).toBe("manual");
+    }
+  });
+
   it("marks planned stories' flights and stays as not yet taken", async () => {
     const planned = STORIES.filter((s) => s.status === "planned").map((s) => s.name);
     const trips = await prisma.trip.findMany({ where: { userId, name: { in: planned } }, include: { flights: true, lodgingStays: true } });

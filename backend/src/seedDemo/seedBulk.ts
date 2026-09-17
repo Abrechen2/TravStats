@@ -1,8 +1,14 @@
 import { prisma } from "../db";
+import { getBaseCurrency } from "../services/fx/snapshot";
 import { BULK_CITIES } from "./bulk";
+import { seedFxColumns } from "./stayFx";
 
 /** Stays and places outside the narrated trips, plus two user lists across them. */
 export async function seedBulk(userId: string): Promise<{ stays: number; places: number; lists: number }> {
+  // The base currency the money figures are reported in. Without a snapshot
+  // into it, a priced stay counts as "not converted" and never reaches the
+  // total (finding B4, independent review 2026-09-17).
+  const baseCurrency = await getBaseCurrency(userId);
   let stays = 0;
   const placeIds: Array<{ id: string; category: string; visited: boolean }> = [];
 
@@ -36,6 +42,7 @@ export async function seedBulk(userId: string): Promise<{ stays: number; places:
         guests: 2,
         currency: h.currency,
         totalPrice: h.price,
+        ...seedFxColumns({ totalPrice: h.price, currency: h.currency, checkIn }, baseCurrency),
         ratingOverall: h.rating,
         dataSource: "manual",
       },
