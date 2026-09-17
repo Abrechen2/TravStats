@@ -19,6 +19,7 @@
 import cron from "node-cron";
 
 import { sweepDocuments } from "../services/documents/documentService";
+import { migrateLegacyReceipts, reconcileReceiptDocuments } from "../services/documents/receipts";
 import logger from "../utils/logger";
 
 const CRON_EXPRESSION = "25 * * * *";
@@ -27,6 +28,11 @@ let schedulerTask: cron.ScheduledTask | null = null;
 
 export async function runDocumentSweep(): Promise<void> {
   try {
+    // Order matters: a legacy receipt becomes a document, the document is filed
+    // with the entry naming it, and only then does the sweep judge what is
+    // still unfiled.
+    await migrateLegacyReceipts();
+    await reconcileReceiptDocuments();
     await sweepDocuments();
   } catch (error) {
     // A failed run is retried by the next one; it must not take the process down.
@@ -45,6 +51,9 @@ export function startDocumentSweepScheduler(): void {
   schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
     void runDocumentSweep();
   });
+  // Once at start as well, so receipts from before 2.7 move without waiting
+  // for the first :25.
+  void runDocumentSweep();
   logger.info(
     { operation: "document_sweep_scheduler_started", cron: CRON_EXPRESSION },
     "Document sweep scheduler started"
