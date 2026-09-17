@@ -200,6 +200,19 @@ describe("buildLodgingPreviewRows", () => {
       expect(rows[0].changes).toEqual([]);
     });
 
+    // Cold review, 2026-09-17: the incoming row restates a DIFFERENT amount
+    // and no currency. Offering that change would write the new number
+    // against the stored currency — relabelling an unknown-currency amount as
+    // euros because an earlier mail happened to say euros.
+    it("does not offer a price the mail restates without its unit", async () => {
+      const { rows } = await buildLodgingPreviewRows(
+        userId,
+        changed({ totalPrice: 250, currency: null })
+      );
+      expect(rows[0].action).toBe("skip");
+      expect(rows[0].changes).toEqual([]);
+    });
+
     it("offers the price only with its currency, and puts a changed row before a settled one", async () => {
       const { rows } = await buildLodgingPreviewRows(userId, [
         ...changed({ totalPrice: 98.1, currency: "EUR" }),

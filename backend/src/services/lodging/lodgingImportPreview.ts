@@ -154,12 +154,17 @@ export function stayChanges(
   text("roomCategory", incoming.roomCategory, stored.roomCategory);
   text("board", incoming.board, stored.board);
   number("guests", incoming.guests, stored.guests);
-  number("totalPrice", incoming.totalPrice, stored.totalPrice);
-  number("pricePerNight", incoming.pricePerNight, stored.pricePerNight);
-  // A price without its unit states nothing (the same guard the commit
-  // applies), so a currency alone is not a change worth offering.
-  if (incoming.totalPrice != null || incoming.pricePerNight != null) {
-    text("currency", incoming.currency, stored.currency);
+  // An amount whose unit the mail never stated is not a price — the same
+  // guard `createStay` applies, and it matters MORE here: writing the new
+  // number against the stored currency would relabel an unknown-currency
+  // amount as euros because a previous mail happened to say euros. A price
+  // the mail restates without its unit is therefore no change at all.
+  if (incoming.currency) {
+    number("totalPrice", incoming.totalPrice, stored.totalPrice);
+    number("pricePerNight", incoming.pricePerNight, stored.pricePerNight);
+    if (incoming.totalPrice != null || incoming.pricePerNight != null) {
+      text("currency", incoming.currency, stored.currency);
+    }
   }
   text("bookingReference", incoming.bookingReference, stored.bookingReference);
   return changes;

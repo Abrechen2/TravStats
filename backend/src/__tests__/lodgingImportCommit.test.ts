@@ -838,6 +838,58 @@ describe("commitLodgingImport", () => {
       }
     });
 
+    // Cold review, 2026-09-17: cross-account was already blocked, but the
+    // commit took the client's word for WHICH booking this is. The preview's
+    // proof is the external reference, so the commit demands the same proof —
+    // otherwise `matchedStayId` plus arbitrary fields rewrites any stay of
+    // one's own account through a route whose premise is "this mail is that
+    // stay".
+    it("refuses an update whose reference does not name the stored booking", async () => {
+      const { lodgingId, stayId } = await storedStay("changed-3");
+      try {
+        const rows: CommitRowInput[] = [
+          {
+            sourceRowIndex: 0,
+            action: "update",
+            matchedLodgingId: lodgingId,
+            matchedStayId: stayId,
+            lodging: null,
+            stay: {
+              checkIn: "2026-04-02",
+              checkOut: "2026-04-30",
+              externalRef: "booking:some-other-booking",
+            },
+          },
+        ];
+        const result = await commitLodgingImport(userId, "email", null, rows);
+        expect(result.updatedStays).toBe(0);
+        expect(result.failed[0]?.code).toBe("missing_stay_reference");
+        const after = await prisma.lodgingStay.findUnique({ where: { id: stayId } });
+        expect(after?.checkOut?.toISOString().slice(0, 10)).toBe("2026-04-07");
+      } finally {
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+      }
+    });
+
+    it("refuses an update that carries no reference at all", async () => {
+      const { lodgingId, stayId } = await storedStay("changed-4");
+      try {
+        const rows: CommitRowInput[] = [
+          {
+            sourceRowIndex: 0,
+            action: "update",
+            matchedStayId: stayId,
+            lodging: null,
+            stay: { checkIn: "2026-04-02", checkOut: "2026-04-30" },
+          },
+        ];
+        const result = await commitLodgingImport(userId, "email", null, rows);
+        expect(result.failed[0]?.code).toBe("missing_stay_reference");
+      } finally {
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+      }
+    });
+
     // `matchedStayId` comes back from the preview the CLIENT controls, and a
     // stay id that exists proves nothing about whose it is.
     it("refuses to touch another account's stay", async () => {

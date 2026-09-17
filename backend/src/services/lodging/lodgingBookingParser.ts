@@ -503,6 +503,20 @@ export async function parseLodgingBookingText(
     }
     return { bookings, parserUsed: "ollama", ollamaAvailable: true };
   } catch (err) {
+    // A timeout, a malformed answer, a model that returned prose — none of
+    // them is a reason to lose a document a template can read. Under
+    // `llm_first` the template has not been tried yet, and this is the third
+    // and last way the model can fail: unavailable, empty, or thrown. All
+    // three fall back the same way, or the setting would quietly cost
+    // coverage rather than trade it.
+    const templateHit = order === "llm_first" ? readTemplate() : null;
+    if (templateHit) {
+      logger.info(
+        { template: templateHit.parserTemplate },
+        "[Lodging Parser] Ollama failed — template read it instead"
+      );
+      return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: true };
+    }
     logger.warn(
       { err: err instanceof Error ? err.message : String(err), model },
       "[Lodging Parser] Ollama parse failed — falling back to manual entry"

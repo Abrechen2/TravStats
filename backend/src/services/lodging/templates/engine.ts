@@ -163,9 +163,24 @@ export function applyLodgingTemplate(
   };
 
   const checkIn = str("checkIn");
-  const checkOut = str("checkOut");
+  let checkOut = str("checkOut");
   if (!checkIn || !checkOut) return null;
-  const nights = Math.max(0, Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY_MS));
+
+  // A stay over New Year, dated without years. Hilton writes "Check In: Dec
+  // 30" / "Check Out: Jan 02" and puts one year in the subject, so both dates
+  // borrow it and the stay comes out ending before it began. The year-less
+  // half is the one to move, and only by one: a checkout more than a year
+  // after the checkin is not a hotel stay, it is a misread.
+  if (Date.parse(checkOut) < Date.parse(checkIn) && template.fields.checkOut?.yearFrom) {
+    const [y, rest] = [checkOut.slice(0, 4), checkOut.slice(4)];
+    checkOut = `${Number(y) + 1}${rest}`;
+  }
+  // Still inconsistent means the document was not understood. Declining is
+  // the result; a stay that ends before it starts would be proposed to the
+  // user as fact, and the import's own date guard would then reject the row.
+  if (Date.parse(checkOut) < Date.parse(checkIn)) return null;
+
+  const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY_MS);
 
   const currency = str("currency") as LodgingCurrency | null;
   const totalPrice = num("totalPrice");

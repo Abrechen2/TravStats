@@ -16,6 +16,10 @@ jest.mock("../services/parserSettings", () => ({
   getParserOrder: jest.fn(async () => "template_first"),
 }));
 
+const mockGetParserOrder = (
+  jest.requireMock("../services/parserSettings") as { getParserOrder: jest.Mock }
+).getParserOrder;
+
 const mockGetAdminParserSettings = getAdminParserSettings as jest.MockedFunction<
   typeof getAdminParserSettings
 >;
@@ -102,6 +106,47 @@ describe("parseLodgingBookingText", () => {
     expect(result.bookings).toEqual([]);
     expect(result.ollamaAvailable).toBe(false);
     expect(typeof result.fallbackReason).toBe("string");
+  });
+
+  // Cold review, 2026-09-17: under `llm_first` the template has not been tried
+  // yet when the model fails, and the model can fail three ways — unreachable,
+  // empty, or thrown. All three must fall back to the template, or the setting
+  // quietly costs coverage instead of trading it.
+  describe("under llm_first, a failing model never costs a document its template", () => {
+    const KOA = [
+      "Canton KOA Holiday Reservation Confirmation #12874330",
+      "Kampgrounds of America",
+      "RESERVED",
+      "Friday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)",
+      "Estimated Total For Your Stay* \t$47.87 (USD)",
+    ].join("\n");
+
+    beforeEach(() => mockGetParserOrder.mockResolvedValue("llm_first"));
+    afterEach(() => mockGetParserOrder.mockResolvedValue("template_first"));
+
+    it("falls back when the generate call answers garbage", async () => {
+      const server = await createMockOllamaServer((req, res) => {
+        if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end("this is not json{{{");
+      });
+      try {
+        const result = await parseLodgingBookingText(KOA, { url: server.url, model: "mock" });
+        expect(result.parserUsed).toBe("template");
+        expect(result.bookings[0]?.checkIn).toBe("2022-11-25");
+      } finally {
+        await server.close();
+      }
+    });
+
+    it("falls back when the model is not reachable at all", async () => {
+      const result = await parseLodgingBookingText(KOA, {
+        url: "http://127.0.0.1:9",
+        model: "mock",
+      });
+      expect(result.parserUsed).toBe("template");
+      expect(result.bookings[0]?.totalPrice).toBeCloseTo(47.87, 2);
+    });
   });
 
   describe("failure matrix — the LLM must never block or throw", () => {

@@ -111,6 +111,24 @@ describe("the declarative lodging readers", () => {
       expect(r?.roomCategory).toBe("TWIN BEDS ROOM");
     });
 
+    // Cold review, 2026-09-17: a stay over New Year, dated without years.
+    // Both halves borrowed the subject's year, so the stay ended before it
+    // began and came out as zero nights — proposed to the user as fact.
+    it("carries the year-less checkout over New Year instead of ending before it began", () => {
+      const overNewYear = mail
+        .replace("Your 01 Oct 2018 Confirmation", "Your 30 Dec 2026 Confirmation")
+        .replace("Check In:	 Oct 01 3:00 PM", "Check In:	 Dec 30 3:00 PM")
+        .replace("Check Out:	 Oct 07 12:00 PM", "Check Out:	 Jan 02 12:00 PM");
+      const r = applyLodgingTemplate(
+        byId("lodging:hilton"),
+        "Your 30 Dec 2026 Confirmation #3451920609",
+        overNewYear
+      );
+      expect(r?.checkIn).toBe("2026-12-30");
+      expect(r?.checkOut).toBe("2027-01-02");
+      expect(r?.nights).toBe(3);
+    });
+
     it("declines rather than guess a year, when the subject carries none", () => {
       const noYear = mail.replace("Your 01 Oct 2018 Confirmation", "Your Confirmation");
       expect(applyLodgingTemplate(byId("lodging:hilton"), "Your Confirmation", noYear)).toBeNull();

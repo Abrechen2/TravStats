@@ -410,6 +410,16 @@ async function updateStay(
   });
   if (!stored) throw new MissingStayReferenceError();
 
+  // The PREVIEW's proof is the external reference — "this is the same
+  // booking". The commit demands the same proof rather than trusting the
+  // action: without it a client could point `matchedStayId` at any stay of
+  // its own account and rewrite it through the import endpoint, with fields
+  // that never came from the document. Same capability as a PATCH, but
+  // through a route whose whole premise is "this mail is that stay".
+  if (!fields.externalRef || fields.externalRef !== stored.externalRef) {
+    throw new MissingStayReferenceError();
+  }
+
   const changes = stayChanges(fields, stored);
   if (changes.length === 0) return false;
 
@@ -446,12 +456,22 @@ async function updateStay(
     }
   }
 
-  // A price that moved carries its snapshot with it. Left alone otherwise, so
-  // a date-only change keeps the rate day the stay was booked against.
+  // The snapshot is keyed by (currency, check-in) on the create path, so it
+  // goes stale when EITHER half moves — a date-only change leaves the stay
+  // holding a rate from a day it no longer spans. Both are re-taken; a change
+  // that touches neither keeps the rate the booking was made against.
   const moneyMoved = changes.some(
     (c) => c.field === "totalPrice" || c.field === "pricePerNight" || c.field === "currency"
   );
-  if (moneyMoved) Object.assign(data, resolveFxFields(fxOutcome));
+  // ...but only when THIS mail carries a price and its unit, because that is
+  // what the pre-pass looked up. Applying an empty outcome would clear a
+  // snapshot that is merely stale, and a stay with a price and no snapshot is
+  // worse than one whose rate day is a month off.
+  const canSnapshot = fields.totalPrice != null && !!fields.currency;
+  const rateDayMoved = changes.some((c) => c.field === "checkIn");
+  if (canSnapshot && (moneyMoved || rateDayMoved)) {
+    Object.assign(data, resolveFxFields(fxOutcome));
+  }
 
   await prisma.lodgingStay.update({ where: { id: stored.id }, data });
   logger.info(
