@@ -1,6 +1,7 @@
 {
   "title": "Einstellungen",
   "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
+  "demoLocked": "Im Demo-Zugang gesperrt — alle Besucher teilen sich dieses Konto.",
   "roadmap": "Roadmap · Punkt 9",
   "backToDashboard": "← Zurück zum Dashboard",
   "tabs": {

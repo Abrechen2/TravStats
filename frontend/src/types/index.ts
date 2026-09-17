@@ -6,6 +6,8 @@ export interface User {
   id: string;
   username: string;
   isAdmin: boolean;
+  /** The shared demo account of a public instance — settings that the server refuses are explained, not offered. */
+  isDemo?: boolean;
 }
 
 export interface Airport {

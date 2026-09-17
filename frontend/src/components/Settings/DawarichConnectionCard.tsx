@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { dawarichApi, dawarichFailureKey, dawarichFailureKind } from "../../lib/api/dawarich";
 import type { DawarichConnectionStatus, DawarichTestResult } from "../../types/dawarich";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 
@@ -24,6 +26,7 @@ import { token } from "../ui/tokens";
  */
 export default function DawarichConnectionCard(): JSX.Element {
   const { t } = useTranslation("trips");
+  const isDemo = useIsDemoAccount();
 
   const [status, setStatus] = useState<DawarichConnectionStatus | null>(null);
   const [baseUrl, setBaseUrl] = useState("");
@@ -132,78 +135,84 @@ export default function DawarichConnectionCard(): JSX.Element {
         }
       />
 
-      <label className="label" htmlFor="dawarich-base-url">
-        {t("trips:tours.dawarichSettings.baseUrl")}
-      </label>
-      <input
-        id="dawarich-base-url"
-        className="input"
-        placeholder={t("trips:tours.dawarichSettings.baseUrlPlaceholder")}
-        value={baseUrl}
-        onChange={(e) => setBaseUrl(e.target.value)}
-      />
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : (
+        <>
+          <label className="label" htmlFor="dawarich-base-url">
+            {t("trips:tours.dawarichSettings.baseUrl")}
+          </label>
+          <input
+            id="dawarich-base-url"
+            className="input"
+            placeholder={t("trips:tours.dawarichSettings.baseUrlPlaceholder")}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
 
-      <label className="label" htmlFor="dawarich-api-key">
-        {t("trips:tours.dawarichSettings.apiKey")}
-      </label>
-      <input
-        id="dawarich-api-key"
-        type="password"
-        autoComplete="off"
-        className="input"
-        placeholder={t("trips:tours.dawarichSettings.apiKeyPlaceholder")}
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-      />
-      {status?.hasKey && (
-        <div className="t-caption flex items-center gap-2">
-          <span>{t("trips:tours.dawarichSettings.apiKeyStored")}</span>
-          <button type="button" className="underline" onClick={() => void handleClearKey()}>
-            {t("trips:tours.dawarichSettings.clearKey")}
-          </button>
-        </div>
-      )}
+          <label className="label" htmlFor="dawarich-api-key">
+            {t("trips:tours.dawarichSettings.apiKey")}
+          </label>
+          <input
+            id="dawarich-api-key"
+            type="password"
+            autoComplete="off"
+            className="input"
+            placeholder={t("trips:tours.dawarichSettings.apiKeyPlaceholder")}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          {status?.hasKey && (
+            <div className="t-caption flex items-center gap-2">
+              <span>{t("trips:tours.dawarichSettings.apiKeyStored")}</span>
+              <button type="button" className="underline" onClick={() => void handleClearKey()}>
+                {t("trips:tours.dawarichSettings.clearKey")}
+              </button>
+            </div>
+          )}
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={saving}
-          className="btn-primary"
-          onClick={() => void handleSave()}
-        >
-          {saving
-            ? t("trips:tours.dawarichSettings.saving")
-            : t("trips:tours.dawarichSettings.save")}
-        </button>
-        <button
-          type="button"
-          disabled={testing}
-          className="btn-secondary"
-          onClick={() => void handleTest()}
-        >
-          {testing
-            ? t("trips:tours.dawarichSettings.testing")
-            : t("trips:tours.dawarichSettings.test")}
-        </button>
-      </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              className="btn-primary"
+              onClick={() => void handleSave()}
+            >
+              {saving
+                ? t("trips:tours.dawarichSettings.saving")
+                : t("trips:tours.dawarichSettings.save")}
+            </button>
+            <button
+              type="button"
+              disabled={testing}
+              className="btn-secondary"
+              onClick={() => void handleTest()}
+            >
+              {testing
+                ? t("trips:tours.dawarichSettings.testing")
+                : t("trips:tours.dawarichSettings.test")}
+            </button>
+          </div>
 
-      {testResult && (
-        <p
-          className="text-sm"
-          role="status"
-          style={{ color: token(testResult.success ? "good" : "bad") }}
-        >
-          {testResult.success
-            ? t("trips:tours.dawarichSettings.connected", {
-                version: testResult.details?.version ?? "?",
-              })
-            : t(dawarichFailureKey(testResult.kind))}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {error}
-        </p>
+          {testResult && (
+            <p
+              className="text-sm"
+              role="status"
+              style={{ color: token(testResult.success ? "good" : "bad") }}
+            >
+              {testResult.success
+                ? t("trips:tours.dawarichSettings.connected", {
+                    version: testResult.details?.version ?? "?",
+                  })
+                : t(dawarichFailureKey(testResult.kind))}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+              {error}
+            </p>
+          )}
+        </>
       )}
     </SectionCard>
   );

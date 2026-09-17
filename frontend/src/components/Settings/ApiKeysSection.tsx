@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import { SettingRows } from "../ui/SettingRow";
 import ApiKeyCard from "./ApiKeyCard";
 import BulkRefreshCard from "./BulkRefreshCard";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi } from "../../lib/api";
 import type { ApiKeyQuotasResponse, ProviderQuota } from "../../lib/api/settings";
 
@@ -38,6 +40,7 @@ export default function ApiKeysSection({
   onSave,
 }: ApiKeysSectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  const isDemo = useIsDemoAccount();
   const [quotas, setQuotas] = useState<ApiKeyQuotasResponse | null>(null);
 
   useEffect(() => {
@@ -132,11 +135,15 @@ export default function ApiKeysSection({
         className="flex justify-end gap-2 pt-4"
         style={{ borderTop: "1px solid var(--ts-border)" }}
       >
-        <button onClick={onSave} disabled={loadingApiKeys} className="btn-primary">
-          {loadingApiKeys
-            ? t("settings:apiKeys.saving") || "Saving..."
-            : t("settings:apiKeys.save") || "Save API Keys"}
-        </button>
+        {isDemo ? (
+          <DemoLockedNotice />
+        ) : (
+          <button onClick={onSave} disabled={loadingApiKeys} className="btn-primary">
+            {loadingApiKeys
+              ? t("settings:apiKeys.saving") || "Saving..."
+              : t("settings:apiKeys.save") || "Save API Keys"}
+          </button>
+        )}
       </div>
     </SectionCard>
   );

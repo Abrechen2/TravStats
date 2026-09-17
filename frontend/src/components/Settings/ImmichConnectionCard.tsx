@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import type { ImmichConnectionStatus, ImmichMode, ImmichTestResult } from "../../types/immich";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Segmented } from "../ui/Segmented";
@@ -16,6 +18,7 @@ import { Segmented } from "../ui/Segmented";
  */
 export default function ImmichConnectionCard(): JSX.Element {
   const { t } = useTranslation("immich");
+  const isDemo = useIsDemoAccount();
 
   const [status, setStatus] = useState<ImmichConnectionStatus | null>(null);
   const [baseUrl, setBaseUrl] = useState("");
@@ -112,89 +115,95 @@ export default function ImmichConnectionCard(): JSX.Element {
         badge={status?.isShared ? <Pill color={token("accent")}>{t("shared")}</Pill> : undefined}
       />
 
-      <label className="label" htmlFor="immich-base-url">
-        {t("baseUrl")}
-      </label>
-      <input
-        id="immich-base-url"
-        className="input"
-        placeholder={t("baseUrlPlaceholder")}
-        value={baseUrl}
-        onChange={(e) => setBaseUrl(e.target.value)}
-      />
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : (
+        <>
+          <label className="label" htmlFor="immich-base-url">
+            {t("baseUrl")}
+          </label>
+          <input
+            id="immich-base-url"
+            className="input"
+            placeholder={t("baseUrlPlaceholder")}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
 
-      <label className="label" htmlFor="immich-api-key">
-        {t("apiKey")}
-      </label>
-      <input
-        id="immich-api-key"
-        type="password"
-        autoComplete="off"
-        className="input"
-        placeholder={t("apiKeyPlaceholder")}
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-      />
-      <p className="t-caption">{t("apiKeyScopes")}</p>
-      {status?.hasKey && (
-        <div className="t-caption flex items-center gap-2">
-          <span>{t("apiKeyStored")}</span>
-          <button type="button" className="underline" onClick={() => void handleClearKey()}>
-            {t("clearKey")}
-          </button>
-        </div>
-      )}
+          <label className="label" htmlFor="immich-api-key">
+            {t("apiKey")}
+          </label>
+          <input
+            id="immich-api-key"
+            type="password"
+            autoComplete="off"
+            className="input"
+            placeholder={t("apiKeyPlaceholder")}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <p className="t-caption">{t("apiKeyScopes")}</p>
+          {status?.hasKey && (
+            <div className="t-caption flex items-center gap-2">
+              <span>{t("apiKeyStored")}</span>
+              <button type="button" className="underline" onClick={() => void handleClearKey()}>
+                {t("clearKey")}
+              </button>
+            </div>
+          )}
 
-      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-        <span className="label">{t("defaultMode")}</span>
-        <Segmented
-          label={t("defaultMode")}
-          value={defaultMode}
-          options={[
-            { value: "link", label: t("modeLink") },
-            { value: "import", label: t("modeImport") },
-          ]}
-          onChange={setDefaultMode}
-        />
-        <p className="t-caption">
-          {defaultMode === "link" ? t("modeLinkHint") : t("modeImportHint")}
-        </p>
-      </div>
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+            <span className="label">{t("defaultMode")}</span>
+            <Segmented
+              label={t("defaultMode")}
+              value={defaultMode}
+              options={[
+                { value: "link", label: t("modeLink") },
+                { value: "import", label: t("modeImport") },
+              ]}
+              onChange={setDefaultMode}
+            />
+            <p className="t-caption">
+              {defaultMode === "link" ? t("modeLinkHint") : t("modeImportHint")}
+            </p>
+          </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={saving}
-          className="btn-primary"
-          onClick={() => void handleSave()}
-        >
-          {saving ? t("saving") : t("save")}
-        </button>
-        <button
-          type="button"
-          disabled={testing}
-          className="btn-secondary"
-          onClick={() => void handleTest()}
-        >
-          {testing ? t("testing") : t("test")}
-        </button>
-      </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              className="btn-primary"
+              onClick={() => void handleSave()}
+            >
+              {saving ? t("saving") : t("save")}
+            </button>
+            <button
+              type="button"
+              disabled={testing}
+              className="btn-secondary"
+              onClick={() => void handleTest()}
+            >
+              {testing ? t("testing") : t("test")}
+            </button>
+          </div>
 
-      {testResult && (
-        <p
-          role="status"
-          className="text-sm"
-          style={{ color: token(testResult.success ? "good" : "bad") }}
-        >
-          {testResult.success
-            ? t("connected", { version: testResult.details?.version ?? "?" })
-            : t(failureKey(testResult.kind))}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {error}
-        </p>
+          {testResult && (
+            <p
+              role="status"
+              className="text-sm"
+              style={{ color: token(testResult.success ? "good" : "bad") }}
+            >
+              {testResult.success
+                ? t("connected", { version: testResult.details?.version ?? "?" })
+                : t(failureKey(testResult.kind))}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+              {error}
+            </p>
+          )}
+        </>
       )}
     </SectionCard>
   );

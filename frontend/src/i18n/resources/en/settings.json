@@ -1,6 +1,7 @@
 {
   "title": "Settings",
   "subtitle": "Profile, preferences and security in one place.",
+  "demoLocked": "Locked in the demo account — every visitor shares it.",
   "roadmap": "Roadmap · Point 9",
   "backToDashboard": "← Back to Dashboard",
   "tabs": {

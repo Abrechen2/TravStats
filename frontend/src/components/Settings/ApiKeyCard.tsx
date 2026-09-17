@@ -6,12 +6,14 @@
 
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi, adminApi } from "../../lib/api";
 import type { ProviderQuota } from "../../lib/api/settings";
 import { Icon } from "../ui/Icon";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { SettingRow } from "../ui/SettingRow";
+import DemoLockedNotice from "./DemoLockedNotice";
 
 export type ApiCardCapability = "historical365";
 
@@ -87,6 +89,11 @@ export default function ApiKeyCard({
   openskyFields,
 }: ApiKeyCardProps) {
   const { t } = useTranslation(["settings", "common"]);
+  // The admin-facing card (`isAdmin`) writes to a different, unguarded
+  // route (GlobalApiKeysManager -> /admin/api-keys/*), so the demo lock —
+  // which only covers a normal user's own /settings/api-keys/* — must not
+  // apply there.
+  const isDemo = useIsDemoAccount() && !isAdmin;
   const [showKey, setShowKey] = useState(false);
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
@@ -378,18 +385,20 @@ export default function ApiKeyCard({
           control={
             <>
               {statusPill}
-              <button
-                type="button"
-                className="btn-secondary"
-                aria-expanded={editing}
-                onClick={() => setEditing((open) => !open)}
-              >
-                {editing ? t("common:buttons.close") : t("common:buttons.edit")}
-              </button>
+              {!isDemo && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  aria-expanded={editing}
+                  onClick={() => setEditing((open) => !open)}
+                >
+                  {editing ? t("common:buttons.close") : t("common:buttons.edit")}
+                </button>
+              )}
             </>
           }
         />
-        {editing && editor}
+        {isDemo ? <DemoLockedNotice /> : editing && editor}
       </div>
     );
   }
@@ -407,7 +416,7 @@ export default function ApiKeyCard({
         <p className="t-caption">{description}</p>
         {details}
       </div>
-      {editor}
+      {isDemo ? <DemoLockedNotice /> : editor}
     </div>
   );
 }

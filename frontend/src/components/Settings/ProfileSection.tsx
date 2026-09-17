@@ -1,8 +1,10 @@
 import React from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import HelpIcon from "../Help/HelpIcon";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 
 interface ProfileSectionProps {
   profile: {
@@ -37,6 +39,7 @@ export default function ProfileSection({
   onSetProfile,
 }: ProfileSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
 
   return (
@@ -82,45 +85,49 @@ export default function ProfileSection({
             <HelpIcon content={t("settings:profile.help.avatar")} position="top" />
           </span>
         </div>
-        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
-          {/* Native <input type=file> shows the browser-locale "Choose File"
-              label which conflicts with the app i18n. Hide it visually and
-              drive it from a labelled button so the copy stays under our
-              translation control. */}
-          <label
-            className="btn-secondary inline-flex items-center gap-2 cursor-pointer"
-            style={{
-              opacity: uploadingProfilePicture ? 0.6 : 1,
-              pointerEvents: uploadingProfilePicture ? "none" : "auto",
-            }}
-          >
-            <Icon name="upload" size={14} />
-            {uploadingProfilePicture
-              ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
-              : t("settings:profile.changePicture")}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onAvatarUpload}
-              disabled={uploadingProfilePicture}
-              className="sr-only"
-            />
-          </label>
-          {profile.profilePicture && (
-            <button
-              type="button"
-              onClick={onAvatarDelete}
-              disabled={removingProfilePicture || uploadingProfilePicture}
-              className="btn-secondary inline-flex items-center gap-2"
-              style={{ color: "var(--ts-bad)", opacity: removingProfilePicture ? 0.6 : 1 }}
+        {isDemo ? (
+          <DemoLockedNotice />
+        ) : (
+          <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+            {/* Native <input type=file> shows the browser-locale "Choose File"
+                label which conflicts with the app i18n. Hide it visually and
+                drive it from a labelled button so the copy stays under our
+                translation control. */}
+            <label
+              className="btn-secondary inline-flex items-center gap-2 cursor-pointer"
+              style={{
+                opacity: uploadingProfilePicture ? 0.6 : 1,
+                pointerEvents: uploadingProfilePicture ? "none" : "auto",
+              }}
             >
-              <Icon name="trash-2" size={14} />
-              {removingProfilePicture
-                ? t("common:buttons.removing", { defaultValue: "Removing..." })
-                : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
-            </button>
-          )}
-        </div>
+              <Icon name="upload" size={14} />
+              {uploadingProfilePicture
+                ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
+                : t("settings:profile.changePicture")}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onAvatarUpload}
+                disabled={uploadingProfilePicture}
+                className="sr-only"
+              />
+            </label>
+            {profile.profilePicture && (
+              <button
+                type="button"
+                onClick={onAvatarDelete}
+                disabled={removingProfilePicture || uploadingProfilePicture}
+                className="btn-secondary inline-flex items-center gap-2"
+                style={{ color: "var(--ts-bad)", opacity: removingProfilePicture ? 0.6 : 1 }}
+              >
+                <Icon name="trash-2" size={14} />
+                {removingProfilePicture
+                  ? t("common:buttons.removing", { defaultValue: "Removing..." })
+                  : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

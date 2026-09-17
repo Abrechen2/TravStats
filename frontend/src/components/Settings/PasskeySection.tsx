@@ -11,9 +11,11 @@ import { useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { SettingRow } from "../ui/SettingRow";
+import DemoLockedNotice from "./DemoLockedNotice";
 
 /** Cancelling the OS or password-manager dialog rejects with this. It is a
  *  normal user action, not an error worth showing. */
@@ -25,6 +27,7 @@ function isUserCancellation(error: unknown): boolean {
 
 export default function PasskeySection(): JSX.Element {
   const { t, i18n } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [reason, setReason] = useState<PasskeyUnavailableReason | null>(null);
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
@@ -106,7 +109,7 @@ export default function PasskeySection(): JSX.Element {
         title={t("settings:passkeys.title")}
         sub={t("settings:passkeys.description")}
         control={
-          available && !adding ? (
+          available && !adding && !isDemo ? (
             <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
               {t("settings:passkeys.add")}
             </button>
@@ -114,96 +117,102 @@ export default function PasskeySection(): JSX.Element {
         }
       />
 
-      {!available && (
-        <p className="t-caption">
-          {reason === "insecureOrigin"
-            ? t("settings:passkeys.insecureOrigin")
-            : t("settings:passkeys.notConfigured")}
-        </p>
-      )}
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : (
+        <>
+          {!available && (
+            <p className="t-caption">
+              {reason === "insecureOrigin"
+                ? t("settings:passkeys.insecureOrigin")
+                : t("settings:passkeys.notConfigured")}
+            </p>
+          )}
 
-      {available && (
-        <div className="space-y-4">
-          {passkeys.length === 0 && <p className="t-caption">{t("settings:passkeys.none")}</p>}
+          {available && (
+            <div className="space-y-4">
+              {passkeys.length === 0 && <p className="t-caption">{t("settings:passkeys.none")}</p>}
 
-          {passkeys.length > 0 && (
-            <ul className="space-y-2">
-              {passkeys.map((key) => (
-                <li
-                  key={key.id}
-                  className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
-                  style={{ background: "var(--bg-elevated)" }}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{key.name}</p>
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:passkeys.rpIdLabel")}: {key.rpId}
-                      {key.lastUsedAt
-                        ? ` · ${t("settings:passkeys.lastUsed")} ${new Date(
-                            key.lastUsedAt
-                          ).toLocaleDateString(i18n.language)}`
-                        : ` · ${t("settings:passkeys.neverUsed")}`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-secondary shrink-0"
-                    onClick={() => void remove(key.id)}
+              {passkeys.length > 0 && (
+                <ul className="space-y-2">
+                  {passkeys.map((key) => (
+                    <li
+                      key={key.id}
+                      className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                      style={{ background: "var(--bg-elevated)" }}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{key.name}</p>
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {t("settings:passkeys.rpIdLabel")}: {key.rpId}
+                          {key.lastUsedAt
+                            ? ` · ${t("settings:passkeys.lastUsed")} ${new Date(
+                                key.lastUsedAt
+                              ).toLocaleDateString(i18n.language)}`
+                            : ` · ${t("settings:passkeys.neverUsed")}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary shrink-0"
+                        onClick={() => void remove(key.id)}
+                      >
+                        {t("settings:passkeys.remove")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {adding && (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="passkey-name"
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "var(--text-secondary)" }}
                   >
-                    {t("settings:passkeys.remove")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                    {t("settings:passkeys.nameLabel")}
+                  </label>
+                  <input
+                    id="passkey-name"
+                    type="text"
+                    className="input w-full"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("settings:passkeys.namePlaceholder")}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={busy || name.trim().length === 0}
+                      onClick={() => void add()}
+                    >
+                      {t("settings:passkeys.confirmAdd")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setAdding(false);
+                        setName("");
+                        setError(null);
+                      }}
+                    >
+                      {t("common:buttons.cancel")}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-          {adding && (
-            <div className="space-y-2">
-              <label
-                htmlFor="passkey-name"
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {t("settings:passkeys.nameLabel")}
-              </label>
-              <input
-                id="passkey-name"
-                type="text"
-                className="input w-full"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("settings:passkeys.namePlaceholder")}
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={busy || name.trim().length === 0}
-                  onClick={() => void add()}
-                >
-                  {t("settings:passkeys.confirmAdd")}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setAdding(false);
-                    setName("");
-                    setError(null);
-                  }}
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-              </div>
+              {error && (
+                <div role="alert" className="text-sm text-red-400">
+                  {error}
+                </div>
+              )}
             </div>
           )}
-
-          {error && (
-            <div role="alert" className="text-sm text-red-400">
-              {error}
-            </div>
-          )}
-        </div>
+        </>
       )}
     </div>
   );

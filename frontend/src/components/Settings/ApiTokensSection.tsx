@@ -14,11 +14,13 @@ import Modal from "../Modal";
 import { useCallback, useEffect, useState } from "react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import {
   apiTokensApi,
   type ApiToken,
@@ -31,6 +33,7 @@ const SCOPES: ApiTokenScope[] = ["read", "write", "admin"];
 
 export default function ApiTokensSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -152,14 +155,16 @@ export default function ApiTokensSection(): JSX.Element {
                       <Pill color={tok.scope === "read" ? token("good") : token("accent")}>
                         {t(`settings:apiTokens.scopesShort.${tok.scope}`)}
                       </Pill>
-                      <button
-                        type="button"
-                        onClick={() => handleRevoke(tok.id)}
-                        className="btn-secondary"
-                        style={{ color: "var(--ts-bad)" }}
-                      >
-                        {t("settings:apiTokens.revokeButton")}
-                      </button>
+                      {!isDemo && (
+                        <button
+                          type="button"
+                          onClick={() => handleRevoke(tok.id)}
+                          className="btn-secondary"
+                          style={{ color: "var(--ts-bad)" }}
+                        >
+                          {t("settings:apiTokens.revokeButton")}
+                        </button>
+                      )}
                     </>
                   )
                 }
@@ -168,7 +173,9 @@ export default function ApiTokensSection(): JSX.Element {
           ))
         )}
 
-        {formOpen ? (
+        {isDemo ? (
+          <DemoLockedNotice />
+        ) : formOpen ? (
           <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
             <label className="label" htmlFor="api-token-label">
               {t("settings:apiTokens.newLabel")}

@@ -13,7 +13,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
@@ -57,6 +59,7 @@ function formatRemaining(totalSeconds: number): string {
 
 export default function DevicesSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
   const [devices, setDevices] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<PairingStart | null>(null);
@@ -199,7 +202,9 @@ export default function DevicesSection(): JSX.Element {
       />
 
       {/* Pairing panel */}
-      {!session ? (
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : !session ? (
         <button
           type="button"
           onClick={handleStart}
@@ -425,7 +430,11 @@ export default function DevicesSection(): JSX.Element {
                     </div>
                   </div>
                 </div>
-                {!dev.revokedAt && (
+                {/* Unpairing revokes the same token row ApiTokensSection lists
+                    (via /settings/tokens, guarded for the demo account) — the
+                    section-level notice above already explains the lock, so
+                    this action is simply not offered rather than repeated. */}
+                {!dev.revokedAt && !isDemo && (
                   <button
                     type="button"
                     onClick={() => handleUnpair(dev.id)}
