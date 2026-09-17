@@ -143,6 +143,7 @@ export const tripResponse = registry.register(
           cruises: z.number().int(),
           lodgingStays: z.number().int(),
           routes: z.number().int(),
+          photos: z.number().int(),
         })
         .optional()
         .describe("GET /trips: how many of each the trip holds"),

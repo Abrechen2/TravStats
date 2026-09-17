@@ -106,7 +106,15 @@ router.get(
         orderBy: { createdAt: "desc" },
         take: 500, // safety cap — users are unlikely to have more than 500 trips
         include: {
-          _count: { select: { flights: true, cruises: true, lodgingStays: true, routes: true } },
+          _count: {
+            select: {
+              flights: true,
+              cruises: true,
+              lodgingStays: true,
+              routes: true,
+              photos: true,
+            },
+          },
           bookings: {
             select: { id: true, pnr: true, price: true, currency: true },
           },
