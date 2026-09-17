@@ -67,6 +67,12 @@ export interface InstanceSettingsPatch {
   countryThreshold?: CountryTier;
 }
 
+/**
+ * Who reads a booking document first — the same setting in all four domains
+ * (backend `getParserOrder`). Default `template_first`, measured 2026-09-17.
+ */
+export type ParserOrder = "template_first" | "llm_first";
+
 export const adminApi = {
   getSystemInfo: async (): Promise<{
     instanceName: string;
@@ -250,6 +256,9 @@ export const adminApi = {
     fxCdnFallbackEnabled: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
+    /** Who reads a booking document first, in every domain. Absent on a
+     *  backend older than 2.7 — treat a missing value as "template_first". */
+    parserOrder?: ParserOrder;
     ollamaUrl: string | null;
     ollamaModel: string | null;
   }> => {
@@ -258,6 +267,7 @@ export const adminApi = {
       fxCdnFallbackEnabled: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
+      parserOrder?: ParserOrder;
       ollamaUrl: string | null;
       ollamaModel: string | null;
     }>("/admin/parser-settings");
@@ -267,6 +277,7 @@ export const adminApi = {
   updateAdminParserSettings: async (settings: {
     allowUserApiKeys?: boolean;
     fxCdnFallbackEnabled?: boolean;
+    parserOrder?: ParserOrder;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
   }): Promise<MessageResponse> => {

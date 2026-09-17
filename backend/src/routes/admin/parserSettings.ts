@@ -11,6 +11,7 @@ interface ParserSettingsUpdateData {
   fxCdnFallbackEnabled?: boolean;
   defaultVisionParser?: string;
   defaultTextParser?: string;
+  parserOrder?: string;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
 }
@@ -24,6 +25,10 @@ const parserSettingsSchema = z.object({
   fxCdnFallbackEnabled: z.boolean().optional(),
   defaultVisionParser: z.string().optional(),
   defaultTextParser: z.string().optional(),
+  // Which reader looks at a booking document first, in every domain. Kept to
+  // the two values the parsers understand, so an admin cannot save a word
+  // that silently means "template_first" (`getParserOrder`).
+  parserOrder: z.enum(["template_first", "llm_first"]).optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
   ollamaModel: z.string().min(1).max(100).optional().nullable(),
 });
@@ -46,6 +51,7 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
       defaultVisionParser: adminSettings.defaultVisionParser ?? "tesseract",
       defaultTextParser: adminSettings.defaultTextParser ?? "regex",
+      parserOrder: adminSettings.parserOrder ?? "template_first",
       ollamaUrl: adminSettings.ollamaUrl ?? null,
       ollamaModel: adminSettings.ollamaModel ?? null,
     });
@@ -62,6 +68,7 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       fxCdnFallbackEnabled,
       defaultVisionParser,
       defaultTextParser,
+      parserOrder,
       ollamaUrl,
       ollamaModel,
     } = parserSettingsSchema.parse(req.body);
@@ -81,6 +88,9 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     }
     if (defaultTextParser !== undefined) {
       updateData.defaultTextParser = defaultTextParser;
+    }
+    if (parserOrder !== undefined) {
+      updateData.parserOrder = parserOrder;
     }
     if (ollamaUrl !== undefined) {
       updateData.ollamaUrl = ollamaUrl;
@@ -104,6 +114,7 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
         fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
         defaultVisionParser: adminSettings.defaultVisionParser ?? "tesseract",
         defaultTextParser: adminSettings.defaultTextParser ?? "regex",
+        parserOrder: adminSettings.parserOrder ?? "template_first",
         ollamaUrl: adminSettings.ollamaUrl ?? null,
         ollamaModel: adminSettings.ollamaModel ?? null,
       },

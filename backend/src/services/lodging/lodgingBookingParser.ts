@@ -8,7 +8,7 @@ import {
 } from "./lodgingFieldNormalization";
 import { cleanEmailBody } from "../parsers/shared/utils";
 import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./documentTotal";
-import { getAdminParserSettings } from "../parserSettings";
+import { getAdminParserSettings, getParserOrder } from "../parserSettings";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
 import {
@@ -410,20 +410,41 @@ export async function parseLodgingBookingText(
   text: string,
   options?: LodgingBookingParserOptions
 ): Promise<LodgingParseResult> {
-  const templateHit = isBookingComConfirmation(undefined, text)
-    ? parseBookingComEmail(firstLineAsSubject(text), text)
-    : null;
-  if (templateHit) {
-    logger.info(
-      { template: templateHit.parserTemplate, confidence: templateHit.parserConfidence },
-      "[Lodging Parser] Template match"
-    );
-    return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
+  const readTemplate = (): ParsedLodgingBooking | null =>
+    isBookingComConfirmation(undefined, text)
+      ? parseBookingComEmail(firstLineAsSubject(text), text)
+      : null;
+
+  // Which reader looks first is one admin setting for all four domains
+  // (`getParserOrder`). This domain has always been template-first; the
+  // setting is what lets an instance whose hotels no template knows put the
+  // model in front instead.
+  const order = await getParserOrder();
+
+  if (order === "template_first") {
+    const templateHit = readTemplate();
+    if (templateHit) {
+      logger.info(
+        { template: templateHit.parserTemplate, confidence: templateHit.parserConfidence },
+        "[Lodging Parser] Template match"
+      );
+      return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
+    }
   }
 
   const { url, model } = await resolveOptions(options);
   const ollamaAvailable = await checkAvailability(url);
   if (!ollamaAvailable) {
+    // An unreachable model must never cost a mail the template could read:
+    // under `llm_first` the template has not been tried yet.
+    const templateHit = order === "llm_first" ? readTemplate() : null;
+    if (templateHit) {
+      logger.info(
+        { template: templateHit.parserTemplate },
+        "[Lodging Parser] Ollama unavailable — template read it instead"
+      );
+      return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
+    }
     logger.warn({ url }, "[Lodging Parser] Ollama unavailable — falling back to manual entry");
     return {
       bookings: [],
@@ -453,6 +474,12 @@ export async function parseLodgingBookingText(
     // is the flight parser's own treatment, not a new idea.
     const bookings = await parseWithOllama(cleanEmailBody(text), url, model);
     if (bookings.length === 0) {
+      // Same rule as above: the model finding nothing is not a reason to
+      // leave a template hit on the table.
+      const templateHit = order === "llm_first" ? readTemplate() : null;
+      if (templateHit) {
+        return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: true };
+      }
       return {
         bookings: [],
         parserUsed: "none",

@@ -744,6 +744,15 @@ model AdminSettings {
   defaultVisionParser String @default("auto") @map("default_vision_parser")
   defaultTextParser   String @default("auto") @map("default_text_parser")
 
+  // Which reader gets the first look at a booking document, in EVERY domain:
+  // "template_first" or "llm_first". Owner decision 2026-09-17, after the
+  // paths were measured against the sample corpus: the template chain read
+  // all 31 flight mails in under a second, gemma3:12b took 19 minutes and
+  // missed three. Flight parsing used to be LLM-first while lodging and
+  // cruise were template-first — one hardcoded order each, and no way to say
+  // otherwise. This is that say, and it is the same say for all four domains.
+  parserOrder String @default("template_first") @map("parser_order")
+
   // Aviationstack usage guard — max lookups per UTC day before falling
   // through to AirLabs/OpenSky. Default 3 keeps Free tier (100/month) safe.
   // Set to 0 to disable Aviationstack entirely.

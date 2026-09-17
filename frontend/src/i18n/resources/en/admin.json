@@ -526,6 +526,12 @@
       "modelsAvailable": "Available models",
       "connectionSuccess": "Ollama reachable",
       "connectionFailed": "Connection failed"
+    },
+    "order": {
+      "label": "Who reads first?",
+      "templateFirst": "Templates first, AI as the fallback (recommended)",
+      "llmFirst": "AI first, templates as the fallback",
+      "hint": "Applies to flights, stays, cruises and places alike. Measured 2026-09-17 on 31 flight mails: the templates read every one in under a second, the language model took 19 minutes and missed three. \"AI first\" is worth it when no template covers your senders."
     }
   },
   "backup": {

@@ -2,7 +2,7 @@ import http from "http";
 import https from "https";
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import logger from "../utils/logger";
-import { getAdminParserSettings } from "./parserSettings";
+import { getAdminParserSettings, getParserOrder } from "./parserSettings";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
@@ -515,21 +515,41 @@ export async function parseCruiseBookingText(
   // if it did not, so an instance without a local model could not import a
   // cruise booking at all — measured on the sample set, every TUI confirmation
   // failed for that reason alone.
-  const templated = parseTuiCruisesConfirmation(text);
-  if (templated.length > 0) {
-    return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+  // Which reader looks first is one admin setting for all four domains
+  // (`getParserOrder`), default template-first — which is what this domain
+  // has always done.
+  const order = await getParserOrder();
+  if (order === "template_first") {
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
   }
 
   const resolved = await resolveCruiseParserOptions(options);
   const parser = getCruiseBookingParser(resolved);
   const ollamaAvailable = await parser.checkAvailability();
   if (!ollamaAvailable) {
+    // Under `llm_first` the template has not been tried yet, and an
+    // unreachable model must not cost a booking the template can read.
+    const templated = order === "llm_first" ? parseTuiCruisesConfirmation(text) : [];
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
     throw new Error(
       `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
         `Check the parser configuration in Settings (Ollama URL / model).`
     );
   }
   const cruises = await parser.parseText(text);
+  if (cruises.length === 0 && order === "llm_first") {
+    // Same rule as lodging: the model finding nothing is not a reason to
+    // leave a template hit on the table.
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: true };
+    }
+  }
   return { cruises, parserUsed: "ollama", ollamaAvailable: true };
 }
 
