@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
@@ -23,6 +24,7 @@ const cruiseStop = registry.register(
   "CruiseStop",
   z
     .object({
+      ...prismaColumns("CruiseStop"),
       id: z.string().uuid(),
       dayNumber: z.number().int().min(1).describe("1-based, always renumbered to match order"),
       portId: z.number().int().nullable(),
@@ -35,6 +37,7 @@ const cruiseStop = registry.register(
       arrivalTime: z.string().datetime().nullable(),
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
+      port: includedRow("port").nullable().optional(),
     })
     .describe(
       "A stop is exactly one of three states: a matched port (portId set, " +
@@ -51,6 +54,7 @@ const cruise = registry.register(
   "Cruise",
   z
     .object({
+      ...prismaColumns("Cruise"),
       id: z.string().uuid(),
       userId: z.string().uuid(),
       shipId: z.number().int().nullable(),
@@ -81,6 +85,11 @@ const cruise = registry.register(
         .nullable()
         .describe("User-chosen map colour; null falls back to the auto-derived one"),
       stops: z.array(cruiseStop).optional(),
+      ship: includedRow("ship").nullable().optional(),
+      departurePort: includedRow("port").nullable().optional(),
+      arrivalPort: includedRow("port").nullable().optional(),
+      trip: includedRow("trip (id, name, color)").nullable().optional(),
+      legs: z.array(includedRow("leg")).optional(),
       createdAt: z.string().datetime(),
     })
     .openapi("Cruise")
