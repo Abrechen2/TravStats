@@ -240,9 +240,12 @@ export default function MapContainer3D({
   }, [flightList]);
 
   return (
+    // T5 (2026-09-17 tester feedback): no rounded-lg/shadow-sm here — every
+    // consumer runs this full-bleed under DashboardLayout, so there is no
+    // frame outside it to round against; the corner just clipped the map.
     <div
       data-map-theme={mapTheme}
-      className="relative h-full w-full rounded-lg shadow-sm overflow-hidden bg-(--bg-surface) flex items-center justify-center"
+      className="relative h-full w-full overflow-hidden bg-(--bg-surface) flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
       <div className="h-full w-full" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>
