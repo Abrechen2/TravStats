@@ -85,7 +85,7 @@ dropping a flight.
 ## 3. Protection of the demo account
 
 Everything below applies only when `user.isDemo` is true. A shared helper
-(e.g. `middleware/demoGuard.ts`, `rejectDemo`) answers
+(`middleware/demoGuard.ts`, exporting `rejectDemo`) answers
 `403 { error: "DEMO_ACCOUNT_FORBIDDEN" }`, the code the two existing guards in
 `routes/flights.ts` already use; those two move onto the helper.
 
@@ -113,8 +113,9 @@ button that always fails.
 ## 4. Credentials on the login page
 
 A new environment variable `PUBLIC_DEMO_LOGIN` (default `false`, parsed in
-`config/env.ts`) is exposed to the frontend through an existing public,
-unauthenticated endpoint. When true, the login page shows a short line with
+`config/env.ts`) is added as `publicDemoLogin` to the unauthenticated
+`GET /api/v1/setup/status`, which the app already calls before any login
+(`App.tsx`). The OpenAPI schema of that route gains the field. When true, the login page shows a short line with
 `demo` / `demo123` and a button that fills both fields. Without the variable an
 install never displays credentials, even though a first install seeds the same
 demo user.
