@@ -55,9 +55,9 @@ export const BETA_FEATURES = Object.freeze({
   /** The LLM trip-summary card on the trip detail page. */
   tripAiSummary: Object.freeze({
     reason: "beta",
-    why: "Until 2026-09-05 the summary ignored the admin's Ollama, wrote German for every reader, knew nothing about stays and places, and had no test — the 'buggy summaries' this gate named. Those are fixed on dev/v2.7; what remains is whether the text is GOOD, which only a reader can say.",
+    why: 'The 2026-09-05 defects are fixed (the admin\'s Ollama, the reader\'s language, stays and places in the brief). What keeps the gate is the prose. Measured 2026-09-17 against gemma3:12b over four trips, after six rounds of prompt work: the facts, the nights, the person and the order are right, the notes and journal are retold well — and the model still adds colour nobody gave it ("escaping the Hamburg winter", "a charming cabin") and once put a journal line in a companion\'s mouth ("which Jonas declared the best day"). A travel diary that invents a sentence about your own trip is worse than none.',
     returnsWhen:
-      "The owner has read three summaries generated on the RC account — one German, one English, one for a trip with stays and place visits — and accepted them.",
+      "A summary reads clean over the same four trips (backend/src/services/tripSummaryService.ts documents them): no colour that is not in the data, no sentence attributed to somebody who did not say it. Either a local model that follows the brief that closely, or the owner deciding that light embellishment is acceptable product.",
   }),
 
   /**
