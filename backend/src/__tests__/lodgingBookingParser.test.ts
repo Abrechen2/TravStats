@@ -10,6 +10,10 @@ import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplat
 
 jest.mock("../services/parserSettings", () => ({
   getAdminParserSettings: jest.fn(async () => ({ ollamaUrl: null, ollamaModel: null })),
+  // Template-first is the instance default since 2026-09-17 (forgejo#125),
+  // and it is what this file measures: the template answers and the LLM is
+  // never called.
+  getParserOrder: jest.fn(async () => "template_first"),
 }));
 
 const mockGetAdminParserSettings = getAdminParserSettings as jest.MockedFunction<

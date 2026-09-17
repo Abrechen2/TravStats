@@ -65,7 +65,7 @@ const GERMAN_MONTHS: Record<string, number> = {
  * "S$ 1.324,90"), which is why those forms are listed rather than folded into
  * a bare "$".
  */
-const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
+export const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
   "€": "EUR",
   $: "USD",
   "£": "GBP",

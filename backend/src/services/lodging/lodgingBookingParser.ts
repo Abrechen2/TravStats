@@ -9,6 +9,8 @@ import {
 import { cleanEmailBody } from "../parsers/shared/utils";
 import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./documentTotal";
 import { getAdminParserSettings, getParserOrder } from "../parserSettings";
+import { LODGING_TEMPLATES } from "./templates/builtins";
+import { applyLodgingTemplate } from "./templates/engine";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
 import {
@@ -410,10 +412,22 @@ export async function parseLodgingBookingText(
   text: string,
   options?: LodgingBookingParserOptions
 ): Promise<LodgingParseResult> {
-  const readTemplate = (): ParsedLodgingBooking | null =>
-    isBookingComConfirmation(undefined, text)
-      ? parseBookingComEmail(firstLineAsSubject(text), text)
-      : null;
+  const readTemplate = (): ParsedLodgingBooking | null => {
+    const subject = firstLineAsSubject(text);
+    if (isBookingComConfirmation(undefined, text)) {
+      return parseBookingComEmail(subject, text);
+    }
+    // Booking.com keeps priority: it is the most-measured reader here (97 of
+    // the owner's 108 mails) and the only one that reads an address. The
+    // declarative readers take what it declines — six KOA campgrounds, a
+    // Hilton and two travelclick properties, which read as NOTHING before
+    // 2026-09-17 on an instance without an LLM (forgejo#122).
+    for (const template of LODGING_TEMPLATES) {
+      const hit = applyLodgingTemplate(template, subject ?? "", text);
+      if (hit) return hit;
+    }
+    return null;
+  };
 
   // Which reader looks first is one admin setting for all four domains
   // (`getParserOrder`). This domain has always been template-first; the
