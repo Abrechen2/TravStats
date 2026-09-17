@@ -225,6 +225,9 @@ router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res:
         placeVisits: { include: { photos: true } },
         placeLists: { include: { entries: true } },
         companions: true,
+        // Kept originals (forgejo#116): the rows — what each is, where it is
+        // filed, what its parse read. The bytes stay out, as a photo's do.
+        documents: true,
         userAchievements: {
           include: {
             achievement: true,

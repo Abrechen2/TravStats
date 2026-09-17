@@ -7,17 +7,31 @@ import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
 import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
 import { FILE_LIMITS } from '../config/constants';
 import { describeParserError } from '../utils/parserErrors';
+import {
+  assertRetainable,
+  parseRetentionFields,
+  readDocumentForParse,
+  recordParse,
+  sendAppError,
+} from '../services/documents/parseRetention';
 
 const router = Router();
 
-const parsePdfSchema = z.object({
+const parsePdfBodySchema = z.object({
   pdfBase64: z
     .string()
     .min(1, 'PDF data is required')
-    .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large'), // base64 overhead ~1.37x, use 2x for safety
+    .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large') // base64 overhead ~1.37x, use 2x for safety
+    .optional(),
   // 'auto' asks the server to decide what the document is — see Forgejo #57.
   // The default stays 'flight' so no existing caller changes behaviour.
   domain: z.enum(REQUESTABLE_DOMAINS).optional().default('flight'),
+  // Keep the PDF, or parse one already kept (forgejo#116).
+  ...parseRetentionFields,
+});
+
+const parsePdfSchema = parsePdfBodySchema.refine((b) => !b.pdfBase64 !== !b.documentId, {
+  message: 'Send pdfBase64 or documentId, exactly one of them',
 });
 
 /**
@@ -27,6 +41,8 @@ const parsePdfSchema = z.object({
  * Body:
  * - pdfBase64: string (required) — Base64-encoded PDF file content
  * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - retain: boolean (optional) — keep the PDF as a document; answers `documentId`
+ * - documentId: string (optional) — parse a PDF already kept, instead of pdfBase64
  *
  * Returns the domain-shaped body plus `pdfTextLength`. When `domain: 'auto'`
  * was asked for, the answer additionally carries `domainSource: 'detected'` and
@@ -36,9 +52,13 @@ const parsePdfSchema = z.object({
 router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parsePdfSchema.parse(req.body);
-    const userId = req.userId;
+    const userId = req.userId!;
 
-    const buffer = Buffer.from(parsed.pdfBase64, 'base64');
+    const buffer = parsed.documentId
+      ? (await readDocumentForParse(userId, parsed.documentId, ['pdf'])).buffer
+      : Buffer.from(parsed.pdfBase64!, 'base64');
+    const retainInput = { buffer, declaredFormat: 'pdf' as const };
+    if (parsed.retain && !parsed.documentId) assertRetainable(retainInput);
 
     let pdfText: string;
     try {
@@ -76,8 +96,18 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       '[PDF Parse] Parsing complete',
     );
 
+    const documentId = await recordParse({
+      userId,
+      documentId: parsed.documentId,
+      retain: parsed.retain,
+      input: retainInput,
+      parsedDomain: outcome.domain,
+      parsedPayload: outcome.body,
+    });
+
     res.json({
       ...outcome.body,
+      ...(documentId ? { documentId } : {}),
       // Only for a flight: it describes a barcode, and a cruise or hotel
       // confirmation never carries one. Reporting `false` on those would
       // suggest the question had been asked of them.
@@ -93,6 +123,7 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation failed', details: error.issues });
     }
+    if (sendAppError(res, error)) return;
     logger.error({ error }, '[PDF Parse] Unexpected error');
     const described = describeParserError(error);
     res.status(described.status).json({

@@ -36,3 +36,4 @@ import "./misc";
 import "./countryFlags";
 import "./xlsxImport";
 import "./settingsRouting";
+import "./documents";

@@ -60,6 +60,13 @@ describe("micro-trip candidates", () => {
       prisma.tripImmichAlbum.create({
         data: { tripId, immichAlbumId: `al-${tripId}`, albumName: "Album" },
       })],
+    ["a kept document", (tripId) =>
+      prisma.document.create({
+        data: {
+          userId, tripId, storedName: `tidy-${tripId}.pdf`, mimetype: "application/pdf",
+          sizeBytes: 1, sha256: "0".repeat(64), format: "pdf", linkedAt: new Date(),
+        },
+      })],
     ["a summary", (tripId) =>
       prisma.trip.update({ where: { id: tripId }, data: { summary: "Written up" } })],
     ["a cover image", (tripId) =>

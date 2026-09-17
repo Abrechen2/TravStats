@@ -20,6 +20,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
   createLodgingSchema,
@@ -293,7 +294,7 @@ registry.registerPath({
   tags: ["Lodging"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: stayCreateInput } }, required: true },
+    body: { content: { "application/json": { schema: stayCreateInput.and(documentIdsBodySchema) } }, required: true },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: stay } } },

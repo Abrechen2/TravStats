@@ -254,54 +254,25 @@ process.on('uncaughtException', (error: Error) => {
   process.exit(1);
 });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Received SIGINT, shutting down gracefully...');
-  const { stopScheduler } = await import('./services/backupScheduler');
-  stopScheduler();
-  const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
-  stopHistoricalEnrichmentScheduler();
-  const { stopReminderScheduler } = await import('./services/reminderScheduler');
-  stopReminderScheduler();
-  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
-  stopUsageStatsScheduler();
-  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
-  stopAirlineLogoRefreshScheduler();
-  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
-  stopStatusSweepScheduler();
-  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
-  stopPlaceAddressBackfillScheduler();
-  const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
-  stopDataQualitySweepScheduler();
-  const { stopDawarichCountryDaySweepScheduler } = await import('./jobs/dawarichCountryDaySweepScheduler');
-  stopDawarichCountryDaySweepScheduler();
+// Graceful shutdown — one path for both signals, so a scheduler added to one
+// list cannot be forgotten in the other.
+const shutdown = (signal: string) => async (): Promise<void> => {
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+  (await import('./services/backupScheduler')).stopScheduler();
+  (await import('./jobs/historicalEnrichmentScheduler')).stopHistoricalEnrichmentScheduler();
+  (await import('./services/reminderScheduler')).stopReminderScheduler();
+  (await import('./jobs/usageStatsScheduler')).stopUsageStatsScheduler();
+  (await import('./jobs/airlineLogoRefreshScheduler')).stopAirlineLogoRefreshScheduler();
+  (await import('./jobs/statusSweepScheduler')).stopStatusSweepScheduler();
+  (await import('./jobs/placeAddressBackfillScheduler')).stopPlaceAddressBackfillScheduler();
+  (await import('./jobs/dataQualitySweepScheduler')).stopDataQualitySweepScheduler();
+  (await import('./jobs/dawarichCountryDaySweepScheduler')).stopDawarichCountryDaySweepScheduler();
+  (await import('./jobs/documentSweepScheduler')).stopDocumentSweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  logger.info('Received SIGTERM, shutting down gracefully...');
-  const { stopScheduler } = await import('./services/backupScheduler');
-  stopScheduler();
-  const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
-  stopHistoricalEnrichmentScheduler();
-  const { stopReminderScheduler } = await import('./services/reminderScheduler');
-  stopReminderScheduler();
-  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
-  stopUsageStatsScheduler();
-  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
-  stopAirlineLogoRefreshScheduler();
-  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
-  stopStatusSweepScheduler();
-  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
-  stopPlaceAddressBackfillScheduler();
-  const { stopDataQualitySweepScheduler } = await import('./jobs/dataQualitySweepScheduler');
-  stopDataQualitySweepScheduler();
-  const { stopDawarichCountryDaySweepScheduler } = await import('./jobs/dawarichCountryDaySweepScheduler');
-  stopDawarichCountryDaySweepScheduler();
-  await prisma.$disconnect();
-  process.exit(0);
-});
+};
+process.on('SIGINT', shutdown('SIGINT'));
+process.on('SIGTERM', shutdown('SIGTERM'));
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
@@ -741,6 +712,14 @@ if (process.env.NODE_ENV !== 'test') {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
       });
+    }
+
+    // Hourly sweep of kept originals (:25): unfiled uploads past their week, and
+    // the bytes of documents whose entry was deleted (forgejo#116)
+    try {
+      (await import('./jobs/documentSweepScheduler')).startDocumentSweepScheduler();
+    } catch (error) {
+      logger.error({ error }, 'server_start_document_sweep_scheduler_error');
     }
 
     // Start flight reminder scheduler

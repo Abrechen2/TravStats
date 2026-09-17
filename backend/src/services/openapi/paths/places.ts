@@ -24,6 +24,8 @@ import {
 } from "../../../schemas/placeImport";
 
 import { registry } from "../registry";
+import { documentIdsBodySchema } from "../../../schemas/document";
+import { createVisitSchema } from "../../../schemas/place";
 import { errorContent } from "./shared";
 import {
   createPlaceListSchema,
@@ -178,9 +180,12 @@ registry.registerPath({
   summary: "Record a visit",
   description:
     "Several visits to the same place on the same day stay several visits — the " +
-    "day is not a key.",
+    "day is not a key. `documentIds` files kept documents with the new visit.",
   tags: placesTag,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: createVisitSchema.extend(documentIdsBodySchema.shape) } } },
+  },
   responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 

@@ -12,6 +12,15 @@ import { validateEmailFile } from '../utils/fileValidation';
 import { describeParserError } from '../utils/parserErrors';
 
 import { parseEmailSchema } from '../schemas/parseEmail';
+import { EMAIL_TEXT_FORMAT } from '../services/documents/documentFormats';
+import {
+  assertRetainable,
+  multipartRetain,
+  readDocumentForParse,
+  recordParse,
+  sendAppError,
+  type RetainInput,
+} from '../services/documents/parseRetention';
 
 const router = Router();
 
@@ -25,6 +34,9 @@ const router = Router();
  * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
  * - referenceDate: string (optional) - when the mail was SENT, so a year-less
  *   date in the body is read against that rather than against today (#285)
+ * - retain: boolean (optional) - keep the pasted mail as a document (forgejo#116)
+ * - documentId: string (optional) - read a kept .eml or mail text instead of
+ *   emailContent; an .eml's own subject, HTML part and send date are used
  *
  * Returns the domain-shaped body plus `text` and `subject`. When `domain: 'auto'`
  * was asked for, the answer additionally carries `domainSource: 'detected'` and a
@@ -34,17 +46,30 @@ const router = Router();
 router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parseEmailSchema.parse(req.body);
+    const userId = req.userId!;
 
-    const emailContent = parsed.emailContent;
-    const subject = parsed.subject;
-    const userId = req.userId;
+    // A kept original stands in for the body: an .eml carries its own subject,
+    // HTML part and send date, exactly as /parse-email-file reads them.
+    const kept = parsed.documentId
+      ? await readDocumentForParse(userId, parsed.documentId, ['eml', 'emailText'])
+      : null;
+    const extracted =
+      kept?.document.format === 'eml' ? extractEmailFromFile(kept.buffer, 'document.eml') : null;
+    const emailContent = extracted?.text ?? kept?.buffer.toString('utf8') ?? parsed.emailContent!;
+    const subject = extracted?.subject ?? parsed.subject;
+
+    const retainInput: RetainInput = {
+      buffer: Buffer.from(emailContent, 'utf8'),
+      forceFormat: EMAIL_TEXT_FORMAT,
+    };
+    if (parsed.retain && !kept) assertRetainable(retainInput);
 
     logger.info({ userId, domain: parsed.domain }, '[Email Parse] Parsing email');
 
     // The caller's anchor for year-less dates. Absent is not "today" written
     // out — it is no opinion at all, and the parser's own default takes over
     // (#285). Only a Date ever leaves here, never a string.
-    const referenceDate = parsed.referenceDate ? new Date(parsed.referenceDate) : undefined;
+    const referenceDate = parsed.referenceDate ? new Date(parsed.referenceDate) : extracted?.sentAt ?? undefined;
 
     const outcome = await parseDocument({
       text: emailContent,
@@ -53,6 +78,7 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       // differently. This mirrors the `subject || undefined` the flight branch
       // used to do here.
       subject: subject || undefined,
+      ...(extracted?.html ? { html: extracted.html } : {}),
       domain: parsed.domain,
       // Never 'document' on this route: the email entry point reads the subject
       // and the HTML part, and a header is what dates a mail whose body carries
@@ -69,8 +95,18 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       '[Email Parse] Parsing complete',
     );
 
+    const documentId = await recordParse({
+      userId,
+      documentId: parsed.documentId,
+      retain: parsed.retain,
+      input: retainInput,
+      parsedDomain: outcome.domain,
+      parsedPayload: body,
+    });
+
     res.json({
       ...body,
+      ...(documentId ? { documentId } : {}),
       text: emailContent,
       subject: subject ?? undefined,
       // Only a flight carries one — a cruise or hotel confirmation has no
@@ -93,6 +129,7 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       });
     }
 
+    if (sendAppError(res, error)) return;
     logger.error({ error }, '[Email Parse] Parsing failed');
     const described = describeParserError(error);
     res.status(described.status).json({
@@ -109,6 +146,8 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
  * Body: multipart/form-data
  * - email: File (required) - Email file (.msg, .eml, or .txt)
  * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - retain: 'true' (optional) - keep the file as a document (forgejo#116); .eml
+ *   and .txt only, a .msg is refused before parsing
  *
  * Returns the domain-shaped body plus `subject`, `text` and `html`. As on
  * /parse-email, `domainSource` and `detection` appear only when the server
@@ -161,8 +200,18 @@ router.post(
         });
       }
       const domainValue = domainParse.data;
+      const retainParse = multipartRetain.safeParse(req.body?.retain);
+      if (!retainParse.success) {
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: retainParse.error.issues,
+        });
+      }
 
-      const userId = req.userId;
+      const userId = req.userId!;
 
       // Validate file using magic numbers
       const ext = path.extname(file.originalname).toLowerCase();
@@ -196,6 +245,12 @@ router.post(
 
       // Extract email content from file
       const fileBuffer = fs.readFileSync(filePath);
+      const retainInput: RetainInput = {
+        buffer: fileBuffer,
+        originalName: file.originalname,
+        declaredMime: file.mimetype,
+      };
+      if (retainParse.data) assertRetainable(retainInput);
       const extracted = extractEmailFromFile(fileBuffer, file.originalname);
 
       logger.debug({
@@ -241,8 +296,17 @@ router.post(
         logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
       }
 
+      const documentId = await recordParse({
+        userId,
+        retain: retainParse.data,
+        input: retainInput,
+        parsedDomain: outcome.domain,
+        parsedPayload: body,
+      });
+
       res.json({
         ...body,
+        ...(documentId ? { documentId } : {}),
         subject: extracted.subject,
         text: extracted.text,
         html: extracted.html ?? undefined,
@@ -265,6 +329,7 @@ router.post(
         }
       }
 
+      if (sendAppError(res, error)) return;
       logger.error({ error }, '[Email Parse File] Parsing failed');
       const described = describeParserError(error);
       res.status(described.status).json({

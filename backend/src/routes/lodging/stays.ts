@@ -15,6 +15,7 @@ import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { linkDocuments, takeDocumentIds } from "../../services/documents/documentService";
 import { recheckAchievements } from "../../utils/achievements";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
@@ -48,6 +49,7 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     // whose they are. Without this, a stay could be filed under a stranger's
     // trip and would then show up on their timeline (AUD-038).
     await assertReferencesOwned(userId, parsed.data);
+    const documentIds = await takeDocumentIds(userId, req.body);
     // totalPrice is the source of truth: the UI types it, but an importer or
     // API client may send only a per-night price — derive the total so it is
     // always stored, and the FX snapshot below converts the right amount.
@@ -107,6 +109,7 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
       },
     });
 
+    await linkDocuments(userId, documentIds, { type: "lodgingStay", id: stay.id });
     await recheckAchievements(userId, "lodging");
     logger.info({ operation: "lodging_stay_create", stayId: stay.id, lodgingId: lodging.id, userId });
     res.status(201).json({ success: true, data: stay });

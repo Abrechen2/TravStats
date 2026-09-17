@@ -38,6 +38,8 @@ import {
 } from '../services/airportCoordinates';
 import { assertMergedChronology, toUtcDate } from '../services/flights/mergedChronology';
 import { sharedFlightCreateFields } from '../services/flights/flightCreateFields';
+import { warnIfScheduledInPast } from '../services/flights/scheduledInPastWarning';
+import { linkDocuments, takeDocumentIds } from '../services/documents/documentService';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
@@ -251,6 +253,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
   try {
     const userId = req.userId!;
     const data = createFlightSchema.parse(await withAirportTimezones(req.body));
+    const documentIds = await takeDocumentIds(userId, req.body);
 
     // A mail carrying ONE flight comes through here rather than the batch
     // route, so provenance has to live in both places or half of every
@@ -288,21 +291,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       }
     }
 
-    // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
-    // legitimate edge cases (manually re-edited just-departed rows) still
-    // succeed, but flagged for ops review since these are almost always a
-    // status-flip bug or a year-typo in bulk imports.
-    if (data.status === 'scheduled' && data.departureLocal) {
-      const nowIso = new Date().toISOString().slice(0, 19);
-      if (data.departureLocal < nowIso) {
-        logger.warn({
-          operation: 'flight_create_scheduled_in_past',
-          userId,
-          departureLocal: data.departureLocal,
-          flightNumber: data.flightNumber,
-        });
-      }
-    }
+    warnIfScheduledInPast(userId, data);
 
     const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
     const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
@@ -350,6 +339,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       });
 
       if (outcome.kind === 'merged') {
+        await linkDocuments(userId, documentIds, { type: 'flight', id: outcome.flight.id });
         res.status(200).json({
           flight: await withAirportFacts(outcome.flight),
           mergedFields: outcome.mergedFields,
@@ -514,6 +504,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 
       return created;
     });
+    await linkDocuments(userId, documentIds, { type: 'flight', id: flight.id });
 
     // Check achievements after creating a flight and return newly unlocked ones
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];

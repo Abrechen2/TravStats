@@ -91,6 +91,28 @@ describe("a trip keeps its contents", () => {
       expect(movedPhoto?.tripId).toBe(target.id);
     });
 
+    it("carries a kept document across instead of letting it cascade away", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const document = await prisma.document.create({
+        data: {
+          userId,
+          tripId: source.id,
+          storedName: `merge-${source.id}.pdf`,
+          mimetype: "application/pdf",
+          sizeBytes: 1,
+          sha256: "0".repeat(64),
+          format: "pdf",
+          linkedAt: new Date(),
+        },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const kept = await prisma.document.findUnique({ where: { id: document.id } });
+      expect(kept?.tripId).toBe(target.id);
+    });
+
     it("folds a duplicate album into the target's own and keeps both sides' photos", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });

@@ -8,6 +8,13 @@ import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDoc
 import { describeParserError } from '../utils/parserErrors';
 import { FILE_LIMITS } from '../config/constants';
 import logger from '../utils/logger';
+import {
+  assertRetainable,
+  parseRetentionFields,
+  readDocumentForParse,
+  recordParse,
+  sendAppError,
+} from '../services/documents/parseRetention';
 
 const router = Router();
 
@@ -34,13 +41,20 @@ const MIN_USABLE_TEXT_LENGTH = 40;
  */
 const MAX_IMAGE_BASE64_LENGTH = Math.ceil((FILE_LIMITS.BOARDING_PASS_MAX_SIZE * 4) / 3) + 4;
 
-const parseImageSchema = z.object({
-  imageBase64: z
-    .string()
-    .min(1, 'Image data is required')
-    .max(MAX_IMAGE_BASE64_LENGTH, 'Image too large'),
-  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('auto'),
-});
+const parseImageSchema = z
+  .object({
+    imageBase64: z
+      .string()
+      .min(1, 'Image data is required')
+      .max(MAX_IMAGE_BASE64_LENGTH, 'Image too large')
+      .optional(),
+    domain: z.enum(REQUESTABLE_DOMAINS).optional().default('auto'),
+    // Keep the photograph, or read one already kept (forgejo#116).
+    ...parseRetentionFields,
+  })
+  .refine((b) => !b.imageBase64 !== !b.documentId, {
+    message: 'Send imageBase64 or documentId, exactly one of them',
+  });
 
 /**
  * POST /api/v1/parse-image — read any travel document from a photograph.
@@ -74,13 +88,16 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parseImageSchema.parse(req.body);
-      const userId = req.userId;
+      const userId = req.userId!;
+      const imageBase64 = parsed.documentId
+        ? (await readDocumentForParse(userId, parsed.documentId, ['image'])).buffer.toString('base64')
+        : parsed.imageBase64!;
 
       // The same validation the boarding pass scanner applies: magic-number
       // sniffing, a declared-versus-detected MIME cross-check, and a real
       // decoded-byte cap. Reusing it rather than restating it keeps one answer
       // to "is this an image we accept".
-      const validation = validateBoardingPassImageBase64(parsed.imageBase64);
+      const validation = validateBoardingPassImageBase64(imageBase64);
       if (!validation.valid) {
         logger.warn(
           { userId, reason: validation.reason },
@@ -92,14 +109,20 @@ router.post(
         });
       }
 
-      // `validation.base64`, never `parsed.imageBase64`: a data URI validates
+      const retainInput = {
+        buffer: Buffer.from(validation.base64 ?? imageBase64, 'base64'),
+        declaredFormat: 'image' as const,
+      };
+      if (parsed.retain && !parsed.documentId) assertRetainable(retainInput);
+
+      // `validation.base64`, never the raw string: a data URI validates
       // fine because the validator strips its prefix, and passing the unstripped
       // string on is what fed Tesseract rubble (forgejo#117).
       let text: string;
       let confidence: number;
       try {
         ({ text, confidence } = await getTesseractParser().recognizeText(
-          validation.base64 ?? parsed.imageBase64,
+          validation.base64 ?? imageBase64,
         ));
       } catch (error) {
         // A payload the OCR cannot decode is a CLIENT error. It used to end the
@@ -149,8 +172,18 @@ router.post(
         '[Image Parse] Parsing complete',
       );
 
+      const documentId = await recordParse({
+        userId,
+        documentId: parsed.documentId,
+        retain: parsed.retain,
+        input: retainInput,
+        parsedDomain: outcome.domain,
+        parsedPayload: outcome.body,
+      });
+
       res.json({
         ...outcome.body,
+        ...(documentId ? { documentId } : {}),
         /**
          * Reported, never used as a gate. OCR confidence says how sure the
          * engine is about the GLYPHS, which is a different question from
@@ -168,6 +201,7 @@ router.post(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
+      if (sendAppError(res, error)) return;
       logger.error({ error }, '[Image Parse] Parsing failed');
       const described = describeParserError(error);
       res.status(described.status).json({
