@@ -138,7 +138,7 @@ export default function AboutSection(): JSX.Element {
             </li>
             <li>
               <a
-                href={`${REPO_URL}/blob/main/LICENSES.md`}
+                href={`${REPO_URL}#third-party-data-and-assets`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
