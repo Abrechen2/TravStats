@@ -3,6 +3,7 @@ import { hashPassword } from "../utils/password";
 import { loadPools } from "../seedDemoAccount";
 import { STORIES } from "../seedDemo/stories";
 import { seedStories } from "../seedDemo/seedStories";
+import { classifyLodging, classifyStay } from "../shared/lodgingCounting";
 
 describe("seedStories", () => {
   let userId: string;
@@ -85,6 +86,33 @@ describe("seedStories", () => {
       if (!trip) throw new Error(`${story.name}: trip not found`);
       for (const flight of trip.flights) expect(flight.companionLinks).toHaveLength(story.companions.length);
       for (const cruise of trip.cruises) expect(cruise.companionLinks).toHaveLength(story.companions.length);
+    }
+  });
+
+  /**
+   * Finding B3 of the independent review of 2026-09-17: the seed wrote
+   * `visited: !planned` on the LODGING, so the two booked Portugal hotels were
+   * classified as bookmarks — `classifyLodging` returns "excluded" for
+   * `visited === false`, whatever the stays say — and the trip that exists to
+   * show what is coming up counted nowhere.
+   *
+   * A booked stay is `visited: true`; whether it has happened is the dates'
+   * answer, not the flag's (see shared/lodgingCounting.ts).
+   */
+  it("counts a booked stay on a planned trip as planned, not as a bookmark", async () => {
+    const planned = STORIES.filter((s) => s.status === "planned" && s.stays.length > 0);
+    expect(planned.length).toBeGreaterThan(0);
+    for (const story of planned) {
+      const stays = await prisma.lodgingStay.findMany({
+        where: { userId, trip: { name: story.name } },
+        include: { lodging: true },
+      });
+      expect(stays).toHaveLength(story.stays.length);
+      for (const stay of stays) {
+        const stayState = classifyStay(stay);
+        expect(stayState).toBe("planned");
+        expect(classifyLodging(stay.lodging, [stayState])).toBe("planned");
+      }
     }
   });
 

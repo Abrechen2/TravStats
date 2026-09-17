@@ -57,7 +57,13 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
     const lodging = await prisma.lodging.create({
       data: {
         userId, type: s.type, name: s.name, city: s.city, country: s.country, isoCountryCode: s.iso,
-        lat: s.lat, lon: s.lon, stars: s.stars, visited: !planned, dataSource: "manual",
+        // `visited: true` for every booked stay, planned or past. The flag
+        // separates a house the user BOOKED from one they merely bookmarked;
+        // whether the stay has happened is the DATES' answer, and
+        // `classifyStay`/`classifyLodging` read them. Writing `!planned` here
+        // made the planned Portugal hotels bookmarks, which count nowhere at
+        // all (finding B3, independent review 2026-09-17).
+        lat: s.lat, lon: s.lon, stars: s.stars, visited: true, dataSource: "manual",
       },
     });
     await prisma.lodgingStay.create({
