@@ -511,6 +511,12 @@ registry.registerPath({
   method: "get",
   path: "/photo-journeys",
   summary: "Journeys proposed from photo timestamps",
+  description:
+    "Each row is ONE reading of a burst of photos nothing recorded explains, the strongest that fits: " +
+    "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
+    "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`) " +
+    "or `stay` (nights away with no dated stay, named by an own place nearby; `placeId`, `nights`). " +
+    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row.",
   tags: miscTag,
   responses: { 200: { description: "Photo journeys" } },
 });
@@ -527,8 +533,25 @@ registry.registerPath({
   method: "patch",
   path: "/photo-journeys/{id}",
   summary: "Update a photo journey",
+  description:
+    "Accept or dismiss. Accepting links what the answer created — `createdTripId`, " +
+    "`createdPlaceVisitId` or `createdLodgingStayId` — and each must be the caller's own entry (404 otherwise).",
   tags: miscTag,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            status: z.enum(["accepted", "dismissed"]),
+            createdTripId: uuid.optional(),
+            createdPlaceVisitId: uuid.optional(),
+            createdLodgingStayId: uuid.optional(),
+          }),
+        },
+      },
+    },
+  },
   responses: { 200: { description: "Updated" }, 404: notFound },
 });
 
