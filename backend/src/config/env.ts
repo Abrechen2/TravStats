@@ -55,6 +55,9 @@ const envSchema = z.object({
   // Seeding
   SEED_AIRPORTS: z.string().transform((val) => val !== 'false').prefault('true'),
   CREATE_DEMO_USER: z.string().transform((val) => val === 'true').prefault('false'),
+  // Prints demo / demo123 on the login page. Only for a public demo instance:
+  // every install seeds the demo user, and a real one must never advertise it.
+  PUBLIC_DEMO_LOGIN: z.string().transform((val) => val === 'true').prefault('false'),
 
   // API Keys (optional)
   AIRLABS_API_KEY: z.string().optional(),

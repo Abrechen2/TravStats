@@ -43,6 +43,9 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     res.json({
       setupComplete,
       requiresSetup: !setupComplete,
+      // Read at request time, not from the cached env schema — the test flips
+      // it per case, and a real instance is never restarted just for this flag.
+      publicDemoLogin: process.env.PUBLIC_DEMO_LOGIN === 'true',
       message: setupComplete
         ? 'Instance is configured'
         : userCount === 0

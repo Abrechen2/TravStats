@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { authApi, passkeyApi } from "../lib/api";
+import { authApi, passkeyApi, setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
@@ -69,6 +69,16 @@ export default function LoginPage(): JSX.Element {
       .availability()
       .then((r) => setPasskeysAvailable(r.available && window.isSecureContext !== false))
       .catch(() => setPasskeysAvailable(false));
+  }, []);
+
+  // A public demo instance prints its shared login (PUBLIC_DEMO_LOGIN). Any
+  // other install never does, although it seeds the same demo account.
+  const [publicDemoLogin, setPublicDemoLogin] = useState(false);
+  useEffect(() => {
+    setupApi
+      .getStatus()
+      .then((s) => setPublicDemoLogin(s.publicDemoLogin === true))
+      .catch(() => setPublicDemoLogin(false));
   }, []);
 
   const handlePasskeyLogin = async (): Promise<void> => {
@@ -219,6 +229,25 @@ export default function LoginPage(): JSX.Element {
               >
                 {successMessage}
               </p>
+            )}
+
+            {publicDemoLogin && (
+              <div
+                className="mb-4 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm"
+                style={{ background: "var(--ts-surface2)", border: "1px solid var(--ts-border)" }}
+              >
+                <span>{t("login.demoHint", { username: "demo", password: "demo123" })}</span>
+                <button
+                  type="button"
+                  className="btn-secondary whitespace-nowrap"
+                  onClick={() => {
+                    setUsername("demo");
+                    setPassword("demo123");
+                  }}
+                >
+                  {t("login.demoFill")}
+                </button>
+              </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
