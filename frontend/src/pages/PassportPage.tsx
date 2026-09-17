@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
-import { Link } from "react-router-dom";
 
 import CountryTable from "../components/Passport/CountryTable";
 import EvidenceSummary from "../components/Passport/EvidenceSummary";
@@ -114,11 +113,11 @@ export default function PassportPage(): JSX.Element {
   return (
     <AppShell width="list">
       <div className="print:max-w-none print:py-0">
-        <div className="flex items-baseline justify-between mb-4 print:hidden">
-          <Link to="/stats" className="text-sm hover:underline" style={{ color: "var(--accent)" }}>
-            ← {t("passport:backToStats")}
-          </Link>
-          {passport && passport.summary.countriesTotal > 0 && (
+        {/* T3 (2026-09-17 tester feedback): the "Zurück zu Statistiken" link
+            duplicated the header's own navigation and led nowhere else in the
+            app — removed rather than kept as a second way back. */}
+        {passport && passport.summary.countriesTotal > 0 && (
+          <div className="flex justify-end mb-4 print:hidden">
             <button
               type="button"
               onClick={(): void => window.print()}
@@ -127,8 +126,8 @@ export default function PassportPage(): JSX.Element {
             >
               {t("passport:print")}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {loading && (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -157,11 +156,12 @@ export default function PassportPage(): JSX.Element {
 
         {!loading && failure === null && passport !== null && (
           <>
-            {/* Everything inside is the DOCUMENT — the one light surface in
-                  a dark app. `.ts-paper` redefines the eight variables this
-                  subtree reads, so the country table and the evidence summary
-                  follow without being touched. */}
-            <div className="ts-paper rounded-2xl p-3 sm:p-6 print:p-0">
+            {/* T3 (2026-09-17 tester feedback): this used to be the app's one
+                light "paper" surface (`.ts-paper`, since removed from
+                theme/ui.css). The owner's decision was to make the passport
+                dark like the rest of the app instead of keeping a second
+                palette alive for one page. */}
+            <div className="rounded-2xl p-3 sm:p-6 print:p-0">
               {passport.summary.countriesTotal === 0 ? (
                 <div
                   className="rounded-xl p-8 text-center"
