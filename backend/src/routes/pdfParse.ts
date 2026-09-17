@@ -7,6 +7,7 @@ import { extractTextFromPdf, isBcbpText } from "../services/pdfParser";
 import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
 import { FILE_LIMITS } from "../config/constants";
 import { describeParserError } from "../utils/parserErrors";
+import { hasUsableText } from "../services/parsing/usableText";
 import {
   assertRetainable,
   parseRetentionFields,
@@ -75,7 +76,9 @@ router.post(
         });
       }
 
-      if (!pdfText.trim()) {
+      // Not only EMPTY: a scanned PDF's text layer is often a page number or a
+      // watermark, and parsing that answers 200 with nothing and no hint.
+      if (!hasUsableText(pdfText)) {
         return res.status(422).json({
           error: "Empty PDF",
           message:

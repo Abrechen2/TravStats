@@ -8,6 +8,7 @@ import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDoc
 import { describeParserError } from "../utils/parserErrors";
 import { FILE_LIMITS } from "../config/constants";
 import logger from "../utils/logger";
+import { MIN_USABLE_TEXT_LENGTH } from "../services/parsing/usableText";
 import {
   assertRetainable,
   parseRetentionFields,
@@ -17,17 +18,6 @@ import {
 } from "../services/documents/parseRetention";
 
 const router = Router();
-
-/**
- * The shortest OCR result that could plausibly be a booking confirmation.
- *
- * A blank page, a photograph of a wall or a failed scan all come back as a
- * handful of stray glyphs. Handing those to a parser wastes an LLM round trip
- * and answers with an empty result that looks like "we could not read your
- * document" when the truth is "there was nothing on it". Below this, the route
- * says so instead.
- */
-const MIN_USABLE_TEXT_LENGTH = 40;
 
 /**
  * The base64 length that corresponds to the real, decoded byte cap.
