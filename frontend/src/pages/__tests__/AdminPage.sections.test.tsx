@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminPage from "../AdminPage";
+import { DEEP_LINK_ALIGN_BUDGET_MS } from "../Admin/useDeepLinkScroll";
 import {
   installFakeIntersectionObserver,
   type FakeIntersectionObserverHandle,
 } from "../Admin/__tests__/intersectionObserverStub";
+import {
+  installFakeResizeObserver,
+  type FakeResizeObserverHandle,
+} from "../Admin/__tests__/resizeObserverStub";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback, forgejo#…): the admin
@@ -206,28 +211,114 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
     });
     expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
   });
+});
 
-  it("re-scrolls the deep-linked section once its lazy content has actually mounted", async () => {
-    const scrollSpy = vi.fn();
-    Element.prototype.scrollIntoView = scrollSpy;
+/**
+ * Wave C finding C1, follow-up round (2026-09-18): a browser measurement of
+ * the first fix showed it did not actually work. `/admin?section=logging` at
+ * 1440x900 landed the "logging" section at `top = 3196` with `scrollY =
+ * 2786` — nowhere near the ~72px anchor offset. The first fix keyed the
+ * corrective re-scroll on the DEEP-LINK TARGET's own `LazySection` mounting,
+ * but the sections that actually grow past their 240px placeholder are the
+ * ones ABOVE the target (they mount as the page scrolls past them and are
+ * far taller once real content lands) — that growth pushes the target
+ * further down, below the fold, where it never intersects and therefore
+ * never mounts, so the "wait for target mount" correction never fired at
+ * all.
+ *
+ * The fix now reacts to the PAGE's layout changing (a `ResizeObserver` on
+ * the sections column) rather than to one section's mount. jsdom does no
+ * layout, so `getBoundingClientRect()` cannot be used to pin actual pixel
+ * convergence here — the fake `ResizeObserver` below only proves the
+ * MECHANISM: a resize re-issues the scroll, repeated resizes keep doing so
+ * within the time budget, a real scroll (wheel/touch/key) input cancels it,
+ * and the time budget itself is a hard stop. See the report for what only a
+ * browser can confirm.
+ */
+describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)", () => {
+  let resizeIO: FakeResizeObserverHandle;
+  let scrollSpy: ReturnType<typeof vi.fn>;
 
+  beforeEach(() => {
+    scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy as typeof Element.prototype.scrollIntoView;
+    resizeIO = installFakeResizeObserver();
+  });
+
+  afterEach(() => {
+    resizeIO.restore();
+    vi.useRealTimers();
+  });
+
+  it("re-aligns the deep-linked section when ANY section's height changes, not only its own", async () => {
     renderAdmin("/admin?section=logging");
     await screen.findByRole("region", { name: "admin:tabs.system" });
 
-    // The first scroll runs against the section's placeholder height (finding
-    // C1) — it happens regardless of any intersection, same as the plain
-    // (no-stub) test above.
+    // The first scroll runs against placeholder heights, same as before.
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
-    const observer = io.observerFor("admin-logging");
+    // Simulates a section ABOVE "logging" growing past its placeholder —
+    // the exact case the browser measurement caught.
     act(() => {
-      observer?.trigger(true);
+      resizeIO.observers[0]?.trigger();
+    });
+    expect(scrollSpy).toHaveBeenCalledTimes(2);
+    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-logging"));
+
+    // A second layout change within the budget realigns again.
+    act(() => {
+      resizeIO.observers[0]?.trigger();
+    });
+    expect(scrollSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("cancels re-aligning on real user scroll input", async () => {
+    renderAdmin("/admin?section=logging");
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      window.dispatchEvent(new Event("wheel"));
+    });
+    act(() => {
+      resizeIO.observers[0]?.trigger();
     });
 
-    // Once the target has actually mounted, the page re-scrolls to correct
-    // for whatever the mount shifted — a bug fixed only in the placeholder,
-    // not in the re-scroll, would leave this at 1.
-    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(2));
-    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-logging"));
+    // The wheel event cancelled the aligner before this resize — no new call.
+    expect(scrollSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cancel on an unrelated key (only scroll-intent keys do)", async () => {
+    renderAdmin("/admin?section=logging");
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
+    });
+    act(() => {
+      resizeIO.observers[0]?.trigger();
+    });
+
+    // Tab is not a scroll-intent key, so the aligner is still armed.
+    expect(scrollSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops re-aligning once its time budget is spent", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    renderAdmin("/admin?section=logging");
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      vi.advanceTimersByTime(DEEP_LINK_ALIGN_BUDGET_MS + 100);
+    });
+    act(() => {
+      resizeIO.observers[0]?.trigger();
+    });
+
+    // The budget timer already cancelled the aligner — no new call.
+    expect(scrollSpy).toHaveBeenCalledTimes(1);
   });
 });

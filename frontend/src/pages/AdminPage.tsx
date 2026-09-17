@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
@@ -21,6 +21,7 @@ import AdminSectionSwitch, {
   type InviteSuccessState,
 } from "./Admin/AdminSectionSwitch";
 import { LazySection, AdminSection } from "./Admin/LazySection";
+import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -48,6 +49,10 @@ export default function AdminPage(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((state) => state.addToast);
   const [searchParams, setSearchParams] = useSearchParams();
+  // The sections column the deep-link aligner's ResizeObserver watches (see
+  // the effect below) — any lazy section growing past its placeholder height
+  // changes this element's size.
+  const mainRef = useRef<HTMLElement>(null);
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
@@ -501,38 +506,11 @@ export default function AdminPage(): JSX.Element {
     "admin"
   );
 
-  // Scrolls a deep-linked `?section=` into view once the page has rendered
-  // its sections. Keyed on `loading` rather than `[]`: on the very first
-  // render the page is still showing the "Admin Panel" placeholder (see the
-  // early return below), so `admin-<id>` does not exist in the DOM yet — an
-  // empty dependency array would run this before there was anything to
-  // scroll to. A later section jump is handled imperatively by `jump`
-  // itself, and does not need a second effect keyed on the URL.
-  useEffect(() => {
-    if (loading || !deepLinkedSection) return;
-    const el = document.getElementById(`admin-${deepLinkedSection}`);
-    // Feature-checked: jsdom has no layout, so the method is absent there.
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }, [loading, deepLinkedSection]);
-
-  // Tracks when the deep-linked section itself has actually mounted its real
-  // content (a `LazySection` fires its `onVisible` for this — see the map
-  // below). Wave C finding C1 (independent review, 2026-09-17): the effect
-  // above scrolls using whatever height every section — INCLUDING the ones
-  // above the target — happens to have at that moment, which for a lazy one
-  // is only the placeholder until it has been near the viewport. Once the
-  // target mounts, the page's layout has settled around it, so the scroll is
-  // re-run to correct for whatever drifted while sections above it expanded.
-  const [deepLinkTargetMounted, setDeepLinkTargetMounted] = useState(false);
-  useEffect(() => {
-    if (!deepLinkTargetMounted || !deepLinkedSection) return;
-    const el = document.getElementById(`admin-${deepLinkedSection}`);
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }, [deepLinkTargetMounted, deepLinkedSection]);
+  // Scrolls a `?section=` deep link into view and keeps correcting that
+  // position while the page's lazy sections are still settling — see
+  // `useDeepLinkScroll`'s own doc comment for the two-round Wave C finding
+  // C1 story (independent review, 2026-09-17, and its 2026-09-18 follow-up).
+  useDeepLinkScroll(mainRef, loading, deepLinkedSection);
 
   const jump = useCallback(
     (id: ActiveSection): void => {
@@ -664,7 +642,7 @@ export default function AdminPage(): JSX.Element {
           />
         </div>
 
-        <main className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+        <main ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
           {/* The scope line is the counterpart of the one in user settings:
               everything here is instance-wide. */}
           <PageHeader title={`${t("admin:title")} · ${currentLabel}`} meta={t("admin:scopeHint")} />
@@ -720,10 +698,7 @@ export default function AdminPage(): JSX.Element {
                 key={section.id}
                 id={`admin-${section.id}`}
                 ariaLabel={section.label}
-                onVisible={() => {
-                  sectionOnVisible[section.id]?.();
-                  if (section.id === deepLinkedSection) setDeepLinkTargetMounted(true);
-                }}
+                onVisible={sectionOnVisible[section.id]}
               >
                 <AdminSectionSwitch section={section.id} {...switchProps} />
               </LazySection>
