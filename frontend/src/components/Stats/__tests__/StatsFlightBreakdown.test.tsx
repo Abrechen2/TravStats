@@ -5,6 +5,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, opts?: { count?: number }) =>
       opts?.count !== undefined ? `${k}:${opts.count}` : k,
+    i18n: { language: "de" },
   }),
 }));
 

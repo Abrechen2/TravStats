@@ -1,5 +1,6 @@
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatHours, formatHoursValue } from "../../lib/units";
 
 interface FlightWithDuration {
   flight: Flight;
@@ -32,7 +33,7 @@ export default function StatsFlightBreakdown({
   shortestFlight,
   totalFlights,
 }: StatsFlightBreakdownProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
 
   const seatClassLabel = (key: string): string => {
     const labels: Record<string, string> = {
@@ -72,7 +73,7 @@ export default function StatsFlightBreakdown({
                   <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {t("stats:airlines.flightsTotal", {
                       count: data.count,
-                      hours: data.totalDuration.toFixed(1),
+                      hours: formatHoursValue(data.totalDuration, i18n.language),
                     })}
                   </div>
                 </div>
@@ -244,7 +245,7 @@ export default function StatsFlightBreakdown({
                 {longestFlight.flight.arrIata || longestFlight.flight.arrIcao || "N/A"}
               </p>
               <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
-                {longestFlight.duration?.toFixed(1) || "0.0"}h
+                {formatHours(longestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
           </div>

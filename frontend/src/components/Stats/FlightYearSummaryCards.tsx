@@ -1,7 +1,12 @@
 import type { SummaryStats } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
-import { convertDistance, formatCurrency, getDistanceLabel } from "../../lib/units";
+import {
+  convertDistance,
+  formatCurrency,
+  formatHoursValue,
+  getDistanceLabel,
+} from "../../lib/units";
 import TrendDelta from "./TrendDelta";
 
 interface FlightYearSummaryCardsProps {
@@ -29,12 +34,7 @@ export default function FlightYearSummaryCards({
 }: FlightYearSummaryCardsProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
-  // Same rule as the overview card: one decimal, in the reader's language.
-  // `toFixed(1)` printed "1.5" on a German page beside a card that said "2 h"
-  // for the same flight (CT106 design-6 R09).
-  const hoursLocale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
-  const formatHours = (minutes: number): string =>
-    (minutes / 60).toLocaleString(hoursLocale, { maximumFractionDigits: 1 });
+  const formatHours = (minutes: number): string => formatHoursValue(minutes / 60, i18n.language);
 
   return (
     <>

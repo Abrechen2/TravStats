@@ -69,6 +69,21 @@ export function formatDistance(
 }
 
 /**
+ * A number of hours with one decimal in the reader's language: "1,5" on a
+ * German page, "1.5" on an English one, "64" rather than "64,0". The flight
+ * statistics printed the same figure as "2 h", "1.5 h", "64 h" and "374.7h"
+ * on one tab (CT106 design-6 R09).
+ */
+export function formatHoursValue(hours: number, language?: string): string {
+  return hours.toLocaleString(localeForLanguage(language), { maximumFractionDigits: 1 });
+}
+
+/** `formatHoursValue` with its unit, for places that print both together. */
+export function formatHours(hours: number, language?: string): string {
+  return `${formatHoursValue(hours, language)} h`;
+}
+
+/**
  * Get distance unit label from translation
  */
 export function getDistanceLabel(unit: DistanceUnit, t: (key: string) => string): string {

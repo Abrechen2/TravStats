@@ -1,7 +1,7 @@
 import type { BusinessStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
-import { formatCurrency, formatDistance } from "../../lib/units";
+import { formatCurrency, formatDistance, formatHours, formatHoursValue } from "../../lib/units";
 
 interface StatsBusinessSectionProps {
   businessStats: BusinessStats;
@@ -81,7 +81,12 @@ export default function StatsBusinessSection({
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.totalCostDesc", {
                   cost: formatCurrency(businessStats.totalCost, baseCurrency),
-                  distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
+                  distance: formatDistance(
+                    businessStats.totalDistance,
+                    units.distanceUnit,
+                    t,
+                    lang
+                  ),
                 })}
           </p>
         </div>
@@ -117,11 +122,11 @@ export default function StatsBusinessSection({
             {t("stats:business.avgFlightDuration")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {businessStats.avgFlightDuration.toFixed(1)}h
+            {formatHours(businessStats.avgFlightDuration, lang)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.avgFlightDurationDesc", {
-              hours: businessStats.avgFlightDuration.toFixed(1),
+              hours: formatHoursValue(businessStats.avgFlightDuration, lang),
             })}
           </p>
         </div>

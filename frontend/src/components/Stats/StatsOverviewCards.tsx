@@ -1,4 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatHours, formatHoursValue } from "../../lib/units";
 
 interface StatsOverviewCardsProps {
   totalFlights: number;
@@ -24,7 +25,7 @@ export default function StatsOverviewCards({
   estimatedHours = 0,
   estimatedFlightCount = 0,
 }: StatsOverviewCardsProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -47,12 +48,12 @@ export default function StatsOverviewCards({
           {t("stats:overview.totalFlightTime")}
         </h3>
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
-          {totalFlightTime.toFixed(1)}h
+          {formatHours(totalFlightTime, i18n.language)}
         </p>
         {estimatedFlightCount > 0 && (
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.flightTimeEstimatedNote", {
-              hours: estimatedHours.toFixed(1),
+              hours: formatHoursValue(estimatedHours, i18n.language),
               count: estimatedFlightCount,
             })}
           </p>
@@ -66,7 +67,7 @@ export default function StatsOverviewCards({
           {t("stats:overview.avgFlightDuration")}
         </h3>
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
-          {avgFlightDuration.toFixed(1)}h
+          {formatHours(avgFlightDuration, i18n.language)}
         </p>
       </div>
       <div

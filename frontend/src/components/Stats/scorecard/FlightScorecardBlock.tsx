@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../store/settingsStore";
-import { formatDistance } from "../../../lib/units";
+import { formatDistance, formatHours } from "../../../lib/units";
 import type { TimeseriesResponse } from "../../../lib/api/types";
 import KpiScorecard from "./KpiScorecard";
 import type { ScorecardTileVM } from "./ScorecardTile";
@@ -64,7 +64,7 @@ export default function FlightScorecardBlock({
     {
       key: "flightTime",
       label: t("stats:scorecard.flightTime"),
-      value: `${Math.round(cur.durationMin / 60)} h`,
+      value: formatHours(cur.durationMin / 60, i18n.language),
       takeaway,
       points: durations,
       current: cur.durationMin,
