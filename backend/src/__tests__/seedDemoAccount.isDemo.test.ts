@@ -69,4 +69,26 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     });
     expect(after?.isDemo).toBe(true);
   });
+
+  it("restores the demo credentials on every run", async () => {
+    const id = await ensureUser();
+    await prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: await hashPassword("changed-by-a-visitor"),
+        mustChangePassword: true,
+        twoFactorSecret: "PENDINGSECRET",
+        twoFactorEnabledAt: new Date(),
+      },
+    });
+
+    await ensureUser();
+
+    const after = await prisma.user.findUnique({ where: { id } });
+    expect(after?.mustChangePassword).toBe(false);
+    expect(after?.twoFactorEnabledAt).toBeNull();
+    expect(after?.twoFactorSecret).toBeNull();
+    const { comparePassword } = await import("../utils/password");
+    expect(await comparePassword("demo123", after!.passwordHash)).toBe(true);
+  });
 });

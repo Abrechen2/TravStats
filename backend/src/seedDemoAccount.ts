@@ -29,7 +29,7 @@ import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "./services/companionService";
 
-type AirportRow = {
+export type AirportRow = {
   id: number;
   iata: string | null;
   icao: string | null;
@@ -118,6 +118,7 @@ const AIRPORT_IATAS = [
   "SYD", "MEL", "AKL",
   "GRU", "EZE", "SCL",
   "CPT", "JNB", "CAI", "RAK", "NBO",
+  "KEF", "FLR", "BGO", "TOS",
 ];
 
 const AIRLINES = [
@@ -436,6 +437,28 @@ async function wipeDemoUser(userId: string): Promise<void> {
   // Cascade-safe teardown: deleting the user would wipe all owned rows via
   // onDelete: Cascade, but we want to keep the user row stable so we just
   // delete owned data. Order matters where there are optional FKs.
+  //
+  // New domains (Tasks 5-8: narrated trips, tours, lodging, places) go first —
+  // deleted before flights/cruises/trips so a stale FK never outlives the row
+  // it points at. PlaceVisit before PlaceList before Place: entries cascade
+  // off the list, but a place can still be a visit target until visits are
+  // gone. LodgingStay before Lodging for the same reason. TripJournalEntry and
+  // TripRoute (legs/tracks cascade with it) before TripStop, because
+  // TripRouteLeg cascades off either its route OR its endpoint stops — routes
+  // first means the legs are already gone by the time stops are deleted, and
+  // TripStop.routeId is SetNull on route delete rather than blocking it.
+  // Companion last of the new set: its join rows (FlightCompanion,
+  // CruiseCompanion) cascade, so it's safe regardless of flight/cruise order.
+  await prisma.placeVisit.deleteMany({ where: { userId } });
+  await prisma.placeList.deleteMany({ where: { userId } }); // entries cascade
+  await prisma.place.deleteMany({ where: { userId } });
+  await prisma.lodgingStay.deleteMany({ where: { userId } });
+  await prisma.lodging.deleteMany({ where: { userId } });
+  await prisma.tripJournalEntry.deleteMany({ where: { trip: { userId } } });
+  await prisma.tripRoute.deleteMany({ where: { trip: { userId } } }); // legs/tracks cascade
+  await prisma.tripStop.deleteMany({ where: { trip: { userId } } });
+  await prisma.companion.deleteMany({ where: { userId } }); // join rows cascade
+
   await prisma.cruiseStop.deleteMany({
     where: { cruise: { userId } },
   });
@@ -453,11 +476,27 @@ export async function ensureUser(): Promise<string> {
   });
   if (existing) {
     await wipeDemoUser(existing.id);
-    // Heal a row seeded before the flag was set here — see below. Without this
-    // the repair only reaches installs that delete the demo user first.
-    if (!existing.isDemo) {
-      await prisma.user.update({ where: { id: existing.id }, data: { isDemo: true } });
-    }
+    // Restore the account itself, not only its data. The route guards added
+    // in Tasks 1-3 should already refuse a credential/2FA/token change on the
+    // demo account server-side — this is the second line of defence, in case
+    // one of those guards is ever missed or bypassed: every re-seed puts the
+    // account back to a known-good, publicly-documented login.
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        isDemo: true,
+        passwordHash: await hashPassword(DEMO_PASSWORD),
+        mustChangePassword: false,
+        twoFactorSecret: null,
+        twoFactorPendingSecret: null,
+        twoFactorEnabledAt: null,
+        twoFactorToken: null,
+        twoFactorTokenExpiry: null,
+      },
+    });
+    await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: existing.id } });
+    await prisma.webAuthnCredential.deleteMany({ where: { userId: existing.id } });
+    await prisma.apiToken.deleteMany({ where: { userId: existing.id } });
     return existing.id;
   }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
