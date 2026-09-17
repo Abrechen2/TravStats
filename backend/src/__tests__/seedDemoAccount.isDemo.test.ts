@@ -1,6 +1,8 @@
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
+import { Prisma } from "@prisma/client";
 import { ensureUser, ensureUserSettings } from "../seedDemoAccount";
+import { appVersion } from "../utils/version";
 
 /**
  * `seedDemoAccount` is the seeder the Docker entrypoint runs when
@@ -245,6 +247,40 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     });
     expect(settings?.autoUpdateEnabled).toBe(false);
     expect(settings?.historicalEnrichmentEnabled).toBe(false);
+  });
+
+  /**
+   * The nightly reseed rebuilds this account from nothing, so every visitor to
+   * a public preview was greeted by the release highlights of a version they
+   * had never run — measured on beta.travstats.de on 2026-09-18, where the
+   * 2.6.0 modal opened over the dashboard on first login and came back after
+   * every reset. Same reasoning as `stampWhatsNewSeen` for a fresh signup:
+   * nothing is new to an account that starts here.
+   */
+  it("stamps the running version as seen, so no modal greets the first visitor", async () => {
+    const id = await ensureUser();
+    await ensureUserSettings(id);
+
+    const fresh = await prisma.userSettings.findUnique({
+      where: { userId: id },
+      select: { data: true },
+    });
+    expect((fresh?.data as { whatsNewSeenVersion?: string })?.whatsNewSeenVersion).toBe(appVersion);
+
+    // And again on the update branch, which is the one the reseed takes.
+    await prisma.userSettings.update({
+      where: { userId: id },
+      data: { data: { welcomeSeen: true } as Prisma.InputJsonValue },
+    });
+    await ensureUserSettings(id);
+
+    const reseeded = await prisma.userSettings.findUnique({
+      where: { userId: id },
+      select: { data: true },
+    });
+    expect((reseeded?.data as { whatsNewSeenVersion?: string })?.whatsNewSeenVersion).toBe(
+      appVersion,
+    );
   });
 
   /**

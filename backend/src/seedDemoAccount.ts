@@ -30,6 +30,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { DEMO_USERNAME } from "./utils/sharedDemo";
+import { appVersion } from "./utils/version";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "./services/companionService";
@@ -670,6 +671,14 @@ export async function ensureUser(): Promise<string> {
  * skip the account, but a row flipped before either guard existed is only
  * healed here, which is why this is an explicit `false` on BOTH branches of
  * the upsert and not a default.
+ *
+ * `whatsNewSeenVersion` is stamped for the same reason `stampWhatsNewSeen`
+ * stamps a fresh signup: nothing is "new" to an account that starts here. The
+ * nightly reseed rebuilds this one from scratch, so without the stamp every
+ * visitor to a public preview meets the release highlights of a version they
+ * never ran before they see a single flight — measured on beta.travstats.de
+ * on 2026-09-18, where the 2.6.0 modal opened over the dashboard on first
+ * login and again after every reset.
  */
 export async function ensureUserSettings(userId: string): Promise<void> {
   await prisma.userSettings.upsert({
@@ -680,6 +689,7 @@ export async function ensureUserSettings(userId: string): Promise<void> {
         unitsSystem: "metric",
         defaultCategory: "vacation",
         welcomeSeen: true,
+        whatsNewSeenVersion: appVersion,
       } as Prisma.InputJsonValue,
       historicalEnrichmentEnabled: false,
       autoUpdateEnabled: false,
@@ -691,6 +701,7 @@ export async function ensureUserSettings(userId: string): Promise<void> {
         unitsSystem: "metric",
         defaultCategory: "vacation",
         welcomeSeen: true,
+        whatsNewSeenVersion: appVersion,
       } as Prisma.InputJsonValue,
       historicalEnrichmentEnabled: false,
       autoUpdateEnabled: false,
