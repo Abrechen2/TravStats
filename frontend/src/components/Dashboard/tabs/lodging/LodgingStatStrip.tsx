@@ -4,6 +4,7 @@ import { useSettingsStore } from "../../../../store/settingsStore";
 import { formatCurrency } from "../../../../lib/units";
 import { otherCurrencySpend } from "../../../../lib/lodgingFormat";
 import type { LodgingStats } from "../../../../types/lodging";
+import { lodgingSpendNothingConverted } from "../../../../lib/lodgingSpendConverted";
 
 export type LodgingStatStripVariant = "overlay" | "inline";
 
@@ -84,10 +85,7 @@ export function LodgingStatStrip({
   ].filter((part): part is string => part !== null);
   const spendSub = spendSubParts.length > 0 ? spendSubParts.join(" · ") : null;
 
-  const nothingConverted =
-    stats.spendBaseTotal === 0 &&
-    (Object.keys(stats.spendByCurrency).length === 0 || stats.spendUnconvertedStays > 0) &&
-    Object.values(stats.spendBaseByCurrency ?? {}).every((amount) => amount === 0);
+  const nothingConverted = lodgingSpendNothingConverted(stats);
 
   const cells: { key: string; value: string; label: string; sub?: string | null }[] = [
     {

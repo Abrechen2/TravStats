@@ -44,6 +44,23 @@ describe("LodgingCurrencyBreakdown", () => {
     useSettingsStore.setState({ baseCurrency: "EUR" });
   });
 
+  // CT106 design-6 R04, the mixed case measured in a browser: every stay was
+  // priced but none converted, and the card said "In Basiswährung: 0 €"
+  // beside a strip that correctly said "— · 3 not converted".
+  it("shows a dash, not 0 €, as the base total when nothing could be converted", () => {
+    const stats: LodgingStats = {
+      ...baseStats,
+      spendBaseTotal: 0,
+      spendByCurrency: { EUR: 1330, USD: 780 },
+      spendUnconvertedStays: 3,
+    };
+
+    render(<LodgingCurrencyBreakdown stats={stats} variant="inline" />);
+
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText(/^0\s?€$/)).toBeNull();
+  });
+
   it("renders each original currency with its own amount and never a summed total", () => {
     const stats: LodgingStats = {
       ...baseStats,
