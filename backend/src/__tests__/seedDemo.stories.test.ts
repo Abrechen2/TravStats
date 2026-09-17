@@ -48,6 +48,33 @@ describe("seedStories", () => {
     }
   });
 
+  /**
+   * Finding B5 of the independent review of 2026-09-17: the stop times were
+   * the EMBARKATION instant plus n days, so the last stop of the Mittelmeer
+   * cruise (embarking 16:00, disembarking 08:00) arrived eight hours after the
+   * passengers had left the ship.
+   */
+  it("keeps every stop's arrival and departure inside its own cruise", async () => {
+    const cruises = await prisma.cruise.findMany({ where: { userId }, include: { stops: true } });
+    expect(cruises.length).toBeGreaterThan(0);
+    for (const cruise of cruises) {
+      for (const stop of cruise.stops) {
+        for (const [label, time] of [
+          ["arrival", stop.arrivalTime],
+          ["departure", stop.departureTime],
+        ] as const) {
+          if (time === null) continue;
+          if (time < cruise.startDate || time > cruise.endDate) {
+            throw new Error(
+              `stop ${stop.dayNumber}'s ${label} ${time.toISOString()} is outside ` +
+                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`,
+            );
+          }
+        }
+      }
+    }
+  });
+
   it("dual-writes FlightCompanion and CruiseCompanion join rows alongside the denormalized arrays", async () => {
     for (const story of STORIES) {
       if (story.companions.length === 0) continue;

@@ -2,6 +2,7 @@ import { prisma } from "../db";
 import type { AirportRow } from "../seedDemoAccount";
 import { calculateCo2Kg } from "../services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "../services/companionService";
+import { stopTimesForDay } from "./cruiseTiming";
 import { airportByIata, curatedIdIfPresent, portIdByLocode, shipByName } from "./lookup";
 import { seedTour } from "./seedTours";
 import { STORIES, type Story } from "./stories";
@@ -105,13 +106,18 @@ async function seedStory(userId: string, story: Story, airports: Map<string, Air
         skipDuplicates: true,
       });
     }
+    const cruiseStart = new Date(c.start);
+    const cruiseEnd = new Date(c.end);
     for (const [i, portId] of portIds.entries()) {
-      const day = new Date(Date.parse(c.start) + i * 86_400_000);
+      // Times come from the stop's OWN day and are clamped to the cruise —
+      // deriving them from the embarkation hour put the last stop after the
+      // cruise had ended (finding B5, independent review 2026-09-17).
+      const { arrivalTime, departureTime } = stopTimesForDay(cruiseStart, cruiseEnd, i);
       await prisma.cruiseStop.create({
         data: {
           cruiseId: cruise.id, dayNumber: i + 1, portId, isAtSea: portId === null,
-          arrivalTime: portId === null ? null : day,
-          departureTime: portId === null ? null : new Date(day.getTime() + 9 * 3_600_000),
+          arrivalTime: portId === null ? null : arrivalTime,
+          departureTime: portId === null ? null : departureTime,
         },
       });
     }
