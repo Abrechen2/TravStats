@@ -130,6 +130,16 @@ const stayCommitFieldsSchema = stayCandidateFieldsSchema.refine((s) => s.checkOu
 export const lodgingImportCandidateSchema = z
   .object({
     sourceRowIndex: z.number().int().nonnegative(),
+    /**
+     * WHICH reader produced this row — "booking.com", "koa", "check24".
+     *
+     * The response used to say only that a template answered, so neither a
+     * client, the parse log nor a corpus run could tell which one carries the
+     * load. Optional because a hand-built row (a CSV import, a client's own
+     * candidate) has no reader, and never trusted for anything: it is a
+     * label, and the commit ignores it.
+     */
+    parserTemplate: z.string().max(60).nullable().optional(),
     // null on a stays-only row — the stay joins an existing lodging by `lodgingName`.
     lodging: lodgingCandidateFieldsSchema.nullable(),
     // Free-text hotel name used to join a stays-only row.
