@@ -159,10 +159,6 @@
           "dawarich": {
             "name": "Dawarich-Anbindung",
             "what": "Eine Verbindung zu einer Dawarich-Instanz, aus der aufgezeichnete Wegstrecken übernommen werden."
-          },
-          "parserTemplates": {
-            "name": "Parser-Werkstatt",
-            "what": "Die Parser-Seite für Admins: E-Mails annotieren und daraus Vorlagen ableiten, eigene und Community-Vorlagen, das Parse-Protokoll. Das Einlesen einer Buchung im Dialog „Hinzufügen“ bleibt davon unberührt."
           }
         }
       },

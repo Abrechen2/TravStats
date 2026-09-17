@@ -159,10 +159,6 @@
           "dawarich": {
             "name": "Dawarich connection",
             "what": "A connection to a Dawarich instance that recorded tracks are pulled from."
-          },
-          "parserTemplates": {
-            "name": "Parser workshop",
-            "what": "The admin parser page: annotate e-mails to derive templates, own and community templates, the parse log. Reading a booking in the “Add” dialog is unaffected."
           }
         }
       },
