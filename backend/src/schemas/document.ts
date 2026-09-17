@@ -17,6 +17,22 @@ export const documentDateSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
   .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), "Not a calendar date");
 
+/**
+ * Spread into a parse route's body schema (forgejo#116, step 4): `retain` keeps
+ * the input as a document, `documentId` parses one already kept.
+ */
+export const parseRetentionFields = {
+  retain: z
+    .boolean()
+    .optional()
+    .describe("Keep the input as a document; the answer carries its documentId"),
+  documentId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Parse a document already kept (POST /documents) instead of content in the body"),
+};
+
 export const entryRefSchema = z.object({ type: z.enum(ENTRY_TYPES), id: uuid });
 
 /** Multipart text fields arrive as strings; an empty one means "not sent". */

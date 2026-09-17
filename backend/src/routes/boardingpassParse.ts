@@ -7,14 +7,31 @@ import { getAvailableProviders } from '../services/parsers/factory';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 import { isEmpty, readBoardingPass } from '../services/boardingPassRead';
+import {
+  assertRetainable,
+  parseRetentionFields,
+  readDocumentForParse,
+  recordParse,
+  sendAppError,
+} from '../services/documents/parseRetention';
 
 const router = Router();
 
-const parseBoardingpassSchema = z.object({
-  imageBase64: z.string().min(1, 'Image data is required').max(20 * 1024 * 1024, 'Image too large (max 20MB)'),
-  enrichWithApi: z.boolean().optional().default(true),
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
-});
+const parseBoardingpassSchema = z
+  .object({
+    imageBase64: z
+      .string()
+      .min(1, 'Image data is required')
+      .max(20 * 1024 * 1024, 'Image too large (max 20MB)')
+      .optional(),
+    enrichWithApi: z.boolean().optional().default(true),
+    domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
+    // Keep the pass, or read one already kept (forgejo#116).
+    ...parseRetentionFields,
+  })
+  .refine((b) => !b.imageBase64 !== !b.documentId, {
+    message: 'Send imageBase64 or documentId, exactly one of them',
+  });
 
 /**
  * POST /api/v1/parse-boardingpass
@@ -50,8 +67,11 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       });
     }
 
-    const { imageBase64, enrichWithApi } = parsed;
+    const { enrichWithApi } = parsed;
     const userId = req.userId!;
+    const imageBase64 = parsed.documentId
+      ? (await readDocumentForParse(userId, parsed.documentId, ['image'])).buffer.toString('base64')
+      : parsed.imageBase64!;
 
     // Validate image using magic numbers
     const validation = validateBoardingPassImageBase64(imageBase64);
@@ -74,6 +94,8 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
     // strips cleanly here and would otherwise reach the OCR with its prefix
     // still in front of the image (forgejo#117).
     const validatedImage = validation.base64 ?? imageBase64;
+    const retainInput = { buffer: Buffer.from(validatedImage, 'base64'), declaredFormat: 'image' as const };
+    if (parsed.retain && !parsed.documentId) assertRetainable(retainInput);
 
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
@@ -129,8 +151,18 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       }
     }
 
+    const documentId = await recordParse({
+      userId,
+      documentId: parsed.documentId,
+      retain: parsed.retain,
+      input: retainInput,
+      parsedDomain: 'flight',
+      parsedPayload: { flight },
+    });
+
     res.json({
       flight,
+      ...(documentId ? { documentId } : {}),
       provider: reading.provider,
       fallbackUsed: reading.fallbackUsed,
       enriched,
@@ -148,6 +180,7 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       });
     }
 
+    if (sendAppError(res, error)) return;
     logger.error({ error }, '[Boarding Pass Parse] Parsing failed');
 
     res.status(500).json({

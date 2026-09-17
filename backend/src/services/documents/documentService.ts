@@ -185,7 +185,14 @@ function sanitizeOriginalName(name: string | undefined): string | null {
   return base ? base.slice(0, 200) : null;
 }
 
-export async function createDocument(input: CreateDocumentInput): Promise<CreateDocumentResult> {
+export type FormatCheckInput = Pick<CreateDocumentInput, "buffer" | "originalName" | "declaredMime" | "forceFormat" | "declaredFormat">;
+
+/**
+ * What the bytes are, or the 415/413 a client can act on. Exported so a parse
+ * route asked to keep its input can refuse BEFORE the expensive parse rather
+ * than after it.
+ */
+export function checkDocumentFormat(input: FormatCheckInput): DetectedFormat {
   const hintMime = input.declaredFormat ? FORMAT_HINT_MIME[input.declaredFormat] : undefined;
   const detected =
     input.forceFormat ?? detectDocumentFormat(input.buffer, input.originalName, hintMime ?? input.declaredMime);
@@ -202,6 +209,11 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   if (limit !== null) {
     throw new AppError(`Document too large: ${detected.format} may be at most ${limit / (1024 * 1024)} MB.`, 413);
   }
+  return detected;
+}
+
+export async function createDocument(input: CreateDocumentInput): Promise<CreateDocumentResult> {
+  const detected = checkDocumentFormat(input);
   if (input.kind && !DOCUMENT_KINDS.includes(input.kind)) throw new AppError("Unknown document kind", 400);
 
   const entry = input.entry ?? null;

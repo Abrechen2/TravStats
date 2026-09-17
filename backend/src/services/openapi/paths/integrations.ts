@@ -14,6 +14,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
+import { parseRetentionFields } from "../../../schemas/document";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
@@ -49,6 +50,10 @@ const parseBody = {
       schema: z.object({
         email: z.string().describe("The document itself"),
         domain: parseDomain,
+        retain: z
+          .enum(["true", "false"])
+          .optional()
+          .describe("Keep the file as a document (.eml and .txt; a .msg is refused with 415)"),
       }),
     },
   },
@@ -68,7 +73,8 @@ registry.registerPath({
     "as — flight, cruise or lodging. All three are supported; omitting the field " +
     "means flight. Returns candidates for review; nothing is stored. A document " +
     "it cannot read comes back as an empty result with a reason, not as an error " +
-    "— 'no booking here' is an answer, not a failure.",
+    "— 'no booking here' is an answer, not a failure. With `retain=true` the file is " +
+    "kept as a document and the answer carries its `documentId`.",
   tags: parseTag,
   request: { body: parseBody },
   responses: { 200: { description: "Parse result" }, 400: badInput },
@@ -80,10 +86,34 @@ registry.registerPath({
   summary: "Read a booking out of a PDF",
   description:
     "Same three domains as the email route — flight, cruise or lodging — and the " +
-    "same contract: a proposal, never a write.",
+    "same contract: a proposal, never a write. JSON body with the PDF as base64. " +
+    "Send `retain: true` to keep the input as a document (the answer then carries `documentId`), " +
+    "or `documentId` instead of the content to read a document already kept — the path for an " +
+    "original too large to send as base64 in a JSON body (forgejo#116). " +
+    "A PDF with no text layer answers 422 and belongs on /parse-image.",
   tags: parseTag,
-  request: { body: parseBody },
-  responses: { 200: { description: "Parse result" }, 400: badInput },
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            pdfBase64: z.string().optional().describe("The PDF, base64. Required unless documentId is sent"),
+            domain: parseDomain,
+            ...parseRetentionFields,
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: { description: "Parse result" },
+    400: badInput,
+    404: { description: "documentId names no document of yours", content: errorContent },
+    413: { description: "Too large to keep", content: errorContent },
+    415: { description: "The kept document is not a PDF", content: errorContent },
+    422: { description: "No text layer", content: errorContent },
+  },
 });
 
 registry.registerPath({

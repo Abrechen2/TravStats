@@ -114,6 +114,9 @@ export function detectDocumentFormat(
   return null;
 }
 
+/** Text the server received AS text — a pasted mail — which has no file name to detect from. */
+export const EMAIL_TEXT_FORMAT: DetectedFormat = { format: "emailText", mimetype: "text/plain", extension: ".txt" };
+
 /** Null when the size is acceptable for the format, otherwise the limit that was exceeded. */
 export function exceededLimit(format: DocumentFormat, sizeBytes: number): number | null {
   const limit = DOCUMENT_SIZE_LIMITS[format];

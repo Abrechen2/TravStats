@@ -5,7 +5,8 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { parseEmailSchema } from "../../../schemas/parseEmail";
+import { parseEmailBodySchema } from "../../../schemas/parseEmail";
+import { parseRetentionFields } from "../../../schemas/document";
 import { errorContent, flightCreateInput, flightResponse } from "./shared";
 
 const parsedFlightSchema = registry.register(
@@ -75,7 +76,7 @@ registry.registerPath({
           // stand here listed two of its four fields, so `domain` was
           // invisible and there was no way to see that the email's own date
           // could be supplied.
-          schema: parseEmailSchema.openapi("ParseEmailRequest"),
+          schema: parseEmailBodySchema.openapi("ParseEmailRequest"),
         },
       },
     },
@@ -89,6 +90,7 @@ registry.registerPath({
             flights: z.array(parsedFlightSchema),
             parserUsed: z.string(),
             subject: z.string().optional(),
+            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
           }),
         },
       },
@@ -120,8 +122,9 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              imageBase64: z.string().min(1).max(20 * 1024 * 1024),
+              imageBase64: z.string().min(1).max(20 * 1024 * 1024).optional(),
               domain: requestableDomain.default("auto").optional(),
+              ...parseRetentionFields,
             })
             .openapi("ParseImageRequest"),
         },
@@ -137,6 +140,7 @@ registry.registerPath({
             domain: z.enum(["flight", "cruise", "lodging"]),
             ocrConfidence: z.number(),
             ocrTextLength: z.number(),
+            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
             domainSource: z
               .enum(["requested", "detected"])
               .optional()
@@ -167,8 +171,9 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              imageBase64: z.string().min(1).max(20 * 1024 * 1024),
+              imageBase64: z.string().min(1).max(20 * 1024 * 1024).optional(),
               enrichWithApi: z.boolean().default(true).optional(),
+              ...parseRetentionFields,
             })
             .openapi("ParseBoardingpassRequest"),
         },
@@ -182,6 +187,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             flight: parsedFlightSchema,
+            documentId: z.string().uuid().optional().describe("Present when retained or read from a document"),
             provider: z.string(),
             fallbackUsed: z.boolean().optional(),
             enriched: z.boolean().optional(),
