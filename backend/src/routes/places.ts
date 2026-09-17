@@ -169,7 +169,8 @@ async function placePhotoFilenames(
       ? { visit: { placeId: scope.placeId } }
       : { placeVisitId: scope.placeVisitId };
   const rows = await prisma.placeVisitPhoto.findMany({ where, select: { filename: true } });
-  return rows.map((r) => r.filename);
+  // A photo that became an Immich link has no copy to remove (forgejo#21).
+  return rows.flatMap((r) => (r.filename ? [r.filename] : []));
 }
 
 /**

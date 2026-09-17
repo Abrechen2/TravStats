@@ -352,7 +352,7 @@
     "viewReceipt": "Beleg ansehen",
     "uploadFile": "Datei hochladen",
     "dragAndDrop": "oder hier ablegen",
-    "fileFormats": "PNG, JPG, GIF, WebP, PDF bis zu 10MB",
+    "fileFormats": "PNG, JPG, WebP, PDF bis zu 10MB",
     "uploading": "Wird hochgeladen... {{progress}}%",
     "invalidFileType": "Ungültiger Dateityp. Erlaubt: JPEG, PNG, GIF, WebP, PDF",
     "fileTooLarge": "Datei zu groß. Maximale Größe: 10MB",

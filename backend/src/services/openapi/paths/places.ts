@@ -234,12 +234,48 @@ registry.registerPath({
   summary: "Fetch a visit photo's bytes",
   description:
     "Ownership-checked, and sets its own `Cache-Control: private` over the " +
-    "API-wide `no-store`. Private, never public.",
+    "API-wide `no-store`. Private, never public. A photo that has become an Immich " +
+    "link (`immichAssetId` set, no copy on disk) is streamed from the owner's Immich; " +
+    "the asset id comes from the row, never from the request. `size` picks the " +
+    "rendition for a link: thumbnail, preview (default) or original.",
   tags: placesTag,
-  request: { params: z.object({ visitId: uuid, photoId: uuid }) },
+  request: {
+    params: z.object({ visitId: uuid, photoId: uuid }),
+    query: z.object({ size: z.enum(["thumbnail", "preview", "original"]).optional() }),
+  },
   responses: {
     200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
+    304: { description: "Unchanged (a link's ETag matched)" },
     404: notFound,
+    409: { description: "A link, and Immich is not configured", content: errorContent },
+    502: { description: "Immich did not deliver the asset" },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/places/visits/photos/immich-link",
+  summary: "Turn visit photo copies into Immich links",
+  description:
+    "Looks every photo copy of the caller that carries a checksum up in their Immich by " +
+    "that checksum (SHA-1, base64, the value Immich keeps). A match keeps the row, gains " +
+    "`immichAssetId` and loses the copy on disk. Photos without a checksum stay copies: " +
+    "matching them by name would be a guess. At most 500 per call.",
+  tags: placesTag,
+  responses: {
+    200: {
+      description: "How many copies were checked and linked",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ checked: z.number().int(), linked: z.number().int() }),
+          }),
+        },
+      },
+    },
+    409: { description: "Immich is not configured for this user", content: errorContent },
+    502: { description: "Immich could not be asked", content: errorContent },
   },
 });
 

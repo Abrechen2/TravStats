@@ -2170,7 +2170,10 @@ model LodgingPhoto {
 model PlaceVisitPhoto {
   id           String  @id @default(uuid())
   placeVisitId String  @map("place_visit_id")
-  filename     String
+  /// The copy on disk. Null once the photo has become a LINK into the owner's
+  /// Immich (forgejo#21): the row keeps `immichAssetId`, the file route streams
+  /// that asset, and the copy is gone.
+  filename     String?
   mimetype     String
   sizeBytes    Int     @map("size_bytes")
   caption      String?

@@ -51,6 +51,15 @@ export interface ImmichClient {
    */
   searchAssetsByDate(range: ImmichDateRange): Promise<ImmichAssetPage>;
   fetchAssetStream(assetId: string, size: ImmichAssetSize): Promise<ImmichAssetStream>;
+  /**
+   * The id of the library asset whose content has this checksum, or null.
+   *
+   * `checksum` is SHA-1, base64 — the encoding Immich keeps in
+   * `asset.checksum`. An exact match on the bytes, so a photo uploaded here as
+   * a copy can be recognised in the library without guessing from its name
+   * (forgejo#21).
+   */
+  findAssetIdByChecksum(checksum: string): Promise<string | null>;
 }
 
 /** Inclusive on both ends, as Immich treats them. */
@@ -245,6 +254,21 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
       }
 
       return collected;
+    },
+
+    async findAssetIdByChecksum(checksum: string): Promise<string | null> {
+      let data: unknown;
+      try {
+        ({ data } = await axios.post(url("/search/metadata"), { checksum, size: 1 }, jsonConfig));
+      } catch (error) {
+        throw toImmichError(error, "search/metadata checksum");
+      }
+      const assets = isRecord(data) && isRecord(data.assets) ? data.assets : undefined;
+      if (!assets || !Array.isArray(assets.items)) {
+        throw new ImmichError("protocol", "Immich returned an unexpected search payload");
+      }
+      const first = assets.items.map(mapAsset).find((asset) => asset !== null);
+      return first?.id ?? null;
     },
 
     async searchAssetsByDate({
