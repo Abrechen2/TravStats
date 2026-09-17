@@ -366,12 +366,21 @@ export default function PlacesListPage(): JSX.Element {
           its place in the flow is what the page reads like before you scroll.
           Search and status stay open because every domain has them; category
           and country sit behind "Filter". */}
-      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="t-screen-title">{t("places:list.title")}</h1>
-          </div>
-          <div className="flex items-center gap-2">
+      {/* The width is the shell's, as on the other three logbooks: an own
+          max-width and padding in here put the title 24px right of theirs
+          (CT106 design-6 R07). Secondary actions first, the primary last. */}
+      <div className="w-full">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="t-screen-title">{t("places:list.title")}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <ColumnPicker
+              columns={COLUMN_IDS.map((id) => ({
+                id,
+                label: columnLabel(t, id),
+                always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
             {/* The only entry point to lists and checklists. Deliberately here
                 rather than in the nav: a list is a view OF the logbook, so it
                 hangs off the logbook rather than competing with it. */}
@@ -390,14 +399,6 @@ export default function PlacesListPage(): JSX.Element {
             >
               + {t("places:list.addPlace")}
             </button>
-            <ColumnPicker
-              columns={COLUMN_IDS.map((id) => ({
-                id,
-                label: columnLabel(t, id),
-                always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
           </div>
         </div>
 
