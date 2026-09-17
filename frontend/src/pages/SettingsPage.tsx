@@ -267,6 +267,18 @@ export default function SettingsPage(): JSX.Element {
               <SettingsSectionSwitch section={id} page={page} />
             </section>
           ))}
+
+          {/* The last section must be able to reach the top of the viewport,
+              or its menu entry can never become active — the tester could not
+              open "Über TravStats" at all. AppShell's own bottom padding
+              (80px) is not enough once a section's scrollMarginTop is added
+              on top of it, so the document needs extra scrollable room below
+              the last card. */}
+          <div
+            aria-hidden
+            data-testid="settings-scroll-tail"
+            style={{ minHeight: "calc(100vh - var(--ts-size-web-header) - 120px)" }}
+          />
         </div>
       </div>
 

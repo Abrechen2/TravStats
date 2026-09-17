@@ -121,29 +121,20 @@ export const DEFAULT_GROUP: SettingsGroupId = "account";
  * Round 4 settled four settings ROUTES — account, flight, cruise, lodging —
  * with the general groups (Konto · Darstellung · Daten · Dienste) as anchors
  * on ONE page rather than four pages (design export, decision 2 of
- * 2026-09-15). The index lists them by kind; the page reads everyday first
- * (E10): profile and how the app looks, then notifications, and only then
- * security, devices, tokens, data and services — the things a reader visits
- * once and then leaves alone.
+ * 2026-09-15). The index originally listed sections by kind (each group's own
+ * `sections` order) while the page read a second, hand-written "everyday
+ * first" order that interleaved sections across groups differently — a
+ * tester (2026-09-17) watched the left-menu highlight jump to an unrelated
+ * entry while scrolling, because the section that scrolled into view was
+ * never the neighbour of the one the menu had just highlighted. Fixed by
+ * deriving this order from the same `sections` arrays the menu already uses,
+ * so the two structurally cannot diverge again — no more hand-copying.
  */
 export const GENERAL_ROUTE: SettingsGroupId = "account";
 
-export const GENERAL_CONTENT_ORDER: readonly SettingsSectionId[] = [
-  "profile",
-  "display",
-  "units",
-  "domainColors",
-  "modules",
-  "countryCounting",
-  "notifications",
-  "security",
-  "devices",
-  "apitokens",
-  "backup",
-  "import",
-  "externalServices",
-  "about",
-];
+export const GENERAL_CONTENT_ORDER: readonly SettingsSectionId[] = SETTINGS_GROUPS.filter((g) =>
+  (GENERAL_GROUP_IDS as readonly string[]).includes(g.id)
+).flatMap((g) => g.sections);
 
 /** The general groups that are anchors on the account page, not routes. */
 export function isGeneralGroup(id: SettingsGroupId): boolean {

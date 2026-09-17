@@ -229,6 +229,18 @@ describe("SettingsPage — one route per group", () => {
     renderAt("/settings/does-not-exist");
     expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile })).toBeTruthy();
   });
+
+  // The tester could never open "Über TravStats" — the last section's
+  // scrollMarginTop target sits past the end of the scrollable document, so
+  // it can never reach the top of the viewport and the IntersectionObserver
+  // never marks it active. jsdom does not lay out or scroll, so this only
+  // pins that the spacer renders; the actual reachability needs a browser
+  // (see task-1-report.md).
+  it("renders a scroll-tail spacer after the last section, so it can reach scrollMarginTop", async () => {
+    renderAt("/settings/account");
+    await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile });
+    expect(document.querySelector('[data-testid="settings-scroll-tail"]')).toBeInTheDocument();
+  });
 });
 
 describe("the settings group table", () => {
