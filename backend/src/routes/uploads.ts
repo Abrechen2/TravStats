@@ -3,6 +3,7 @@ import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth
 import { uploadReceipt, deleteReceiptFile, getUploadDir } from '../middleware/upload';
 import { AppError } from '../middleware/errorHandler';
 import { uploadReceiptLimiter } from '../middleware/rateLimit';
+import { rejectDemo } from '../middleware/demoGuard';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
@@ -59,6 +60,10 @@ router.post(
   '/receipt',
   authenticate,
   requireWriteScope,
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   uploadReceipt.single('receipt'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {

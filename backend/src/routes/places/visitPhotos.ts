@@ -13,6 +13,7 @@ import {
   deletePlacePhotoFile,
 } from "../../middleware/upload";
 import { uploadReceiptLimiter } from "../../middleware/rateLimit";
+import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
@@ -122,6 +123,10 @@ router.get(
  */
 router.post(
   "/visits/:visitId/photos",
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   uploadPlacePhotos.array("photos", 20),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

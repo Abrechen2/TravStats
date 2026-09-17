@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
+import { rejectDemo } from '../middleware/demoGuard';
 import { uploadReceiptLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../db';
@@ -71,6 +72,10 @@ const annotateSchema = z.object({
 // refused request never writes its bytes.
 router.post(
   '/upload',
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   trainingUpload.single('file'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {

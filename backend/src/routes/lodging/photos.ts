@@ -11,6 +11,7 @@ import {
   deleteLodgingPhotoFile,
 } from "../../middleware/upload";
 import { AppError } from "../../middleware/errorHandler";
+import { rejectDemo } from "../../middleware/demoGuard";
 import logger from "../../utils/logger";
 
 /**
@@ -106,6 +107,10 @@ router.get(
 
 router.post(
   "/:lodgingId/photos",
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadLodgingPhotos.array("photos", 20),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const uploaded: Express.Multer.File[] = (req.files as Express.Multer.File[] | undefined) ?? [];
