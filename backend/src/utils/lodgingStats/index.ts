@@ -128,9 +128,11 @@ export function calculateLodgingStats(
       chainCounts.set(stay.chainId, (chainCounts.get(stay.chainId) ?? 0) + 1);
     }
 
-    if (stay.currency) {
-      const amount = stay.totalPrice ?? 0;
-      spendByCurrency[stay.currency] = (spendByCurrency[stay.currency] ?? 0) + amount;
+    // A currency without a price is the editor's default, not a spend: a `?? 0`
+    // here turned "no prices yet" into a "0 €" card (CT106 design-6 R04).
+    // A real 0 (an award stay) still opens its bucket.
+    if (stay.currency && stay.totalPrice !== null) {
+      spendByCurrency[stay.currency] = (spendByCurrency[stay.currency] ?? 0) + stay.totalPrice;
     }
     if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
       spendBaseByCurrency[stay.fxBaseCurrency] =
