@@ -439,6 +439,51 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
 
 // ---------------------------------------------------------- main seed logic
 
+/**
+ * EVERY model in `prisma/schema.prisma` that belongs to one user, and what
+ * happens to it here. Written down because the wipe missed thirteen of them
+ * until the independent review of 2026-09-17 (finding A7), and because the
+ * next model with a `userId` will be noticed only if this list is read — a
+ * cascade you cannot see is indistinguishable from a table nobody thought of.
+ *
+ * Deleted by this function (29). Rows, not files — an uploaded receipt or
+ * training sample leaves its bytes on disk, as `demoGuard.uploads.test.ts`
+ * notes, which is why the upload routes refuse the account outright:
+ *   AnalyticsEvent · Booking · Companion · CountryDay · Cruise ·
+ *   CruiseStop · DataQualityFlag · DawarichSweepState · Flight · ImportBatch ·
+ *   Lodging · LodgingMembership · LodgingStay · PairingCode ·
+ *   ParseTrainingLog · ParserTemplate · PendingFlightUpdate ·
+ *   PendingUpdateStatistics · PhotoJourney · Place · PlaceList · PlaceVisit ·
+ *   ReceiptUpload · TrainingData · Trip · TripJournalEntry · TripRoute ·
+ *   TripStop · UserAchievement
+ *
+ * Deleted by CASCADE from one of those, so they need no statement of their
+ * own — each reaches the user through exactly one owner:
+ *   CruiseCompanion, CruiseLeg, CruiseLegRoute (Cruise) ·
+ *   FlightCompanion (Flight/Companion) · ImmichImportJob (TripImmichAlbum) ·
+ *   LodgingPhoto (Lodging) · LodgingMembershipChain,
+ *   LodgingMembershipLodging (LodgingMembership) · PlaceListEntry
+ *   (PlaceList/Place) · PlaceVisitPhoto (PlaceVisit) · TripCompanion,
+ *   TripImmichAlbum, TripPhoto (Trip) · TripRouteLeg, TripRouteTrack
+ *   (TripRoute)
+ *
+ * Deliberately NOT deleted here, each for a stated reason:
+ *   ApiToken, TwoFactorRecoveryCode, WebAuthnCredential — `ensureUser`
+ *     removes them BEFORE this runs, together with the credential reset, so a
+ *     live session is ended before the first row is deleted (finding I4).
+ *   UserSettings — rewritten rather than removed, by `ensureUserSettings`
+ *     right after this; deleting it would drop the enabled domains the seeded
+ *     account needs and is what the upsert exists to avoid.
+ *   Invitation — reaches a user through TWO relations (creator and redeemer)
+ *     and is instance-level admin data. The demo cannot create one; deleting
+ *     invitations it happened to touch would destroy an admin's records.
+ *
+ * NOT user-owned at all, and never to be deleted here: Airport, Airline,
+ * Aircraft, Ship, Port, LodgingChain, Achievement, CuratedList, CuratedPlace,
+ * AdminSettings, SmtpConfig, Backup, AirportSeedingStatus, PoiBackfillAudit.
+ * Those are the global catalogues every account reads — which is exactly why
+ * the shared demo account may not write to them (finding A3).
+ */
 async function wipeDemoUser(userId: string): Promise<void> {
   // Cascade-safe teardown: deleting the user would wipe all owned rows via
   // onDelete: Cascade, but we want to keep the user row stable so we just
@@ -469,11 +514,41 @@ async function wipeDemoUser(userId: string): Promise<void> {
     where: { cruise: { userId } },
   });
   await prisma.cruise.deleteMany({ where: { userId } });
+  // Before the flights it hangs off, so the row goes whether or not the
+  // cascade fires. See the enumeration below.
+  await prisma.pendingFlightUpdate.deleteMany({ where: { userId } });
   await prisma.flight.deleteMany({ where: { userId } });
   await prisma.booking.deleteMany({ where: { userId } });
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.userAchievement.deleteMany({ where: { userId } });
   await prisma.analyticsEvent.deleteMany({ where: { userId } });
+
+  /**
+   * The twelve tables below were ALL missed until the independent review of
+   * 2026-09-17 (finding A7). The wipe covered the domains a visitor is shown
+   * — flights, cruises, trips, lodging, places — and nothing else, so a public
+   * instance accumulated the shared account's leavings for as long as it ran:
+   * a hotel loyalty number, an import batch naming an uploaded file, a parser
+   * template trained on somebody's booking mail, an uploaded receipt, a
+   * location-history sweep cursor, an unspent pairing code.
+   *
+   * `ImportBatch` goes LAST of all: flights, cruises, lodgings, stays and
+   * places point at it with `onDelete: SetNull`, so the order is not required
+   * for correctness, but deleting the batch after its contents keeps the
+   * reading obvious.
+   */
+  await prisma.countryDay.deleteMany({ where: { userId } });
+  await prisma.dataQualityFlag.deleteMany({ where: { userId } });
+  await prisma.dawarichSweepState.deleteMany({ where: { userId } });
+  await prisma.lodgingMembership.deleteMany({ where: { userId } }); // chain/lodging links cascade
+  await prisma.pairingCode.deleteMany({ where: { userId } });
+  await prisma.parseTrainingLog.deleteMany({ where: { userId } });
+  await prisma.parserTemplate.deleteMany({ where: { userId } });
+  await prisma.pendingUpdateStatistics.deleteMany({ where: { userId } });
+  await prisma.photoJourney.deleteMany({ where: { userId } });
+  await prisma.receiptUpload.deleteMany({ where: { userId } });
+  await prisma.trainingData.deleteMany({ where: { userId } });
+  await prisma.importBatch.deleteMany({ where: { userId } });
 }
 
 export async function ensureUser(): Promise<string> {

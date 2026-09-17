@@ -246,4 +246,143 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     expect(settings?.autoUpdateEnabled).toBe(false);
     expect(settings?.historicalEnrichmentEnabled).toBe(false);
   });
+
+  /**
+   * Finding A7 (independent review, 2026-09-17). `wipeDemoUser` covered the
+   * domains a visitor is shown and missed thirteen other user-owned tables, so
+   * a public instance accumulated the shared account's leavings for as long as
+   * it ran: hotel loyalty numbers, import batches, parser templates, uploaded
+   * receipts, a location-history sweep cursor, pairing codes.
+   *
+   * Every table this case writes is one the wipe did NOT touch before. It is
+   * the counterpart of the enumeration comment beside the wipe — a list in a
+   * comment that nothing exercises would rot the first time a model is added.
+   */
+  it("removes every user-owned row the wipe used to miss", async () => {
+    const id = await ensureUser();
+
+    const flight = await prisma.flight.create({
+      data: { userId: id, depLat: 48.35, depLon: 11.79, arrLat: 50.03, arrLon: 8.57 },
+      select: { id: true },
+    });
+
+    await prisma.countryDay.create({
+      data: {
+        userId: id,
+        date: new Date("2026-03-01T00:00:00.000Z"),
+        countryCode: "DE",
+        source: "track",
+        pointCount: 12,
+        spanKm: 3.5,
+      },
+    });
+    await prisma.dataQualityFlag.create({
+      data: {
+        userId: id,
+        entityType: "flight",
+        entityId: flight.id,
+        kind: "missing_times",
+        details: {},
+      },
+    });
+    await prisma.dawarichSweepState.create({ data: { userId: id } });
+    await prisma.importBatch.create({ data: { userId: id, domain: "flight", source: "csv" } });
+    await prisma.lodgingMembership.create({ data: { userId: id, programName: "Demo Rewards" } });
+    await prisma.pairingCode.create({
+      data: {
+        userId: id,
+        codeHash: "a-pairing-code-hash",
+        expiresAt: new Date(Date.now() + 600_000),
+      },
+    });
+    await prisma.parseTrainingLog.create({
+      data: {
+        userId: id,
+        templateHit: true,
+        fieldCount: 7,
+        missingFields: [],
+        parserProvider: "template",
+      },
+    });
+    await prisma.parserTemplate.create({
+      data: { userId: id, name: "A visitor's template", fingerprint: {}, patterns: {} },
+    });
+    await prisma.pendingFlightUpdate.create({
+      data: {
+        userId: id,
+        flightId: flight.id,
+        originalData: {},
+        proposedData: {},
+        changes: [],
+        apiSource: "airlabs",
+        fetchedAt: new Date(),
+        expiresAt: new Date(Date.now() + 600_000),
+      },
+    });
+    await prisma.pendingUpdateStatistics.create({
+      data: { userId: id, mostChangedFields: {} },
+    });
+    await prisma.photoJourney.create({
+      data: {
+        userId: id,
+        startDate: new Date("2026-03-01T00:00:00.000Z"),
+        endDate: new Date("2026-03-05T00:00:00.000Z"),
+        photoCount: 20,
+        locatedCount: 18,
+        lat: 41.9,
+        lon: 12.5,
+        fingerprint: "a-visitors-journey",
+      },
+    });
+    await prisma.receiptUpload.create({
+      data: { userId: id, filename: "a-visitors-receipt.pdf" },
+    });
+    await prisma.trainingData.create({
+      data: {
+        userId: id,
+        type: "email",
+        originalFile: "a-visitors-sample.eml",
+        annotations: {},
+        extractedData: {},
+      },
+    });
+
+    await ensureUser();
+
+    const counts = {
+      countryDay: await prisma.countryDay.count({ where: { userId: id } }),
+      dataQualityFlag: await prisma.dataQualityFlag.count({ where: { userId: id } }),
+      dawarichSweepState: await prisma.dawarichSweepState.count({ where: { userId: id } }),
+      importBatch: await prisma.importBatch.count({ where: { userId: id } }),
+      lodgingMembership: await prisma.lodgingMembership.count({ where: { userId: id } }),
+      pairingCode: await prisma.pairingCode.count({ where: { userId: id } }),
+      parseTrainingLog: await prisma.parseTrainingLog.count({ where: { userId: id } }),
+      parserTemplate: await prisma.parserTemplate.count({ where: { userId: id } }),
+      pendingFlightUpdate: await prisma.pendingFlightUpdate.count({ where: { userId: id } }),
+      pendingUpdateStatistics: await prisma.pendingUpdateStatistics.count({
+        where: { userId: id },
+      }),
+      photoJourney: await prisma.photoJourney.count({ where: { userId: id } }),
+      receiptUpload: await prisma.receiptUpload.count({ where: { userId: id } }),
+      trainingData: await prisma.trainingData.count({ where: { userId: id } }),
+      flight: await prisma.flight.count({ where: { userId: id } }),
+    };
+
+    expect(counts).toEqual({
+      countryDay: 0,
+      dataQualityFlag: 0,
+      dawarichSweepState: 0,
+      importBatch: 0,
+      lodgingMembership: 0,
+      pairingCode: 0,
+      parseTrainingLog: 0,
+      parserTemplate: 0,
+      pendingFlightUpdate: 0,
+      pendingUpdateStatistics: 0,
+      photoJourney: 0,
+      receiptUpload: 0,
+      trainingData: 0,
+      flight: 0,
+    });
+  });
 });
