@@ -341,7 +341,20 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // refuses (finding C2); the name beside it greets everyone from the header.
     // The rest of the block — display, units, map colours — stays open, which
     // is why the refusal is here and not on the whole route.
-    if (payload.profile !== undefined && (await isSharedDemoUser(userId))) {
+    //
+    // `autoUpdate` and `historicalEnrichment` are refused for the same account
+    // and on the same terms (independent review, 2026-09-17, finding A4).
+    // Neither is a preference: each one arms a BACKGROUND WORKER that spends
+    // the instance's flight-provider quota, unattended, on an account nobody
+    // owns — a visitor of a public instance could switch both on and leave the
+    // operator paying for lookups over 160 seeded sample flights. The nightly
+    // reseed puts them back to false (`ensureUserSettings`) and the two
+    // workers skip the account outright; this is the door itself.
+    const refusedForDemo =
+      payload.profile !== undefined ||
+      payload.autoUpdate !== undefined ||
+      payload.historicalEnrichment !== undefined;
+    if (refusedForDemo && (await isSharedDemoUser(userId))) {
       res.status(403).json({
         error: 'DEMO_ACCOUNT_FORBIDDEN',
         message: 'The demo account cannot change this. Use your own account on your own instance.',

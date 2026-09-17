@@ -219,4 +219,31 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     });
     expect(settings?.historicalEnrichmentEnabled).toBe(false);
   });
+
+  /**
+   * Finding A4 (independent review, 2026-09-17). I5 reset historical
+   * enrichment only on a FRESH row: the `update` branch left whatever a
+   * visitor had switched on, and auto-update — the same kind of switch, the
+   * same unattended background work against the instance's provider keys —
+   * was never reset at all. Both are put back on every run now, which is what
+   * "the reseed restores a known-good account" has to mean for a setting that
+   * spends money.
+   */
+  it("switches both background sweeps back off on every run", async () => {
+    const id = await ensureUser();
+    await ensureUserSettings(id);
+    await prisma.userSettings.update({
+      where: { userId: id },
+      data: { autoUpdateEnabled: true, historicalEnrichmentEnabled: true },
+    });
+
+    await ensureUserSettings(id);
+
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: id },
+      select: { autoUpdateEnabled: true, historicalEnrichmentEnabled: true },
+    });
+    expect(settings?.autoUpdateEnabled).toBe(false);
+    expect(settings?.historicalEnrichmentEnabled).toBe(false);
+  });
 });

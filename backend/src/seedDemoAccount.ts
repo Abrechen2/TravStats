@@ -552,10 +552,17 @@ export async function ensureUser(): Promise<string> {
 }
 
 /**
- * Historical enrichment stays OFF. It is a background job that spends the
+ * Both background sweeps stay OFF — historical enrichment (final review
+ * finding I5) and, since the independent review of 2026-09-17 (finding A4),
+ * flight auto-update beside it.
+ *
+ * They are the same kind of switch: each one arms a job that spends the
  * instance's flight-API quota, and on a public instance the shared account is
  * unattended by definition — the admin who pays for the key is not the person
- * clicking around in it (final review finding I5).
+ * clicking around in it. The route refuses both blocks and the two workers
+ * skip the account, but a row flipped before either guard existed is only
+ * healed here, which is why this is an explicit `false` on BOTH branches of
+ * the upsert and not a default.
  */
 export async function ensureUserSettings(userId: string): Promise<void> {
   await prisma.userSettings.upsert({
@@ -568,6 +575,7 @@ export async function ensureUserSettings(userId: string): Promise<void> {
         welcomeSeen: true,
       } as Prisma.InputJsonValue,
       historicalEnrichmentEnabled: false,
+      autoUpdateEnabled: false,
     },
     create: {
       userId,
@@ -578,6 +586,7 @@ export async function ensureUserSettings(userId: string): Promise<void> {
         welcomeSeen: true,
       } as Prisma.InputJsonValue,
       historicalEnrichmentEnabled: false,
+      autoUpdateEnabled: false,
     },
   });
 }

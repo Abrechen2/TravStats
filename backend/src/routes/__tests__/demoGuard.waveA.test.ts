@@ -114,4 +114,46 @@ describe("Wave A demo guards", () => {
       expect(res.status).toBe(200);
     });
   });
+
+  /**
+   * A4. Auto-update and historical enrichment are not preferences — they are
+   * switches that start BACKGROUND WORK against the instance's provider keys,
+   * unattended, for an account nobody owns. A visitor could turn both on and
+   * spend the operator's RapidAPI quota on 160 seeded sample flights.
+   *
+   * Refused exactly like the `profile` block, and for the same reason: the
+   * rest of the settings PUT — theme, units, map colours — is what a visitor
+   * came to try, so the refusal is on these two blocks and not on the route.
+   */
+  describe("A4 settings that start background work", () => {
+    const refusedBlocks: Array<[string, object]> = [
+      ["autoUpdate", { autoUpdate: { enabled: true } }],
+      ["historicalEnrichment", { historicalEnrichment: { enabled: true } }],
+    ];
+
+    it.each(refusedBlocks)(
+      "refuses a settings PUT carrying the %s block for the shared demo account",
+      async (_name, body) => {
+        const res = await request(app).put("/api/v1/settings").set("Cookie", demoCookie).send(body);
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
+      },
+    );
+
+    it.each(refusedBlocks)(
+      "does not refuse the %s block for a normal account",
+      async (_name, body) => {
+        const res = await request(app).put("/api/v1/settings").set("Cookie", userCookie).send(body);
+        expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+      },
+    );
+
+    it("leaves the rest of the settings PUT open for the shared demo account", async () => {
+      const res = await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", demoCookie)
+        .send({ display: { theme: "dark" } });
+      expect(res.status).toBe(200);
+    });
+  });
 });
