@@ -36,6 +36,8 @@ import { classifyPlace } from "../shared/placeCounting";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { usePagination } from "../components/table/usePagination";
+import TablePagination from "../components/table/TablePagination";
 import { formatIsoDate } from "../lib/dateUtils";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
@@ -243,6 +245,9 @@ export default function PlacesListPage(): JSX.Element {
     const dir = sortOrder === "asc" ? 1 : -1;
     return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language, t) * dir);
   }, [rows, search, category, country, visited, listMembers, sortBy, sortOrder, i18n.language]);
+  // Pages over the already filtered+sorted set — the summary strip and the
+  // filter option lists above keep reading `filtered`/`rows`, never this.
+  const pagination = usePagination(filtered, "places-list");
 
   const handleSort = useCallback(
     (key: PlaceSortKey): void => {
@@ -520,70 +525,73 @@ export default function PlacesListPage(): JSX.Element {
               />
             </div>
           ) : (
-            <Table columns={visibleColumns} label={t("places:list.title")} {...tableHints}>
-              {filtered.map((p) => (
-                <PlaceRow
-                  key={p.id}
-                  columns={visibleColumns}
-                  onOpen={() => navigate(`/places/${p.id}`)}
-                  onEdit={() => navigate(`/places/${p.id}`)}
-                  onDelete={() => setPendingDelete(p)}
-                  editLabel={t("common:buttons.edit")}
-                  deleteLabel={t("common:buttons.delete")}
-                  cells={{
-                    name: (
-                      <span className="flex items-center gap-2 font-medium">
-                        <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
-                        {p.name}
-                      </span>
-                    ),
-                    category: t(`places:categories.${p.category}`),
-                    location: (
-                      // min-w-0 + shrink-0: a long city ("Sassnitz-Stubbenkammer")
-                      // wraps inside the cell instead of pushing the flag into
-                      // the next column.
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="min-w-0 break-words">{p.city ?? "—"}</span>
-                        {p.country && (
-                          <span className="shrink-0">
-                            <FlagImg country={p.country} />
-                          </span>
-                        )}
-                      </span>
-                    ),
-                    country: placeCountryLabel(p, i18n.language) || "—",
-                    continent: continentLabel(p.continent, t),
-                    visits: (
-                      <>
-                        {p.visitCount}
-                        {/* Planned visits are shown but never folded into the
+            <>
+              <Table columns={visibleColumns} label={t("places:list.title")} {...tableHints}>
+                {pagination.paged.map((p) => (
+                  <PlaceRow
+                    key={p.id}
+                    columns={visibleColumns}
+                    onOpen={() => navigate(`/places/${p.id}`)}
+                    onEdit={() => navigate(`/places/${p.id}`)}
+                    onDelete={() => setPendingDelete(p)}
+                    editLabel={t("common:buttons.edit")}
+                    deleteLabel={t("common:buttons.delete")}
+                    cells={{
+                      name: (
+                        <span className="flex items-center gap-2 font-medium">
+                          <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+                          {p.name}
+                        </span>
+                      ),
+                      category: t(`places:categories.${p.category}`),
+                      location: (
+                        // min-w-0 + shrink-0: a long city ("Sassnitz-Stubbenkammer")
+                        // wraps inside the cell instead of pushing the flag into
+                        // the next column.
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="min-w-0 break-words">{p.city ?? "—"}</span>
+                          {p.country && (
+                            <span className="shrink-0">
+                              <FlagImg country={p.country} />
+                            </span>
+                          )}
+                        </span>
+                      ),
+                      country: placeCountryLabel(p, i18n.language) || "—",
+                      continent: continentLabel(p.continent, t),
+                      visits: (
+                        <>
+                          {p.visitCount}
+                          {/* Planned visits are shown but never folded into the
                               count — the future-date rule, made visible rather
                               than silently applied. */}
-                        {p.plannedVisitCount > 0 && (
-                          <span className="ml-1 text-xs text-[var(--warning)]">
-                            {t("places:list.plannedSuffix", { count: p.plannedVisitCount })}
-                          </span>
-                        )}
-                      </>
-                    ),
-                    lastVisit: formatDate(p.lastVisitAt),
-                    /* The shared palette every other list resolves its status
+                          {p.plannedVisitCount > 0 && (
+                            <span className="ml-1 text-xs text-[var(--warning)]">
+                              {t("places:list.plannedSuffix", { count: p.plannedVisitCount })}
+                            </span>
+                          )}
+                        </>
+                      ),
+                      lastVisit: formatDate(p.lastVisitAt),
+                      /* The shared palette every other list resolves its status
                          through — green for happened, blue for still ahead,
                          muted for a wishlist entry. It used to carry its own two
                          colours, which is how a fourth shade of "done" gets into
                          an app. */
-                    status: (
-                      <span
-                        className={STATUS_PILL_CLASS}
-                        style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
-                      >
-                        {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
-                      </span>
-                    ),
-                  }}
-                />
-              ))}
-            </Table>
+                      status: (
+                        <span
+                          className={STATUS_PILL_CLASS}
+                          style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
+                        >
+                          {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
+                        </span>
+                      ),
+                    }}
+                  />
+                ))}
+              </Table>
+              <TablePagination {...pagination} />
+            </>
           )}
         </>
       </div>

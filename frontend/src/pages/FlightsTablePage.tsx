@@ -40,6 +40,7 @@ import { Table, type TableColumn } from "../components/ui/Table";
 import { formatAmount } from "../lib/units";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import TablePagination, { usePagination } from "../components/table/TablePagination";
 import {
   FLIGHT_ALWAYS_VISIBLE,
   FLIGHT_COLUMN_IDS,
@@ -52,9 +53,7 @@ import {
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 
-// Trips moved to their own /trips top-level page (Phase-1 redesign).
-// This page now focuses purely on the flight table; the trip badge in
-// each flight row is a Link to /trips/:id.
+// Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
 export default function FlightsTablePage(): JSX.Element {
   const { t, i18n } = useTranslation([
@@ -433,6 +432,8 @@ export default function FlightsTablePage(): JSX.Element {
       searchNeedle,
     ]
   );
+  // Paginates the filtered+sorted set; the summary strip stays on the full list.
+  const pagination = usePagination(displayedFlights, "flights-list");
 
   /** Read straight off the visible rows — nothing estimated. Flight time and
    *  distance are both derived and marked as estimates wherever they show, so
@@ -665,7 +666,7 @@ export default function FlightsTablePage(): JSX.Element {
               </div>
             ) : (
               <Table columns={visibleColumns} label={t("flights:table.title")} {...tableHints}>
-                {displayedFlights.map((flight) => (
+                {pagination.paged.map((flight) => (
                   <FlightRow
                     key={flight.id}
                     flight={flight}
@@ -715,7 +716,7 @@ export default function FlightsTablePage(): JSX.Element {
                 ))}
               </Table>
             )}
-
+            {!loading && displayedFlights.length > 0 && <TablePagination {...pagination} />}
             {/* Footer */}
             {!loading && displayedFlights.length > 0 && (
               <p className="mt-2 px-1 text-right text-xs text-(--text-muted)">

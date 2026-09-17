@@ -210,7 +210,16 @@
   "table": {
     "columns": "Spalten",
     "scrollHint": "Die Tabelle ist breiter als die Ansicht — zur Seite scrollen für weitere Spalten.",
-    "hiddenColumns": "Aus Platzgründen ausgeblendete Spalten: {{count}}. Ein breiteres Fenster zeigt alle; unter „Spalten“ lässt sich die Auswahl ändern."
+    "hiddenColumns": "Aus Platzgründen ausgeblendete Spalten: {{count}}. Ein breiteres Fenster zeigt alle; unter „Spalten“ lässt sich die Auswahl ändern.",
+    "pagination": {
+      "range": "{{from}}–{{to}} von {{total}}",
+      "first": "Erste Seite",
+      "previous": "Vorherige Seite",
+      "next": "Nächste Seite",
+      "last": "Letzte Seite",
+      "pageSize": "Zeilen pro Seite",
+      "all": "Alle"
+    }
   },
   "support": {
     "donate": "Spenden",

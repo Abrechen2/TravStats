@@ -210,7 +210,16 @@
   "table": {
     "columns": "Columns",
     "scrollHint": "The table is wider than the view — scroll sideways for more columns.",
-    "hiddenColumns": "Columns hidden for lack of width: {{count}}. A wider window shows them all; “Columns” changes the selection."
+    "hiddenColumns": "Columns hidden for lack of width: {{count}}. A wider window shows them all; “Columns” changes the selection.",
+    "pagination": {
+      "range": "{{from}}–{{to}} of {{total}}",
+      "first": "First page",
+      "previous": "Previous page",
+      "next": "Next page",
+      "last": "Last page",
+      "pageSize": "Rows per page",
+      "all": "All"
+    }
   },
   "support": {
     "donate": "Donate",

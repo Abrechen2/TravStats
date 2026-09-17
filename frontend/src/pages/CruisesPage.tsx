@@ -28,6 +28,8 @@ import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey } from "../components/Cruise/sortCruises";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { usePagination } from "../components/table/usePagination";
+import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 
@@ -227,6 +229,9 @@ export default function CruisesPage(): JSX.Element {
     () => sortCruises(filtered, sortBy, sortOrder),
     [filtered, sortBy, sortOrder]
   );
+  // Pages over the already filtered+sorted set — the summary strip and the
+  // filter option lists above keep reading `filtered`/`cruises`, never this.
+  const pagination = usePagination(sorted, "cruises-list");
 
   /**
    * The visible columns, in order, with their narrow places and their sort
@@ -409,7 +414,7 @@ export default function CruisesPage(): JSX.Element {
         ) : (
           <>
             <Table columns={visibleColumns} label={t("list.title")} {...tableHints}>
-              {sorted.map((c) => (
+              {pagination.paged.map((c) => (
                 <CruiseRow
                   key={c.id}
                   cruise={c}
@@ -426,6 +431,7 @@ export default function CruisesPage(): JSX.Element {
                 />
               ))}
             </Table>
+            <TablePagination {...pagination} />
             {/* Same closing line the flights and lodging tables carry: how many
                 rows, and what they are sorted by. The count used to sit only in
                 the filter bar, so the table simply stopped. */}

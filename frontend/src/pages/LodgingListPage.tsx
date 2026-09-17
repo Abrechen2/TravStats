@@ -36,6 +36,8 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
 import { useSortPrefs } from "../components/table/useSortPrefs";
+import { usePagination } from "../components/table/usePagination";
+import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 
@@ -292,6 +294,9 @@ export default function LodgingListPage(): JSX.Element {
     });
     return sortLodgingRows(visible, sortBy, sortOrder);
   }, [rows, search, statusFilter, sortBy, sortOrder]);
+  // Pages over the already filtered+sorted set — the summary strip and the
+  // filter option lists above keep reading `filtered`/`baseline`, never this.
+  const pagination = usePagination(filtered, "lodging-list");
 
   const summaryFigures = useMemo(() => {
     let stays = 0;
@@ -472,7 +477,7 @@ export default function LodgingListPage(): JSX.Element {
             ) : (
               <>
                 <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
-                  {filtered.map((l) => (
+                  {pagination.paged.map((l) => (
                     <LodgingRow
                       key={l.id}
                       lodging={l}
@@ -484,6 +489,7 @@ export default function LodgingListPage(): JSX.Element {
                     />
                   ))}
                 </Table>
+                <TablePagination {...pagination} />
                 <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
                   {t("lodging:list.footer.sortedBy", {
                     label: columnLabel(t, sortBy),
