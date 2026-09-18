@@ -1,6 +1,11 @@
 # Evidence panel — which entries produced this number
 
-**Status:** design approved by the owner on 2026-09-18.
+**Status:** design approved 2026-09-18, then **substantially revised the same day**
+after an independent review (Codex, read-only, against the code) refuted three of
+its decisions. This document is the revision. The first version is in git; what
+it got wrong is recorded here under "What the first version got wrong", because a
+spec that quietly drops its own mistakes teaches nobody.
+
 **Branch:** `dev/design-system`.
 
 ## The request
@@ -9,355 +14,264 @@
 > einträge. Welche einträge haben den Erfolg oder Statistik ausgelößt usw"
 > — owner, 2026-09-18
 
-Every number on the Achievements and Statistics pages is currently a dead end.
-The user sees "21 Länder", "124 von 275 Erfolgen", "Vielflieger: 10 Flüge" and
-has no way to ask which of their entries produced it. This feature answers that
-question, everywhere, in one shape.
+Every number on the Achievements and Statistics pages is a dead end. The user
+sees "21 Länder", "124 von 275 Erfolgen", "Vielflieger: 10 Flüge" and cannot ask
+which of their entries produced it.
 
-## Owner decisions taken before design
+## Owner decisions
 
-Asked and answered on 2026-09-18:
+| Question | Decision | When |
+|---|---|---|
+| How does the detail open? | A side panel, full-screen sheet on phones. Not a route, not an inline expander. | before design |
+| Which surfaces? | Achievements, headline metrics, rankings, records. | before design |
+| Where does evidence come from? | The backend, never a frontend re-filter. | before design |
+| Numbers with no per-entry evidence? | Say so, with the reason. | before design |
+| Branch? | `dev/design-system`. | before design |
+| **Cruise base-currency columns?** | **Add them.** `Cruise` is the only priced model without them. | after the review |
+| **Scope of the first release?** | **Rankings and metrics first; achievements second**, once provenance is collected inside the producers. | after the review |
 
-| Question | Decision |
-|---|---|
-| How does the detail open? | A side panel, full-screen sheet on phones. Not a separate route, not an inline expander. |
-| Which surfaces? | All four: achievements, headline metrics, rankings, records/superlatives. |
-| Where does the evidence come from? | A backend endpoint per metric — never a frontend re-filter of an already-loaded list. |
-| What about numbers with no per-entry evidence? | Say so honestly, with the reason. ("Abstention is a result".) |
-| Which branch? | `dev/design-system`. |
+## What the first version got wrong
+
+Three decisions, each refuted with evidence from the code:
+
+1. **"`sum(contribution) + unattributed === value` holds for all four kinds."**
+   It does not. Ten flights prove ONE country; one international flight proves
+   TWO (`achievementStats.ts` adds both endpoints to a `Set`). Rounding has to
+   stay after aggregation — two contributions of 0.6 round to 2 individually and
+   to 1 together. A truncated list is undefined as written, because `total`
+   counts entries and not kilometres, and the omitted 201st row is KNOWN
+   evidence rather than unattributed. And "a record has exactly one winning
+   entry" is false: the longest layover is derived from TWO flights
+   (`utils/stats/uniqueStats.ts`).
+2. **"A table of row predicates keeps the evidence and the number together."**
+   It would have been the drift it was meant to prevent. The draft's own example
+   code read `f.distanceKm` (achievement flights carry no such field — distance
+   is computed from coordinates) and `s.nights` (insufficient: the real path is
+   `resolveStayTiming` → `walkNights`), and a "matching flights, contribution 1"
+   predicate mis-implements `island_flights`, which credits both endpoints.
+3. **"The statistics page counts countries a second time and should be pointed
+   at the passport engine."** The separation is deliberate and says so in a
+   comment above the endpoint — "These are LISTS, and they stay lists". Further,
+   `/stats/hero` already uses `passport.summary.countries`, and the web overview
+   already unions countries across the VISIBLE domains. Re-pointing the flight
+   distribution would have attributed lodging and location-history countries to
+   flights and broken the domain toggles.
+
+The first version also missed four facts that change scope: `Cruise` has no
+base-currency columns; `/trips` caps at 500 trips and 200 nested rows per domain;
+the promised "show it in the logbook with this filter" escape hatch does not
+exist; and a surface's population is not named by a year alone — the flight
+overview is explicitly all-time, scorecards support `rolling12m`, and the
+overview's countries depend on which domains are visible.
 
 ## Goal
 
-One question — *which entries produced this number?* — answered by the same code
-that produced the number, for every number a user can see on those two pages.
-
-## This generalises something that already works
-
-Two drill-downs of exactly this kind are already shipped, and both are the
-pattern rather than a precedent to argue with:
-
-- **The passport's country provenance.** `GET /stats/countries/:code` →
-  `loadCountryDetail` → `buildCountryDetail` returns a `timeline` whose entries
-  carry `flightId` / `cruiseId` / `placeId` / `lodgingId`, and
-  `frontend/src/components/Passport/CountryProvenance.tsx` renders it as links
-  into the logbook. Its `linkFor` / `labelFor` shape is what the generic entry
-  list becomes.
-- **The aircraft hull profile.** `GET /stats/aircraft/:registration` re-queries
-  `flight.findMany({ where: { userId, ...countableFlightWhere(), registration } })`
-  — a second endpoint whose whole job is "the rows behind this one ranking row",
-  built on the shared counting predicate. That is the contract below, written
-  once for one dimension.
-
-So this work is not an invention. It is the same move for the other numbers,
-with one response shape instead of two bespoke ones, and with the sum test that
-neither of the two existing drill-downs has.
+One question — *which entries produced this number?* — answered by the same
+computation that produced the number, for the numbers on those two pages, with
+an invariant per **aggregation kind** rather than one invariant for everything.
 
 ## Non-goals
 
-- Not an export. The panel links into the logbook; it does not become a second
-  table with its own filters.
-- Not a new statistics page. No number is added, moved or re-defined by this
-  work, with one exception named below (the cross-currency record, which is a
-  defect the panel would otherwise put on display).
-- Not a permission boundary. Evidence is the caller's own data, read-only; it
-  needs no new guard beyond `authenticate`.
+- Not an export, not a second table with its own filters.
+- Not a redefinition of any number. One number changes — the most expensive trip
+  — because it is wrong, and that change is a changelog entry.
+- Not a permission boundary: evidence is the caller's own data, read-only.
+- **Not the passport.** Its country provenance already exists and is the model
+  this copies; it is not rebuilt.
+
+## The model: aggregation kinds
+
+A number is not just a number. What "evidence" means, and what may be asserted
+about it, depends on how the number was aggregated:
+
+| Aggregation | Example | What an entry is | Invariant |
+|---|---|---|---|
+| `sum` | total distance, nights | a row with a RAW, unrounded contribution | `round(Σ returned + Σ omitted) === value`, at the same rounding step the surface uses |
+| `distinct` | countries, unique airports, active days | a row plus the **unit it witnesses** (`credits: string[]`) | `|distinct(credits ∪ omitted credits)| + unattributedUnits === value` |
+| `extremum` | longest flight, longest layover | the **witnesses** — one row, or two for a layover | recomputing the measure over the witnesses reproduces `value` |
+| `ratio` | an airline's share | the rows of the numerator, with the denominator stated | `numerator / denominator === value`, both returned |
+| `boolean` | "has flown over an ocean" | the supporting rows | `value ∈ {0,1}` and, when 1, at least one row |
+| `sequence` | longest streak | the ordered rows of the run | the run's length or span reproduces `value` |
+
+`distinct` is the one the first version could not express, and it is the most
+common shape on these two pages. A bare scalar per row cannot say that five
+flights witness one country; `credits` can.
 
 ## The contract
 
-One response shape for all four kinds. Four bespoke shapes would be four
-features to maintain and four places for the number and its evidence to drift.
-
 ```
 GET /api/v1/evidence/:kind/:key
-    kind ∈ "achievement" | "metric" | "ranking" | "record"
-    key  — the achievement code, the metric id, the ranking row's key, the record id
-    query: year?   (the statistics page's year filter, passed through unchanged)
+    kind ∈ "metric" | "ranking" | "record"        (achievements: release 2)
+    body: EvidenceResponse
 ```
 
 ```ts
-interface EvidenceResponse {
-  metric: {
-    kind: EvidenceKind;
-    key: string;
-    /** Already-localised label of the number, as the tile shows it. */
-    label: string;
-    /** The number itself — the panel repeats it, so a drift is visible. */
-    value: number;
-    /** "flights" | "nights" | "countries" | "km" | … — decides the unit line. */
-    unit: string;
-  };
-  entries: EvidenceEntry[];
-  /** Entries before the cap; `entries.length` may be smaller. */
-  total: number;
-  truncated: boolean;
-  /**
-   * The honest gap. Present whenever `sum(contribution) < value`, absent when
-   * every unit of the number has a row behind it.
-   */
-  unattributed?: { count: number; reason: UnattributedReason };
+interface EvidenceScope {
+  /** What population the number was measured over. Mirrors the surface. */
+  period: { kind: "allTime" } | { kind: "year"; year: number } | { kind: "rolling12m" };
+  /** Only where the surface is domain-filtered (the overview is). */
+  domains?: EvidenceDomain[];
+}
+
+interface EvidenceMeasure {
+  kind: EvidenceKind;
+  key: string;
+  aggregation: Aggregation;
+  /** i18n KEY plus values — never a server-localised string. */
+  label: { key: string; values?: Record<string, string | number> };
+  unit: string;
+  value: number;
+  scope: EvidenceScope;
+  /** `ratio` only: both sides, so the percentage can be explained. */
+  numerator?: number;
+  denominator?: number;
 }
 
 interface EvidenceEntry {
-  domain: "flight" | "cruise" | "lodging" | "place" | "trip";
+  domain: EvidenceDomain;
+  /** Identity of the EVIDENCE — a stay id, a port call id. */
   id: string;
-  /** "LH2080 MUC → FRA", "Hotel Borg", "Elbphilharmonie". */
-  title: string;
-  /** The second line: route, city, chain, cruise line. May be null. */
-  subtitle: string | null;
-  /** ISO day the entry is filed under, for sorting and for the date column. */
-  date: string | null;
-  /** Route to the entry, e.g. "/flights/abc". Null when it has no page. */
+  /** Where the user goes. A stay's target is its lodging; may differ from id. */
   href: string | null;
-  /**
-   * What this row contributes to `value`, in `metric.unit`. A flight
-   * contributes 1 to a flight count and 954 to a km sum; a stay contributes
-   * its nights. NEVER a fraction of a percentage — the panel explains the
-   * number, it does not re-derive it.
-   */
-  contribution: number;
+  title: { key: string; values?: Record<string, string | number> } | { text: string };
+  subtitle: { key: string; values?: Record<string, string | number> } | { text: string } | null;
+  /** The surface's own clock rule, with its precision kept. */
+  date: { value: string; precision: "day" | "month" | "year" } | null;
+  /** `sum` only, RAW and unrounded. */
+  contribution?: number;
+  /** `distinct` only: the units this row witnesses ("DE", "MUC", "2026-04-02"). */
+  credits?: string[];
 }
 
-type UnattributedReason =
-  /** A country known only from location history — no logbook entry to name. */
-  | "transitOnly"
-  /** The row that would prove it was deleted; the count is historical. */
-  | "entryRemoved"
-  /** The metric counts something the entry list cannot resolve per row. */
-  | "notPerEntry";
+interface EvidenceResponse {
+  measure: EvidenceMeasure;
+  entries: EvidenceEntry[];
+  /** Three buckets, never two. */
+  returned: number;
+  /** Known evidence beyond the page — NOT unattributed. */
+  omitted: { count: number; contribution?: number; credits?: number };
+  /** Genuinely without a nameable row. Several reasons may coexist. */
+  unattributed: Array<{ count: number; reason: UnattributedReason }>;
+  page: { offset: number; limit: number };
+}
 ```
 
-### The keys have one home
+Three changes from the first version, each forced by the review: the label is an
+i18n key rather than a server-rendered string (the rest of this codebase
+translates client-side, see `Passport/CountryProvenance.tsx`); the date keeps its
+precision instead of being flattened with `toISOString().slice(0, 10)`, which is
+not even the filed day (`summary.ts` files a flight by the departure airport's
+local clock); and `unattributed` is a LIST, because a number can miss rows for
+more than one reason at once.
 
-`kind` and `key` are the only thing the tile and the endpoint share, so they are
-defined once, in `shared/evidenceKeys.ts`, mirrored backend↔frontend like the
-other shared vocabularies in this codebase:
+### Paging, not a promise
 
-```ts
-export const EVIDENCE_METRICS = ["countries", "flights", "nights", "portCalls",
-  "places", "distanceKm", "activeDays"] as const;
-export type EvidenceMetric = (typeof EVIDENCE_METRICS)[number];
+The first version capped at 200 and offered "show it in the logbook with this
+filter". That filter does not exist. Evidence pages instead: `offset`/`limit`,
+default 100, and the panel loads more on scroll. Sorting is stable and stated —
+date descending, then id — so a page boundary cannot drop or repeat a row.
 
-/** "airline:LH", "airport:MUC", "country:IS" — prefix names the dimension. */
-export function rankingKey(dimension: RankingDimension, value: string): string;
-export function parseRankingKey(key: string): { dimension; value } | null;
-```
+### Identity
 
-A tile that asks for a key the backend does not serve is then a type error, not
-a 404 discovered by a user. Achievement keys are the achievement `code`, which
-already exists and is already the identity used by `isLive()`; record keys are
-the record ids from `services/stats/records.ts`.
+A ranking row is addressed by the **canonical group key** the ranking itself
+uses, exposed by the ranking endpoint for the purpose — not reconstructed from a
+display label. For airlines that is `airlineGroupKey`'s result (stored IATA →
+resolved ICAO → resolved name → normalised fallback), so a flight with
+`airline: null` but `airlineIata: "LH"` lands in the row it was counted in.
+Aircraft types are grouped RAW by the ranking, so evidence groups raw too;
+applying the achievement-side `normalizeAircraft` would merge groups the ranking
+keeps apart.
 
-The `year` query parameter applies to metrics, rankings and records — the three
-things the statistics page filters. Achievements are lifetime by definition and
-ignore it; the endpoint rejects `year` on an achievement key rather than
-silently accepting a filter it does not apply.
+Every resolver preserves `countableFlightWhere()` and the ranking's own
+denominator rule: airline percentages exclude unattributed flights, aircraft-type
+percentages divide by all countable flights.
 
-### The rule that keeps the number and its evidence together
+## Release 1 — rankings and metrics
 
-**The evidence endpoint never counts.** It resolves the SAME predicate the
-number is built from and returns the rows that predicate selects:
+**Rankings**: airlines, airports, countries (the flight distribution, with its
+own flight-domain semantics — the tile is NOT re-pointed), continents, aircraft
+types. Airport rankings count endpoint occurrences, so a flight can credit two
+airports and `distinct` is the wrong aggregation there — it is a `sum` over
+endpoints, and the entry says which endpoint it credits.
 
-- flights → `shared/flightCounting.countableFlightWhere`
-- lodging → `shared/lodgingCounting`
-- places → `shared/placeCounting`
-- countries → `shared/countryEvidence`
-- flight status/duration → `shared/statusDerivation`, `shared/flightDuration`
+**Metrics**: the tiles whose aggregation is `sum` or `distinct` over one domain,
+each answered through its shared counting rule. The seven keys of the first
+version were an under-count; the surface inventory (first task of the plan)
+lists every number, its calculator, its scope and its aggregation, and that
+inventory decides the key list rather than a guess.
 
-Where a number is computed inline inside a route handler today, the predicate is
-**extracted first**, into the `shared/` module that owns that question. That
-extraction is part of this work, not a side effect of it: an evidence list built
-from a second, hand-written query is exactly the failure this project has had
-twice ("Deutschland" and "Germany" counted as two countries; flight costs summed
-across currencies), and the whole point of answering from the backend is to make
-it structurally impossible.
+**Performance.** A panel must not re-run `runAchievementCheck`, which loads
+countable flights AND all flights, cruises with nested trip rows, stays,
+lodgings, memberships, trips, settings and places, then calls `loadPassport` over
+much of it again — the existing manual recheck is rate-limited precisely because
+it scans the whole logbook. Each resolver declares the projection it needs and
+loads that; display fields are batch-loaded for the returned page only. A GET
+never calls `checkAndUpdateAchievements`, which writes.
 
-### The test that fails without the rule
+## Release 2 — achievements
 
-Per evidence kind, on real seeded data:
+Not in release 1, and the reason is the measurement: `checkAchievement` is one
+~146-case switch over pre-aggregated statistics, and the producers
+(`calculateUserStats`, `calculateCruiseStats`, `calculateLodgingStats`,
+`calculatePlaceStats`) discard row identity while aggregating.
 
-```ts
-const sum = res.entries.reduce((n, e) => n + e.contribution, 0);
-expect(sum + (res.unattributed?.count ?? 0)).toBe(res.metric.value);
-```
+The approach is **provenance collected inside those producers**, at the exact
+line where the aggregate moves — beside `stats.airports.add(depCode)`, beside
+`stats.totalDistance += distance` — and not a second set of predicates beside
+them. That keeps the decision and its evidence in one place, which is the whole
+point; it also means the work touches the code 275 achievements depend on, which
+is why it is its own release with its own review.
 
-When `truncated` is true the assertion runs against `total` instead of
-`entries.length`, and a second case proves the cap does not change the sum.
+Two things release 2 must settle and release 1 need not:
+- **The unlock date is not a row's date.** `unlockedAt` is `new Date()` at write
+  time and can be triggered by an import or an edit. So the panel promises
+  CURRENT supporting evidence, not a historical reconstruction of the moment.
+- **A hidden locked achievement must stay hidden.** Opening its evidence would
+  reveal the name and description the card deliberately conceals.
 
-This is the guard the feature exists for. A panel that disagrees with the tile
-above it is worse than no panel, because it teaches the user that the numbers
-are guesses.
+## The most expensive trip
 
-## The four surfaces
+`tripInsights.tripDominantCost` picks the largest per-currency bucket and
+`winner` then compares those numbers across currencies: 334.000 ¥ beats 1.650 €,
+and a 200.000 KRW trip (≈ 130 €) would beat every euro trip.
 
-### 1. Achievements — and the one place where the code does not help
+The fix, with the owner's decision of 2026-09-18:
 
-Every card opens its evidence.
-
-- **Unlocked**: the entries that satisfied the requirement, oldest first, and
-  the one that crossed the line marked as such (it carries the unlock date).
-- **Not yet unlocked**: the entries that count so far, plus a line saying what
-  is missing in the requirement's own unit ("noch 3 Flüge", not "70 %").
-  Progress is already computed per achievement; the panel states the remainder
-  rather than a percentage, because a percentage cannot be acted on.
-- **Retired** (`isRetired`): the entries stay visible, with the note that the
-  definition was withdrawn and the achievement counts only towards points.
-
-**The risk named in the first draft is real and now measured.**
-`utils/achievementChecks.ts` is ONE function — `checkAchievement(achievement,
-stats, flights)` — with roughly 150 `switch` cases over `requirementType`, and
-it reads a pre-aggregated `UserStats`. `utils/achievementStats.ts` reduces the
-loaded rows to `Set<string>` and `Map<string, number>`: the ids are read for
-coordinates and dates and then dropped. Nothing in that pipeline knows which
-flight made the count go up.
-
-Re-deriving 150 cases is not the answer; it would be 150 second opinions about
-what counts, which is the defect this spec exists to prevent. The answer is that
-the ~150 requirement types collapse to a much smaller set of **row predicates**
-over the four domains already loaded by `runAchievementCheck`:
-
-```ts
-/** shared/achievementEvidence.ts */
-export type EvidencePredicate = (rows: AchievementInputRows, a: Achievement) =>
-  EvidenceEntry[] | null;   // null = this type has no per-entry evidence
-
-export const EVIDENCE_BY_REQUIREMENT: Record<string, EvidencePredicate>;
-```
-
-Each entry in that table is written ONCE against the same input arrays
-`runAchievementCheck` already builds, and a test runs every catalogue
-achievement through both `checkAchievement` and its predicate and asserts the
-sum rule. A requirement type with no predicate returns `notPerEntry` — the card
-still opens, and the panel says the number comes from an aggregate rather than
-from nameable entries. That is a smaller, honest first release, and the table
-can grow one requirement type at a time without touching anything else.
-
-The plan measures the real coverage before the work starts: how many of the
-~275 catalogue achievements the first batch of predicates covers, and which
-requirement types are left saying `notPerEntry`.
-
-### 2. Headline metrics
-
-The tiles on the statistics overview and the per-domain summary cards:
-countries, flights, nights, port calls, places, distance, active travel days.
-The `year` filter of the page travels with the request unchanged, so the panel
-answers for exactly the period on screen.
-
-Two of these need a change before they can answer at all, and both changes are
-worth making on their own:
-
-- **`computeSummary`'s flight query does not select `id`.** It reduces rows to
-  distance, duration and cost and never needed the identity. Adding `id` to that
-  select (and to the cost query beside it) is what lets the same rows be named.
-- **The statistics page counts countries a second time.** `GET /stats/countries`
-  aggregates flight rows by the resolved airport country in JS, with no tier and
-  no evidence concept, while `buildPassport` / `foldCountryEvidence` answers the
-  same question properly — by evidence, across all four domains, which is what
-  the 2.6.0 release note told users the number now means. Two answers to one
-  question is the exact shape of a defect this codebase has already paid for
-  twice. **The tile is pointed at the passport's engine**, and the panel then
-  reuses `buildCountryDetail` unchanged. If that shifts the number on screen,
-  that is the tile having been wrong, and the change is a changelog entry.
-
-### 3. Rankings
-
-Airlines, airports, countries, continents, aircraft types. The key identifies
-the row (`airline:LH`, `airport:MUC`, `country:IS`), and the entries are the
-rows of that group, which is what a ranking row IS — the evidence here is
-simply the group's members, so the sum test is exact by construction.
-
-### 4. Records and superlatives
-
-**Scope is what is on screen.** `services/stats/records.ts` exists and already
-returns `flightId` for four of its seven records, but `GET /stats/records` has
-no frontend consumer at all — it was ported from the Companion. Building a UI
-for it is a different feature, and it is not this one. The superlatives a user
-can actually see today are:
-
-- the trip superlatives in `components/Trips/TripInsightsBar.tsx` (longest, most
-  expensive, most countries), computed in `lib/stats/tripInsights.ts`;
-- the "unique" and "fun" sections of the statistics page
-  (`StatsUniqueSection`, `StatsFunSection`), computed by
-  `utils/statsCalculator.ts` over rows that already carry `id`.
-
-A record has exactly one winning entry, so `entries` has length 1 and
-`contribution` equals the record's value. What the panel adds here is the
-**measurement**: the unit, the comparison used, and — where relevant — what was
-NOT comparable.
-
-The trip superlatives are the exception to "evidence comes from the backend":
-the winning `Trip` object already holds its `flights`, `cruises` and
-`lodgingStays` in memory, so the panel reads them directly and no round trip is
-made. The backend still changes, but for the currency fix below — the trips list
-does not send base amounts today.
-
-#### The cross-currency defect this surfaces
-
-"Teuerste Reise" currently ranks trips by the raw amount of their largest
-currency bucket (`frontend/src/lib/stats/tripInsights.ts`,
-`tripDominantCost` + `winner`). In the demo account that makes Japan the winner
-with 334.000 ¥ against a 1.650 € trip — right by accident, since 334.000 ¥ is
-about 2.030 €, but a 200.000 KRW trip (≈ 130 €) would beat every euro trip.
-
-The panel would print that comparison, so the record is fixed in the same work:
-ranking happens on the base-currency amount (`price_base`,
-`total_price_base`, already on flights, bookings and stays), a trip whose cost
-cannot be converted is **left out of the comparison** rather than compared on
-its face value, and the panel names how many trips were left out and why. The
-displayed value stays the money actually spent, in its own currency — the
-conversion decides the ORDER, not the label.
+- **`Cruise` gains `price_base`, `fx_rate`, `fx_rate_date`, `fx_base_currency`**,
+  by migration, exactly as `Flight`, `Booking` and `LodgingStay` carry them. It
+  is the only priced model without them, which is a defect in its own right.
+- Ranking happens on the base amount. A trip that cannot be converted leaves the
+  comparison and the panel says how many did and why.
+- The displayed value stays the money actually spent, in its own currency. The
+  conversion decides the ORDER, not the label.
+- The trip superlatives are NOT computed from the already-loaded `Trip` objects:
+  `/trips` caps at 500 trips and 200 nested rows per domain, so those arrays
+  cannot guarantee the winner. The superlative and its evidence come from the
+  backend like everything else.
 
 ## The panel
 
-There is no drawer component in this codebase — `components/ui/Dialog.tsx` is
-built for a short question, and `components/Modal.tsx` is the shell with a fixed
-header, a **scrolling body** and a footer. The evidence panel is a list, so it is
-built on `Modal`, widened, and docked to the right on desktop rather than
-centred; below `sm` the existing sheet behaviour is already what is wanted.
+No drawer component exists. `components/ui/Dialog.tsx` is for a short question;
+`components/Modal.tsx` has the fixed header, scrolling body and footer a list
+needs, so the panel is built on `Modal`, widened and docked right at `sm` and
+above, sheet below. `useDialogChrome` provides the focus trap and Escape.
 
-- Enters from the right on desktop, full-screen sheet below the `sm` breakpoint.
-- Focus trap, Escape to close, focus returned to the tile — through the existing
-  `useDialogChrome`, not a second implementation.
-- **The open panel is in the URL**: `?evidence=<kind>:<key>` (plus the year that
-  is already there). A link can be shared, the browser's back button closes it,
-  and a reload reopens it. This is what the "own detail page" option would have
-  bought, without a page change.
-- Fetched on open, never with the page. A tile costs nothing until it is asked.
-- Capped at 200 entries: beyond that `truncated` is true and the footer offers
-  "im Logbuch mit diesem Filter zeigen", linking to the logbook with the
-  matching filter rather than paginating a second table.
-- Copy is German-first with the English mirror, in a new `evidence` namespace.
+The open panel is in the URL — `?evidence=<kind>:<key>` — so it is linkable and
+the back button closes it. Copy is German-first with the English mirror, in a new
+`evidence` namespace; entry titles are composed client-side from keys and values.
 
 ## What this does not need
 
-- **No beta gate.** The goal for 2.7.0 is that the registry is empty; a feature
-  that is finished does not enter it.
-- **No demo guard.** Reading one's own evidence spends nothing and exposes
-  nothing; the shared demo account may open the panels like anybody else.
-- **No new tables.** Every row the panel names already exists.
-
-## Risks, named
-
-1. **Achievement coverage is partial by design.** Measured: `checkAchievement`
-   is one ~150-case switch over pre-aggregated statistics, and the ids are gone
-   by then. The first release covers the requirement types whose predicate is a
-   plain filter over one domain's rows; the rest answer `notPerEntry` and say
-   so. The plan states the measured coverage before the work starts — a number,
-   not a hope.
-2. **Two of the rankings are pure SQL `groupBy`** (airlines, aircraft types),
-   so their evidence is a second query, filtered by the same grouping the
-   ranking used — for airlines that means going through `groupAirlines` so a
-   spelling variant lands in the row it was counted in. A hand-written `where`
-   here would be the drift this spec is about.
-3. **The cap hides disagreement.** A truncated list whose sum is checked against
-   `total` and not against the rows on screen could still drift. The second test
-   case above exists for that.
-4. **Pointing the country tile at the passport engine may move a number** that
-   users have seen. That is the point — one question, one answer — but it is a
-   visible change and belongs in the changelog, not in a silent commit.
+No beta gate (2.7.0's goal is an empty registry). No demo guard: evidence is the
+caller's own data and spends nothing. No new tables — except the four columns on
+`Cruise`, which exist everywhere else already.
 
 ## Success
 
-- Every tile, card, ranking row and record on both pages opens a panel.
-- For each, the sum test holds on the seeded demo account.
-- Nothing that was visible before moved or changed, except the most-expensive
-  record, which changed because it was wrong.
+- Every ranking row and every inventoried metric tile opens a panel.
+- Per aggregation kind, the invariant holds on the seeded demo account AND on
+  fixtures built for the awkward cases: a distinct count with a row crediting two
+  units, a sum whose per-row rounding would disagree, a truncated page, a ratio,
+  and a two-witness extremum.
+- Cross-user probes prove every resolver scopes by user, including nested rows.
+- Nothing visible moves, except the most expensive trip.

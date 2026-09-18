@@ -364,23 +364,29 @@ export const NO_PER_ENTRY_EVIDENCE = new Set<string>([ /* … */ ]);
 
 ---
 
-### Task 4: Achievements answer, and the cards open
-
-**Files:** `backend/src/services/evidence/index.ts` (achievement branch), `frontend/src/components/achievements/AchievementCard.tsx`, the panel from Task 6 is not yet needed — this task wires the data and the card's activation, and asserts the sum rule.
-
-- [ ] Test first: for every UNLOCKED achievement of the seeded demo account, `sum(contribution) + unattributed >= requirement`, and for a locked one the sum equals the stored `progress`. That second assertion is the one that catches a predicate disagreeing with `checkAchievement`.
-- [ ] The card becomes a `<button>` with the card's own styling, `aria-haspopup="dialog"`, keyboard-activatable. A retired achievement opens too.
-- [ ] Commit.
-
----
-
-### Task 5: The panel
+### Task 4: The panel
 
 **Files:** `frontend/src/components/evidence/{EvidencePanel,EvidenceEntryRow,useEvidence}.tsx`, `frontend/src/lib/api/evidence.ts`, `frontend/src/i18n/resources/{de,en}/evidence.json`
+
+The panel comes BEFORE the first surface that opens it. The first draft had it
+the other way round, which would have shipped a card that sets a query
+parameter nothing reads — a half-feature between two commits, and a reviewer
+with nothing to look at.
 
 - [ ] Test first (Vitest + Testing Library): opening sets `?evidence=achievement:<code>`; the panel shows the label and the value; entries link into the logbook; Escape closes and restores focus to the tile; a response with `unattributed` renders the reason, and one without renders no gap line.
 - [ ] Built on `components/Modal.tsx` (fixed header, scrolling body, footer), docked right at `sm` and above. `useDialogChrome` provides the focus trap.
 - [ ] Copy in `de` first, `en` mirrored in the same commit — `localeKeyParity` fails otherwise.
+- [ ] Until a real surface is wired (Task 5), the panel is driven in tests only; nothing on screen opens it yet.
+- [ ] Commit.
+
+---
+
+### Task 5: Achievements answer, and the cards open
+
+**Files:** `backend/src/services/evidence/index.ts` (achievement branch), `frontend/src/components/achievements/AchievementCard.tsx`
+
+- [ ] Test first: for every UNLOCKED achievement of the seeded demo account, `sum(contribution) + unattributed >= requirement`, and for a locked one the sum equals the stored `progress`. That second assertion is the one that catches a predicate disagreeing with `checkAchievement`.
+- [ ] The card becomes a `<button>` with the card's own styling, `aria-haspopup="dialog"`, keyboard-activatable. A retired achievement opens too.
 - [ ] Commit.
 
 ---
