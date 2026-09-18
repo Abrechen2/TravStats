@@ -21,7 +21,9 @@ describe("StatsFlightBreakdown — airlines", () => {
     render(
       <MemoryRouter>
         <StatsFlightBreakdown
-          sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
+          sortedAirlines={[
+            ["iata:LH", { label: "Lufthansa", count: 3, totalDuration: 6, flights: [] }],
+          ]}
           flightsWithoutAirline={4}
           sortedAirports={[]}
           seatClassStats={{}}
@@ -43,7 +45,9 @@ describe("StatsFlightBreakdown — airlines", () => {
     render(
       <MemoryRouter>
         <StatsFlightBreakdown
-          sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
+          sortedAirlines={[
+            ["iata:LH", { label: "Lufthansa", count: 3, totalDuration: 6, flights: [] }],
+          ]}
           flightsWithoutAirline={0}
           sortedAirports={[]}
           seatClassStats={{}}

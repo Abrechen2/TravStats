@@ -16,7 +16,8 @@ import type {
 import { API_LIMITS } from "../lib/constants";
 import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
-import { airlineGroupKey, groupAirlines } from "../shared/airlineNormalize";
+import { groupAirlines } from "../shared/airlineNormalize";
+import { buildAirlineBreakdown } from "../components/Stats/airlineBreakdown";
 import { airlineResolvers } from "../lib/airlineUtils";
 import {
   addFlightDuration,
@@ -326,22 +327,13 @@ export default function AdvancedStatsPage(): JSX.Element {
   // rule the server's ranking uses: "SWISS" and "Swiss" are one carrier, and
   // a flight with no airline is counted apart instead of becoming a group
   // whose label is the empty string — that was the empty row in the list.
-  const { groups: airlineGroups, withoutAirline: flightsWithoutAirline } = groupAirlines(
+  // The fold itself lives in `components/Stats/airlineBreakdown.ts`, where
+  // its identity (the group KEY, never the label) has a test of its own.
+  const { withoutAirline: flightsWithoutAirline } = groupAirlines(
     flights.map((f) => ({ ...f, count: 1 })),
     airlineResolvers
   );
-  const airlineStats = airlineGroups.reduce(
-    (acc, group) => {
-      const members = flights.filter((f) => airlineGroupKey(f, airlineResolvers) === group.key);
-      acc[group.label] = {
-        count: group.count,
-        totalDuration: members.reduce((sum, f) => sum + calculateDuration(f), 0),
-        flights: members,
-      };
-      return acc;
-    },
-    {} as Record<string, { count: number; totalDuration: number; flights: Flight[] }>
-  );
+  const airlineStats = buildAirlineBreakdown(flights, airlineResolvers, calculateDuration);
 
   const sortedAirlines = Object.entries(airlineStats)
     .sort(([, a], [, b]) => b.count - a.count)
@@ -521,8 +513,9 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights: flightsPerMonthOfYear[index] || 0,
   }));
 
-  // Certificate derived stats
-  const topAirline: string | null = sortedAirlines.length > 0 ? sortedAirlines[0][0] : null;
+  // Certificate derived stats. The label, not the group key — a certificate
+  // naming "iata:LH" would be a leak of the identity into the copy.
+  const topAirline: string | null = sortedAirlines.length > 0 ? sortedAirlines[0][1].label : null;
 
   const routeCounts = flights.reduce(
     (acc, flight) => {

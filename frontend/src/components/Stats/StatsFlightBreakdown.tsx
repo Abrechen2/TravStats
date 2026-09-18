@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatHours, formatHoursValue } from "../../lib/units";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
+import type { AirlineBreakdownRow } from "./airlineBreakdown";
 
 /** Every ranking dimension wired below is `allTime`-only — see `rankingEvidence.ts` on the backend. */
 const ALL_TIME = { period: "allTime" as const };
@@ -13,7 +14,12 @@ interface FlightWithDuration {
 }
 
 interface StatsFlightBreakdownProps {
-  sortedAirlines: [string, { count: number; totalDuration: number; flights: Flight[] }][];
+  /**
+   * `[groupKey, row]`, never `[label, row]` — two carriers can share a
+   * display name, and keying the list by the label merged them on screen
+   * while the server's own `airlineCount` kept them apart.
+   */
+  sortedAirlines: [string, AirlineBreakdownRow][];
   /** Counted flights that name no airline — said, never ranked (forgejo#81). */
   flightsWithoutAirline?: number;
   sortedAirports: [string, number][];
@@ -77,11 +83,11 @@ export default function StatsFlightBreakdown({
             </EvidenceTrigger>
           )}
           <div className="space-y-3">
-            {sortedAirlines.map(([airline, data]) => (
-              <div key={airline} className="flex items-center justify-between">
+            {sortedAirlines.map(([groupKey, data]) => (
+              <div key={groupKey} className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium" style={{ color: "var(--text-primary)" }}>
-                    {airline}
+                    {data.label}
                   </div>
                   <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {t("stats:airlines.flightsTotal", {
