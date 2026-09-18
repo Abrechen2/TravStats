@@ -78,6 +78,18 @@ export default function EvidencePanel({
       ? formatMeasureValue({ ...measure, value: renderedValue }, t, i18n.language, baseCurrency)
       : null;
 
+  // "N more known, not loaded yet" has to mean exactly that. `omitted.count`
+  // is every known row absent from THIS page — including the rows already on
+  // screen from earlier pages — so printing it raw double-counted what the
+  // reader was looking at: page two of a 250-row measure claimed 150 further
+  // rows while 200 were already listed. What is genuinely still to come is
+  // `omitted.count` minus the rows earlier pages contributed
+  // (`entries.length - returned`). Clamped at zero because a resolver is free
+  // to recount between two pages, and a negative "more known" is nonsense.
+  const stillToLoad = response
+    ? Math.max(0, response.omitted.count - (entries.length - response.returned))
+    : 0;
+
   return (
     <Modal
       open={isOpen}
@@ -93,8 +105,8 @@ export default function EvidencePanel({
             style={{ color: "var(--text-muted)" }}
           >
             <span>{t("evidence:panel.bucket.returned", { count: response.returned })}</span>
-            {response.omitted.count > 0 && (
-              <span>{t("evidence:panel.bucket.omitted", { count: response.omitted.count })}</span>
+            {stillToLoad > 0 && (
+              <span>{t("evidence:panel.bucket.omitted", { count: stillToLoad })}</span>
             )}
             {response.unattributed.map((u, index) => (
               <span key={`${u.reason}-${index}`}>

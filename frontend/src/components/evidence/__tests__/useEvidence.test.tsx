@@ -130,7 +130,11 @@ describe("useEvidence", () => {
           },
         ],
         returned: 1,
-        omitted: { count: 0 },
+        // Page two of a two-row measure: the row page one showed is still
+        // "known and not on this page", so a resolver reports 1 here, never
+        // 0 (`rankingEvidence.ts`'s own reading of `omitted`).
+        omitted: { count: 1 },
+        page: { offset: 1, limit: 100 },
       })
     );
     act(() => result.current.loadMore());
@@ -143,5 +147,53 @@ describe("useEvidence", () => {
       "flightCount",
       expect.objectContaining({ offset: 1 })
     );
+  });
+
+  /**
+   * `hasMore` used to be `omitted.count > 0`, which never went false: at 250
+   * rows and a 100 limit, page three still reported 200 omitted (every known
+   * row not on THAT page), so the button stayed and the next click fetched
+   * offset 250 and appended nothing, forever. What bounds the list is the
+   * accumulated `entries.length` against the whole known population,
+   * `returned + omitted.count`.
+   */
+  it("stops asking for more once the accumulated rows cover the whole known population", async () => {
+    const row = (n: number) => ({
+      domain: "flight" as const,
+      id: `f${n}`,
+      href: `/flights/f${n}`,
+      title: { text: `LH${n}` },
+      subtitle: null,
+      date: null,
+      contribution: 1,
+    });
+    const pageOf = (offset: number, size: number) =>
+      response({
+        entries: Array.from({ length: size }, (_, i) => row(offset + i)),
+        returned: size,
+        omitted: { count: 250 - size, contribution: 250 - size },
+        page: { offset, limit: 100 },
+      });
+
+    vi.mocked(evidenceApi.get)
+      .mockResolvedValueOnce(pageOf(0, 100))
+      .mockResolvedValueOnce(pageOf(100, 100))
+      .mockResolvedValueOnce(pageOf(200, 50));
+
+    const { result } = renderHook(() => useEvidence(), {
+      wrapper: wrapper(["/stats?evidence=metric%3AflightCount"]),
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(100));
+    expect(result.current.hasMore).toBe(true);
+
+    act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.entries).toHaveLength(200));
+    // 200 of 250 in hand — `omitted.count` still says 150 on this page.
+    expect(result.current.response?.omitted.count).toBe(150);
+    expect(result.current.hasMore).toBe(true);
+
+    act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.entries).toHaveLength(250));
+    expect(result.current.hasMore).toBe(false);
   });
 });

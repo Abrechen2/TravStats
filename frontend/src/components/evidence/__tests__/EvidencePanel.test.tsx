@@ -203,7 +203,13 @@ describe("EvidencePanel", () => {
           },
         ],
         returned: 1,
-        omitted: { count: 0 },
+        // The second page of a two-row measure: `omitted.count` is every
+        // known row NOT on this page, so it is 1 (the row page one showed),
+        // not 0. The fixture said 0 before, which is a response no resolver
+        // can produce — it made the panel look right while the real shape
+        // kept "load more" on screen forever.
+        omitted: { count: 1 },
+        page: { offset: 1, limit: 100 },
       })
     );
     await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
@@ -211,6 +217,69 @@ describe("EvidencePanel", () => {
     await screen.findByText("LH200");
     // The first page's row is still there — "load more" appends, it does not replace.
     expect(screen.getByText("LH100")).toBeInTheDocument();
+    // Both rows are in hand, so nothing is left to fetch.
+    expect(
+      screen.queryByRole("button", { name: "evidence:panel.loadMore" })
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * The paging arithmetic, at the size that exposed it. `omitted.count` is
+   * every known row absent from THIS page — before or after it — so reading
+   * it as "rows ahead" left the button on screen on the last page and printed
+   * a count that included what the reader was already looking at. Three real
+   * resolver-shaped pages over 250 rows, asserted at both ends.
+   */
+  it("counts down the 'not loaded yet' line and drops 'load more' on the last of three pages", async () => {
+    const row = (n: number) => ({
+      domain: "flight" as const,
+      id: `f${n}`,
+      href: `/flights/f${n}`,
+      title: { text: `LH${n}` },
+      subtitle: null,
+      date: null,
+      contribution: 1,
+    });
+    const pageOf = (offset: number, size: number) =>
+      response({
+        measure: {
+          kind: "metric",
+          key: "flightCount",
+          aggregation: "sum",
+          label: { key: "evidence.metric.flightCount" },
+          unit: "flights",
+          value: 250,
+          scope: { period: { kind: "allTime" } },
+        },
+        entries: Array.from({ length: size }, (_, i) => row(offset + i)),
+        returned: size,
+        omitted: { count: 250 - size, contribution: 250 - size },
+        page: { offset, limit: 100 },
+      });
+
+    vi.mocked(evidenceApi.get)
+      .mockResolvedValueOnce(pageOf(0, 100))
+      .mockResolvedValueOnce(pageOf(100, 100))
+      .mockResolvedValueOnce(pageOf(200, 50));
+
+    renderPanel(["/stats?evidence=metric%3AflightCount"]);
+    await screen.findByText("LH0");
+
+    // 250 known, 100 in hand: 150 still to come — not the raw 150 omitted by
+    // coincidence, which is why the third page below is the real assertion.
+    expect(screen.getByText('evidence:panel.bucket.omitted({"count":150})')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
+    await screen.findByText("LH100");
+    // 200 in hand of 250: 50 left, although `omitted.count` still says 150.
+    expect(screen.getByText('evidence:panel.bucket.omitted({"count":50})')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
+    await screen.findByText("LH200");
+    expect(screen.queryByText(/panel\.bucket\.omitted/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "evidence:panel.loadMore" })
+    ).not.toBeInTheDocument();
   });
 
   it("Escape closes the panel and returns focus to whatever opened it", async () => {

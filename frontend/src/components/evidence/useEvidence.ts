@@ -125,7 +125,7 @@ export interface UseEvidenceResult extends UseEvidenceOpen {
   entries: EvidenceEntry[];
   loading: boolean;
   error: LoadFailure | null;
-  /** `omitted.count > 0` on the latest page: there is more to load. */
+  /** There are rows the panel has not appended yet — see the `hasMore` computation below for why this is not `omitted.count > 0`. */
   hasMore: boolean;
   loadMore: () => void;
   /** What the opening tile said it was showing — `null` for a bookmark, a raw `?evidence=` link, or once the panel is closed. */
@@ -210,7 +210,15 @@ export function useEvidence(scope?: EvidenceScopeParams): UseEvidenceResult {
     entries,
     loading,
     error,
-    hasMore: (response?.omitted.count ?? 0) > 0,
+    // `omitted.count` is every KNOWN row not in THIS page's `entries` —
+    // rows BEFORE `offset` as well as rows after it (`rankingEvidence.ts`
+    // states the same reading). Read as "there is more ahead" it never
+    // reaches zero: a 250-row measure paged at 100 still reported 200
+    // omitted on page three, so the button stayed and the next click
+    // fetched offset 250, appended nothing, and reported 250 omitted —
+    // forever. The total known population is `returned + omitted.count`,
+    // and what the panel HAS is `entries.length` accumulated across pages.
+    hasMore: entries.length < (response?.returned ?? 0) + (response?.omitted.count ?? 0),
     loadMore,
     renderedValue,
   };
