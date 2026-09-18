@@ -11,6 +11,7 @@ import {
   getLodgingPhotoDir,
 } from "../../middleware/upload";
 import { getTrainingUploadDir } from "../../routes/training";
+import { DOCUMENT_DIR, ensureDocumentDir } from "../../services/documents/documentStore";
 
 /**
  * Finding I2: every upload route was open to the shared demo account. A
@@ -133,6 +134,23 @@ const uploads: UploadCase[] = [
     filename: "sample.png",
     buffer: PNG,
     snapshotStorage: diskUntouched(getTrainingUploadDir),
+  },
+  {
+    // The Critical of the cold security audit of 2026-09-19 (finding 1).
+    // `routes/documents.ts` came from main AFTER the sweep that guarded the six
+    // above, so it was the one upload surface still open — and the worst one to
+    // leave open, because a kept original is a boarding pass or an invoice with
+    // somebody's name on it, and an UNFILED document survives the 04:00 reseed
+    // for up to seven days where the next visitor reads it.
+    name: "kept document",
+    path: "/api/v1/documents",
+    field: "file",
+    filename: "boarding-pass.png",
+    buffer: PNG,
+    snapshotStorage: diskUntouched(() => {
+      ensureDocumentDir();
+      return DOCUMENT_DIR;
+    }),
   },
   {
     // Found by an independent review on 2026-09-17 (finding A5): the GPX

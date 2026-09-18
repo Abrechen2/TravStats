@@ -380,6 +380,23 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
         extractedData: {},
       },
     });
+    // UNFILED on purpose. A document filed with a flight or a trip dies by
+    // cascade when that entry is deleted, so the wipe looked complete as long
+    // as nobody uploaded one without filing it — and that is the common case,
+    // since `POST /documents` accepts a document before its entry exists. An
+    // unfiled one had no owner but the user and survived for up to
+    // `UNLINKED_TTL_DAYS` (7 days), readable by the next visitor.
+    await prisma.document.create({
+      data: {
+        userId: id,
+        storedName: "a-visitors-document.png",
+        originalName: "boarding-pass.png",
+        mimetype: "image/png",
+        sizeBytes: 72,
+        sha256: "0".repeat(64),
+        format: "image",
+      },
+    });
 
     await ensureUser();
 
@@ -387,6 +404,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       countryDay: await prisma.countryDay.count({ where: { userId: id } }),
       dataQualityFlag: await prisma.dataQualityFlag.count({ where: { userId: id } }),
       dawarichSweepState: await prisma.dawarichSweepState.count({ where: { userId: id } }),
+      document: await prisma.document.count({ where: { userId: id } }),
       importBatch: await prisma.importBatch.count({ where: { userId: id } }),
       lodgingMembership: await prisma.lodgingMembership.count({ where: { userId: id } }),
       pairingCode: await prisma.pairingCode.count({ where: { userId: id } }),
@@ -406,6 +424,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       countryDay: 0,
       dataQualityFlag: 0,
       dawarichSweepState: 0,
+      document: 0,
       importBatch: 0,
       lodgingMembership: 0,
       pairingCode: 0,

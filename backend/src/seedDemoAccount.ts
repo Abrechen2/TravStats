@@ -838,11 +838,12 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  * next model with a `userId` will be noticed only if this list is read — a
  * cascade you cannot see is indistinguishable from a table nobody thought of.
  *
- * Deleted by this function (29). Rows, not files — an uploaded receipt or
+ * Deleted by this function (30). Rows, not files — an uploaded receipt or
  * training sample leaves its bytes on disk, as `demoGuard.uploads.test.ts`
  * notes, which is why the upload routes refuse the account outright:
  *   AnalyticsEvent · Booking · Companion · CountryDay · Cruise ·
- *   CruiseStop · DataQualityFlag · DawarichSweepState · Flight · ImportBatch ·
+ *   CruiseStop · DataQualityFlag · DawarichSweepState · Document · Flight ·
+ *   ImportBatch ·
  *   Lodging · LodgingMembership · LodgingStay · PairingCode ·
  *   ParseTrainingLog · ParserTemplate · PendingFlightUpdate ·
  *   PendingUpdateStatistics · PhotoJourney · Place · PlaceList · PlaceVisit ·
@@ -870,6 +871,10 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  *     and is instance-level admin data. The demo cannot create one; deleting
  *     invitations it happened to touch would destroy an admin's records.
  *
+ * `Document` is the newest of them and the reason the count moved from 29 to
+ * 30: it arrived from main with `routes/documents.ts` AFTER this enumeration
+ * was written on 2026-09-17, so the sweep that produced the list never saw it.
+ *
  * NOT user-owned at all, and never to be deleted here: Airport, Airline,
  * Aircraft, Ship, Port, LodgingChain, Achievement, CuratedList, CuratedPlace,
  * AdminSettings, SmtpConfig, Backup, AirportSeedingStatus, PoiBackfillAudit.
@@ -892,6 +897,16 @@ async function wipeDemoUser(userId: string): Promise<void> {
   // TripStop.routeId is SetNull on route delete rather than blocking it.
   // Companion last of the new set: its join rows (FlightCompanion,
   // CruiseCompanion) cascade, so it's safe regardless of flight/cruise order.
+  // Before everything it hangs off. A document FILED with an entry dies by
+  // cascade with that entry, but an UNFILED one has no owner but the user, so
+  // it outlived the reseed by up to `UNLINKED_TTL_DAYS` (7 days) with its bytes
+  // still readable through `GET /documents/:id/file`. `routes/documents.ts`
+  // arrived from main after the wipe was enumerated on 2026-09-17, so `Document`
+  // was never in any of the three lists above — an omission, not a decision
+  // (security audit of 2026-09-19, finding 1). Rows only: the bytes under
+  // `uploads/documents/` are the orphan sweep's business, which is the second
+  // reason the upload route now refuses the shared account outright.
+  await prisma.document.deleteMany({ where: { userId } });
   await prisma.placeVisit.deleteMany({ where: { userId } });
   await prisma.placeList.deleteMany({ where: { userId } }); // entries cascade
   await prisma.place.deleteMany({ where: { userId } });
