@@ -2,6 +2,7 @@ import type { BusinessStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { formatCurrency, formatDistance, formatHours, formatHoursValue } from "../../lib/units";
+import EvidenceTrigger from "./EvidenceTrigger";
 
 interface StatsBusinessSectionProps {
   businessStats: BusinessStats;
@@ -60,7 +61,12 @@ export default function StatsBusinessSection({
           </p>
         </div>
 
-        <div
+        <EvidenceTrigger
+          kind="metric"
+          evidenceKey="businessTotalCost"
+          scope={{ period: "allTime" }}
+          renderedValue={businessStats.totalCost}
+          label={t("stats:business.totalCost")}
           className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
@@ -89,9 +95,14 @@ export default function StatsBusinessSection({
                   ),
                 })}
           </p>
-        </div>
+        </EvidenceTrigger>
 
-        <div
+        <EvidenceTrigger
+          kind="metric"
+          evidenceKey="airportsVisitedCount"
+          scope={{ period: "allTime" }}
+          renderedValue={businessStats.airportDiversity}
+          label={t("stats:business.airportDiversity")}
           className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
@@ -109,7 +120,7 @@ export default function StatsBusinessSection({
               count: businessStats.airportDiversity,
             })}
           </p>
-        </div>
+        </EvidenceTrigger>
 
         <div
           className="rounded-lg shadow-sm p-6"

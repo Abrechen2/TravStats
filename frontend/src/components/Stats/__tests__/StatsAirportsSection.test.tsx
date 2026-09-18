@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { AirportStats } from "../../../types";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -28,7 +29,12 @@ const stats: AirportStats = {
 // caption said "of the 7" and the passport said 6/7.
 describe("StatsAirportsSection — continents tile", () => {
   it("renders the denominator from the response, tight against the slash", () => {
-    const { container } = render(<StatsAirportsSection airportStats={stats} />);
+    // A tile is a real `<button>` since Task 9, which needs `useSearchParams`.
+    const { container } = render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={stats} />
+      </MemoryRouter>
+    );
 
     const text = container.textContent ?? "";
     expect(text).toContain("6/7");
@@ -37,7 +43,11 @@ describe("StatsAirportsSection — continents tile", () => {
   });
 
   it("labels the distribution through the shared continent keys, Antarctica included", () => {
-    render(<StatsAirportsSection airportStats={stats} />);
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={stats} />
+      </MemoryRouter>
+    );
 
     expect(screen.getByText("common:continents.europe")).toBeInTheDocument();
     expect(screen.getByText("common:continents.northAmerica")).toBeInTheDocument();

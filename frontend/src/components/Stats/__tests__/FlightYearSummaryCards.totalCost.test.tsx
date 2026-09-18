@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { SummaryStats } from "../../../lib/api";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -33,15 +34,18 @@ const summary = (over: Partial<SummaryStats>): SummaryStats => ({
   ...over,
 });
 
+// Every tile is a real `<button>` since Task 9, which needs `useSearchParams`.
 const renderWith = (yearSummary: SummaryStats): ReturnType<typeof render> =>
   render(
-    <FlightYearSummaryCards
-      selectedYear={2023}
-      compareYear={null}
-      summaryLoading={false}
-      yearSummary={yearSummary}
-      compareSummary={null}
-    />
+    <MemoryRouter>
+      <FlightYearSummaryCards
+        selectedYear={2023}
+        compareYear={null}
+        summaryLoading={false}
+        yearSummary={yearSummary}
+        compareSummary={null}
+      />
+    </MemoryRouter>
   );
 
 // forgejo#83 — a year with no priced flight read "Gesamtkosten 0 €": a claim

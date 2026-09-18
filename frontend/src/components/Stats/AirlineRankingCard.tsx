@@ -3,6 +3,8 @@ import { statsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { AirlineRankingItem } from "../../types";
 import { logger } from "../../lib/logger";
+import EvidenceTrigger from "./EvidenceTrigger";
+import { rankingKey } from "../../shared/evidence";
 
 const MAX_ROWS = 10;
 
@@ -37,7 +39,15 @@ export default function AirlineRankingCard(): JSX.Element {
       </p>
       <div className="space-y-1.5">
         {airlines.map((row) => (
-          <div key={row.airline} className="flex items-center gap-3">
+          <EvidenceTrigger
+            key={row.airline}
+            kind="ranking"
+            evidenceKey={rankingKey("airline", row.key)}
+            scope={{ period: "allTime" }}
+            renderedValue={row.count}
+            label={row.airline}
+            className="flex items-center gap-3"
+          >
             <div
               className="flex-1 rounded-full h-5 overflow-hidden"
               style={{ background: "var(--bg-elevated)" }}
@@ -54,7 +64,7 @@ export default function AirlineRankingCard(): JSX.Element {
               {row.airline}
             </span>
             <span className="w-10 text-right text-sm font-semibold">{row.percentage}%</span>
-          </div>
+          </EvidenceTrigger>
         ))}
       </div>
     </div>

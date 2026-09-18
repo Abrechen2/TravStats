@@ -3,10 +3,23 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { formatDistance, formatHours } from "../../../lib/units";
 import type { TimeseriesResponse } from "../../../lib/api/types";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import KpiScorecard from "./KpiScorecard";
 import type { ScorecardTileVM } from "./ScorecardTile";
 import TimeRangeControl, { type WindowKind } from "./TimeRangeControl";
 import CanonicalTimeSeries from "./CanonicalTimeSeries";
+
+/**
+ * `WindowKind`'s `"all"` is this component's own spelling; the evidence
+ * contract (mirrored backend/frontend, `shared/evidence.ts`) spells the same
+ * period `"allTime"`. Two vocabularies for one thing, so one function
+ * translates rather than leaving every caller to remember the mismatch.
+ */
+function scorecardScope(window: WindowKind, selectedYear: number | null): EvidenceScopeParams {
+  if (window === "year") return { period: "year", year: selectedYear ?? undefined };
+  if (window === "all") return { period: "allTime" };
+  return { period: "rolling12m" };
+}
 
 interface FlightScorecardBlockProps {
   timeseries: TimeseriesResponse | null;
@@ -42,6 +55,7 @@ export default function FlightScorecardBlock({
   const durations = timeseries?.series.map((p) => Math.round(p.durationMin / 60)) ?? [];
   const cur = timeseries?.current ?? { count: 0, distanceKm: 0, durationMin: 0 };
   const prev = timeseries?.previous ?? { count: 0, distanceKm: 0, durationMin: 0 };
+  const scope = scorecardScope(rangeWindow, selectedYear);
   const tiles: ScorecardTileVM[] = [
     {
       key: "flights",
@@ -51,6 +65,7 @@ export default function FlightScorecardBlock({
       points: counts,
       current: cur.count,
       previous: prev.count,
+      evidence: { kind: "metric", key: "scorecardFlightCount", scope },
     },
     {
       key: "distance",
@@ -60,6 +75,7 @@ export default function FlightScorecardBlock({
       points: distances,
       current: cur.distanceKm,
       previous: prev.distanceKm,
+      evidence: { kind: "metric", key: "scorecardDistanceKm", scope },
     },
     {
       key: "flightTime",
@@ -69,6 +85,7 @@ export default function FlightScorecardBlock({
       points: durations,
       current: cur.durationMin,
       previous: prev.durationMin,
+      evidence: { kind: "metric", key: "scorecardFlightTimeMinutes", scope },
     },
   ];
   return (

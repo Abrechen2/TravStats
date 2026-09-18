@@ -49,7 +49,7 @@ export default function EvidencePanel({
 }): JSX.Element | null {
   const { t, i18n } = useTranslation(["evidence", "common"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
-  const { isOpen, close, response, entries, loading, error, hasMore, loadMore } =
+  const { isOpen, close, response, entries, loading, error, hasMore, loadMore, renderedValue } =
     useEvidence(scope);
 
   if (!isOpen) return null;
@@ -60,6 +60,23 @@ export default function EvidencePanel({
   const showAbstention = measure !== null && measure.value === null;
   const showEmpty =
     !loading && !error && measure !== null && measure.value !== null && entries.length === 0;
+
+  // "The number may have moved since the tile rendered" (design). Both sides
+  // have to be real numbers — an abstention on either end is a different
+  // fact, not a disagreement — and are rounded to whole units before the
+  // comparison: two independently computed sums (a client fold, a fresh
+  // server aggregate) can differ in float dust with nothing having actually
+  // changed, and the sentence below must mean "the data moved", not "floats
+  // are floats".
+  const recomputed =
+    renderedValue !== null &&
+    measure !== null &&
+    measure.value !== null &&
+    Math.round(renderedValue) !== Math.round(measure.value);
+  const recomputedFromText =
+    recomputed && measure
+      ? formatMeasureValue({ ...measure, value: renderedValue }, t, i18n.language, baseCurrency)
+      : null;
 
   return (
     <Modal
@@ -108,6 +125,14 @@ export default function EvidencePanel({
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {scopeText(measure.scope, t)}
             </p>
+            {recomputed && recomputedFromText && (
+              <p className="mt-1 text-xs" style={{ color: "var(--warning)" }}>
+                {t("evidence:panel.recomputed", {
+                  previous: recomputedFromText,
+                  current: valueText,
+                })}
+              </p>
+            )}
           </>
         )}
       </div>

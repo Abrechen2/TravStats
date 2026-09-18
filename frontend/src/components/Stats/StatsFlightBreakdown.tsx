@@ -1,6 +1,11 @@
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatHours, formatHoursValue } from "../../lib/units";
+import EvidenceTrigger from "./EvidenceTrigger";
+import { rankingKey } from "../../shared/evidence";
+
+/** Every ranking dimension wired below is `allTime`-only — see `rankingEvidence.ts` on the backend. */
+const ALL_TIME = { period: "allTime" as const };
 
 interface FlightWithDuration {
   flight: Flight;
@@ -59,9 +64,17 @@ export default function StatsFlightBreakdown({
             {t("stats:airlines.title")}
           </h2>
           {flightsWithoutAirline > 0 && (
-            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="flightsWithoutAirlineCount"
+              scope={ALL_TIME}
+              renderedValue={flightsWithoutAirline}
+              label={t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
+              className="mb-3 text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
               {t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
-            </p>
+            </EvidenceTrigger>
           )}
           <div className="space-y-3">
             {sortedAirlines.map(([airline, data]) => (
@@ -95,14 +108,22 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {sortedAirports.map(([airport, count]) => (
-              <div key={airport} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={airport}
+                kind="ranking"
+                evidenceKey={rankingKey("airport", airport)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={airport}
+                className="flex items-center justify-between"
+              >
                 <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                   {airport}
                 </div>
                 <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
                   {count}
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -144,14 +165,22 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {sortedAircraft.map(([aircraft, count]) => (
-              <div key={aircraft} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={aircraft}
+                kind="ranking"
+                evidenceKey={rankingKey("aircraftType", aircraft)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={aircraft}
+                className="flex items-center justify-between"
+              >
                 <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                   {aircraft}
                 </div>
                 <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>
                   {count}
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>

@@ -1,12 +1,17 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router-dom";
 import EvidencePanel from "../EvidencePanel";
+import { useEvidenceOpenStore } from "../evidenceOpenStore";
 import { evidenceApi } from "../../../lib/api/evidence";
 import type { EvidenceResponse } from "../../../shared/evidence";
 
 afterEach(cleanup);
+// Reset BEFORE each test, never after: the store is a module-level singleton,
+// and resetting once `cleanup()` has already run risks notifying a listener
+// mid-teardown instead of a clean slate for the next test.
+beforeEach(() => useEvidenceOpenStore.setState({ scope: undefined, renderedValue: undefined }));
 
 vi.mock("../../../lib/api/evidence", () => ({
   evidenceApi: { get: vi.fn() },
@@ -71,6 +76,54 @@ describe("EvidencePanel", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveAccessibleName('evidence.ranking.airline({"airline":"Lufthansa"})');
     expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  /**
+   * "The number may have moved since the tile rendered" (design). Before
+   * Task 9 there was no channel for a tile's own value to reach the panel at
+   * all, so this invariant was trivially true and proved nothing — these two
+   * tests exercise the real channel: `evidenceOpenStore` holds the figure a
+   * tile had on screen when it called `open()` (`useEvidenceOpen`, tested on
+   * its own in `useEvidence.test.tsx`), and `EvidencePanel` compares it
+   * against the measure it just fetched. Priming the store directly and then
+   * mounting on an already-open URL — rather than clicking a trigger — tests
+   * that comparison in isolation, without a second async boundary (the click
+   * → store write → router navigation → re-render chain) between the
+   * assertion and the thing it is checking.
+   */
+  it("says the figure was recomputed when the opening tile's value disagrees with the fresh one", async () => {
+    useEvidenceOpenStore.setState({ scope: undefined, renderedValue: 40 });
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+
+    // Waits for the fetch to settle, not just for the dialog shell to mount —
+    // the shell renders before `evidenceApi.get` resolves.
+    await screen.findByText("42");
+
+    // The measured value (42) and the tile's own value (40) both appear —
+    // never a wording that only gives one side of the disagreement.
+    expect(
+      screen.getByText('evidence:panel.recomputed({"previous":"40","current":"42"})')
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing when the opening tile's value agrees with the fresh one", async () => {
+    useEvidenceOpenStore.setState({ scope: undefined, renderedValue: 42 });
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+
+    await screen.findByText("42");
+
+    expect(screen.queryByText(/panel\.recomputed/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing for a bookmark or a raw `?evidence=` link — no rendered value is known", async () => {
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+
+    await screen.findByText("42");
+
+    expect(screen.queryByText(/panel\.recomputed/)).not.toBeInTheDocument();
   });
 
   it("renders the abstention line for a `null` value — never '0'", async () => {

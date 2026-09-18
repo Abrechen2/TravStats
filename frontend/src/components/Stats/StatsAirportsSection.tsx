@@ -2,6 +2,11 @@ import type { AirportStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
+import EvidenceTrigger from "./EvidenceTrigger";
+import { rankingKey } from "../../shared/evidence";
+
+/** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
+const ALL_TIME = { period: "allTime" as const };
 
 interface StatsAirportsSectionProps {
   airportStats: AirportStats | null;
@@ -65,11 +70,23 @@ export default function StatsAirportsSection({
           title={t("stats:airportStats.airportCount")}
           value={airportCount}
           description={t("stats:airportStats.airportCountDesc")}
+          evidence={{
+            kind: "metric",
+            key: "airportsVisitedCount",
+            scope: ALL_TIME,
+            renderedValue: airportCount,
+          }}
         />
         <StatCard
           title={t("stats:airportStats.countryCount")}
           value={countryCount}
           description={t("stats:airportStats.countryCountDesc")}
+          evidence={{
+            kind: "metric",
+            key: "flightCountriesVisitedCount",
+            scope: ALL_TIME,
+            renderedValue: countryCount,
+          }}
         />
         <StatCard
           title={t("stats:airportStats.continentCount")}
@@ -82,6 +99,12 @@ export default function StatsAirportsSection({
             </>
           }
           description={t("stats:airportStats.continentCountDesc", { total: continentTotal })}
+          evidence={{
+            kind: "metric",
+            key: "continentsVisitedCount",
+            scope: ALL_TIME,
+            renderedValue: continentCount,
+          }}
         />
       </div>
 
@@ -105,22 +128,34 @@ export default function StatsAirportsSection({
           ) : (
             <ol className="space-y-2">
               {topAirports.map((a, i) => (
-                <li key={a.code} className="flex items-center gap-3">
-                  <span
-                    className="text-sm font-bold w-6 text-right"
-                    style={{ color: "var(--text-muted)" }}
+                <li key={a.code}>
+                  <EvidenceTrigger
+                    kind="ranking"
+                    evidenceKey={rankingKey("airport", a.code)}
+                    scope={ALL_TIME}
+                    renderedValue={a.visits}
+                    label={`${a.code} ${a.name ?? ""}`.trim()}
+                    className="flex items-center gap-3"
                   >
-                    {i + 1}.
-                  </span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {a.code}
-                  </span>
-                  <span className="text-sm flex-1 truncate" style={{ color: "var(--text-muted)" }}>
-                    {a.name || "—"}
-                  </span>
-                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                    {t("stats:airportStats.visits", { count: a.visits })}
-                  </span>
+                    <span
+                      className="text-sm font-bold w-6 text-right"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {i + 1}.
+                    </span>
+                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                      {a.code}
+                    </span>
+                    <span
+                      className="text-sm flex-1 truncate"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {a.name || "—"}
+                    </span>
+                    <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                      {t("stats:airportStats.visits", { count: a.visits })}
+                    </span>
+                  </EvidenceTrigger>
                 </li>
               ))}
             </ol>
@@ -145,22 +180,31 @@ export default function StatsAirportsSection({
           ) : (
             <ol className="space-y-2">
               {topCountries.map((c, i) => (
-                <li key={c.country} className="flex items-center gap-3">
-                  <span
-                    className="text-sm font-bold w-6 text-right"
-                    style={{ color: "var(--text-muted)" }}
+                <li key={c.country}>
+                  <EvidenceTrigger
+                    kind="ranking"
+                    evidenceKey={rankingKey("country", c.country)}
+                    scope={ALL_TIME}
+                    renderedValue={c.count}
+                    label={c.country}
+                    className="flex items-center gap-3"
                   >
-                    {i + 1}.
-                  </span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {c.country}
-                  </span>
-                  <span
-                    className="text-sm ml-auto font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {t("stats:airportStats.flightsCount", { count: c.count })}
-                  </span>
+                    <span
+                      className="text-sm font-bold w-6 text-right"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {i + 1}.
+                    </span>
+                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                      {c.country}
+                    </span>
+                    <span
+                      className="text-sm ml-auto font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {t("stats:airportStats.flightsCount", { count: c.count })}
+                    </span>
+                  </EvidenceTrigger>
                 </li>
               ))}
             </ol>

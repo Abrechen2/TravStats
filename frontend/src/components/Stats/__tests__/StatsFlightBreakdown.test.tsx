@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -15,19 +16,23 @@ import StatsFlightBreakdown from "../StatsFlightBreakdown";
 // label was "", drawn as an empty row in "Top Fluggesellschaften".
 describe("StatsFlightBreakdown — airlines", () => {
   it("renders no row for flights without an airline, and says how many were left out", () => {
+    // The "without airline" note is a real `<button>` since Task 9, which
+    // needs `useSearchParams`; so are the airport/aircraft rows below it.
     render(
-      <StatsFlightBreakdown
-        sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
-        flightsWithoutAirline={4}
-        sortedAirports={[]}
-        seatClassStats={{}}
-        sortedAircraft={[]}
-        statusStats={{}}
-        boardingGroupStats={{}}
-        longestFlight={undefined}
-        shortestFlight={undefined}
-        totalFlights={7}
-      />
+      <MemoryRouter>
+        <StatsFlightBreakdown
+          sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
+          flightsWithoutAirline={4}
+          sortedAirports={[]}
+          seatClassStats={{}}
+          sortedAircraft={[]}
+          statusStats={{}}
+          boardingGroupStats={{}}
+          longestFlight={undefined}
+          shortestFlight={undefined}
+          totalFlights={7}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("Lufthansa")).toBeInTheDocument();
@@ -36,18 +41,20 @@ describe("StatsFlightBreakdown — airlines", () => {
 
   it("says nothing when every flight names its airline", () => {
     render(
-      <StatsFlightBreakdown
-        sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
-        flightsWithoutAirline={0}
-        sortedAirports={[]}
-        seatClassStats={{}}
-        sortedAircraft={[]}
-        statusStats={{}}
-        boardingGroupStats={{}}
-        longestFlight={undefined}
-        shortestFlight={undefined}
-        totalFlights={3}
-      />
+      <MemoryRouter>
+        <StatsFlightBreakdown
+          sortedAirlines={[["Lufthansa", { count: 3, totalDuration: 6, flights: [] }]]}
+          flightsWithoutAirline={0}
+          sortedAirports={[]}
+          seatClassStats={{}}
+          sortedAircraft={[]}
+          statusStats={{}}
+          boardingGroupStats={{}}
+          longestFlight={undefined}
+          shortestFlight={undefined}
+          totalFlights={3}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.queryByText(/withoutAirline/)).toBeNull();

@@ -8,6 +8,8 @@ import {
   getDistanceLabel,
 } from "../../lib/units";
 import TrendDelta from "./TrendDelta";
+import EvidenceTrigger from "./EvidenceTrigger";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
 
 interface FlightYearSummaryCardsProps {
   selectedYear: number | null;
@@ -35,6 +37,12 @@ export default function FlightYearSummaryCards({
   const { t, i18n } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
   const formatHours = (minutes: number): string => formatHoursValue(minutes / 60, i18n.language);
+  // `year`-scoped measures need the year itself, not just the "year" period
+  // kind — an evidence request without it is a request the resolver cannot
+  // answer. `selectedYear` is non-null whenever this block renders anything
+  // (`yearSummary !== null` implies it — see `useUrlStatsPeriod`).
+  const yearScope: EvidenceScopeParams | undefined =
+    selectedYear !== null ? { period: "year", year: selectedYear } : undefined;
 
   return (
     <>
@@ -66,7 +74,12 @@ export default function FlightYearSummaryCards({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Total Flights */}
-            <div
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="yearFlightCount"
+              scope={yearScope}
+              renderedValue={yearSummary.totalFlights}
+              label={t("stats:overview.totalFlights")}
               className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
@@ -94,10 +107,15 @@ export default function FlightYearSummaryCards({
                   {compareSummary.totalFlights} ({compareYear})
                 </p>
               )}
-            </div>
+            </EvidenceTrigger>
 
             {/* Total Distance */}
-            <div
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="yearDistanceKm"
+              scope={yearScope}
+              renderedValue={yearSummary.totalDistance}
+              label={t("stats:overview.totalDistance")}
               className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
@@ -129,10 +147,15 @@ export default function FlightYearSummaryCards({
                   {getDistanceLabel(units.distanceUnit, t)} ({compareYear})
                 </p>
               )}
-            </div>
+            </EvidenceTrigger>
 
             {/* Total Flight Time */}
-            <div
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="yearFlightTimeMinutes"
+              scope={yearScope}
+              renderedValue={yearSummary.totalFlightTime}
+              label={t("stats:overview.totalFlightTime")}
               className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
@@ -162,10 +185,15 @@ export default function FlightYearSummaryCards({
                   {compareYear})
                 </p>
               )}
-            </div>
+            </EvidenceTrigger>
 
             {/* Total Cost */}
-            <div
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="yearTotalCost"
+              scope={yearScope}
+              renderedValue={yearSummary.totalCost}
+              label={t("stats:overview.totalCost")}
               className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
@@ -206,7 +234,7 @@ export default function FlightYearSummaryCards({
                   ({compareYear})
                 </p>
               )}
-            </div>
+            </EvidenceTrigger>
           </div>
         </>
       )}

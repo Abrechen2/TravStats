@@ -27,6 +27,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
 import { FlightCertificate, type FlightCertificateStats } from "../components/FlightCertificate";
+import FlightReportActions from "../components/Stats/FlightReportActions";
+import EvidencePanel from "../components/evidence/EvidencePanel";
 import AirlineRankingCard from "../components/Stats/AirlineRankingCard";
 import AircraftRankingCard from "../components/Stats/AircraftRankingCard";
 import CountryDistributionCard from "../components/Stats/CountryDistributionCard";
@@ -593,6 +595,10 @@ export default function AdvancedStatsPage(): JSX.Element {
   return (
     <AppShell width="list">
       <div>
+        {/* Mounted ONCE for the whole page (Task 9) — every tile below opens
+            it by writing `?evidence=<kind>:<key>`, never by rendering a
+            second instance. */}
+        <EvidencePanel />
         <StatsTabStrip
           tabs={visibleStatsTabs(enabled, placesAccess)}
           active={filter}
@@ -636,29 +642,12 @@ export default function AdvancedStatsPage(): JSX.Element {
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowCertificate(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
-                style={{
-                  backgroundColor: "var(--color-primary)",
-                  color: "#ffffff",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                ✈ {t("stats:certificate.generate")}
-              </button>
-              <button
-                onClick={() => {
-                  void handleYearReport();
-                }}
-                disabled={generatingPdf || !selectedYear}
-                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
-              >
-                {generatingPdf ? t("stats:yearReport.generating") : t("stats:yearReport.btn")}
-              </button>
-            </div>
+            <FlightReportActions
+              onGenerateCertificate={() => setShowCertificate(true)}
+              onYearReport={() => void handleYearReport()}
+              generatingPdf={generatingPdf}
+              yearReportDisabled={generatingPdf || !selectedYear}
+            />
           )}
 
           {/* Certificate Modal */}

@@ -6,6 +6,7 @@
     "abstention": "This figure cannot currently be determined.",
     "empty": "No entries.",
     "loadMore": "Load more",
+    "recomputed": "This figure has since been recomputed: {{previous}} → {{current}}.",
     "scope": {
       "allTime": "All time",
       "year": "Year {{year}}",

@@ -724,6 +724,14 @@ export interface AirlineRankingItem {
    *  has carried it since 2.5.0 — this side simply never declared it, so the
    *  card could not render what the endpoint was already sending. */
   iata?: string;
+  /**
+   * The canonical `airlineGroupKey` identity ("iata:LH", "name:some carrier")
+   * this row folds — always present. The evidence panel addresses a ranking
+   * row by this, never by `airline` (a display label): the API has carried
+   * it since the evidence resolvers landed (`routes/stats.ts`), this side
+   * simply never declared it either.
+   */
+  key: string;
 }
 
 export interface AirlineRankingResponse {

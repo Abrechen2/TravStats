@@ -51,6 +51,12 @@ export default function StatsDistanceSection({
             maximumFractionDigits: 0,
           })}
           description={getDistanceLabel(units.distanceUnit, t)}
+          evidence={{
+            kind: "metric",
+            key: "distanceKmTotal",
+            scope: { period: "allTime" },
+            renderedValue: totalDistance,
+          }}
         />
         <StatCard
           title={t("stats:distance.avgPerFlight")}

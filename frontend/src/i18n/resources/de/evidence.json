@@ -6,6 +6,7 @@
     "abstention": "Diese Zahl lässt sich derzeit nicht ermitteln.",
     "empty": "Keine Einträge.",
     "loadMore": "Weitere laden",
+    "recomputed": "Diese Zahl wurde inzwischen neu berechnet: {{previous}} → {{current}}.",
     "scope": {
       "allTime": "Gesamter Zeitraum",
       "year": "Jahr {{year}}",

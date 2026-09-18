@@ -3,6 +3,8 @@ import { statsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { CountryStat } from "../../types";
 import { logger } from "../../lib/logger";
+import EvidenceTrigger from "./EvidenceTrigger";
+import { rankingKey } from "../../shared/evidence";
 
 const MAX_ROWS = 15;
 
@@ -34,7 +36,15 @@ export default function CountryDistributionCard(): JSX.Element {
       <h3 className="text-lg font-semibold">{t("stats:countryDist.title")}</h3>
       <div className="space-y-1.5">
         {countries.map((row) => (
-          <div key={row.country} className="flex items-center gap-3">
+          <EvidenceTrigger
+            key={row.country}
+            kind="ranking"
+            evidenceKey={rankingKey("country", row.country)}
+            scope={{ period: "allTime" }}
+            renderedValue={row.count}
+            label={row.country}
+            className="flex items-center gap-3"
+          >
             <div
               className="flex-1 rounded-full h-5 overflow-hidden"
               style={{ background: "var(--bg-elevated)" }}
@@ -48,7 +58,7 @@ export default function CountryDistributionCard(): JSX.Element {
               {row.country}
             </span>
             <span className="w-8 text-right text-sm font-semibold">{row.count}</span>
-          </div>
+          </EvidenceTrigger>
         ))}
       </div>
     </div>

@@ -1,4 +1,14 @@
 import type { JSX, ReactNode } from "react";
+import EvidenceTrigger from "./EvidenceTrigger";
+import type { EvidenceKind } from "../../shared/evidence";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
+
+interface StatCardEvidence {
+  kind: EvidenceKind;
+  key: string;
+  scope?: EvidenceScopeParams;
+  renderedValue: number | null;
+}
 
 interface StatCardProps {
   title: string;
@@ -14,6 +24,8 @@ interface StatCardProps {
    */
   accent?: string;
   title2?: never;
+  /** Present only when this card's number is a served evidence measure (Task 9) — omitted, the card stays a plain `<div>`, exactly as before. */
+  evidence?: StatCardEvidence;
 }
 
 const VALUE_CLASS: Record<NonNullable<StatCardProps["valueSize"]>, string> = {
@@ -33,16 +45,16 @@ export default function StatCard({
   footnote,
   valueSize = "lg",
   accent = "var(--accent)",
+  evidence,
 }: StatCardProps): JSX.Element {
-  return (
-    <div
-      className="rounded-lg border p-6 shadow-md"
-      style={{
-        background: "var(--bg-elevated)",
-        borderColor: "var(--color-border)",
-        color: "var(--text-primary)",
-      }}
-    >
+  const className = "rounded-lg border p-6 shadow-md";
+  const style = {
+    background: "var(--bg-elevated)",
+    borderColor: "var(--color-border)",
+    color: "var(--text-primary)",
+  };
+  const body = (
+    <>
       <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
         {title}
       </h3>
@@ -51,6 +63,28 @@ export default function StatCard({
       </p>
       <p className="text-sm opacity-75">{description}</p>
       {footnote && <p className="mt-2 text-xs opacity-60">{footnote}</p>}
+    </>
+  );
+
+  if (evidence) {
+    return (
+      <EvidenceTrigger
+        kind={evidence.kind}
+        evidenceKey={evidence.key}
+        scope={evidence.scope}
+        renderedValue={evidence.renderedValue}
+        label={title}
+        className={className}
+        style={style}
+      >
+        {body}
+      </EvidenceTrigger>
+    );
+  }
+
+  return (
+    <div className={className} style={style}>
+      {body}
     </div>
   );
 }
