@@ -131,7 +131,8 @@ interface EvidenceMeasure {
   /** i18n KEY plus values — never a server-localised string. */
   label: { key: string; values?: Record<string, string | number> };
   unit: string;
-  value: number;
+  /** `null` when the measure cannot be derived — NOT the same as 0. */
+  value: number | null;
   scope: EvidenceScope;
   /** `ratio` only: both sides, so the percentage can be explained. */
   numerator?: number;
