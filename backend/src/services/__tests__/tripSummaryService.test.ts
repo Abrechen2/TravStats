@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import {
   briefFromTrip,
+  briefHasVoice,
   buildSystemPrompt,
   compactBrief,
   routeLine,
@@ -70,6 +71,33 @@ describe("tripSummaryService", () => {
       expect(buildSystemPrompt("de")).toMatch(/"journal"/);
       expect(buildSystemPrompt("en")).toMatch(/"notes"/);
       expect(buildSystemPrompt("en")).toMatch(/"journal"/);
+    });
+
+    // Measured 2026-09-18 against gemma3:12b on the 2.7.0-beta.1 build: on a
+    // trip with no notes and no journal, the model invented both and labelled
+    // them as quotes (`*notes: Der Flug war überraschend ruhig …*`), plus a
+    // hotel the trip does not have. Given a real journal entry the same build
+    // wrote a clean summary — so the absence is the trigger, and the prompt
+    // must stop naming fields the brief cannot carry.
+    it("does not name notes or journal when the trip has neither", () => {
+      for (const language of ["de", "en"] as const) {
+        const prompt = buildSystemPrompt(language, false);
+        expect(prompt).not.toMatch(/"notes"/);
+        expect(prompt).not.toMatch(/"journal"/);
+        // The rest of the instruction survives — this is a removal of two
+        // phrases, not a different prompt.
+        expect(prompt).toMatch(/"perspective"/);
+        expect(prompt).toMatch(/"completed"/);
+      }
+    });
+
+    // The user prompt asked for three paragraphs while rules 1 and 9 asked for
+    // two. The model settled it differently from run to run.
+    it("asks for one shape only — the rules carry the paragraph count, the user prompt does not", () => {
+      for (const language of ["de", "en"] as const) {
+        expect(buildUserPrompt(language, "{}")).not.toMatch(/3-|3 /);
+        expect(buildSystemPrompt(language)).toMatch(/(Zwei Absätze|Two paragraphs)/);
+      }
     });
 
     // Measured 2026-09-17 on gemma3:12b: "You took a business trip" in English
@@ -150,6 +178,100 @@ describe("tripSummaryService", () => {
           checkOut: "2024-05-03",
         },
       ]);
+    });
+  });
+
+  // Which prompt a trip gets hangs on this one question, so it is asked in
+  // every place the traveller can actually write something — not just the two
+  // that gave the defect its name.
+  describe("briefHasVoice", () => {
+    const silent = (): SummaryBrief => ({
+      name: "Trip",
+      perspective: "I",
+      nights: 2,
+      status: "completed",
+      category: null,
+      startDate: "2024-05-01",
+      endDate: "2024-05-03",
+      origin: null,
+      destination: "Porto",
+      countries: [],
+      companions: [],
+      tags: [],
+      flights: [],
+      cruises: [],
+      stays: [],
+      places: [],
+      stops: [],
+      journal: [],
+      notes: null,
+    });
+
+    it("is false for a trip nobody wrote anything on", () => {
+      expect(briefHasVoice(silent())).toBe(false);
+    });
+
+    it("is true for trip notes, a journal entry, a stay note or a place note", () => {
+      expect(briefHasVoice({ ...silent(), notes: "Schön war es." })).toBe(true);
+      expect(
+        briefHasVoice({
+          ...silent(),
+          journal: [{ date: "2024-05-01", title: null, body: "Angekommen." }],
+        })
+      ).toBe(true);
+      expect(
+        briefHasVoice({
+          ...silent(),
+          stays: [
+            {
+              lodging: "Casa",
+              nights: 2,
+              city: "Porto",
+              country: null,
+              checkIn: null,
+              checkOut: null,
+              room: null,
+              notes: "Laut, aber zentral.",
+            },
+          ],
+        })
+      ).toBe(true);
+      expect(
+        briefHasVoice({
+          ...silent(),
+          places: [
+            {
+              name: "Livraria Lello",
+              category: "landmark",
+              city: null,
+              country: null,
+              date: null,
+              notes: "Voll.",
+            },
+          ],
+        })
+      ).toBe(true);
+    });
+
+    it("stays false when the only entries carry no words of their own", () => {
+      expect(
+        briefHasVoice({
+          ...silent(),
+          stays: [
+            {
+              lodging: "Casa",
+              nights: 2,
+              city: "Porto",
+              country: null,
+              checkIn: null,
+              checkOut: null,
+              room: null,
+              notes: null,
+            },
+          ],
+          flights: [{ from: "FRA", to: "OPO", date: "2024-05-01" }],
+        })
+      ).toBe(false);
     });
   });
 

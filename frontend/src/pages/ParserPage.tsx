@@ -57,20 +57,23 @@ export default function ParserPage(): JSX.Element {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {t("parser:title")}
             </h1>
-            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
-              {t("parser:beta")}
-            </span>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{t("parser:description")}</p>
         </div>
       </header>
 
+      {/*
+       * The page carried a "Beta" badge and a notice saying only LLM parsing
+       * was tested and templates were experimental. Both were hardcoded — tied
+       * to no gate — so the beta exit (owner, 2026-09-17) left them standing,
+       * and by 2026-09-18 the notice claimed the opposite of what was measured:
+       * templates read 108 of 108 lodging mails and 31 of 31 flight mails with
+       * no model at all, and `admin_settings.parser_order` defaults to
+       * `template_first` for that reason. Seen on the 2.7.0-beta.1 build, where
+       * the admin page recommended templates while this page called them
+       * experimental.
+       */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Beta notice */}
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
-          <p className="text-sm text-amber-800 dark:text-amber-300">{t("parser:betaNotice")}</p>
-        </div>
-
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
           <nav className="flex gap-6 sm:gap-8 overflow-x-auto overflow-y-hidden whitespace-nowrap">

@@ -319,7 +319,7 @@
       "items": {
         "resourceUsage": "LLM-Parsing (Ollama) benötigt einen konfigurierten Ollama-Server",
         "technicalKnowledge": "Erfordert technisches Verständnis",
-        "unexpectedResults": "Template- und Regex-Parser sind experimentell (Beta)",
+        "unexpectedResults": "Eine selbst abgeleitete Vorlage ist nur so gut wie die Beispiel-Mail, aus der sie stammt",
         "longTraining": "Eigene Templates erfordern Kenntnis des Email-Formats der Airline"
       }
     },
