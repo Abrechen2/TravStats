@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { achievementsApi } from "../lib/api";
+import AchievementDetailModal from "../components/Achievements/AchievementDetailModal";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
 import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
@@ -45,6 +46,8 @@ export default function AchievementsPage(): JSX.Element {
   const { addToast } = useToastStore();
   const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  /** The card whose detail dialog is open, or null (#330). */
+  const [selected, setSelected] = useState<Achievement | null>(null);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -552,6 +555,24 @@ export default function AchievementsPage(): JSX.Element {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.04, duration: 0.2 }}
                             whileHover={achievement.isUnlocked ? { scale: 1.04 } : {}}
+                            // The pointer and the hover zoom were here before
+                            // anything answered them (#330): a tester clicked
+                            // and nothing happened. The owner's call was to
+                            // keep them and make them true, not to take them
+                            // away — so the card opens its own detail dialog.
+                            // `role`/`tabIndex`/Enter make it reachable by
+                            // keyboard as well as by mouse; a div that only
+                            // answers a click is a control half the readers
+                            // cannot use.
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelected(achievement)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelected(achievement);
+                              }
+                            }}
                             className="relative rounded-xl overflow-hidden cursor-pointer"
                             style={{
                               background: "var(--bg-surface)",
@@ -684,6 +705,7 @@ export default function AchievementsPage(): JSX.Element {
           </div>
         </div>
       </div>
+      <AchievementDetailModal achievement={selected} onClose={() => setSelected(null)} />
     </PageTransition>
   );
 }
