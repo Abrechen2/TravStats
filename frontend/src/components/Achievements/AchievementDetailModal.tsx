@@ -14,8 +14,14 @@ import type { Achievement } from "../../types";
  * the scope (2026-09-17) is what this shows: the badge, the progress, and the
  * date it was unlocked. Deliberately NOT which flights or stays earned it —
  * the engine stores `progress` and `requirement`, not the rows behind them, so
- * naming them would need an endpoint that does not exist and a claim this
- * dialog cannot back.
+ * naming them here would be a claim this dialog cannot back.
+ *
+ * That is a statement about the data, not a verdict on the feature, and it has
+ * a date on it: the evidence endpoint is being built on `dev/design-system`
+ * (confirmed by that session on 2026-09-18). When it lands, showing what
+ * earned an achievement is a WIRING job in here, not a new surface — pass the
+ * rows in and render them below the progress. Whoever does it should not read
+ * the paragraph above as a decision against it.
  *
  * A hidden achievement that is still locked stays hidden in here too. The
  * grid draws it as "???" on purpose; a dialog that spelled it out would be a
