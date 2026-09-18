@@ -111,9 +111,33 @@ router.get(
   }
 );
 
-// Get airport by IATA/ICAO code - with automatic external lookup and DB save (rate limited)
+/**
+ * One airport by IATA/ICAO code — and, on a miss, an external lookup that
+ * INSERTS a row into the global catalogue every account reads.
+ *
+ * That is why it is no longer public, unlike `/search` above (which only reads,
+ * and is unauthenticated so the signup-flow autocomplete works before anyone
+ * has credentials). Anyone at all could make this instance call a provider and
+ * then write what came back into the catalogue (security audit of 2026-09-19,
+ * finding 7). Every caller in the frontend already runs inside an authenticated
+ * page, and `AirportAutocomplete` catches a failure here and falls back to the
+ * search results, so nothing visible depends on the old openness.
+ *
+ * `rejectDemoWrites` beside it, the same guard the six catalogue routers carry.
+ * **It does NOT refuse this route**, and that is worth knowing rather than
+ * assuming: it keys on the HTTP method and lets every GET through, so the
+ * shared demo account can still reach the insert. The audit records that as its
+ * own finding 8 — "a future mutating GET would pass" — and this is that GET,
+ * present rather than future. The guard is mounted because the ruling for this
+ * change said so and because it is what makes the route refuse should it ever
+ * gain a mutating verb; closing the GET itself is a separate decision, since
+ * refusing it would take the external lookup away from the demo's own flight
+ * form. `airports.demoWrites.test.ts` pins the behaviour as it actually is.
+ */
 router.get(
   "/:code",
+  authenticate,
+  rejectDemoWrites,
   airportSearchLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
