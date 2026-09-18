@@ -111,20 +111,35 @@ async function readStoredAirport(upperCode: string): Promise<AirportData | null>
 }
 
 /**
+ * Is this code already ours? Cache first, then the table — and the table read
+ * is not optional.
+ *
+ * `getCachedAirport` NEGATIVE-caches a miss for five minutes, so a row seeded,
+ * imported or created by another request in that window is invisible to the
+ * cache alone. The re-read is what catches it, and it has to be here rather
+ * than inlined at each caller: `findOrCreateAirport` below would otherwise
+ * fetch and insert a row the table already holds, and the demo branch of
+ * `GET /airports/:code` (routes/airports.ts) would answer 404 for an airport
+ * every other account can see. Both ask the same question, so both ask it
+ * through this one function.
+ *
+ * Never writes and never reaches the network — that is the whole difference
+ * from `findOrCreateAirport`.
+ */
+export async function findExistingAirport(code: string): Promise<AirportData | null> {
+  const upperCode = code.toUpperCase();
+  return (await getCachedAirport(upperCode)) ?? (await readStoredAirport(upperCode));
+}
+
+/**
  * Sucht einen Flughafen in der lokalen DB oder lädt ihn von externen Quellen
  */
 export async function findOrCreateAirport(code: string): Promise<AirportData | null> {
   const upperCode = code.toUpperCase();
 
-  // 1. Try cache first
-  const cachedAirport = await getCachedAirport(upperCode);
-  if (cachedAirport) {
-    return cachedAirport;
-  }
-
-  // 2. If not in cache, check database (cache will be populated by getCachedAirport if found)
-  // This handles the case where cache returned null but airport might exist
-  const existingAirport = await readStoredAirport(upperCode);
+  // 1. Cache, then the table — see `findExistingAirport` for why the second
+  //    read is not redundant with the first.
+  const existingAirport = await findExistingAirport(upperCode);
 
   if (existingAirport) {
     return existingAirport;

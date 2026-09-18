@@ -30,7 +30,11 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { documentPath } from "../../services/documents/documentStore";
+import {
+  DOCUMENT_DIR,
+  documentPath,
+  ensureDocumentDir,
+} from "../../services/documents/documentStore";
 import { createDocument } from "../../services/documents/documentService";
 
 /**
@@ -55,7 +59,9 @@ describe("parse routes keep their originals", () => {
   const stamp = Date.now();
   let userId: string;
   let strangerId: string;
+  let demoId: string;
   let cookie: string;
+  let demoCookie: string;
 
   beforeAll(async () => {
     const passwordHash = await hashPassword("test-password");
@@ -64,7 +70,11 @@ describe("parse routes keep their originals", () => {
     strangerId = (
       await prisma.user.create({ data: { username: `parse-keep-other-${stamp}`, passwordHash } })
     ).id;
+    await prisma.user.deleteMany({ where: { username: "demo" } });
+    demoId = (await prisma.user.create({ data: { username: "demo", passwordHash, isDemo: true } }))
+      .id;
     cookie = `auth_token=${generateToken(userId)}`;
+    demoCookie = `auth_token=${generateToken(demoId)}`;
   });
 
   beforeEach(() => {
@@ -78,10 +88,10 @@ describe("parse routes keep their originals", () => {
 
   afterAll(async () => {
     const rows = await prisma.document.findMany({
-      where: { userId: { in: [userId, strangerId] } },
+      where: { userId: { in: [userId, strangerId, demoId] } },
     });
     for (const row of rows) fs.rmSync(documentPath(row.storedName), { force: true });
-    await prisma.user.deleteMany({ where: { id: { in: [userId, strangerId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [userId, strangerId, demoId] } } });
   });
 
   it("keeps a pasted mail as text and records what the parse made of it", async () => {
@@ -194,6 +204,49 @@ describe("parse routes keep their originals", () => {
       where: { id: first.body.documentId },
     });
     expect(document).toMatchObject({ format: "pdf", source: "parse" });
+  });
+
+  /**
+   * Retention is the same destination as `POST /documents`, reached through a
+   * different door. That route refuses the shared demo account outright (the
+   * Critical of the cold security audit of 2026-09-19); `retain: true` on a
+   * parse route wrote the identical row and the identical bytes under
+   * `uploads/documents/` for it, and an UNFILED document — which a parse
+   * retention always is — outlives the 04:00 reseed until the wipe catches it,
+   * readable in the meantime by the next visitor through
+   * `GET /documents/:id/file`.
+   *
+   * The routes themselves stay OPEN: the template parser is what a visitor came
+   * to try, and it costs nothing. So `retain` is IGNORED rather than refused,
+   * which is the answer `recordParse` already gives when retention was not
+   * asked for — the reply simply carries no `documentId`.
+   */
+  it("ignores retain for the shared demo account — no row, no bytes, and the parse still answers", async () => {
+    ensureDocumentDir();
+    const before = fs.readdirSync(DOCUMENT_DIR).sort();
+
+    const res = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Cookie", demoCookie)
+      .send({ pdfBase64: PDF(`demo-${stamp}`).toString("base64"), retain: true });
+
+    // The parse itself is untouched — this is not a refusal.
+    expect(res.status).toBe(200);
+    expect(res.body.documentId).toBeUndefined();
+    expect(await prisma.document.count({ where: { userId: demoId } })).toBe(0);
+    expect(fs.readdirSync(DOCUMENT_DIR).sort()).toEqual(before);
+  });
+
+  it("still keeps the same input for a normal account", async () => {
+    const res = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Cookie", cookie)
+      .send({ pdfBase64: PDF(`normal-retain-${stamp}`).toString("base64"), retain: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.documentId).toBeDefined();
+    const kept = await prisma.document.findUniqueOrThrow({ where: { id: res.body.documentId } });
+    expect(kept).toMatchObject({ userId, format: "pdf", source: "parse" });
   });
 
   it("parses a kept PDF by id — the path for originals too large for a JSON body", async () => {

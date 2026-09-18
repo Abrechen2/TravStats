@@ -61,6 +61,12 @@ describe("the shared demo account never reaches the operator's Ollama", () => {
   let adminSettingsId: number | null = null;
   let previousOllamaUrl: string | null = null;
   let previousOllamaModel: string | null = null;
+  /** Whether THIS suite created the row. If it did, nulling its columns in
+   *  `afterAll` would leave an `adminSettings` row behind that the database did
+   *  not have before — enough on its own to change what
+   *  `getAdminParserSettings` returns for every suite that runs after, since it
+   *  answers `null` only when no row exists at all. */
+  let createdAdminSettings = false;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: { in: ["demo", "llmUser"] } } });
@@ -91,16 +97,21 @@ describe("the shared demo account never reaches the operator's Ollama", () => {
         data: { ollamaUrl: "http://127.0.0.1:9", ollamaModel: "audit-model" },
       });
       adminSettingsId = created.id;
+      createdAdminSettings = true;
     }
   });
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { id: { in: [demoId, userId] } } });
     if (adminSettingsId !== null) {
-      await prisma.adminSettings.update({
-        where: { id: adminSettingsId },
-        data: { ollamaUrl: previousOllamaUrl, ollamaModel: previousOllamaModel },
-      });
+      if (createdAdminSettings) {
+        await prisma.adminSettings.delete({ where: { id: adminSettingsId } });
+      } else {
+        await prisma.adminSettings.update({
+          where: { id: adminSettingsId },
+          data: { ollamaUrl: previousOllamaUrl, ollamaModel: previousOllamaModel },
+        });
+      }
     }
   });
 

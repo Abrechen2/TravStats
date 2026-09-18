@@ -61,6 +61,8 @@ describe("GET /api/v1/airports/:code — authentication and the demo write path"
   const UNKNOWN_FOR_DEMO = "QQY";
   /** Never in the catalogue — what a normal account still creates. */
   const UNKNOWN_FOR_USER = "QQZ";
+  /** Asked for once while absent, then seeded — the stale-negative-cache case. */
+  const SEEDED_AFTER_MISS = "QQX";
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: { in: ["demo", "airportCodeUser"] } } });
@@ -75,7 +77,7 @@ describe("GET /api/v1/airports/:code — authentication and the demo write path"
     userCookie = `auth_token=${generateToken(user.id)}`;
 
     await prisma.airport.deleteMany({
-      where: { iata: { in: [KNOWN, UNKNOWN_FOR_DEMO, UNKNOWN_FOR_USER] } },
+      where: { iata: { in: [KNOWN, UNKNOWN_FOR_DEMO, UNKNOWN_FOR_USER, SEEDED_AFTER_MISS] } },
     });
     await prisma.airport.create({
       data: { iata: KNOWN, name: "Audit Test Field", lat: 0, lon: 0 },
@@ -85,7 +87,7 @@ describe("GET /api/v1/airports/:code — authentication and the demo write path"
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
     await prisma.airport.deleteMany({
-      where: { iata: { in: [KNOWN, UNKNOWN_FOR_DEMO, UNKNOWN_FOR_USER] } },
+      where: { iata: { in: [KNOWN, UNKNOWN_FOR_DEMO, UNKNOWN_FOR_USER, SEEDED_AFTER_MISS] } },
     });
     clearAirportCache();
   });
@@ -142,6 +144,48 @@ describe("GET /api/v1/airports/:code — authentication and the demo write path"
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await prisma.airport.count()).toBe(before);
     expect(await prisma.airport.findFirst({ where: { iata: UNKNOWN_FOR_DEMO } })).toBeNull();
+  });
+
+  it("reads a row seeded after a miss, without the cache having to be cleared", async () => {
+    /**
+     * A GUARD, not a reproduction — and the difference was measured rather than
+     * assumed.
+     *
+     * `getCachedAirport` WRITES a five-minute null entry on a miss
+     * (`airportCache.ts`, "Cache null result for shorter time…"), which is why
+     * `findOrCreateAirport` re-reads the table straight after it. But the entry
+     * is never honoured: the next call does `cache.get<AirportData>(key)` and
+     * tests `if (cached)`, and a stored `null` is falsy, so the database is
+     * queried again anyway. Probed directly on 2026-09-19 — a code missed, then
+     * seeded, then asked for again with no cache clear, came back with the row.
+     *
+     * So this case passes on the cache-only version too, and it is kept for two
+     * reasons: it fails the moment that `if (cached)` becomes a `cache.has()`
+     * (the negative cache would then work as it was plainly written to, and the
+     * demo would answer 404 for five minutes on an airport every other account
+     * can see), and it pins that this branch answers the same question
+     * `findOrCreateAirport` does. Both now ask it through `findExistingAirport`.
+     *
+     * No `clearAirportCache()` between the two requests, on purpose: the stale
+     * negative entry is the thing under test.
+     */
+    fetchSpy.mockResolvedValue({ ok: false } as unknown as Response);
+
+    const miss = await request(app)
+      .get(`/api/v1/airports/${SEEDED_AFTER_MISS}`)
+      .set("Cookie", demoCookie);
+    expect(miss.status).toBe(404);
+
+    // Straight into the table, the way a seed or another request would.
+    await prisma.airport.create({
+      data: { iata: SEEDED_AFTER_MISS, name: "Seeded After Miss", lat: 3.5, lon: 4.5 },
+    });
+
+    const res = await request(app)
+      .get(`/api/v1/airports/${SEEDED_AFTER_MISS}`)
+      .set("Cookie", demoCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.iata).toBe(SEEDED_AFTER_MISS);
   });
 
   it("still creates on a miss for a normal account — the catalogue is not frozen, only the demo is", async () => {

@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import {
+  findExistingAirport,
   findOrCreateAirport,
   findNearestAirport,
   enrichAirportData,
@@ -10,7 +11,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { airportSearchBurstLimiter, airportSearchLimiter } from "../middleware/rateLimit";
 import { createAirportSchema } from "../schemas/airportData";
 import { deriveTimezone } from "../services/airportLookup";
-import { getCachedAirport, invalidateAirportCache } from "../services/airportCache";
+import { invalidateAirportCache } from "../services/airportCache";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { rejectDemoWrites } from "../middleware/demoGuard";
@@ -165,7 +166,12 @@ router.get(
        * results on a failure here.
        */
       if (req.userId && (await isSharedDemoUser(req.userId))) {
-        const known = await getCachedAirport(code.toUpperCase());
+        // `findExistingAirport`, not `getCachedAirport`: the cache keeps a miss
+        // for five minutes, so a code looked up once before it was seeded would
+        // read 404 for the demo while every other account saw the airport.
+        // That helper is the same cache-then-table pair `findOrCreateAirport`
+        // uses, so the two can never disagree about what "already ours" means.
+        const known = await findExistingAirport(code);
         if (!known) {
           return res.status(404).json({ error: "Airport not found" });
         }
