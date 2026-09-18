@@ -2,7 +2,10 @@ import { z } from "./zod";
 import type {
   Aggregation,
   EvidenceDomain,
+  EvidenceEntry as SharedEvidenceEntry,
   EvidenceKind,
+  EvidenceMeasure as SharedEvidenceMeasure,
+  EvidenceResponse as SharedEvidenceResponse,
   EvidenceScope,
   UnattributedReason,
 } from "../shared/evidence";
@@ -141,6 +144,27 @@ export type EvidenceMeasure = z.infer<typeof evidenceMeasureSchema>;
 export type EvidenceEntry = z.infer<typeof evidenceEntrySchema>;
 export type EvidenceResponse = z.infer<typeof evidenceResponseSchema>;
 
+/**
+ * These three types are declared TWICE on purpose (here, and as interfaces
+ * in `shared/evidence.ts`) — the frontend cannot import a Zod schema, so
+ * the shared module has to keep stating the shape for its mirror, while
+ * this file's `z.infer` types are what the backend actually runs against.
+ * Two declarations of one payload drift the first time a field is added
+ * (the exact failure `Aggregation` used to have, fixed one commit before
+ * this one) unless something other than a reader catches it. `Exact` turns
+ * that drift into a `tsc --noEmit` failure: a field added here and
+ * forgotten in `shared/evidence.ts` is a payload the frontend's type says
+ * does not exist, and the reverse is a promise the backend never keeps —
+ * either direction fails one of these three lines.
+ */
+type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+const _measureMatchesContract: Exact<EvidenceMeasure, SharedEvidenceMeasure> = true;
+const _entryMatchesContract: Exact<EvidenceEntry, SharedEvidenceEntry> = true;
+const _responseMatchesContract: Exact<EvidenceResponse, SharedEvidenceResponse> = true;
+void _measureMatchesContract;
+void _entryMatchesContract;
+void _responseMatchesContract;
+
 /** Path params: `/evidence/:kind/:key`. An unknown `kind` is a 400 — the frontend never builds one. */
 export const evidenceParamsSchema = z.object({
   kind: evidenceKindSchema,
@@ -148,16 +172,31 @@ export const evidenceParamsSchema = z.object({
 });
 export type EvidenceParams = z.infer<typeof evidenceParamsSchema>;
 
+/** The first plausible year a logged trip could carry — commercial aviation's own start. */
+const FIRST_PLAUSIBLE_TRAVEL_YEAR = 1900;
+
 /**
  * Query params. `domains` arrives comma-separated (`flight,cruise`), the
  * same convention `routes/countryFlags.ts` uses for its `codes` list.
  * `year` is required exactly when `period=year` — checked with `.refine`
  * because Zod's own unions can't cross-validate two sibling fields.
+ *
+ * `year` is bounded rather than a bare `int()`: unbounded, `?period=year&
+ * year=999999` passed validation and handed every resolver a year that
+ * cannot exist to reconcile against, instead of failing at the boundary
+ * where the mistake actually is. The upper bound is "next year", not a
+ * fixed far-future constant, so a panel opened in December for a still-
+ * forming year keeps working without this file ever needing a bump.
  */
 export const evidenceQuerySchema = z
   .object({
     period: z.enum(["allTime", "year", "rolling12m"]).default("allTime"),
-    year: z.coerce.number().int().optional(),
+    year: z.coerce
+      .number()
+      .int()
+      .min(FIRST_PLAUSIBLE_TRAVEL_YEAR)
+      .max(new Date().getUTCFullYear() + 1)
+      .optional(),
     domains: z
       .preprocess(
         (value) => (typeof value === "string" ? value.split(",").filter(Boolean) : value),
@@ -165,6 +204,16 @@ export const evidenceQuerySchema = z
       )
       .optional(),
     offset: z.coerce.number().int().min(0).default(0),
+    /**
+     * `EVIDENCE_PAGE_SIZE` is both the default AND the ceiling — a caller
+     * can only ever ask for one page's worth in a single request, never a
+     * bigger one. That is deliberate: the panel pages by scrolling
+     * (`docs/superpowers/specs/2026-09-18-evidence-panel-design.md`,
+     * "Paging, not a promise"), so there is no legitimate caller that
+     * needs more than one page at once, and raising the ceiling would
+     * only let a request re-open the unbounded-scan problem paging exists
+     * to close.
+     */
     limit: z.coerce.number().int().min(1).max(EVIDENCE_PAGE_SIZE).default(EVIDENCE_PAGE_SIZE),
   })
   .refine((query) => query.period !== "year" || query.year !== undefined, {
