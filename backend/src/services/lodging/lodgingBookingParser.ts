@@ -13,6 +13,8 @@ import { LODGING_TEMPLATES } from "./templates/builtins";
 import { applyLodgingTemplate } from "./templates/engine";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
+import { isSharedDemoUser } from "../../utils/sharedDemo";
+import { DEMO_NO_LLM_REASON } from "../cruiseBookingParser";
 import {
   isBookingComConfirmation,
   parseBookingComEmail,
@@ -410,7 +412,11 @@ function firstLineAsSubject(text: string): string | undefined {
  */
 export async function parseLodgingBookingText(
   text: string,
-  options?: LodgingBookingParserOptions
+  options?: LodgingBookingParserOptions,
+  /** Who is asking. Only the shared demo account is treated differently — see
+   *  the guard below; every other value, including `undefined`, parses as
+   *  before. */
+  userId?: string
 ): Promise<LodgingParseResult> {
   const readTemplate = (): ParsedLodgingBooking | null => {
     const subject = firstLineAsSubject(text);
@@ -444,6 +450,39 @@ export async function parseLodgingBookingText(
       );
       return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
     }
+  }
+
+  /**
+   * The SHARED demo account never reaches the model — one of the three places a
+   * parse falls through from a template to the LLM (security audit of
+   * 2026-09-19, finding 3). `resolveOptions` below hands back the ADMIN's
+   * Ollama for whoever asks, so on a public preview whose demo password is
+   * printed on the login page this is the operator's hardware answering
+   * strangers, minutes per document, while the summarize route is guarded
+   * against precisely that.
+   *
+   * Booking.com and the declarative templates above are what a visitor came to
+   * try — 97 of the owner's 108 mails, and they cost nothing — so they run
+   * untouched; this is the step after them. The answer is the one an instance
+   * with no model configured already gives, the same shape as
+   * `services/immich/immichResolver.ts` returning `null`, so the routes take
+   * their existing "template only / not recognised" path and no new error
+   * exists. The reason names the account rather than the endpoint: an
+   * unreachable-Ollama reason quotes the admin's URL, which is not the shared
+   * account's business.
+   */
+  if (userId !== undefined && (await isSharedDemoUser(userId))) {
+    // Under `llm_first` the template has not been tried yet.
+    const templateHit = order === "llm_first" ? readTemplate() : null;
+    if (templateHit) {
+      return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
+    }
+    return {
+      bookings: [],
+      parserUsed: "none",
+      ollamaAvailable: false,
+      fallbackReason: DEMO_NO_LLM_REASON,
+    };
   }
 
   const { url, model } = await resolveOptions(options);

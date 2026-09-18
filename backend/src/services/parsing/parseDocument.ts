@@ -146,7 +146,11 @@ async function parseAs(
   combined: string
 ): Promise<ParsedDocumentBody> {
   if (domain === "cruise") {
-    const result = await parseCruiseBookingText(combined);
+    // The userId is what lets the parser refuse the ADMIN's Ollama to the
+    // shared demo account (security audit of 2026-09-19, finding 3). The flight
+    // branch below already carried it, for templates; the two booking parsers
+    // did not carry it at all, which is why it had to be threaded here.
+    const result = await parseCruiseBookingText(combined, undefined, input.userId);
     const resolved = await Promise.all(result.cruises.map(resolveCruiseEntities));
     return {
       domain: "cruise",
@@ -158,7 +162,7 @@ async function parseAs(
   }
 
   if (domain === "lodging") {
-    const result = await parseLodgingBookingText(combined);
+    const result = await parseLodgingBookingText(combined, undefined, input.userId);
     return {
       domain: "lodging",
       candidates: bookingsToCandidates(result.bookings),
