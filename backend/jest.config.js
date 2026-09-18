@@ -22,7 +22,17 @@ module.exports = {
   // Caps the Prisma pool before any client is built — see jest.setup.ts.
   setupFiles: ["<rootDir>/jest.setup.ts"],
   roots: ["<rootDir>/src"],
-  testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+  // Narrowed to the `.test.ts`/`.spec.ts` suffix (2026-09-18, evidence panel
+  // Task 4): the old `**/__tests__/**/*.ts` ran EVERY file under a
+  // `__tests__` directory as its own suite, with no suffix required. Every
+  // existing test already carries the suffix, so this was silently
+  // redundant with the second pattern below — until `invariants.ts`, a test
+  // HELPER with no `describe`/`it` blocks, needed to live in
+  // `services/evidence/__tests__/` beside the tests that import it. Jest
+  // picked it up as a suite of its own and failed the whole run with "Your
+  // test suite must contain at least one test." The suffix is what actually
+  // marks a file as a test; the directory never was.
+  testMatch: ["**/?(*.)+(spec|test).ts"],
   collectCoverageFrom: [
     "src/**/*.ts",
     "!src/**/*.d.ts",
