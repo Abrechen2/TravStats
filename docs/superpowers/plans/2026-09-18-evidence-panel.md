@@ -311,3 +311,58 @@ Independent of the panel: it fixes a wrong number that is live today.
 - [ ] Browser verification on the seeded demo account at 1440 and 390: one ranking row, one `sum` tile, one `distinct` tile, a paged measure past 100 rows, and an abstention case. The airline-logo lesson applies — green tests are not a look.
 - [ ] `design/DESIGN_SYSTEM.md` gains the panel.
 - [ ] Commit.
+
+---
+
+### Task 12: the year comparison stops measuring unequal periods
+
+Independent of the evidence panel and of everything above it — it is on this
+plan only because the owner raised it here ("design du das", 2026-09-18) and it
+is the same page. It may be implemented before or after any other task.
+
+**The defect.** The statistics page compares the selected year against the one
+before it. For the CURRENT year that is eight months against twelve: the demo
+account shows "-29 Erlebnisse (-78 %)" in September, which reads as a collapse
+in travel and is really a difference in elapsed time. The same figure will read
+"+0 %" on 31 December and has moved by nothing in between.
+
+**The design.** Like against like, and say which:
+
+- The **current** year is compared against the same span of the previous year —
+  1 January to today, versus 1 January to the same day a year earlier. The label
+  says so: `ggü. gleichem Zeitraum {{year}}` / `vs. same period in {{year}}`.
+- A **completed** year keeps the full-year comparison it has now, unchanged, and
+  keeps its existing label.
+- The cut is "is this year still running", not "is this the year in the system
+  clock": a user viewing 2024 in 2026 sees a full-year comparison, because 2024
+  is over.
+
+**Why not abstain.** This codebase's rule is that a value which cannot be
+derived is absent rather than invented — but this one CAN be derived. Dropping
+the delta for the current year would remove a true statement; the old delta was
+not untrue for lack of data but for comparing two different lengths of time. The
+fix is the right window, not silence.
+
+**The visible consequence, which is the point.** The number on screen changes —
+substantially, and for every user whose current year is incomplete. That belongs
+in the release notes, not in a quiet commit.
+
+- [ ] **Step 1: Write the failing test.** Fixture: a user with 10 experiences in
+      Jan–Sep of the previous year and 8 in Jan–Sep of the current one, plus 20
+      more in Oct–Dec of the previous year. Today is in September.
+      Expected: the current year's delta is 8 vs 10 (−20 %), NOT 8 vs 30 (−73 %).
+      A second case asserts a completed year still compares against the full
+      previous year.
+- [ ] **Step 2: Run it and watch it fail** — it currently reports the full-year
+      comparison.
+- [ ] **Step 3: Implement the window.** Find every place the year-over-year
+      delta is computed (start from `backend/src/routes/stats.ts` and
+      `services/stats/summary.ts`; the comparison may be assembled on the
+      frontend, in which case the same rule goes to the one place that owns it —
+      NOT to each tile).
+- [ ] **Step 4: The label travels with the number.** A delta whose window is
+      "same period" must never render under a label that says "vs 2025", or the
+      fix becomes a second, quieter lie. DE and EN in the same commit.
+- [ ] **Step 5: Run the suite, `tsc`, lint, `check:size`.**
+- [ ] **Step 6: Commit**, and say in the message that a visible number moves and
+      why.
