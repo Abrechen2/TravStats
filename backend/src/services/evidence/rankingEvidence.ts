@@ -8,7 +8,7 @@ import { sortEntries, sliceEntries } from "./paging";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { airlineGroupKey, normalizeAirline } from "../../shared/airlineNormalize";
 import { airlineResolvers } from "../../utils/airlineNormalize";
-import { flightEvidenceEntry } from "./entryMappers";
+import { flightDateOf, hydrateFlightSumEntries } from "./entryMappers";
 import { getCachedAirports } from "../../services/airportCache";
 
 /**
@@ -127,50 +127,6 @@ async function resolveAirlineRankingEvidence(
   // to the page actually returned.
   const matched = identityRows.filter((row) => airlineGroupKey(row, airlineResolvers) === groupKey);
 
-  const skeletons: EvidenceEntry[] = matched.map((row) => ({
-    domain: "flight",
-    id: row.id,
-    href: `/flights/${row.id}`,
-    title: { text: "" },
-    subtitle: null,
-    date: row.departureTime
-      ? { value: row.departureTime.toISOString().slice(0, 10), precision: "day" as const }
-      : null,
-    contribution: 1,
-  }));
-  const sorted = sortEntries(skeletons);
-  const paged = sliceEntries(sorted, page);
-
-  // Display fields (flight number, route) are hydrated for the returned
-  // PAGE only — the identity pass above never loaded them, so an account
-  // with thousands of flights on one airline pays for one full-row fetch
-  // sized to `limit`, not to its whole history.
-  const details = paged.length
-    ? await prisma.flight.findMany({
-        where: { id: { in: paged.map((entry) => entry.id) } },
-        select: { flightNumber: true, depIata: true, arrIata: true, id: true },
-      })
-    : [];
-  const detailById = new Map(details.map((d) => [d.id, d]));
-  // `flightEvidenceEntry` builds title/subtitle/href/contribution from the
-  // hydrated fields; `date` is overwritten from the skeleton, which already
-  // carries it from the identity pass — re-selecting `departureTime` here
-  // would fetch the same column twice for no reason.
-  const entries: EvidenceEntry[] = paged.map((skeleton) => {
-    const detail = detailById.get(skeleton.id);
-    const hydrated = flightEvidenceEntry(
-      {
-        id: skeleton.id,
-        flightNumber: detail?.flightNumber ?? null,
-        depIata: detail?.depIata ?? null,
-        arrIata: detail?.arrIata ?? null,
-        departureTime: null,
-      },
-      1
-    );
-    return { ...hydrated, date: skeleton.date };
-  });
-
   // `omitted` counts every KNOWN row not in `entries` — on ANY page, not
   // only the rows still ahead of this one. Rows before `offset` are just as
   // known and just as absent from this response as rows after it, and
@@ -178,7 +134,24 @@ async function resolveAirlineRankingEvidence(
   // count includes pages one and two as well as what comes after. (The
   // spec's "hasn't paged there yet" phrasing only reads correctly on page
   // one — corrected there; this is the reading that actually holds.)
-  const omittedContribution = matched.length - entries.length;
+  //
+  // Sort, slice and hydrate are `hydrateFlightSumEntries` (`entryMappers.ts`),
+  // which loads flight number and route for the returned PAGE only — the
+  // identity pass above never touched them, so an account with thousands of
+  // flights on one airline pays for one full-row fetch sized to `limit`, not
+  // to its whole history. That tail was extracted for the metric resolvers
+  // while the three one-credit-per-flight rankings kept a byte-identical
+  // copy each, which is how four separate `where: { id: { in } }` queries
+  // ended up each needing the same user scoping added by hand.
+  const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
+    matched.map((row) => ({
+      id: row.id,
+      date: flightDateOf(row.departureTime),
+      contribution: 1,
+    })),
+    page
+  );
 
   return {
     measure: {
@@ -195,7 +168,7 @@ async function resolveAirlineRankingEvidence(
     },
     entries,
     returned: entries.length,
-    omitted: { count: omittedContribution, contribution: omittedContribution },
+    omitted: { count: omittedCount, contribution: omittedContribution },
     unattributed: [],
     page,
   };
@@ -329,9 +302,19 @@ async function resolveAirportRankingEvidence(
   // Display fields hydrated for the returned PAGE only, same reasoning as
   // the airline resolver: an account with thousands of flights through one
   // hub pays for one full-row fetch sized to `limit`, not to its history.
+  // `userId` beside the id list, for the reason `entryMappers.ts`'s own
+  // hydration states: redundant today, and the one query in this feature
+  // that would hand a row to the wrong account if an id ever arrived from
+  // anywhere but a user-scoped pass. This resolver keeps a hydration of its
+  // own rather than sharing `hydrateFlightSumEntries`, because it needs the
+  // ICAO columns and a `role`-bearing subtitle the shared mapper does not
+  // produce.
   const details = paged.length
     ? await prisma.flight.findMany({
-        where: { id: { in: paged.map((entry) => entry.id) } },
+        where: {
+          userId,
+          id: { in: paged.map((entry) => entry.id) },
+        },
         select: {
           id: true,
           flightNumber: true,
@@ -487,43 +470,15 @@ async function resolveCountryRankingEvidence(
 
   const matched = identityRows.filter((row) => flightTouchesCountry(row, airportMap, countryCode));
 
-  const skeletons: EvidenceEntry[] = matched.map((row) => ({
-    domain: "flight",
-    id: row.id,
-    href: `/flights/${row.id}`,
-    title: { text: "" },
-    subtitle: null,
-    date: row.departureTime
-      ? { value: row.departureTime.toISOString().slice(0, 10), precision: "day" as const }
-      : null,
-    contribution: 1,
-  }));
-  const sorted = sortEntries(skeletons);
-  const paged = sliceEntries(sorted, page);
-
-  const details = paged.length
-    ? await prisma.flight.findMany({
-        where: { id: { in: paged.map((entry) => entry.id) } },
-        select: { flightNumber: true, depIata: true, arrIata: true, id: true },
-      })
-    : [];
-  const detailById = new Map(details.map((d) => [d.id, d]));
-  const entries: EvidenceEntry[] = paged.map((skeleton) => {
-    const detail = detailById.get(skeleton.id);
-    const hydrated = flightEvidenceEntry(
-      {
-        id: skeleton.id,
-        flightNumber: detail?.flightNumber ?? null,
-        depIata: detail?.depIata ?? null,
-        arrIata: detail?.arrIata ?? null,
-        departureTime: null,
-      },
-      1
-    );
-    return { ...hydrated, date: skeleton.date };
-  });
-
-  const omittedContribution = matched.length - entries.length;
+  const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
+    matched.map((row) => ({
+      id: row.id,
+      date: flightDateOf(row.departureTime),
+      contribution: 1,
+    })),
+    page
+  );
 
   return {
     measure: {
@@ -541,7 +496,7 @@ async function resolveCountryRankingEvidence(
     },
     entries,
     returned: entries.length,
-    omitted: { count: omittedContribution, contribution: omittedContribution },
+    omitted: { count: omittedCount, contribution: omittedContribution },
     unattributed: [],
     page,
   };
@@ -597,43 +552,15 @@ async function resolveAircraftTypeRankingEvidence(
     select: { id: true, departureTime: true },
   });
 
-  const skeletons: EvidenceEntry[] = identityRows.map((row) => ({
-    domain: "flight",
-    id: row.id,
-    href: `/flights/${row.id}`,
-    title: { text: "" },
-    subtitle: null,
-    date: row.departureTime
-      ? { value: row.departureTime.toISOString().slice(0, 10), precision: "day" as const }
-      : null,
-    contribution: 1,
-  }));
-  const sorted = sortEntries(skeletons);
-  const paged = sliceEntries(sorted, page);
-
-  const details = paged.length
-    ? await prisma.flight.findMany({
-        where: { id: { in: paged.map((entry) => entry.id) } },
-        select: { flightNumber: true, depIata: true, arrIata: true, id: true },
-      })
-    : [];
-  const detailById = new Map(details.map((d) => [d.id, d]));
-  const entries: EvidenceEntry[] = paged.map((skeleton) => {
-    const detail = detailById.get(skeleton.id);
-    const hydrated = flightEvidenceEntry(
-      {
-        id: skeleton.id,
-        flightNumber: detail?.flightNumber ?? null,
-        depIata: detail?.depIata ?? null,
-        arrIata: detail?.arrIata ?? null,
-        departureTime: null,
-      },
-      1
-    );
-    return { ...hydrated, date: skeleton.date };
-  });
-
-  const omittedContribution = identityRows.length - entries.length;
+  const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
+    identityRows.map((row) => ({
+      id: row.id,
+      date: flightDateOf(row.departureTime),
+      contribution: 1,
+    })),
+    page
+  );
 
   return {
     measure: {
@@ -647,7 +574,7 @@ async function resolveAircraftTypeRankingEvidence(
     },
     entries,
     returned: entries.length,
-    omitted: { count: omittedContribution, contribution: omittedContribution },
+    omitted: { count: omittedCount, contribution: omittedContribution },
     unattributed: [],
     page,
   };

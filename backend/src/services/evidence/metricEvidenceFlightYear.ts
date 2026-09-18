@@ -53,6 +53,7 @@ export async function resolveYearFlightCount(
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -87,6 +88,7 @@ export async function resolveYearDistanceKm(
     contribution: r.distanceKm,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -121,6 +123,7 @@ export async function resolveYearFlightTimeMinutes(
     contribution: r.durationMinutes ?? 0,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -161,6 +164,7 @@ export async function resolveYearTotalCost(
     contribution: r.costContributionBase,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -195,6 +199,7 @@ export async function resolveYearUnpricedFlightCount(
     .filter((r) => !r.priced)
     .map((r) => ({ id: r.id, date: flightDateOf(r.departureTime), contribution: 1 }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );

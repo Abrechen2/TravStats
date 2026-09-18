@@ -82,6 +82,7 @@ export async function resolveAirportsVisitedCount(
     return { id: r.id, date: flightDateOf(r.departureTime), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
+    userId,
     matched,
     page
   );
@@ -121,6 +122,7 @@ export async function resolveFlightCountriesVisitedCount(
     return { id: r.id, date: flightDateOf(r.departureTime), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
+    userId,
     matched,
     page
   );
@@ -181,6 +183,7 @@ export async function resolveContinentsVisitedCount(
     return { id: r.id, date: flightDateOf(r.departureTime), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
+    userId,
     matched,
     page
   );

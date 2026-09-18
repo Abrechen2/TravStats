@@ -116,6 +116,7 @@ export async function resolveFlightCount(
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -168,6 +169,7 @@ export async function resolveFlightTimeMinutes(
     return { id: r.id, date: flightDateOf(r.departureTime), contribution: minutes };
   });
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -203,6 +205,7 @@ export async function resolveDistanceKmTotal(
     contribution: calculateDistance(r.depLat, r.depLon, r.arrLat, r.arrLon),
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -256,6 +259,7 @@ export async function resolveAirlineCount(
     credits: row.groupKey ? [row.groupKey] : [],
   }));
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
+    userId,
     matched,
     page
   );
@@ -292,6 +296,7 @@ export async function resolveFlightsWithoutAirlineCount(
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -340,6 +345,7 @@ export async function resolveBusinessTotalCost(
     contribution: cost.perFlightBaseContribution[index],
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -393,6 +399,7 @@ export async function resolvePunctualitySampleSize(
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );

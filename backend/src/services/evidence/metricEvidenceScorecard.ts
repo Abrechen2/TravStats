@@ -55,6 +55,7 @@ export async function resolveScorecardFlightCount(
   const rows = withId(await loadScorecardRows(userId, scope));
   const matched = rows.map((r) => ({ id: r.id, date: flightDateOf(r.date), contribution: 1 }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -88,6 +89,7 @@ export async function resolveScorecardDistanceKm(
     contribution: r.distanceKm,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );
@@ -122,6 +124,7 @@ export async function resolveScorecardFlightTimeMinutes(
     contribution: r.durationMin,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
+    userId,
     matched,
     page
   );

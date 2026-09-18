@@ -26,14 +26,25 @@ export function flightDateOf(date: Date | null): FlightDate {
   return date ? { value: date.toISOString().slice(0, 10), precision: "day" } : null;
 }
 
+/**
+ * The ONE hydration query in the feature, and the only one whose `where` is
+ * a list of ids rather than a predicate. `userId` is redundant today — every
+ * id reaching here came out of a pass that already filtered on it — and is
+ * there anyway, because this is precisely the query that would hand a row to
+ * the wrong account the day an id arrived from somewhere else (a cached
+ * page, a client-supplied cursor, a resolver written in a hurry). A
+ * redundant condition costs one indexed column; the alternative costs a
+ * cross-account leak nothing would catch.
+ */
 async function hydrateFlightPage(
+  userId: string,
   paged: Array<{ id: string }>
 ): Promise<
   Map<string, { flightNumber: string | null; depIata: string | null; arrIata: string | null }>
 > {
   const details = paged.length
     ? await prisma.flight.findMany({
-        where: { id: { in: paged.map((entry) => entry.id) } },
+        where: { userId, id: { in: paged.map((entry) => entry.id) } },
         select: { id: true, flightNumber: true, depIata: true, arrIata: true },
       })
     : [];
@@ -89,6 +100,7 @@ export interface FlightSumSkeleton {
  * row's own contribution isn't exactly 1 (distance, duration, cost).
  */
 export async function hydrateFlightSumEntries(
+  userId: string,
   matched: FlightSumSkeleton[],
   page: PagingParams
 ): Promise<{ entries: EvidenceEntry[]; omittedCount: number; omittedContribution: number }> {
@@ -102,7 +114,7 @@ export async function hydrateFlightSumEntries(
     contribution: row.contribution,
   }));
   const paged = sliceEntries(sortEntries(skeletons), page);
-  const detailById = await hydrateFlightPage(paged);
+  const detailById = await hydrateFlightPage(userId, paged);
   const contributionById = new Map(matched.map((m) => [m.id, m.contribution]));
 
   const entries: EvidenceEntry[] = paged.map((skeleton) => {
@@ -142,6 +154,7 @@ export interface FlightDistinctSkeleton {
  * per `assertDistinctInvariant`'s own union rule (never a per-row sum).
  */
 export async function hydrateFlightDistinctEntries(
+  userId: string,
   matched: FlightDistinctSkeleton[],
   page: PagingParams
 ): Promise<{ entries: EvidenceEntry[]; omittedRowCount: number; omittedCredits: number }> {
@@ -155,7 +168,7 @@ export async function hydrateFlightDistinctEntries(
     credits: row.credits,
   }));
   const paged = sliceEntries(sortEntries(skeletons), page);
-  const detailById = await hydrateFlightPage(paged);
+  const detailById = await hydrateFlightPage(userId, paged);
 
   const entries: EvidenceEntry[] = paged.map((skeleton) => {
     const detail = detailById.get(skeleton.id);
