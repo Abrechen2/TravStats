@@ -101,7 +101,8 @@ flights witness one country; `credits` can.
 
 ```
 GET /api/v1/evidence/:kind/:key
-    kind ∈ "metric" | "ranking" | "record"        (achievements: release 2)
+    kind ∈ "metric" | "ranking"                   release 1
+           "record" | "achievement"               release 2 — answered 501
     body: EvidenceResponse
 ```
 
@@ -282,7 +283,15 @@ it scans the whole logbook. Each resolver declares the projection it needs and
 loads that; display fields are batch-loaded for the returned page only. A GET
 never calls `checkAndUpdateAchievements`, which writes.
 
-## Release 2 — achievements
+Records go with achievements into release 2, for the same reason: the
+superlatives on screen are `extremum` and `sequence` measures whose witnesses
+come out of `utils/statsCalculator.ts` and `uniqueStats.ts`, which — like the
+achievement producers — return derived values without the rows behind them. The
+one thing that does NOT wait is the cross-currency defect in the most expensive
+trip: that is a wrong number today, it is fixed in release 1, and its evidence
+panel follows in release 2.
+
+## Release 2 — achievements and records
 
 Not in release 1, and the reason is the measurement: `checkAchievement` is one
 ~146-case switch over pre-aggregated statistics, and the producers
