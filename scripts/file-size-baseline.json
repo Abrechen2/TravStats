@@ -16,7 +16,6 @@
     "frontend/src/components/FlightCertificate.tsx": 883,
     "backend/src/utils/achievementChecks.ts": 863,
     "frontend/src/components/Training/EmailAnnotation.tsx": 857,
-    "frontend/src/pages/AdvancedStatsPage.tsx": 808,
-    "backend/src/index.ts": 803
+    "frontend/src/pages/AdvancedStatsPage.tsx": 808
   }
 }

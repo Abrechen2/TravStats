@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+import { statsLimiter } from "../middleware/rateLimit";
 import {
   evidenceParamsSchema,
   evidenceQuerySchema,
@@ -36,6 +37,19 @@ import { resolveEvidence } from "../services/evidence";
  */
 const router = Router();
 router.use(authenticate);
+/**
+ * The same bucket as the other expensive stats routes, and for the same reason:
+ * one request scans the caller's whole set — every flight, every stay — to
+ * attribute one number, and none of that is bounded by the `limit`/`offset` the
+ * caller sends, which only pages the answer. The router had no limiter of its
+ * own at all, so the only thing in front of it was the global `/api` cap, and
+ * that one was skipping every private source address until the same audit
+ * closed it (security audit of 2026-09-19, findings 6 and 5 — they compound).
+ *
+ * Per user, not per IP (`userOrIpKey`), so one visitor of a public preview
+ * cannot lock the panel for the next.
+ */
+router.use(statsLimiter);
 
 router.get("/:kind/:key", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
