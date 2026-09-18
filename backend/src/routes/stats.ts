@@ -1217,7 +1217,6 @@ router.get(
       // "Swiss" are one carrier once either row's code is known, and the
       // catalogue names the group. The rule lives in shared/airlineNormalize.ts
       // and every client surface uses the same one.
-      //
       // A row without an airline is NOT an airline. It used to be folded in
       // under the label "Unknown", which could top the loyalty ranking on an
       // account with many imported rows — and it sat in the percentage
@@ -1239,6 +1238,7 @@ router.get(
         airline: g.label,
         count: g.count,
         percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
+        key: g.key, // Canonical identity, always present; evidence addresses this row by it.
         ...(g.iata ? { iata: g.iata } : {}),
       }));
 

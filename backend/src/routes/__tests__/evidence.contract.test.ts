@@ -5,13 +5,17 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 
 /**
- * Task 3 ships plumbing only — no resolver is wired
- * (`services/evidence/index.ts`'s `DEFAULT_RESOLVERS` is empty; the first
- * one arrives in Task 5). So this suite covers only what needs none: the
- * four answers that reduce to the same empty-resolver path, plus 501 and
- * 401. The 0-case and the null-case are unit-tested against injected fakes
- * in `services/evidence/__tests__/index.test.ts` instead — see the ruling
- * in `.superpowers/sdd/2026-09-18-evidence-panel/task-3-brief.md`.
+ * Task 3 shipped plumbing only — no resolver was wired. Task 5 (this branch)
+ * registers the first one, `ranking`'s `airline` dimension
+ * (`services/evidence/rankingEvidence.ts`), but `metric` still has none
+ * (Task 7) and `ranking`'s other four dimensions still answer `unknownKey`
+ * from inside that resolver (Task 6). So this suite still covers only what
+ * needs no live data: malformed keys, unserved kinds, and auth — the 0-case
+ * and the null-case against the real airline resolver belong to
+ * `evidence.rankingAirline.test.ts` instead, and the fake-injection cases
+ * from before Task 5 existed still live in
+ * `services/evidence/__tests__/index.test.ts` (see the ruling in
+ * `.superpowers/sdd/2026-09-18-evidence-panel/task-3-brief.md`).
  */
 describe("GET /api/v1/evidence/:kind/:key — contract", () => {
   let authCookie: string;
@@ -35,7 +39,7 @@ describe("GET /api/v1/evidence/:kind/:key — contract", () => {
     expect(res.status).toBe(401);
   });
 
-  it("answers 404 for a key it does not serve — no resolver is wired for metric/ranking yet", async () => {
+  it("answers 404 for a key it does not serve — 'ZZZZ' is not a shape `groupAirlines` ever produces", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/ranking/airline:ZZZZ")
       .set("Cookie", authCookie);

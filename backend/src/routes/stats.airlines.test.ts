@@ -48,12 +48,14 @@ describe("GET /api/v1/stats/airlines", () => {
       airline: "Lufthansa",
       count: 6,
       percentage: 60.0,
+      key: "iata:LH",
       iata: "LH",
     });
     expect(res.body.airlines[1]).toEqual({
       airline: "Ryanair",
       count: 4,
       percentage: 40.0,
+      key: "iata:FR",
       iata: "FR",
     });
   });
@@ -128,12 +130,15 @@ describe("GET /api/v1/stats/airlines", () => {
     expect(res.body.airlines[0].iata).toBe("LH");
   });
 
-  it("omits iata when the airline cannot be resolved", async () => {
+  it("omits iata when the airline cannot be resolved, but still carries a key", async () => {
     mockCount.mockResolvedValue(1);
     mockGroupBy.mockResolvedValue([{ airline: "Definitely Not An Airline", _count: 1 }]);
 
     const res = await request(app).get("/api/v1/stats/airlines");
     expect(res.status).toBe(200);
     expect(res.body.airlines[0].iata).toBeUndefined();
+    // `key` is never optional the way `iata` is — a `name:` group is still an
+    // identity evidence can address, just not a code-backed one.
+    expect(res.body.airlines[0].key).toBe("name:definitely not an airline");
   });
 });

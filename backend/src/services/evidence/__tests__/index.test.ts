@@ -29,8 +29,8 @@ function response(
 }
 
 describe("resolveEvidence", () => {
-  it("has no wired resolver by default — the fake belongs in Task 5, not here", () => {
-    expect(DEFAULT_RESOLVERS).toEqual({});
+  it("wires only `ranking` by default — `metric` still answers unknownKey until Task 7", () => {
+    expect(Object.keys(DEFAULT_RESOLVERS)).toEqual(["ranking"]);
   });
 
   it("answers unknownKey when no resolver is registered for the kind", async () => {

@@ -78,6 +78,13 @@ export const airlineRankingItemSchema = z.object({
   iata: z.string().optional().openapi({
     description: "IATA code via strict exact lookup; absent when nothing matches.",
   }),
+  key: z.string().openapi({
+    description:
+      "The canonical identity `groupAirlines` folded this row under (`iata:LH`, or " +
+      "`name:some carrier` when no code resolves) — ALWAYS present, unlike `iata`. " +
+      "Evidence addresses this row by this key (`evidence.rankingKey`), not by " +
+      "`airline`/`iata`, because a display label's spelling can change under it.",
+  }),
 });
 
 export const airlineRankingResponseSchema = z.object({
