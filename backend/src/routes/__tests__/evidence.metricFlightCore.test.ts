@@ -198,6 +198,25 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
     assertSumInvariant(res.body, (n: number) => Math.round(n * 100) / 100);
   });
 
+  /**
+   * The drift guard `metricEvidenceFlightCore.ts` promises. `dedupedCost.ts`
+   * and `businessStats.ts` are two hand-kept copies of one rule, so the
+   * literal above proves only that the resolver agrees with itself — the sum
+   * invariant cannot help either, since `value` and `omitted.contribution`
+   * come from the same total. What catches a divergence between the two
+   * copies is asking the TILE'S OWN endpoint, in the same test, what number
+   * it renders.
+   */
+  it("businessTotalCost: answers the same total /stats/business renders", async () => {
+    const [evidence, business] = await Promise.all([
+      request(app).get("/api/v1/evidence/metric/businessTotalCost").set("Cookie", userACookie),
+      request(app).get("/api/v1/stats/business").set("Cookie", userACookie),
+    ]);
+    expect(evidence.status).toBe(200);
+    expect(business.status).toBe(200);
+    expect(evidence.body.measure.value).toBe(business.body.totalCost);
+  });
+
   it("punctualitySampleSize: samples only the countable flights carrying a recorded delay", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/punctualitySampleSize")

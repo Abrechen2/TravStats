@@ -15,6 +15,31 @@ import type { EvidenceEntry, EvidenceResponse } from "../../../schemas/evidence"
  * correct `EvidenceResponse` and rejects a wrong one via
  * `expect(() => assertX(bad)).toThrow()`. A guard nobody has watched fail is
  * an assumption, not a guard.
+ *
+ * WHAT THESE ASSERTIONS DO NOT CATCH, stated plainly because a reader who
+ * assumes otherwise will write a weaker test on the strength of it. Most
+ * resolvers derive BOTH `measure.value` and `omitted.contribution` from the
+ * SAME total (`entryMappers.ts`: `omitted = total - returned`, `value =
+ * round(total)`), so `round(returned + omitted) === value` holds BY
+ * CONSTRUCTION, for any population whatsoever. A resolver that selected
+ * entirely the wrong flights passes it. What the sum and distinct assertions
+ * actually prove is INTERNAL CONSISTENCY — that the response's own buckets
+ * add up, that rounding happened once at the end, that a distinct count is a
+ * union and not a row count — and they bite on the population only where
+ * `value` comes from a different source than the entries do (the `year*`
+ * measures read `computeSummary`'s own stats, `businessTotalCost` reads
+ * `computeDedupedTotalCost`).
+ *
+ * The guard against the wrong POPULATION is a different test entirely: fetch
+ * the surface's own endpoint in the same test and assert `measure.value`
+ * equals the number that endpoint renders. The four ranking suites have done
+ * this from the start; the metric suites gained it for
+ * `businessTotalCost` (`/stats/business`), the five `year*` measures
+ * (`/stats/summary?year=`) and the three geo counts (`/stats/airports`).
+ * Where no endpoint exists to compare against — the scorecard family is
+ * computed from `/stats/timeseries` buckets, not a single figure — the
+ * `.toBe(<literal>)` assertions carry that weight alone, and that is a known
+ * limit, not an oversight.
  */
 
 /**

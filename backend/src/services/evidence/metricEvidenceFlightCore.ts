@@ -325,10 +325,13 @@ export async function resolveFlightsWithoutAirlineCount(
  * booking counted once, a per-flight fallback to price+taxes+fees, a
  * currency-shortcut or FX snapshot to convert. Reusing `computeDedupedTotalCost`
  * here is therefore not a resolver that merely resembles `calculateBusinessStats`;
- * it is the rule the two are already contracted to share, and the invariant
- * test below asserts against `/stats/business`'s OWN `totalCost` — so a future
- * drift between the two hand-kept copies fails loudly here rather than being
- * assumed away.
+ * it is the rule the two are already contracted to share. The drift guard is
+ * `evidence.metricFlightCore.test.ts`'s "answers the same total
+ * /stats/business renders", which fetches BOTH numbers in one test — this
+ * sentence claimed such a guard existed for a while before it did, and the
+ * sum invariant could never have been it: `value` and `omitted.contribution`
+ * come from the same total, so it holds however wrong the population is
+ * (`__tests__/invariants.ts` now says so at the top).
  */
 export async function resolveBusinessTotalCost(
   userId: string,

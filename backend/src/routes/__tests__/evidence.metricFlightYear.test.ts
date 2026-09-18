@@ -130,6 +130,38 @@ describe("GET /api/v1/evidence/metric/... — the FlightYearSummaryCards family"
     assertSumInvariant(res.body, Math.round);
   });
 
+  /**
+   * All five literals above were written from the same fixture set the
+   * resolvers read, and the sum invariant cannot separate "the right rows"
+   * from "consistent arithmetic over the wrong rows" (`invariants.ts` says
+   * why). `FlightYearSummaryCards` renders `GET /stats/summary?year=`, so
+   * that response is the independent witness: each measure must equal the
+   * field the card actually shows, fetched in this same test.
+   */
+  it("every year measure equals the field /stats/summary?year= renders for it", async () => {
+    const summary = await request(app)
+      .get("/api/v1/stats/summary?year=2025")
+      .set("Cookie", userACookie);
+    expect(summary.status).toBe(200);
+
+    const pairs: Array<[string, number | null]> = [
+      ["yearFlightCount", summary.body.totalFlights],
+      ["yearDistanceKm", summary.body.totalDistance],
+      ["yearFlightTimeMinutes", summary.body.totalFlightTime],
+      ["yearTotalCost", summary.body.totalCost],
+      ["yearUnpricedFlightCount", summary.body.unpricedFlights],
+    ];
+    for (const [key, rendered] of pairs) {
+      const res = await request(app)
+        .get(`/api/v1/evidence/metric/${key}?period=year&year=2025`)
+        .set("Cookie", userACookie);
+      expect(res.status).toBe(200);
+      // The key travels with the value so a failure names WHICH measure
+      // drifted instead of printing two bare numbers.
+      expect([key, res.body.measure.value]).toEqual([key, rendered]);
+    }
+  });
+
   it("a year with no flights at all answers 200 with value 0, not 404", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/yearFlightCount?period=year&year=2019")

@@ -127,6 +127,36 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab geo distinct family
     assertDistinctInvariant(res.body);
   });
 
+  /**
+   * The three counts above are asserted as literals, and the distinct
+   * invariant cannot help: `value` and `omitted.credits` are both derived
+   * from the same credit union, so it holds for any population at all
+   * (`invariants.ts` states this). What proves the resolvers select the same
+   * flights the TILE does is asking the tile's own endpoint, in this test,
+   * what it renders — `calculateAirportStats` is a second implementation of
+   * the same credit rules, and a divergence between the two is exactly the
+   * defect literals cannot see.
+   */
+  it("all three geo counts equal the numbers /stats/airports renders", async () => {
+    const airports = await request(app).get("/api/v1/stats/airports").set("Cookie", userACookie);
+    expect(airports.status).toBe(200);
+
+    const pairs: Array<[string, number]> = [
+      ["airportsVisitedCount", airports.body.airportCount],
+      ["flightCountriesVisitedCount", airports.body.countryCount],
+      ["continentsVisitedCount", airports.body.continentCount],
+    ];
+    for (const [key, rendered] of pairs) {
+      const res = await request(app)
+        .get(`/api/v1/evidence/metric/${key}`)
+        .set("Cookie", userACookie);
+      expect(res.status).toBe(200);
+      // The key rides along in the assertion so a failure names WHICH of the
+      // three diverged, rather than printing two bare numbers.
+      expect([key, res.body.measure.value]).toEqual([key, rendered]);
+    }
+  });
+
   it("never leaks user A's airports into user B's own distinct count", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/airportsVisitedCount")
