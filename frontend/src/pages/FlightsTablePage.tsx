@@ -4,7 +4,7 @@
  * Dedicated page for viewing all flights in a comprehensive table format
  */
 
-import { airlineGroupKey } from "../shared/airlineNormalize";
+import { flightSummaryFigures } from "../lib/flights/flightSummaryFigures";
 import { airlineResolvers } from "../lib/airlineUtils";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -399,44 +399,17 @@ export default function FlightsTablePage(): JSX.Element {
     ]
   );
 
-  /** Read straight off the visible rows — nothing estimated. Flight time and
-   *  distance are both derived and marked as estimates wherever they show, so
-   *  they have no business being silently summed into a headline. */
-  const summaryFigures = useMemo(() => {
-    const airlines = new Set<string>();
-    const airports = new Set<string>();
-    let withoutAirline = 0;
-    for (const f of displayedFlights) {
-      // Same airline = same code (forgejo#81), like every other surface.
-      const key = airlineGroupKey(f, airlineResolvers);
-      if (key !== null) airlines.add(key);
-      else withoutAirline += 1;
-      if (f.depIata) airports.add(f.depIata);
-      if (f.arrIata) airports.add(f.arrIata);
-    }
-    return [
-      {
-        key: "flights",
-        value: String(displayedFlights.length),
-        label: t("common:summary.flights"),
-      },
-      {
-        key: "airlines",
-        value: String(airlines.size),
-        label: t("common:summary.airlines"),
-        // A row can show an airline tile without being counted here: the cell
-        // derives a carrier from the flight number for the logo, while this
-        // counts the airlines a row actually RECORDS. Both are right; without
-        // this note they read as a contradiction on one screen. `/stats` says
-        // the same thing beside its ranking.
-        note:
-          withoutAirline > 0
-            ? t("common:summary.withoutAirline", { count: withoutAirline })
-            : undefined,
-      },
-      { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
-    ];
-  }, [displayedFlights, t]);
+  /** The rule, the note and the reasons live in `lib/flights/flightSummaryFigures`. */
+  const summaryFigures = useMemo(
+    () =>
+      flightSummaryFigures(displayedFlights, airlineResolvers, {
+        flights: t("common:summary.flights"),
+        airlines: t("common:summary.airlines"),
+        airports: t("common:summary.airports"),
+        withoutAirline: (count) => t("common:summary.withoutAirline", { count }),
+      }),
+    [displayedFlights, t]
+  );
 
   const resetFilters = (): void => {
     setSearch("");
