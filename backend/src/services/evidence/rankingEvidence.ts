@@ -257,8 +257,14 @@ interface AirportCredit {
  * mistake (task-6-brief.md's own warning about exactly this).
  */
 function matchAirportCredit(row: AirportIdentityRow, code: string): AirportCredit | null {
-  const depCode = row.depIata ?? row.depIcao;
-  const arrCode = row.arrIata ?? row.arrIcao;
+  // `||`, not `??`, because `calculateAirportStats` resolves the same two
+  // columns with `||` (`airportStats.ts`: `const dep = f.depIata ||
+  // f.depIcao`). An empty-string `depIata` is falsy but not nullish, so `??`
+  // kept it: the ranking counted such a flight under its ICAO code while the
+  // panel matched it under neither, and the tile's own number then had no
+  // rows to show for part of itself.
+  const depCode = row.depIata || row.depIcao;
+  const arrCode = row.arrIata || row.arrIcao;
   const depMatches = depCode === code;
   const arrMatches = arrCode === code;
   if (!depMatches && !arrMatches) return null;
@@ -341,8 +347,11 @@ async function resolveAirportRankingEvidence(
   const entries: EvidenceEntry[] = paged.map((skeleton) => {
     const detail = detailById.get(skeleton.id);
     const credit = creditByFlightId.get(skeleton.id)!;
-    const depCode = detail?.depIata ?? detail?.depIcao ?? "?";
-    const arrCode = detail?.arrIata ?? detail?.arrIcao ?? "?";
+    // Same `||` as `matchAirportCredit` above: a row credited through its
+    // ICAO code must also be LABELLED with it, not with the empty string
+    // that got it there.
+    const depCode = detail?.depIata || detail?.depIcao || "?";
+    const arrCode = detail?.arrIata || detail?.arrIcao || "?";
     return {
       domain: "flight",
       id: skeleton.id,
@@ -421,6 +430,14 @@ function flightTouchesCountry(
   airportMap: Map<string, { country?: string | null }>,
   targetCountry: string
 ): boolean {
+  // `??` here, `||` in `matchAirportCredit` above — deliberately, and each
+  // copies its OWN calculator: `/stats/countries` resolves the pair with
+  // `f.depIata ?? f.depIcao`, `calculateAirportStats` with `||`. An
+  // empty-string `depIata` therefore lands in "Unknown" for the country
+  // distribution and under the ICAO code for the airport ranking, and
+  // evidence has to say what the tile above it says, not what either of us
+  // would prefer. Unifying the two operators is a change to the RANKINGS,
+  // not to their evidence.
   const depCode = row.depIata ?? row.depIcao;
   const arrCode = row.arrIata ?? row.arrIcao;
   const touched = new Set<string>();

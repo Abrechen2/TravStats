@@ -21,6 +21,7 @@ describe("GET /api/v1/evidence/ranking/airport:... — the airport resolver", ()
 
   interface FlightFixtureOverrides {
     depIata?: string;
+    depIcao?: string;
     arrIata?: string;
     flightNumber?: string;
     status?: string;
@@ -98,6 +99,17 @@ describe("GET /api/v1/evidence/ranking/airport:... — the airport resolver", ()
           arrIata: "MUC",
           flightNumber: "AF400",
         }),
+        // An EMPTY-STRING IATA code beside a real ICAO one. `depIata` is
+        // falsy but not nullish, so `??` keeps the empty string and `||`
+        // falls through to the ICAO — which is why the resolver must use the
+        // same operator its calculator does.
+        flightFixture(userAId, {
+          depIata: "",
+          depIcao: "EDDK",
+          arrIata: "LHR",
+          flightNumber: "AF500",
+          departureTime: new Date("2025-04-10T08:00:00Z"),
+        }),
       ],
     });
 
@@ -122,6 +134,30 @@ describe("GET /api/v1/evidence/ranking/airport:... — the airport resolver", ()
     expect(row).toBeDefined();
     return row as { code: string; visits: number };
   }
+
+  /**
+   * `calculateAirportStats` resolves the endpoint pair with `||`
+   * (`airportStats.ts`), so a flight with `depIata: ""` and a real `depIcao`
+   * is counted under the ICAO code. The resolver used `??`, which keeps the
+   * empty string, so the same flight matched neither the IATA row nor the
+   * ICAO one — the ranking showed a visit whose evidence was empty. Both
+   * numbers are fetched here, not asserted as literals: the point is that
+   * they agree.
+   */
+  it("credits a flight whose depIata is an empty string under its ICAO code, exactly as the ranking counts it", async () => {
+    const stats = await request(app).get("/api/v1/stats/airports").set("Cookie", userACookie);
+    const row = stats.body.topAirports.find((a: { code: string }) => a.code === "EDDK");
+    expect(row).toBeDefined();
+
+    const res = await request(app)
+      .get("/api/v1/evidence/ranking/airport:EDDK")
+      .set("Cookie", userACookie);
+    expect(res.status).toBe(200);
+    expect(res.body.measure.value).toBe(row.visits);
+    const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
+    expect(flightNumbers).toContain("AF500");
+    assertSumInvariant(res.body, (n: number) => n);
+  });
 
   it("holds the sum invariant against the ranking's own visit count", async () => {
     const row = await fraRankingRow(userACookie);
