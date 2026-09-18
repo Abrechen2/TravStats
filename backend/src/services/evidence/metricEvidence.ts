@@ -42,10 +42,13 @@ import {
  * `evidenceMeasuresCrossDomain.ts` or `evidenceMeasuresDomains.ts` — see
  * task-7-report.md for the exact count served vs. outstanding.
  */
-const METRIC_RESOLVERS: Record<
-  string,
-  (userId: string, scope: EvidenceScope, page: PagingParams) => Promise<EvidenceResponse>
-> = {
+type MetricResolver = (
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+) => Promise<EvidenceResponse>;
+
+const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   flightCount: resolveFlightCount,
   flightTimeMinutes: resolveFlightTimeMinutes,
   distanceKmTotal: resolveDistanceKmTotal,
@@ -65,6 +68,19 @@ const METRIC_RESOLVERS: Record<
   scorecardDistanceKm: resolveScorecardDistanceKm,
   scorecardFlightTimeMinutes: resolveScorecardFlightTimeMinutes,
 };
+
+/**
+ * The keys this instance actually answers. Exported for
+ * `__tests__/registryBinding.test.ts`, which is the only thing tying
+ * `shared/evidenceMeasures.ts` to running code: the registry is imported by
+ * nothing else, so `servedIn: 1` was a claim no machine checked — 78 entries
+ * asserted it while 18 had a resolver. The test reads this list rather than
+ * a hand-kept copy, because a hand-kept copy of a served-key list is the
+ * same defect one level down.
+ */
+export function servedMetricKeys(): string[] {
+  return Object.keys(METRIC_RESOLVERS);
+}
 
 export async function resolveMetricEvidence(
   userId: string,

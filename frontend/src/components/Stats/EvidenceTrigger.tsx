@@ -32,10 +32,15 @@ interface EvidenceTriggerProps {
  * page would otherwise run its own fetch effect against the shared
  * `?evidence=` param (see `useEvidence.ts`).
  *
- * A tile whose measure is NOT served (`servedIn: 2`, or no ranking resolver
- * at all — `continent`, tail-number aircraft) must not use this component:
- * GitHub #330 was exactly a card drawing a pointer cursor over nothing
- * clickable.
+ * A tile may use this component only when a RESOLVER exists for its key —
+ * `METRIC_RESOLVERS` in `backend/src/services/evidence/metricEvidence.ts`,
+ * or one of the four served `RANKING_DIMENSIONS` (`continent` has none, on
+ * purpose). `servedIn: 1` in `shared/evidenceMeasures.ts` is NOT that test:
+ * it records what release 1 intends to serve, and 78 entries claim it while
+ * 18 answer. Wiring a tile on the strength of the registry alone ships a
+ * pointer cursor over a 404, which is GitHub #330 with an extra round trip.
+ * `backend/src/services/evidence/__tests__/registryBinding.test.ts` holds the
+ * two lists together from the other side.
  */
 const BUTTON_RESET: CSSProperties = {
   width: "100%",
