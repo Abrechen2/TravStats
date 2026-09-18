@@ -3,7 +3,9 @@ import { displayName, fullName, initials } from "../userDisplay";
 
 describe("displayName", () => {
   it("prefers the first name", () => {
-    expect(displayName({ username: "akuenzel", firstName: "Alex", lastName: "Künzel" })).toBe("Alex");
+    expect(displayName({ username: "akuenzel", firstName: "Alex", lastName: "Künzel" })).toBe(
+      "Alex"
+    );
   });
 
   it("falls back to the username so the header never greets nobody", () => {
@@ -50,7 +52,9 @@ describe("initials", () => {
 
   // charAt would return half a surrogate pair and render as a replacement box.
   it("keeps a whole character outside the BMP intact", () => {
-    expect(initials({ username: "x", firstName: "𝒜lex" })).toBe(Array.from("𝒜lex")[0].toLocaleUpperCase());
+    expect(initials({ username: "x", firstName: "𝒜lex" })).toBe(
+      Array.from("𝒜lex")[0].toLocaleUpperCase()
+    );
     expect(initials({ username: "🙂user" })).toBe("🙂");
   });
 

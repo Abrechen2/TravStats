@@ -21,7 +21,7 @@ function buildConnection(
   rawUrl: string | null | undefined,
   rawKey: string | null | undefined,
   source: DawarichConnectionSource,
-  decrypt: boolean,
+  decrypt: boolean
 ): DawarichConnection | null {
   if (!rawUrl || !rawKey) return null;
 
@@ -69,7 +69,7 @@ function buildConnection(
  */
 export function buildUserDawarichConnection(
   baseUrl: string | null | undefined,
-  encryptedApiKey: string | null | undefined,
+  encryptedApiKey: string | null | undefined
 ): DawarichConnection | null {
   return buildConnection(baseUrl, encryptedApiKey, "user", true);
 }
@@ -99,7 +99,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
         settings?.dawarichBaseUrl,
         settings?.dawarichApiKey,
         "user",
-        true,
+        true
       );
       if (user) return user;
     }
@@ -109,7 +109,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
       admin?.globalDawarichBaseUrl,
       admin?.globalDawarichApiKey,
       "global",
-      true,
+      true
     );
     if (global) return global;
 
@@ -117,7 +117,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
       process.env.DAWARICH_BASE_URL,
       process.env.DAWARICH_API_KEY,
       "env",
-      false,
+      false
     );
   } catch (error) {
     logger.error({

@@ -114,12 +114,7 @@ export function GlobeLabelsOverlay({
       const overlaps = (b: PlacedBox): boolean => {
         for (let j = 0; j < placed.length; j++) {
           const q = placed[j];
-          if (
-            b.x < q.x + q.w &&
-            b.x + b.w > q.x &&
-            b.y < q.y + q.h &&
-            b.y + b.h > q.y
-          ) {
+          if (b.x < q.x + q.w && b.x + b.w > q.x && b.y < q.y + q.h && b.y + b.h > q.y) {
             return true;
           }
         }

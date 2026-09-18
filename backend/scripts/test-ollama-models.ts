@@ -5,14 +5,14 @@
  *   npm run test:ollama-models
  */
 
-import axios from 'axios';
+import axios from "axios";
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
 const TEST_EMAILS = [
   {
-    name: 'Lufthansa Round Trip',
-    subject: 'Ihre Buchungsbestätigung - Lufthansa',
+    name: "Lufthansa Round Trip",
+    subject: "Ihre Buchungsbestätigung - Lufthansa",
     text: `Sehr geehrter Herr Müller,
 
 Ihre Buchung wurde erfolgreich abgeschlossen!
@@ -41,11 +41,11 @@ Ankunft: 10:35 Uhr
 Mit freundlichen Grüßen
 Lufthansa Team`,
     expected: 2, // Number of flights
-    expectedFields: ['LH103', 'LH442', 'MUC', 'LUX', '9RFAA7', '26F']
+    expectedFields: ["LH103", "LH442", "MUC", "LUX", "9RFAA7", "26F"],
   },
   {
-    name: 'Ryanair One Way',
-    subject: 'Ryanair Booking Confirmation',
+    name: "Ryanair One Way",
+    subject: "Ryanair Booking Confirmation",
     text: `Your booking has been confirmed!
 
 Booking Reference: ABC123
@@ -63,11 +63,11 @@ Download your boarding pass 48h before departure.
 
 Ryanair`,
     expected: 1,
-    expectedFields: ['FR8234', 'BER', 'STN', 'ABC123', '15A']
+    expectedFields: ["FR8234", "BER", "STN", "ABC123", "15A"],
   },
   {
-    name: 'Multi-Leg Journey',
-    subject: 'Ihre Reise Frankfurt - Bangkok',
+    name: "Multi-Leg Journey",
+    subject: "Ihre Reise Frankfurt - Bangkok",
     text: `Buchungsbestätigung PNR: XYZ789
 
 1. Flug: LH712
@@ -80,17 +80,11 @@ Ryanair`,
 
 Gesamtpreis: 1.249,00 EUR`,
     expected: 2,
-    expectedFields: ['LH712', 'TG417', 'FRA', 'BKK', 'HKT', 'XYZ789']
-  }
+    expectedFields: ["LH712", "TG417", "FRA", "BKK", "HKT", "XYZ789"],
+  },
 ];
 
-const MODELS_TO_TEST = [
-  'qwen2.5:14b',
-  'llama3.2:3b',
-  'qwen2.5:7b',
-  'mistral:7b',
-  'gemma2:9b',
-];
+const MODELS_TO_TEST = ["qwen2.5:14b", "llama3.2:3b", "qwen2.5:7b", "mistral:7b", "gemma2:9b"];
 
 interface TestResult {
   model: string;
@@ -103,7 +97,7 @@ interface TestResult {
   error?: string;
 }
 
-async function testModel(model: string, email: typeof TEST_EMAILS[0]): Promise<TestResult> {
+async function testModel(model: string, email: (typeof TEST_EMAILS)[0]): Promise<TestResult> {
   console.log(`\n🧪 Testing ${model} on "${email.name}"...`);
 
   const prompt = `Extract ALL flights from this email. Return ONLY a JSON array.
@@ -135,7 +129,7 @@ JSON:`;
         model,
         prompt,
         stream: false,
-        format: 'json',
+        format: "json",
         options: {
           temperature: 0.05,
           top_p: 0.9,
@@ -151,13 +145,13 @@ JSON:`;
 
     // Parse response
     let jsonText = response.data.response.trim();
-    if (jsonText.includes('```')) {
-      jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    if (jsonText.includes("```")) {
+      jsonText = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "");
     }
 
     // Extract JSON array
-    const jsonStart = jsonText.indexOf('[');
-    const jsonEnd = jsonText.lastIndexOf(']') + 1;
+    const jsonStart = jsonText.indexOf("[");
+    const jsonEnd = jsonText.lastIndexOf("]") + 1;
     if (jsonStart >= 0 && jsonEnd > jsonStart) {
       jsonText = jsonText.substring(jsonStart, jsonEnd);
     }
@@ -192,7 +186,6 @@ JSON:`;
     console.log(`  📈 Accuracy: ${accuracy.toFixed(1)}%`);
 
     return result;
-
   } catch (error: any) {
     const duration = Date.now() - startTime;
 
@@ -238,26 +231,26 @@ async function pullModel(model: string): Promise<void> {
 }
 
 async function main() {
-  console.log('🚀 TravStats Ollama Model Comparison Tool\n');
-  console.log('='.repeat(60));
+  console.log("🚀 TravStats Ollama Model Comparison Tool\n");
+  console.log("=".repeat(60));
 
   // Check Ollama connection
   try {
     await axios.get(`${OLLAMA_URL}/api/tags`, { timeout: 3000 });
-    console.log('✅ Connected to Ollama at', OLLAMA_URL);
+    console.log("✅ Connected to Ollama at", OLLAMA_URL);
   } catch {
-    console.error('❌ Cannot connect to Ollama. Is it running?');
-    console.error('   Start with: ollama serve');
+    console.error("❌ Cannot connect to Ollama. Is it running?");
+    console.error("   Start with: ollama serve");
     process.exit(1);
   }
 
   // Check and download models
-  console.log('\n📦 Checking models...');
+  console.log("\n📦 Checking models...");
   for (const model of MODELS_TO_TEST) {
     const available = await checkModelAvailability(model);
     if (!available) {
       console.log(`   ⚠️  ${model} not found locally`);
-      const shouldPull = process.argv.includes('--download-missing');
+      const shouldPull = process.argv.includes("--download-missing");
 
       if (shouldPull) {
         await pullModel(model);
@@ -271,8 +264,8 @@ async function main() {
   }
 
   // Run tests
-  console.log('\n🧪 Running tests...');
-  console.log('='.repeat(60));
+  console.log("\n🧪 Running tests...");
+  console.log("=".repeat(60));
 
   const results: TestResult[] = [];
 
@@ -284,76 +277,81 @@ async function main() {
     }
 
     console.log(`\n📊 Testing model: ${model}`);
-    console.log('-'.repeat(60));
+    console.log("-".repeat(60));
 
     for (const email of TEST_EMAILS) {
       const result = await testModel(model, email);
       results.push(result);
 
       // Small delay between tests
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
   // Print summary
-  console.log('\n\n📊 SUMMARY');
-  console.log('='.repeat(60));
+  console.log("\n\n📊 SUMMARY");
+  console.log("=".repeat(60));
 
   // Group by model
-  const modelGroups = results.reduce((acc, result) => {
-    if (!acc[result.model]) acc[result.model] = [];
-    acc[result.model].push(result);
-    return acc;
-  }, {} as Record<string, TestResult[]>);
+  const modelGroups = results.reduce(
+    (acc, result) => {
+      if (!acc[result.model]) acc[result.model] = [];
+      acc[result.model].push(result);
+      return acc;
+    },
+    {} as Record<string, TestResult[]>
+  );
 
   for (const [model, modelResults] of Object.entries(modelGroups)) {
     console.log(`\n${model}:`);
 
     const avgDuration = modelResults.reduce((sum, r) => sum + r.duration, 0) / modelResults.length;
     const avgAccuracy = modelResults.reduce((sum, r) => sum + r.accuracy, 0) / modelResults.length;
-    const successRate = (modelResults.filter(r => r.success).length / modelResults.length) * 100;
+    const successRate = (modelResults.filter((r) => r.success).length / modelResults.length) * 100;
 
     console.log(`  ⏱️  Avg Duration: ${avgDuration.toFixed(0)}ms`);
     console.log(`  📈 Avg Accuracy: ${avgAccuracy.toFixed(1)}%`);
     console.log(`  ✅ Success Rate: ${successRate.toFixed(1)}%`);
 
-    modelResults.forEach(result => {
-      const icon = result.success ? '✅' : '❌';
-      console.log(`     ${icon} ${result.email}: ${result.accuracy.toFixed(0)}% (${result.duration}ms)`);
+    modelResults.forEach((result) => {
+      const icon = result.success ? "✅" : "❌";
+      console.log(
+        `     ${icon} ${result.email}: ${result.accuracy.toFixed(0)}% (${result.duration}ms)`
+      );
     });
   }
 
   // Recommendations
-  console.log('\n\n🎯 RECOMMENDATIONS');
-  console.log('='.repeat(60));
+  console.log("\n\n🎯 RECOMMENDATIONS");
+  console.log("=".repeat(60));
 
   const modelScores = Object.entries(modelGroups).map(([model, results]) => {
     const avgAccuracy = results.reduce((sum, r) => sum + r.accuracy, 0) / results.length;
     const avgDuration = results.reduce((sum, r) => sum + r.duration, 0) / results.length;
-    const score = avgAccuracy - (avgDuration / 100); // Balance accuracy vs speed
+    const score = avgAccuracy - avgDuration / 100; // Balance accuracy vs speed
 
     return { model, avgAccuracy, avgDuration, score };
   });
 
   modelScores.sort((a, b) => b.score - a.score);
 
-  console.log('\nBest models for TravStats:');
+  console.log("\nBest models for TravStats:");
   modelScores.forEach((entry, index) => {
-    const medal = ['🥇', '🥈', '🥉'][index] || '  ';
+    const medal = ["🥇", "🥈", "🥉"][index] || "  ";
     console.log(`${medal} ${entry.model}`);
     console.log(`    Accuracy: ${entry.avgAccuracy.toFixed(1)}%`);
     console.log(`    Speed: ${entry.avgDuration.toFixed(0)}ms`);
     console.log(`    Score: ${entry.score.toFixed(1)}`);
   });
 
-  console.log('\n💡 To use the best model, add to your .env:');
+  console.log("\n💡 To use the best model, add to your .env:");
   console.log(`   OLLAMA_MODEL=${modelScores[0].model}`);
 
-  console.log('\n✨ Done!\n');
+  console.log("\n✨ Done!\n");
 }
 
 // Run
-main().catch(error => {
-  console.error('\n❌ Fatal error:', error);
+main().catch((error) => {
+  console.error("\n❌ Fatal error:", error);
   process.exit(1);
 });

@@ -4,7 +4,6 @@ import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { IconName } from "../ui/Icon";
 
 export interface NavLeaf {
@@ -79,7 +78,6 @@ export function useNavItems(): {
   const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
   const placesVisible = usePlacesVisible();
   const isAdmin = user?.isAdmin ?? false;
 
@@ -151,9 +149,11 @@ export function useNavItems(): {
     // it is the header's own icon now (`NavigationBar`), and drawing it here
     // too duplicated it. Admin moved into `UserMenu`, beside settings.
     const tools: NavLeaf[] = [
-      // The badge and the gate agree: offered only while the instance
-      // beta switch is on (see `parserTemplates` in config/betaFeatures.ts).
-      ...(isAdmin && isFeatureVisible("parserTemplates")
+      // Out of beta on 2026-09-17 (owner decision): the gate asked for the
+      // template and regex parsers to be measured against the sample set,
+      // and they were — 31 of 31 flight mails, 97 of 108 lodging, 4 of 4
+      // cruise, without an LLM. Admin-only, as it has always been.
+      ...(isAdmin
         ? [
             {
               kind: "leaf" as const,
@@ -161,7 +161,6 @@ export function useNavItems(): {
               path: "/parser",
               label: t("dashboard:parser"),
               icon: "mail" as const,
-              betaBadge: true,
             },
           ]
         : []),
@@ -173,5 +172,5 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, isFeatureVisible, placesVisible, isAdmin]);
+  }, [t, isEnabled, placesVisible, isAdmin]);
 }

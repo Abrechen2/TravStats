@@ -69,9 +69,7 @@ describe("GET /api/v1/geo/reverse", () => {
   it("answers 200 with data:null when nothing resolves — an empty sea pin is not an error", async () => {
     mockReverse.mockResolvedValue(null);
 
-    const res = await request(app)
-      .get("/api/v1/geo/reverse?lat=0&lon=0")
-      .set("Cookie", authCookie);
+    const res = await request(app).get("/api/v1/geo/reverse?lat=0&lon=0").set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

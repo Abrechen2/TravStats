@@ -4,7 +4,9 @@ import { BULK_CITIES } from "./bulk";
 import { seedFxColumns } from "./stayFx";
 
 /** Stays and places outside the narrated trips, plus two user lists across them. */
-export async function seedBulk(userId: string): Promise<{ stays: number; places: number; lists: number }> {
+export async function seedBulk(
+  userId: string
+): Promise<{ stays: number; places: number; lists: number }> {
   // The base currency the money figures are reported in. Without a snapshot
   // into it, a priced stay counts as "not converted" and never reaches the
   // total (finding B4, independent review 2026-09-17).
@@ -74,11 +76,23 @@ export async function seedBulk(userId: string): Promise<{ stays: number; places:
   }
 
   const lists = [
-    { name: "Aussichtspunkte", color: "#60a5fa", icon: "🔭", members: placeIds.filter((p) => p.category === "viewpoint") },
-    { name: "Nächstes Mal", color: "#f472b6", icon: "📌", members: placeIds.filter((p) => !p.visited) },
+    {
+      name: "Aussichtspunkte",
+      color: "#60a5fa",
+      icon: "🔭",
+      members: placeIds.filter((p) => p.category === "viewpoint"),
+    },
+    {
+      name: "Nächstes Mal",
+      color: "#f472b6",
+      icon: "📌",
+      members: placeIds.filter((p) => !p.visited),
+    },
   ];
   for (const [sortIdx, l] of lists.entries()) {
-    const list = await prisma.placeList.create({ data: { userId, name: l.name, color: l.color, icon: l.icon, sortIdx } });
+    const list = await prisma.placeList.create({
+      data: { userId, name: l.name, color: l.color, icon: l.icon, sortIdx },
+    });
     await prisma.placeListEntry.createMany({
       data: l.members.map((m, i) => ({ listId: list.id, placeId: m.id, sortIdx: i })),
     });

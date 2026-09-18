@@ -24,11 +24,7 @@ export function StayStatusPill({
 }): JSX.Element {
   const { t } = useTranslation(["lodging"]);
   return (
-    <span
-      data-testid={testId}
-      className={STATUS_PILL_CLASS}
-      style={statusPillStyle(status)}
-    >
+    <span data-testid={testId} className={STATUS_PILL_CLASS} style={statusPillStyle(status)}>
       {t(`lodging:stayStatus.${status}`)}
     </span>
   );

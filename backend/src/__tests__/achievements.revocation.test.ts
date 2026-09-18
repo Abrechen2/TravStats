@@ -1,5 +1,5 @@
-import { prisma } from '../db';
-import { checkAndUpdateAchievements } from '../utils/achievements';
+import { prisma } from "../db";
+import { checkAndUpdateAchievements } from "../utils/achievements";
 
 /**
  * The achievement engine used to `continue` on any already-unlocked achievement, so it
@@ -17,8 +17,8 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
  * the column was, and an audit of the table believed it.
  */
 
-const AIRPORTS_10 = 'AIRPORTS_10'; // requirement: 10 distinct airports
-const AIRPORTS_50 = 'AIRPORTS_50'; // far out of reach here — a pure progress row
+const AIRPORTS_10 = "AIRPORTS_10"; // requirement: 10 distinct airports
+const AIRPORTS_50 = "AIRPORTS_50"; // far out of reach here — a pure progress row
 
 interface Leg {
   dep: string;
@@ -31,12 +31,12 @@ interface Leg {
 
 // Each leg touches two airports, so six of them give twelve distinct codes.
 const ROUTES: Leg[] = [
-  { dep: 'FRA', depLat: 50.0379, depLon: 8.5622, arr: 'JFK', arrLat: 40.6413, arrLon: -73.7781 },
-  { dep: 'MUC', depLat: 48.3538, depLon: 11.7861, arr: 'LHR', arrLat: 51.47, arrLon: -0.4543 },
-  { dep: 'CDG', depLat: 49.0097, depLon: 2.5479, arr: 'DXB', arrLat: 25.2532, arrLon: 55.3657 },
-  { dep: 'AMS', depLat: 52.3105, depLon: 4.7683, arr: 'SIN', arrLat: 1.3644, arrLon: 103.9915 },
-  { dep: 'ZRH', depLat: 47.4647, depLon: 8.5492, arr: 'HND', arrLat: 35.5494, arrLon: 139.7798 },
-  { dep: 'VIE', depLat: 48.1103, depLon: 16.5697, arr: 'LAX', arrLat: 33.9416, arrLon: -118.4085 },
+  { dep: "FRA", depLat: 50.0379, depLon: 8.5622, arr: "JFK", arrLat: 40.6413, arrLon: -73.7781 },
+  { dep: "MUC", depLat: 48.3538, depLon: 11.7861, arr: "LHR", arrLat: 51.47, arrLon: -0.4543 },
+  { dep: "CDG", depLat: 49.0097, depLon: 2.5479, arr: "DXB", arrLat: 25.2532, arrLon: 55.3657 },
+  { dep: "AMS", depLat: 52.3105, depLon: 4.7683, arr: "SIN", arrLat: 1.3644, arrLon: 103.9915 },
+  { dep: "ZRH", depLat: 47.4647, depLon: 8.5492, arr: "HND", arrLat: 35.5494, arrLon: 139.7798 },
+  { dep: "VIE", depLat: 48.1103, depLon: 16.5697, arr: "LAX", arrLat: 33.9416, arrLon: -118.4085 },
 ];
 
 let userId: string;
@@ -48,7 +48,7 @@ async function seedFlights(count: number) {
     await prisma.flight.create({
       data: {
         userId,
-        airline: 'Lufthansa',
+        airline: "Lufthansa",
         flightNumber: `LH${100 + i}`,
         depIata: leg.dep,
         depLat: leg.depLat,
@@ -58,13 +58,15 @@ async function seedFlights(count: number) {
         arrLon: leg.arrLon,
         departureTime: new Date(Date.UTC(2020, 0, 1 + i, 8, 0)),
         arrivalTime: new Date(Date.UTC(2020, 0, 1 + i, 14, 0)),
-        status: 'flown',
+        status: "flown",
       },
     });
   }
 }
 
-async function progressOf(code: string): Promise<{ progress: number; requirement: number; unlockedAt: Date | null } | null> {
+async function progressOf(
+  code: string
+): Promise<{ progress: number; requirement: number; unlockedAt: Date | null } | null> {
   const row = await prisma.userAchievement.findFirst({
     where: { userId, achievement: { code } },
     include: { achievement: true },
@@ -94,8 +96,8 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe('achievement re-evaluation', () => {
-  it('revokes an achievement once its requirement is no longer met', async () => {
+describe("achievement re-evaluation", () => {
+  it("revokes an achievement once its requirement is no longer met", async () => {
     // Six round trips = twelve distinct airports -> AIRPORTS_10 (needs 10) unlocks.
     await seedFlights(6);
     await checkAndUpdateAchievements(userId);
@@ -118,7 +120,7 @@ describe('achievement re-evaluation', () => {
     expect(after!.unlockedAt).toBeNull();
   });
 
-  it('never dates a badge that was only ever tracked, not earned', async () => {
+  it("never dates a badge that was only ever tracked, not earned", async () => {
     // The defect behind "103 badges stand unlocked with a progress value below
     // their own requirement": `unlocked_at` was NOT NULL DEFAULT now(), so the
     // progress row created the moment a measure moved off zero carried a date.
@@ -138,7 +140,7 @@ describe('achievement re-evaluation', () => {
     expect(held!.unlockedAt).toBeInstanceOf(Date);
   });
 
-  it('keeps the original unlock date when re-checking an achievement still held', async () => {
+  it("keeps the original unlock date when re-checking an achievement still held", async () => {
     await seedFlights(6);
     await checkAndUpdateAchievements(userId);
 
@@ -147,7 +149,7 @@ describe('achievement re-evaluation', () => {
     const originalDate = first!.unlockedAt!;
 
     // Wait long enough that a bumped timestamp would be visibly different.
-    await new Promise(resolve => setTimeout(resolve, 25));
+    await new Promise((resolve) => setTimeout(resolve, 25));
 
     // A later flight re-runs the engine. The badge is re-evaluated (that is the fix),
     // but it must not be re-dated.
@@ -158,16 +160,16 @@ describe('achievement re-evaluation', () => {
     expect(second!.unlockedAt!.getTime()).toBe(originalDate.getTime());
   });
 
-  it('does not re-announce an achievement the user already holds', async () => {
+  it("does not re-announce an achievement the user already holds", async () => {
     await seedFlights(6);
     await checkAndUpdateAchievements(userId); // first unlock
 
     const again = await checkAndUpdateAchievements(userId);
-    const codes = again.map(a => a.achievement.code);
+    const codes = again.map((a) => a.achievement.code);
     expect(codes).not.toContain(AIRPORTS_10);
   });
 
-  it('re-unlocks cleanly when the data comes back', async () => {
+  it("re-unlocks cleanly when the data comes back", async () => {
     await seedFlights(2);
     await checkAndUpdateAchievements(userId);
     const revoked = await progressOf(AIRPORTS_10);
@@ -181,7 +183,7 @@ describe('achievement re-evaluation', () => {
     expect(after!.progress).toBeGreaterThanOrEqual(after!.requirement);
     // It was revoked, so earning it again IS a new unlock and should be
     // announced — and dated, off the cleared column rather than the old date.
-    expect(newly.map(a => a.achievement.code)).toContain(AIRPORTS_10);
+    expect(newly.map((a) => a.achievement.code)).toContain(AIRPORTS_10);
     expect(after!.unlockedAt).toBeInstanceOf(Date);
   });
 });

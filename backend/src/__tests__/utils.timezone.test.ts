@@ -111,13 +111,13 @@ describe("normalizeFlightTimeUtc — semantics-aware UTC resolution", () => {
 
   it("returns the stored value unchanged for canonical UTC rows", () => {
     expect(normalizeFlightTimeUtc(stored, "UTC", "Europe/Berlin")?.toISOString()).toBe(
-      stored.toISOString(),
+      stored.toISOString()
     );
   });
 
   it("re-interprets LEGACY_FAKE_UTC rows via the airport tz", () => {
     expect(normalizeFlightTimeUtc(stored, "LEGACY_FAKE_UTC", "Europe/Berlin")?.toISOString()).toBe(
-      "2026-05-01T08:30:00.000Z",
+      "2026-05-01T08:30:00.000Z"
     );
   });
 
@@ -130,10 +130,10 @@ describe("normalizeFlightTimeUtc — semantics-aware UTC resolution", () => {
     // by the API would be wrongly shifted in the post-deploy / pre-backfill
     // window. The backfill script is responsible for tagging rows correctly.
     expect(normalizeFlightTimeUtc(stored, "UNKNOWN", "Europe/Berlin")?.toISOString()).toBe(
-      stored.toISOString(),
+      stored.toISOString()
     );
     expect(normalizeFlightTimeUtc(stored, "UNKNOWN", null)?.toISOString()).toBe(
-      stored.toISOString(),
+      stored.toISOString()
     );
   });
 
@@ -147,7 +147,14 @@ describe("tzAwareDurationMinutes — semantics short-circuit", () => {
     // Both endpoints are real UTC instants — naive diff is exact.
     const dep = new Date("2026-05-01T08:30:00.000Z");
     const arr = new Date("2026-05-01T11:00:00.000Z");
-    const minutes = tzAwareDurationMinutes(dep, arr, "Europe/Berlin", "Europe/Berlin", "UTC", "UTC");
+    const minutes = tzAwareDurationMinutes(
+      dep,
+      arr,
+      "Europe/Berlin",
+      "Europe/Berlin",
+      "UTC",
+      "UTC"
+    );
     expect(minutes).toBe(150);
   });
 
@@ -162,7 +169,7 @@ describe("tzAwareDurationMinutes — semantics short-circuit", () => {
       "America/Los_Angeles",
       "America/New_York",
       "LEGACY_FAKE_UTC",
-      "LEGACY_FAKE_UTC",
+      "LEGACY_FAKE_UTC"
     );
     // LAX 17:30 PDT = 00:30 UTC next day; JFK 22:30 EDT = 02:30 UTC next day.
     // Real elapsed = 2h.

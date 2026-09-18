@@ -45,9 +45,7 @@ describe("lodgingImport api client", () => {
           createdLodgings: 1,
           createdStays: 0,
           skipped: 0,
-          failed: [
-            { sourceRowIndex: 2, code: "ownership_mismatch", error: "not yours" },
-          ],
+          failed: [{ sourceRowIndex: 2, code: "ownership_mismatch", error: "not yours" }],
         },
       },
     });

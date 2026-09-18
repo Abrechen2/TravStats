@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
+import { formatDateTime } from "../lib/displayFormat";
 
 interface ChangeEntry {
   field: string;
@@ -51,7 +52,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
     if (value === null || value === undefined) return "-";
     if (typeof value === "object") return JSON.stringify(value);
     if (typeof value === "string" && value.includes("T")) {
-      return new Date(value).toLocaleString();
+      return formatDateTime(value) || value;
     }
     return String(value);
   };
@@ -65,10 +66,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
         {changes.map((change, index) => {
           const isExpanded = expandedFields.has(change.field);
           return (
-            <div
-              key={index}
-              className="border rounded-lg p-3 border-border bg-(--bg-surface)"
-            >
+            <div key={index} className="border rounded-lg p-3 border-border bg-(--bg-surface)">
               <button
                 onClick={() => toggleField(change.field)}
                 className="w-full flex items-center justify-between text-left"

@@ -76,11 +76,14 @@ export const lodgingPriceStatsSchema = z
     }),
     pricedNights: z.number().int(),
     pricedStays: z.number().int(),
-    unpricedStays: z.number().int().openapi({
-      description:
-        "Stays with a price that could not be compared — no conversion, or an older " +
-        "base currency. Counted here rather than quietly skewing an average.",
-    }),
+    unpricedStays: z
+      .number()
+      .int()
+      .openapi({
+        description:
+          "Stays with a price that could not be compared — no conversion, or an older " +
+          "base currency. Counted here rather than quietly skewing an average.",
+      }),
     cheapestNight: pricedNightSchema.nullable(),
     dearestNight: pricedNightSchema.nullable(),
     byYear: z.array(priceGroupSchema),
@@ -88,12 +91,15 @@ export const lodgingPriceStatsSchema = z
     byChain: z.array(priceGroupSchema),
     byType: z.array(priceGroupSchema),
     byBoard: z.array(priceGroupSchema),
-    awardNightsValue: z.number().nullable().openapi({
-      description:
-        "Award nights times the AVERAGE PAID rate, deliberately not each stay's own " +
-        "price: an award stay usually carries no price at all, so there is nothing " +
-        "to sum. Null when no paid night exists to derive a rate from.",
-    }),
+    awardNightsValue: z
+      .number()
+      .nullable()
+      .openapi({
+        description:
+          "Award nights times the AVERAGE PAID rate, deliberately not each stay's own " +
+          "price: an award stay usually carries no price at all, so there is nothing " +
+          "to sum. Null when no paid night exists to derive a rate from.",
+      }),
   })
   .openapi({
     description:
@@ -139,8 +145,7 @@ export const lodgingGeoStatsSchema = z.object({
         "no stay has coordinates, or when the weighted vectors cancel out.",
     }),
   topCities: z.array(placeCountSchema).openapi({
-    description:
-      "Most nights first. NOT truncated — a screen slices, a payload should not decide.",
+    description: "Most nights first. NOT truncated — a screen slices, a payload should not decide.",
   }),
   topCountries: z.array(placeCountSchema),
   unlocatedStays: z.number().int().openapi({
@@ -149,19 +154,25 @@ export const lodgingGeoStatsSchema = z.object({
 });
 
 export const lodgingRhythmStatsSchema = z.object({
-  nightsAway: z.number().int().openapi({
-    description:
-      "Distinct dates spent away. Differs from `totalNights` exactly when stays " +
-      "overlap — and the difference is the interesting part, so both are reported.",
-  }),
-  walkableNights: z.number().int().openapi({
-    description:
-      "Nights from stays that CAN be placed on a calendar, so `walkableNights` minus " +
-      "`nightsAway` is the genuine overlap. Computing it from `totalNights` instead is " +
-      "a different quantity: totalNights includes undated stays, which can never enter " +
-      "nightsAway, so a stay recorded as five nights in July 2011 came out as five " +
-      "nights double-booked. That measured missing data and called it an overlap.",
-  }),
+  nightsAway: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Distinct dates spent away. Differs from `totalNights` exactly when stays " +
+        "overlap — and the difference is the interesting part, so both are reported.",
+    }),
+  walkableNights: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Nights from stays that CAN be placed on a calendar, so `walkableNights` minus " +
+        "`nightsAway` is the genuine overlap. Computing it from `totalNights` instead is " +
+        "a different quantity: totalNights includes undated stays, which can never enter " +
+        "nightsAway, so a stay recorded as five nights in July 2011 came out as five " +
+        "nights double-booked. That measured missing data and called it an overlap.",
+    }),
   nightsByWeekday: z.array(z.number().int()).openapi({
     description: "Seven entries, index 0 = Sunday, matching Date.getUTCDay().",
   }),
@@ -176,12 +187,15 @@ export const lodgingRhythmStatsSchema = z.object({
   }),
   longestStreakNights: z.number().int(),
   longestStreak: z.object({ start: z.string(), end: z.string() }).nullable(),
-  longestGapDays: z.number().int().openapi({
-    description:
-      "Longest stretch at home, counted only BETWEEN the first and last night away — " +
-      "before the first recorded night the user was not at home for decades, they " +
-      "simply had no data.",
-  }),
+  longestGapDays: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Longest stretch at home, counted only BETWEEN the first and last night away — " +
+        "before the first recorded night the user was not at home for decades, they " +
+        "simply had no data.",
+    }),
   awayShareByYear: z.record(z.string(), z.number()).openapi({
     description:
       "Fraction of each year spent away, 0..1. The current year is divided by the days " +
@@ -255,13 +269,16 @@ export const lodgingStatsResponseSchema = z
       spendByCurrency: z.record(z.string(), z.number()).openapi({
         description: "Original amounts grouped by their original currency — NOT a conversion.",
       }),
-      spendUnconvertedStays: z.number().int().openapi({
-        description:
-          "Stays whose price no provider could convert, and which are therefore absent " +
-          "from spendBaseTotal. A stay converted under an OLDER base currency is not " +
-          "counted here: it has a rate and is reported by spendBaseByCurrency, and " +
-          "counting it twice would put one stay behind two different hints.",
-      }),
+      spendUnconvertedStays: z
+        .number()
+        .int()
+        .openapi({
+          description:
+            "Stays whose price no provider could convert, and which are therefore absent " +
+            "from spendBaseTotal. A stay converted under an OLDER base currency is not " +
+            "counted here: it has a rate and is reported by spendBaseByCurrency, and " +
+            "counting it twice would put one stay behind two different hints.",
+        }),
       spendBaseByCurrency: z.record(z.string(), z.number()),
       awardNights: z.number().int(),
       nightsByType: z.record(z.string(), z.number().int()).openapi({
@@ -275,12 +292,15 @@ export const lodgingStatsResponseSchema = z
       plannedStaysCount: z.number().int(),
       plannedNights: z.number().int(),
       plannedLodgingsCount: z.number().int(),
-      notedLodgingsCount: z.number().int().openapi({
-        description:
-          "Houses that are no visit and have none coming: bookmarked, or every stay " +
-          "cancelled. Never part of any other figure — visited, planned and noted " +
-          "partition the list.",
-      }),
+      notedLodgingsCount: z
+        .number()
+        .int()
+        .openapi({
+          description:
+            "Houses that are no visit and have none coming: bookmarked, or every stay " +
+            "cancelled. Never part of any other figure — visited, planned and noted " +
+            "partition the list.",
+        }),
       nightsByStars: z.record(z.string(), z.number().int()).openapi({
         description:
           "Nights by OFFICIAL star count. A house with no star rating has no key here: " +
@@ -288,21 +308,27 @@ export const lodgingStatsResponseSchema = z
           "put campsites next to one-star hotels.",
       }),
       nightsByBoard: z.record(z.string(), z.number().int()),
-      perfectStays: z.number().int().openapi({
-        description:
-          "Rated 5 on ALL FOUR columns. A null on any column disqualifies: everything " +
-          "was perfect is a claim about everything, and three fives with a blank is a " +
-          "claim about three things.",
-      }),
+      perfectStays: z
+        .number()
+        .int()
+        .openapi({
+          description:
+            "Rated 5 on ALL FOUR columns. A null on any column disqualifies: everything " +
+            "was perfect is a claim about everything, and three fives with a blank is a " +
+            "claim about three things.",
+        }),
       enduredStays: z.number().int(),
       oneNightStays: z.number().int(),
-      undatedStays: z.number().int().openapi({
-        description:
-          "Stays with no usable date. They count in every sum, ranking and achievement " +
-          "— a hotel you cannot date is still one you slept in — and in no calendar " +
-          "series. Reported so a screen can SAY so: a year chart quietly missing eleven " +
-          "stays looks exactly like one that has them all.",
-      }),
+      undatedStays: z
+        .number()
+        .int()
+        .openapi({
+          description:
+            "Stays with no usable date. They count in every sum, ranking and achievement " +
+            "— a hotel you cannot date is still one you slept in — and in no calendar " +
+            "series. Reported so a screen can SAY so: a year chart quietly missing eleven " +
+            "stays looks exactly like one that has them all.",
+        }),
       undatedNights: z.number().int(),
       staysWithUnknownLength: z.number().int(),
       price: lodgingPriceStatsSchema,

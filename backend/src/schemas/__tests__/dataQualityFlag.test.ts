@@ -36,7 +36,9 @@ const undatedCountryDetails = {
 };
 
 const stayDatesReversedDetails = {
-  stays: [{ stayId: "s1", checkIn: "2024-09-03T00:00:00.000Z", checkOut: "2024-03-09T00:00:00.000Z" }],
+  stays: [
+    { stayId: "s1", checkIn: "2024-09-03T00:00:00.000Z", checkOut: "2024-03-09T00:00:00.000Z" },
+  ],
 };
 
 describe("dataQualityFlagPayloadSchema — details must be the shape its kind names", () => {

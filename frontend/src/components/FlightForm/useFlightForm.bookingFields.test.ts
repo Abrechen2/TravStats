@@ -171,9 +171,7 @@ describe("useFlightForm booking fields (#197)", () => {
   });
 
   it("keeps the booking reference when preparing the return leg", async () => {
-    const { result } = renderHook(() =>
-      useFlightForm(mocks.onSubmit, vi.fn())
-    );
+    const { result } = renderHook(() => useFlightForm(mocks.onSubmit, vi.fn()));
 
     act(() => {
       result.current.setDeparture(makeAirport("FRA"));

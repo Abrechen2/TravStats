@@ -1,6 +1,6 @@
-import { z } from './zod';
+import { z } from "./zod";
 
-import { API_TOKEN_SCOPES } from '../utils/apiTokens';
+import { API_TOKEN_SCOPES } from "../utils/apiTokens";
 
 /**
  * Zod schemas for the Personal Access Token (PAT) routes.
@@ -18,14 +18,10 @@ export const createApiTokenSchema = z
     label: z
       .string()
       .trim()
-      .min(1, 'Label is required')
-      .max(80, 'Label must be 80 characters or fewer'),
-    scope: apiTokenScopeSchema.default('read'),
-    expiresAt: z
-      .string()
-      .datetime({ offset: true })
-      .optional()
-      .nullable(),
+      .min(1, "Label is required")
+      .max(80, "Label must be 80 characters or fewer"),
+    scope: apiTokenScopeSchema.default("read"),
+    expiresAt: z.string().datetime({ offset: true }).optional().nullable(),
   })
   .strict();
 

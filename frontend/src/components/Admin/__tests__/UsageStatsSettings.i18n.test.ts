@@ -18,7 +18,7 @@ const USAGE_STATS_KEYS = [
   "admin.disabled",
   "admin.installId",
   "admin.installIdHint",
-  "admin.endpointDisabled"
+  "admin.endpointDisabled",
 ];
 
 const COMMON_KEYS = ["loading.title"];

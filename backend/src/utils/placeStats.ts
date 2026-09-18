@@ -1,5 +1,5 @@
-import { classifyPlace, classifyVisit } from '../shared/placeCounting';
-import { getContinent } from './continents';
+import { classifyPlace, classifyVisit } from "../shared/placeCounting";
+import { getContinent } from "./continents";
 
 /**
  * POI measures for the achievement engine.
@@ -114,7 +114,7 @@ export function longestDayStreak(days: Iterable<string>): number {
 
 export function calculatePlaceStats(
   places: readonly PlaceStatsInput[],
-  now: Date = new Date(),
+  now: Date = new Date()
 ): PlaceStats {
   const stats = emptyPlaceStats();
   const byCategory = new Map<string, number>();
@@ -126,7 +126,7 @@ export function calculatePlaceStats(
   places.forEach((place, index) => {
     // A wishlist entry — and an unticked checklist target, which is the same
     // thing wearing a different hat — contributes to nothing at all.
-    if (classifyPlace(place) !== 'visited') return;
+    if (classifyPlace(place) !== "visited") return;
 
     stats.placesCount += 1;
 
@@ -148,10 +148,10 @@ export function calculatePlaceStats(
 
     let visitsHere = 0;
     for (const visit of place.visits) {
-      if (classifyVisit(visit, now) !== 'visited') continue;
+      if (classifyVisit(visit, now) !== "visited") continue;
       stats.placeVisitsCount += 1;
       visitsHere += 1;
-      if (typeof visit.rating === 'number') stats.placeRatedVisits += 1;
+      if (typeof visit.rating === "number") stats.placeRatedVisits += 1;
       if (visit.tripId) stats.placeTripVisits += 1;
 
       // From here on the measure asks WHEN, and an undated visit has no answer.
@@ -181,7 +181,7 @@ export function calculatePlaceStats(
       // Ids are namespaced `listKey:slug`, so the prefix IS the list. Same
       // split the curated routes do — no extra join to learn which checklist
       // a ticked place belongs to.
-      const listKey = place.curatedItemId.split(':')[0];
+      const listKey = place.curatedItemId.split(":")[0];
       if (listKey) {
         stats.curatedTickedByList.set(listKey, (stats.curatedTickedByList.get(listKey) ?? 0) + 1);
       }
@@ -190,15 +190,12 @@ export function calculatePlaceStats(
 
   stats.placesInCategoryMax = Math.max(0, ...Array.from(byCategory.values()));
   stats.placeCategoriesUnique = byCategory.size;
-  stats.placesInOneDayMax = Math.max(
-    0,
-    ...Array.from(placesPerDay.values(), (set) => set.size),
-  );
+  stats.placesInOneDayMax = Math.max(0, ...Array.from(placesPerDay.values(), (set) => set.size));
   stats.placeVisitStreakMax = longestDayStreak(placesPerDay.keys());
   stats.placeVisitsInYearMax = Math.max(0, ...Array.from(visitsPerYear.values()));
   stats.placeCountriesInYearMax = Math.max(
     0,
-    ...Array.from(countriesPerYear.values(), (set) => set.size),
+    ...Array.from(countriesPerYear.values(), (set) => set.size)
   );
 
   return stats;

@@ -1,35 +1,68 @@
-import {
-  riverCalculator,
-  __resetRiverCache,
-} from "../riverCalculator";
+import { riverCalculator, __resetRiverCache } from "../riverCalculator";
 import type { PortPoint } from "../types";
 
 const BASEL: PortPoint = {
-  id: 1, lat: 47.5594, lon: 7.5886, unlocode: null, region: "river_rhine",
+  id: 1,
+  lat: 47.5594,
+  lon: 7.5886,
+  unlocode: null,
+  region: "river_rhine",
 };
 const COLOGNE: PortPoint = {
-  id: 2, lat: 50.9417, lon: 6.9583, unlocode: null, region: "river_rhine",
+  id: 2,
+  lat: 50.9417,
+  lon: 6.9583,
+  unlocode: null,
+  region: "river_rhine",
 };
 const AMSTERDAM_RHINE: PortPoint = {
-  id: 3, lat: 52.37, lon: 4.90, unlocode: null, region: "river_rhine",
+  id: 3,
+  lat: 52.37,
+  lon: 4.9,
+  unlocode: null,
+  region: "river_rhine",
 };
 const PASSAU: PortPoint = {
-  id: 4, lat: 48.5747, lon: 13.4561, unlocode: null, region: "river_danube",
+  id: 4,
+  lat: 48.5747,
+  lon: 13.4561,
+  unlocode: null,
+  region: "river_danube",
 };
 const BUDAPEST: PortPoint = {
-  id: 5, lat: 47.4979, lon: 19.0402, unlocode: null, region: "river_danube",
+  id: 5,
+  lat: 47.4979,
+  lon: 19.0402,
+  unlocode: null,
+  region: "river_danube",
 };
 const HAMBURG: PortPoint = {
-  id: 6, lat: 53.55, lon: 9.99, unlocode: "DEHAM", region: "north_sea",
+  id: 6,
+  lat: 53.55,
+  lon: 9.99,
+  unlocode: "DEHAM",
+  region: "north_sea",
 };
 const MAINZ_RHINE: PortPoint = {
-  id: 7, lat: 50.0, lon: 8.2711, unlocode: null, region: "river_rhine",
+  id: 7,
+  lat: 50.0,
+  lon: 8.2711,
+  unlocode: null,
+  region: "river_rhine",
 };
 const LYON_RHONE: PortPoint = {
-  id: 8, lat: 45.76, lon: 4.84, unlocode: null, region: "river_rhone",
+  id: 8,
+  lat: 45.76,
+  lon: 4.84,
+  unlocode: null,
+  region: "river_rhone",
 };
 const ARLES_RHONE: PortPoint = {
-  id: 9, lat: 43.6767, lon: 4.6275, unlocode: null, region: "river_rhone",
+  id: 9,
+  lat: 43.6767,
+  lon: 4.6275,
+  unlocode: null,
+  region: "river_rhone",
 };
 
 describe("riverCalculator", () => {

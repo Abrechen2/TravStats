@@ -31,7 +31,10 @@ export interface ColumnPrefs {
   hiddenIds: readonly string[];
 }
 
-export function useColumnPrefs(tableKey: string, alwaysVisible: readonly string[] = []): ColumnPrefs {
+export function useColumnPrefs(
+  tableKey: string,
+  alwaysVisible: readonly string[] = []
+): ColumnPrefs {
   const [hidden, setHidden] = useState<string[]>(() => readHidden(tableKey));
 
   const isVisible = useCallback((id: string): boolean => !hidden.includes(id), [hidden]);

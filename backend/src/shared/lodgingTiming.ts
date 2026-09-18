@@ -26,7 +26,12 @@
 export type LodgingDatePrecision = "DAY" | "MONTH" | "YEAR" | "NONE";
 
 /** Tuple, not `readonly T[]`, so `z.enum()` can consume it directly. */
-export const LODGING_DATE_PRECISIONS = ["DAY", "MONTH", "YEAR", "NONE"] as const satisfies readonly LodgingDatePrecision[];
+export const LODGING_DATE_PRECISIONS = [
+  "DAY",
+  "MONTH",
+  "YEAR",
+  "NONE",
+] as const satisfies readonly LodgingDatePrecision[];
 
 export interface TimedStay {
   checkIn: Date | null;

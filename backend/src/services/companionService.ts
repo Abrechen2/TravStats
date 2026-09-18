@@ -1,5 +1,5 @@
-import { prisma } from '../db';
-import { canonicalizeCompanionName, searchableCompanionName } from '../utils/companionName';
+import { prisma } from "../db";
+import { canonicalizeCompanionName, searchableCompanionName } from "../utils/companionName";
 
 export interface ResolvedCompanion {
   id: string;

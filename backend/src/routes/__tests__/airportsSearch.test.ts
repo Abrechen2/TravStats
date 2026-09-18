@@ -66,18 +66,14 @@ describe("GET /api/v1/airports/search — closed airports", () => {
   });
 
   it("returns it for a name search when the caller opts in", async () => {
-    const res = await request(app).get(
-      "/api/v1/airports/search?q=Testhausen&includeClosed=true",
-    );
+    const res = await request(app).get("/api/v1/airports/search?q=Testhausen&includeClosed=true");
     const codes = res.body.map((a: { iata: string }) => a.iata);
     expect(codes).toContain(CLOSED_CODE);
     expect(codes).toContain(OPEN_CODE);
   });
 
   it("still lists the open airport first when closed ones are included", async () => {
-    const res = await request(app).get(
-      "/api/v1/airports/search?q=Testhausen&includeClosed=true",
-    );
+    const res = await request(app).get("/api/v1/airports/search?q=Testhausen&includeClosed=true");
     const codes = res.body.map((a: { iata: string }) => a.iata);
     expect(codes.indexOf(OPEN_CODE)).toBeLessThan(codes.indexOf(CLOSED_CODE));
   });

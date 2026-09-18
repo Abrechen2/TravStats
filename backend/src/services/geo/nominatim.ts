@@ -1,7 +1,4 @@
-import {
-  resolveGeocoderUrls,
-  DEFAULT_NOMINATIM_URL,
-} from "../instanceSettingsService";
+import { resolveGeocoderUrls, DEFAULT_NOMINATIM_URL } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -152,10 +149,7 @@ function parseRow(row: NominatimRow): Coordinates | null {
   return toCoordinates(row.lat, row.lon);
 }
 
-async function fetchCoordinates(
-  query: string,
-  baseUrl: string,
-): Promise<Coordinates | null> {
+async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
   const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -180,10 +174,7 @@ async function fetchCoordinates(
   }
   const coords = parseRow(rows[0]);
   if (coords === null) {
-    logger.warn(
-      { query, row: rows[0] },
-      "geocoding response had unparseable coordinates",
-    );
+    logger.warn({ query, row: rows[0] }, "geocoding response had unparseable coordinates");
   }
   return coords;
 }
@@ -194,9 +185,7 @@ async function fetchCoordinates(
  * unparseable coordinates) logs a warning and resolves to `null` so a
  * lodging save is never blocked by a flaky or rate-limiting geocoder.
  */
-export async function geocodeAddress(
-  parts: GeocodeParts,
-): Promise<Coordinates | null> {
+export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates | null> {
   const query = buildQuery(parts);
   if (!query) return null;
 
@@ -211,10 +200,7 @@ export async function geocodeAddress(
     // to the public default (matters for air-gapped self-hosters during a
     // DB blip).
     nominatimUrl = process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL;
-    logger.warn(
-      { error },
-      "failed to resolve geocoder settings, falling back to ENV/default URL",
-    );
+    logger.warn({ error }, "failed to resolve geocoder settings, falling back to ENV/default URL");
   }
 
   const baseUrl = nominatimUrl.replace(/\/+$/, "");
@@ -249,7 +235,7 @@ function str(v: unknown): string | null {
 async function fetchAddress(
   lat: number,
   lon: number,
-  baseUrl: string,
+  baseUrl: string
 ): Promise<GeocodeParts | null> {
   const url =
     `${baseUrl}/reverse?lat=${encodeURIComponent(String(lat))}` +
@@ -316,10 +302,7 @@ async function fetchAddress(
  * process-wide queue, throttle and never-throws contract as `geocodeAddress`,
  * because it hits the same 1 req/s Nominatim budget.
  */
-export async function reverseGeocode(
-  lat: number,
-  lon: number,
-): Promise<GeocodeParts | null> {
+export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeParts | null> {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
 
@@ -329,10 +312,7 @@ export async function reverseGeocode(
     nominatimUrl = settings.nominatimUrl;
   } catch (error) {
     nominatimUrl = process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL;
-    logger.warn(
-      { error },
-      "failed to resolve geocoder settings, falling back to ENV/default URL",
-    );
+    logger.warn({ error }, "failed to resolve geocoder settings, falling back to ENV/default URL");
   }
 
   const baseUrl = nominatimUrl.replace(/\/+$/, "");
@@ -368,7 +348,7 @@ export async function reverseGeocode(
  * `null` when there is nothing to add, so callers can skip the write entirely.
  */
 export async function completeAddressFromCoordinates(
-  input: ResolveCoordinatesInput,
+  input: ResolveCoordinatesInput
 ): Promise<GeocodeParts | null> {
   const { lat, lon } = input;
   if (lat == null || lon == null) return null;
@@ -401,7 +381,7 @@ export async function completeAddressFromCoordinates(
  * no address material to geocode. Otherwise delegates to `geocodeAddress`.
  */
 export async function resolveCoordinates(
-  input: ResolveCoordinatesInput,
+  input: ResolveCoordinatesInput
 ): Promise<Coordinates | null> {
   if (input.lat != null && input.lon != null) return null;
   return geocodeAddress(input);

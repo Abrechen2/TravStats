@@ -9,12 +9,7 @@ import { runServe } from "./reactionRole.js";
 import { runRead, parseLimit } from "./readChannel.js";
 import { runReply } from "./replyThread.js";
 import { resolveReplyInput } from "./replyArgs.js";
-import {
-  runAnnounce,
-  readRepoVersion,
-  readRepoChangelog,
-  AnnounceType,
-} from "./announce.js";
+import { runAnnounce, readRepoVersion, readRepoChangelog, AnnounceType } from "./announce.js";
 import { extractChangelogEntry } from "./changelog.js";
 import { log } from "./log.js";
 
@@ -44,14 +39,13 @@ async function main(): Promise<void> {
     const type = process.argv[3];
     if (type !== "beta" && type !== "rc" && type !== "release") {
       log(
-        "Usage: tsx src/index.ts announce <beta|rc|release> [version] [--notes-file <path> | --notes <text>]",
+        "Usage: tsx src/index.ts announce <beta|rc|release> [version] [--notes-file <path> | --notes <text>]"
       );
       process.exitCode = 1;
       return;
     }
     const versionArg = process.argv[4];
-    const version =
-      versionArg && !versionArg.startsWith("--") ? versionArg : readRepoVersion();
+    const version = versionArg && !versionArg.startsWith("--") ? versionArg : readRepoVersion();
     if (!version) {
       log("No version given and backend/VERSION could not be read.");
       process.exitCode = 1;
@@ -99,9 +93,7 @@ async function main(): Promise<void> {
       return;
     }
     const message =
-      input.kind === "file"
-        ? readFileSync(input.path, "utf8").replace(/\s+$/, "")
-        : input.message;
+      input.kind === "file" ? readFileSync(input.path, "utf8").replace(/\s+$/, "") : input.message;
     if (!message) {
       log("The message file is empty — nothing to post.");
       process.exitCode = 1;
@@ -133,7 +125,7 @@ async function main(): Promise<void> {
       "  read <channel> [limit]         print recent messages of a channel\n" +
       "  announce <beta|rc|release> [v] [--notes-file <path> | --notes <text>]\n" +
       "                                post a beta/RC/release announcement\n" +
-      "  reply <thread> <message…>      reply in a forum thread (use --file <path> for multi-line)",
+      "  reply <thread> <message…>      reply in a forum thread (use --file <path> for multi-line)"
   );
   process.exitCode = 1;
 }

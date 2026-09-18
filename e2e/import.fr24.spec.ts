@@ -84,7 +84,7 @@ async function removeFixtureFlights(page: Page): Promise<void> {
   if (!res.ok()) return;
   const body = (await res.json()) as { flights?: { id: string; flightNumber: string | null }[] };
   const doomed = (body.flights ?? []).filter(
-    (f) => f.flightNumber && FIXTURE_FLIGHT_NUMBERS.includes(f.flightNumber),
+    (f) => f.flightNumber && FIXTURE_FLIGHT_NUMBERS.includes(f.flightNumber)
   );
   for (const flight of doomed) {
     await page.request.delete(`/api/v1/flights/${flight.id}`);
@@ -125,7 +125,7 @@ test.describe("FR24 importer (Settings → Import)", () => {
     // Upload the golden-master CSV fixture via the file input inside the FR24 tile label
     await page.setInputFiles(
       'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
-      FR24_FIXTURE,
+      FR24_FIXTURE
     );
 
     // Preview modal must appear (role=dialog with aria-labelledby="preview-modal-title")
@@ -142,9 +142,9 @@ test.describe("FR24 importer (Settings → Import)", () => {
     // Firefox and WebKit happened to be slow enough that it landed anyway,
     // Chromium was not — so the same test wrote a flight in two engines and
     // silently wrote nothing in the third, and then failed looking for it.
-    await expect(
-      page.getByText(/Import abgeschlossen|Import complete/i),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Import abgeschlossen|Import complete/i)).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Navigate to dashboard and verify first flight from fixture is visible
     // The flight LIST, not the dashboard — the dashboard is a map since the
@@ -160,7 +160,7 @@ test.describe("FR24 importer (Settings → Import)", () => {
     // First upload + commit
     await page.setInputFiles(
       'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
-      FR24_FIXTURE,
+      FR24_FIXTURE
     );
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.click('button:has-text("8 Zeilen importieren"), button:has-text("Import 8 rows")');
@@ -171,15 +171,15 @@ test.describe("FR24 importer (Settings → Import)", () => {
     // Firefox and WebKit happened to be slow enough that it landed anyway,
     // Chromium was not — so the same test wrote a flight in two engines and
     // silently wrote nothing in the third, and then failed looking for it.
-    await expect(
-      page.getByText(/Import abgeschlossen|Import complete/i),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Import abgeschlossen|Import complete/i)).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Second upload — same file
     await gotoImportSection(page);
     await page.setInputFiles(
       'label:has-text("FR24-CSV auswählen") input[type="file"], label:has-text("Choose FR24 CSV") input[type="file"]',
-      FR24_FIXTURE,
+      FR24_FIXTURE
     );
     // The preview summary must mention duplicates (exact count may vary depending
     // on prior test state in the DB — just assert the word "duplicates" appears)

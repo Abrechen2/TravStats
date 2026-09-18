@@ -26,8 +26,12 @@ export const receiptUrlValidator = z
   .string()
   .refine(
     (url) => {
-      // Allow local uploads (starts with /api/v1/uploads/)
+      // Allow local uploads (starts with /api/v1/uploads/), and a kept
+      // document, which is what a receipt upload answers since forgejo#116.
       if (url.startsWith("/api/v1/uploads/")) {
+        return true;
+      }
+      if (/^\/api\/v1\/documents\/[0-9a-f-]{36}\/file$/i.test(url)) {
         return true;
       }
 
@@ -36,7 +40,7 @@ export const receiptUrlValidator = z
         const parsedUrl = new URL(url);
         const hostname = parsedUrl.hostname.toLowerCase();
         return ALLOWED_RECEIPT_DOMAINS.some(
-          (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+          (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
         );
       } catch {
         return false;
@@ -44,6 +48,6 @@ export const receiptUrlValidator = z
     },
     {
       message: `Receipt URL must be a local upload (/api/v1/uploads/) or from a trusted domain: ${ALLOWED_RECEIPT_DOMAINS.join(", ")}`,
-    },
+    }
   )
   .optional();

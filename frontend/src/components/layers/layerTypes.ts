@@ -27,8 +27,20 @@ export interface ArcDatum {
   scheduledCount: number;
   /** First-seen departure/arrival identity for this canonical route —
    *  drives the flag/ICAO/name shown in the hover tooltip. */
-  departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
-  arrival: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
+  departure: {
+    iata?: string;
+    icao?: string;
+    name?: string;
+    city?: string | null;
+    country?: string | null;
+  };
+  arrival: {
+    iata?: string;
+    icao?: string;
+    name?: string;
+    city?: string | null;
+    country?: string | null;
+  };
 }
 
 export interface PointDatum {

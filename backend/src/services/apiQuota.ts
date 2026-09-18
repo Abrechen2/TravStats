@@ -21,7 +21,7 @@
  * indicator.
  */
 
-export type ApiProvider = 'aerodatabox' | 'airlabs' | 'aviationstack' | 'opensky';
+export type ApiProvider = "aerodatabox" | "airlabs" | "aviationstack" | "opensky";
 
 /**
  * RapidAPI / AeroDataBox return TWO independent counters:
@@ -42,7 +42,7 @@ export type ApiProvider = 'aerodatabox' | 'airlabs' | 'aviationstack' | 'opensky
  * modal don't inflate the budget the user actually has.
  */
 export interface ObservedQuota {
-  kind: 'observed';
+  kind: "observed";
   /** Primary tier quota (e.g. 600/month for AeroDataBox BASIC). */
   limit: number | null;
   remaining: number | null;
@@ -54,18 +54,18 @@ export interface ObservedQuota {
 }
 
 export interface NotReportedQuota {
-  kind: 'not_reported';
+  kind: "not_reported";
   /** Static known cap from provider docs, if any. Used as a hint only. */
   knownLimitHint?: number;
 }
 
 export interface RateLimitOnlyQuota {
-  kind: 'rate_limit_only';
+  kind: "rate_limit_only";
 }
 
 export type ProviderQuota = ObservedQuota | NotReportedQuota | RateLimitOnlyQuota;
 
-const ANON = '__anon__';
+const ANON = "__anon__";
 
 /** Map<userId, Map<provider, ObservedQuota>>. Static kinds aren't stored —
  *  they come from `getQuotaShape` because they don't change per-user. */
@@ -77,10 +77,10 @@ const observed = new Map<string, Map<ApiProvider, ObservedQuota>>();
  * static shape from this map.
  */
 const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
-  aerodatabox: { kind: 'observed', limit: null, remaining: null, observedAt: '' },
-  airlabs: { kind: 'not_reported', knownLimitHint: 1000 },
-  aviationstack: { kind: 'not_reported', knownLimitHint: 100 },
-  opensky: { kind: 'rate_limit_only' },
+  aerodatabox: { kind: "observed", limit: null, remaining: null, observedAt: "" },
+  airlabs: { kind: "not_reported", knownLimitHint: 1000 },
+  aviationstack: { kind: "not_reported", knownLimitHint: 100 },
+  opensky: { kind: "rate_limit_only" },
 };
 
 /**
@@ -91,21 +91,21 @@ const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
 export function recordObservedQuota(
   provider: ApiProvider,
   userId: string | undefined,
-  headers: Record<string, unknown> | undefined | null,
+  headers: Record<string, unknown> | undefined | null
 ): void {
-  if (!headers || typeof headers !== 'object') return;
+  if (!headers || typeof headers !== "object") return;
   const parseHeader = (name: string): number => {
     const raw = headers[name];
-    return typeof raw === 'string' ? parseInt(raw, 10) : NaN;
+    return typeof raw === "string" ? parseInt(raw, 10) : NaN;
   };
 
   // Header keys arrive lowercased from axios. Prefer the API-units pair
   // (the actual tier quota) over the bare "requests" pair (HTTP-call
   // counter, generally 4× larger and irrelevant for plan budgeting).
-  const unitsLimit = parseHeader('x-ratelimit-api-units-limit');
-  const unitsRemaining = parseHeader('x-ratelimit-api-units-remaining');
-  const requestsLimit = parseHeader('x-ratelimit-requests-limit');
-  const requestsRemaining = parseHeader('x-ratelimit-requests-remaining');
+  const unitsLimit = parseHeader("x-ratelimit-api-units-limit");
+  const unitsRemaining = parseHeader("x-ratelimit-api-units-remaining");
+  const requestsLimit = parseHeader("x-ratelimit-requests-limit");
+  const requestsRemaining = parseHeader("x-ratelimit-requests-remaining");
 
   // Fall back to the requests counter only when units headers are
   // absent — that way providers that don't have the units split still
@@ -124,7 +124,7 @@ export function recordObservedQuota(
     observed.set(key, inner);
   }
   inner.set(provider, {
-    kind: 'observed',
+    kind: "observed",
     limit: Number.isFinite(primaryLimit) ? primaryLimit : null,
     remaining: Number.isFinite(primaryRemaining) ? primaryRemaining : null,
     requestsLimit: Number.isFinite(requestsLimit) ? requestsLimit : null,
@@ -148,7 +148,7 @@ export function getProviderQuota(provider: ApiProvider, userId?: string): Provid
 /** Returns the shape of every provider's quota for the user — single
  *  fetch from the API-keys page. */
 export function getAllProviderQuotas(userId?: string): Record<ApiProvider, ProviderQuota> {
-  const providers: ApiProvider[] = ['aerodatabox', 'airlabs', 'aviationstack', 'opensky'];
+  const providers: ApiProvider[] = ["aerodatabox", "airlabs", "aviationstack", "opensky"];
   const out = {} as Record<ApiProvider, ProviderQuota>;
   for (const p of providers) {
     out[p] = getProviderQuota(p, userId);

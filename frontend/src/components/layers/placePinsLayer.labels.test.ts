@@ -15,7 +15,13 @@ import type { PlaceLabelList } from "../../lib/placeLabel";
 beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = ((kind: string) =>
     kind === "2d"
-      ? ({ clearRect() {}, fillText() {}, set font(_v: string) {}, set textAlign(_v: string) {}, set textBaseline(_v: string) {} } as unknown as CanvasRenderingContext2D)
+      ? ({
+          clearRect() {},
+          fillText() {},
+          set font(_v: string) {},
+          set textAlign(_v: string) {},
+          set textBaseline(_v: string) {},
+        } as unknown as CanvasRenderingContext2D)
       : null) as HTMLCanvasElement["getContext"];
   HTMLCanvasElement.prototype.toDataURL = () => "data:image/png;base64,stub";
 });
@@ -50,7 +56,9 @@ function build(
   }) as Layer[];
   const text = layers.find((l) => l.id === "place-pins-labels");
   const icons = layers.find((l) => l.id === "place-pins-symbols");
-  const rows = (l: Layer | undefined): { shortLabel: string; label: { kind: string; glyph?: string } }[] =>
+  const rows = (
+    l: Layer | undefined
+  ): { shortLabel: string; label: { kind: string; glyph?: string } }[] =>
     ((l?.props as { data?: unknown[] } | undefined)?.data ?? []) as never;
   return {
     texts: rows(text).map((d) => d.shortLabel),

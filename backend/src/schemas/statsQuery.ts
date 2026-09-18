@@ -39,9 +39,9 @@ export const WrappedQuerySchema = z.object({
 
 // Timeseries endpoint — bucketed series + current/previous window totals
 export const TimeseriesQuerySchema = z.object({
-  domain: z.enum(['flight', 'cruise']).default('flight'),
-  granularity: z.enum(['month', 'year']).default('month'),
-  window: z.enum(['rolling12m', 'year', 'all']).default('rolling12m'),
+  domain: z.enum(["flight", "cruise"]).default("flight"),
+  granularity: z.enum(["month", "year"]).default("month"),
+  window: z.enum(["rolling12m", "year", "all"]).default("rolling12m"),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
   fromDate: z.string().optional(),
   toDate: z.string().optional(),

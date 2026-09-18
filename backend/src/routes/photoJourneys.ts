@@ -45,47 +45,95 @@ const patchBodySchema = z.object({
   status: z.enum(["accepted", "dismissed"]),
   /** Set when accepting produced a trip, so the row can point at it. */
   createdTripId: z.string().uuid().optional(),
+  /** Accepting a `place` finding records a visit; a `stay` finding, a stay. */
+  createdPlaceVisitId: z.string().uuid().optional(),
+  createdLodgingStayId: z.string().uuid().optional(),
 });
 
-/** The user's home airport, for the "this is not daily life" floor. */
-async function homePosition(
+/**
+ * 404 unless every id the caller links is their own. The columns carry no
+ * foreign key, and even one would prove only that the row EXISTS — pointing a
+ * journey at a stranger's trip must fail like pointing it at nothing.
+ */
+async function assertCreatedOwned(
   userId: string,
-): Promise<{ lat: number; lon: number } | null> {
-  // The most-departed airport is the honest stand-in for "home": it needs
-  // no setting, no prompt, and it is already how the rest of the app
-  // decides what counts as a home base.
-  const grouped = await prisma.flight.groupBy({
-    by: ["depIata", "depLat", "depLon"],
-    where: { userId, depIata: { not: null } },
-    _count: { _all: true },
-    orderBy: { _count: { depIata: "desc" } },
-    take: 1,
-  });
-  const top = grouped[0];
-  if (top === undefined) {
-    return null;
-  }
-  return { lat: top.depLat, lon: top.depLon };
+  body: z.infer<typeof patchBodySchema>
+): Promise<void> {
+  const checks = [
+    body.createdTripId &&
+      prisma.trip.findFirst({ where: { id: body.createdTripId, userId }, select: { id: true } }),
+    body.createdPlaceVisitId &&
+      prisma.placeVisit.findFirst({
+        where: { id: body.createdPlaceVisitId, userId },
+        select: { id: true },
+      }),
+    body.createdLodgingStayId &&
+      prisma.lodgingStay.findFirst({
+        where: { id: body.createdLodgingStayId, userId },
+        select: { id: true },
+      }),
+  ].filter(Boolean);
+  const found = await Promise.all(checks);
+  if (found.some((row) => row === null)) throw new AppError("Linked entry not found", 404);
 }
 
+const settingsBodySchema = z.object({ nightlyScan: z.boolean() }).strict();
+
+/**
+ * The account's opt-in to the nightly scan (forgejo#94, point 5). Off until the
+ * user turns it on: the scan reads their library and asks a third-party
+ * geocoder about what it finds (see jobs/photoJourneyScanScheduler.ts).
+ */
 router.get(
-  "/",
+  "/settings",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const parsed = listQuerySchema.safeParse(req.query);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
-
-      const journeys = await prisma.photoJourney.findMany({
-        where: { userId: req.userId!, status: parsed.data.status },
-        orderBy: { startDate: "desc" },
+      const row = await prisma.userSettings.findUnique({
+        where: { userId: req.userId! },
+        select: { photoJourneyNightlyScan: true },
       });
-
-      res.json({ success: true, data: journeys });
+      res.json({ success: true, data: { nightlyScan: row?.photoJourneyNightlyScan ?? false } });
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
+
+router.put(
+  "/settings",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = settingsBodySchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const update = { photoJourneyNightlyScan: parsed.data.nightlyScan };
+      const row = await prisma.userSettings.upsert({
+        where: { userId: req.userId! },
+        update,
+        create: { userId: req.userId!, data: {}, ...update },
+        select: { photoJourneyNightlyScan: true },
+      });
+      res.json({ success: true, data: { nightlyScan: row.photoJourneyNightlyScan } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const journeys = await prisma.photoJourney.findMany({
+      where: { userId: req.userId!, status: parsed.data.status },
+      orderBy: { startDate: "desc" },
+    });
+
+    res.json({ success: true, data: journeys });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * The scan is the expensive one and the only route here that is limited.
@@ -119,18 +167,14 @@ router.post(
             Date.UTC(
               until.getUTCFullYear() - DEFAULT_LOOKBACK_YEARS,
               until.getUTCMonth(),
-              until.getUTCDate(),
-            ),
+              until.getUTCDate()
+            )
           );
       if (since >= until) {
         throw new AppError("since must be before until", 400);
       }
 
-      const outcome = await scanPhotoJourneys(req.userId!, {
-        since,
-        until,
-        home: await homePosition(req.userId!),
-      });
+      const outcome = await scanPhotoJourneys(req.userId!, { since, until });
 
       // Not an error: an account without Immich is a normal account, and
       // a 4xx here would make the Companion show a failure for a feature
@@ -147,36 +191,36 @@ router.post(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
-router.patch(
-  "/:id",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parsed = patchBodySchema.safeParse(req.body);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = patchBodySchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    await assertCreatedOwned(req.userId!, parsed.data);
 
-      // Scoped by userId in the WHERE, not checked after loading: a
-      // journey belonging to someone else must be a 404, never a row we
-      // fetched and then decided not to show.
-      const { count } = await prisma.photoJourney.updateMany({
-        where: { id: req.params.id, userId: req.userId! },
-        data: {
-          status: parsed.data.status,
-          createdTripId: parsed.data.createdTripId ?? null,
-          resolvedAt: new Date(),
-        },
-      });
-      if (count === 0) {
-        throw new AppError("Photo journey not found", 404);
-      }
-
-      res.json({ success: true });
-    } catch (err) {
-      next(err);
+    // Scoped by userId in the WHERE, not checked after loading: a
+    // journey belonging to someone else must be a 404, never a row we
+    // fetched and then decided not to show.
+    const { count } = await prisma.photoJourney.updateMany({
+      where: { id: req.params.id, userId: req.userId! },
+      data: {
+        status: parsed.data.status,
+        createdTripId: parsed.data.createdTripId ?? null,
+        createdPlaceVisitId: parsed.data.createdPlaceVisitId ?? null,
+        createdLodgingStayId: parsed.data.createdLodgingStayId ?? null,
+        resolvedAt: new Date(),
+      },
+    });
+    if (count === 0) {
+      throw new AppError("Photo journey not found", 404);
     }
-  },
-);
+
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

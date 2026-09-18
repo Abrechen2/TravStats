@@ -30,7 +30,7 @@ import { z } from "./zod";
  * this answers is only "did the client supply this field at all".
  */
 export function partialForUpdate<T extends z.ZodRawShape>(
-  schema: z.ZodObject<T>,
+  schema: z.ZodObject<T>
 ): z.ZodObject<{ [K in keyof T]: z.ZodOptional<T[K]> }> {
   const stripped: Record<string, z.ZodTypeAny> = {};
   for (const key of Object.keys(schema.shape)) {
@@ -40,7 +40,7 @@ export function partialForUpdate<T extends z.ZodRawShape>(
         ? (field.unwrap() as z.ZodTypeAny)
         : field;
   }
-  return z
-    .object(stripped)
-    .partial() as unknown as z.ZodObject<{ [K in keyof T]: z.ZodOptional<T[K]> }>;
+  return z.object(stripped).partial() as unknown as z.ZodObject<{
+    [K in keyof T]: z.ZodOptional<T[K]>;
+  }>;
 }

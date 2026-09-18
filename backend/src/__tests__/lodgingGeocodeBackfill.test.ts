@@ -78,18 +78,21 @@ describe("backfillMissingCoordinates", () => {
     // The name reaches the geocoder — without it the query would be empty and
     // the lookup would never run.
     expect(geocodeAddress).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Schlosshotel Kronberg" }),
+      expect.objectContaining({ name: "Schlosshotel Kronberg" })
     );
 
-    expect(
-      (await prisma.lodging.findUnique({ where: { id: needsCoords.id } }))?.lat,
-    ).toBeCloseTo(52.5, 3);
-    expect(
-      (await prisma.lodging.findUnique({ where: { id: hasCoords.id } }))?.lat,
-    ).toBeCloseTo(1, 3);
-    expect(
-      (await prisma.lodging.findUnique({ where: { id: nameOnly.id } }))?.lat,
-    ).toBeCloseTo(52.5, 3);
+    expect((await prisma.lodging.findUnique({ where: { id: needsCoords.id } }))?.lat).toBeCloseTo(
+      52.5,
+      3
+    );
+    expect((await prisma.lodging.findUnique({ where: { id: hasCoords.id } }))?.lat).toBeCloseTo(
+      1,
+      3
+    );
+    expect((await prisma.lodging.findUnique({ where: { id: nameOnly.id } }))?.lat).toBeCloseTo(
+      52.5,
+      3
+    );
     // Ten round-trips against a containerised Postgres: three creates, the
     // service's own reads and updates, then three verifying reads. Measured at
     // 6.0 s on a Windows/Docker dev database, i.e. just over the 5 s default,
@@ -109,9 +112,7 @@ describe("backfillMissingCoordinates", () => {
 
     expect(result.attempted).toBe(1);
     expect(result.filled).toBe(0);
-    expect(
-      (await prisma.lodging.findUnique({ where: { id: row.id } }))?.lat,
-    ).toBeNull();
+    expect((await prisma.lodging.findUnique({ where: { id: row.id } }))?.lat).toBeNull();
   });
 
   it("swallows a geocoder throw and keeps going with the next row", async () => {
@@ -152,7 +153,7 @@ describe("backfillMissingCoordinates", () => {
         await prisma.lodging.findFirst({
           where: { userId, name: "Out Of Batch" },
         })
-      )?.lat,
+      )?.lat
     ).toBeNull();
 
     await prisma.lodging.deleteMany({ where: { batchId: batch.id } });
@@ -183,10 +184,7 @@ describe("backfillMissingCoordinates", () => {
 
       expect(result.attempted).toBe(0);
       expect(geocodeAddress).not.toHaveBeenCalled();
-      expect(
-        (await prisma.lodging.findUnique({ where: { id: otherLodging.id } }))
-          ?.lat,
-      ).toBeNull();
+      expect((await prisma.lodging.findUnique({ where: { id: otherLodging.id } }))?.lat).toBeNull();
     } finally {
       await prisma.lodging.deleteMany({ where: { userId: otherUser.id } });
       await prisma.importBatch.deleteMany({
@@ -308,8 +306,8 @@ describe("agreesWithRow", () => {
     expect(
       agreesWithRow(
         { name: "Hotel", type: "hotel", chainId: null, address: null, city: "北京", country: "CN" },
-        found({ city: "北京", countryName: "China" }),
-      ),
+        found({ city: "北京", countryName: "China" })
+      )
     ).toBe(true);
   });
 
@@ -331,8 +329,8 @@ describe("agreesWithRow", () => {
           city: "東京",
           country: "Japan",
         },
-        found({ city: "大阪", countryName: "Japan" }),
-      ),
+        found({ city: "大阪", countryName: "Japan" })
+      )
     ).toBe(false);
   });
 
@@ -347,8 +345,8 @@ describe("agreesWithRow", () => {
           city: "東京",
           country: "Japan",
         },
-        found({ city: "東京", countryName: "Japan" }),
-      ),
+        found({ city: "東京", countryName: "Japan" })
+      )
     ).toBe(true);
   });
 
@@ -362,10 +360,13 @@ describe("agreesWithRow", () => {
       country,
     });
     expect(
-      agreesWithRow(subject("Berlin", "Deutschland"), found({ city: "Roma", countryName: "Italia" })),
+      agreesWithRow(
+        subject("Berlin", "Deutschland"),
+        found({ city: "Roma", countryName: "Italia" })
+      )
     ).toBe(false);
     expect(
-      agreesWithRow(subject("Rom", "Italien"), found({ city: "Roma", countryName: "Italy" })),
+      agreesWithRow(subject("Rom", "Italien"), found({ city: "Roma", countryName: "Italy" }))
     ).toBe(true);
   });
 
@@ -373,8 +374,8 @@ describe("agreesWithRow", () => {
     expect(
       agreesWithRow(
         { name: "Hotel", type: "hotel", chainId: null, address: null, city: null, country: null },
-        found({ city: "Roma", countryName: "Italy" }),
-      ),
+        found({ city: "Roma", countryName: "Italy" })
+      )
     ).toBe(true);
   });
 });

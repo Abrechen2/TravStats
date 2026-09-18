@@ -24,7 +24,9 @@ describe("deriveStayOverallRating", () => {
     // A source that scores the stay as a whole (a Booking.com score, a legacy
     // row) is the user's own data with nothing to contradict it. Dropping it
     // would be a silent loss, so it survives as the fallback.
-    expect(deriveStayOverallRating({ room: null, breakfast: null, service: null, current: 4 })).toBe(4);
+    expect(
+      deriveStayOverallRating({ room: null, breakfast: null, service: null, current: 4 })
+    ).toBe(4);
   });
 
   it("is null when the stay carries no rating at all", () => {

@@ -37,10 +37,7 @@ function daysInYear(year: number): number {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
 }
 
-export function computeRhythmStats(
-  entries: StayWithNights[],
-  now: Date,
-): LodgingRhythmStats {
+export function computeRhythmStats(entries: StayWithNights[], now: Date): LodgingRhythmStats {
   // Every date the user was away, deduplicated. Keyed by UTC midnight in ms so
   // consecutive-run detection is plain arithmetic.
   const nightDays = new Set<number>();
@@ -63,12 +60,12 @@ export function computeRhythmStats(
     let cursor = Date.UTC(
       stay.checkIn.getUTCFullYear(),
       stay.checkIn.getUTCMonth(),
-      stay.checkIn.getUTCDate(),
+      stay.checkIn.getUTCDate()
     );
     const end = Date.UTC(
       stay.checkOut.getUTCFullYear(),
       stay.checkOut.getUTCMonth(),
-      stay.checkOut.getUTCDate(),
+      stay.checkOut.getUTCDate()
     );
     while (cursor < end) {
       nightDays.add(cursor);
@@ -137,12 +134,11 @@ export function computeRhythmStats(
   const startOfYear = Date.UTC(nowYear, 0, 1);
   const elapsedThisYear = Math.max(
     1,
-    Math.floor((Date.UTC(nowYear, now.getUTCMonth(), now.getUTCDate()) - startOfYear) / DAY_MS) + 1,
+    Math.floor((Date.UTC(nowYear, now.getUTCMonth(), now.getUTCDate()) - startOfYear) / DAY_MS) + 1
   );
   const awayShareByYear: Record<string, number> = {};
   for (const [year, nights] of Object.entries(nightsPerYear)) {
-    const denominator =
-      Number(year) === nowYear ? elapsedThisYear : daysInYear(Number(year));
+    const denominator = Number(year) === nowYear ? elapsedThisYear : daysInYear(Number(year));
     awayShareByYear[year] = Math.round((nights / denominator) * 10000) / 10000;
   }
 

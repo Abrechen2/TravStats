@@ -1,7 +1,7 @@
-import { prisma } from '../db';
-import { mergeTrips } from '../services/tripCleanupService';
+import { prisma } from "../db";
+import { mergeTrips } from "../services/tripCleanupService";
 
-describe('mergeTrips companion links', () => {
+describe("mergeTrips companion links", () => {
   let userId: string;
 
   beforeEach(async () => {
@@ -10,7 +10,7 @@ describe('mergeTrips companion links', () => {
     await prisma.trip.deleteMany();
     await prisma.user.deleteMany();
     const user = await prisma.user.create({
-      data: { username: 'merge-companions', passwordHash: 'x' },
+      data: { username: "merge-companions", passwordHash: "x" },
     });
     userId = user.id;
   });
@@ -25,12 +25,12 @@ describe('mergeTrips companion links', () => {
 
   // The invariant the whole dual write exists for: after any write path, a
   // trip's legacy array and its links must describe the same people.
-  it('leaves the merged trip with links matching its unioned array', async () => {
+  it("leaves the merged trip with links matching its unioned array", async () => {
     const target = await prisma.trip.create({
-      data: { userId, name: 'Ziel', companions: ['Anna'] },
+      data: { userId, name: "Ziel", companions: ["Anna"] },
     });
     const source = await prisma.trip.create({
-      data: { userId, name: 'Quelle', companions: ['Jonas'] },
+      data: { userId, name: "Quelle", companions: ["Jonas"] },
     });
 
     await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
@@ -40,20 +40,20 @@ describe('mergeTrips companion links', () => {
       include: { companionLinks: { include: { companion: true } } },
     });
 
-    expect(merged.companions.sort()).toEqual(['Anna', 'Jonas']);
+    expect(merged.companions.sort()).toEqual(["Anna", "Jonas"]);
     expect(merged.companionLinks).toHaveLength(merged.companions.length);
     expect(merged.companionLinks.map((l) => l.companion.displayName).sort()).toEqual([
-      'Anna',
-      'Jonas',
+      "Anna",
+      "Jonas",
     ]);
   });
 
-  it('does not duplicate a companion both trips already shared', async () => {
+  it("does not duplicate a companion both trips already shared", async () => {
     const target = await prisma.trip.create({
-      data: { userId, name: 'Ziel', companions: ['Anna'] },
+      data: { userId, name: "Ziel", companions: ["Anna"] },
     });
     const source = await prisma.trip.create({
-      data: { userId, name: 'Quelle', companions: ['anna'] },
+      data: { userId, name: "Quelle", companions: ["anna"] },
     });
 
     await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });

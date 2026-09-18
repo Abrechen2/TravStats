@@ -201,9 +201,7 @@ describe("Lodging Memberships API", () => {
       // chains (Sheraton/Westin/Ritz-Carlton) share one loyalty program.
       expect(create.body.data).not.toHaveProperty("chainId");
 
-      const list = await request(app)
-        .get("/api/v1/lodging-memberships")
-        .set("Cookie", authCookie);
+      const list = await request(app).get("/api/v1/lodging-memberships").set("Cookie", authCookie);
       expect(list.status).toBe(200);
       expect(list.body.data).toHaveLength(1);
     });
@@ -303,9 +301,7 @@ describe("Lodging Memberships API", () => {
       await prisma.lodgingMembership.create({
         data: { userId: otherUserId, programName: "Accor Live Limitless" },
       });
-      const res = await request(app)
-        .get("/api/v1/lodging-memberships")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/lodging-memberships").set("Cookie", authCookie);
       expect(res.status).toBe(200);
       for (const m of res.body.data as { userId: string }[]) {
         expect(m.userId).toBe(userId);

@@ -365,7 +365,7 @@ describe("suggestVisits", () => {
       // The control that exposed the bug: same distance, cells now adjacent.
       const shifted = suggestVisits(
         [{ ...TROMSO_TARGET, lon: TROMSO_TARGET.lon - 0.1 }],
-        [anchor({ ...TROMSO_ANCHOR, lon: TROMSO_ANCHOR.lon - 0.1 })],
+        [anchor({ ...TROMSO_ANCHOR, lon: TROMSO_ANCHOR.lon - 0.1 })]
       );
       const direct = suggestVisits([TROMSO_TARGET], [TROMSO_ANCHOR]);
       expect(shifted).toHaveLength(direct.length);
@@ -374,10 +374,7 @@ describe("suggestVisits", () => {
     it("still rejects a high-latitude pair OUTSIDE the radius", () => {
       // Widening the scan must not turn into "everything matches" — the
       // distance check is still what decides.
-      const far = suggestVisits(
-        [TROMSO_TARGET],
-        [anchor({ ...TROMSO_ANCHOR, lon: 22.5 })],
-      );
+      const far = suggestVisits([TROMSO_TARGET], [anchor({ ...TROMSO_ANCHOR, lon: 22.5 })]);
       expect(far).toEqual([]);
     });
   });

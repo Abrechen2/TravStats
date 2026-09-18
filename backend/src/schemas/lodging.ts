@@ -5,13 +5,7 @@ import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 import { partialForUpdate } from "./partialUpdate";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
-export const BOARD_TYPES = [
-  "none",
-  "breakfast",
-  "half",
-  "full",
-  "all_inclusive",
-] as const;
+export const BOARD_TYPES = ["none", "breakfast", "half", "full", "all_inclusive"] as const;
 // `in_progress` joined the vocabulary when lodging status became derived from
 // the dates (Alex, 2026-07-12) — a stay whose check-in has passed but whose
 // check-out has not is "laufend", the same three-way split cruises already use.
@@ -82,10 +76,12 @@ const baseLodgingSchema = z.object({
 });
 
 export const createLodgingSchema = baseLodgingSchema;
-export const updateLodgingSchema = partialForUpdate(baseLodgingSchema)
-  .refine((d) => Object.keys(d).length > 0, {
+export const updateLodgingSchema = partialForUpdate(baseLodgingSchema).refine(
+  (d) => Object.keys(d).length > 0,
+  {
     message: "At least one field must be provided for update",
-  });
+  }
+);
 
 // "HH:mm", 24h. Deliberately NOT a datetime: the day lives in
 // checkIn/checkOut, and re-encoding it here would create two sources of
@@ -172,7 +168,7 @@ export const createStaySchema = baseStaySchema
       d.checkIn == null ||
       d.checkOut == null ||
       new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
-    { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+    { message: "checkOut must not precede checkIn", path: ["checkOut"] }
   )
   // Same cap as the explicit `nights` field above, applied to the SPAN —
   // see MAX_STAY_SPAN_NIGHTS for why this exists.
@@ -185,7 +181,7 @@ export const createStaySchema = baseStaySchema
     {
       message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
       path: ["checkOut"],
-    },
+    }
   )
   // A precision is a claim about dates that are there. Saying "DAY" with no
   // date, or "NONE" while sending one, are both a record disagreeing with
@@ -201,7 +197,7 @@ export const createStaySchema = baseStaySchema
       d.checkOut != null ||
       d.datePrecision === undefined ||
       d.datePrecision === "NONE",
-    { message: "a stay with no dates must use datePrecision NONE", path: ["datePrecision"] },
+    { message: "a stay with no dates must use datePrecision NONE", path: ["datePrecision"] }
   )
   // An amount with no unit is not a price. Without this, `currency` simply
   // stayed absent and the NOT-NULL column's 'EUR' default answered for it —
@@ -221,11 +217,11 @@ export const createStaySchema = baseStaySchema
   // to be data.
   .refine(
     (d) => d.checkInTime == null || (d.checkIn != null && (d.datePrecision ?? "DAY") === "DAY"),
-    { message: "checkInTime requires a DAY-precision check-in date", path: ["checkInTime"] },
+    { message: "checkInTime requires a DAY-precision check-in date", path: ["checkInTime"] }
   )
   .refine(
     (d) => d.checkOutTime == null || (d.checkOut != null && (d.datePrecision ?? "DAY") === "DAY"),
-    { message: "checkOutTime requires a DAY-precision check-out date", path: ["checkOutTime"] },
+    { message: "checkOutTime requires a DAY-precision check-out date", path: ["checkOutTime"] }
   );
 export const updateStaySchema = partialForUpdate(baseStaySchema)
   .refine((d) => Object.keys(d).length > 0, {
@@ -236,7 +232,7 @@ export const updateStaySchema = partialForUpdate(baseStaySchema)
       if (!d.checkIn || !d.checkOut) return true;
       return new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime();
     },
-    { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+    { message: "checkOut must not precede checkIn", path: ["checkOut"] }
   )
   // Same cap as createStaySchema — see MAX_STAY_SPAN_NIGHTS. A PATCH that
   // sends both dates is just as able to widen a stay to a millennium as a
@@ -252,7 +248,7 @@ export const updateStaySchema = partialForUpdate(baseStaySchema)
     {
       message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
       path: ["checkOut"],
-    },
+    }
   );
 
 /**

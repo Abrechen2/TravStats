@@ -22,7 +22,6 @@ router.use(requireWriteScope);
 // typeahead is most of what a visitor came to try, so reads pass through.
 router.use(rejectDemoWrites);
 
-
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),
   region: z.string().max(40).optional(),
@@ -106,21 +105,25 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // which isn't in the vendored CSV) to coordinates so the user can add it as a
 // port without typing lat/lon by hand. Results carry source:"geocoder" and no
 // id — the client POSTs the chosen one back to /ports to persist it.
-router.get("/geocode", portGeocodeLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const parsed = listQuerySchema.safeParse(req.query);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const { q } = parsed.data;
-    if (!q || q.trim().length < 2) {
-      res.json({ success: true, data: [] });
-      return;
+router.get(
+  "/geocode",
+  portGeocodeLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = listQuerySchema.safeParse(req.query);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const { q } = parsed.data;
+      if (!q || q.trim().length < 2) {
+        res.json({ success: true, data: [] });
+        return;
+      }
+      const ports = await geocodePort(q);
+      res.json({ success: true, data: ports });
+    } catch (err) {
+      next(err);
     }
-    const ports = await geocodePort(q);
-    res.json({ success: true, data: ports });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

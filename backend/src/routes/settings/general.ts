@@ -1,30 +1,26 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
-import { AuthRequest } from '../../middleware/auth';
-import { isSharedDemoUser } from '../../middleware/demoGuard';
-import { prisma } from '../../db';
-import logger from '../../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { AuthRequest } from "../../middleware/auth";
+import { isSharedDemoUser } from "../../middleware/demoGuard";
+import { prisma } from "../../db";
+import logger from "../../utils/logger";
 import {
   SettingsDataJson,
   SettingsResponse,
   UserSettingsUpdateData,
   defaultSettings,
-} from './types';
-import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
-import { ECB_CURRENCIES } from '../../shared/currencies';
-import {
-  COUNTRY_TIERS,
-  parseCountryTier,
-  type CountryTier,
-} from '../../shared/countryEvidence';
-import { getInstanceSettings } from '../../services/instanceSettingsService';
+} from "./types";
+import { DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
+import { ECB_CURRENCIES } from "../../shared/currencies";
+import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
+import { getInstanceSettings } from "../../services/instanceSettingsService";
 
 const router = Router();
 
 // Coerce empty string to undefined before email validation so the frontend
 // can send back the cleared field without triggering a 400.
-const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
+const emptyToUndef = (v: unknown): unknown => (v === "" ? undefined : v);
 
 /**
  * The FX BASE is narrower than what you may record in. Everything converts
@@ -33,136 +29,164 @@ const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
  */
 type EcbCurrency = (typeof ECB_CURRENCIES)[number];
 export const baseCurrencyField = z.enum(
-  ECB_CURRENCIES as unknown as [EcbCurrency, ...EcbCurrency[]],
+  ECB_CURRENCIES as unknown as [EcbCurrency, ...EcbCurrency[]]
 );
 
-const settingsSchema = z.object({
-  profile: z.object({
-    username: z.string().optional(),
-    // Real name (#241). Unlike everything else in this block these two do NOT
-    // go into the settings JSON — they are columns on `User`, because the
-    // header reads them from /auth/me. Empty string means "clear it", which is
-    // why they are nullable and not run through `emptyToUndef`: dropping the
-    // key would make a cleared field silently keep its old value, the exact
-    // defect #198 was about.
-    firstName: z.string().max(100).nullable().optional(),
-    lastName: z.string().max(100).nullable().optional(),
-    email: z.preprocess(emptyToUndef, z.string().email().optional()),
-    // Self-hosted app behind an arbitrary domain/reverse proxy can't reliably
-    // know its own public origin, so a same-origin path (e.g. the value
-    // returned by POST /settings/profile-picture) is the normal case.
-    // http(s):// is accepted for backwards compatibility with older rows
-    // that stored an absolute URL. blob:/data: URLs are rejected — they're
-    // client-local (or huge inline payloads) and don't survive a reload or
-    // another device (see issue #186).
-    profilePicture: z
-      .string()
-      .refine(
-        (value) =>
-          value.startsWith('https://') || value.startsWith('http://') || value.startsWith('/'),
-        'Profile picture must be an HTTP(S) URL or a same-origin path'
-      )
-      .optional()
-      .nullable(),
-  }).partial().optional(),
-  display: z.object({
-    theme: z.enum(['light', 'dark']).optional(),
-    language: z.enum(['de', 'en']).optional(),
-    timezone: z.string().optional(),
-    dateFormat: z.enum(['DD.MM.YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']).optional(),
-    timeFormat: z.enum(['24h', '12h']).optional(),
-  }).partial().optional(),
-  units: z.object({
-    distanceUnit: z.enum(['kilometers', 'miles', 'nautical_miles']).optional(),
-    // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
-    currency: z
-      .string()
-      .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
+const settingsSchema = z
+  .object({
+    profile: z
+      .object({
+        username: z.string().optional(),
+        // Real name (#241). Unlike everything else in this block these two do NOT
+        // go into the settings JSON — they are columns on `User`, because the
+        // header reads them from /auth/me. Empty string means "clear it", which is
+        // why they are nullable and not run through `emptyToUndef`: dropping the
+        // key would make a cleared field silently keep its old value, the exact
+        // defect #198 was about.
+        firstName: z.string().max(100).nullable().optional(),
+        lastName: z.string().max(100).nullable().optional(),
+        email: z.preprocess(emptyToUndef, z.string().email().optional()),
+        // Self-hosted app behind an arbitrary domain/reverse proxy can't reliably
+        // know its own public origin, so a same-origin path (e.g. the value
+        // returned by POST /settings/profile-picture) is the normal case.
+        // http(s):// is accepted for backwards compatibility with older rows
+        // that stored an absolute URL. blob:/data: URLs are rejected — they're
+        // client-local (or huge inline payloads) and don't survive a reload or
+        // another device (see issue #186).
+        profilePicture: z
+          .string()
+          .refine(
+            (value) =>
+              value.startsWith("https://") || value.startsWith("http://") || value.startsWith("/"),
+            "Profile picture must be an HTTP(S) URL or a same-origin path"
+          )
+          .optional()
+          .nullable(),
+      })
+      .partial()
       .optional(),
-  }).partial().optional(),
-  defaults: z.object({
-    flightStatus: z.enum(['scheduled', 'flown']).optional(),
-    // '' = "no default" — the flight form then starts unclassified (#256).
-    seatClass: z.enum(['', 'economy', 'premium_economy', 'business', 'first']).optional(),
-    favoriteAirline: z.string().optional(),
-    flightCategory: z.enum(['', 'business', 'private', 'vacation']).optional(),
-  }).partial().optional(),
-  map: z.object({
-    mapStyle: z.enum(['osm', 'satellite']).optional(),
-    zoomLevel: z.number().min(1).max(18).optional(),
-    markerStyle: z.enum(['pin', 'circle', 'custom']).optional(),
-    routeColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/, 'Must be a hex color').optional(),
-  }).partial().optional(),
-  notifications: z.object({
-    emailNotifications: z.boolean().optional(),
-    flightReminder: z.enum(['off', '24h', '48h']).optional(),
-    checkInReminder: z.boolean().optional(),
-    featureUpdates: z.boolean().optional(),
-  }).partial().optional(),
-  autoUpdate: z.object({
-    enabled: z.boolean().optional(),
-    requireApproval: z.boolean().optional(),
-    checkInterval: z.number().min(5).max(1440).optional(), // 5 minutes to 24 hours
-    onlyDuringFlight: z.boolean().optional(),
-    expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
-  }).partial().optional(),
-  historicalEnrichment: z
-    .object({
-      enabled: z.boolean().optional(),
-      minConfidence: z.number().min(0).max(100).optional(),
-      maxPerDay: z.number().min(1).max(1000).optional(),
-    })
-    .partial()
-    .optional(),
-  // Feature toggles the settings page shows and the client autosaves.
-  //
-  // Absent from this schema until 2026-09-10, so Zod stripped them silently:
-  // the PUT answered 200, the block never reached the database, and a fresh
-  // browser had cost tracking off and tail-number recording on again — the
-  // second of those being a privacy choice the user had deliberately made
-  // (audit finding AUD-017). A visible switch has to survive save → GET →
-  // fresh client, or it is not a setting.
-  features: z
-    .object({
-      enableCostTracking: z.boolean().optional(),
-      trackAircraftRegistration: z.boolean().optional(),
-    })
-    .partial()
-    .optional(),
-  // Cruise-domain preferences. Own slice so the pattern stays clean when
-  // hotel / POI domains add their own slices later.
-  cruise: z
-    .object({
-      defaultLine: z.string().max(200).optional(),
-      defaultCabinType: z
-        .enum(['inside', 'oceanview', 'balcony', 'suite'])
-        .nullable()
-        .optional(),
-      showCruiseArcs: z.boolean().optional(),
-    })
-    .partial()
-    .optional(),
-  boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
-  enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
-  whatsNewSeenVersion: z.string().max(32).optional(),
-  // Lodging-domain preference: single currency used to aggregate stay costs that
-  // were originally billed in whatever currency the hotel uses.
-  baseCurrency: baseCurrencyField.optional(),
-  // Silent trip auto-creation during flight import (column-backed, default
-  // true). The explicit "detect trips" button is not gated by this.
-  autoCreateTrips: z.boolean().optional(),
-  /**
-   * Which evidence tier the country headline counts from, for THIS user
-   * (spec §3.2). `.nullable()` because null is a value and not an absence:
-   * sending it clears the override and returns the account to the instance
-   * default, while omitting the key leaves the choice alone.
-   *
-   * The enum comes from `COUNTRY_TIERS`, so the boundary can never accept a
-   * vocabulary the counting rule does not know — and can never grow an
-   * hours-based option, which §2 refuses on principle.
-   */
-  countryThreshold: z.enum(COUNTRY_TIERS).nullable().optional(),
-}).partial();
+    display: z
+      .object({
+        theme: z.enum(["light", "dark"]).optional(),
+        language: z.enum(["de", "en"]).optional(),
+        timezone: z.string().optional(),
+        dateFormat: z.enum(["DD.MM.YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]).optional(),
+        timeFormat: z.enum(["24h", "12h"]).optional(),
+      })
+      .partial()
+      .optional(),
+    units: z
+      .object({
+        distanceUnit: z.enum(["kilometers", "miles", "nautical_miles"]).optional(),
+        // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
+        currency: z
+          .string()
+          .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
+          .optional(),
+      })
+      .partial()
+      .optional(),
+    defaults: z
+      .object({
+        flightStatus: z.enum(["scheduled", "flown"]).optional(),
+        // '' = "no default" — the flight form then starts unclassified (#256).
+        seatClass: z.enum(["", "economy", "premium_economy", "business", "first"]).optional(),
+        favoriteAirline: z.string().optional(),
+        flightCategory: z.enum(["", "business", "private", "vacation"]).optional(),
+      })
+      .partial()
+      .optional(),
+    map: z
+      .object({
+        mapStyle: z.enum(["osm", "satellite"]).optional(),
+        zoomLevel: z.number().min(1).max(18).optional(),
+        markerStyle: z.enum(["pin", "circle", "custom"]).optional(),
+        routeColor: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{3,8}$/, "Must be a hex color")
+          .optional(),
+      })
+      .partial()
+      .optional(),
+    notifications: z
+      .object({
+        emailNotifications: z.boolean().optional(),
+        flightReminder: z.enum(["off", "24h", "48h"]).optional(),
+        checkInReminder: z.boolean().optional(),
+        featureUpdates: z.boolean().optional(),
+      })
+      .partial()
+      .optional(),
+    autoUpdate: z
+      .object({
+        enabled: z.boolean().optional(),
+        requireApproval: z.boolean().optional(),
+        checkInterval: z.number().min(5).max(1440).optional(), // 5 minutes to 24 hours
+        onlyDuringFlight: z.boolean().optional(),
+        expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
+      })
+      .partial()
+      .optional(),
+    historicalEnrichment: z
+      .object({
+        enabled: z.boolean().optional(),
+        minConfidence: z.number().min(0).max(100).optional(),
+        maxPerDay: z.number().min(1).max(1000).optional(),
+      })
+      .partial()
+      .optional(),
+    // Feature toggles the settings page shows and the client autosaves.
+    //
+    // Absent from this schema until 2026-09-10, so Zod stripped them silently:
+    // the PUT answered 200, the block never reached the database, and a fresh
+    // browser had cost tracking off and tail-number recording on again — the
+    // second of those being a privacy choice the user had deliberately made
+    // (audit finding AUD-017). A visible switch has to survive save → GET →
+    // fresh client, or it is not a setting.
+    features: z
+      .object({
+        enableCostTracking: z.boolean().optional(),
+        trackAircraftRegistration: z.boolean().optional(),
+      })
+      .partial()
+      .optional(),
+    // Cruise-domain preferences. Own slice so the pattern stays clean when
+    // hotel / POI domains add their own slices later.
+    cruise: z
+      .object({
+        defaultLine: z.string().max(200).optional(),
+        defaultCabinType: z.enum(["inside", "oceanview", "balcony", "suite"]).nullable().optional(),
+        showCruiseArcs: z.boolean().optional(),
+      })
+      .partial()
+      .optional(),
+    boardingPassParserStrategy: z
+      .enum(["parser-only", "parser-with-api", "api-only"])
+      .nullable()
+      .optional(),
+    enabledDomains: z
+      .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
+      .optional(),
+    whatsNewSeenVersion: z.string().max(32).optional(),
+    // Lodging-domain preference: single currency used to aggregate stay costs that
+    // were originally billed in whatever currency the hotel uses.
+    baseCurrency: baseCurrencyField.optional(),
+    // Silent trip auto-creation during flight import (column-backed, default
+    // true). The explicit "detect trips" button is not gated by this.
+    autoCreateTrips: z.boolean().optional(),
+    /**
+     * Which evidence tier the country headline counts from, for THIS user
+     * (spec §3.2). `.nullable()` because null is a value and not an absence:
+     * sending it clears the override and returns the account to the instance
+     * default, while omitting the key leaves the choice alone.
+     *
+     * The enum comes from `COUNTRY_TIERS`, so the boundary can never accept a
+     * vocabulary the counting rule does not know — and can never grow an
+     * hours-based option, which §2 refuses on principle.
+     */
+    countryThreshold: z.enum(COUNTRY_TIERS).nullable().optional(),
+  })
+  .partial();
 
 export const settingsUpdateSchema = settingsSchema;
 
@@ -179,37 +203,41 @@ export const settingsUpdateSchema = settingsSchema;
  * (Aufenthalt)"), and a client that guessed the word would say the wrong one on
  * any instance whose admin had changed it.
  */
-function buildSettingsResponse(extra: {
-  betaFeaturesEnabled: boolean;
-  countryThreshold: CountryTier;
-  /**
-   * Whether THIS account has any track evidence. Per-user, unlike the two
-   * above — which is why the parameter is not called `instance`: a name that
-   * said "instance" would invite the next reader to cache it across users.
-   */
-  hasCountryTracks: boolean;
-}, name: {
-  firstName: string | null;
-  lastName: string | null;
-}, record: {
-  data: Prisma.JsonValue;
-  autoUpdateEnabled: boolean;
-  autoUpdateRequireApproval: boolean;
-  autoUpdateCheckInterval: number;
-  autoUpdateOnlyDuringFlight: boolean;
-  autoUpdateExpiryHours: number;
-  boardingPassParserStrategy: string | null;
-  historicalEnrichmentEnabled: boolean | null;
-  historicalEnrichmentMinConfidence: number | null;
-  historicalEnrichmentMaxPerDay: number | null;
-  enabledDomains: string[];
-  baseCurrency: string;
-  autoCreateTrips: boolean;
-  countryThreshold: string | null;
-}): SettingsResponse {
-  const baseData = (typeof record.data === 'object' && record.data !== null
-    ? record.data
-    : {}) as SettingsDataJson;
+function buildSettingsResponse(
+  extra: {
+    betaFeaturesEnabled: boolean;
+    countryThreshold: CountryTier;
+    /**
+     * Whether THIS account has any track evidence. Per-user, unlike the two
+     * above — which is why the parameter is not called `instance`: a name that
+     * said "instance" would invite the next reader to cache it across users.
+     */
+    hasCountryTracks: boolean;
+  },
+  name: {
+    firstName: string | null;
+    lastName: string | null;
+  },
+  record: {
+    data: Prisma.JsonValue;
+    autoUpdateEnabled: boolean;
+    autoUpdateRequireApproval: boolean;
+    autoUpdateCheckInterval: number;
+    autoUpdateOnlyDuringFlight: boolean;
+    autoUpdateExpiryHours: number;
+    boardingPassParserStrategy: string | null;
+    historicalEnrichmentEnabled: boolean | null;
+    historicalEnrichmentMinConfidence: number | null;
+    historicalEnrichmentMaxPerDay: number | null;
+    enabledDomains: string[];
+    baseCurrency: string;
+    autoCreateTrips: boolean;
+    countryThreshold: string | null;
+  }
+): SettingsResponse {
+  const baseData = (
+    typeof record.data === "object" && record.data !== null ? record.data : {}
+  ) as SettingsDataJson;
 
   return {
     ...baseData,
@@ -268,7 +296,7 @@ async function hasCountryTracks(userId: string): Promise<boolean> {
 }
 
 // GET /
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
@@ -314,7 +342,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const response = buildSettingsResponse(extra, name, existing);
 
     logger.info({
-      operation: 'get_settings_response',
+      operation: "get_settings_response",
       autoUpdate: response.autoUpdate,
       historicalEnrichment: response.historicalEnrichment,
     });
@@ -326,7 +354,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 });
 
 // PUT /
-router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     // Zod strips unknown keys, so a client PUTting `betaFeaturesEnabled` here
@@ -356,8 +384,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       payload.historicalEnrichment !== undefined;
     if (refusedForDemo && (await isSharedDemoUser(userId))) {
       res.status(403).json({
-        error: 'DEMO_ACCOUNT_FORBIDDEN',
-        message: 'The demo account cannot change this. Use your own account on your own instance.',
+        error: "DEMO_ACCOUNT_FORBIDDEN",
+        message: "The demo account cannot change this. Use your own account on your own instance.",
       });
       return;
     }
@@ -370,14 +398,19 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
-    logger.info({ operation: 'settings_update', userId });
+    logger.info({ operation: "settings_update", userId });
 
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
 
     // Extract direct fields from payload since they're not part of JSON data
-    const { boardingPassParserStrategy, autoUpdate: _autoUpdate, historicalEnrichment: _historicalEnrichment, ...payloadWithoutDirectFields } = rest;
+    const {
+      boardingPassParserStrategy,
+      autoUpdate: _autoUpdate,
+      historicalEnrichment: _historicalEnrichment,
+      ...payloadWithoutDirectFields
+    } = rest;
 
     // First and last name are columns on `User`, not settings JSON — strip them
     // out of the profile block before it is merged, or a stale copy would sit
@@ -396,7 +429,9 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     const merged: SettingsDataJson = {
       ...defaultSettings,
-      ...(typeof existing?.data === 'object' && existing.data !== null ? existing.data as SettingsDataJson : {}),
+      ...(typeof existing?.data === "object" && existing.data !== null
+        ? (existing.data as SettingsDataJson)
+        : {}),
       ...payloadWithoutDirectFields,
     };
 
@@ -407,21 +442,23 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // Handle auto-update settings
     if (payload.autoUpdate) {
       logger.info({
-        operation: 'updating_auto_update_settings',
+        operation: "updating_auto_update_settings",
         autoUpdate: payload.autoUpdate,
       });
       // Always update enabled, even if false (use 'in' operator to check if property exists)
-      if ('enabled' in payload.autoUpdate) {
+      if ("enabled" in payload.autoUpdate) {
         updateData.autoUpdateEnabled = payload.autoUpdate.enabled;
-        logger.info(`Setting autoUpdateEnabled to: ${payload.autoUpdate.enabled} (type: ${typeof payload.autoUpdate.enabled})`);
+        logger.info(
+          `Setting autoUpdateEnabled to: ${payload.autoUpdate.enabled} (type: ${typeof payload.autoUpdate.enabled})`
+        );
       }
-      if ('requireApproval' in payload.autoUpdate) {
+      if ("requireApproval" in payload.autoUpdate) {
         updateData.autoUpdateRequireApproval = payload.autoUpdate.requireApproval;
       }
       if (payload.autoUpdate.checkInterval !== undefined) {
         updateData.autoUpdateCheckInterval = payload.autoUpdate.checkInterval;
       }
-      if ('onlyDuringFlight' in payload.autoUpdate) {
+      if ("onlyDuringFlight" in payload.autoUpdate) {
         updateData.autoUpdateOnlyDuringFlight = payload.autoUpdate.onlyDuringFlight;
       }
       if (payload.autoUpdate.expiryHours !== undefined) {
@@ -439,13 +476,15 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // Historical enrichment settings
     if (payload.historicalEnrichment) {
       logger.info({
-        operation: 'updating_historical_enrichment_settings',
+        operation: "updating_historical_enrichment_settings",
         historicalEnrichment: payload.historicalEnrichment,
       });
       // Always update enabled, even if false (use 'in' operator to check if property exists)
-      if ('enabled' in payload.historicalEnrichment) {
+      if ("enabled" in payload.historicalEnrichment) {
         updateData.historicalEnrichmentEnabled = payload.historicalEnrichment.enabled;
-        logger.info(`Setting historicalEnrichmentEnabled to: ${payload.historicalEnrichment.enabled} (type: ${typeof payload.historicalEnrichment.enabled})`);
+        logger.info(
+          `Setting historicalEnrichmentEnabled to: ${payload.historicalEnrichment.enabled} (type: ${typeof payload.historicalEnrichment.enabled})`
+        );
       }
       if (payload.historicalEnrichment.minConfidence !== undefined) {
         updateData.historicalEnrichmentMinConfidence = payload.historicalEnrichment.minConfidence;
@@ -504,8 +543,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
-        enabledDomains: enabledDomains ?? ['flight'],
-        baseCurrency: baseCurrency ?? 'EUR',
+        enabledDomains: enabledDomains ?? ["flight"],
+        baseCurrency: baseCurrency ?? "EUR",
         autoCreateTrips: autoCreateTrips ?? true,
         // null on a fresh row means "follow the instance", which is what an
         // account that has never opened the setting should do.
@@ -514,7 +553,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     logger.info({
-      operation: 'saved_settings',
+      operation: "saved_settings",
       autoUpdateEnabled: saved.autoUpdateEnabled,
       historicalEnrichmentEnabled: saved.historicalEnrichmentEnabled,
     });

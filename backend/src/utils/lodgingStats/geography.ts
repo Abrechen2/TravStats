@@ -26,7 +26,7 @@ const DEG = Math.PI / 180;
  * vector; that returns null rather than an arbitrary point.
  */
 function centreOfGravity(
-  points: Array<{ lat: number; lon: number; weight: number }>,
+  points: Array<{ lat: number; lon: number; weight: number }>
 ): { lat: number; lon: number } | null {
   if (points.length === 0) return null;
 

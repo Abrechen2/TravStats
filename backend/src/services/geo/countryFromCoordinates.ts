@@ -32,7 +32,12 @@ import {
 } from "./countryBoundaries";
 
 /** Even-odd crossing test against ONE ring, using its latitude-band index. */
-function isInsideRing(index: CountryBoundaryIndex, ring: number, lon: number, lat: number): boolean {
+function isInsideRing(
+  index: CountryBoundaryIndex,
+  ring: number,
+  lon: number,
+  lat: number
+): boolean {
   const bandBase = index.ringBandStart[ring];
   const bandCount = index.ringBandStart[ring + 1] - bandBase;
   const height = index.ringBandHeight[ring];
@@ -43,10 +48,7 @@ function isInsideRing(index: CountryBoundaryIndex, ring: number, lon: number, la
   const band =
     height === 0
       ? 0
-      : Math.max(
-          0,
-          Math.min(bandCount - 1, Math.floor((lat - index.ringLatMin[ring]) / height))
-        );
+      : Math.max(0, Math.min(bandCount - 1, Math.floor((lat - index.ringLatMin[ring]) / height)));
 
   const from = index.bandEdgeStart[bandBase + band];
   const to = index.bandEdgeStart[bandBase + band + 1];
@@ -66,7 +68,12 @@ function isInsideRing(index: CountryBoundaryIndex, ring: number, lon: number, la
   return inside;
 }
 
-function isInsidePart(index: CountryBoundaryIndex, part: number, lon: number, lat: number): boolean {
+function isInsidePart(
+  index: CountryBoundaryIndex,
+  part: number,
+  lon: number,
+  lat: number
+): boolean {
   const firstRing = index.partRingStart[part];
   const lastRing = index.partRingStart[part + 1];
   if (!isInsideRing(index, firstRing, lon, lat)) return false;

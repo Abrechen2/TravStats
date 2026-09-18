@@ -10,9 +10,9 @@
  * `check()` returns `null` and the badge stays hidden.
  */
 
-import logger from '../utils/logger';
+import logger from "../utils/logger";
 
-const GITHUB_REPO = 'Abrechen2/TravStats';
+const GITHUB_REPO = "Abrechen2/TravStats";
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 5_000;
 
@@ -41,7 +41,7 @@ interface GithubReleasePayload {
 }
 
 function isObject(value: unknown): value is GithubReleasePayload {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 async function fetchLatestRelease(): Promise<UpdateInfo | null> {
@@ -51,15 +51,15 @@ async function fetchLatestRelease(): Promise<UpdateInfo | null> {
   try {
     const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
       headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'travstats-update-check',
+        Accept: "application/vnd.github+json",
+        "User-Agent": "travstats-update-check",
       },
       signal: controller.signal,
     });
 
     if (!response.ok) {
       logger.warn({
-        operation: 'update_check_http_error',
+        operation: "update_check_http_error",
         status: response.status,
       });
       return null;
@@ -70,13 +70,13 @@ async function fetchLatestRelease(): Promise<UpdateInfo | null> {
 
     if (payload.draft === true || payload.prerelease === true) return null;
 
-    const tag = typeof payload.tag_name === 'string' ? payload.tag_name : null;
-    const htmlUrl = typeof payload.html_url === 'string' ? payload.html_url : null;
+    const tag = typeof payload.tag_name === "string" ? payload.tag_name : null;
+    const htmlUrl = typeof payload.html_url === "string" ? payload.html_url : null;
     if (!tag || !htmlUrl) return null;
 
-    const version = tag.replace(/^v/, '');
-    const body = typeof payload.body === 'string' ? payload.body : '';
-    const publishedAt = typeof payload.published_at === 'string' ? payload.published_at : '';
+    const version = tag.replace(/^v/, "");
+    const body = typeof payload.body === "string" ? payload.body : "";
+    const publishedAt = typeof payload.published_at === "string" ? payload.published_at : "";
 
     return {
       latestAvailable: version,
@@ -86,8 +86,8 @@ async function fetchLatestRelease(): Promise<UpdateInfo | null> {
     };
   } catch (err) {
     logger.warn({
-      operation: 'update_check_network_error',
-      error: err instanceof Error ? err.message : 'unknown',
+      operation: "update_check_network_error",
+      error: err instanceof Error ? err.message : "unknown",
     });
     return null;
   } finally {
@@ -137,11 +137,11 @@ export function isUpdateAvailable(current: string, latest: string): boolean {
 }
 
 function stripPrerelease(version: string): string {
-  return version.replace(/^v/, '').split('-')[0]!;
+  return version.replace(/^v/, "").split("-")[0]!;
 }
 
 function parseSemver(s: string): [number, number, number] | null {
-  const parts = s.split('.');
+  const parts = s.split(".");
   if (parts.length !== 3) return null;
   const nums = parts.map((p) => parseInt(p, 10));
   if (nums.some((n) => Number.isNaN(n))) return null;

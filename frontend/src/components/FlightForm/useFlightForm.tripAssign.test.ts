@@ -79,9 +79,7 @@ function submitEvent(): React.FormEvent {
   return { preventDefault: () => {} } as React.FormEvent;
 }
 
-function fillMinimalFlight(result: {
-  current: ReturnType<typeof useFlightForm>;
-}): void {
+function fillMinimalFlight(result: { current: ReturnType<typeof useFlightForm> }): void {
   act(() => {
     result.current.setDeparture(makeAirport("FRA"));
     result.current.setArrival(makeAirport("JFK"));

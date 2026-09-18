@@ -15,7 +15,7 @@ import { recomputeTripStatus } from "../tripStatusService";
  */
 export async function restatusIfDatesMoved<T extends { id: string }>(
   trip: T,
-  body: { startDate?: unknown; endDate?: unknown },
+  body: { startDate?: unknown; endDate?: unknown }
 ): Promise<T> {
   if (body.startDate === undefined && body.endDate === undefined) return trip;
 

@@ -167,9 +167,7 @@ describe("LocationInput", () => {
     expect(onChange).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByText("location:mapModal.confirm"));
-    expect(onChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ lat: 2.222, lon: 1.111 })
-    );
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ lat: 2.222, lon: 1.111 }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

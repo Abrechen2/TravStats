@@ -170,11 +170,7 @@ function* walkTsx(dir) {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "__tests__") continue;
       yield* walkTsx(full);
-    } else if (
-      entry.isFile() &&
-      entry.name.endsWith(".tsx") &&
-      !entry.name.endsWith(".test.tsx")
-    ) {
+    } else if (entry.isFile() && entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
       yield full;
     }
   }

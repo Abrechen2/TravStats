@@ -18,8 +18,7 @@ const ls = (coords: [number, number][]): LineString => ({
   properties: {},
   geometry: { type: "LineString", coordinates: coords },
 });
-const fc = (features: LineString[]) =>
-  ({ type: "FeatureCollection" as const, features });
+const fc = (features: LineString[]) => ({ type: "FeatureCollection" as const, features });
 
 describe("routeMarnetWithGraph — synthetic graph", () => {
   afterEach(() => setMarnetGraphForTesting(null));
@@ -33,7 +32,7 @@ describe("routeMarnetWithGraph — synthetic graph", () => {
           [2, 0],
           [3, 0],
         ]),
-      ]),
+      ])
     );
     const result = routeMarnetWithGraph(graph, { lat: 0.1, lon: 0.05 }, { lat: -0.1, lon: 3.05 });
     expect(result).not.toBeNull();
@@ -55,12 +54,12 @@ describe("routeMarnetWithGraph — synthetic graph", () => {
           [0, 0],
           [10, 0],
         ]),
-      ]),
+      ])
     );
     const result = routeMarnetWithGraph(
       graph,
       { lat: 0.001, lon: 0.001 },
-      { lat: -0.001, lon: -0.001 },
+      { lat: -0.001, lon: -0.001 }
     );
     expect(result).toBeNull();
   });
@@ -78,14 +77,14 @@ describe("routeMarnetWithGraph — synthetic graph", () => {
           [50, 50],
           [51, 50],
         ]),
-      ]),
+      ])
     );
     // Force the second port into the small component by allowing it.
     const result = routeMarnetWithGraph(
       graph,
       { lat: 0, lon: 0 },
       { lat: 50, lon: 50 },
-      { allowDisconnectedComponents: true },
+      { allowDisconnectedComponents: true }
     );
     expect(result).toBeNull();
   });
@@ -97,13 +96,13 @@ describe("routeMarnetWithGraph — synthetic graph", () => {
           [0, 0],
           [1, 0],
         ]),
-      ]),
+      ])
     );
     const result = routeMarnetWithGraph(
       graph,
       { lat: 0, lon: 50 }, // hundreds of km from the only nodes
       { lat: 0, lon: 0 },
-      { maxSnapKm: 50 },
+      { maxSnapKm: 50 }
     );
     expect(result).toBeNull();
   });
@@ -192,14 +191,14 @@ describe("routeMarnet — real vendored graph", () => {
     const result = await routeMarnet(
       { lat: 53.541, lon: 9.984 },
       { lat: 35.622, lon: 139.78 },
-      { maxSnapKm: 250 },
+      { maxSnapKm: 250 }
     );
     expect(result).not.toBeNull();
     // Look for any coordinate inside the Red Sea / Gulf-of-Aden
     // corridor — only the Suez routing reaches it. A circumnavigation
     // via Cape Horn would skip this region entirely.
     const passesSuezCorridor = result!.coords.some(
-      ([lon, lat]) => lon > 30 && lon < 55 && lat > 10 && lat < 30,
+      ([lon, lat]) => lon > 30 && lon < 55 && lat > 10 && lat < 30
     );
     expect(passesSuezCorridor).toBe(true);
   });
@@ -208,12 +207,12 @@ describe("routeMarnet — real vendored graph", () => {
     const result = await routeMarnet(
       { lat: 40.689, lon: -74.045 }, // New York harbour
       { lat: 33.74, lon: -118.27 }, // Long Beach / Los Angeles
-      { maxSnapKm: 150 },
+      { maxSnapKm: 150 }
     );
     expect(result).not.toBeNull();
     // Any coord in the Panama Canal / approaches band confirms transit.
     const passesPanama = result!.coords.some(
-      ([lon, lat]) => lon > -82 && lon < -77 && lat > 7 && lat < 11,
+      ([lon, lat]) => lon > -82 && lon < -77 && lat > 7 && lat < 11
     );
     expect(passesPanama).toBe(true);
     // And a coord on the Pacific side confirms emergence.

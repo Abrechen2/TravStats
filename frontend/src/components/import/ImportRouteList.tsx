@@ -37,9 +37,7 @@ export function ImportRouteRow({
   return (
     <div
       className={`flex items-start gap-3 rounded-lg border p-3 ${
-        primary
-          ? "border-(--accent)/45 bg-(--accent-soft)"
-          : "border-border bg-(--bg-elevated)"
+        primary ? "border-(--accent)/45 bg-(--accent-soft)" : "border-border bg-(--bg-elevated)"
       }`}
     >
       <span aria-hidden="true" className="w-5 shrink-0 text-center text-base leading-6">

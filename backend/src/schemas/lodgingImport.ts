@@ -40,7 +40,7 @@ const isoDay = z
       const t = Date.parse(`${s}T00:00:00.000Z`);
       return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
     },
-    { message: "must be a real calendar day" },
+    { message: "must be a real calendar day" }
   );
 
 // Same 0.5 floor as `schemas/lodging.ts` — an import must accept every rating
@@ -77,9 +77,7 @@ export const lodgingCandidateFieldsSchema = z.object({
    */
   visited: z.boolean().optional(),
 });
-export type LodgingCandidateFields = z.infer<
-  typeof lodgingCandidateFieldsSchema
->;
+export type LodgingCandidateFields = z.infer<typeof lodgingCandidateFieldsSchema>;
 
 export const stayCandidateFieldsSchema = z.object({
   checkIn: isoDay,
@@ -136,17 +134,26 @@ const stayCommitFieldsSchema = stayCandidateFieldsSchema
   // request. checkIn/checkOut here are plain "YYYY-MM-DD" strings
   // (`isoDay`), so `Date.parse` is enough — no time-of-day component to lose.
   .refine(
-    (s) =>
-      (Date.parse(s.checkOut) - Date.parse(s.checkIn)) / 86_400_000 <= MAX_STAY_SPAN_NIGHTS,
+    (s) => (Date.parse(s.checkOut) - Date.parse(s.checkIn)) / 86_400_000 <= MAX_STAY_SPAN_NIGHTS,
     {
       message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
       path: ["checkOut"],
-    },
+    }
   );
 
 export const lodgingImportCandidateSchema = z
   .object({
     sourceRowIndex: z.number().int().nonnegative(),
+    /**
+     * WHICH reader produced this row — "booking.com", "koa", "check24".
+     *
+     * The response used to say only that a template answered, so neither a
+     * client, the parse log nor a corpus run could tell which one carries the
+     * load. Optional because a hand-built row (a CSV import, a client's own
+     * candidate) has no reader, and never trusted for anything: it is a
+     * label, and the commit ignores it.
+     */
+    parserTemplate: z.string().max(60).nullable().optional(),
     // null on a stays-only row — the stay joins an existing lodging by `lodgingName`.
     lodging: lodgingCandidateFieldsSchema.nullable(),
     // Free-text hotel name used to join a stays-only row.
@@ -160,9 +167,7 @@ export const lodgingImportCandidateSchema = z
     message: "A candidate needs either `lodging` or `lodgingName`",
     path: ["lodgingName"],
   });
-export type LodgingImportCandidate = z.infer<
-  typeof lodgingImportCandidateSchema
->;
+export type LodgingImportCandidate = z.infer<typeof lodgingImportCandidateSchema>;
 
 export type LodgingImportFlag =
   | "missing_name"
@@ -183,7 +188,39 @@ export type LodgingDedupeHint =
   | "stay_exact_ref"
   | "stay_same_dates";
 
-export type LodgingImportAction = "create" | "skip" | "needs_input";
+export type LodgingImportAction = "create" | "skip" | "needs_input" | "update";
+
+/**
+ * The stay fields a re-import may carry a NEW value for.
+ *
+ * Deliberately short: these are the fields a booking mail restates when the
+ * booking changes. Ratings, notes and the batch are the user's own work and
+ * an import never overwrites them.
+ */
+export const UPDATABLE_STAY_FIELDS = [
+  "checkIn",
+  "checkOut",
+  "roomCategory",
+  "board",
+  "guests",
+  "totalPrice",
+  "pricePerNight",
+  "currency",
+  "bookingReference",
+] as const;
+export type UpdatableStayField = (typeof UPDATABLE_STAY_FIELDS)[number];
+
+/**
+ * One field a proven-identical stay would change, with both values so the
+ * user can see WHAT moved rather than being told "this differs".
+ *
+ * `from` is the stored value, `to` the incoming one; a date is an ISO day.
+ */
+export interface LodgingStayChange {
+  field: UpdatableStayField;
+  from: string | number | null;
+  to: string | number | null;
+}
 
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
@@ -197,6 +234,14 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedLodgingName: string | null;
   matchedStayId: string | null;
   action: LodgingImportAction;
+  /**
+   * Non-empty only on `action: "update"`: what a changed booking would move.
+   *
+   * Until 2026-09-17 a proven `externalRef` hit was always `skip`, which is
+   * right for a re-upload and wrong for the mail that says the dates moved:
+   * the stay kept its old dates and nothing said so (forgejo#122).
+   */
+  changes: LodgingStayChange[];
 }
 
 export interface LodgingImportSummary {
@@ -206,6 +251,8 @@ export interface LodgingImportSummary {
   alreadyPresent: number;
   /** rows the user must resolve */
   needsInput: number;
+  /** rows whose stay is already stored and would change */
+  changedRows: number;
 }
 
 export interface LodgingImportBatchSummary {
@@ -218,10 +265,7 @@ export interface LodgingImportBatchSummary {
 }
 
 export const lodgingImportPreviewRequestSchema = z.object({
-  candidates: z
-    .array(lodgingImportCandidateSchema)
-    .min(1)
-    .max(MAX_LODGING_IMPORT_ROWS),
+  candidates: z.array(lodgingImportCandidateSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
 });
 
 // `needs_input` is deliberately NOT accepted here: the preview may produce it,
@@ -231,8 +275,14 @@ export const lodgingImportPreviewRequestSchema = z.object({
 // a valid *commit* action — the schema for the commit boundary rejects it.
 export const commitRowSchema = z.object({
   sourceRowIndex: z.number().int().nonnegative(),
-  action: z.enum(["create", "skip"]),
+  action: z.enum(["create", "skip", "update"]),
   matchedLodgingId: z.string().uuid().nullable().optional(),
+  /**
+   * The stay an `update` row patches. Client-supplied like
+   * `matchedLodgingId`, so the commit re-checks ownership: `LodgingStay`
+   * carries its own `userId` and a plain id lookup proves only existence.
+   */
+  matchedStayId: z.string().uuid().nullable().optional(),
   lodging: lodgingCandidateFieldsSchema.nullable(),
   // Free-text hotel name for an UNEDITED stays-only row the preview matched
   // by name against another candidate in the SAME payload (`lodging` stays
@@ -250,9 +300,7 @@ export const lodgingImportCommitRequestSchema = z.object({
   fileName: z.string().max(260).nullable(),
   rows: z.array(commitRowSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
 });
-export type LodgingImportCommitRequest = z.infer<
-  typeof lodgingImportCommitRequestSchema
->;
+export type LodgingImportCommitRequest = z.infer<typeof lodgingImportCommitRequestSchema>;
 
 // Mirrors the `headers` array cap below — a sample row is built FROM those
 // headers, so it can never legitimately need more keys than the header list

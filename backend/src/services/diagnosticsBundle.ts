@@ -11,8 +11,8 @@
  * redaction list so the maintainer can reproduce against the right code.
  */
 
-import { prisma } from '../db';
-import { appVersion } from '../utils/version';
+import { prisma } from "../db";
+import { appVersion } from "../utils/version";
 
 /**
  * Field names whose values are redacted before the bundle leaves the
@@ -20,18 +20,18 @@ import { appVersion } from '../utils/version';
  * verify what was stripped without reading the source.
  */
 export const REDACTED_FIELDS = [
-  'bookingReference',
-  'ticketNumber',
-  'frequentFlyerNumber',
-  'price',
-  'taxes',
-  'fees',
-  'currency',
-  'receiptUrl',
-  'coPassengers',
-  'companions',
-  'userId',
-  'notes',
+  "bookingReference",
+  "ticketNumber",
+  "frequentFlyerNumber",
+  "price",
+  "taxes",
+  "fees",
+  "currency",
+  "receiptUrl",
+  "coPassengers",
+  "companions",
+  "userId",
+  "notes",
 ] as const;
 
 const REDACTED_SET = new Set<string>(REDACTED_FIELDS);
@@ -50,7 +50,7 @@ interface DiagnosticsBundle {
   redacted: readonly string[];
   flights: Array<Record<string, unknown>>;
   trips: Array<Record<string, unknown>>;
-  recentErrors: never[];      // reserved for v1.5.x — see issue #105
+  recentErrors: never[]; // reserved for v1.5.x — see issue #105
   filters: BundleFilters;
   counts: { flights: number; trips: number };
 }
@@ -73,7 +73,7 @@ function redactRow(row: Record<string, unknown>): Record<string, unknown> {
  */
 export async function buildDiagnosticsBundle(
   userId: string,
-  filters: BundleFilters,
+  filters: BundleFilters
 ): Promise<DiagnosticsBundle> {
   // Build flight WHERE — empty filters means "give me everything"; we
   // still cap the response below to avoid runaway dumps.
@@ -90,17 +90,17 @@ export async function buildDiagnosticsBundle(
   // we still want to surface SOME data so the bundle isn't empty —
   // 100/50 is enough for any realistic round-trip / multi-week trip.
   const FLIGHT_CAP = filters.flightIds?.length ? filters.flightIds.length : 100;
-  const TRIP_CAP   = filters.tripIds?.length   ? filters.tripIds.length   : 50;
+  const TRIP_CAP = filters.tripIds?.length ? filters.tripIds.length : 50;
 
   const [rawFlights, rawTrips] = await Promise.all([
     prisma.flight.findMany({
       where: flightWhere,
-      orderBy: { departureTime: 'desc' },
+      orderBy: { departureTime: "desc" },
       take: FLIGHT_CAP,
     }),
     prisma.trip.findMany({
       where: tripWhere,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       take: TRIP_CAP,
     }),
   ]);
@@ -108,10 +108,10 @@ export async function buildDiagnosticsBundle(
   return {
     generatedAt: new Date().toISOString(),
     travstatsVersion: appVersion,
-    schemaVersion: '1',
+    schemaVersion: "1",
     redacted: REDACTED_FIELDS,
     flights: rawFlights.map((f) => redactRow(f as unknown as Record<string, unknown>)),
-    trips:   rawTrips.map((t)   => redactRow(t as unknown as Record<string, unknown>)),
+    trips: rawTrips.map((t) => redactRow(t as unknown as Record<string, unknown>)),
     recentErrors: [],
     filters,
     counts: { flights: rawFlights.length, trips: rawTrips.length },

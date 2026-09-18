@@ -1,11 +1,11 @@
-import { Router, Response, NextFunction } from 'express';
-import { AuthRequest } from '../../middleware/auth';
+import { Router, Response, NextFunction } from "express";
+import { AuthRequest } from "../../middleware/auth";
 import {
   getLoggingConfig,
   updateLoggingConfig,
   toggleDebugLogging,
   invalidateCacheAndReinit,
-} from '../../services/loggingConfig';
+} from "../../services/loggingConfig";
 import {
   listLogFiles,
   readLogFile,
@@ -14,18 +14,18 @@ import {
   getLogStats,
   searchLogs,
   getLogFilePathForDownload,
-} from '../../services/logManager';
+} from "../../services/logManager";
 import {
   loggingConfigSchema,
   toggleDebugLoggingSchema,
   readLogFileQuerySchema,
   searchLogsQuerySchema,
-} from '../../schemas/admin';
+} from "../../schemas/admin";
 
 const router = Router();
 
 // Get logging configuration
-router.get('/config', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/config", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const config = await getLoggingConfig();
     res.json(config);
@@ -35,7 +35,7 @@ router.get('/config', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Update logging configuration
-router.put('/config', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/config", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const validatedData = loggingConfigSchema.parse(req.body);
     const updated = await updateLoggingConfig(validatedData);
@@ -44,7 +44,7 @@ router.put('/config', async (req: AuthRequest, res: Response, next: NextFunction
     await invalidateCacheAndReinit();
 
     res.json({
-      message: 'Logging configuration updated successfully',
+      message: "Logging configuration updated successfully",
       config: updated,
     });
   } catch (error) {
@@ -53,7 +53,7 @@ router.put('/config', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Toggle debug logging (convenience endpoint)
-router.post('/toggle-debug', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/toggle-debug", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { enabled } = toggleDebugLoggingSchema.parse(req.body);
     await toggleDebugLogging(enabled);
@@ -62,7 +62,7 @@ router.post('/toggle-debug', async (req: AuthRequest, res: Response, next: NextF
     await invalidateCacheAndReinit();
 
     res.json({
-      message: `Debug logging ${enabled ? 'enabled' : 'disabled'}`,
+      message: `Debug logging ${enabled ? "enabled" : "disabled"}`,
       debugLoggingEnabled: enabled,
     });
   } catch (error) {
@@ -71,7 +71,7 @@ router.post('/toggle-debug', async (req: AuthRequest, res: Response, next: NextF
 });
 
 // List log files
-router.get('/files', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/files", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const files = await listLogFiles();
     res.json({ files });
@@ -81,7 +81,7 @@ router.get('/files', async (req: AuthRequest, res: Response, next: NextFunction)
 });
 
 // Read specific log file with filters
-router.get('/files/:filename', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/files/:filename", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { filename } = req.params;
     const queryParams = readLogFileQuerySchema.parse(req.query);
@@ -100,21 +100,27 @@ router.get('/files/:filename', async (req: AuthRequest, res: Response, next: Nex
 });
 
 // Download log file
-router.get('/files/:filename/download', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { filename } = req.params;
-    const filepath = getLogFilePathForDownload(filename);
+router.get(
+  "/files/:filename/download",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { filename } = req.params;
+      const filepath = getLogFilePathForDownload(filename);
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.download(filepath);
-  } catch (error) {
-    next(error);
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+      );
+      res.download(filepath);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Delete log file
-router.delete('/files/:filename', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/files/:filename", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { filename } = req.params;
     await deleteLogFile(filename);
@@ -127,7 +133,7 @@ router.delete('/files/:filename', async (req: AuthRequest, res: Response, next: 
 });
 
 // Get logging statistics
-router.get('/stats', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/stats", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const stats = await getLogStats();
     res.json(stats);
@@ -137,7 +143,7 @@ router.get('/stats', async (req: AuthRequest, res: Response, next: NextFunction)
 });
 
 // Cleanup old logs
-router.post('/cleanup', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/cleanup", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const deletedCount = await cleanupOldLogs();
     res.json({
@@ -150,7 +156,7 @@ router.post('/cleanup', async (req: AuthRequest, res: Response, next: NextFuncti
 });
 
 // Search logs across all files
-router.get('/search', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/search", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const queryParams = searchLogsQuerySchema.parse(req.query);
     const results = await searchLogs(queryParams);

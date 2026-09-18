@@ -21,11 +21,11 @@
  *   tsx src/scripts/fixMistaggedDurations.ts --apply    # retag flagged rows → UTC
  */
 
-import { prisma } from '../db';
-import { haversineKm } from '../services/co2Calculator';
-import { legacyFakeUtcToRealUtc } from '../utils/timezone';
-import { getCachedAirport } from '../services/airportCache';
-import logger from '../utils/logger';
+import { prisma } from "../db";
+import { haversineKm } from "../services/co2Calculator";
+import { legacyFakeUtcToRealUtc } from "../utils/timezone";
+import { getCachedAirport } from "../services/airportCache";
+import logger from "../utils/logger";
 
 // Cruise speed assumption for the great-circle baseline + a fixed taxi/climb
 // overhead. Deliberately generous: this is a plausibility band, not a precise
@@ -63,8 +63,8 @@ function expectedMinutes(gcKm: number): number {
 async function run(apply: boolean): Promise<Report> {
   const flights = await prisma.flight.findMany({
     where: {
-      depTimeSemantics: 'LEGACY_FAKE_UTC',
-      arrTimeSemantics: 'LEGACY_FAKE_UTC',
+      depTimeSemantics: "LEGACY_FAKE_UTC",
+      arrTimeSemantics: "LEGACY_FAKE_UTC",
     },
     select: {
       id: true,
@@ -85,8 +85,8 @@ async function run(apply: boolean): Promise<Report> {
   for (const f of flights) {
     if (!f.departureTime || !f.arrivalTime) continue;
     const [depAirport, arrAirport] = await Promise.all([
-      getCachedAirport(f.depIata ?? ''),
-      getCachedAirport(f.arrIata ?? ''),
+      getCachedAirport(f.depIata ?? ""),
+      getCachedAirport(f.arrIata ?? ""),
     ]);
     const depTz = depAirport?.timezone ?? null;
     const arrTz = arrAirport?.timezone ?? null;
@@ -112,7 +112,7 @@ async function run(apply: boolean): Promise<Report> {
     const candidate: Candidate = {
       id: f.id,
       flightNumber: f.flightNumber,
-      route: `${f.depIata ?? '?'}-${f.arrIata ?? '?'}`,
+      route: `${f.depIata ?? "?"}-${f.arrIata ?? "?"}`,
       naiveMin: Math.round(naiveMin),
       legacyMin: Math.round(legacyMin),
       expMin: Math.round(expMin),
@@ -130,13 +130,13 @@ async function run(apply: boolean): Promise<Report> {
       try {
         await prisma.flight.update({
           where: { id: f.id },
-          data: { depTimeSemantics: 'UTC', arrTimeSemantics: 'UTC' },
+          data: { depTimeSemantics: "UTC", arrTimeSemantics: "UTC" },
         });
       } catch (err) {
         logger.error({
-          operation: 'fix_mistagged_duration_failed',
+          operation: "fix_mistagged_duration_failed",
           flightId: f.id,
-          error: err instanceof Error ? err.message : 'unknown',
+          error: err instanceof Error ? err.message : "unknown",
         });
       }
     }
@@ -146,7 +146,7 @@ async function run(apply: boolean): Promise<Report> {
 }
 
 function printReport(report: Report, apply: boolean): void {
-  const mode = apply ? 'APPLIED' : 'DRY-RUN';
+  const mode = apply ? "APPLIED" : "DRY-RUN";
   const h = (m: number): string => (m / 60).toFixed(1);
 
   process.stdout.write(`\n=== Mis-tagged duration repair (${mode}) ===\n`);
@@ -157,22 +157,22 @@ function printReport(report: Report, apply: boolean): void {
 
   for (const c of report.flagged) {
     process.stdout.write(
-      `  RETAG  ${(c.flightNumber ?? '——').padEnd(8)} ${c.route.padEnd(9)} ` +
-        `naive=${h(c.naiveMin)}h legacy=${h(c.legacyMin)}h exp=${h(c.expMin)}h\n`,
+      `  RETAG  ${(c.flightNumber ?? "——").padEnd(8)} ${c.route.padEnd(9)} ` +
+        `naive=${h(c.naiveMin)}h legacy=${h(c.legacyMin)}h exp=${h(c.expMin)}h\n`
     );
   }
   for (const c of report.needsManualReview) {
     process.stdout.write(
-      `  REVIEW ${(c.flightNumber ?? '——').padEnd(8)} ${c.route.padEnd(9)} ` +
-        `naive=${h(c.naiveMin)}h (implausible — corrupt source times)\n`,
+      `  REVIEW ${(c.flightNumber ?? "——").padEnd(8)} ${c.route.padEnd(9)} ` +
+        `naive=${h(c.naiveMin)}h (implausible — corrupt source times)\n`
     );
   }
   if (!apply) process.stdout.write(`\n(dry-run — re-run with --apply to retag)\n`);
-  process.stdout.write('\n');
+  process.stdout.write("\n");
 }
 
 async function main(): Promise<void> {
-  const apply = process.argv.includes('--apply');
+  const apply = process.argv.includes("--apply");
   const report = await run(apply);
   printReport(report, apply);
   await prisma.$disconnect();
@@ -180,8 +180,8 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   logger.error({
-    operation: 'fix_mistagged_duration_fatal',
-    error: err instanceof Error ? err.message : 'unknown',
+    operation: "fix_mistagged_duration_fatal",
+    error: err instanceof Error ? err.message : "unknown",
   });
   process.exit(1);
 });

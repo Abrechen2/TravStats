@@ -1,13 +1,13 @@
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import fs from 'fs';
-import path from 'path';
-import { parse } from 'csv-parse/sync';
-import https from 'https';
-import { AIRPORT_CATALOGUE } from '../config/constants';
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import fs from "fs";
+import path from "path";
+import { parse } from "csv-parse/sync";
+import https from "https";
+import { AIRPORT_CATALOGUE } from "../config/constants";
 
-import { admitsAirport } from '../shared/antarcticAirfields';
-import { normalizeAirportName } from '../shared/airportName';
+import { admitsAirport } from "../shared/antarcticAirfields";
+import { normalizeAirportName } from "../shared/airportName";
 
 interface CSVAirport {
   id: string;
@@ -35,32 +35,36 @@ let seedingInProgress = false;
 async function downloadCSV(url: string, destination: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(destination);
-    https.get(url, (response) => {
-      if (response.statusCode === 302 || response.statusCode === 301) {
-        // Follow redirect
-        file.close();
-        fs.unlinkSync(destination);
-        https.get(response.headers.location!, (redirectResponse) => {
-          redirectResponse.pipe(file);
-          file.on('finish', () => {
+    https
+      .get(url, (response) => {
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          // Follow redirect
+          file.close();
+          fs.unlinkSync(destination);
+          https
+            .get(response.headers.location!, (redirectResponse) => {
+              redirectResponse.pipe(file);
+              file.on("finish", () => {
+                file.close();
+                resolve();
+              });
+            })
+            .on("error", (err) => {
+              fs.unlinkSync(destination);
+              reject(err);
+            });
+        } else {
+          response.pipe(file);
+          file.on("finish", () => {
             file.close();
             resolve();
           });
-        }).on('error', (err) => {
-          fs.unlinkSync(destination);
-          reject(err);
-        });
-      } else {
-        response.pipe(file);
-        file.on('finish', () => {
-          file.close();
-          resolve();
-        });
-      }
-    }).on('error', (err) => {
-      fs.unlinkSync(destination);
-      reject(err);
-    });
+        }
+      })
+      .on("error", (err) => {
+        fs.unlinkSync(destination);
+        reject(err);
+      });
   });
 }
 
@@ -70,7 +74,7 @@ async function downloadCSV(url: string, destination: string): Promise<void> {
 async function updateSeedingStatus(
   statusId: string,
   updates: {
-    status?: 'pending' | 'running' | 'completed' | 'failed';
+    status?: "pending" | "running" | "completed" | "failed";
     processedAirports?: number;
     estimatedTimeRemaining?: number | null;
     error?: string | null;
@@ -87,10 +91,10 @@ async function updateSeedingStatus(
     });
   } catch (error) {
     logger.error({
-      operation: 'update_seeding_status_error',
-      message: 'Failed to update seeding status',
+      operation: "update_seeding_status_error",
+      message: "Failed to update seeding status",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
@@ -129,39 +133,39 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
 
   try {
     logger.info({
-      operation: 'seed_airports_async_start',
-      message: 'Starting async airport import from CSV',
+      operation: "seed_airports_async_start",
+      message: "Starting async airport import from CSV",
       context: { statusId },
     });
 
-    const csvPath = path.join(__dirname, '..', '..', 'airports.csv');
+    const csvPath = path.join(__dirname, "..", "..", "airports.csv");
 
     // Download CSV if needed
     if (!fs.existsSync(csvPath)) {
       await updateSeedingStatus(statusId, {
-        status: 'running',
+        status: "running",
         processedAirports: 0,
         estimatedTimeRemaining: null,
       });
 
       logger.info({
-        operation: 'seed_airports_download',
-        message: 'CSV file not found, downloading from OurAirports.com',
+        operation: "seed_airports_download",
+        message: "CSV file not found, downloading from OurAirports.com",
       });
 
-      const downloadUrl = 'https://davidmegginson.github.io/ourairports-data/airports.csv';
+      const downloadUrl = "https://davidmegginson.github.io/ourairports-data/airports.csv";
 
       try {
         await downloadCSV(downloadUrl, csvPath);
         logger.info({
-          operation: 'seed_airports_download_success',
-          message: 'CSV file downloaded successfully',
+          operation: "seed_airports_download_success",
+          message: "CSV file downloaded successfully",
         });
       } catch (error: unknown) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
         logger.error({
-          operation: 'seed_airports_download_error',
-          message: 'Failed to download CSV file',
+          operation: "seed_airports_download_error",
+          message: "Failed to download CSV file",
           error: { message: errorMsg },
         });
         throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${errorMsg}`);
@@ -169,14 +173,14 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     }
 
     // Parse CSV
-    const fileContent = fs.readFileSync(csvPath, 'utf-8');
+    const fileContent = fs.readFileSync(csvPath, "utf-8");
     const records: CSVAirport[] = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
     });
 
     logger.info({
-      operation: 'seed_airports_csv_parsed',
+      operation: "seed_airports_csv_parsed",
       message: `Found ${records.length} airports in CSV`,
       context: { recordCount: records.length },
     });
@@ -192,7 +196,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     // "BER, EDDI, THF" because BER Brandenburg replaced it).
     const activeIatas = new Set<string>();
     for (const a of filteredAirports) {
-      if (a.type !== 'closed' && a.iata_code) activeIatas.add(a.iata_code.toUpperCase());
+      if (a.type !== "closed" && a.iata_code) activeIatas.add(a.iata_code.toUpperCase());
     }
 
     // Update total airports count
@@ -200,13 +204,13 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
       where: { id: statusId },
       data: {
         totalAirports,
-        status: 'running',
+        status: "running",
         startedAt: new Date(),
       },
     });
 
     logger.info({
-      operation: 'seed_airports_filtered',
+      operation: "seed_airports_filtered",
       message: `Filtered ${totalAirports} airports`,
       context: { filteredCount: totalAirports },
     });
@@ -225,8 +229,8 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
         // remain searchable by their well-known codes.
         let iata = airport.iata_code || null;
         let icao = airport.gps_code || airport.ident || null;
-        if (airport.type === 'closed' && airport.keywords) {
-          const tokens = airport.keywords.split(',').map((t) => t.trim().toUpperCase());
+        if (airport.type === "closed" && airport.keywords) {
+          const tokens = airport.keywords.split(",").map((t) => t.trim().toUpperCase());
           if (!iata) {
             const threeLetter = tokens.filter((t) => /^[A-Z]{3}$/.test(t));
             // If only one 3-letter code is present it's almost certainly
@@ -268,7 +272,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           ? Math.round(parseFloat(airport.elevation_ft) * 0.3048)
           : null;
 
-        const isClosed = airport.type === 'closed';
+        const isClosed = airport.type === "closed";
 
         // Composite uniqueness on (iata, isClosed) and (icao, isClosed) lets
         // a closed predecessor coexist with its active successor sharing the
@@ -317,17 +321,17 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           });
 
           logger.debug({
-            operation: 'seed_airports_progress',
+            operation: "seed_airports_progress",
             message: `Progress: ${processed}/${totalAirports} airports processed`,
             context: { processed, total: totalAirports },
           });
         }
       } catch (error: unknown) {
         logger.error({
-          operation: 'seed_airports_airport_error',
+          operation: "seed_airports_airport_error",
           message: `Error processing airport ${airport.name}`,
           context: { airportName: airport.name },
-          error: { message: error instanceof Error ? error.message : 'Unknown error' },
+          error: { message: error instanceof Error ? error.message : "Unknown error" },
         });
         skipped++;
         processed++;
@@ -344,46 +348,53 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     // catalogue is actually usable.
     let timezonesFilled = 0;
     try {
-      const { backfillAirportTimezones } = await import('./airportLookup');
+      const { backfillAirportTimezones } = await import("./airportLookup");
       timezonesFilled = await backfillAirportTimezones();
     } catch (error) {
       // A failed backfill must not fail the import — the rows are still worth
       // having, and the next boot retries. Loud in the log, not fatal.
       logger.error({
-        operation: 'seed_airports_timezone_backfill_failed',
-        message: 'Airport import finished but the timezone backfill failed',
-        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+        operation: "seed_airports_timezone_backfill_failed",
+        message: "Airport import finished but the timezone backfill failed",
+        error: { message: error instanceof Error ? error.message : "Unknown error" },
       });
     }
 
     // Final update
     const totalCount = await prisma.airport.count();
     await updateSeedingStatus(statusId, {
-      status: 'completed',
+      status: "completed",
       processedAirports: processed,
       estimatedTimeRemaining: 0,
       completedAt: new Date(),
     });
 
     logger.info({
-      operation: 'seed_airports_complete',
-      message: 'Airport import completed',
-      context: { imported, updated, skipped, total: imported + updated, totalCount, timezonesFilled },
+      operation: "seed_airports_complete",
+      message: "Airport import completed",
+      context: {
+        imported,
+        updated,
+        skipped,
+        total: imported + updated,
+        totalCount,
+        timezonesFilled,
+      },
     });
 
     seedingInProgress = false;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await updateSeedingStatus(statusId, {
-      status: 'failed',
+      status: "failed",
       error: errorMessage,
       completedAt: new Date(),
     });
 
     logger.error({
-      operation: 'seed_airports_failed',
-      message: 'Airport seeding failed',
+      operation: "seed_airports_failed",
+      message: "Airport seeding failed",
       error: {
         message: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
@@ -421,8 +432,8 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
   // status, the in-memory flag is stale — clear it before proceeding.
   if (seedingInProgress) {
     const running = await prisma.airportSeedingStatus.findFirst({
-      where: { status: 'running' },
-      orderBy: { createdAt: 'desc' },
+      where: { status: "running" },
+      orderBy: { createdAt: "desc" },
     });
     if (running) {
       return running.id;
@@ -443,7 +454,7 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
     try {
       const status = await prisma.airportSeedingStatus.create({
         data: {
-          status: 'completed',
+          status: "completed",
           totalAirports: airportCount,
           processedAirports: airportCount,
           startedAt: new Date(),
@@ -454,9 +465,9 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
     } catch (error: unknown) {
       // If another process already created a status, return existing one
       const prismaError = error as { code?: string };
-      if (prismaError.code === 'P2002') {
+      if (prismaError.code === "P2002") {
         const existing = await prisma.airportSeedingStatus.findFirst({
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         });
         if (existing) return existing.id;
       }
@@ -469,7 +480,7 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
   try {
     status = await prisma.airportSeedingStatus.create({
       data: {
-        status: 'pending',
+        status: "pending",
         totalAirports: 0,
         processedAirports: 0,
       },
@@ -477,12 +488,12 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
   } catch (error: unknown) {
     // If another process already created a status, check for existing pending/running status
     const prismaError = error as { code?: string; message?: string };
-    if (prismaError.code === 'P2002' || prismaError.message?.includes('unique')) {
+    if (prismaError.code === "P2002" || prismaError.message?.includes("unique")) {
       const existing = await prisma.airportSeedingStatus.findFirst({
         where: {
-          status: { in: ['pending', 'running'] },
+          status: { in: ["pending", "running"] },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
       if (existing) {
         return existing.id;
@@ -497,10 +508,10 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
   // Start seeding asynchronously (don't await)
   seedAirportsFromCSVAsync(status.id).catch((error) => {
     logger.error({
-      operation: 'start_airport_seeding_error',
-      message: 'Failed to start airport seeding',
+      operation: "start_airport_seeding_error",
+      message: "Failed to start airport seeding",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   });
@@ -512,7 +523,7 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
  * Get current seeding status
  */
 export async function getSeedingStatus(): Promise<{
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress?: number;
   estimatedSecondsRemaining?: number;
   totalAirports?: number;
@@ -526,13 +537,13 @@ export async function getSeedingStatus(): Promise<{
   if (airportCount >= AIRPORT_CATALOGUE.MIN_HEALTHY_COUNT) {
     // Check if there's a completed status
     const completed = await prisma.airportSeedingStatus.findFirst({
-      where: { status: 'completed' },
-      orderBy: { createdAt: 'desc' },
+      where: { status: "completed" },
+      orderBy: { createdAt: "desc" },
     });
 
     if (completed) {
       return {
-        status: 'completed',
+        status: "completed",
         progress: 1,
         estimatedSecondsRemaining: 0,
         totalAirports: completed.totalAirports,
@@ -546,7 +557,7 @@ export async function getSeedingStatus(): Promise<{
 
   // Get latest status
   const latestStatus = await prisma.airportSeedingStatus.findFirst({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!latestStatus) {
@@ -559,7 +570,7 @@ export async function getSeedingStatus(): Promise<{
       : 0;
 
   return {
-    status: latestStatus.status as 'pending' | 'running' | 'completed' | 'failed',
+    status: latestStatus.status as "pending" | "running" | "completed" | "failed",
     progress,
     estimatedSecondsRemaining: latestStatus.estimatedTimeRemaining ?? undefined,
     totalAirports: latestStatus.totalAirports,

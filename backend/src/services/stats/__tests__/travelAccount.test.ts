@@ -36,9 +36,7 @@ describe("buildTravelAccount", () => {
     const account = buildTravelAccount({
       stays: [stay("2025-03-01", "2025-03-04")],
       cruises: [{ status: "flown", startDate: d("2025-06-01"), endDate: d("2025-06-08") }],
-      flights: [
-        utcFlight("2025-09-01T22:00:00Z", "2025-09-02T08:00:00Z"),
-      ],
+      flights: [utcFlight("2025-09-01T22:00:00Z", "2025-09-02T08:00:00Z")],
       now: NOW,
     });
     const y = account.years.find((r) => r.year === "2025")!;
@@ -52,9 +50,7 @@ describe("buildTravelAccount", () => {
     const account = buildTravelAccount({
       stays: [],
       cruises: [],
-      flights: [
-        utcFlight("2025-09-01T08:00:00Z", "2025-09-01T11:00:00Z"),
-      ],
+      flights: [utcFlight("2025-09-01T08:00:00Z", "2025-09-01T11:00:00Z")],
       now: NOW,
     });
     expect(account.years).toEqual([]);

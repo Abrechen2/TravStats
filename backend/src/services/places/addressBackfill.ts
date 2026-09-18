@@ -46,7 +46,14 @@ export interface PlaceBackfillResult {
 }
 
 /** The columns the backfill reads and may write. */
-const SELECT = { id: true, lat: true, lon: true, address: true, city: true, country: true } as const;
+const SELECT = {
+  id: true,
+  lat: true,
+  lon: true,
+  address: true,
+  city: true,
+  country: true,
+} as const;
 type PlaceRow = Prisma.PlaceGetPayload<{ select: typeof SELECT }>;
 
 /**
@@ -71,7 +78,7 @@ export async function completePlaceAddress(placeId: string): Promise<boolean> {
  */
 export async function completeMissingPlaceAddresses(
   userId: string,
-  limit: number = MAX_PLACE_BACKFILL_ROWS,
+  limit: number = MAX_PLACE_BACKFILL_ROWS
 ): Promise<PlaceBackfillResult> {
   let attempted = 0;
   let filled = 0;
@@ -120,14 +127,14 @@ export async function completeMissingPlaceAddresses(
             placeId: row.id,
             err: err instanceof Error ? err.message : String(err),
           },
-          "Place address backfill row failed — continuing",
+          "Place address backfill row failed — continuing"
         );
       }
     }
 
     logger.info(
       { operation: "place_address_backfill", userId, attempted, filled },
-      "Place address backfill finished",
+      "Place address backfill finished"
     );
   } catch (err) {
     logger.error(
@@ -136,7 +143,7 @@ export async function completeMissingPlaceAddresses(
         userId,
         err: err instanceof Error ? err.message : String(err),
       },
-      "Place address backfill failed",
+      "Place address backfill failed"
     );
   }
 

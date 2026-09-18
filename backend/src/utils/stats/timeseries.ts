@@ -23,7 +23,7 @@ export function resolveWindow(
   year: number | undefined,
   fromDate: string | undefined,
   toDate: string | undefined,
-  now: Date,
+  now: Date
 ): ResolvedWindow {
   if (fromDate || toDate) {
     return {
@@ -106,7 +106,7 @@ export function bucketSeries(
   rows: DatedRow[],
   granularity: Granularity,
   from: Date,
-  to: Date,
+  to: Date
 ): TimeseriesPoint[] {
   const buckets = new Map<string, TimeseriesPoint>();
   for (const start of bucketStarts(from, to, granularity)) {
@@ -150,7 +150,7 @@ export function sumTotals(rows: DatedRow[]): WindowTotals {
       distanceKm: acc.distanceKm + r.distanceKm,
       durationMin: acc.durationMin + r.durationMin,
     }),
-    { count: 0, distanceKm: 0, durationMin: 0 },
+    { count: 0, distanceKm: 0, durationMin: 0 }
   );
 }
 

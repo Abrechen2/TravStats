@@ -1,6 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
-import { logoCacheDir, putCachedLogo, touchFailedRefresh } from "../../services/airlineLogo/logoCache";
+import {
+  logoCacheDir,
+  putCachedLogo,
+  touchFailedRefresh,
+} from "../../services/airlineLogo/logoCache";
 import * as service from "../../services/airlineLogo/airlineLogoService";
 import { sweepStaleLogos } from "../airlineLogoRefreshScheduler";
 
@@ -55,7 +59,8 @@ it("keeps going when one refresh throws", async () => {
   await ageEntry("LH-logo", 40 * DAY);
   await putCachedLogo("BA-logo", LOGO, "kiwi");
   await ageEntry("BA-logo", 40 * DAY);
-  jest.spyOn(service, "refreshLogo")
+  jest
+    .spyOn(service, "refreshLogo")
     .mockRejectedValueOnce(new Error("upstream down"))
     .mockResolvedValueOnce(true);
 

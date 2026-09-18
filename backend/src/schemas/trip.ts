@@ -1,15 +1,27 @@
 import { z } from "./zod";
 
 export const TRIP_COLORS = [
-  "#818cf8", "#38bdf8", "#34d399", "#fb923c", "#f472b6",
-  "#a78bfa", "#22d3ee", "#86efac", "#fbbf24", "#f87171",
+  "#818cf8",
+  "#38bdf8",
+  "#34d399",
+  "#fb923c",
+  "#f472b6",
+  "#a78bfa",
+  "#22d3ee",
+  "#86efac",
+  "#fbbf24",
+  "#f87171",
 ];
 
 export const TRIP_STATUSES = ["planned", "in_progress", "completed"] as const;
 export const TRIP_CATEGORIES = ["vacation", "business", "weekend", "family", "other"] as const;
 
 const HEX_COLOR = z.string().regex(/^#[0-9a-fA-F]{6}$/);
-const ISO_DATE = z.string().datetime().or(z.coerce.date()).transform((d) => new Date(d));
+const ISO_DATE = z
+  .string()
+  .datetime()
+  .or(z.coerce.date())
+  .transform((d) => new Date(d));
 const STRING_LIST = z.array(z.string().min(1).max(80)).max(40);
 const COUNTRY_LIST = z.array(z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2")).max(60);
 

@@ -41,16 +41,13 @@ export interface StayWindowInput {
  */
 const CANCELLED = "cancelled";
 
-function toWindow(
-  start: Date | null,
-  end: Date | null,
-): TravelWindow | null {
+function toWindow(start: Date | null, end: Date | null): TravelWindow | null {
   const startMs = start?.getTime();
   const endMs = end?.getTime();
   // A row with only one side still bounds a day: a flight with no arrival
   // time is not a reason to ignore the departure we do know about.
   const known = [startMs, endMs].filter(
-    (value): value is number => typeof value === "number" && Number.isFinite(value),
+    (value): value is number => typeof value === "number" && Number.isFinite(value)
   );
   if (known.length === 0) {
     return null;

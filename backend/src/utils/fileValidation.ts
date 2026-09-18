@@ -3,40 +3,40 @@
  * This provides more secure file type validation than MIME types alone
  */
 
-import fs from 'fs';
-import logger from './logger';
-import { SECURITY, FILE_LIMITS } from '../config/constants';
+import fs from "fs";
+import logger from "./logger";
+import { SECURITY, FILE_LIMITS } from "../config/constants";
 
 // Magic numbers (file signatures) for different file types
 const FILE_SIGNATURES: Record<string, Array<{ offset: number; bytes: number[] }>> = {
   // Image formats
-  'image/jpeg': [
+  "image/jpeg": [
     { offset: 0, bytes: [0xff, 0xd8, 0xff] }, // JPEG
   ],
-  'image/png': [
+  "image/png": [
     { offset: 0, bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] }, // PNG
   ],
-  'image/gif': [
+  "image/gif": [
     { offset: 0, bytes: [0x47, 0x49, 0x46, 0x38, 0x37, 0x61] }, // GIF87a
     { offset: 0, bytes: [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] }, // GIF89a
   ],
-  'image/webp': [
+  "image/webp": [
     { offset: 0, bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF
     { offset: 8, bytes: [0x57, 0x45, 0x42, 0x50] }, // WEBP (at offset 8)
   ],
   // PDF
-  'application/pdf': [
+  "application/pdf": [
     { offset: 0, bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
   ],
   // Email formats
-  'message/rfc822': [
+  "message/rfc822": [
     // .eml files - check for common email headers
     { offset: 0, bytes: [0x46, 0x72, 0x6f, 0x6d] }, // "From"
     { offset: 0, bytes: [0x52, 0x65, 0x74, 0x75, 0x72, 0x6e] }, // "Return"
     { offset: 0, bytes: [0x44, 0x65, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x65, 0x64] }, // "Delivered"
   ],
   // Outlook .msg files (OLE2 format)
-  'application/vnd.ms-outlook': [
+  "application/vnd.ms-outlook": [
     { offset: 0, bytes: [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] }, // OLE2 signature
   ],
 };
@@ -44,9 +44,12 @@ const FILE_SIGNATURES: Record<string, Array<{ offset: number; bytes: number[] }>
 /**
  * Read file signature (first bytes) from file path
  */
-function readFileSignature(filePath: string, maxBytes: number = SECURITY.MAGIC_NUMBER_READ_BYTES): Buffer | null {
+function readFileSignature(
+  filePath: string,
+  maxBytes: number = SECURITY.MAGIC_NUMBER_READ_BYTES
+): Buffer | null {
   try {
-    const fd = fs.openSync(filePath, 'r');
+    const fd = fs.openSync(filePath, "r");
     const buffer = Buffer.alloc(maxBytes);
     const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0);
     fs.closeSync(fd);
@@ -57,11 +60,11 @@ function readFileSignature(filePath: string, maxBytes: number = SECURITY.MAGIC_N
     return buffer;
   } catch (error) {
     logger.error({
-      operation: 'file_signature_read_error',
-      message: 'Failed to read file signature',
+      operation: "file_signature_read_error",
+      message: "Failed to read file signature",
       context: { filePath },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     return null;
@@ -71,14 +74,20 @@ function readFileSignature(filePath: string, maxBytes: number = SECURITY.MAGIC_N
 /**
  * Read file signature from buffer
  */
-function readFileSignatureFromBuffer(buffer: Buffer, maxBytes: number = SECURITY.MAGIC_NUMBER_READ_BYTES): Buffer {
+function readFileSignatureFromBuffer(
+  buffer: Buffer,
+  maxBytes: number = SECURITY.MAGIC_NUMBER_READ_BYTES
+): Buffer {
   return buffer.subarray(0, Math.min(maxBytes, buffer.length));
 }
 
 /**
  * Check if file signature matches expected magic numbers
  */
-function matchesSignature(buffer: Buffer, signatures: Array<{ offset: number; bytes: number[] }>): boolean {
+function matchesSignature(
+  buffer: Buffer,
+  signatures: Array<{ offset: number; bytes: number[] }>
+): boolean {
   for (const sig of signatures) {
     if (sig.offset + sig.bytes.length > buffer.length) {
       continue; // Not enough bytes to check this signature
@@ -114,7 +123,7 @@ export function validateFileType(filePath: string, expectedMimeType: string): bo
     // No magic number validation available for this type
     // Fall back to MIME type check only
     logger.warn({
-      operation: 'file_validation_no_signature',
+      operation: "file_validation_no_signature",
       message: `No magic number signature defined for ${expectedMimeType}`,
       context: { mimeType: expectedMimeType },
     });
@@ -186,15 +195,18 @@ export function detectFileTypeFromBuffer(buffer: Buffer): string | null {
 /**
  * Validate receipt file (images and PDFs)
  */
-export function validateReceiptFile(filePath: string, declaredMimeType: string): { valid: boolean; reason?: string } {
+export function validateReceiptFile(
+  filePath: string,
+  declaredMimeType: string
+): { valid: boolean; reason?: string } {
   // First check MIME type
   const allowedMimeTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
   ];
 
   if (!allowedMimeTypes.includes(declaredMimeType)) {
@@ -206,7 +218,7 @@ export function validateReceiptFile(filePath: string, declaredMimeType: string):
     const detectedType = detectFileType(filePath);
     return {
       valid: false,
-      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || 'unknown'}`,
+      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || "unknown"}`,
     };
   }
 
@@ -216,8 +228,12 @@ export function validateReceiptFile(filePath: string, declaredMimeType: string):
 /**
  * Validate email file (.eml, .txt, .msg)
  */
-export function validateEmailFile(filePath: string, declaredMimeType: string, extension: string): { valid: boolean; reason?: string } {
-  const allowedExtensions = ['.eml', '.txt', '.msg'];
+export function validateEmailFile(
+  filePath: string,
+  declaredMimeType: string,
+  extension: string
+): { valid: boolean; reason?: string } {
+  const allowedExtensions = [".eml", ".txt", ".msg"];
   const ext = extension.toLowerCase();
 
   if (!allowedExtensions.includes(ext)) {
@@ -225,39 +241,57 @@ export function validateEmailFile(filePath: string, declaredMimeType: string, ex
   }
 
   // For .msg files, validate OLE2 signature
-  if (ext === '.msg') {
-    if (!validateFileType(filePath, 'application/vnd.ms-outlook')) {
-      return { valid: false, reason: 'Invalid .msg file: does not match OLE2 format' };
+  if (ext === ".msg") {
+    if (!validateFileType(filePath, "application/vnd.ms-outlook")) {
+      return { valid: false, reason: "Invalid .msg file: does not match OLE2 format" };
     }
   }
 
   // For .eml files, check for email headers (optional - some .eml files might be valid without From header)
-  if (ext === '.eml') {
+  if (ext === ".eml") {
     // More lenient validation - just check if it's text-based
     const signature = readFileSignature(filePath, 512);
     if (signature) {
       // Check if it contains printable ASCII or UTF-8
-      const text = signature.toString('utf-8', 0, Math.min(SECURITY.MAGIC_NUMBER_READ_BYTES_TEXT, signature.length));
+      const text = signature.toString(
+        "utf-8",
+        0,
+        Math.min(SECURITY.MAGIC_NUMBER_READ_BYTES_TEXT, signature.length)
+      );
       // Allow if it looks like text (contains common email keywords or is mostly printable)
       const hasEmailKeywords = /(From|To|Subject|Date|Message-ID)/i.test(text);
       if (!hasEmailKeywords && text.length > 0) {
         // Check if it's mostly printable ASCII
-        const printableRatio = text.split('').filter(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126).length / text.length;
+        const printableRatio =
+          text.split("").filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126).length /
+          text.length;
         if (printableRatio < 0.7) {
-          return { valid: false, reason: 'Invalid .eml file: does not appear to be a valid email file' };
+          return {
+            valid: false,
+            reason: "Invalid .eml file: does not appear to be a valid email file",
+          };
         }
       }
     }
   }
 
   // For .txt files, just check if it's text-based
-  if (ext === '.txt') {
+  if (ext === ".txt") {
     const signature = readFileSignature(filePath, SECURITY.MAGIC_NUMBER_READ_BYTES_TEXT);
     if (signature) {
-      const text = signature.toString('utf-8', 0, Math.min(SECURITY.MAGIC_NUMBER_READ_BYTES_TEXT, signature.length));
-      const printableRatio = text.split('').filter(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126 || c.charCodeAt(0) >= 160).length / text.length;
+      const text = signature.toString(
+        "utf-8",
+        0,
+        Math.min(SECURITY.MAGIC_NUMBER_READ_BYTES_TEXT, signature.length)
+      );
+      const printableRatio =
+        text
+          .split("")
+          .filter(
+            (c) => (c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126) || c.charCodeAt(0) >= 160
+          ).length / text.length;
       if (printableRatio < 0.7 && text.length > 0) {
-        return { valid: false, reason: 'Invalid .txt file: does not appear to be text-based' };
+        return { valid: false, reason: "Invalid .txt file: does not appear to be text-based" };
       }
     }
   }
@@ -268,14 +302,11 @@ export function validateEmailFile(filePath: string, declaredMimeType: string, ex
 /**
  * Validate profile picture file (images only, no PDF)
  */
-export function validateProfilePictureFile(filePath: string, declaredMimeType: string): { valid: boolean; reason?: string } {
-  const allowedMimeTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-  ];
+export function validateProfilePictureFile(
+  filePath: string,
+  declaredMimeType: string
+): { valid: boolean; reason?: string } {
+  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 
   if (!allowedMimeTypes.includes(declaredMimeType)) {
     return { valid: false, reason: `Invalid MIME type: ${declaredMimeType}` };
@@ -287,7 +318,7 @@ export function validateProfilePictureFile(filePath: string, declaredMimeType: s
     const detectedType = detectFileType(filePath);
     return {
       valid: false,
-      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || 'unknown'}`,
+      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || "unknown"}`,
     };
   }
 
@@ -297,13 +328,11 @@ export function validateProfilePictureFile(filePath: string, declaredMimeType: s
 /**
  * Validate image file for boarding pass parsing
  */
-export function validateBoardingPassImage(filePath: string, declaredMimeType: string): { valid: boolean; reason?: string } {
-  const allowedMimeTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-  ];
+export function validateBoardingPassImage(
+  filePath: string,
+  declaredMimeType: string
+): { valid: boolean; reason?: string } {
+  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
   if (!allowedMimeTypes.includes(declaredMimeType)) {
     return { valid: false, reason: `Invalid MIME type for image: ${declaredMimeType}` };
@@ -314,7 +343,7 @@ export function validateBoardingPassImage(filePath: string, declaredMimeType: st
     const detectedType = detectFileType(filePath);
     return {
       valid: false,
-      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || 'unknown'}`,
+      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || "unknown"}`,
     };
   }
 
@@ -351,50 +380,51 @@ export function validateBoardingPassImageBase64(imageBase64: string): {
     let base64Data = imageBase64;
     let declaredMimeType: string | undefined;
 
-    if (imageBase64.startsWith('data:')) {
+    if (imageBase64.startsWith("data:")) {
       const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
       if (match) {
         declaredMimeType = match[1];
         base64Data = match[2];
       } else {
-        return { valid: false, reason: 'Invalid data URI format' };
+        return { valid: false, reason: "Invalid data URI format" };
       }
     }
 
     // Decode base64
-    const buffer = Buffer.from(base64Data, 'base64');
+    const buffer = Buffer.from(base64Data, "base64");
     if (buffer.length === 0) {
-      return { valid: false, reason: 'Empty image data' };
+      return { valid: false, reason: "Empty image data" };
     }
 
     // Check file size limit
     if (buffer.length > FILE_LIMITS.BOARDING_PASS_MAX_SIZE) {
-      return { valid: false, reason: `Image too large: ${buffer.length} bytes (max: ${FILE_LIMITS.BOARDING_PASS_MAX_SIZE})` };
+      return {
+        valid: false,
+        reason: `Image too large: ${buffer.length} bytes (max: ${FILE_LIMITS.BOARDING_PASS_MAX_SIZE})`,
+      };
     }
 
     // Detect file type from magic numbers
     const detectedType = detectFileTypeFromBuffer(buffer);
     if (!detectedType) {
-      return { valid: false, reason: 'Could not detect image type from file signature' };
+      return { valid: false, reason: "Could not detect image type from file signature" };
     }
 
     // Check if detected type is an allowed image type
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-    ];
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
     if (!allowedMimeTypes.includes(detectedType)) {
-      return { valid: false, reason: `Detected type ${detectedType} is not an allowed image format` };
+      return {
+        valid: false,
+        reason: `Detected type ${detectedType} is not an allowed image format`,
+      };
     }
 
     // If MIME type was declared, verify it matches detected type
     if (declaredMimeType) {
       // Normalize jpg to jpeg
-      const normalizedDeclared = declaredMimeType === 'image/jpg' ? 'image/jpeg' : declaredMimeType;
-      const normalizedDetected = detectedType === 'image/jpg' ? 'image/jpeg' : detectedType;
+      const normalizedDeclared = declaredMimeType === "image/jpg" ? "image/jpeg" : declaredMimeType;
+      const normalizedDetected = detectedType === "image/jpg" ? "image/jpeg" : detectedType;
 
       if (normalizedDeclared !== normalizedDetected) {
         return {
@@ -408,7 +438,7 @@ export function validateBoardingPassImageBase64(imageBase64: string): {
   } catch (error) {
     return {
       valid: false,
-      reason: `Failed to validate image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      reason: `Failed to validate image: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }

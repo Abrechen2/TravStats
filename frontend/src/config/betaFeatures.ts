@@ -55,9 +55,9 @@ export const BETA_FEATURES = Object.freeze({
   /** The LLM trip-summary card on the trip detail page. */
   tripAiSummary: Object.freeze({
     reason: "beta",
-    why: "Until 2026-09-05 the summary ignored the admin's Ollama, wrote German for every reader, knew nothing about stays and places, and had no test — the 'buggy summaries' this gate named. Those are fixed on dev/v2.7; what remains is whether the text is GOOD, which only a reader can say.",
+    why: 'The 2026-09-05 defects are fixed (the admin\'s Ollama, the reader\'s language, stays and places in the brief). What keeps the gate is the prose. Measured 2026-09-17 against gemma3:12b over four trips, after six rounds of prompt work: the facts, the nights, the person and the order are right, the notes and journal are retold well — and the model still adds colour nobody gave it ("escaping the Hamburg winter", "a charming cabin") and once put a journal line in a companion\'s mouth ("which Jonas declared the best day"). A travel diary that invents a sentence about your own trip is worse than none.',
     returnsWhen:
-      "The owner has read three summaries generated on the RC account — one German, one English, one for a trip with stays and place visits — and accepted them.",
+      "A summary reads clean over the same four trips (backend/src/services/tripSummaryService.ts documents them): no colour that is not in the data, no sentence attributed to somebody who did not say it. Either a local model that follows the brief that closely, or the owner deciding that light embellishment is acceptable product.",
   }),
 
   /**
@@ -72,27 +72,10 @@ export const BETA_FEATURES = Object.freeze({
    * URL-reachability by dropping `devices` from the section model.
    */
   devicePairing: Object.freeze({
-    why: "Pairing a phone works end to end, but the Companion app and the flows behind it are unfinished. The three came off the switch on 2026-09-01 on the strength of their own release conditions; on 2026-09-05, reading the 2.6.0 announcement, the owner ruled all three beta and put them back. Off means the Devices section, the only place a claim code is minted, is not offered.",
-    returnsWhen: "The owner accepts the Companion pairing for release.",
-    reason: "advanced",
-  }),
-
-  /**
-   * The Parser page — /parser and its admin-only nav entry: annotating a mail
-   * to derive a template, the user's own templates, the community templates
-   * and the parse log.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: this gates the TEMPLATE WORKSHOP, not
-   * the parsing. "Buchungs-E-Mail oder PDF" in the add dialog keeps reading
-   * bookings whatever the flag says — that path is the product, this page is
-   * the tooling behind it. The endpoints under /api/v1/templates stay open like
-   * every other gated endpoint (see the file header).
-   */
-  parserTemplates: Object.freeze({
-    reason: "beta",
-    why: "Owner decision of 2026-09-05 (design-system decisions, no. 10): the page has carried a Beta badge since 2.2 with no gate behind it, and a badge nothing enforces is a promise nobody keeps. Only the LLM parser (Ollama) is fully tested; the template and regex parsers this page manages are experimental.",
+    why: "Pairing a phone works end to end; what is unfinished is the phone. Measured 2026-09-17: the Companion is version 0.1.0, build 23, handed out through TestFlight to one tester, and still gaining features daily. A Devices section offered to everybody would mint claim codes for an app they cannot install. The three came off the switch on 2026-09-01 on the strength of their own release conditions; on 2026-09-05, reading the 2.6.0 announcement, the owner ruled all three beta and put them back.",
     returnsWhen:
-      "The template and regex parsers are tested against the sample set under test-samples/ and the owner accepts the page for release.",
+      "The Companion is installable outside TestFlight — a public build a reader of the release notes can actually get — and the owner accepts the pairing flow for release.",
+    reason: "advanced",
   }),
 
   /**

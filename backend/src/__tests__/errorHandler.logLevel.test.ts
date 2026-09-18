@@ -1,6 +1,6 @@
-import { describe, it, expect, jest } from '@jest/globals';
-import { Request, Response, NextFunction } from 'express';
-import { errorHandler, AppError } from '../middleware/errorHandler';
+import { describe, it, expect, jest } from "@jest/globals";
+import { Request, Response, NextFunction } from "express";
+import { errorHandler, AppError } from "../middleware/errorHandler";
 
 /**
  * These run against the REAL logger, deliberately — no `jest.mock` of
@@ -18,25 +18,25 @@ import { errorHandler, AppError } from '../middleware/errorHandler';
  *
  * So: one cheap smoke test per level, against the real thing.
  */
-describe('errorHandler logs through a bound logger (#245 regression)', () => {
+describe("errorHandler logs through a bound logger (#245 regression)", () => {
   const makeReq = (): Partial<Request> => ({
-    method: 'GET',
-    url: '/api/test',
-    path: '/api/test',
+    method: "GET",
+    url: "/api/test",
+    path: "/api/test",
     query: {},
-    ip: '127.0.0.1',
-    get: jest.fn(() => 'test-user-agent') as unknown as Request['get'],
+    ip: "127.0.0.1",
+    get: jest.fn(() => "test-user-agent") as unknown as Request["get"],
   });
 
   const makeRes = (): Partial<Response> => {
     const json = jest.fn();
-    return { status: jest.fn().mockReturnValue({ json }) as unknown as Response['status'], json };
+    return { status: jest.fn().mockReturnValue({ json }) as unknown as Response["status"], json };
   };
 
-  it('does not throw on a 4xx (the warn path)', async () => {
+  it("does not throw on a 4xx (the warn path)", async () => {
     await expect(
       errorHandler(
-        new AppError('Not authenticated', 401),
+        new AppError("Not authenticated", 401),
         makeReq() as Request,
         makeRes() as Response,
         jest.fn() as NextFunction
@@ -44,10 +44,10 @@ describe('errorHandler logs through a bound logger (#245 regression)', () => {
     ).resolves.not.toThrow();
   });
 
-  it('does not throw on a 5xx (the error path)', async () => {
+  it("does not throw on a 5xx (the error path)", async () => {
     await expect(
       errorHandler(
-        new AppError('Internal error', 500),
+        new AppError("Internal error", 500),
         makeReq() as Request,
         makeRes() as Response,
         jest.fn() as NextFunction

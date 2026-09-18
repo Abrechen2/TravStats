@@ -1,4 +1,4 @@
-import type { FlightTimeSemantics } from '../timezone';
+import type { FlightTimeSemantics } from "../timezone";
 
 // These two shapes are published by /stats/business and /stats/unique, so the
 // schema in `schemas/statsFlights.ts` is where they are described and this is

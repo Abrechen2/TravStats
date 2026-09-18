@@ -51,19 +51,18 @@ const previewRowInputSchema = z.object({
   aircraft: z.string().optional(),
   registration: z.string().optional(),
   seatNumber: z.string().optional(),
-  seatClass: z
-    .enum(["economy", "premium_economy", "business", "first"])
-    .optional(),
-  category: z
-    .enum(["business", "vacation", "private", "training", "ferry", "other"])
-    .optional(),
+  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).optional(),
+  category: z.enum(["business", "vacation", "private", "training", "ferry", "other"]).optional(),
   notes: z.string().optional(),
   source: z.enum(["fr24", "generic_csv"]),
   sourceRowIndex: z.number().int().nonnegative(),
 });
 
 const previewRequestSchema = z.object({
-  rows: z.array(previewRowInputSchema).min(1).max(MAX_PREVIEW_ROWS + 1),
+  rows: z
+    .array(previewRowInputSchema)
+    .min(1)
+    .max(MAX_PREVIEW_ROWS + 1),
 });
 
 // ---------------------------------------------------------------------------

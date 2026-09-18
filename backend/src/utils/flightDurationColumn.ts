@@ -24,7 +24,7 @@
  * it — null must keep meaning "no duration" and reach the estimate, not 0.
  */
 
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from './timezone';
+import { tzAwareDurationMinutes, type FlightTimeSemantics } from "./timezone";
 
 /** The columns a caller must select for the answer to be trustworthy. */
 export interface FlightDurationRow {
@@ -47,9 +47,9 @@ export interface FlightDurationRow {
  */
 export function isCatalogueDerivedDuration(
   depTimeSemantics: string,
-  arrTimeSemantics: string,
+  arrTimeSemantics: string
 ): boolean {
-  return depTimeSemantics === 'LEGACY_FAKE_UTC' && arrTimeSemantics === 'LEGACY_FAKE_UTC';
+  return depTimeSemantics === "LEGACY_FAKE_UTC" && arrTimeSemantics === "LEGACY_FAKE_UTC";
 }
 
 /**
@@ -64,7 +64,7 @@ export function isCatalogueDerivedDuration(
 export function measuredDurationMinutes(
   flight: FlightDurationRow,
   depTz: string | null,
-  arrTz: string | null,
+  arrTz: string | null
 ): number | null {
   if (!isCatalogueDerivedDuration(flight.depTimeSemantics, flight.arrTimeSemantics)) {
     return flight.durationMinutes;
@@ -76,7 +76,7 @@ export function measuredDurationMinutes(
     depTz,
     arrTz,
     flight.depTimeSemantics as FlightTimeSemantics,
-    flight.arrTimeSemantics as FlightTimeSemantics,
+    flight.arrTimeSemantics as FlightTimeSemantics
   );
 }
 
@@ -84,7 +84,7 @@ export function measuredDurationMinutes(
 export function roundedMeasuredDurationMinutes(
   flight: FlightDurationRow,
   depTz: string | null,
-  arrTz: string | null,
+  arrTz: string | null
 ): number | null {
   const minutes = measuredDurationMinutes(flight, depTz, arrTz);
   return minutes === null ? null : Math.round(minutes);

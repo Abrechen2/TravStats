@@ -42,9 +42,12 @@ describe("per-adapter profile maps", () => {
     ["customOsrm", OSRM_PROFILE_BY_MODE],
   ];
 
-  it.each(adapterMaps)("%s has an entry for every routable mode and none for the rest", (_name, map) => {
-    for (const mode of LEG_MODES) {
-      expect(mode in map).toBe(isRoutableMode(mode));
+  it.each(adapterMaps)(
+    "%s has an entry for every routable mode and none for the rest",
+    (_name, map) => {
+      for (const mode of LEG_MODES) {
+        expect(mode in map).toBe(isRoutableMode(mode));
+      }
     }
-  });
+  );
 });

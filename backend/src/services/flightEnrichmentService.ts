@@ -5,10 +5,10 @@
  * live-tracked flights with the same flight number.
  */
 
-import { PrismaClient, Flight, Prisma } from '@prisma/client';
-import { prisma } from '../db';
-import { calculateDistance } from '../utils/geo';
-import logger from '../utils/logger';
+import { PrismaClient, Flight, Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import { calculateDistance } from "../utils/geo";
+import logger from "../utils/logger";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -19,8 +19,7 @@ interface RouteWaypoint {
   country?: string;
 }
 
-
-export type EnrichmentMode = 'full' | 'slim';
+export type EnrichmentMode = "full" | "slim";
 
 export interface UserEnrichmentSettings {
   enabled: boolean;
@@ -39,8 +38,8 @@ export interface EnrichmentCandidate {
 }
 
 export interface RouteAnomaly {
-  type: 'route_change' | 'aircraft_change' | 'inconsistent_countries';
-  severity: 'high' | 'medium' | 'low';
+  type: "route_change" | "aircraft_change" | "inconsistent_countries";
+  severity: "high" | "medium" | "low";
   description: string;
   affectedFlights: number;
 }
@@ -57,7 +56,7 @@ export interface AggregatedFlightData {
 
   // Route-Daten
   typicalRoute?: {
-    waypoints: Array<{lat: number; lon: number}>;
+    waypoints: Array<{ lat: number; lon: number }>;
     overflownCountries: string[];
     routeDistance: number;
   };
@@ -66,13 +65,15 @@ export interface AggregatedFlightData {
   sourceFlightsCount: number;
   confidence: number;
   anomalies: RouteAnomaly[];
-  routeConsistency: 'high' | 'medium' | 'low';
+  routeConsistency: "high" | "medium" | "low";
 }
 
 /**
  * Get user enrichment settings
  */
-export async function getUserEnrichmentSettings(userId: string): Promise<UserEnrichmentSettings | null> {
+export async function getUserEnrichmentSettings(
+  userId: string
+): Promise<UserEnrichmentSettings | null> {
   try {
     const userSettings = await prismaClient.userSettings.findUnique({
       where: { userId },
@@ -89,11 +90,11 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
     };
   } catch (error) {
     logger.error({
-      operation: 'get_user_enrichment_settings_error',
-      message: 'Failed to get user enrichment settings',
+      operation: "get_user_enrichment_settings_error",
+      message: "Failed to get user enrichment settings",
       context: { userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       },
     });
     return null;
@@ -110,11 +111,11 @@ export function getEnrichmentMode(departureTime: Date | null | undefined): Enric
   // an "I flew this but don't remember when" record. We can't tell if it's a
   // year old or ten, so use the conservative slim mode (ICAO + terminal only)
   // which aggregates only the fields that stay stable over long time spans.
-  if (!departureTime) return 'slim';
+  if (!departureTime) return "slim";
 
   const ageMs = Date.now() - departureTime.getTime();
   const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
-  return ageYears < 1 ? 'full' : 'slim';
+  return ageYears < 1 ? "full" : "slim";
 }
 
 /**
@@ -126,7 +127,7 @@ export async function findEnrichmentCandidates(
 ): Promise<EnrichmentCandidate[]> {
   try {
     // Get settings if not provided
-    const enrichmentSettings = settings || await getUserEnrichmentSettings(userId);
+    const enrichmentSettings = settings || (await getUserEnrichmentSettings(userId));
 
     if (!enrichmentSettings || !enrichmentSettings.enabled) {
       return [];
@@ -147,14 +148,11 @@ export async function findEnrichmentCandidates(
       where: {
         userId,
         flightNumber: { not: null },
-        OR: [
-          { departureTime: { gte: maxAgeDate } },
-          { departureTime: null },
-        ],
+        OR: [{ departureTime: { gte: maxAgeDate } }, { departureTime: null }],
         NOT: {
           pendingUpdates: {
             some: {
-              status: { in: ['applied', 'pending', 'rejected'] },
+              status: { in: ["applied", "pending", "rejected"] },
             },
           },
         },
@@ -168,12 +166,15 @@ export async function findEnrichmentCandidates(
       let missingRoute = false;
 
       // Check for missing fields
-      if (!flight.aircraft) missingFields.push('aircraft');
-      if (!flight.depIcao) missingFields.push('depIcao');
-      if (!flight.arrIcao) missingFields.push('arrIcao');
-      if (!flight.actualRoute || (Array.isArray(flight.actualRoute) && flight.actualRoute.length === 0)) {
+      if (!flight.aircraft) missingFields.push("aircraft");
+      if (!flight.depIcao) missingFields.push("depIcao");
+      if (!flight.arrIcao) missingFields.push("arrIcao");
+      if (
+        !flight.actualRoute ||
+        (Array.isArray(flight.actualRoute) && flight.actualRoute.length === 0)
+      ) {
         missingRoute = true;
-        missingFields.push('actualRoute');
+        missingFields.push("actualRoute");
       }
 
       if (missingFields.length === 0) {
@@ -204,11 +205,11 @@ export async function findEnrichmentCandidates(
     return candidates;
   } catch (error) {
     logger.error({
-      operation: 'find_enrichment_candidates_error',
-      message: 'Failed to find enrichment candidates',
+      operation: "find_enrichment_candidates_error",
+      message: "Failed to find enrichment candidates",
       context: { userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -261,12 +262,12 @@ export async function aggregateFlightData(
   flightNumber: string,
   excludeFlightId: string,
   minFlights?: number,
-  mode: EnrichmentMode = 'full',
+  mode: EnrichmentMode = "full",
   userId?: string
 ): Promise<AggregatedFlightData | null> {
   try {
     const effectiveMinFlights =
-      minFlights ?? (mode === 'slim' ? DEFAULT_MIN_FLIGHTS_SLIM : DEFAULT_MIN_FLIGHTS_FULL);
+      minFlights ?? (mode === "slim" ? DEFAULT_MIN_FLIGHTS_SLIM : DEFAULT_MIN_FLIGHTS_FULL);
 
     // Find flights with live tracking and same flight number
     const referenceFlights = await prismaClient.flight.findMany({
@@ -280,15 +281,15 @@ export async function aggregateFlightData(
         actualRoute: { not: Prisma.DbNull },
       },
       orderBy: {
-        departureTime: 'desc',
+        departureTime: "desc",
       },
       take: 10, // Top 10 newest
     });
 
     if (referenceFlights.length < effectiveMinFlights) {
       logger.info({
-        operation: 'aggregate_flight_data_insufficient',
-        message: 'Not enough reference flights for aggregation',
+        operation: "aggregate_flight_data_insufficient",
+        message: "Not enough reference flights for aggregation",
         context: {
           flightNumber,
           referenceFlightsCount: referenceFlights.length,
@@ -305,8 +306,8 @@ export async function aggregateFlightData(
     // flights only (when userId is provided).
 
     // Always collected (stable across time)
-    const depIcaos = referenceFlights.map(f => f.depIcao).filter(Boolean) as string[];
-    const arrIcaos = referenceFlights.map(f => f.arrIcao).filter(Boolean) as string[];
+    const depIcaos = referenceFlights.map((f) => f.depIcao).filter(Boolean) as string[];
+    const arrIcaos = referenceFlights.map((f) => f.arrIcao).filter(Boolean) as string[];
 
     const mostCommonDepIcao = getMostCommon(depIcaos);
     const mostCommonArrIcao = getMostCommon(arrIcaos);
@@ -326,22 +327,22 @@ export async function aggregateFlightData(
         select: { terminal: true },
       });
       mostCommonTerminal = getMostCommon(
-        ownFlightsForTerminal.map(f => f.terminal).filter(Boolean) as string[]
+        ownFlightsForTerminal.map((f) => f.terminal).filter(Boolean) as string[]
       );
     } else {
       mostCommonTerminal = getMostCommon(
-        referenceFlights.map(f => f.terminal).filter(Boolean) as string[]
+        referenceFlights.map((f) => f.terminal).filter(Boolean) as string[]
       );
     }
 
     // Full mode only (unreliable for flights ≥1 year old)
     let mostCommonAircraft: string | undefined;
     let mostCommonGate: string | undefined;
-    let typicalRoute: AggregatedFlightData['typicalRoute'];
-    let routeConsistency: 'high' | 'medium' | 'low' = 'low';
+    let typicalRoute: AggregatedFlightData["typicalRoute"];
+    let routeConsistency: "high" | "medium" | "low" = "low";
 
-    if (mode === 'full') {
-      const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
+    if (mode === "full") {
+      const aircrafts = referenceFlights.map((f) => f.aircraft).filter(Boolean) as string[];
       mostCommonAircraft = getMostCommon(aircrafts);
 
       // Gate: use only the requesting user's own flights when userId is known.
@@ -357,15 +358,15 @@ export async function aggregateFlightData(
           select: { gate: true },
         });
         mostCommonGate = getMostCommon(
-          ownFlightsForGate.map(f => f.gate).filter(Boolean) as string[]
+          ownFlightsForGate.map((f) => f.gate).filter(Boolean) as string[]
         );
       } else {
-        const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
+        const gates = referenceFlights.map((f) => f.gate).filter(Boolean) as string[];
         mostCommonGate = getMostCommon(gates);
       }
 
       const routes = referenceFlights
-        .map(f => f.actualRoute)
+        .map((f) => f.actualRoute)
         .filter(Boolean) as Prisma.JsonValue[];
       typicalRoute = aggregateRoutes(routes);
       routeConsistency = calculateRouteConsistency(routes);
@@ -383,7 +384,8 @@ export async function aggregateFlightData(
       routeConsistency,
       anomalies,
       referenceFlights[0]?.departureTime
-        ? (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+        ? (Date.now() - referenceFlights[0].departureTime.getTime()) /
+            (1000 * 60 * 60 * 24 * 365.25)
         : 0
     );
 
@@ -403,11 +405,11 @@ export async function aggregateFlightData(
     };
   } catch (error) {
     logger.error({
-      operation: 'aggregate_flight_data_error',
-      message: 'Failed to aggregate flight data',
+      operation: "aggregate_flight_data_error",
+      message: "Failed to aggregate flight data",
       context: { flightNumber, excludeFlightId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -450,7 +452,9 @@ function resampleRoute(
 
   const cumDist: number[] = [0];
   for (let i = 1; i < wps.length; i++) {
-    cumDist.push(cumDist[i - 1] + calculateDistance(wps[i - 1].lat, wps[i - 1].lon, wps[i].lat, wps[i].lon));
+    cumDist.push(
+      cumDist[i - 1] + calculateDistance(wps[i - 1].lat, wps[i - 1].lon, wps[i].lat, wps[i].lon)
+    );
   }
   const totalDist = cumDist[cumDist.length - 1];
   if (totalDist === 0) return Array(n).fill({ ...wps[0] });
@@ -475,35 +479,42 @@ function resampleRoute(
 function medianOf(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
  * Aggregate multiple routes into a typical route using resampling + median.
  * Exported for testing.
  */
-export function aggregateRoutesForTest(
-  rawRoutes: Array<Array<{ lat: number; lon: number }>>
-): { waypoints: Array<{ lat: number; lon: number }>; overflownCountries: string[]; routeDistance: number } | undefined {
-  const validRoutes = rawRoutes.filter(r => r.length >= 2);
+export function aggregateRoutesForTest(rawRoutes: Array<Array<{ lat: number; lon: number }>>):
+  | {
+      waypoints: Array<{ lat: number; lon: number }>;
+      overflownCountries: string[];
+      routeDistance: number;
+    }
+  | undefined {
+  const validRoutes = rawRoutes.filter((r) => r.length >= 2);
   if (validRoutes.length === 0) return undefined;
 
-  const resampled = validRoutes.map(r => resampleRoute(r, RESAMPLE_POINTS));
+  const resampled = validRoutes.map((r) => resampleRoute(r, RESAMPLE_POINTS));
 
   const waypoints: Array<{ lat: number; lon: number }> = [];
   for (let i = 0; i < RESAMPLE_POINTS; i++) {
     waypoints.push({
-      lat: medianOf(resampled.map(r => r[i].lat)),
-      lon: medianOf(resampled.map(r => r[i].lon)),
+      lat: medianOf(resampled.map((r) => r[i].lat)),
+      lon: medianOf(resampled.map((r) => r[i].lon)),
     });
   }
 
   // Sum Haversine distances along the median route for accurate km estimate
   let routeDistance = 0;
   for (let i = 1; i < waypoints.length; i++) {
-    routeDistance += calculateDistance(waypoints[i - 1].lat, waypoints[i - 1].lon, waypoints[i].lat, waypoints[i].lon);
+    routeDistance += calculateDistance(
+      waypoints[i - 1].lat,
+      waypoints[i - 1].lon,
+      waypoints[i].lat,
+      waypoints[i].lon
+    );
   }
 
   return { waypoints, overflownCountries: [], routeDistance };
@@ -513,17 +524,20 @@ export function aggregateRoutesForTest(
  * Aggregate routes from Prisma JsonValue array.
  * Internal wrapper used by aggregateFlightData.
  */
-function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typicalRoute'] {
+function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData["typicalRoute"] {
   const parsed = routes
     .filter(Array.isArray)
     .map((r) =>
       (r as Prisma.JsonValue[])
         .filter(
           (wp): wp is Prisma.JsonObject =>
-            typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
-            typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
+            typeof wp === "object" &&
+            wp !== null &&
+            !Array.isArray(wp) &&
+            typeof wp["lat"] === "number" &&
+            typeof wp["lon"] === "number"
         )
-        .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }))
+        .map((wp) => ({ lat: wp["lat"] as number, lon: wp["lon"] as number }))
     )
     .filter((r) => r.length >= 2);
 
@@ -536,10 +550,12 @@ function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typi
     if (Array.isArray(route)) {
       for (const wp of route) {
         if (
-          typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
-          typeof (wp as Prisma.JsonObject)['country'] === 'string'
+          typeof wp === "object" &&
+          wp !== null &&
+          !Array.isArray(wp) &&
+          typeof (wp as Prisma.JsonObject)["country"] === "string"
         ) {
-          allCountries.add((wp as Prisma.JsonObject)['country'] as string);
+          allCountries.add((wp as Prisma.JsonObject)["country"] as string);
         }
       }
     }
@@ -558,12 +574,14 @@ function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typi
 function parseRouteWaypoints(route: Prisma.JsonValue): RouteWaypoint[] | null {
   if (!Array.isArray(route)) return null;
   const parsed = route
-    .filter((w): w is { lat: number; lon: number } =>
-      typeof w === 'object' && w !== null &&
-      typeof (w as { lat?: unknown }).lat === 'number' &&
-      typeof (w as { lon?: unknown }).lon === 'number',
+    .filter(
+      (w): w is { lat: number; lon: number } =>
+        typeof w === "object" &&
+        w !== null &&
+        typeof (w as { lat?: unknown }).lat === "number" &&
+        typeof (w as { lon?: unknown }).lon === "number"
     )
-    .map(w => ({ lat: w.lat, lon: w.lon }));
+    .map((w) => ({ lat: w.lat, lon: w.lon }));
   return parsed.length >= 2 ? parsed : null;
 }
 
@@ -571,33 +589,36 @@ function parseRouteWaypoints(route: Prisma.JsonValue): RouteWaypoint[] | null {
  * Calculate route consistency by comparing resampled geographic paths.
  * Two routes are "similar" if their average Haversine deviation is < 150 km.
  */
-function calculateRouteConsistency(routes: Prisma.JsonValue[]): 'high' | 'medium' | 'low' {
-  if (routes.length < 3) return 'low';
+function calculateRouteConsistency(routes: Prisma.JsonValue[]): "high" | "medium" | "low" {
+  if (routes.length < 3) return "low";
 
   const SAMPLE_POINTS = 10;
   const SIMILAR_THRESHOLD_KM = 150;
 
   const resampled = routes
-    .map(r => parseRouteWaypoints(r))
+    .map((r) => parseRouteWaypoints(r))
     .filter((wps): wps is RouteWaypoint[] => wps !== null)
-    .map(wps => resampleRoute(wps, SAMPLE_POINTS));
+    .map((wps) => resampleRoute(wps, SAMPLE_POINTS));
 
-  if (resampled.length < 3) return 'low';
+  if (resampled.length < 3) return "low";
 
   // Use the first route as reference and count how many are "similar"
   const reference = resampled[0];
   let similarCount = 0;
   for (let i = 1; i < resampled.length; i++) {
     const avgDev =
-      reference.reduce((sum, pt, j) => sum + calculateDistance(pt.lat, pt.lon, resampled[i][j].lat, resampled[i][j].lon), 0) /
-      SAMPLE_POINTS;
+      reference.reduce(
+        (sum, pt, j) =>
+          sum + calculateDistance(pt.lat, pt.lon, resampled[i][j].lat, resampled[i][j].lon),
+        0
+      ) / SAMPLE_POINTS;
     if (avgDev < SIMILAR_THRESHOLD_KM) similarCount++;
   }
 
   const similarRatio = similarCount / (resampled.length - 1);
-  if (similarRatio > 0.8) return 'high';
-  if (similarRatio > 0.5) return 'medium';
-  return 'low';
+  if (similarRatio > 0.8) return "high";
+  if (similarRatio > 0.5) return "medium";
+  return "low";
 }
 
 /**
@@ -605,29 +626,27 @@ function calculateRouteConsistency(routes: Prisma.JsonValue[]): 'high' | 'medium
  */
 function detectRouteAnomalies(
   referenceFlights: Flight[],
-  aggregatedData: { aircraft?: string; routeConsistency: 'high' | 'medium' | 'low' }
+  aggregatedData: { aircraft?: string; routeConsistency: "high" | "medium" | "low" }
 ): RouteAnomaly[] {
   const anomalies: RouteAnomaly[] = [];
 
   // Check for aircraft changes
-  const uniqueAircrafts = new Set(
-    referenceFlights.map(f => f.aircraft).filter(Boolean)
-  );
+  const uniqueAircrafts = new Set(referenceFlights.map((f) => f.aircraft).filter(Boolean));
   if (uniqueAircrafts.size > 2) {
     anomalies.push({
-      type: 'aircraft_change',
-      severity: 'medium',
-      description: `Multiple aircraft types found: ${Array.from(uniqueAircrafts).join(', ')}`,
+      type: "aircraft_change",
+      severity: "medium",
+      description: `Multiple aircraft types found: ${Array.from(uniqueAircrafts).join(", ")}`,
       affectedFlights: uniqueAircrafts.size,
     });
   }
 
   // Check for route consistency
-  if (aggregatedData.routeConsistency === 'low') {
+  if (aggregatedData.routeConsistency === "low") {
     anomalies.push({
-      type: 'route_change',
-      severity: 'high',
-      description: 'Route has changed significantly (e.g., Russia airspace closure)',
+      type: "route_change",
+      severity: "high",
+      description: "Route has changed significantly (e.g., Russia airspace closure)",
       affectedFlights: referenceFlights.length,
     });
   }
@@ -644,9 +663,9 @@ function detectRouteAnomalies(
 
   if (allCountries.size > referenceFlights.length * 0.5) {
     anomalies.push({
-      type: 'inconsistent_countries',
-      severity: 'medium',
-      description: 'Significant variation in overflown countries',
+      type: "inconsistent_countries",
+      severity: "medium",
+      description: "Significant variation in overflown countries",
       affectedFlights: referenceFlights.length,
     });
   }
@@ -659,7 +678,7 @@ function detectRouteAnomalies(
  */
 function calculateConfidence(
   sourceFlightsCount: number,
-  routeConsistency: 'high' | 'medium' | 'low',
+  routeConsistency: "high" | "medium" | "low",
   anomalies: RouteAnomaly[],
   timeProximity: number // Years since last reference flight
 ): number {
@@ -669,13 +688,13 @@ function calculateConfidence(
   confidence += Math.min(sourceFlightsCount * 5, 30);
 
   // Route consistency bonus
-  if (routeConsistency === 'high') confidence += 20;
-  else if (routeConsistency === 'medium') confidence += 10;
+  if (routeConsistency === "high") confidence += 20;
+  else if (routeConsistency === "medium") confidence += 10;
 
   // Anomaly penalties
   for (const anomaly of anomalies) {
-    if (anomaly.severity === 'high') confidence -= 15;
-    else if (anomaly.severity === 'medium') confidence -= 10;
+    if (anomaly.severity === "high") confidence -= 15;
+    else if (anomaly.severity === "medium") confidence -= 10;
     else confidence -= 5;
   }
 
@@ -701,8 +720,8 @@ export async function createHistoricalEnrichment(
 
     if (!flight) {
       logger.warn({
-        operation: 'create_historical_enrichment_flight_not_found',
-        message: 'Flight not found for historical enrichment',
+        operation: "create_historical_enrichment_flight_not_found",
+        message: "Flight not found for historical enrichment",
         context: { flightId },
       });
       return null;
@@ -714,8 +733,8 @@ export async function createHistoricalEnrichment(
     const settings = await getUserEnrichmentSettings(flight.userId);
     if (!settings || !settings.enabled) {
       logger.warn({
-        operation: 'create_historical_enrichment_disabled',
-        message: 'Historical enrichment disabled for user',
+        operation: "create_historical_enrichment_disabled",
+        message: "Historical enrichment disabled for user",
         context: { userId: flight.userId, flightId },
       });
       return null;
@@ -724,8 +743,8 @@ export async function createHistoricalEnrichment(
     // Check confidence threshold
     if (aggregatedData.confidence < settings.minConfidence) {
       logger.info({
-        operation: 'create_historical_enrichment_low_confidence',
-        message: 'Confidence below threshold',
+        operation: "create_historical_enrichment_low_confidence",
+        message: "Confidence below threshold",
         context: {
           flightId,
           confidence: aggregatedData.confidence,
@@ -755,7 +774,7 @@ export async function createHistoricalEnrichment(
 
     // Create proposed data
     const proposedData =
-      mode === 'full'
+      mode === "full"
         ? {
             ...originalData,
             aircraft: aggregatedData.aircraft ?? flight.aircraft,
@@ -766,7 +785,8 @@ export async function createHistoricalEnrichment(
             gate: aggregatedData.gate ?? flight.gate,
             terminal: aggregatedData.terminal ?? flight.terminal,
             actualRoute: aggregatedData.typicalRoute?.waypoints ?? flight.actualRoute,
-            overflownCountries: aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
+            overflownCountries:
+              aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
             routeDistance: aggregatedData.typicalRoute?.routeDistance ?? flight.routeDistance,
           }
         : {
@@ -780,7 +800,7 @@ export async function createHistoricalEnrichment(
           };
 
     // Calculate changes
-    const { calculateChanges } = await import('./flightAutoUpdate');
+    const { calculateChanges } = await import("./flightAutoUpdate");
     const changes = calculateChanges(originalData, proposedData);
 
     // Calculate expiry (7 days for historical enrichments)
@@ -789,7 +809,7 @@ export async function createHistoricalEnrichment(
     // Calculate statistics impact
     let statisticsImpact: Prisma.InputJsonValue | null = null;
     try {
-      const { calculateStatisticsImpact } = await import('./pendingUpdateService');
+      const { calculateStatisticsImpact } = await import("./pendingUpdateService");
       const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
       // Convert Set objects in the impact to arrays for JSON serialization
       if (impact) {
@@ -811,11 +831,11 @@ export async function createHistoricalEnrichment(
       }
     } catch (error: unknown) {
       logger.warn({
-        operation: 'calculate_statistics_impact_error',
-        message: 'Failed to calculate statistics impact',
+        operation: "calculate_statistics_impact_error",
+        message: "Failed to calculate statistics impact",
         context: { flightId: flight.id },
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
         },
       });
     }
@@ -834,7 +854,7 @@ export async function createHistoricalEnrichment(
     const existing = await prismaClient.pendingFlightUpdate.findFirst({
       where: {
         flightId: flight.id,
-        status: 'pending',
+        status: "pending",
       },
     });
 
@@ -845,7 +865,7 @@ export async function createHistoricalEnrichment(
         data: {
           proposedData: proposedData as unknown as Prisma.InputJsonValue,
           changes: changes as unknown as Prisma.InputJsonValue,
-          apiSource: 'historical_aggregation',
+          apiSource: "historical_aggregation",
           fetchedAt: new Date(),
           expiresAt,
           metadata: metadata as unknown as Prisma.InputJsonValue,
@@ -860,11 +880,11 @@ export async function createHistoricalEnrichment(
       data: {
         flightId: flight.id,
         userId: flight.userId,
-        status: 'pending',
+        status: "pending",
         originalData: originalData as unknown as Prisma.InputJsonValue,
         proposedData: proposedData as unknown as Prisma.InputJsonValue,
         changes: changes as unknown as Prisma.InputJsonValue,
-        apiSource: 'historical_aggregation',
+        apiSource: "historical_aggregation",
         fetchedAt: new Date(),
         expiresAt,
         statisticsImpact: statisticsImpact as Prisma.InputJsonValue,
@@ -873,8 +893,8 @@ export async function createHistoricalEnrichment(
     });
 
     logger.info({
-      operation: 'create_historical_enrichment',
-      message: 'Created historical enrichment pending update',
+      operation: "create_historical_enrichment",
+      message: "Created historical enrichment pending update",
       context: {
         pendingUpdateId: pendingUpdate.id,
         flightId: flight.id,
@@ -887,11 +907,11 @@ export async function createHistoricalEnrichment(
     return pendingUpdate.id;
   } catch (error) {
     logger.error({
-      operation: 'create_historical_enrichment_error',
-      message: 'Failed to create historical enrichment',
+      operation: "create_historical_enrichment_error",
+      message: "Failed to create historical enrichment",
       context: { flightId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });

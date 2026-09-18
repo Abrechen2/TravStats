@@ -175,7 +175,9 @@ describe("Tour route sections — provider routing", () => {
     expect(routeImpl).toHaveBeenCalledTimes(1);
 
     const roadLeg = await prisma.tripRouteLeg.findUniqueOrThrow({
-      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
     });
     expect(roadLeg.source).toBe("routed");
     expect(roadLeg.distanceKm).toBe(320);
@@ -206,7 +208,7 @@ describe("Tour route sections — provider routing", () => {
     expect(legs.every((l) => l.source === "straight" && l.confidence === "low")).toBe(true);
   });
 
-  it("rejects a leg override with source \"track\" and no trackId (400) — trackId is required, track itself is NOT refused", async () => {
+  it('rejects a leg override with source "track" and no trackId (400) — trackId is required, track itself is NOT refused', async () => {
     // Fix round 1: this test used to be titled "still rejects ... track ...
     // phase 3b owns producing it", from when `track` was not yet a valid
     // source at all. Phase 3b IS this task now, and `track` IS produced by
@@ -228,7 +230,7 @@ describe("Tour route sections — provider routing", () => {
     expect(details.some((d) => d.field === "source")).toBe(false);
   });
 
-  it("refuses a leg override with source \"routed\" (400) — that geometry comes from the routing endpoint, not this one", async () => {
+  it('refuses a leg override with source "routed" (400) — that geometry comes from the routing endpoint, not this one', async () => {
     // Fix round 1: the manual override endpoint and the routing endpoint own
     // DIFFERENT source vocabularies now (MANUAL_LEG_SOURCES vs
     // ACCEPTED_LEG_SOURCES). A caller cannot hand-supply "routed" here.

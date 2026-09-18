@@ -106,7 +106,7 @@ export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState
  */
 export function classifyLodging(
   lodging: CountableLodging,
-  stayStates: readonly LodgingCountState[],
+  stayStates: readonly LodgingCountState[]
 ): LodgingCountState {
   if (!lodging.visited) return "excluded";
   if (stayStates.some((s) => s === "visited")) return "visited";

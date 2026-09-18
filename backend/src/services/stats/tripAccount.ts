@@ -38,7 +38,13 @@ export interface TripAccountInput {
     totalPriceBase: number | null;
     fxBaseCurrency: string | null;
   }[];
-  cruises: { status: string; startDate: Date | null; endDate: Date | null; price: number | null; currency: string | null }[];
+  cruises: {
+    status: string;
+    startDate: Date | null;
+    endDate: Date | null;
+    price: number | null;
+    currency: string | null;
+  }[];
   /**
    * Costs follow `flightCostShare`: price PLUS taxes and fees, and a booking
    * shared by several segments counted once. This used to read `price` alone,
@@ -63,7 +69,7 @@ function dayKey(d: Date): number {
 function addAmount(
   into: Record<string, number>,
   currency: string | null | undefined,
-  amount: number | null | undefined,
+  amount: number | null | undefined
 ): void {
   // Nullish, not just null: a row that simply does not carry the field yields
   // `undefined`, which slipped past a `=== null` check and produced a bucket
@@ -107,7 +113,8 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       if (cruise.status === "cancelled") continue;
       addAmount(spendByCurrency, cruise.currency, cruise.price);
       if (cruise.startDate === null || cruise.endDate === null) continue;
-      for (let c = dayKey(cruise.startDate); c < dayKey(cruise.endDate); c += DAY_MS) covered.add(c);
+      for (let c = dayKey(cruise.startDate); c < dayKey(cruise.endDate); c += DAY_MS)
+        covered.add(c);
     }
     // Per trip, not per run: a booking shared across two trips is a real
     // shared cost for both, and hiding it from the second would understate it.
@@ -165,7 +172,8 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
     for (const entry of trip.journalEntries) {
       journalEntries += 1;
       if (entry.mood) moodCounts.set(entry.mood, (moodCounts.get(entry.mood) ?? 0) + 1);
-      if (entry.weather) weatherCounts.set(entry.weather, (weatherCounts.get(entry.weather) ?? 0) + 1);
+      if (entry.weather)
+        weatherCounts.set(entry.weather, (weatherCounts.get(entry.weather) ?? 0) + 1);
     }
   }
 

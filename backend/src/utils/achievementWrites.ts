@@ -15,11 +15,11 @@
 // them into the measures. That one talks to eight tables; this one talks to
 // exactly one.
 
-import { prisma } from '../db';
-import type { Achievement, UserAchievement } from '@prisma/client';
-import logger from './logger';
-import { checkAchievement } from './achievementChecks';
-import type { FlightData, UserStats } from './achievementStats';
+import { prisma } from "../db";
+import type { Achievement, UserAchievement } from "@prisma/client";
+import logger from "./logger";
+import { checkAchievement } from "./achievementChecks";
+import type { FlightData, UserStats } from "./achievementStats";
 
 export type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -72,7 +72,7 @@ export function planAchievementWrites(
   allAchievements: Achievement[],
   existingAchievementMap: Map<string, UserAchievement>,
   stats: UserStats,
-  flights: FlightData[],
+  flights: FlightData[]
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const revoked: string[] = [];
@@ -141,7 +141,7 @@ export function planAchievementWrites(
 export async function applyAchievementWrites(
   userId: string,
   plan: AchievementWritePlan,
-  achievementCount: number,
+  achievementCount: number
 ): Promise<UserAchievementWithRelation[]> {
   const newlyUnlocked: UserAchievementWithRelation[] = [];
 
@@ -215,18 +215,18 @@ export async function applyAchievementWrites(
 
     if (plan.revoked.length > 0) {
       logger.info({
-        operation: 'revoke_achievements',
-        message: 'Achievements no longer met their requirement and were revoked',
+        operation: "revoke_achievements",
+        message: "Achievements no longer met their requirement and were revoked",
         context: { userId, codes: plan.revoked },
       });
     }
   } catch (error) {
     logger.error({
-      operation: 'update_achievements_transaction',
-      message: 'Failed to update achievements in transaction',
+      operation: "update_achievements_transaction",
+      message: "Failed to update achievements in transaction",
       context: { userId, achievementCount },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -235,9 +235,9 @@ export async function applyAchievementWrites(
 
   if (newlyUnlocked.length > 0) {
     logger.info({
-      operation: 'achievements_unlocked',
+      operation: "achievements_unlocked",
       message: `User unlocked ${newlyUnlocked.length} achievement(s)`,
-      context: { userId, achievementIds: newlyUnlocked.map(ua => ua.achievement.id) },
+      context: { userId, achievementIds: newlyUnlocked.map((ua) => ua.achievement.id) },
     });
   }
 

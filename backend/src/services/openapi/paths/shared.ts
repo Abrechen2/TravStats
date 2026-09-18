@@ -9,6 +9,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
 import {
   apiTokenScopeSchema,
@@ -16,8 +17,6 @@ import {
   sanitizedApiTokenSchema,
   createdApiTokenSchema,
 } from "../../../schemas/apiToken";
-
-
 
 export const errorResponse = registry.register(
   "Error",
@@ -43,6 +42,7 @@ export const flightResponse = registry.register(
   "Flight",
   z
     .object({
+      ...prismaColumns("Flight"),
       id: z.string().uuid(),
       userId: z.string().uuid(),
       airline: z.string().nullable(),
@@ -129,6 +129,7 @@ export const tripResponse = registry.register(
   "Trip",
   z
     .object({
+      ...prismaColumns("Trip"),
       id: z.string().uuid(),
       userId: z.string().uuid(),
       name: z.string().nullable(),
@@ -136,6 +137,23 @@ export const tripResponse = registry.register(
       startDate: z.string().datetime().nullable(),
       endDate: z.string().datetime().nullable(),
       createdAt: z.string().datetime(),
+      _count: z
+        .object({
+          flights: z.number().int(),
+          cruises: z.number().int(),
+          lodgingStays: z.number().int(),
+          routes: z.number().int(),
+          photos: z.number().int(),
+        })
+        .optional()
+        .describe("GET /trips: how many of each the trip holds"),
+      flights: z
+        .array(includedRow("flight"))
+        .optional()
+        .describe("GET /trips: a slim select per flight"),
+      cruises: z.array(includedRow("cruise")).optional(),
+      lodgingStays: z.array(includedRow("stay")).optional(),
+      bookings: z.array(includedRow("booking")).optional(),
     })
     .openapi("Trip")
 );
@@ -146,8 +164,6 @@ registry.register("ApiTokenScope", apiTokenScopeSchema.openapi("ApiTokenScope"))
 registry.register("CreateApiTokenInput", createApiTokenSchema.openapi("CreateApiTokenInput"));
 registry.register("ApiToken", sanitizedApiTokenSchema.openapi("ApiToken"));
 registry.register("CreatedApiToken", createdApiTokenSchema.openapi("CreatedApiToken"));
-
-
 
 export const errorContent = {
   "application/json": { schema: errorResponse },

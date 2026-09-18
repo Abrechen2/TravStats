@@ -21,7 +21,7 @@ export const cruiseStatsResponseSchema = z.object({
   cruiseLines: z.array(z.string()).openapi({
     description:
       "Ranked by how often they were sailed, ties alphabetical. The cross-domain " +
-      "tile slices the first five and labels them \"Top\", so a purely alphabetical " +
+      'tile slices the first five and labels them "Top", so a purely alphabetical ' +
       "list put AIDA and Costa there for their initials rather than for having " +
       "been sailed.",
   }),
@@ -40,8 +40,8 @@ export const cruiseStatsResponseSchema = z.object({
   countriesIso: z.array(z.string()).openapi({
     description:
       "Counting vocabulary: ISO alpha-2, so the cross-domain figure can union " +
-      "these with the airport catalogue's codes without counting \"Germany\" and " +
-      "\"DE\" as two countries. A port whose name does not resolve is dropped from " +
+      'these with the airport catalogue\'s codes without counting "Germany" and ' +
+      '"DE" as two countries. A port whose name does not resolve is dropped from ' +
       "the COUNT rather than counted under its raw name — an unresolvable name " +
       "cannot be deduplicated against anything.",
   }),
@@ -52,11 +52,14 @@ export const cruiseStatsResponseSchema = z.object({
       "with a delta on top that could only ever read zero.",
   }),
 
-  totalDistanceKm: z.number().int().openapi({
-    description:
-      "From the computed sea legs. A cruise the router never ran for contributes " +
-      "0 rather than a straight-line guess.",
-  }),
+  totalDistanceKm: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "From the computed sea legs. A cruise the router never ran for contributes " +
+        "0 rather than a straight-line guess.",
+    }),
   longestLegKm: z.number().int(),
 
   totalPortCalls: z.number().int(),

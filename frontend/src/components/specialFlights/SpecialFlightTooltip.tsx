@@ -11,8 +11,8 @@
 import type { Flight } from "../../types";
 import { TooltipContainer } from "../TooltipContainer";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useLocale } from "../../hooks/useLocale";
 import { SPECIAL_TYPE_META, rgbToCss, type SpecialType } from "./specialTypeMeta";
+import { formatDate } from "../../lib/displayFormat";
 
 interface Props {
   flight: Flight;
@@ -30,7 +30,6 @@ export function SpecialFlightTooltip({
   onClose,
 }: Props): JSX.Element | null {
   const { t } = useTranslation(["specialFlights", "common"]);
-  const locale = useLocale();
 
   const type = flight.specialType as SpecialType | null | undefined;
   if (!type) return null;
@@ -56,7 +55,7 @@ export function SpecialFlightTooltip({
   if (flight.aircraft) metaParts.push(flight.aircraft);
   if (flight.eventLabel) metaParts.push(flight.eventLabel);
   if (flight.departureTime) {
-    metaParts.push(new Date(flight.departureTime).toLocaleDateString(locale));
+    metaParts.push(formatDate(flight.departureTime));
   }
 
   const borderColor = rgbToCss(meta.rgb, 0.6);

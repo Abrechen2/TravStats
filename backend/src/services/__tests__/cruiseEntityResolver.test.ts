@@ -68,7 +68,7 @@ describe("resolveCruiseEntities", () => {
 
   it("falls back to shipNameOverride when no ship matches", async () => {
     const result = await resolveCruiseEntities(
-      baseParsedCruise({ shipName: "World Voyager", cruiseLine: "Atlas" }),
+      baseParsedCruise({ shipName: "World Voyager", cruiseLine: "Atlas" })
     );
     expect(result.shipMatched).toBe(false);
     expect(result.input.shipId).toBeUndefined();
@@ -162,9 +162,7 @@ describe("resolveCruiseEntities", () => {
       { id: 21, name: "Springfield", city: "Springfield", country: "Canada" },
     ]);
     const cruise = baseParsedCruise({
-      stops: [
-        { dayNumber: 1, isAtSea: false, portName: "Springfield", country: "Canada" },
-      ],
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Springfield", country: "Canada" }],
     });
     const result = await resolveCruiseEntities(cruise);
     expect(result.input.stops?.[0].portId).toBe(21);
@@ -176,7 +174,13 @@ describe("resolveCruiseEntities", () => {
     // won purely by DB order. With no country hint on the stop, the geographic
     // truth has to come from the region-bearing catalog entry.
     portFindMany.mockResolvedValueOnce([
-      { id: 11712, name: "Naples", city: "Naples", country: "United States of America", region: null },
+      {
+        id: 11712,
+        name: "Naples",
+        city: "Naples",
+        country: "United States of America",
+        region: null,
+      },
       { id: 49, name: "Naples", city: "Naples", country: "Italy", region: "mediterranean" },
     ]);
     const cruise = baseParsedCruise({
@@ -200,7 +204,7 @@ describe("resolveCruiseEntities", () => {
 
   it("propagates routeName into CruiseInput (#133)", async () => {
     const result = await resolveCruiseEntities(
-      baseParsedCruise({ routeName: "Kanaren mit Marokko" }),
+      baseParsedCruise({ routeName: "Kanaren mit Marokko" })
     );
     expect(result.input.routeName).toBe("Kanaren mit Marokko");
   });

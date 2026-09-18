@@ -56,8 +56,12 @@ describe("resolveTrustProxy", () => {
   });
 
   it("keeps named ranges, addresses and CIDRs, normalising the list", () => {
-    expect(resolveTrustProxy("loopback,uniquelocal , 10.0.0.5")).toBe("loopback, uniquelocal, 10.0.0.5");
-    expect(resolveTrustProxy("loopback, fd00::/8, 2001:db8::1")).toBe("loopback, fd00::/8, 2001:db8::1");
+    expect(resolveTrustProxy("loopback,uniquelocal , 10.0.0.5")).toBe(
+      "loopback, uniquelocal, 10.0.0.5"
+    );
+    expect(resolveTrustProxy("loopback, fd00::/8, 2001:db8::1")).toBe(
+      "loopback, fd00::/8, 2001:db8::1"
+    );
   });
 
   it("accepts a hop count of one or more", () => {
@@ -72,6 +76,6 @@ describe("resolveTrustProxy", () => {
     "refuses the unrecognised entry %s",
     (value) => {
       expect(() => resolveTrustProxy(value)).toThrow(/TRUST_PROXY/);
-    },
+    }
   );
 });

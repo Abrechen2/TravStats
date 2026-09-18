@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   const t1 = Date.now();
   const parseResult = await parseCruiseBookingText(text);
   console.log(
-    `[2/3] LLM parse done: ${parseResult.cruises.length} cruise(s) (${Date.now() - t1}ms)`,
+    `[2/3] LLM parse done: ${parseResult.cruises.length} cruise(s) (${Date.now() - t1}ms)`
   );
 
   const t2 = Date.now();
@@ -43,12 +43,16 @@ async function main(): Promise<void> {
   for (const [i, entry] of resolved.entries()) {
     console.log(`--- Cruise ${i + 1} ---`);
     console.log(`  shipMatched:        ${entry.shipMatched}`);
-    console.log(`  ship:               ${entry.input.shipNameOverride ?? `(id ${entry.input.shipId})`}`);
+    console.log(
+      `  ship:               ${entry.input.shipNameOverride ?? `(id ${entry.input.shipId})`}`
+    );
     console.log(`  cruiseLine:         ${entry.input.cruiseLine ?? "—"}`);
     console.log(`  routeName:          ${entry.input.routeName ?? "—"}`);
     console.log(`  startDate:          ${entry.input.startDate ?? "—"}`);
     console.log(`  endDate:            ${entry.input.endDate ?? "—"}`);
-    console.log(`  cabin:              ${[entry.input.cabinNumber, entry.input.cabinType, entry.input.deck && `Deck ${entry.input.deck}`].filter(Boolean).join(" · ") || "—"}`);
+    console.log(
+      `  cabin:              ${[entry.input.cabinNumber, entry.input.cabinType, entry.input.deck && `Deck ${entry.input.deck}`].filter(Boolean).join(" · ") || "—"}`
+    );
     console.log(`  bookingReference:   ${entry.input.bookingReference ?? "—"}`);
     console.log(`  price:              ${entry.input.price ?? "—"} ${entry.input.currency ?? ""}`);
     console.log(`  stops (${entry.input.stops?.length ?? 0}):`);
@@ -60,7 +64,9 @@ async function main(): Promise<void> {
       console.log(`    Day ${s.dayNumber.toString().padStart(2)}: ${date}  ${tag} ${time}${note}`);
     }
     if (entry.unmatchedPorts.length > 0) {
-      console.log(`  unmatched ports:    ${entry.unmatchedPorts.map((p) => `Day ${p.dayNumber}: ${p.portName}`).join(", ")}`);
+      console.log(
+        `  unmatched ports:    ${entry.unmatchedPorts.map((p) => `Day ${p.dayNumber}: ${p.portName}`).join(", ")}`
+      );
     }
     console.log();
   }

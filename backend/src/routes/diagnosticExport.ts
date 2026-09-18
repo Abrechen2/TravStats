@@ -1,9 +1,9 @@
-import { Router, Response, NextFunction } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { rejectDemo } from '../middleware/demoGuard';
-import { diagnosticExportLimiter } from '../middleware/rateLimit';
-import { buildDiagnosticBundle } from '../services/diagnosticExport';
-import logger from '../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
+import { diagnosticExportLimiter } from "../middleware/rateLimit";
+import { buildDiagnosticBundle } from "../services/diagnosticExport";
+import logger from "../utils/logger";
 
 const router = Router();
 
@@ -29,7 +29,7 @@ const router = Router();
  * deliberately only about the shared login.
  */
 router.get(
-  '/diagnostic-export',
+  "/diagnostic-export",
   authenticate,
   rejectDemo,
   diagnosticExportLimiter,
@@ -37,7 +37,7 @@ router.get(
     try {
       const bundle = await buildDiagnosticBundle(req.userId!);
       logger.info({
-        operation: 'diagnostic_export',
+        operation: "diagnostic_export",
         userId: req.userId,
         context: {
           appTailSize: bundle.logs.appTail.length,
@@ -46,14 +46,14 @@ router.get(
       });
 
       res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="travstats-diagnostic-${Date.now()}.json"`,
+        "Content-Disposition",
+        `attachment; filename="travstats-diagnostic-${Date.now()}.json"`
       );
       res.json(bundle);
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

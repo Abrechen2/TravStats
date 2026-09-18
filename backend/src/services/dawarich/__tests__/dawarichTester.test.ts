@@ -74,7 +74,7 @@ describe("testDawarichConnection", () => {
 
   it("reports a protocol mismatch when the server answers with garbage", async () => {
     checkHealth.mockRejectedValue(
-      new DawarichError("protocol", "Dawarich health check returned an unexpected payload"),
+      new DawarichError("protocol", "Dawarich health check returned an unexpected payload")
     );
     await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
       success: false,
@@ -86,7 +86,7 @@ describe("testDawarichConnection", () => {
   it("reports notFound when the server answers 404", async () => {
     checkHealth.mockResolvedValue({ reachable: true, version: "1.9.2" });
     getPoints.mockRejectedValue(
-      new DawarichError("notFound", "Dawarich resource not found (points page=1)", 404),
+      new DawarichError("notFound", "Dawarich resource not found (points page=1)", 404)
     );
     await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toMatchObject({
       success: false,

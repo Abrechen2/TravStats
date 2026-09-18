@@ -160,9 +160,7 @@ describe("lodging price statistics", () => {
   });
 
   it("has no award value when nothing was ever paid to derive a rate from", () => {
-    const p = price([
-      stay({ isAwardStay: true, totalPriceBase: 0, totalPrice: 0 }),
-    ]);
+    const p = price([stay({ isAwardStay: true, totalPriceBase: 0, totalPrice: 0 })]);
     expect(p.awardNightsValue).toBeNull();
   });
 

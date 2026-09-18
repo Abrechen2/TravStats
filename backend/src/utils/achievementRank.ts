@@ -16,12 +16,12 @@ export interface RankTier {
 }
 
 export const RANK_LADDER: readonly RankTier[] = [
-  { key: 'newcomer', minPoints: 0 },
-  { key: 'traveller', minPoints: 1_000 },
-  { key: 'explorer', minPoints: 2_500 },
-  { key: 'frequent_flyer', minPoints: 4_000 },
-  { key: 'globetrotter', minPoints: 5_000 },
-  { key: 'legend', minPoints: 10_000 },
+  { key: "newcomer", minPoints: 0 },
+  { key: "traveller", minPoints: 1_000 },
+  { key: "explorer", minPoints: 2_500 },
+  { key: "frequent_flyer", minPoints: 4_000 },
+  { key: "globetrotter", minPoints: 5_000 },
+  { key: "legend", minPoints: 10_000 },
 ];
 
 export interface ResolvedRank {

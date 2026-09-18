@@ -105,7 +105,7 @@ export type PullDawarichTrackInput = z.infer<typeof pullDawarichTrackSchema>;
  * `manualLegSource` directly, outside the union.
  */
 const ROUTED_REDIRECT_MESSAGE =
-  "This endpoint only accepts \"straight\", \"drawn\", or \"track\" — routing a leg " +
+  'This endpoint only accepts "straight", "drawn", or "track" — routing a leg ' +
   "through the configured provider is done via POST " +
   ".../legs/{fromStopId}/{toStopId}/route or POST .../route-all, not this one.";
 
@@ -126,7 +126,10 @@ const coordinate = z
 export const createRouteSchema = z.object({
   name: z.string().min(1).max(200),
   mode: z.enum(LEG_MODES),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
   notes: z.string().max(20000).optional(),
   startOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
   endOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
@@ -135,7 +138,11 @@ export const createRouteSchema = z.object({
 export const updateRouteSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   mode: z.enum(LEG_MODES).optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .nullable()
+    .optional(),
   notes: z.string().max(20000).nullable().optional(),
   orderIdx: z.number().int().min(0).max(10000).optional(),
   startOdometerKm: z.number().int().min(0).max(10_000_000).nullable().optional(),
@@ -154,12 +161,15 @@ export const updateRouteSchema = z.object({
  * free that way, and `routeOrderIdx` stays contiguous as the schema
  * requires.
  */
-export const assignStopsSchema = z.object({
-  stopIds: z.array(z.string().uuid()).max(512),
-}).refine((v) => new Set(v.stopIds).size === v.stopIds.length, {
-  message: "A stop may appear only once in a route; model a loop as two distinct stops at the same place",
-  path: ["stopIds"],
-});
+export const assignStopsSchema = z
+  .object({
+    stopIds: z.array(z.string().uuid()).max(512),
+  })
+  .refine((v) => new Set(v.stopIds).size === v.stopIds.length, {
+    message:
+      "A stop may appear only once in a route; model a loop as two distinct stops at the same place",
+    path: ["stopIds"],
+  });
 
 /**
  * `straight` / `drawn` — the hand-corrected shape. `waypoints` stays

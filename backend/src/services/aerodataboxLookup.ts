@@ -183,7 +183,7 @@ export function departsFrom(
 
 function pickOperatorAndMarketing(
   flights: AerodataboxFlight[],
-  requestedNumber: string,
+  requestedNumber: string
 ): PickedFlights | undefined {
   if (flights.length === 0) return undefined;
   const operator = flights.find((f) => f.codeshareStatus === "isOperator") ?? flights[0];
@@ -192,8 +192,7 @@ function pickOperatorAndMarketing(
   // padded-vs-unpadded mismatch would silently drop the marketing entry.
   const normalizedRequested = toProviderFlightNumber(requestedNumber);
   const marketing = flights.find(
-    (f) =>
-      f !== operator && toProviderFlightNumber(f.number ?? "") === normalizedRequested,
+    (f) => f !== operator && toProviderFlightNumber(f.number ?? "") === normalizedRequested
   );
   return { operator, marketing };
 }
@@ -223,7 +222,7 @@ export async function lookupFlightAerodatabox(
    * a one-in-two chance. Backfilling by hand with only the date filter picked
    * the feeder and wrote its arrival time onto the long-haul row.
    */
-  depAirportCode?: string,
+  depAirportCode?: string
 ): Promise<FlightLookupResult | null> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
@@ -244,7 +243,7 @@ export async function lookupFlightAerodatabox(
   if (cached !== undefined) {
     logger.info(
       { flightNumber: normalized, date, operation: "aerodatabox_cache_hit" },
-      `AeroDataBox cache hit for ${normalized} on ${date}`,
+      `AeroDataBox cache hit for ${normalized} on ${date}`
     );
     return cached;
   }
@@ -252,7 +251,7 @@ export async function lookupFlightAerodatabox(
   try {
     logger.info(
       { flightNumber: normalized, date, api: "aerodatabox", operation: "api_call_start" },
-      `Calling AeroDataBox for ${normalized} on ${date}`,
+      `Calling AeroDataBox for ${normalized} on ${date}`
     );
 
     const response = await axios.get<AerodataboxFlight[]>(
@@ -269,7 +268,7 @@ export async function lookupFlightAerodatabox(
         // location enrichment — we already have airport coordinates locally.
         params: { withAircraftImage: false, withLocation: false },
         timeout: 8000,
-      },
+      }
     );
 
     captureRateLimit(response.headers as Record<string, unknown>, userId);
@@ -288,7 +287,7 @@ export async function lookupFlightAerodatabox(
           receivedType: typeof response.data,
           operation: "unexpected_response_shape",
         },
-        `AeroDataBox answered ${normalized} on ${date} with a ${typeof response.data}, not a flight list`,
+        `AeroDataBox answered ${normalized} on ${date} with a ${typeof response.data}, not a flight list`
       );
       // Not cached: a message body is the provider's moment, not the
       // flight's absence, and a historical date would otherwise pin the
@@ -310,7 +309,7 @@ export async function lookupFlightAerodatabox(
           returned: returned.length,
           operation: "aerodatabox_no_departure_on_date",
         },
-        `AeroDataBox returned ${returned.length} entr${returned.length === 1 ? "y" : "ies"} for ${normalized}, none departing on ${date}`,
+        `AeroDataBox returned ${returned.length} entr${returned.length === 1 ? "y" : "ies"} for ${normalized}, none departing on ${date}`
       );
     }
 
@@ -319,7 +318,7 @@ export async function lookupFlightAerodatabox(
     if (!picked) {
       logger.info(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "api_empty_response" },
-        `AeroDataBox returned no data for ${normalized} on ${date}`,
+        `AeroDataBox returned no data for ${normalized} on ${date}`
       );
       const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
       cache.set(cacheKey, null, ttl);
@@ -338,14 +337,16 @@ export async function lookupFlightAerodatabox(
         hasAircraft: !!result.aircraft,
         operation: "api_call_success",
       },
-      `AeroDataBox returned data for ${normalized} on ${date}`,
+      `AeroDataBox returned data for ${normalized} on ${date}`
     );
 
     const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
     cache.set(cacheKey, result, ttl);
     return result;
   } catch (error: unknown) {
-    const errResponse = (error as { response?: { status?: number; headers?: Record<string, unknown> } })?.response;
+    const errResponse = (
+      error as { response?: { status?: number; headers?: Record<string, unknown> } }
+    )?.response;
     const status = errResponse?.status;
     const message = error instanceof Error ? error.message : String(error);
 
@@ -358,17 +359,23 @@ export async function lookupFlightAerodatabox(
     if (status === 429) {
       logger.warn(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "rate_limited" },
-        "AeroDataBox returned 429 — quota or per-second limit hit",
+        "AeroDataBox returned 429 — quota or per-second limit hit"
       );
     } else if (status === 401 || status === 403) {
       logger.warn(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "auth_failed" },
-        "AeroDataBox returned auth error — check API key",
+        "AeroDataBox returned auth error — check API key"
       );
     } else {
       logger.warn(
-        { flightNumber: normalized, date, api: "aerodatabox", error: message, operation: "api_call_error" },
-        `AeroDataBox lookup failed for ${normalized}: ${message}`,
+        {
+          flightNumber: normalized,
+          date,
+          api: "aerodatabox",
+          error: message,
+          operation: "api_call_error",
+        },
+        `AeroDataBox lookup failed for ${normalized}: ${message}`
       );
     }
     return null;
@@ -399,7 +406,7 @@ function mapAerodataboxStatus(status: string | undefined): "cancelled" | "divert
 async function mapToLookupResult(
   flight: AerodataboxFlight,
   marketing: AerodataboxFlight | undefined,
-  fallbackFlightNumber: string,
+  fallbackFlightNumber: string
 ): Promise<FlightLookupResult> {
   const departureCode = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
   const arrivalCode = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
@@ -429,10 +436,10 @@ async function mapToLookupResult(
   const scheduledArrival = parseAerodataboxUtc(flight.arrival?.scheduledTime?.utc);
   // Prefer actualTime (block-on-block reality) over predictedTime / revisedTime.
   const actualDeparture = parseAerodataboxUtc(
-    flight.departure?.actualTime?.utc ?? flight.departure?.runwayTime?.utc,
+    flight.departure?.actualTime?.utc ?? flight.departure?.runwayTime?.utc
   );
   const actualArrival = parseAerodataboxUtc(
-    flight.arrival?.actualTime?.utc ?? flight.arrival?.runwayTime?.utc,
+    flight.arrival?.actualTime?.utc ?? flight.arrival?.runwayTime?.utc
   );
 
   // Codeshare detection: the user-typed flight number is a marketing

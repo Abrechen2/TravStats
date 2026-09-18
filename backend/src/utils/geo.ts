@@ -18,10 +18,7 @@ export const calculateDistance = (
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
@@ -87,14 +84,14 @@ const interpolateGreatCircle = (
   const lat2Rad = toRad(lat2);
   const lon2Rad = toRad(lon2);
 
-  const d = 2 * Math.asin(
-    Math.sqrt(
-      Math.pow(Math.sin((lat1Rad - lat2Rad) / 2), 2) +
-        Math.cos(lat1Rad) *
-          Math.cos(lat2Rad) *
-          Math.pow(Math.sin((lon1Rad - lon2Rad) / 2), 2)
-    )
-  );
+  const d =
+    2 *
+    Math.asin(
+      Math.sqrt(
+        Math.pow(Math.sin((lat1Rad - lat2Rad) / 2), 2) +
+          Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.pow(Math.sin((lon1Rad - lon2Rad) / 2), 2)
+      )
+    );
 
   // Guard: identical points — return departure point
   if (Math.abs(d) < 1e-10) {

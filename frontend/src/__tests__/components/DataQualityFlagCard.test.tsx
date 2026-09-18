@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
+import { formatDate } from "../../lib/displayFormat";
 
 /**
  * A flag is a question, not a verdict — so the card's job is to show BOTH
@@ -129,8 +130,7 @@ describe("DataQualityFlagCard — both values, neither marked correct", () => {
     // the component formats them, because the property under test is "both
     // values are shown", not the date format, and hardcoding a rendering would
     // make the test depend on the machine's timezone.
-    const asShown = (iso: string) =>
-      new Date(iso).toLocaleDateString("en", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const asShown = (iso: string) => formatDate(iso);
     expect(screen.getByText(asShown("2024-09-03T00:00:00.000Z"))).toBeInTheDocument();
     expect(screen.getByText(asShown("2024-03-09T00:00:00.000Z"))).toBeInTheDocument();
   });

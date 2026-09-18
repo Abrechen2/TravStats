@@ -19,7 +19,7 @@ describe("walkNights", () => {
       new Date("2024-05-01T00:00:00.000Z"),
       new Date("2024-05-04T00:00:00.000Z"),
       nightsByYear,
-      nightsByMonth,
+      nightsByMonth
     );
     expect(n).toBe(3);
     expect(nightsByYear).toEqual({ "2024": 3 });
@@ -37,7 +37,7 @@ describe("walkNights", () => {
       new Date("1900-01-01T00:00:00.000Z"),
       new Date("2000-01-01T00:00:00.000Z"),
       nightsByYear,
-      nightsByMonth,
+      nightsByMonth
     );
     expect(n).toBe(3650);
     expect(Object.keys(nightsByMonth).length).toBeLessThanOrEqual(3650 / 28 + 1);

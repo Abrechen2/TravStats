@@ -2,8 +2,8 @@
  * Helper functions for loading and decrypting parser settings
  */
 
-import { prisma } from '../db';
-import { decryptApiKey } from '../utils/encryption';
+import { prisma } from "../db";
+import { decryptApiKey } from "../utils/encryption";
 
 export interface UserParserSettings {
   preferredVisionParser?: string | null;
@@ -18,11 +18,31 @@ export interface AdminParserSettings {
   globalOpenaiApiKey?: string | null;
   globalClaudeApiKey?: string | null;
   allowUserApiKeys?: boolean;
-  defaultVisionParser?: string | null;
-  defaultTextParser?: string | null;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
   ollamaVisionModel?: string | null;
+  parserOrder?: string | null;
+}
+
+/**
+ * Which reader gets the first look at a booking document.
+ *
+ * ONE home for the rule, read by all four domains (see
+ * `shared/` conventions): flight mails used to be LLM-first whenever an
+ * Ollama was configured, while lodging and cruise were template-first — three
+ * hardcoded orders and no way for an admin to say otherwise.
+ *
+ * The default is `template_first`, measured on 2026-09-17 against the sample
+ * corpus: the template chain read 31 of 31 flight mails and met all 29
+ * expectations in under a second, where gemma3:12b took 19 minutes and missed
+ * three. `llm_first` is there because a corpus is not every mail: an instance
+ * whose senders are all unknown to the templates is better served by the model.
+ */
+export type ParserOrder = "template_first" | "llm_first";
+
+export async function getParserOrder(): Promise<ParserOrder> {
+  const settings = await getAdminParserSettings();
+  return settings?.parserOrder === "llm_first" ? "llm_first" : "template_first";
 }
 
 /**
@@ -68,11 +88,10 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
     globalOpenaiApiKey: decryptApiKey(settings.globalOpenaiApiKey),
     globalClaudeApiKey: decryptApiKey(settings.globalClaudeApiKey),
     allowUserApiKeys: settings.allowUserApiKeys,
-    defaultVisionParser: settings.defaultVisionParser,
-    defaultTextParser: settings.defaultTextParser,
     ollamaUrl: settings.ollamaUrl,
     ollamaModel: settings.ollamaModel,
     ollamaVisionModel: settings.ollamaVisionModel,
+    parserOrder: settings.parserOrder,
   };
 }
 
@@ -86,7 +105,9 @@ export interface ParserConfigWithSettings {
  * User settings take precedence over admin settings
  * Returns config ready to pass to getParserConfig
  */
-export async function getParserConfigWithSettings(userId: string): Promise<ParserConfigWithSettings> {
+export async function getParserConfigWithSettings(
+  userId: string
+): Promise<ParserConfigWithSettings> {
   const userSettings = await getUserParserSettings(userId);
   const adminSettings = await getAdminParserSettings();
 
@@ -111,7 +132,7 @@ export interface AdminFxSettings {
  */
 export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   const settings = await prisma.adminSettings.findFirst({
-      orderBy: { id: "asc" },
+    orderBy: { id: "asc" },
     select: { fxCdnFallbackEnabled: true },
   });
   return { cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true };

@@ -66,88 +66,102 @@ async function requireRp(): Promise<NonNullable<Awaited<ReturnType<typeof resolv
   return rp;
 }
 
-router.post("/register/options", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
-  try {
-    const rp = await requireRp();
-    const userId = req.userId!;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { username: true },
-    });
-    if (!user) throw new AppError("User not found", 404);
+router.post(
+  "/register/options",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const rp = await requireRp();
+      const userId = req.userId!;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true },
+      });
+      if (!user) throw new AppError("User not found", 404);
 
-    const existing = await prisma.webAuthnCredential.findMany({
-      where: { userId },
-      select: { credentialId: true, transports: true },
-    });
+      const existing = await prisma.webAuthnCredential.findMany({
+        where: { userId },
+        select: { credentialId: true, transports: true },
+      });
 
-    const options = await generateRegistrationOptions({
-      rpName: rp.rpName,
-      rpID: rp.rpId,
-      userName: user.username,
-      // Registering the same authenticator twice produces a confusing duplicate
-      // in the list; the browser refuses instead when we exclude what we have.
-      excludeCredentials: existing.map((entry) => ({
-        id: entry.credentialId,
-        transports: entry.transports as never,
-      })),
-      // residentKey "preferred", not "required": a discoverable credential is
-      // what makes the username-less sign-in button work, and every syncing
-      // password manager creates one — but a hardware key with no storage left
-      // should still be allowed to register rather than fail outright.
-      authenticatorSelection: {
-        residentKey: "preferred",
-        userVerification: USER_VERIFICATION,
-      },
-    });
+      const options = await generateRegistrationOptions({
+        rpName: rp.rpName,
+        rpID: rp.rpId,
+        userName: user.username,
+        // Registering the same authenticator twice produces a confusing duplicate
+        // in the list; the browser refuses instead when we exclude what we have.
+        excludeCredentials: existing.map((entry) => ({
+          id: entry.credentialId,
+          transports: entry.transports as never,
+        })),
+        // residentKey "preferred", not "required": a discoverable credential is
+        // what makes the username-less sign-in button work, and every syncing
+        // password manager creates one — but a hardware key with no storage left
+        // should still be allowed to register rather than fail outright.
+        authenticatorSelection: {
+          residentKey: "preferred",
+          userVerification: USER_VERIFICATION,
+        },
+      });
 
-    putChallenge(`reg:${userId}`, options.challenge);
-    res.json(options);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post("/register/verify", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
-  try {
-    const rp = await requireRp();
-    const userId = req.userId!;
-    const { name, response } = registerVerifySchema.parse(req.body);
-
-    const expectedChallenge = takeChallenge(`reg:${userId}`);
-    if (!expectedChallenge) throw new AppError("Registration challenge expired", 400);
-
-    const verification = await verifyRegistrationResponse({
-      response: response as never,
-      expectedChallenge,
-      expectedOrigin: rp.origins,
-      expectedRPID: rp.rpId,
-      requireUserVerification: true,
-    });
-
-    if (!verification.verified || !verification.registrationInfo) {
-      throw new AppError("Passkey registration could not be verified", 400);
+      putChallenge(`reg:${userId}`, options.challenge);
+      res.json(options);
+    } catch (error) {
+      next(error);
     }
-
-    const { credential } = verification.registrationInfo;
-    const row = await prisma.webAuthnCredential.create({
-      data: {
-        userId,
-        credentialId: credential.id,
-        publicKey: Buffer.from(credential.publicKey).toString("base64url"),
-        counter: BigInt(credential.counter),
-        transports: credential.transports ?? [],
-        name,
-        rpId: rp.rpId,
-      },
-    });
-
-    logger.info({ operation: "passkey_registered", userId });
-    res.json({ id: row.id, name: row.name });
-  } catch (error) {
-    next(error);
   }
-});
+);
+
+router.post(
+  "/register/verify",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const rp = await requireRp();
+      const userId = req.userId!;
+      const { name, response } = registerVerifySchema.parse(req.body);
+
+      const expectedChallenge = takeChallenge(`reg:${userId}`);
+      if (!expectedChallenge) throw new AppError("Registration challenge expired", 400);
+
+      const verification = await verifyRegistrationResponse({
+        response: response as never,
+        expectedChallenge,
+        expectedOrigin: rp.origins,
+        expectedRPID: rp.rpId,
+        requireUserVerification: true,
+      });
+
+      if (!verification.verified || !verification.registrationInfo) {
+        throw new AppError("Passkey registration could not be verified", 400);
+      }
+
+      const { credential } = verification.registrationInfo;
+      const row = await prisma.webAuthnCredential.create({
+        data: {
+          userId,
+          credentialId: credential.id,
+          publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+          counter: BigInt(credential.counter),
+          transports: credential.transports ?? [],
+          name,
+          rpId: rp.rpId,
+        },
+      });
+
+      logger.info({ operation: "passkey_registered", userId });
+      res.json({ id: row.id, name: row.name });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post("/login/options", authLimiter, async (req, res, next) => {
   try {
@@ -286,35 +300,49 @@ router.get("/", authenticate, async (req: AuthRequest, res, next) => {
   }
 });
 
-router.patch("/:id", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
-  try {
-    const { name } = renamePasskeySchema.parse(req.body);
-    // Scoped by userId for the same reason as the delete below.
-    const updated = await prisma.webAuthnCredential.updateMany({
-      where: { id: req.params.id, userId: req.userId! },
-      data: { name },
-    });
-    if (updated.count === 0) throw new AppError("Passkey not found", 404);
-    res.json({ id: req.params.id, name });
-  } catch (error) {
-    next(error);
+router.patch(
+  "/:id",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { name } = renamePasskeySchema.parse(req.body);
+      // Scoped by userId for the same reason as the delete below.
+      const updated = await prisma.webAuthnCredential.updateMany({
+        where: { id: req.params.id, userId: req.userId! },
+        data: { name },
+      });
+      if (updated.count === 0) throw new AppError("Passkey not found", 404);
+      res.json({ id: req.params.id, name });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
-router.delete("/:id", authenticate, rejectDemo, requireBrowserSession, authLimiter, async (req: AuthRequest, res, next) => {
-  try {
-    // Scoped by userId, not just id: a foreign key proves the row exists, never
-    // that it belongs to the caller.
-    const deleted = await prisma.webAuthnCredential.deleteMany({
-      where: { id: req.params.id, userId: req.userId! },
-    });
-    if (deleted.count === 0) throw new AppError("Passkey not found", 404);
+router.delete(
+  "/:id",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      // Scoped by userId, not just id: a foreign key proves the row exists, never
+      // that it belongs to the caller.
+      const deleted = await prisma.webAuthnCredential.deleteMany({
+        where: { id: req.params.id, userId: req.userId! },
+      });
+      if (deleted.count === 0) throw new AppError("Passkey not found", 404);
 
-    logger.info({ operation: "passkey_deleted", userId: req.userId });
-    res.json({ deleted: true });
-  } catch (error) {
-    next(error);
+      logger.info({ operation: "passkey_deleted", userId: req.userId });
+      res.json({ deleted: true });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 export default router;

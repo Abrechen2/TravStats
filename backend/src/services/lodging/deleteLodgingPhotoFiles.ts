@@ -20,7 +20,7 @@ import logger from "../../utils/logger";
 
 /** Read the photo filenames of every lodging matching `where`. */
 export async function collectLodgingPhotoFilenames(
-  where: { id: { in: string[] } } | Record<string, unknown>,
+  where: { id: { in: string[] } } | Record<string, unknown>
 ): Promise<string[]> {
   const photos = await prisma.lodgingPhoto.findMany({
     where: { lodging: where },
@@ -41,7 +41,7 @@ export function removeLodgingPhotoFiles(filenames: string[]): void {
     } catch (error) {
       logger.warn(
         { operation: "lodging_photo_file_orphaned", filename, err: error },
-        "[Lodging] Photo row deleted but its file could not be removed",
+        "[Lodging] Photo row deleted but its file could not be removed"
       );
     }
   }

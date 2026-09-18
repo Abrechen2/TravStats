@@ -58,7 +58,10 @@ async function main(): Promise<void> {
     await prisma.lodging.update({ where: { id: u.id }, data: { isoCountryCode: u.code } });
     written++;
   }
-  logger.info({ operation: "backfill_lodging_country_codes", written }, "[Backfill] Country codes written");
+  logger.info(
+    { operation: "backfill_lodging_country_codes", written },
+    "[Backfill] Country codes written"
+  );
   console.log(`\ngeschrieben: ${written}`);
 }
 

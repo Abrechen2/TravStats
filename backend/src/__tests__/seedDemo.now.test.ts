@@ -40,7 +40,7 @@ describe("a seed run given its own 'now'", () => {
       if (flight.departureTime === null || flight.departureTime <= FROZEN_NOW) {
         throw new Error(
           `a scheduled flight departs ${flight.departureTime?.toISOString() ?? "never"}, ` +
-            `which is not after ${FROZEN_NOW.toISOString()}`,
+            `which is not after ${FROZEN_NOW.toISOString()}`
         );
       }
     }
@@ -52,7 +52,7 @@ describe("a seed run given its own 'now'", () => {
     for (const flight of flown) {
       if (flight.departureTime !== null && flight.departureTime > FROZEN_NOW) {
         throw new Error(
-          `a flown flight departs ${flight.departureTime.toISOString()}, which is still ahead`,
+          `a flown flight departs ${flight.departureTime.toISOString()}, which is still ahead`
         );
       }
     }

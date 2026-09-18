@@ -27,7 +27,14 @@ describe("seedStories", () => {
     for (const story of STORIES) {
       const trip = await prisma.trip.findFirst({
         where: { userId, name: story.name },
-        include: { flights: true, lodgingStays: true, placeVisits: true, routes: true, journalEntries: true, cruises: true },
+        include: {
+          flights: true,
+          lodgingStays: true,
+          placeVisits: true,
+          routes: true,
+          journalEntries: true,
+          cruises: true,
+        },
       });
       if (!trip) throw new Error(`${story.name}: trip not found`);
       expect(trip.flights).toHaveLength(story.flights.length);
@@ -40,7 +47,10 @@ describe("seedStories", () => {
   });
 
   it("keeps a cruise's stops in the 3-state invariant, numbered from 1", async () => {
-    const cruises = await prisma.cruise.findMany({ where: { userId }, include: { stops: { orderBy: { dayNumber: "asc" } } } });
+    const cruises = await prisma.cruise.findMany({
+      where: { userId },
+      include: { stops: { orderBy: { dayNumber: "asc" } } },
+    });
     for (const cruise of cruises) {
       cruise.stops.forEach((stop, i) => {
         expect(stop.dayNumber).toBe(i + 1);
@@ -68,7 +78,7 @@ describe("seedStories", () => {
           if (time < cruise.startDate || time > cruise.endDate) {
             throw new Error(
               `stop ${stop.dayNumber}'s ${label} ${time.toISOString()} is outside ` +
-                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`,
+                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`
             );
           }
         }
@@ -81,11 +91,16 @@ describe("seedStories", () => {
       if (story.companions.length === 0) continue;
       const trip = await prisma.trip.findFirst({
         where: { userId, name: story.name },
-        include: { flights: { include: { companionLinks: true } }, cruises: { include: { companionLinks: true } } },
+        include: {
+          flights: { include: { companionLinks: true } },
+          cruises: { include: { companionLinks: true } },
+        },
       });
       if (!trip) throw new Error(`${story.name}: trip not found`);
-      for (const flight of trip.flights) expect(flight.companionLinks).toHaveLength(story.companions.length);
-      for (const cruise of trip.cruises) expect(cruise.companionLinks).toHaveLength(story.companions.length);
+      for (const flight of trip.flights)
+        expect(flight.companionLinks).toHaveLength(story.companions.length);
+      for (const cruise of trip.cruises)
+        expect(cruise.companionLinks).toHaveLength(story.companions.length);
     }
   });
 
@@ -118,7 +133,9 @@ describe("seedStories", () => {
 
   /** The narrated side of finding B4 — see seedDemo.bulk.test.ts. */
   it("snapshots every narrated stay into the base currency", async () => {
-    const stays = await prisma.lodgingStay.findMany({ where: { userId, totalPrice: { not: null } } });
+    const stays = await prisma.lodgingStay.findMany({
+      where: { userId, totalPrice: { not: null } },
+    });
     expect(stays.length).toBeGreaterThan(0);
     for (const stay of stays) {
       expect(stay.totalPriceBase).not.toBeNull();
@@ -130,7 +147,10 @@ describe("seedStories", () => {
 
   it("marks planned stories' flights and stays as not yet taken", async () => {
     const planned = STORIES.filter((s) => s.status === "planned").map((s) => s.name);
-    const trips = await prisma.trip.findMany({ where: { userId, name: { in: planned } }, include: { flights: true, lodgingStays: true } });
+    const trips = await prisma.trip.findMany({
+      where: { userId, name: { in: planned } },
+      include: { flights: true, lodgingStays: true },
+    });
     for (const trip of trips) {
       for (const f of trip.flights) expect(f.status).toBe("scheduled");
       for (const s of trip.lodgingStays) expect(s.status).toBe("scheduled");

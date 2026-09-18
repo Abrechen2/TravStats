@@ -16,7 +16,7 @@ registry.registerPath({
     "Use this to resolve coordinates before creating a flight via API. " +
     "A closed airport is always findable by its exact code; `includeClosed` " +
     "additionally lets it match by name or city, which is what an import of " +
-    "old bookings needs (a 2004 confirmation says \"Berlin\", not \"TXL\").",
+    'old bookings needs (a 2004 confirmation says "Berlin", not "TXL").',
   tags: ["Airports"],
   request: {
     query: z.object({

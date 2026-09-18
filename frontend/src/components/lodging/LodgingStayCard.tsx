@@ -1,11 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRatingText, formatStayPriceDisplay } from "../../lib/lodgingFormat";
-import {
-  formatStayPeriod,
-  hasUnknownLength,
-  stayNights,
-} from "../../lib/lodgingDateDisplay";
+import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
 import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
 import { StayStatusPill } from "./StayStatusPill";
@@ -90,9 +86,7 @@ export function LodgingStayCard({
       data-testid={`stay-card-${stay.id}`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-[var(--text-primary)]">
-          {period.label}
-        </span>
+        <span className="text-sm font-semibold text-[var(--text-primary)]">{period.label}</span>
         <span className="text-xs text-[var(--text-muted)]">
           {/* A stay nobody knows the length of shows that, rather than "0 nights" —
               which reads as a same-day stay somebody actually recorded. */}

@@ -5,22 +5,22 @@
  * and creates pending updates for user review.
  */
 
-import { PrismaClient, Flight, Prisma } from '@prisma/client';
-import { lookupFlightDetails, FlightLookupResult } from './flightLookup';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { DEMO_USERNAME } from '../utils/sharedDemo';
-import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
-import { applyPendingUpdate } from './pendingUpdateService';
-import type { FlightDataSnapshot } from './pendingUpdateService';
-import { sweepStatuses } from './statusSweep';
-import { runFinalArrivalSweep } from './finalArrivalLookup';
+import { PrismaClient, Flight, Prisma } from "@prisma/client";
+import { lookupFlightDetails, FlightLookupResult } from "./flightLookup";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { DEMO_USERNAME } from "../utils/sharedDemo";
+import { recalculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { applyPendingUpdate } from "./pendingUpdateService";
+import type { FlightDataSnapshot } from "./pendingUpdateService";
+import { sweepStatuses } from "./statusSweep";
+import { runFinalArrivalSweep } from "./finalArrivalLookup";
 import {
   getAirportTimezone,
   normalizeFlightTimeUtc,
   toLocalDateString,
   type FlightTimeSemantics,
-} from '../utils/timezone';
+} from "../utils/timezone";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -31,7 +31,7 @@ export interface FlightChange {
   field: string;
   oldValue: FlightFieldValue;
   newValue: FlightFieldValue;
-  type: 'added' | 'removed' | 'changed';
+  type: "added" | "removed" | "changed";
 }
 
 export interface PendingUpdateData {
@@ -63,7 +63,7 @@ export function isFlightActive(flight: Flight): boolean {
   return (
     departureTime <= now &&
     now <= bufferEnd &&
-    (flight.status === 'scheduled' || flight.status === 'flown')
+    (flight.status === "scheduled" || flight.status === "flown")
   );
 }
 
@@ -78,29 +78,28 @@ export function calculateChanges(
 
   // Fields to compare
   const fieldsToCompare = [
-    'airline',
-    'flightNumber',
-    'aircraft',
-    'gate',
-    'terminal',
-    'depIata',
-    'depIcao',
-    'arrIata',
-    'arrIcao',
-    'departureTime',
-    'arrivalTime',
-    'actualDeparture',
-    'actualArrival',
-    'status',
-    'actualRoute',
-    'overflownCountries',
-    'routeDistance',
+    "airline",
+    "flightNumber",
+    "aircraft",
+    "gate",
+    "terminal",
+    "depIata",
+    "depIcao",
+    "arrIata",
+    "arrIcao",
+    "departureTime",
+    "arrivalTime",
+    "actualDeparture",
+    "actualArrival",
+    "status",
+    "actualRoute",
+    "overflownCountries",
+    "routeDistance",
   ];
 
   // Treat null, undefined and empty string uniformly as "empty" so that a first-ever
   // fill from Prisma's "" default is classified as `added`, not `changed`.
-  const isEmpty = (v: FlightFieldValue): boolean =>
-    v === null || v === undefined || v === '';
+  const isEmpty = (v: FlightFieldValue): boolean => v === null || v === undefined || v === "";
 
   for (const field of fieldsToCompare) {
     const oldValue = (original as Record<string, FlightFieldValue>)[field];
@@ -111,23 +110,34 @@ export function calculateChanges(
         field,
         oldValue: null,
         newValue,
-        type: 'added',
+        type: "added",
       });
     } else if (!isEmpty(oldValue) && isEmpty(newValue)) {
       changes.push({
         field,
         oldValue,
         newValue: null,
-        type: 'removed',
+        type: "removed",
       });
     } else if (oldValue !== newValue && !isEmpty(newValue)) {
       // Special handling for time fields — includes actual off/on-block times
       // so single-minute-level jitter doesn't churn a "changed" event on every
       // API poll.
-      const timeFields = new Set(['departureTime', 'arrivalTime', 'actualDeparture', 'actualArrival']);
+      const timeFields = new Set([
+        "departureTime",
+        "arrivalTime",
+        "actualDeparture",
+        "actualArrival",
+      ]);
       if (timeFields.has(field)) {
-        const oldTime = oldValue && (typeof oldValue === 'string' || typeof oldValue === 'number') ? new Date(oldValue).getTime() : 0;
-        const newTime = newValue && (typeof newValue === 'string' || typeof newValue === 'number') ? new Date(newValue).getTime() : 0;
+        const oldTime =
+          oldValue && (typeof oldValue === "string" || typeof oldValue === "number")
+            ? new Date(oldValue).getTime()
+            : 0;
+        const newTime =
+          newValue && (typeof newValue === "string" || typeof newValue === "number")
+            ? new Date(newValue).getTime()
+            : 0;
         const diffMinutes = Math.abs(newTime - oldTime) / (1000 * 60);
 
         // Only include if difference is significant
@@ -136,7 +146,7 @@ export function calculateChanges(
             field,
             oldValue,
             newValue,
-            type: 'changed',
+            type: "changed",
           });
         }
       } else {
@@ -144,7 +154,7 @@ export function calculateChanges(
           field,
           oldValue,
           newValue,
-          type: 'changed',
+          type: "changed",
         });
       }
     }
@@ -169,19 +179,19 @@ export function hasSignificantChanges(changes: FlightChange[]): boolean {
   if (changes.length === 0) return false;
 
   const criticalFields = [
-    'departureTime',
-    'arrivalTime',
-    'actualDeparture',
-    'actualArrival',
-    'depIata',
-    'depIcao',
-    'arrIata',
-    'arrIcao',
+    "departureTime",
+    "arrivalTime",
+    "actualDeparture",
+    "actualArrival",
+    "depIata",
+    "depIcao",
+    "arrIata",
+    "arrIcao",
   ];
-  if (changes.some(c => criticalFields.includes(c.field))) return true;
+  if (changes.some((c) => criticalFields.includes(c.field))) return true;
 
   // Initial fill — single change is enough to be worth showing the user
-  if (changes.some(c => c.type === 'added')) return true;
+  if (changes.some((c) => c.type === "added")) return true;
 
   // Pure modifications to existing values need multiple to count
   return changes.length >= 2;
@@ -261,7 +271,7 @@ export async function createPendingUpdate(
     const existing = await prismaClient.pendingFlightUpdate.findFirst({
       where: {
         flightId: flight.id,
-        status: 'pending',
+        status: "pending",
       },
     });
 
@@ -306,7 +316,7 @@ export async function createPendingUpdate(
     // Calculate statistics impact
     let statisticsImpact: Prisma.InputJsonValue | null = null;
     try {
-      const { calculateStatisticsImpact } = await import('./pendingUpdateService');
+      const { calculateStatisticsImpact } = await import("./pendingUpdateService");
       const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
       if (impact) {
         statisticsImpact = {
@@ -327,11 +337,11 @@ export async function createPendingUpdate(
       }
     } catch (error: unknown) {
       logger.warn({
-        operation: 'calculate_statistics_impact_error',
-        message: 'Failed to calculate statistics impact',
+        operation: "calculate_statistics_impact_error",
+        message: "Failed to calculate statistics impact",
         context: { flightId: flight.id },
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
         },
       });
     }
@@ -340,7 +350,7 @@ export async function createPendingUpdate(
       data: {
         flightId: flight.id,
         userId: flight.userId,
-        status: 'pending',
+        status: "pending",
         originalData: originalData as unknown as Prisma.InputJsonValue,
         proposedData: proposedData as unknown as Prisma.InputJsonValue,
         changes: changes as unknown as Prisma.InputJsonValue,
@@ -352,8 +362,8 @@ export async function createPendingUpdate(
     });
 
     logger.info({
-      operation: 'create_pending_update',
-      message: 'Created pending flight update',
+      operation: "create_pending_update",
+      message: "Created pending flight update",
       context: {
         pendingUpdateId: pendingUpdate.id,
         flightId: flight.id,
@@ -366,11 +376,11 @@ export async function createPendingUpdate(
     return pendingUpdate.id;
   } catch (error) {
     logger.error({
-      operation: 'create_pending_update_error',
-      message: 'Failed to create pending update',
+      operation: "create_pending_update_error",
+      message: "Failed to create pending update",
       context: { flightId: flight.id, userId: flight.userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -389,8 +399,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
     });
 
     if (!userSettings?.autoUpdateEnabled) {
-      logger.info({ userId, operation: 'check_flights_skipped', reason: 'auto_update_disabled' },
-        'Skipping flight checks — auto-update disabled for user');
+      logger.info(
+        { userId, operation: "check_flights_skipped", reason: "auto_update_disabled" },
+        "Skipping flight checks — auto-update disabled for user"
+      );
       return 0;
     }
 
@@ -401,14 +413,26 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
       where: {
         userId,
         flightNumber: { not: null },
-        status: 'scheduled',
+        status: "scheduled",
         nextApiCheckAt: { lte: now },
       },
     });
 
-    logger.info({ userId, operation: 'check_flights_due', count: activeFlights.length,
-      flights: activeFlights.map(f => ({ id: f.id, fn: f.flightNumber, dep: f.depIata, arr: f.arrIata, depTime: f.departureTime?.toISOString() })),
-    }, `Found ${activeFlights.length} flight(s) due for API check`);
+    logger.info(
+      {
+        userId,
+        operation: "check_flights_due",
+        count: activeFlights.length,
+        flights: activeFlights.map((f) => ({
+          id: f.id,
+          fn: f.flightNumber,
+          dep: f.depIata,
+          arr: f.arrIata,
+          depTime: f.departureTime?.toISOString(),
+        })),
+      },
+      `Found ${activeFlights.length} flight(s) due for API check`
+    );
 
     let updatesCreated = 0;
 
@@ -424,15 +448,22 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         // flight, shifting it a full day into the past (prod, 2026-08-11).
         // Every early-morning departure east of Greenwich hits this.
         const depTz = await getAirportTimezone(flight.depIata ?? flight.depIcao);
-        const realDeparture = normalizeFlightTimeUtc(
-          flight.departureTime,
-          flight.depTimeSemantics as FlightTimeSemantics,
-          depTz,
-        ) ?? flight.departureTime;
+        const realDeparture =
+          normalizeFlightTimeUtc(
+            flight.departureTime,
+            flight.depTimeSemantics as FlightTimeSemantics,
+            depTz
+          ) ?? flight.departureTime;
         const dateStr = realDeparture ? toLocalDateString(realDeparture, depTz) : null;
         if (!dateStr) {
-          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'skip_no_departure_time' },
-            `Skipping ${flight.flightNumber} — no departure time`);
+          logger.info(
+            {
+              flightId: flight.id,
+              flightNumber: flight.flightNumber,
+              operation: "skip_no_departure_time",
+            },
+            `Skipping ${flight.flightNumber} — no departure time`
+          );
           await prismaClient.flight.update({
             where: { id: flight.id },
             data: { nextApiCheckAt: null },
@@ -440,8 +471,15 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           continue;
         }
 
-        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_lookup_start' },
-          `Looking up ${flight.flightNumber} on ${dateStr}`);
+        logger.info(
+          {
+            flightId: flight.id,
+            flightNumber: flight.flightNumber,
+            date: dateStr,
+            operation: "api_lookup_start",
+          },
+          `Looking up ${flight.flightNumber} on ${dateStr}`
+        );
         // Pass full departure/arrival times so lookupFlightDetails can gate
         // Aviationstack to the live window (±3h of departure / in-flight).
         const apiData = await lookupFlightDetails(
@@ -449,7 +487,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           dateStr,
           flight.userId,
           flight.departureTime,
-          flight.arrivalTime,
+          flight.arrivalTime
         );
 
         // Always recalculate nextApiCheckAt after a check attempt.
@@ -468,18 +506,32 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           {
             hasActualDeparture: Boolean(observedDeparture),
             hasActualArrival: Boolean(observedArrival),
-          },
+          }
         );
         await prismaClient.flight.update({
           where: { id: flight.id },
           data: { nextApiCheckAt: nextCheck },
         });
-        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, nextCheck: nextCheck?.toISOString(), operation: 'next_check_scheduled' },
-          `Next check for ${flight.flightNumber}: ${nextCheck?.toISOString() ?? 'none'}`);
+        logger.info(
+          {
+            flightId: flight.id,
+            flightNumber: flight.flightNumber,
+            nextCheck: nextCheck?.toISOString(),
+            operation: "next_check_scheduled",
+          },
+          `Next check for ${flight.flightNumber}: ${nextCheck?.toISOString() ?? "none"}`
+        );
 
         if (!apiData) {
-          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_no_data' },
-            `No API data returned for ${flight.flightNumber} on ${dateStr}`);
+          logger.info(
+            {
+              flightId: flight.id,
+              flightNumber: flight.flightNumber,
+              date: dateStr,
+              operation: "api_no_data",
+            },
+            `No API data returned for ${flight.flightNumber} on ${dateStr}`
+          );
           continue;
         }
 
@@ -490,18 +542,21 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         // looking at the wrong day's aircraft — proposing (or auto-applying)
         // its times would rewrite the user's flight onto the wrong date.
         if (apiData.departureTime && realDeparture) {
-          const diffHours = Math.abs(
-            new Date(apiData.departureTime).getTime() - realDeparture.getTime()
-          ) / 3_600_000;
+          const diffHours =
+            Math.abs(new Date(apiData.departureTime).getTime() - realDeparture.getTime()) /
+            3_600_000;
           if (diffHours > ROTATION_MISMATCH_MAX_HOURS) {
-            logger.warn({
-              flightId: flight.id,
-              flightNumber: flight.flightNumber,
-              storedDeparture: realDeparture.toISOString(),
-              apiDeparture: new Date(apiData.departureTime).toISOString(),
-              diffHours: Math.round(diffHours * 10) / 10,
-              operation: 'rotation_mismatch_rejected',
-            }, `Rejected API data for ${flight.flightNumber}: scheduled departure ${Math.round(diffHours)}h away from ours — wrong rotation`);
+            logger.warn(
+              {
+                flightId: flight.id,
+                flightNumber: flight.flightNumber,
+                storedDeparture: realDeparture.toISOString(),
+                apiDeparture: new Date(apiData.departureTime).toISOString(),
+                diffHours: Math.round(diffHours * 10) / 10,
+                operation: "rotation_mismatch_rejected",
+              },
+              `Rejected API data for ${flight.flightNumber}: scheduled departure ${Math.round(diffHours)}h away from ours — wrong rotation`
+            );
             continue;
           }
         }
@@ -516,8 +571,14 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             where: { id: flight.id },
             data: { hasLiveTracking: true },
           });
-          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'has_live_tracking_set' },
-            `Marked ${flight.flightNumber} as live-tracked (first successful API response)`);
+          logger.info(
+            {
+              flightId: flight.id,
+              flightNumber: flight.flightNumber,
+              operation: "has_live_tracking_set",
+            },
+            `Marked ${flight.flightNumber} as live-tracked (first successful API response)`
+          );
         }
 
         // Convert API data to proposed format
@@ -544,28 +605,36 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
         // Only create update if there are significant changes
         if (!hasSignificantChanges(changes)) {
-          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'no_significant_changes' },
-            `No significant changes for ${flight.flightNumber}`);
+          logger.info(
+            {
+              flightId: flight.id,
+              flightNumber: flight.flightNumber,
+              operation: "no_significant_changes",
+            },
+            `No significant changes for ${flight.flightNumber}`
+          );
           continue;
         }
 
-        const changedFieldNames = changes.map(c => c.field);
-        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, changeCount: changes.length,
-          changedFields: changedFieldNames, operation: 'significant_changes_found' },
-          `Found ${changes.length} change(s) for ${flight.flightNumber}: ${changedFieldNames.join(', ')}`);
+        const changedFieldNames = changes.map((c) => c.field);
+        logger.info(
+          {
+            flightId: flight.id,
+            flightNumber: flight.flightNumber,
+            changeCount: changes.length,
+            changedFields: changedFieldNames,
+            operation: "significant_changes_found",
+          },
+          `Found ${changes.length} change(s) for ${flight.flightNumber}: ${changedFieldNames.join(", ")}`
+        );
 
         // Attribute the update to the provider that actually served the data.
         // (Guessing from which keys are configured mislabelled every AirLabs
         // fallback result as "aviationstack" — prod audit 2026-06-07.)
-        const apiSource = apiData.source ?? 'unknown';
+        const apiSource = apiData.source ?? "unknown";
 
         // Create pending update
-        const updateId = await createPendingUpdate(
-          flight,
-          proposedData,
-          changes,
-          apiSource
-        );
+        const updateId = await createPendingUpdate(flight, proposedData, changes, apiSource);
 
         if (updateId) {
           updatesCreated++;
@@ -576,26 +645,38 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           if (userSettings.autoUpdateRequireApproval === false) {
             const applied = await applyPendingUpdate(updateId, userId);
             if (applied) {
-              logger.info({ flightId: flight.id, flightNumber: flight.flightNumber,
-                pendingUpdateId: updateId, operation: 'auto_applied' },
-                `Auto-applied update for ${flight.flightNumber} (requireApproval=false)`);
+              logger.info(
+                {
+                  flightId: flight.id,
+                  flightNumber: flight.flightNumber,
+                  pendingUpdateId: updateId,
+                  operation: "auto_applied",
+                },
+                `Auto-applied update for ${flight.flightNumber} (requireApproval=false)`
+              );
             } else {
-              logger.warn({ flightId: flight.id, flightNumber: flight.flightNumber,
-                pendingUpdateId: updateId, operation: 'auto_apply_failed' },
-                `Auto-apply failed for ${flight.flightNumber} — pending update left in place`);
+              logger.warn(
+                {
+                  flightId: flight.id,
+                  flightNumber: flight.flightNumber,
+                  pendingUpdateId: updateId,
+                  operation: "auto_apply_failed",
+                },
+                `Auto-apply failed for ${flight.flightNumber} — pending update left in place`
+              );
             }
           }
         }
 
         // Rate limiting: wait a bit between API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         logger.warn({
-          operation: 'check_flight_update_error',
-          message: 'Failed to check flight update',
+          operation: "check_flight_update_error",
+          message: "Failed to check flight update",
           context: { flightId: flight.id, userId },
           error: {
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message: error instanceof Error ? error.message : "Unknown error",
           },
         });
         // Continue with next flight
@@ -605,11 +686,11 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
     return updatesCreated;
   } catch (error) {
     logger.error({
-      operation: 'check_and_update_flights_error',
-      message: 'Failed to check and update flights for user',
+      operation: "check_and_update_flights_error",
+      message: "Failed to check and update flights for user",
       context: { userId },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -671,15 +752,17 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
       const finalArrivals = await runFinalArrivalSweep();
       if (finalArrivals.attempted > 0) {
         logger.info(
-          { ...finalArrivals, operation: 'final_arrival_sweep_complete' },
-          `Last-attempt lookups: ${finalArrivals.attempted} attempted, ${finalArrivals.filled} filled`,
+          { ...finalArrivals, operation: "final_arrival_sweep_complete" },
+          `Last-attempt lookups: ${finalArrivals.attempted} attempted, ${finalArrivals.filled} filled`
         );
       }
     } catch (error) {
       logger.warn(
-        { err: error instanceof Error ? error.message : String(error),
-          operation: 'final_arrival_sweep_failed' },
-        'Final-arrival sweep failed; continuing with the scheduled checks',
+        {
+          err: error instanceof Error ? error.message : String(error),
+          operation: "final_arrival_sweep_failed",
+        },
+        "Final-arrival sweep failed; continuing with the scheduled checks"
       );
     }
 
@@ -693,8 +776,8 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     }
 
     logger.info({
-      operation: 'check_all_flights_complete',
-      message: 'Completed checking all flights for updates',
+      operation: "check_all_flights_complete",
+      message: "Completed checking all flights for updates",
       context: {
         usersChecked: users.length,
         totalUpdatesCreated: totalUpdates,
@@ -704,10 +787,10 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     return totalUpdates;
   } catch (error) {
     logger.error({
-      operation: 'check_all_flights_error',
-      message: 'Failed to check all flights',
+      operation: "check_all_flights_error",
+      message: "Failed to check all flights",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });

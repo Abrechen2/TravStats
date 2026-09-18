@@ -156,8 +156,8 @@ npm run check:coverage -- backend
 ```
 
 This list is the real gate, and since 2026-09-15 CI runs almost all of it.
-`ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on changed
-frontend files, the **file-size ratchet** and the **schema-drift check** — the
+`ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on the whole
+tree (since forgejo#61), the **file-size ratchet** and the **schema-drift check** — the
 last two wired on 2026-09-15 (forgejo#60), having been runnable and unwired
 since 2026-09-01. The backend Jest job is **required** since 2026-09-16: it
 was advisory for a fortnight, then its first run that reached the suite at all
@@ -517,7 +517,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 |---|---|
 | `any` is forbidden — **frontend only** | `@typescript-eslint/no-explicit-any` (error, via `tseslint.configs.recommended`) + `eslint . --max-warnings 0`. The backend sets it to `'warn'` and runs bare `eslint src`, so a backend `any` passes. `.d.ts` is exempt on purpose. |
 | No unused variables (`^_` opts out) | same two eslint configs — error on the frontend, warn on the backend |
-| Frontend formatting | `prettier --check` on changed files (`.github/workflows/ci.yml`) plus a `prettier --write` pre-commit hook |
+| The tree is Prettier-formatted — code, config and YAML; `.prettierignore` names each exclusion and why | `prettier --check .` from the root (`format` job in `.github/workflows/ci.yml`, `npm run format:check`) plus a `prettier --write` pre-commit hook. The two whole-tree formatting commits are in `.git-blame-ignore-revs` — run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once per clone |
 | DE and EN move together | `frontend/src/i18n/__tests__/localeKeyParity.test.ts` — reads the namespace list from the filesystem, so a new namespace is covered the day it is added, and keeps no allow-list |
 | No source file over 800 lines | `scripts/check-file-size.mjs` (`npm run check:size`) |
 | Coverage does not fall below its recorded figure | `scripts/check-coverage.mjs` vs `scripts/coverage-baseline.json` — required in both the Vitest and the Jest job. Recorded 2026-09-16: frontend 56.21 % lines, backend 76.35 % (forgejo#62) |
@@ -545,7 +545,7 @@ denominator and reported 65.81 % instead of 56.21 %.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
 `ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
-Prettier on changed frontend files as required jobs, and — since 2026-09-16 —
+Prettier on the whole tree (since forgejo#61) as required jobs, and — since 2026-09-16 —
 the backend Jest suite as a required one too; its comment block keeps the
 history of why it was advisory until then. `security.yml` runs
 `npm audit` on production deps, Trivy and CodeQL on every push to `main` and

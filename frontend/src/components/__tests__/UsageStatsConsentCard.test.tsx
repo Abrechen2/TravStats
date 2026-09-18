@@ -19,7 +19,11 @@ import UsageStatsConsentCard from "../UsageStatsConsentCard";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.setConsent.mockResolvedValue({ consent: "granted", installId: "x", endpointConfigured: true });
+  mocks.setConsent.mockResolvedValue({
+    consent: "granted",
+    installId: "x",
+    endpointConfigured: true,
+  });
 });
 
 describe("UsageStatsConsentCard", () => {
@@ -73,9 +77,7 @@ describe("UsageStatsConsentCard", () => {
     expect(onDecided).not.toHaveBeenCalled();
     expect(mocks.addToast).toHaveBeenCalledWith("error", "usageStats:consent.saveFailed");
     // Buttons remain — the admin can retry instead of the choice silently vanishing.
-    expect(
-      screen.getByRole("button", { name: "usageStats:consent.decline" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "usageStats:consent.decline" })).toBeInTheDocument();
   });
 
   it("in setup variant it defers the API call to the parent", async () => {

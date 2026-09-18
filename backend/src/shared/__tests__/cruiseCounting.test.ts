@@ -15,12 +15,9 @@ describe("cruise counting rule", () => {
     expect(isCountableCruiseStatus(status)).toBe(true);
   });
 
-  it.each(["scheduled", "cancelled", "duplicated", "", "FLOWN"])(
-    "does not count %s",
-    (status) => {
-      expect(isCountableCruiseStatus(status)).toBe(false);
-    },
-  );
+  it.each(["scheduled", "cancelled", "duplicated", "", "FLOWN"])("does not count %s", (status) => {
+    expect(isCountableCruiseStatus(status)).toBe(false);
+  });
 
   it("reads the status off a row", () => {
     expect(isCountableCruise({ status: "flown" })).toBe(true);

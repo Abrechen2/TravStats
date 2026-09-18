@@ -25,15 +25,7 @@ const MEDITERRANEAN_SHIPS = [
   "Mein Schiff 3",
 ];
 
-const MEDITERRANEAN_RIM = [
-  "Spain",
-  "Italy",
-  "France",
-  "Greece",
-  "Türkiye",
-  "Croatia",
-  "Malta",
-];
+const MEDITERRANEAN_RIM = ["Spain", "Italy", "France", "Greece", "Türkiye", "Croatia", "Malta"];
 
 /**
  * Itineraries that cannot leave a named set of countries. Which duplicate the
@@ -74,7 +66,8 @@ describe("seedCruises", () => {
     for (const cruise of cruises) {
       cruise.stops.forEach((stop, i) => {
         expect(stop.dayNumber).toBe(i + 1);
-        const matchedPort = stop.portId !== null && !stop.isAtSea && stop.unresolvedPortName === null;
+        const matchedPort =
+          stop.portId !== null && !stop.isAtSea && stop.unresolvedPortName === null;
         const seaDay = stop.portId === null && stop.isAtSea && stop.unresolvedPortName === null;
         const unresolved =
           stop.portId === null &&
@@ -84,7 +77,7 @@ describe("seedCruises", () => {
         if (!(matchedPort || seaDay || unresolved)) {
           throw new Error(
             `stop ${stop.dayNumber} of cruise ${cruise.id} is in no valid state: ` +
-              `portId=${stop.portId} isAtSea=${stop.isAtSea} unresolved=${stop.unresolvedPortName}`,
+              `portId=${stop.portId} isAtSea=${stop.isAtSea} unresolved=${stop.unresolvedPortName}`
           );
         }
       });
@@ -111,12 +104,12 @@ describe("seedCruises", () => {
           if (!countries.includes(stop.port.country ?? "")) {
             throw new Error(
               `${shipName} day ${stop.dayNumber}: ${stop.port.name} (${stop.port.unlocode}) ` +
-                `is in ${stop.port.country}, which is not on ${region}`,
+                `is in ${stop.port.country}, which is not on ${region}`
             );
           }
         }
       }
-    },
+    }
   );
 
   it("resolves every port call to the UN/LOCODE its itinerary names", async () => {
@@ -151,7 +144,7 @@ describe("seedCruises", () => {
           if (time < cruise.startDate || time > cruise.endDate) {
             throw new Error(
               `stop ${stop.dayNumber}'s ${label} ${time.toISOString()} is outside ` +
-                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`,
+                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`
             );
           }
         }

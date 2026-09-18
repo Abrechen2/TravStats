@@ -25,7 +25,6 @@ router.use(requireWriteScope);
 // typeahead is most of what a visitor came to try, so reads pass through.
 router.use(rejectDemoWrites);
 
-
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),
   cruiseLine: z.string().max(120).optional(),

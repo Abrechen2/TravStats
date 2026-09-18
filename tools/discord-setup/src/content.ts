@@ -19,7 +19,7 @@ export function buildRulesEmbed(): EmbedBuilder {
     .setColor(0xf0a947)
     .addFields(
       { name: "Rules", value: RULES },
-      { name: "Escalation", value: "Warning → Timeout → Kick → Ban." },
+      { name: "Escalation", value: "Warning → Timeout → Kick → Ban." }
     )
     .setFooter({ text: RULES_MARKER });
 }
@@ -36,7 +36,7 @@ export function buildWelcomeEmbed(): EmbedBuilder {
         "📖 Docs: https://travstats.de/docs/",
         "",
         "➡️ Read the rules in #rules and ask setup questions in **#install-help**.",
-      ].join("\n"),
+      ].join("\n")
     )
     .setFooter({ text: WELCOME_MARKER });
 }

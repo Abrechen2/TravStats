@@ -1,12 +1,12 @@
-import { calculateDistance } from '../geo';
-import { getCachedAirports } from '../../services/airportCache';
-import logger from '../logger';
-import type { AirportData } from '../../services/airportLookup';
-import type { FlightData } from './types';
-import { departureClockOf } from './departureClock';
-import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
-import { isCountableFlight } from '../../shared/flightCounting';
-import { CONTINENTS, getContinent } from '../continents';
+import { calculateDistance } from "../geo";
+import { getCachedAirports } from "../../services/airportCache";
+import logger from "../logger";
+import type { AirportData } from "../../services/airportLookup";
+import type { FlightData } from "./types";
+import { departureClockOf } from "./departureClock";
+import { HomeAirportEntry, getHomeAirportAt } from "../homeAirport";
+import { isCountableFlight } from "../../shared/flightCounting";
+import { CONTINENTS, getContinent } from "../continents";
 
 // Published by /stats/airports, so the shape is described once in
 // `schemas/statsFlights.ts` and read here (forgejo#52). The prose that used to
@@ -23,8 +23,8 @@ export type { AirportStats };
  * counted as 'Other', and Bermuda pushed the tile to "7 of 6".
  */
 function continentOfAirport(info: AirportData | undefined): string {
-  if (!info) return 'Other';
-  return getContinent(info.lat, info.lon, info.country) ?? 'Other';
+  if (!info) return "Other";
+  return getContinent(info.lat, info.lon, info.country) ?? "Other";
 }
 
 function emptyAirportStats(): AirportStats {
@@ -72,8 +72,8 @@ export async function calculateAirportStats(
     airportInfo = await getCachedAirports(Array.from(codes));
   } catch (error) {
     logger.error({
-      operation: 'calculate_airport_stats',
-      message: 'Failed to fetch airport metadata, returning partial stats',
+      operation: "calculate_airport_stats",
+      message: "Failed to fetch airport metadata, returning partial stats",
       error,
     });
   }
@@ -109,8 +109,8 @@ export async function calculateAirportStats(
       }
     }
 
-    const depCountry = dep ? airportInfo.get(dep)?.country ?? null : null;
-    const arrCountry = arr ? airportInfo.get(arr)?.country ?? null : null;
+    const depCountry = dep ? (airportInfo.get(dep)?.country ?? null) : null;
+    const arrCountry = arr ? (airportInfo.get(arr)?.country ?? null) : null;
     if (depCountry) bump(countryCount, depCountry);
     if (arrCountry && arrCountry !== depCountry) bump(countryCount, arrCountry);
 
@@ -155,7 +155,7 @@ export async function calculateAirportStats(
 
   // Farthest from home — consider every arrival that isn't home itself and
   // measure great-circle distance to whatever home was active at that time.
-  let farthestFromHome: AirportStats['farthestFromHome'] = null;
+  let farthestFromHome: AirportStats["farthestFromHome"] = null;
   for (const f of flownFlights) {
     const arrCode = f.arrIata || f.arrIcao;
     if (!arrCode) continue;
@@ -193,7 +193,7 @@ export async function calculateAirportStats(
     // "Other" is the fallback for a country the table does not list — it is
     // the ABSENCE of a continent, not a seventh one. Counting it let a flight
     // to Bermuda or Curaçao push the tile to "7 of 6".
-    continentCount: [...continentCount.keys()].filter((c) => c !== 'Other').length,
+    continentCount: [...continentCount.keys()].filter((c) => c !== "Other").length,
     continentTotal: CONTINENTS.length,
     topAirports,
     rarestAirports,

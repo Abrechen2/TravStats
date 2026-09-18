@@ -29,9 +29,8 @@ describe("micro-trip candidates", () => {
     lodgingId = (
       await prisma.lodging.create({ data: { userId, name: "Tidy Hotel", type: "hotel" } })
     ).id;
-    placeId = (
-      await prisma.place.create({ data: { userId, name: "Tidy Place", lat: 1, lon: 1 } })
-    ).id;
+    placeId = (await prisma.place.create({ data: { userId, name: "Tidy Place", lat: 1, lon: 1 } }))
+      .id;
   });
 
   afterAll(async () => {
@@ -52,18 +51,43 @@ describe("micro-trip candidates", () => {
   });
 
   const withContent: Array<[string, (tripId: string) => Promise<unknown>]> = [
-    ["a hotel stay", (tripId) =>
-      prisma.lodgingStay.create({ data: { userId, lodgingId, tripId, status: "completed" } })],
-    ["a place visit", (tripId) =>
-      prisma.placeVisit.create({ data: { userId, placeId, tripId } })],
-    ["a linked album", (tripId) =>
-      prisma.tripImmichAlbum.create({
-        data: { tripId, immichAlbumId: `al-${tripId}`, albumName: "Album" },
-      })],
-    ["a summary", (tripId) =>
-      prisma.trip.update({ where: { id: tripId }, data: { summary: "Written up" } })],
-    ["a cover image", (tripId) =>
-      prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl: "/x.jpg" } })],
+    [
+      "a hotel stay",
+      (tripId) =>
+        prisma.lodgingStay.create({ data: { userId, lodgingId, tripId, status: "completed" } }),
+    ],
+    ["a place visit", (tripId) => prisma.placeVisit.create({ data: { userId, placeId, tripId } })],
+    [
+      "a linked album",
+      (tripId) =>
+        prisma.tripImmichAlbum.create({
+          data: { tripId, immichAlbumId: `al-${tripId}`, albumName: "Album" },
+        }),
+    ],
+    [
+      "a kept document",
+      (tripId) =>
+        prisma.document.create({
+          data: {
+            userId,
+            tripId,
+            storedName: `tidy-${tripId}.pdf`,
+            mimetype: "application/pdf",
+            sizeBytes: 1,
+            sha256: "0".repeat(64),
+            format: "pdf",
+            linkedAt: new Date(),
+          },
+        }),
+    ],
+    [
+      "a summary",
+      (tripId) => prisma.trip.update({ where: { id: tripId }, data: { summary: "Written up" } }),
+    ],
+    [
+      "a cover image",
+      (tripId) => prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl: "/x.jpg" } }),
+    ],
     ["tags", (tripId) => prisma.trip.update({ where: { id: tripId }, data: { tags: ["ski"] } })],
   ];
 
@@ -75,15 +99,18 @@ describe("micro-trip candidates", () => {
     expect(ids).not.toContain(trip.id);
   });
 
-  it.each(withContent)("refuses to dissolve a trip that gained %s meanwhile", async (_label, add) => {
-    const trip = await prisma.trip.create({ data: { userId, name: "Curated later" } });
-    // Offered while still bare — this is the stale client list.
-    expect((await findMicroTripCandidates(userId)).map((c) => c.id)).toContain(trip.id);
+  it.each(withContent)(
+    "refuses to dissolve a trip that gained %s meanwhile",
+    async (_label, add) => {
+      const trip = await prisma.trip.create({ data: { userId, name: "Curated later" } });
+      // Offered while still bare — this is the stale client list.
+      expect((await findMicroTripCandidates(userId)).map((c) => c.id)).toContain(trip.id);
 
-    await add(trip.id);
-    const result = await dissolveMicroTrips(userId, [trip.id]);
+      await add(trip.id);
+      const result = await dissolveMicroTrips(userId, [trip.id]);
 
-    expect(result.dissolved).toBe(0);
-    expect(await prisma.trip.findUnique({ where: { id: trip.id } })).not.toBeNull();
-  });
+      expect(result.dissolved).toBe(0);
+      expect(await prisma.trip.findUnique({ where: { id: trip.id } })).not.toBeNull();
+    }
+  );
 });

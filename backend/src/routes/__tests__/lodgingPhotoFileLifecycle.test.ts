@@ -24,7 +24,7 @@ const USERNAME = `lodging-photo-file-${Date.now()}`;
 // The smallest thing sharp will accept as an image: a real 1x1 PNG.
 const PNG_1x1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
+  "base64"
 );
 
 describe("lodging photo files", () => {
@@ -62,9 +62,7 @@ describe("lodging photo files", () => {
     // The file has to be there first, or the assertion below proves nothing.
     expect(fs.existsSync(filePath)).toBe(true);
 
-    const del = await request(app)
-      .delete(`/api/v1/lodging/${lodging.id}`)
-      .set("Cookie", cookie);
+    const del = await request(app).delete(`/api/v1/lodging/${lodging.id}`).set("Cookie", cookie);
     expect(del.status).toBe(204);
 
     expect(await prisma.lodgingPhoto.findUnique({ where: { id: photo.id } })).toBeNull();

@@ -83,9 +83,7 @@ function oldest(candidates: MembershipCoverage[]): MembershipCoverage | null {
   });
 }
 
-export function deriveStayMembership(
-  input: StayMembershipInput,
-): StayMembershipResolution {
+export function deriveStayMembership(input: StayMembershipInput): StayMembershipResolution {
   if (input.optOut) return { membershipId: null, source: "none" };
 
   // A stale override (the card was deleted) must fall through to derivation
@@ -97,16 +95,12 @@ export function deriveStayMembership(
 
   if (input.lodgingChainId !== null) {
     const byChain = oldest(
-      input.memberships.filter((m) =>
-        m.chainIds.includes(input.lodgingChainId as number),
-      ),
+      input.memberships.filter((m) => m.chainIds.includes(input.lodgingChainId as number))
     );
     if (byChain) return { membershipId: byChain.id, source: "chain" };
   }
 
-  const byLodging = oldest(
-    input.memberships.filter((m) => m.lodgingIds.includes(input.lodgingId)),
-  );
+  const byLodging = oldest(input.memberships.filter((m) => m.lodgingIds.includes(input.lodgingId)));
   if (byLodging) return { membershipId: byLodging.id, source: "lodging" };
 
   return { membershipId: null, source: "none" };

@@ -352,7 +352,7 @@
     "viewReceipt": "View Receipt",
     "uploadFile": "Upload a file",
     "dragAndDrop": "or drag and drop",
-    "fileFormats": "PNG, JPG, GIF, WebP, PDF up to 10MB",
+    "fileFormats": "PNG, JPG, WebP, PDF up to 10MB",
     "uploading": "Uploading... {{progress}}%",
     "invalidFileType": "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF",
     "fileTooLarge": "File too large. Maximum size: 10MB",

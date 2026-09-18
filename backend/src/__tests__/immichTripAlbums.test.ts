@@ -148,7 +148,7 @@ describe("GET /trips/:id/immich/albums", () => {
 
   it("propagates an auth failure as 502 + kind=auth rather than a 500", async () => {
     const { ImmichError } = jest.requireActual<typeof import("../services/immich/types")>(
-      "../services/immich/types",
+      "../services/immich/types"
     );
     listAlbums.mockRejectedValue(new ImmichError("auth", "Immich rejected the API key", 401));
 
@@ -159,7 +159,7 @@ describe("GET /trips/:id/immich/albums", () => {
 
   it("404s when the user does not own the trip", async () => {
     const { AppError } = jest.requireActual<typeof import("../middleware/errorHandler")>(
-      "../middleware/errorHandler",
+      "../middleware/errorHandler"
     );
     resolveTrip.mockRejectedValueOnce(new AppError("Trip not found", 404));
     const res = await request(makeApp()).get("/api/v1/trips/other/immich/albums");
@@ -320,7 +320,7 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
     findManyPhotos.mockResolvedValue([{ filename: "a.jpg" }, { filename: "b.jpg" }]);
 
     const res = await request(makeApp()).delete(
-      "/api/v1/trips/trip-1/immich/albums/link-1?deleteCopies=true",
+      "/api/v1/trips/trip-1/immich/albums/link-1?deleteCopies=true"
     );
 
     expect(res.status).toBe(204);
@@ -470,7 +470,7 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     expect(findManyPhotos).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: [{ takenAt: { sort: "asc", nulls: "last" } }, { sortIdx: "asc" }],
-      }),
+      })
     );
   });
 
@@ -499,7 +499,7 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
 
   it("returns 502 + kind=notFound when the album was deleted in Immich", async () => {
     const { ImmichError } = jest.requireActual<typeof import("../services/immich/types")>(
-      "../services/immich/types",
+      "../services/immich/types"
     );
     findFirstLink.mockResolvedValue({
       id: "link-1",
@@ -592,7 +592,7 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
           error: null,
         }),
         create: expect.objectContaining({ albumLinkId: "link-1", status: "pending" }),
-      }),
+      })
     );
     expect(res.body.job.status).toBe("pending");
     expect(startAlbumImport).toHaveBeenCalledTimes(1);
@@ -639,7 +639,7 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
         where: { albumLinkId: "link-1" },
         update: expect.objectContaining({ status: "failed" }),
         create: expect.objectContaining({ albumLinkId: "link-1", status: "failed" }),
-      }),
+      })
     );
     expect(startAlbumImport).not.toHaveBeenCalled();
   });
@@ -688,7 +688,7 @@ describe("GET /trips/:id/immich/albums/:linkId/import-job", () => {
     });
 
     const res = await request(makeApp()).get(
-      "/api/v1/trips/trip-1/immich/albums/link-1/import-job",
+      "/api/v1/trips/trip-1/immich/albums/link-1/import-job"
     );
 
     expect(res.status).toBe(200);
@@ -714,7 +714,7 @@ describe("GET /trips/:id/immich/albums/:linkId/import-job", () => {
     getImportJob.mockResolvedValue(null);
 
     const res = await request(makeApp()).get(
-      "/api/v1/trips/trip-1/immich/albums/link-1/import-job",
+      "/api/v1/trips/trip-1/immich/albums/link-1/import-job"
     );
 
     expect(res.status).toBe(200);

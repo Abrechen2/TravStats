@@ -14,9 +14,7 @@ interface StatsAirportsSectionProps {
  * own word.
  */
 function continentKey(continent: string): string {
-  return continent === "Other"
-    ? "stats:airportStats.continent.other"
-    : continentI18nKey(continent);
+  return continent === "Other" ? "stats:airportStats.continent.other" : continentI18nKey(continent);
 }
 
 export default function StatsAirportsSection({
@@ -289,9 +287,7 @@ export default function StatsAirportsSection({
                 return (
                   <li key={cont}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span style={{ color: "var(--text-primary)" }}>
-                        {t(continentKey(cont))}
-                      </span>
+                      <span style={{ color: "var(--text-primary)" }}>{t(continentKey(cont))}</span>
                       <span style={{ color: "var(--text-muted)" }}>
                         {count} ({percent}%)
                       </span>

@@ -200,7 +200,7 @@ export const AIRLINES: Airline[] = [
  * Used by flightLookup.ts for reverse lookups.
  */
 export const AIRLINE_IATA_MAP: Record<string, string> = Object.fromEntries(
-  AIRLINES.map(a => [a.iata, a.name])
+  AIRLINES.map((a) => [a.iata, a.name])
 );
 
 /**
@@ -209,5 +209,5 @@ export const AIRLINE_IATA_MAP: Record<string, string> = Object.fromEntries(
  * one), so those are skipped.
  */
 export const AIRLINE_ICAO_MAP: Record<string, string> = Object.fromEntries(
-  AIRLINES.filter(a => a.icao).map(a => [a.icao as string, a.name])
+  AIRLINES.filter((a) => a.icao).map((a) => [a.icao as string, a.name])
 );

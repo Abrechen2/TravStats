@@ -279,9 +279,24 @@ jobs:
   # on the URL below only because jest.setup.ts explicitly honours an
   # already-chosen limit, which makes the intent visible at the call site.
   # ---------------------------------------------------------------------
+  # Sharded since 2026-09-17. The suite runs serially (`maxWorkers: 1`,
+  # because its files share one database and wipe tables), and in one job
+  # it took 30.5 minutes, against six for everything else together. Four
+  # jobs, each with its own PostGIS container, cut the wall-clock time and
+  # change nothing about isolation: a shard is the old job on a quarter of
+  # the files. `fail-fast: false` so that one red shard does not hide the
+  # results of the other three.
+  #
+  # Coverage is merged in `backend-coverage` below, from the hit counts,
+  # not from the shards' percentages. Each shard reports every source file
+  # (`collectCoverageFrom`), so on its own each would read far too low.
   backend-tests:
-    name: Backend tests (Jest)
+    name: Backend tests (Jest ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -347,16 +362,54 @@ jobs:
       - name: Jest
         id: jest
         run: >-
-          cd backend && npx jest --ci --forceExit --coverage
-          --coverageReporters=json-summary --coverageReporters=text-summary
+          cd backend && npx jest --ci --forceExit --shard=${{ matrix.shard }}/4
+          --coverage --coverageReporters=json
+
+      # Uploaded after a red run too: the coverage job merges what exists and
+      # the ratchet then reports the number, as it did before sharding.
+      - name: Keep this shard's coverage
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-${{ matrix.shard }}
+          path: backend/coverage/coverage-final.json
+          if-no-files-found: error
+          retention-days: 3
+
+  backend-coverage:
+    name: Backend coverage ratchet
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    # Runs whether the shards passed or failed, so the figure is never
+    # missing. A shard that died before writing its report fails the merge
+    # step loudly instead of silently lowering the number.
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Collect the shards' coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: backend-coverage-*
+          path: backend/coverage-shards
+
+      - name: Merge coverage
+        run: cd backend && node scripts/merge-coverage.cjs coverage-shards coverage
 
       # The baseline was recorded from a green local run and CI's figures
       # matched it within the tolerance (2026-09-16). If a later CI figure
       # differs for an environment reason (a test that skips here), record
-      # CI's figure rather than widening the tolerance. Runs after a red Jest
-      # too, like the frontend ratchet, so the number is never missing.
+      # CI's figure rather than widening the tolerance.
       - name: Coverage ratchet
-        if: success() || failure()
         run: node scripts/check-coverage.mjs backend
 
   # ---------------------------------------------------------------------
@@ -466,23 +519,25 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------
-  # SAFE TO REQUIRE — but note it only checks files the change touched.
+  # SAFE TO REQUIRE — the whole tree, since forgejo#61.
   #
-  # Scoped on purpose: ~95 files under frontend/src have never been
-  # Prettier-formatted (mostly since the Tailwind 4 migration), so a
-  # repo-wide check would fail on every PR regardless of its content, and
-  # a badge that is always red carries no information. Scoping keeps the
-  # signal about the change under review. A mass `prettier --write` is the
-  # alternative whenever the maintainer wants to take that diff.
+  # This job used to check only the frontend files a change touched, and
+  # said why: ~95 frontend files and nearly the whole backend had never been
+  # formatted, so a repo-wide check would have been red on every push
+  # whatever it contained. `9349b975` formatted the tree once (and is listed
+  # in .git-blame-ignore-revs), which removes the reason. A full check is
+  # also the cheaper one to reason about: nothing depends on a diff range.
+  #
+  # Scope is `.prettierignore` at the root — every exclusion there says why.
+  # Run from the root, because that is where Prettier reads the ignore file.
+  # prettier comes from frontend's lockfile, the same pinned version the
+  # pre-commit hook uses.
   # ---------------------------------------------------------------------
   format:
-    name: Frontend format check
+    name: Format check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Need history on both sides of the change to diff against.
-          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -493,53 +548,5 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Collect changed frontend files
-        id: changed
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          BEFORE_SHA: ${{ github.event.before }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            range="origin/$BASE_REF...HEAD"
-          elif [ "$EVENT_NAME" = "push" ] && \
-               [ -n "${BEFORE_SHA:-}" ] && \
-               [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-            range="$BEFORE_SHA..HEAD"
-          else
-            # workflow_dispatch, or a first push with no "before" commit:
-            # nothing meaningful to diff against, so check the last commit.
-            range="HEAD~1..HEAD"
-          fi
-          echo "Diffing $range"
-          # ACMR: skip deletions — prettier cannot check a file that is gone.
-          #
-          # Single `*`, not `**`: in a git pathspec (no :(glob) magic) `*`
-          # already crosses directory separators, while `src/**/*.tsx`
-          # requires at least one intermediate directory and therefore
-          # silently misses frontend/src/App.tsx and its siblings. Measured,
-          # not assumed — that miss is exactly the kind of quiet hole this
-          # job exists to close.
-          git diff --name-only --diff-filter=ACMR "$range" -- \
-            'frontend/src/*.ts' \
-            'frontend/src/*.tsx' \
-            'frontend/src/*.css' > changed.txt || true
-          # Guard against a file deleted later in the range.
-          : > files.txt
-          while IFS= read -r f; do
-            [ -f "$f" ] && printf '%s\n' "${f#frontend/}" >> files.txt
-          done < changed.txt
-          count=$(wc -l < files.txt | tr -d ' ')
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Changed frontend files to check: $count"
-          cat files.txt
-
-      - name: Prettier check (changed files only)
-        if: steps.changed.outputs.count != '0'
-        run: cd frontend && xargs -a ../files.txt npx prettier --check
-
-      - name: Nothing to check
-        if: steps.changed.outputs.count == '0'
-        run: echo "No frontend source files changed — skipping Prettier."
+      - name: Prettier check (whole tree)
+        run: npx --prefix frontend prettier --check --ignore-unknown .

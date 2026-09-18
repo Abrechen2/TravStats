@@ -84,9 +84,7 @@ describe("parseCsv", () => {
   describe("delimiter detection", () => {
     it("parses a semicolon-separated document (German Excel default)", () => {
       const out = parseCsv("Hotel;Anreise;Abreise\nNH München;07.03.2026;09.03.2026");
-      expect(out).toEqual([
-        { Hotel: "NH München", Anreise: "07.03.2026", Abreise: "09.03.2026" },
-      ]);
+      expect(out).toEqual([{ Hotel: "NH München", Anreise: "07.03.2026", Abreise: "09.03.2026" }]);
     });
 
     it("parses a tab-separated document", () => {

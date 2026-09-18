@@ -1,11 +1,11 @@
 import * as fs from "fs";
-import * as path from "path";
 
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
-import { getUploadDir } from "../../middleware/upload";
+import { documentPath } from "../../services/documents/documentStore";
+import { reconcileReceiptDocuments } from "../../services/documents/receipts";
 
 /**
  * Knowing a file's URL is not the same as being allowed to read it.
@@ -17,6 +17,9 @@ import { getUploadDir } from "../../middleware/upload";
  * (audit finding AUD-019). The reference proved only that B had typed the URL.
  *
  * The file now carries its owner, written at upload time from the session.
+ * Since forgejo#116 the file is a kept Document, and the same holds: the
+ * document's owner decides, and the hourly run that files receipts with the
+ * entries naming them files nothing across accounts.
  */
 const A = "uploadOwnerA";
 const B = "uploadOwnerB";
@@ -68,17 +71,21 @@ describe("receipt uploads belong to whoever uploaded them", () => {
   });
 
   afterAll(async () => {
+    const row = filename ? await prisma.document.findUnique({ where: { id: filename } }) : null;
     await prisma.user.deleteMany({ where: { username: { in: [A, B] } } });
-    if (filename) {
-      const onDisk = path.join(getUploadDir(), filename);
-      if (fs.existsSync(onDisk)) fs.rmSync(onDisk, { force: true });
-    }
+    if (row) fs.rmSync(documentPath(row.storedName), { force: true });
   });
 
-  it("records the uploader as the owner", async () => {
-    const row = await prisma.receiptUpload.findUnique({ where: { filename } });
+  it("keeps the receipt as a document owned by the uploader", async () => {
+    expect(receiptUrl).toBe(`/api/v1/documents/${filename}/file`);
+    const row = await prisma.document.findUnique({ where: { id: filename } });
     const owner = await prisma.user.findUnique({ where: { username: A } });
-    expect(row?.userId).toBe(owner?.id);
+    expect(row).toMatchObject({
+      userId: owner?.id,
+      source: "receipt",
+      kind: "invoice",
+      format: "image",
+    });
   });
 
   it("serves the file to its owner", async () => {
@@ -118,12 +125,15 @@ describe("receipt uploads belong to whoever uploaded them", () => {
 
     const after = await request(app).get(receiptUrl).set("Cookie", cookieB);
     expect(after.status).toBe(404);
+
+    // And the run that files receipts must not hand A's document to B's flight.
+    await reconcileReceiptDocuments();
+    const row = await prisma.document.findUnique({ where: { id: filename } });
+    expect(row?.flightId).toBeNull();
   });
 
   it("refuses another account trying to delete the file", async () => {
-    const res = await request(app)
-      .delete(`/api/v1/uploads/receipts/${filename}`)
-      .set("Cookie", cookieB);
+    const res = await request(app).delete(`/api/v1/documents/${filename}`).set("Cookie", cookieB);
     expect(res.status).toBe(404);
 
     // And it is still there for its owner.

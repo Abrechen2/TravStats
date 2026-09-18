@@ -1,4 +1,4 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction } from "express";
 import aircraftStatsRouter from "./stats/aircraft";
 import {
   CountryCodeParamSchema,
@@ -7,14 +7,14 @@ import {
   SummaryQuerySchema,
   TimeseriesQuerySchema,
   WrappedQuerySchema,
-} from '../schemas/statsQuery';
-import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { calculateDistance } from '../utils/geo';
-import { getCachedAirports } from '../services/airportCache';
-import type { AirportData } from '../services/airportLookup';
-import { buildFlightNetwork } from '../services/stats/network';
-import { computePunctuality } from '../services/punctualityStats';
+} from "../schemas/statsQuery";
+import { prisma } from "../db";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { calculateDistance } from "../utils/geo";
+import { getCachedAirports } from "../services/airportCache";
+import type { AirportData } from "../services/airportLookup";
+import { buildFlightNetwork } from "../services/stats/network";
+import { computePunctuality } from "../services/punctualityStats";
 // Response shapes: the spec and these handlers describe one thing, not two
 // (forgejo#52). The prose that used to sit on these interfaces moved with them,
 // so a consumer reading the spec gets the same caveats.
@@ -24,37 +24,42 @@ import type {
   AirlineRankingResponse,
   CountryStat,
   CountryStatsResponse,
-} from '../schemas/statsFlights';
-import { Prisma } from '@prisma/client';
+} from "../schemas/statsFlights";
+import { Prisma } from "@prisma/client";
 import {
   calculateFunStats,
   calculateBusinessStats,
   calculateUniqueStats,
   calculateAirportStats,
-} from '../utils/statsCalculator';
-import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
-import { calculateLodgingStats, type LodgingStayData, type LodgingRecord } from '../utils/lodgingStats';
+} from "../utils/statsCalculator";
+import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../utils/cruiseStats";
 import {
-  buildMembershipContext,
-  resolveStayProgramme,
-} from '../services/lodging/stayMembership';
-import { normalizeHistory } from '../utils/homeAirport';
-import type { SettingsDataJson } from './settings/types';
-import logger from '../utils/logger';
-import { localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
-import { normalizeCountrySet } from '../shared/countryEvidence';
-import { airportCalendarDay, buildTzMap, withDepartureClock } from '../services/stats/departureClock';
-import { loadPassport } from '../services/stats/passportLoader';
-import { buildWhere, computeSummary } from '../services/stats/summary';
-import { loadDaysAway } from '../services/stats/daysAwayLoader';
-import { loadCountryDetail } from '../services/stats/countryDetailLoader';
-import { buildWrapped } from '../services/stats/wrapped';
-import { fetchFlightDatedRows, fetchCruiseDatedRows } from '../services/stats/timeseriesRows';
-import { buildTravelRecords } from '../services/stats/records';
-import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
-import { countableFlightWhere } from '../shared/flightCounting';
-import { airlineResolvers } from '../utils/airlineNormalize';
-import { groupAirlines } from '../shared/airlineNormalize';
+  calculateLodgingStats,
+  type LodgingStayData,
+  type LodgingRecord,
+} from "../utils/lodgingStats";
+import { buildMembershipContext, resolveStayProgramme } from "../services/lodging/stayMembership";
+import { normalizeHistory } from "../utils/homeAirport";
+import type { SettingsDataJson } from "./settings/types";
+import logger from "../utils/logger";
+import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
+import { normalizeCountrySet } from "../shared/countryEvidence";
+import {
+  airportCalendarDay,
+  buildTzMap,
+  withDepartureClock,
+} from "../services/stats/departureClock";
+import { loadPassport } from "../services/stats/passportLoader";
+import { buildWhere, computeSummary } from "../services/stats/summary";
+import { loadDaysAway } from "../services/stats/daysAwayLoader";
+import { loadCountryDetail } from "../services/stats/countryDetailLoader";
+import { buildWrapped } from "../services/stats/wrapped";
+import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
+import { buildTravelRecords } from "../services/stats/records";
+import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
+import { countableFlightWhere } from "../shared/flightCounting";
+import { airlineResolvers } from "../utils/airlineNormalize";
+import { groupAirlines } from "../shared/airlineNormalize";
 import {
   resolveWindow,
   bucketSeries,
@@ -62,13 +67,13 @@ import {
   trimZeroEdges,
   withinWindow,
   type DatedRow,
-} from '../utils/stats/timeseries';
-import { readYearQuery, scopeLodgingsToStays, startedIn } from '../utils/stats/domainYear';
-import { lodgingCountryKey } from '../utils/stats/lodgingCountryKey';
-import { buildTravelAccount } from '../services/stats/travelAccount';
-import { buildTripAccount } from '../services/stats/tripAccount';
-import { getBaseCurrency } from '../services/fx/snapshot';
-import { statsEtag } from '../middleware/statsEtag';
+} from "../utils/stats/timeseries";
+import { readYearQuery, scopeLodgingsToStays, startedIn } from "../utils/stats/domainYear";
+import { lodgingCountryKey } from "../utils/stats/lodgingCountryKey";
+import { buildTravelAccount } from "../services/stats/travelAccount";
+import { buildTripAccount } from "../services/stats/tripAccount";
+import { getBaseCurrency } from "../services/fx/snapshot";
+import { statsEtag } from "../middleware/statsEtag";
 
 const router = Router();
 
@@ -83,33 +88,39 @@ router.use(authenticate);
 router.use(statsEtag);
 
 // Get summary statistics
-router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
+router.get(
+  "/summary",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
 
-    const parsed = SummaryQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
-    }
-    const { fromDate, toDate, year, compareYear } = parsed.data;
-    const baseCurrency = await getBaseCurrency(userId);
+      const parsed = SummaryQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
+      }
+      const { fromDate, toDate, year, compareYear } = parsed.data;
+      const baseCurrency = await getBaseCurrency(userId);
 
-    // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
-    const summarize = async (scopeYear: number | undefined) => ({
-      ...(await computeSummary(await buildWhere(userId, fromDate, toDate, scopeYear), baseCurrency)),
-      daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
-    });
-    if (year !== undefined && compareYear !== undefined) {
-      const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
-      res.json({ current, compare });
-    } else {
-      res.json(await summarize(year));
+      // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
+      const summarize = async (scopeYear: number | undefined) => ({
+        ...(await computeSummary(
+          await buildWhere(userId, fromDate, toDate, scopeYear),
+          baseCurrency
+        )),
+        daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
+      });
+      if (year !== undefined && compareYear !== undefined) {
+        const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
+        res.json({ current, compare });
+      } else {
+        res.json(await summarize(year));
+      }
+    } catch (error) {
+      next(error);
     }
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 interface HeroStats {
   distanceKm: number;
@@ -127,7 +138,7 @@ interface HeroStats {
 // date-range params yet. The airport+fun flight select is fetched ONCE and
 // shared between calculateAirportStats and calculateFunStats since both use
 // the identical select already used by /airports and /fun.
-router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
@@ -219,157 +230,163 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
 // GET /api/v1/stats/timeseries — bucketed series (month|year) + current/previous
 // window totals, domain-parameterized (flight|cruise). Powers the Wave A
 // stats redesign's trend charts.
-router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-    const parsed = TimeseriesQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
+router.get(
+  "/timeseries",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const parsed = TimeseriesQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
+      }
+      const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
+      const w = resolveWindow(window, year, fromDate, toDate, new Date());
+
+      const fetchRows = domain === "cruise" ? fetchCruiseDatedRows : fetchFlightDatedRows;
+      const [fetchedCurrent, fetchedPrevious] = await Promise.all([
+        fetchRows(userId, w.from, w.to),
+        w.prevFrom && w.prevTo
+          ? fetchRows(userId, w.prevFrom, w.prevTo)
+          : Promise.resolve([] as DatedRow[]),
+      ]);
+
+      // The flight fetcher deliberately over-fetches by a day at each edge, so
+      // the window is decided HERE, once, on the local calendar day — and the
+      // series and the totals below cannot disagree about what was in it.
+      const currentRows = withinWindow(fetchedCurrent, w.from, w.to);
+      const previousRows =
+        w.prevFrom && w.prevTo ? withinWindow(fetchedPrevious, w.prevFrom, w.prevTo) : [];
+
+      const rawSeries = bucketSeries(currentRows, granularity, w.from, w.to);
+      // The all-time window spans from the Unix epoch, so trim the leading/
+      // trailing empty buckets down to the user's actual data range. Bounded
+      // windows (rolling12m, year, explicit range) keep their zero buckets —
+      // those empty periods are meaningful context.
+      const series =
+        window === "all" && !fromDate && !toDate ? trimZeroEdges(rawSeries) : rawSeries;
+
+      res.json({
+        domain,
+        granularity,
+        window: { from: w.from.toISOString(), to: w.to.toISOString() },
+        series,
+        current: sumTotals(currentRows),
+        previous: sumTotals(previousRows),
+      });
+    } catch (error) {
+      next(error);
     }
-    const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
-    const w = resolveWindow(window, year, fromDate, toDate, new Date());
-
-    const fetchRows = domain === 'cruise' ? fetchCruiseDatedRows : fetchFlightDatedRows;
-    const [fetchedCurrent, fetchedPrevious] = await Promise.all([
-      fetchRows(userId, w.from, w.to),
-      w.prevFrom && w.prevTo ? fetchRows(userId, w.prevFrom, w.prevTo) : Promise.resolve([] as DatedRow[]),
-    ]);
-
-    // The flight fetcher deliberately over-fetches by a day at each edge, so
-    // the window is decided HERE, once, on the local calendar day — and the
-    // series and the totals below cannot disagree about what was in it.
-    const currentRows = withinWindow(fetchedCurrent, w.from, w.to);
-    const previousRows =
-      w.prevFrom && w.prevTo ? withinWindow(fetchedPrevious, w.prevFrom, w.prevTo) : [];
-
-    const rawSeries = bucketSeries(currentRows, granularity, w.from, w.to);
-    // The all-time window spans from the Unix epoch, so trim the leading/
-    // trailing empty buckets down to the user's actual data range. Bounded
-    // windows (rolling12m, year, explicit range) keep their zero buckets —
-    // those empty periods are meaningful context.
-    const series =
-      window === 'all' && !fromDate && !toDate ? trimZeroEdges(rawSeries) : rawSeries;
-
-    res.json({
-      domain,
-      granularity,
-      window: { from: w.from.toISOString(), to: w.to.toISOString() },
-      series,
-      current: sumTotals(currentRows),
-      previous: sumTotals(previousRows),
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 // Get top routes
-router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
+router.get(
+  "/routes",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
 
-    const parsed = RoutesQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
-    }
-    const limit = parsed.data.limit ?? 10;
-
-    // Routes are time-insensitive (airport-pair grouping + great-circle distance),
-    // so historical flights are included.
-    const flights = await prisma.flight.findMany({
-      where: { userId, ...countableFlightWhere() },
-      select: {
-        depIata: true,
-        depIcao: true,
-        depName: true,
-        depLat: true,
-        depLon: true,
-        arrIata: true,
-        arrIcao: true,
-        arrName: true,
-        arrLat: true,
-        arrLon: true,
-      },
-    });
-
-    /**
-     * Grouped by the PAIR, not the direction — Forgejo #42, owner's decision
-     * 2026-08-31.
-     *
-     * This used to key `${dep}-${arr}`, so FRA→WAW and WAW→FRA were two routes
-     * with one flight each while the Companion's globe grouped them as one with
-     * two. Same account, two different route counts, and neither side was
-     * wrong on its own terms — which is exactly the drift #42 was filed about.
-     *
-     * A person says "I have flown Munich–Dubai eleven times" and means both
-     * directions. So the pair is the route, and the key is the two codes
-     * sorted: FRA-WAW and WAW-FRA both become "FRA-WAW".
-     *
-     * This CHANGES the top-routes list for existing accounts — two entries of
-     * one collapse into one of two, which reorders the ranking. That is a
-     * visible change and belongs in the changelog, not a silent fix.
-     *
-     * `departure`/`arrival` name the first flight of the pair that was seen.
-     * With direction no longer meaningful they are simply the two ends; the
-     * distance is the same either way.
-     */
-    const routeMap = new Map<string, {
-      count: number;
-      departure: { iata?: string; name?: string; lat: number; lon: number };
-      arrival: { iata?: string; name?: string; lat: number; lon: number };
-      distance: number;
-    }>();
-
-    flights.forEach(flight => {
-      const depCode = flight.depIata || flight.depIcao;
-      const arrCode = flight.arrIata || flight.arrIcao;
-      // Sorted, so both directions land on one key. `String()` guards the
-      // null-code case, which would otherwise sort inconsistently.
-      const routeKey = [String(depCode), String(arrCode)].sort().join('-');
-
-      if (routeMap.has(routeKey)) {
-        routeMap.get(routeKey)!.count++;
-      } else {
-        routeMap.set(routeKey, {
-          count: 1,
-          departure: {
-            iata: flight.depIata || undefined,
-            name: flight.depName || undefined,
-            lat: flight.depLat,
-            lon: flight.depLon,
-          },
-          arrival: {
-            iata: flight.arrIata || undefined,
-            name: flight.arrName || undefined,
-            lat: flight.arrLat,
-            lon: flight.arrLon,
-          },
-          distance: calculateDistance(
-            flight.depLat,
-            flight.depLon,
-            flight.arrLat,
-            flight.arrLon
-          ),
-        });
+      const parsed = RoutesQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
       }
-    });
+      const limit = parsed.data.limit ?? 10;
 
-    // Convert to array and sort by count
-    const routes = Array.from(routeMap.entries())
-      .map(([route, data]) => ({
-        route,
-        ...data,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, limit);
+      // Routes are time-insensitive (airport-pair grouping + great-circle distance),
+      // so historical flights are included.
+      const flights = await prisma.flight.findMany({
+        where: { userId, ...countableFlightWhere() },
+        select: {
+          depIata: true,
+          depIcao: true,
+          depName: true,
+          depLat: true,
+          depLon: true,
+          arrIata: true,
+          arrIcao: true,
+          arrName: true,
+          arrLat: true,
+          arrLon: true,
+        },
+      });
 
-    res.json({ routes });
-  } catch (error) {
-    next(error);
+      /**
+       * Grouped by the PAIR, not the direction — Forgejo #42, owner's decision
+       * 2026-08-31.
+       *
+       * This used to key `${dep}-${arr}`, so FRA→WAW and WAW→FRA were two routes
+       * with one flight each while the Companion's globe grouped them as one with
+       * two. Same account, two different route counts, and neither side was
+       * wrong on its own terms — which is exactly the drift #42 was filed about.
+       *
+       * A person says "I have flown Munich–Dubai eleven times" and means both
+       * directions. So the pair is the route, and the key is the two codes
+       * sorted: FRA-WAW and WAW-FRA both become "FRA-WAW".
+       *
+       * This CHANGES the top-routes list for existing accounts — two entries of
+       * one collapse into one of two, which reorders the ranking. That is a
+       * visible change and belongs in the changelog, not a silent fix.
+       *
+       * `departure`/`arrival` name the first flight of the pair that was seen.
+       * With direction no longer meaningful they are simply the two ends; the
+       * distance is the same either way.
+       */
+      const routeMap = new Map<
+        string,
+        {
+          count: number;
+          departure: { iata?: string; name?: string; lat: number; lon: number };
+          arrival: { iata?: string; name?: string; lat: number; lon: number };
+          distance: number;
+        }
+      >();
+
+      flights.forEach((flight) => {
+        const depCode = flight.depIata || flight.depIcao;
+        const arrCode = flight.arrIata || flight.arrIcao;
+        // Sorted, so both directions land on one key. `String()` guards the
+        // null-code case, which would otherwise sort inconsistently.
+        const routeKey = [String(depCode), String(arrCode)].sort().join("-");
+
+        if (routeMap.has(routeKey)) {
+          routeMap.get(routeKey)!.count++;
+        } else {
+          routeMap.set(routeKey, {
+            count: 1,
+            departure: {
+              iata: flight.depIata || undefined,
+              name: flight.depName || undefined,
+              lat: flight.depLat,
+              lon: flight.depLon,
+            },
+            arrival: {
+              iata: flight.arrIata || undefined,
+              name: flight.arrName || undefined,
+              lat: flight.arrLat,
+              lon: flight.arrLon,
+            },
+            distance: calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon),
+          });
+        }
+      });
+
+      // Convert to array and sort by count
+      const routes = Array.from(routeMap.entries())
+        .map(([route, data]) => ({
+          route,
+          ...data,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      res.json({ routes });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // GET /api/v1/stats/network — the WHOLE network: every drawable airport with
 // its visit count, every flown airport pair with its count and distance.
@@ -386,64 +403,67 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
 // that /routes and /airports do not both offer. See services/stats/network.ts
 // for the four rules and for why an airport without usable coordinates is
 // omitted rather than returned with nulls.
-router.get('/network', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-
-    // Same done-predicate as every other aggregate in this file. A booked
-    // flight is not a line on a map.
-    const flights = await prisma.flight.findMany({
-      where: { userId, ...countableFlightWhere() },
-      select: {
-        depIata: true,
-        depIcao: true,
-        depLat: true,
-        depLon: true,
-        arrIata: true,
-        arrIcao: true,
-        arrLat: true,
-        arrLon: true,
-        status: true,
-      },
-    });
-
-    const codes = new Set<string>();
-    for (const f of flights) {
-      const dep = f.depIata ?? f.depIcao;
-      const arr = f.arrIata ?? f.arrIcao;
-      if (dep) codes.add(dep);
-      if (arr) codes.add(arr);
-    }
-
-    // The catalogue folds ICAO-only rows onto their IATA node and supplies
-    // coordinates for rows that never got any. A failed lookup is not fatal —
-    // the derivation then works from the flight rows alone, which is what it
-    // did before the catalogue was consulted at all.
-    let catalogue = new Map<string, AirportData>();
+router.get(
+  "/network",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      catalogue = await getCachedAirports([...codes]);
-    } catch (error) {
-      logger.error({
-        operation: 'stats_network_airport_lookup_failed',
-        message: 'Airport catalogue unavailable, building network from flight rows only',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
+      const userId = req.userId!;
 
-    res.json(buildFlightNetwork(flights, catalogue));
-  } catch (error) {
-    next(error);
+      // Same done-predicate as every other aggregate in this file. A booked
+      // flight is not a line on a map.
+      const flights = await prisma.flight.findMany({
+        where: { userId, ...countableFlightWhere() },
+        select: {
+          depIata: true,
+          depIcao: true,
+          depLat: true,
+          depLon: true,
+          arrIata: true,
+          arrIcao: true,
+          arrLat: true,
+          arrLon: true,
+          status: true,
+        },
+      });
+
+      const codes = new Set<string>();
+      for (const f of flights) {
+        const dep = f.depIata ?? f.depIcao;
+        const arr = f.arrIata ?? f.arrIcao;
+        if (dep) codes.add(dep);
+        if (arr) codes.add(arr);
+      }
+
+      // The catalogue folds ICAO-only rows onto their IATA node and supplies
+      // coordinates for rows that never got any. A failed lookup is not fatal —
+      // the derivation then works from the flight rows alone, which is what it
+      // did before the catalogue was consulted at all.
+      let catalogue = new Map<string, AirportData>();
+      try {
+        catalogue = await getCachedAirports([...codes]);
+      } catch (error) {
+        logger.error({
+          operation: "stats_network_airport_lookup_failed",
+          message: "Airport catalogue unavailable, building network from flight rows only",
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+
+      res.json(buildFlightNetwork(flights, catalogue));
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Get fun/entertaining statistics
-router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/fun", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+      res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -498,9 +518,9 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
       // If stats calculation fails (e.g., database issues), return partial stats
       // This prevents the entire endpoint from failing
       logger.error({
-        operation: 'calculate_fun_stats_error',
-        message: 'Failed to calculate fun stats, returning partial data',
-        error: statsError instanceof Error ? statsError.message : 'Unknown error',
+        operation: "calculate_fun_stats_error",
+        message: "Failed to calculate fun stats, returning partial data",
+        error: statsError instanceof Error ? statsError.message : "Unknown error",
       });
       // Return a minimal response instead of failing completely
       funStats = {
@@ -532,230 +552,236 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
 });
 
 // Get business/informative statistics
-router.get('/business', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-
-    const parsed = DateRangeQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
-    }
-    const { fromDate, toDate } = parsed.data;
-
-    // Business stats are computed across both flown and historical flights; the
-    // helper applies a tighter `flown`-only filter for duration-based metrics
-    // (avgFlightDuration, costPerHour).
-    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
-
-    if (fromDate || toDate) {
-      where.departureTime = {};
-      if (fromDate) {
-        where.departureTime.gte = new Date(fromDate);
-      }
-      if (toDate) {
-        where.departureTime.lte = new Date(toDate);
-      }
-    }
-
-    const flights = await prisma.flight.findMany({
-      where,
-      select: {
-        id: true,
-        depLat: true,
-        depLon: true,
-        arrLat: true,
-        arrLon: true,
-        depIata: true,
-        depIcao: true,
-        arrIata: true,
-        arrIcao: true,
-        airline: true,
-        aircraft: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        status: true,
-        price: true,
-        taxes: true,
-        fees: true,
-        currency: true,
-        priceBase: true,
-        fxBaseCurrency: true,
-        category: true,
-        seatClass: true,
-        createdAt: true,
-        bookingId: true,
-        booking: {
-          select: {
-            id: true,
-            price: true,
-            currency: true,
-            priceBase: true,
-            fxBaseCurrency: true,
-          },
-        },
-      },
-    });
-
-    // Business stats don't require database lookups, so they should be safe
-    // But wrap in try-catch for safety
-    let businessStats;
-    try {
-      businessStats = calculateBusinessStats(
-        await withDepartureClock(flights),
-        await getBaseCurrency(userId),
-      );
-    } catch (statsError) {
-      logger.error({
-        operation: 'calculate_business_stats_error',
-        message: 'Failed to calculate business stats',
-        error: statsError instanceof Error ? statsError.message : 'Unknown error',
-      });
-      // Return minimal response
-      businessStats = {
-        costPerKm: 0,
-        costPerHour: 0,
-        totalCost: null,
-        totalDistance: 0,
-        seatClassDistribution: {},
-        mostCommonCategory: null,
-        airportDiversity: 0,
-        avgFlightDuration: 0,
-        busiestMonth: null,
-        busiestMonthFlights: 0,
-        categoryDistribution: {},
-      };
-    }
-
-    res.json(businessStats);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get unique/special statistics
-router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-
-    const parsed = DateRangeQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
-    }
-    const { fromDate, toDate } = parsed.data;
-
-    // Unique stats are computed across both flown and historical flights; the
-    // helper applies a tighter `flown`-only filter for time-sensitive parts
-    // (time-travel index, layovers, fastest route, midnight crossings, etc.).
-    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
-
-    if (fromDate || toDate) {
-      where.departureTime = {};
-      if (fromDate) {
-        where.departureTime.gte = new Date(fromDate);
-      }
-      if (toDate) {
-        where.departureTime.lte = new Date(toDate);
-      }
-    }
-
-    const flights = await prisma.flight.findMany({
-      where,
-      select: {
-        id: true,
-        depLat: true,
-        depLon: true,
-        arrLat: true,
-        arrLon: true,
-        depIata: true,
-        depIcao: true,
-        arrIata: true,
-        arrIcao: true,
-        airline: true,
-        aircraft: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        status: true,
-        price: true,
-        taxes: true,
-        fees: true,
-        category: true,
-        seatClass: true,
-        createdAt: true,
-      },
-    });
-
-    // Load home airport history so layovers exclude returns to home-at-that-date.
-    const homeSettings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: { data: true },
-    });
-    const historyData =
-      homeSettings?.data && typeof homeSettings.data === 'object'
-        ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-        : undefined;
-    const homeHistory = normalizeHistory(historyData);
-
-    // Calculate unique stats with error handling - continue even if airport data fails
-    let uniqueStats;
-    try {
-      uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homeHistory);
-    } catch (statsError) {
-      // If stats calculation fails (e.g., database issues), return partial stats
-      logger.error({
-        operation: 'calculate_unique_stats_error',
-        message: 'Failed to calculate unique stats, returning partial data',
-        error: statsError instanceof Error ? statsError.message : 'Unknown error',
-      });
-      // Return a minimal response instead of failing completely
-      uniqueStats = {
-        timeTravelIndex: 0,
-        equatorCrossings: 0,
-        arcticFlights: 0,
-        oceanCrossings: 0,
-        highestAirport: null,
-        northernmost: null,
-        southernmost: null,
-        longestTravelChain: 0,
-        fastestRoute: null,
-        mostCountriesInDay: 0,
-        mostCountriesDate: null,
-        hemisphereHops: 0,
-        dateLineCrossings: 0,
-        continentalExplorer: 0,
-        continents: [],
-        tropicsTraveler: 0,
-        eastWestBalance: { eastward: 0, westward: 0, ratio: 0 },
-        sameDayReturns: 0,
-        midnightFlights: 0,
-        seasonalExplorer: false,
-        seasonsCount: 0,
-        internationalVsDomestic: { international: 0, domestic: 0, ratio: 0 },
-        longestLayover: null,
-        shortestLayover: null,
-        roundTripMaster: 0,
-      };
-    }
-
-    res.json(uniqueStats);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Airport-focused statistics (top airports, rarest, farthest from home, etc.)
 router.get(
-  '/airports',
+  "/business",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
 
       const parsed = DateRangeQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
+      }
+      const { fromDate, toDate } = parsed.data;
+
+      // Business stats are computed across both flown and historical flights; the
+      // helper applies a tighter `flown`-only filter for duration-based metrics
+      // (avgFlightDuration, costPerHour).
+      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+
+      if (fromDate || toDate) {
+        where.departureTime = {};
+        if (fromDate) {
+          where.departureTime.gte = new Date(fromDate);
+        }
+        if (toDate) {
+          where.departureTime.lte = new Date(toDate);
+        }
+      }
+
+      const flights = await prisma.flight.findMany({
+        where,
+        select: {
+          id: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          airline: true,
+          aircraft: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimeSemantics: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          currency: true,
+          priceBase: true,
+          fxBaseCurrency: true,
+          category: true,
+          seatClass: true,
+          createdAt: true,
+          bookingId: true,
+          booking: {
+            select: {
+              id: true,
+              price: true,
+              currency: true,
+              priceBase: true,
+              fxBaseCurrency: true,
+            },
+          },
+        },
+      });
+
+      // Business stats don't require database lookups, so they should be safe
+      // But wrap in try-catch for safety
+      let businessStats;
+      try {
+        businessStats = calculateBusinessStats(
+          await withDepartureClock(flights),
+          await getBaseCurrency(userId)
+        );
+      } catch (statsError) {
+        logger.error({
+          operation: "calculate_business_stats_error",
+          message: "Failed to calculate business stats",
+          error: statsError instanceof Error ? statsError.message : "Unknown error",
+        });
+        // Return minimal response
+        businessStats = {
+          costPerKm: 0,
+          costPerHour: 0,
+          totalCost: null,
+          totalDistance: 0,
+          seatClassDistribution: {},
+          mostCommonCategory: null,
+          airportDiversity: 0,
+          avgFlightDuration: 0,
+          busiestMonth: null,
+          busiestMonthFlights: 0,
+          categoryDistribution: {},
+        };
+      }
+
+      res.json(businessStats);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Get unique/special statistics
+router.get(
+  "/unique",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
+      }
+      const { fromDate, toDate } = parsed.data;
+
+      // Unique stats are computed across both flown and historical flights; the
+      // helper applies a tighter `flown`-only filter for time-sensitive parts
+      // (time-travel index, layovers, fastest route, midnight crossings, etc.).
+      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+
+      if (fromDate || toDate) {
+        where.departureTime = {};
+        if (fromDate) {
+          where.departureTime.gte = new Date(fromDate);
+        }
+        if (toDate) {
+          where.departureTime.lte = new Date(toDate);
+        }
+      }
+
+      const flights = await prisma.flight.findMany({
+        where,
+        select: {
+          id: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          airline: true,
+          aircraft: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimeSemantics: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          category: true,
+          seatClass: true,
+          createdAt: true,
+        },
+      });
+
+      // Load home airport history so layovers exclude returns to home-at-that-date.
+      const homeSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { data: true },
+      });
+      const historyData =
+        homeSettings?.data && typeof homeSettings.data === "object"
+          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
+          : undefined;
+      const homeHistory = normalizeHistory(historyData);
+
+      // Calculate unique stats with error handling - continue even if airport data fails
+      let uniqueStats;
+      try {
+        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homeHistory);
+      } catch (statsError) {
+        // If stats calculation fails (e.g., database issues), return partial stats
+        logger.error({
+          operation: "calculate_unique_stats_error",
+          message: "Failed to calculate unique stats, returning partial data",
+          error: statsError instanceof Error ? statsError.message : "Unknown error",
+        });
+        // Return a minimal response instead of failing completely
+        uniqueStats = {
+          timeTravelIndex: 0,
+          equatorCrossings: 0,
+          arcticFlights: 0,
+          oceanCrossings: 0,
+          highestAirport: null,
+          northernmost: null,
+          southernmost: null,
+          longestTravelChain: 0,
+          fastestRoute: null,
+          mostCountriesInDay: 0,
+          mostCountriesDate: null,
+          hemisphereHops: 0,
+          dateLineCrossings: 0,
+          continentalExplorer: 0,
+          continents: [],
+          tropicsTraveler: 0,
+          eastWestBalance: { eastward: 0, westward: 0, ratio: 0 },
+          sameDayReturns: 0,
+          midnightFlights: 0,
+          seasonalExplorer: false,
+          seasonsCount: 0,
+          internationalVsDomestic: { international: 0, domestic: 0, ratio: 0 },
+          longestLayover: null,
+          shortestLayover: null,
+          roundTripMaster: 0,
+        };
+      }
+
+      res.json(uniqueStats);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Airport-focused statistics (top airports, rarest, farthest from home, etc.)
+router.get(
+  "/airports",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
       const { fromDate, toDate } = parsed.data;
@@ -801,7 +827,7 @@ router.get(
         select: { data: true },
       });
       const historyData =
-        homeSettings?.data && typeof homeSettings.data === 'object'
+        homeSettings?.data && typeof homeSettings.data === "object"
           ? (homeSettings.data as SettingsDataJson).homeAirportHistory
           : undefined;
       const homeHistory = normalizeHistory(historyData);
@@ -838,7 +864,7 @@ router.get(
  * decimal separator and the unit for every client that ever reads it.
  */
 router.get(
-  '/records',
+  "/records",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -878,18 +904,18 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 router.get(
-  '/passport',
+  "/passport",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.json(await loadPassport(req.userId!));
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -905,13 +931,13 @@ router.get(
  * to its page should not have to unwrap a second shape halfway.
  */
 router.get(
-  '/countries/:code',
+  "/countries/:code",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const parsed = CountryCodeParamSchema.safeParse(req.params);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid country', details: parsed.error.issues });
+        res.status(400).json({ error: "Invalid country", details: parsed.error.issues });
         return;
       }
 
@@ -921,7 +947,7 @@ router.get(
         // Nothing evidences this country — including a code the catalogue does
         // not know. Both are "you have not been there", and saying so is
         // better than an empty page that looks like a loading failure.
-        res.status(404).json({ error: 'No record of this country' });
+        res.status(404).json({ error: "No record of this country" });
         return;
       }
 
@@ -929,7 +955,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -942,13 +968,13 @@ router.get(
  * in services/stats/wrapped.ts.
  */
 router.get(
-  '/wrapped',
+  "/wrapped",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const parsed = WrappedQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
 
@@ -1007,13 +1033,13 @@ router.get(
         })),
         cruises,
         passport.countries,
-        parsed.data.year ?? null,
+        parsed.data.year ?? null
       );
 
       if (!wrapped) {
         // No countable activity in any year. There is no story, and a grid of
         // zeros would pretend there is one.
-        res.status(404).json({ error: 'Nothing to look back on yet' });
+        res.status(404).json({ error: "Nothing to look back on yet" });
         return;
       }
 
@@ -1021,17 +1047,17 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // Seat position statistics
-router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/seats", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
     const parsed = DateRangeQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+      res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
       return;
     }
     const { fromDate, toDate } = parsed.data;
@@ -1076,7 +1102,8 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
     for (const flight of flights) {
       // Count seat class distribution
       if (flight.seatClass) {
-        seatClassDistribution[flight.seatClass] = (seatClassDistribution[flight.seatClass] ?? 0) + 1;
+        seatClassDistribution[flight.seatClass] =
+          (seatClassDistribution[flight.seatClass] ?? 0) + 1;
       }
 
       if (!flight.seatNumber) {
@@ -1115,11 +1142,16 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
       //   Window: A, F, K
       //   Middle: B, E, H, J (wide-body center section)
       //   Aisle:  C, D, G (narrow/wide-body aisle seats)
-      if (lastLetter === 'A' || lastLetter === 'F' || lastLetter === 'K') {
+      if (lastLetter === "A" || lastLetter === "F" || lastLetter === "K") {
         windowCount++;
-      } else if (lastLetter === 'B' || lastLetter === 'E' || lastLetter === 'H' || lastLetter === 'J') {
+      } else if (
+        lastLetter === "B" ||
+        lastLetter === "E" ||
+        lastLetter === "H" ||
+        lastLetter === "J"
+      ) {
         middleCount++;
-      } else if (lastLetter === 'C' || lastLetter === 'D' || lastLetter === 'G') {
+      } else if (lastLetter === "C" || lastLetter === "D" || lastLetter === "G") {
         aisleCount++;
       } else {
         unknownCount++;
@@ -1147,7 +1179,8 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
       backCount,
       mostCommonSeat,
       seatClassDistribution,
-      avgRowNumber: rowCountWithNumber > 0 ? Math.round((rowTotal / rowCountWithNumber) * 10) / 10 : null,
+      avgRowNumber:
+        rowCountWithNumber > 0 ? Math.round((rowTotal / rowCountWithNumber) * 10) / 10 : null,
     };
 
     res.json(result);
@@ -1164,59 +1197,62 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
 // ranking — and the statistics page put this card a few hundred pixels below
 // the client-side breakdown, which has always used the narrower scope. Same
 // airline, two numbers, one screen.
-router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-    const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+router.get(
+  "/airlines",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
 
-    const [total, airlineCounts] = await Promise.all([
-      prisma.flight.count({ where }),
-      prisma.flight.groupBy({
-        by: ['airline', 'airlineIata', 'airlineIcao'],
-        where,
-        _count: true,
-      }),
-    ]);
+      const [total, airlineCounts] = await Promise.all([
+        prisma.flight.count({ where }),
+        prisma.flight.groupBy({
+          by: ["airline", "airlineIata", "airlineIcao"],
+          where,
+          _count: true,
+        }),
+      ]);
 
-    // Same airline = same CODE, not same spelling (forgejo#81): "SWISS" and
-    // "Swiss" are one carrier once either row's code is known, and the
-    // catalogue names the group. The rule lives in shared/airlineNormalize.ts
-    // and every client surface uses the same one.
-    //
-    // A row without an airline is NOT an airline. It used to be folded in
-    // under the label "Unknown", which could top the loyalty ranking on an
-    // account with many imported rows — and it sat in the percentage
-    // denominator too, quietly diluting every real airline's share. Such rows
-    // are excluded from both, and reported separately so the ranking can say
-    // what it is silent about.
-    const { groups, withoutAirline: flightsWithoutAirline } = groupAirlines(
-      airlineCounts.map((row) => ({
-        airline: row.airline,
-        airlineIata: row.airlineIata,
-        airlineIcao: row.airlineIcao,
-        count: row._count,
-      })),
-      airlineResolvers,
-    );
-    const attributedTotal = total - flightsWithoutAirline;
+      // Same airline = same CODE, not same spelling (forgejo#81): "SWISS" and
+      // "Swiss" are one carrier once either row's code is known, and the
+      // catalogue names the group. The rule lives in shared/airlineNormalize.ts
+      // and every client surface uses the same one.
+      //
+      // A row without an airline is NOT an airline. It used to be folded in
+      // under the label "Unknown", which could top the loyalty ranking on an
+      // account with many imported rows — and it sat in the percentage
+      // denominator too, quietly diluting every real airline's share. Such rows
+      // are excluded from both, and reported separately so the ranking can say
+      // what it is silent about.
+      const { groups, withoutAirline: flightsWithoutAirline } = groupAirlines(
+        airlineCounts.map((row) => ({
+          airline: row.airline,
+          airlineIata: row.airlineIata,
+          airlineIcao: row.airlineIcao,
+          count: row._count,
+        })),
+        airlineResolvers
+      );
+      const attributedTotal = total - flightsWithoutAirline;
 
-    const airlines: AirlineRankingItem[] = groups.map((g) => ({
-      airline: g.label,
-      count: g.count,
-      percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
-      ...(g.iata ? { iata: g.iata } : {}),
-    }));
+      const airlines: AirlineRankingItem[] = groups.map((g) => ({
+        airline: g.label,
+        count: g.count,
+        percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
+        ...(g.iata ? { iata: g.iata } : {}),
+      }));
 
-    const response: AirlineRankingResponse = {
-      airlines,
-      total: attributedTotal,
-      flightsWithoutAirline,
-    };
-    res.json(response);
-  } catch (error) {
-    next(error);
+      const response: AirlineRankingResponse = {
+        airlines,
+        total: attributedTotal,
+        flightsWithoutAirline,
+      };
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // ─── Country Distribution ─────────────────────────────────────────────────────
 
@@ -1242,96 +1278,99 @@ function isoCodes(values: Iterable<string>): string[] {
 }
 
 // GET /api/v1/stats/countries — visited-country distribution (both flight ends)
-router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
+router.get(
+  "/countries",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
 
-    const flights = await prisma.flight.findMany({
-      where: { userId, ...countableFlightWhere() },
-      select: {
-        depIata: true,
-        depIcao: true,
-        arrIata: true,
-        arrIcao: true,
-        departureTime: true,
-        depTimeSemantics: true,
-      },
-    });
+      const flights = await prisma.flight.findMany({
+        where: { userId, ...countableFlightWhere() },
+        select: {
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          departureTime: true,
+          depTimeSemantics: true,
+        },
+      });
 
-    const airportCodes = new Set<string>();
-    for (const f of flights) {
-      if (f.depIata) airportCodes.add(f.depIata);
-      else if (f.depIcao) airportCodes.add(f.depIcao);
-      if (f.arrIata) airportCodes.add(f.arrIata);
-      else if (f.arrIcao) airportCodes.add(f.arrIcao);
-    }
-
-    const airportMap = await getCachedAirports([...airportCodes]);
-
-    const countryCounts = new Map<string, number>();
-    const countriesByYear = new Map<number, Set<string>>();
-    for (const f of flights) {
-      // BOTH ends count. This used to read the departure only, so a single
-      // FRA -> LHR reported "Länder besucht: 1" and the United Kingdom
-      // appeared nowhere — the KPI says VISITED, and landing somewhere is
-      // the clearest way to visit it (#233).
-      const depCode = f.depIata ?? f.depIcao;
-      const arrCode = f.arrIata ?? f.arrIcao;
-      const depAirport = depCode ? airportMap.get(depCode) : undefined;
-      const arrAirport = arrCode ? airportMap.get(arrCode) : undefined;
-
-      // A Set per flight, so a domestic leg is ONE visit to that country
-      // rather than two. Across flights the counts still accumulate, which
-      // keeps `countries` usable as a ranking.
-      const touched = new Set<string>();
-      touched.add(depAirport?.country ?? 'Unknown');
-      // Only when an arrival airport is actually on file — otherwise an
-      // incomplete row would invent a second "Unknown" visit.
-      if (arrCode) touched.add(arrAirport?.country ?? 'Unknown');
-
-      for (const country of touched) {
-        countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+      const airportCodes = new Set<string>();
+      for (const f of flights) {
+        if (f.depIata) airportCodes.add(f.depIata);
+        else if (f.depIcao) airportCodes.add(f.depIcao);
+        if (f.arrIata) airportCodes.add(f.arrIata);
+        else if (f.arrIcao) airportCodes.add(f.arrIcao);
       }
 
-      // An undated flight cannot be attributed to a year. It stays in the
-      // lifetime tally rather than being guessed into the current one.
-      if (!f.departureTime) continue;
-      // The timezone lives on the airport, not the flight — same source the
-      // flight list uses to derive depTimezone. Both endpoints land in the
-      // DEPARTURE year: a red-eye that lands after midnight is still one
-      // journey, and splitting its two ends across two years would count a
-      // country as visited in a year the traveller never flew.
-      const year = localWallClockOf(
-        f.departureTime,
-        depAirport?.timezone ?? null,
-        f.depTimeSemantics as FlightTimeSemantics,
-      ).year;
-      if (!Number.isFinite(year)) continue;
-      const bucket = countriesByYear.get(year) ?? new Set<string>();
-      for (const country of touched) bucket.add(country);
-      countriesByYear.set(year, bucket);
+      const airportMap = await getCachedAirports([...airportCodes]);
+
+      const countryCounts = new Map<string, number>();
+      const countriesByYear = new Map<number, Set<string>>();
+      for (const f of flights) {
+        // BOTH ends count. This used to read the departure only, so a single
+        // FRA -> LHR reported "Länder besucht: 1" and the United Kingdom
+        // appeared nowhere — the KPI says VISITED, and landing somewhere is
+        // the clearest way to visit it (#233).
+        const depCode = f.depIata ?? f.depIcao;
+        const arrCode = f.arrIata ?? f.arrIcao;
+        const depAirport = depCode ? airportMap.get(depCode) : undefined;
+        const arrAirport = arrCode ? airportMap.get(arrCode) : undefined;
+
+        // A Set per flight, so a domestic leg is ONE visit to that country
+        // rather than two. Across flights the counts still accumulate, which
+        // keeps `countries` usable as a ranking.
+        const touched = new Set<string>();
+        touched.add(depAirport?.country ?? "Unknown");
+        // Only when an arrival airport is actually on file — otherwise an
+        // incomplete row would invent a second "Unknown" visit.
+        if (arrCode) touched.add(arrAirport?.country ?? "Unknown");
+
+        for (const country of touched) {
+          countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+        }
+
+        // An undated flight cannot be attributed to a year. It stays in the
+        // lifetime tally rather than being guessed into the current one.
+        if (!f.departureTime) continue;
+        // The timezone lives on the airport, not the flight — same source the
+        // flight list uses to derive depTimezone. Both endpoints land in the
+        // DEPARTURE year: a red-eye that lands after midnight is still one
+        // journey, and splitting its two ends across two years would count a
+        // country as visited in a year the traveller never flew.
+        const year = localWallClockOf(
+          f.departureTime,
+          depAirport?.timezone ?? null,
+          f.depTimeSemantics as FlightTimeSemantics
+        ).year;
+        if (!Number.isFinite(year)) continue;
+        const bucket = countriesByYear.get(year) ?? new Set<string>();
+        for (const country of touched) bucket.add(country);
+        countriesByYear.set(year, bucket);
+      }
+
+      const countries: CountryStat[] = [...countryCounts.entries()]
+        .map(([country, count]) => ({ country, count }))
+        .sort((a, b) => b.count - a.count);
+
+      const byYear: Record<string, string[]> = {};
+      for (const [year, set] of countriesByYear) {
+        byYear[String(year)] = isoCodes(set);
+      }
+
+      const response: CountryStatsResponse = {
+        countries,
+        total: flights.length,
+        countriesIso: isoCodes(countryCounts.keys()),
+        byYear,
+      };
+      res.json(response);
+    } catch (error) {
+      next(error);
     }
-
-    const countries: CountryStat[] = [...countryCounts.entries()]
-      .map(([country, count]) => ({ country, count }))
-      .sort((a, b) => b.count - a.count);
-
-    const byYear: Record<string, string[]> = {};
-    for (const [year, set] of countriesByYear) {
-      byYear[String(year)] = isoCodes(set);
-    }
-
-    const response: CountryStatsResponse = {
-      countries,
-      total: flights.length,
-      countriesIso: isoCodes(countryCounts.keys()),
-      byYear,
-    };
-    res.json(response);
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 /**
  * Cruise-domain stats endpoint for the StatsPage cruise tab.
@@ -1345,12 +1384,12 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
  * JSON transport.
  */
 router.get(
-  '/cruise',
+  "/cruise",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId;
       if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
@@ -1360,10 +1399,10 @@ router.get(
       const [user, cruises] = await Promise.all([
         prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
         prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere(), ...startedIn('startDate', year) },
+          where: { userId, ...countableFlightWhere(), ...startedIn("startDate", year) },
           include: {
             stops: { include: { port: true } },
-            legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
+            legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },
             departurePort: true,
             arrivalPort: true,
           },
@@ -1422,7 +1461,7 @@ router.get(
         stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
       } catch (calcError) {
         logger.error({
-          operation: 'cruise_stats_calculation_failed',
+          operation: "cruise_stats_calculation_failed",
           userId,
           error: calcError instanceof Error ? calcError.message : calcError,
         });
@@ -1466,10 +1505,7 @@ router.get(
         // can answer for a selected year instead of showing the lifetime set
         // with a delta on top that could only ever read zero.
         countriesByYear: Object.fromEntries(
-          [...stats.countriesByYear.entries()].map(([year, set]) => [
-            String(year),
-            isoCodes(set),
-          ]),
+          [...stats.countriesByYear.entries()].map(([year, set]) => [String(year), isoCodes(set)])
         ),
         // Distance metrics (added 2026-04-25 with the schematic-routes
         // pipeline; long-overdue exposure to the stats UI)
@@ -1507,12 +1543,12 @@ router.get(
  * sorted array before the response leaves this handler.
  */
 router.get(
-  '/lodging',
+  "/lodging",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId;
       if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
@@ -1521,7 +1557,7 @@ router.get(
 
       const [stays, lodgings, settings, memberships] = await Promise.all([
         prisma.lodgingStay.findMany({
-          where: { userId, ...startedIn('checkIn', year) },
+          where: { userId, ...startedIn("checkIn", year) },
           // The chain is joined for its NAME: the price and rating rankings
           // are read by a human, and a chain id is not a label.
           include: { lodging: { include: { chain: true } } },
@@ -1550,45 +1586,47 @@ router.get(
           include: { chains: true, lodgings: true },
         }),
       ]);
-      const baseCurrency = settings?.baseCurrency ?? 'EUR';
+      const baseCurrency = settings?.baseCurrency ?? "EUR";
       const membershipContext = buildMembershipContext(memberships);
-      const lodgingRecords: LodgingRecord[] = scopeLodgingsToStays(lodgings, stays, year).map((l) => ({
-        id: l.id,
-        chainId: l.chainId,
-        type: l.type,
-        country: lodgingCountryKey(l),
-        city: l.city,
-        visited: l.visited,
-      }));
+      const lodgingRecords: LodgingRecord[] = scopeLodgingsToStays(lodgings, stays, year).map(
+        (l) => ({
+          id: l.id,
+          chainId: l.chainId,
+          type: l.type,
+          country: lodgingCountryKey(l),
+          city: l.city,
+          visited: l.visited,
+        })
+      );
 
       const stayData: LodgingStayData[] = stays.map((s) => {
         const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
         return {
-        lodgingId: s.lodgingId,
-        lodgingName: s.lodging.name,
-        type: s.lodging.type,
-        country: lodgingCountryKey(s.lodging),
-        city: s.lodging.city,
-        chainId: s.lodging.chainId,
-        chainName: s.lodging.chain?.name ?? null,
-        stars: s.lodging.stars,
-        lat: s.lodging.lat,
-        lon: s.lodging.lon,
-        checkIn: s.checkIn,
-        checkOut: s.checkOut,
-        datePrecision: s.datePrecision,
-        nights: s.nights,
-        status: s.status,
-        totalPriceBase: s.totalPriceBase,
-        fxBaseCurrency: s.fxBaseCurrency,
-        currency: s.currency,
-        totalPrice: s.totalPrice,
-        board: s.board,
-        isAwardStay: s.isAwardStay,
-        ratingOverall: s.ratingOverall,
-        ratingRoom: s.ratingRoom,
-        ratingBreakfast: s.ratingBreakfast,
-        ratingService: s.ratingService,
+          lodgingId: s.lodgingId,
+          lodgingName: s.lodging.name,
+          type: s.lodging.type,
+          country: lodgingCountryKey(s.lodging),
+          city: s.lodging.city,
+          chainId: s.lodging.chainId,
+          chainName: s.lodging.chain?.name ?? null,
+          stars: s.lodging.stars,
+          lat: s.lodging.lat,
+          lon: s.lodging.lon,
+          checkIn: s.checkIn,
+          checkOut: s.checkOut,
+          datePrecision: s.datePrecision,
+          nights: s.nights,
+          status: s.status,
+          totalPriceBase: s.totalPriceBase,
+          fxBaseCurrency: s.fxBaseCurrency,
+          currency: s.currency,
+          totalPrice: s.totalPrice,
+          board: s.board,
+          isAwardStay: s.isAwardStay,
+          ratingOverall: s.ratingOverall,
+          ratingRoom: s.ratingRoom,
+          ratingBreakfast: s.ratingBreakfast,
+          ratingService: s.ratingService,
           programName: programme.programName,
           membershipTier: programme.tier,
         };
@@ -1602,7 +1640,7 @@ router.get(
         stats = calculateLodgingStats(stayData, baseCurrency, lodgingRecords);
       } catch (calcError) {
         logger.error({
-          operation: 'lodging_stats_calculation_failed',
+          operation: "lodging_stats_calculation_failed",
           userId,
           error: calcError instanceof Error ? calcError.message : calcError,
         });
@@ -1619,7 +1657,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // The three aircraft rankings live in `stats/aircraft` — mounted HERE rather
@@ -1628,43 +1666,46 @@ router.use(aircraftStatsRouter);
 
 // GET /api/v1/stats/punctuality — actual-vs-scheduled aggregates (#2).
 // Reads the stored per-flight delayMinutes captured since 2.5; no new lookups.
-router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-    const parsed = DateRangeQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
-      return;
+router.get(
+  "/punctuality",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
+        return;
+      }
+      const { fromDate, toDate } = parsed.data;
+
+      const where: Prisma.FlightWhereInput = {
+        userId,
+        ...countableFlightWhere(),
+        delayMinutes: { not: null },
+      };
+      if (fromDate || toDate) {
+        where.departureTime = {};
+        if (fromDate) where.departureTime.gte = new Date(fromDate);
+        if (toDate) where.departureTime.lte = new Date(toDate);
+      }
+
+      const flights = await prisma.flight.findMany({
+        where,
+        select: {
+          delayMinutes: true,
+          airline: true,
+          airlineIata: true,
+          depIata: true,
+          arrIata: true,
+        },
+      });
+
+      res.json(computePunctuality(flights));
+    } catch (error) {
+      next(error);
     }
-    const { fromDate, toDate } = parsed.data;
-
-    const where: Prisma.FlightWhereInput = {
-      userId,
-      ...countableFlightWhere(),
-      delayMinutes: { not: null },
-    };
-    if (fromDate || toDate) {
-      where.departureTime = {};
-      if (fromDate) where.departureTime.gte = new Date(fromDate);
-      if (toDate) where.departureTime.lte = new Date(toDate);
-    }
-
-    const flights = await prisma.flight.findMany({
-      where,
-      select: {
-        delayMinutes: true,
-        airline: true,
-        airlineIata: true,
-        depIata: true,
-        arrIata: true,
-      },
-    });
-
-    res.json(computePunctuality(flights));
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 /**
  * GET /api/v1/stats/travel-account — the cross-domain night account plus the
@@ -1675,12 +1716,12 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
  * for one question is two chances to show half an answer.
  */
 router.get(
-  '/travel-account',
+  "/travel-account",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId;
       if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
@@ -1784,13 +1825,23 @@ router.get(
       // stays a pure function over rows that carry their own answer (AUD-079).
       const tzMap = await buildTzMap(flights);
       const flightsWithLocalDays = flights.map((f) => {
-        const depTz = (f.depIata ? tzMap.get(f.depIata) : undefined) ?? (f.depIcao ? tzMap.get(f.depIcao) : undefined) ?? null;
-        const arrTz = (f.arrIata ? tzMap.get(f.arrIata) : undefined) ?? (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ?? null;
+        const depTz =
+          (f.depIata ? tzMap.get(f.depIata) : undefined) ??
+          (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
+          null;
+        const arrTz =
+          (f.arrIata ? tzMap.get(f.arrIata) : undefined) ??
+          (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ??
+          null;
         return {
           ...f,
           depLocalDay:
             f.departureTime && depTz
-              ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
+              ? airportCalendarDay(
+                  f.departureTime,
+                  depTz,
+                  f.depTimeSemantics as FlightTimeSemantics
+                )
               : null,
           arrLocalDay:
             f.arrivalTime && arrTz
@@ -1814,14 +1865,14 @@ router.get(
           stays: t.lodgingStays,
           cruises: t.cruises,
           flights: t.flights,
-        })),
+        }))
       );
 
       res.json({ account, trips: tripAccount });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

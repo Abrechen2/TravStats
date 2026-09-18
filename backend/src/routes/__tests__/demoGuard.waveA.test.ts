@@ -137,7 +137,7 @@ describe("Wave A demo guards", () => {
         const res = await request(app).put("/api/v1/settings").set("Cookie", demoCookie).send(body);
         expect(res.status).toBe(403);
         expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
-      },
+      }
     );
 
     it.each(refusedBlocks)(
@@ -145,7 +145,7 @@ describe("Wave A demo guards", () => {
       async (_name, body) => {
         const res = await request(app).put("/api/v1/settings").set("Cookie", userCookie).send(body);
         expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
-      },
+      }
     );
 
     it("leaves the rest of the settings PUT open for the shared demo account", async () => {

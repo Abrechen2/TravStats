@@ -108,9 +108,7 @@ describe("sweepStatuses", () => {
       "in_progress"
     );
     expect((await prisma.cruise.findUnique({ where: { id: done.id } }))?.status).toBe("flown");
-    expect((await prisma.cruise.findUnique({ where: { id: hist.id } }))?.status).toBe(
-      "historical"
-    );
+    expect((await prisma.cruise.findUnique({ where: { id: hist.id } }))?.status).toBe("historical");
   });
 
   // Lodging joined the sweep when its status became derived (Alex, 2026-07-12).
@@ -149,7 +147,9 @@ describe("sweepStatuses", () => {
   });
 
   it("derives trip status from segment dates", async () => {
-    const trip = await prisma.trip.create({ data: { userId, name: "SweepTrip", status: "completed" } });
+    const trip = await prisma.trip.create({
+      data: { userId, name: "SweepTrip", status: "completed" },
+    });
     await flight({ tripId: trip.id, departureTime: past(24), arrivalTime: past(22) });
     await flight({ tripId: trip.id, departureTime: future(24), arrivalTime: future(26) });
     await sweepStatuses();

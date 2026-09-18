@@ -40,10 +40,8 @@ describe("folding recorded travel into explained time", () => {
   it("ignores a flight that knows neither", () => {
     expect(
       travelWindows({
-        flights: [
-          { departureTime: null, arrivalTime: null, status: "flown" },
-        ],
-      }),
+        flights: [{ departureTime: null, arrivalTime: null, status: "flown" }],
+      })
     ).toHaveLength(0);
   });
 
@@ -60,27 +58,21 @@ describe("folding recorded travel into explained time", () => {
             status: "cancelled",
           },
         ],
-      }),
+      })
     ).toHaveLength(0);
   });
 
   it("takes trips and cruises as the ranges they are", () => {
     const windows = travelWindows({
-      trips: [
-        { startDate: at("2026-06-01T00:00:00Z"), endDate: at("2026-06-08T00:00:00Z") },
-      ],
-      cruises: [
-        { startDate: at("2026-07-01T00:00:00Z"), endDate: at("2026-07-10T00:00:00Z") },
-      ],
+      trips: [{ startDate: at("2026-06-01T00:00:00Z"), endDate: at("2026-06-08T00:00:00Z") }],
+      cruises: [{ startDate: at("2026-07-01T00:00:00Z"), endDate: at("2026-07-10T00:00:00Z") }],
     });
     expect(windows).toHaveLength(2);
   });
 
   it("takes a stay from check-in to check-out", () => {
     const windows = travelWindows({
-      stays: [
-        { checkIn: at("2026-06-01T00:00:00Z"), checkOut: at("2026-06-04T00:00:00Z") },
-      ],
+      stays: [{ checkIn: at("2026-06-01T00:00:00Z"), checkOut: at("2026-06-04T00:00:00Z") }],
     });
     expect(windows).toHaveLength(1);
     expect(windows[0].endMs - windows[0].startMs).toBe(3 * 86_400_000);
@@ -90,9 +82,7 @@ describe("folding recorded travel into explained time", () => {
     // Bad data exists, and a window with end before start would silently
     // explain nothing at all rather than the days it names.
     const windows = travelWindows({
-      trips: [
-        { startDate: at("2026-06-08T00:00:00Z"), endDate: at("2026-06-01T00:00:00Z") },
-      ],
+      trips: [{ startDate: at("2026-06-08T00:00:00Z"), endDate: at("2026-06-01T00:00:00Z") }],
     });
     expect(windows[0].startMs).toBeLessThan(windows[0].endMs);
   });

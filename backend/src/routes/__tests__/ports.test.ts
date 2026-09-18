@@ -72,16 +72,13 @@ describe("Ports API", () => {
 
   describe("POST /api/v1/ports", () => {
     it("creates a user-added port", async () => {
-      const res = await request(app)
-        .post("/api/v1/ports")
-        .set("Cookie", authCookie)
-        .send({
-          name: "Kleiner Hafen",
-          city: "Timmendorf",
-          country: "Germany",
-          lat: 54.0,
-          lon: 10.8,
-        });
+      const res = await request(app).post("/api/v1/ports").set("Cookie", authCookie).send({
+        name: "Kleiner Hafen",
+        city: "Timmendorf",
+        country: "Germany",
+        lat: 54.0,
+        lon: 10.8,
+      });
       expect(res.status).toBe(201);
       expect(res.body.data.isUserAdded).toBe(true);
       expect(res.body.data.name).toBe("Kleiner Hafen");
@@ -96,9 +93,7 @@ describe("Ports API", () => {
     });
 
     it("requires authentication", async () => {
-      const res = await request(app)
-        .post("/api/v1/ports")
-        .send({ name: "Y", lat: 0, lon: 0 });
+      const res = await request(app).post("/api/v1/ports").send({ name: "Y", lat: 0, lon: 0 });
       expect(res.status).toBe(401);
     });
   });
@@ -122,9 +117,9 @@ describe("Ports API", () => {
     it("Taranto resolves from the local catalog (the original complaint)", async () => {
       const res = await request(app).get("/api/v1/ports?q=Taranto").set("Cookie", authCookie);
       expect(res.status).toBe(200);
-      expect(
-        res.body.data.some((p: { unlocode: string | null }) => p.unlocode === "ITTAR")
-      ).toBe(true);
+      expect(res.body.data.some((p: { unlocode: string | null }) => p.unlocode === "ITTAR")).toBe(
+        true
+      );
     });
   });
 

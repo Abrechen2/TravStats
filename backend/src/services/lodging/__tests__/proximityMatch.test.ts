@@ -30,7 +30,7 @@ describe("metresBetween", () => {
 
   it("does not confuse two continents", () => {
     expect(
-      metresBetween(bietigheim.lat, bietigheim.lon, portland.lat, portland.lon),
+      metresBetween(bietigheim.lat, bietigheim.lon, portland.lat, portland.lon)
     ).toBeGreaterThan(8_000_000);
   });
 

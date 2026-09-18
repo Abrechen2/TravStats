@@ -1,10 +1,10 @@
-import cron from 'node-cron';
-import type { ScheduledTask } from 'node-cron';
-import { prisma } from '../db';
-import { sendFlightReminder } from './emailService';
-import { getCachedAirport } from './airportCache';
-import { normalizeFlightTimeUtc, type FlightTimeSemantics } from '../utils/timezone';
-import logger from '../utils/logger';
+import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
+import { prisma } from "../db";
+import { sendFlightReminder } from "./emailService";
+import { getCachedAirport } from "./airportCache";
+import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../utils/timezone";
+import logger from "../utils/logger";
 
 // Track sent reminders to avoid duplicates within the same process lifetime.
 // Key format: `${flightId}-${hoursKey}` where hoursKey is '24h' or '2h'
@@ -32,14 +32,14 @@ async function resolveDepTz(iata: string | null, icao: string | null): Promise<s
 }
 
 async function checkAndSendReminders(): Promise<void> {
-  logger.debug({ operation: 'reminder_scheduler_run', message: 'Checking flight reminders' });
+  logger.debug({ operation: "reminder_scheduler_run", message: "Checking flight reminders" });
 
   const now = new Date();
 
   // Windows for each reminder type (departure within hoursAhead ± 15 min).
   const windows: Array<{ hoursAhead: number; key: string }> = [
-    { hoursAhead: 24, key: '24h' },
-    { hoursAhead: 2, key: '2h' },
+    { hoursAhead: 24, key: "24h" },
+    { hoursAhead: 2, key: "2h" },
   ];
 
   for (const { hoursAhead, key } of windows) {
@@ -73,7 +73,7 @@ async function checkAndSendReminders(): Promise<void> {
     try {
       flights = await prisma.flight.findMany({
         where: {
-          status: 'scheduled',
+          status: "scheduled",
           departureTime: {
             gte: preFilterStart,
             lte: preFilterEnd,
@@ -91,9 +91,9 @@ async function checkAndSendReminders(): Promise<void> {
       });
     } catch (error) {
       logger.error({
-        operation: 'reminder_scheduler_query_failed',
+        operation: "reminder_scheduler_query_failed",
         hoursAhead,
-        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+        error: { message: error instanceof Error ? error.message : "Unknown error" },
       });
       continue;
     }
@@ -109,7 +109,7 @@ async function checkAndSendReminders(): Promise<void> {
 
       const shouldSend =
         user.notificationEmail !== null &&
-        ((key === '24h' && user.notifyBefore24h) || (key === '2h' && user.notifyBefore2h));
+        ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
 
       if (!shouldSend) {
         continue;
@@ -120,8 +120,7 @@ async function checkAndSendReminders(): Promise<void> {
       // LEGACY rows are re-interpreted via the airport's tz. This is the fix
       // for reminders previously firing 1–2h off for manual/parser entries.
       const semantics = flight.depTimeSemantics as FlightTimeSemantics;
-      const depTz =
-        semantics === 'UTC' ? null : await resolveDepTz(flight.depIata, flight.depIcao);
+      const depTz = semantics === "UTC" ? null : await resolveDepTz(flight.depIata, flight.depIcao);
       const realDeparture = normalizeFlightTimeUtc(flight.departureTime, semantics, depTz);
       if (!realDeparture) continue;
 
@@ -133,10 +132,10 @@ async function checkAndSendReminders(): Promise<void> {
         sentReminders.add(reminderKey);
       } catch (error) {
         logger.error({
-          operation: 'reminder_scheduler_send_failed',
+          operation: "reminder_scheduler_send_failed",
           flightId: flight.id,
           hoursAhead,
-          error: { message: error instanceof Error ? error.message : 'Unknown error' },
+          error: { message: error instanceof Error ? error.message : "Unknown error" },
         });
         // Do not add to sentReminders — allow retry on next run
       }
@@ -147,29 +146,35 @@ async function checkAndSendReminders(): Promise<void> {
 export function startReminderScheduler(): void {
   if (scheduledTask) {
     logger.warn({
-      operation: 'reminder_scheduler_already_running',
-      message: 'Reminder scheduler is already running',
+      operation: "reminder_scheduler_already_running",
+      message: "Reminder scheduler is already running",
     });
     return;
   }
 
   // Run every 15 minutes
-  scheduledTask = cron.schedule('*/15 * * * *', () => {
+  scheduledTask = cron.schedule("*/15 * * * *", () => {
     checkAndSendReminders().catch((error: unknown) => {
       logger.error({
-        operation: 'reminder_scheduler_unhandled_error',
-        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+        operation: "reminder_scheduler_unhandled_error",
+        error: { message: error instanceof Error ? error.message : "Unknown error" },
       });
     });
   });
 
-  logger.info({ operation: 'reminder_scheduler_started', message: 'Flight reminder scheduler started (every 15 min)' });
+  logger.info({
+    operation: "reminder_scheduler_started",
+    message: "Flight reminder scheduler started (every 15 min)",
+  });
 }
 
 export function stopReminderScheduler(): void {
   if (scheduledTask) {
     scheduledTask.stop();
     scheduledTask = null;
-    logger.info({ operation: 'reminder_scheduler_stopped', message: 'Flight reminder scheduler stopped' });
+    logger.info({
+      operation: "reminder_scheduler_stopped",
+      message: "Flight reminder scheduler stopped",
+    });
   }
 }

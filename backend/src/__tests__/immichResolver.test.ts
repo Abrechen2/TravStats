@@ -19,7 +19,7 @@ jest.mock("../db", () => ({
 jest.mock("../utils/encryption", () => ({
   // The resolver must call decryptApiKey — the fake strips a marker prefix.
   decryptApiKey: jest.fn((v: string | null | undefined) =>
-    typeof v === "string" ? v.replace(/^enc:/, "") : null,
+    typeof v === "string" ? v.replace(/^enc:/, "") : null
   ),
 }));
 
@@ -135,7 +135,7 @@ describe("getImmichDefaultMode", () => {
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
 
     findUniqueUser.mockResolvedValue({ isDemo: false, username: "someone" });
-  findUniqueUserSettings.mockResolvedValue(null);
+    findUniqueUserSettings.mockResolvedValue(null);
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
   });
 });

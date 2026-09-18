@@ -3,16 +3,14 @@ import { buildRulesEmbed, buildWelcomeEmbed, RULES_MARKER, WELCOME_MARKER } from
 import { log, dryRunLog } from "./log.js";
 
 function findTextChannel(guild: Guild, name: string): TextChannel | null {
-  const ch = guild.channels.cache.find(
-    (c) => c.name === name && c.type === ChannelType.GuildText,
-  );
+  const ch = guild.channels.cache.find((c) => c.name === name && c.type === ChannelType.GuildText);
   return ch instanceof TextChannel ? ch : null;
 }
 
 export async function postRulesAndWelcome(
   guild: Guild,
   rulesChannelId: string | null,
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<string | null> {
   let rules: TextChannel | null;
   if (rulesChannelId) {
@@ -34,8 +32,8 @@ export async function postRulesAndWelcome(
 
   const recent = await rules.messages.fetch({ limit: 50 });
   const mine = recent.find(
-    (m) => m.author.id === guild.client.user?.id &&
-      m.embeds.some((e) => e.footer?.text === RULES_MARKER),
+    (m) =>
+      m.author.id === guild.client.user?.id && m.embeds.some((e) => e.footer?.text === RULES_MARKER)
   );
 
   let messageId: string;
@@ -53,8 +51,9 @@ export async function postRulesAndWelcome(
   if (welcome) {
     const welcomeRecent = await welcome.messages.fetch({ limit: 20 });
     const mineWelcome = welcomeRecent.find(
-      (m) => m.author.id === guild.client.user?.id &&
-        m.embeds.some((e) => e.footer?.text === WELCOME_MARKER),
+      (m) =>
+        m.author.id === guild.client.user?.id &&
+        m.embeds.some((e) => e.footer?.text === WELCOME_MARKER)
     );
     if (mineWelcome) {
       await mineWelcome.edit({ embeds: [buildWelcomeEmbed()] });

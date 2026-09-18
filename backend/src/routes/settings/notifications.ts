@@ -1,7 +1,7 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
 
 const router = Router();
 
@@ -11,11 +11,11 @@ const notificationPrefsSchema = z.object({
   notifyBefore2h: z.boolean().optional(),
 });
 
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
@@ -29,7 +29,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     });
 
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
@@ -39,11 +39,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
-router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 

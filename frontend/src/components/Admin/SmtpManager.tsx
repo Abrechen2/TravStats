@@ -140,7 +140,6 @@ export default function SmtpManager(): JSX.Element {
         {t("settings:notifications.smtpTitle")}
       </h3>
 
-
       {/* Enable toggle */}
       <label className="flex items-center gap-3">
         <input
@@ -170,9 +169,9 @@ export default function SmtpManager(): JSX.Element {
         {/* Port */}
         <div>
           <label className="label flex items-center gap-1.5">
-                {t("settings:notifications.smtpPort")}
-                <HelpIcon content={t("settings:notifications.smtpHelp.ports")} position="top" />
-              </label>
+            {t("settings:notifications.smtpPort")}
+            <HelpIcon content={t("settings:notifications.smtpHelp.ports")} position="top" />
+          </label>
           <input
             type="number"
             className="input"
@@ -198,9 +197,9 @@ export default function SmtpManager(): JSX.Element {
         {/* Password */}
         <div>
           <label className="label flex items-center gap-1.5">
-                {t("settings:notifications.smtpPassword")}
-                <HelpIcon content={t("settings:notifications.smtpHelp.credentials")} position="top" />
-              </label>
+            {t("settings:notifications.smtpPassword")}
+            <HelpIcon content={t("settings:notifications.smtpHelp.credentials")} position="top" />
+          </label>
           <input
             type="password"
             className="input"
@@ -214,9 +213,9 @@ export default function SmtpManager(): JSX.Element {
         {/* From Email */}
         <div>
           <label className="label flex items-center gap-1.5">
-                {t("settings:notifications.smtpFromEmail")}
-                <HelpIcon content={t("settings:notifications.smtpHelp.sender")} position="top" />
-              </label>
+            {t("settings:notifications.smtpFromEmail")}
+            <HelpIcon content={t("settings:notifications.smtpHelp.sender")} position="top" />
+          </label>
           <input
             type="email"
             className="input"

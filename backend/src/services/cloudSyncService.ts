@@ -1,10 +1,10 @@
-import { createClient } from 'webdav';
-import * as fs from 'fs';
-import * as path from 'path';
-import { prisma } from '../db';
-import { getWebDAVSettings } from './instanceSettingsService';
-import { AppError } from '../middleware/errorHandler';
-import logger from '../utils/logger';
+import { createClient } from "webdav";
+import * as fs from "fs";
+import * as path from "path";
+import { prisma } from "../db";
+import { getWebDAVSettings } from "./instanceSettingsService";
+import { AppError } from "../middleware/errorHandler";
+import logger from "../utils/logger";
 
 type WebDAVClient = ReturnType<typeof createClient>;
 
@@ -30,10 +30,10 @@ type WebDAVClient = ReturnType<typeof createClient>;
 async function getWebDAVClient(): Promise<{ client: WebDAVClient; backupPath: string }> {
   const { enabled, url, username, password, backupPath } = await getWebDAVSettings();
   if (!enabled) {
-    throw new AppError('WebDAV sync is not enabled', 409);
+    throw new AppError("WebDAV sync is not enabled", 409);
   }
   if (!url || !username || !password) {
-    throw new AppError('WebDAV is not configured', 409);
+    throw new AppError("WebDAV is not configured", 409);
   }
   return {
     client: createClient(url, { username, password }),
@@ -52,10 +52,10 @@ async function getWebDAVClient(): Promise<{ client: WebDAVClient; backupPath: st
 function asUpstreamError(error: unknown): AppError {
   if (error instanceof AppError) return error;
   const status = (error as { status?: unknown }).status;
-  if (status === 404) return new AppError('Backup not found on the WebDAV share', 404);
+  if (status === 404) return new AppError("Backup not found on the WebDAV share", 404);
   // The share's own words stay in the message: "507 Insufficient Storage" is
   // what the admin has to act on, and the status alone would hide it.
-  const reason = error instanceof Error ? error.message : 'Unknown error';
+  const reason = error instanceof Error ? error.message : "Unknown error";
   return new AppError(`WebDAV share did not answer as expected: ${reason}`, 502);
 }
 
@@ -64,22 +64,22 @@ export async function testConnection(): Promise<{ success: boolean; message: str
   try {
     const { enabled } = await getWebDAVSettings();
     if (!enabled) {
-      return { success: false, message: 'WebDAV sync is not enabled' };
+      return { success: false, message: "WebDAV sync is not enabled" };
     }
 
     const { client } = await getWebDAVClient();
-    await client.getDirectoryContents('/');
+    await client.getDirectoryContents("/");
 
-    return { success: true, message: 'WebDAV connection successful' };
+    return { success: true, message: "WebDAV connection successful" };
   } catch (error) {
     logger.error({
-      operation: 'webdav_test_error',
-      message: 'WebDAV connection test failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      operation: "webdav_test_error",
+      message: "WebDAV connection test failed",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -92,15 +92,15 @@ export async function syncToCloud(backupId: string): Promise<void> {
   const backup = await prisma.backup.findUnique({ where: { id: backupId } });
 
   if (!backup) {
-    throw new AppError('Backup not found', 404);
+    throw new AppError("Backup not found", 404);
   }
 
-  if (backup.status !== 'completed') {
-    throw new AppError('Backup is not completed', 400);
+  if (backup.status !== "completed") {
+    throw new AppError("Backup is not completed", 400);
   }
 
   if (!backup.backupPath || !fs.existsSync(backup.backupPath)) {
-    throw new AppError('Backup file not found', 404);
+    throw new AppError("Backup file not found", 404);
   }
 
   const { client, backupPath } = await getWebDAVClient();
@@ -114,11 +114,11 @@ export async function syncToCloud(backupId: string): Promise<void> {
     }
 
     const filename = path.basename(backup.backupPath);
-    const remotePath = path.join(backupPath, filename).replace(/\\/g, '/');
+    const remotePath = path.join(backupPath, filename).replace(/\\/g, "/");
 
     logger.info({
-      operation: 'webdav_upload_start',
-      message: 'Uploading backup to WebDAV',
+      operation: "webdav_upload_start",
+      message: "Uploading backup to WebDAV",
       backupId,
       remotePath,
     });
@@ -138,17 +138,17 @@ export async function syncToCloud(backupId: string): Promise<void> {
     });
 
     logger.info({
-      operation: 'webdav_upload_complete',
-      message: 'Backup uploaded to WebDAV successfully',
+      operation: "webdav_upload_complete",
+      message: "Backup uploaded to WebDAV successfully",
       backupId,
       remotePath,
     });
   } catch (error) {
     logger.error({
-      operation: 'webdav_upload_error',
-      message: 'Failed to upload backup to WebDAV',
+      operation: "webdav_upload_error",
+      message: "Failed to upload backup to WebDAV",
       backupId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     throw asUpstreamError(error);
   }
@@ -189,8 +189,8 @@ export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
     const { enabled } = await getWebDAVSettings();
     if (!enabled) {
       logger.debug({
-        operation: 'webdav_autosync_skip',
-        message: 'WebDAV sync is not enabled, backup stays local',
+        operation: "webdav_autosync_skip",
+        message: "WebDAV sync is not enabled, backup stays local",
         backupId,
       });
       return;
@@ -200,10 +200,10 @@ export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
     // mean we cannot tell whether an upload was wanted — so say so rather than
     // silently deciding it was not.
     logger.error({
-      operation: 'webdav_autosync_settings_error',
-      message: 'Could not read WebDAV settings, skipping automatic upload',
+      operation: "webdav_autosync_settings_error",
+      message: "Could not read WebDAV settings, skipping automatic upload",
       backupId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     return;
   }
@@ -211,10 +211,10 @@ export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
   try {
     await syncToCloud(backupId);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : 'Unknown error';
+    const reason = error instanceof Error ? error.message : "Unknown error";
     logger.error({
-      operation: 'webdav_autosync_error',
-      message: 'Automatic upload of a completed backup failed',
+      operation: "webdav_autosync_error",
+      message: "Automatic upload of a completed backup failed",
       backupId,
       error: reason,
     });
@@ -225,10 +225,10 @@ export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
       })
       .catch((updateError: unknown) => {
         logger.error({
-          operation: 'webdav_autosync_error_persist_failed',
-          message: 'Could not record why the automatic upload failed',
+          operation: "webdav_autosync_error_persist_failed",
+          message: "Could not record why the automatic upload failed",
           backupId,
-          error: updateError instanceof Error ? updateError.message : 'Unknown error',
+          error: updateError instanceof Error ? updateError.message : "Unknown error",
         });
       });
   }
@@ -259,20 +259,20 @@ export async function listCloudBackups(): Promise<
 
     const itemsArray: WebDAVItem[] = Array.isArray(items)
       ? (items as WebDAVItem[])
-      : ((items as { data?: WebDAVItem[] }).data || []);
+      : (items as { data?: WebDAVItem[] }).data || [];
 
     return itemsArray
-      .filter((item) => item.type === 'file' && item.basename?.endsWith('.tar.gz'))
+      .filter((item) => item.type === "file" && item.basename?.endsWith(".tar.gz"))
       .map((item) => ({
-        name: item.basename || '',
+        name: item.basename || "",
         size: item.size || 0,
         lastModified: item.lastmod ? new Date(item.lastmod) : new Date(),
       }));
   } catch (error) {
     logger.error({
-      operation: 'webdav_list_error',
-      message: 'Failed to list backups from WebDAV',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      operation: "webdav_list_error",
+      message: "Failed to list backups from WebDAV",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     throw asUpstreamError(error);
   }
@@ -283,30 +283,30 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
   const { client, backupPath } = await getWebDAVClient();
 
   try {
-    const remotePath = path.join(backupPath, backupName).replace(/\\/g, '/');
+    const remotePath = path.join(backupPath, backupName).replace(/\\/g, "/");
 
     logger.info({
-      operation: 'webdav_download_start',
-      message: 'Downloading backup from WebDAV',
+      operation: "webdav_download_start",
+      message: "Downloading backup from WebDAV",
       remotePath,
       localPath,
     });
 
-    const fileBuffer = (await client.getFileContents(remotePath, { format: 'binary' })) as Buffer;
+    const fileBuffer = (await client.getFileContents(remotePath, { format: "binary" })) as Buffer;
     fs.writeFileSync(localPath, fileBuffer);
 
     logger.info({
-      operation: 'webdav_download_complete',
-      message: 'Backup downloaded from WebDAV successfully',
+      operation: "webdav_download_complete",
+      message: "Backup downloaded from WebDAV successfully",
       remotePath,
       localPath,
     });
   } catch (error) {
     logger.error({
-      operation: 'webdav_download_error',
-      message: 'Failed to download backup from WebDAV',
+      operation: "webdav_download_error",
+      message: "Failed to download backup from WebDAV",
       backupName,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     throw asUpstreamError(error);
   }

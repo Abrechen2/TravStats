@@ -67,7 +67,10 @@ describe("getOrCreateInstallId", () => {
   });
 
   it("is stable across calls", async () => {
-    mockPrisma.adminSettings.findFirst.mockResolvedValue({ id: 7, usageStatsInstallId: "stable99" });
+    mockPrisma.adminSettings.findFirst.mockResolvedValue({
+      id: 7,
+      usageStatsInstallId: "stable99",
+    });
     expect(await getOrCreateInstallId()).toBe(await getOrCreateInstallId());
   });
 });

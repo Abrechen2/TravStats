@@ -1,10 +1,10 @@
-import { ParsedBooking } from '../bookingParser';
+import { ParsedBooking } from "../bookingParser";
 
 /**
  * Provider types for vision and text parsing
  */
-export type VisionProvider = 'tesseract' | 'manual';
-export type TextProvider = 'regex' | 'ollama';
+export type VisionProvider = "tesseract" | "manual";
+export type TextProvider = "regex" | "ollama";
 
 /**
  * Common interface for all vision parsers
@@ -68,7 +68,7 @@ export interface ITextParser {
     text: string,
     html?: string,
     apiKey?: string,
-    options?: TextParseOptions,
+    options?: TextParseOptions
   ): Promise<ParsedBooking[]>;
 }
 
@@ -99,12 +99,12 @@ export interface ParserConfig {
   /**
    * Preferred vision parser provider
    */
-  visionProvider: VisionProvider | 'auto';
+  visionProvider: VisionProvider | "auto";
 
   /**
    * Preferred text parser provider
    */
-  textProvider: TextProvider | 'auto';
+  textProvider: TextProvider | "auto";
 
   /**
    * Fallback chain for vision parsing

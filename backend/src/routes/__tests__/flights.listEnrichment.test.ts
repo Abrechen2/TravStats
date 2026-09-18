@@ -26,7 +26,7 @@ describe("GET /api/v1/flights — country + timezone enrichment", () => {
     if (!catalogReady) {
       // eslint-disable-next-line no-console
       console.warn(
-        "SKIP: airports catalog is empty in the dev DB (MUC/JFK not found) — run the airport seed before running this test.",
+        "SKIP: airports catalog is empty in the dev DB (MUC/JFK not found) — run the airport seed before running this test."
       );
       return;
     }
@@ -93,9 +93,7 @@ describe("GET /api/v1/flights — country + timezone enrichment", () => {
     expect(listRes.status).toBe(200);
     expect(oneRes.status).toBe(200);
 
-    const fromList = listRes.body.flights.find(
-      (f: { id: string }) => f.id === seededFlightId,
-    );
+    const fromList = listRes.body.flights.find((f: { id: string }) => f.id === seededFlightId);
     expect(fromList).toBeDefined();
 
     for (const field of [

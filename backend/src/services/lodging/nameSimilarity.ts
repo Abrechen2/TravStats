@@ -154,7 +154,7 @@ export function sharedSignificantTokens(nameA: string, nameB: string): string[] 
 export function namesCouldBeOneHouse(
   nameA: string,
   nameB: string,
-  sameCity: boolean | null,
+  sameCity: boolean | null
 ): boolean {
   if (sameCity === false) return false;
   const shared = sharedSignificantTokens(nameA, nameB);

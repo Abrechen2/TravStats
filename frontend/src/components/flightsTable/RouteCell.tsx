@@ -12,7 +12,10 @@ export default function RouteCell({ flight }: { flight: Flight }): JSX.Element {
         <span className="font-mono font-semibold" style={{ color: "var(--accent)" }}>
           {flight.depIata || flight.depIcao}
         </span>
-        <span className="inline-flex items-center opacity-60" style={{ color: "var(--text-muted)" }}>
+        <span
+          className="inline-flex items-center opacity-60"
+          style={{ color: "var(--text-muted)" }}
+        >
           <span className="inline-block w-3 h-px" style={{ background: "var(--color-border)" }} />
           {/* No rotation: U+2708 already points due east, so the 45° this used
               to carry tipped the nose down and read as a plane going in

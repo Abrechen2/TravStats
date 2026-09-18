@@ -141,7 +141,11 @@ describe("findExistingFlight — timezone-aware day window (#dup)", () => {
   });
 
   it("ignores the PNR when the route is unknown, rather than matching on it alone", async () => {
-    findFirst.mockResolvedValue({ id: "some-other-leg", flightNumber: "LH400", departureTime: null });
+    findFirst.mockResolvedValue({
+      id: "some-other-leg",
+      flightNumber: "LH400",
+      departureTime: null,
+    });
 
     const match = await findExistingFlight({
       userId: USER,

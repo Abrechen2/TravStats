@@ -15,8 +15,7 @@ import { extractTextFromPdf } from "../services/pdfParser";
 import { parseTripDocument, type TripDocument } from "../services/trip/tripDocumentParser";
 
 const DIR =
-  process.env.SAMPLE_DIR ??
-  path.resolve(__dirname, "../../..", "test-samples", "Rundreisen Mails");
+  process.env.SAMPLE_DIR ?? path.resolve(__dirname, "../../..", "test-samples", "Rundreisen Mails");
 
 if (!fs.existsSync(DIR)) {
   console.log(`No sample folder at ${DIR} — set SAMPLE_DIR. Nothing to measure.`);
@@ -52,7 +51,7 @@ async function main(): Promise<void> {
   for (const mail of files) {
     const reader = new MsgReader(toArrayBuffer(fs.readFileSync(path.join(DIR, mail))));
     const attachments = (reader.getFileData().attachments ?? []).filter((a) =>
-      /\.pdf$/i.test(a.fileName ?? ""),
+      /\.pdf$/i.test(a.fileName ?? "")
     );
     if (attachments.length === 0) mailsWithoutPdf += 1;
     for (const att of attachments) {
@@ -76,25 +75,45 @@ async function main(): Promise<void> {
 
   console.log(`\nMails: ${files.length} · PDFs: ${rows.length} · ohne PDF: ${mailsWithoutPdf}`);
   console.log(
-    `Erkannt: ${invoices.length} Rechnung · ${itineraries.length} Unterlagen · ${unknown.length} unbekannt`,
+    `Erkannt: ${invoices.length} Rechnung · ${itineraries.length} Unterlagen · ${unknown.length} unbekannt`
   );
 
   const pct = (n: number, of: number): string =>
     of === 0 ? "—" : `${n}/${of} (${Math.round((n / of) * 100)}%)`;
 
   console.log("\n--- Rechnung ---");
-  console.log(`  Buchungs-Nr. : ${pct(invoices.filter((r) => r.doc.bookingReference).length, invoices.length)}`);
-  console.log(`  Reisename    : ${pct(invoices.filter((r) => r.doc.tripName).length, invoices.length)}`);
-  console.log(`  Reisetag     : ${pct(invoices.filter((r) => r.doc.startDate).length, invoices.length)}`);
-  console.log(`  Teilnehmer   : ${pct(invoices.filter((r) => r.doc.travellers.length > 0).length, invoices.length)}`);
-  console.log(`  Gesamtbetrag : ${pct(invoices.filter((r) => r.doc.totalPrice !== null).length, invoices.length)}`);
-  console.log(`  Flüge (IATA) : ${pct(invoices.filter((r) => r.doc.flights.length > 0).length, invoices.length)}`);
+  console.log(
+    `  Buchungs-Nr. : ${pct(invoices.filter((r) => r.doc.bookingReference).length, invoices.length)}`
+  );
+  console.log(
+    `  Reisename    : ${pct(invoices.filter((r) => r.doc.tripName).length, invoices.length)}`
+  );
+  console.log(
+    `  Reisetag     : ${pct(invoices.filter((r) => r.doc.startDate).length, invoices.length)}`
+  );
+  console.log(
+    `  Teilnehmer   : ${pct(invoices.filter((r) => r.doc.travellers.length > 0).length, invoices.length)}`
+  );
+  console.log(
+    `  Gesamtbetrag : ${pct(invoices.filter((r) => r.doc.totalPrice !== null).length, invoices.length)}`
+  );
+  console.log(
+    `  Flüge (IATA) : ${pct(invoices.filter((r) => r.doc.flights.length > 0).length, invoices.length)}`
+  );
 
   console.log("\n--- Reiseunterlagen ---");
-  console.log(`  Buchungs-Nr. : ${pct(itineraries.filter((r) => r.doc.bookingReference).length, itineraries.length)}`);
-  console.log(`  Reisedatum   : ${pct(itineraries.filter((r) => r.doc.startDate).length, itineraries.length)}`);
-  console.log(`  Ablauf       : ${pct(itineraries.filter((r) => r.doc.flights.length > 0).length, itineraries.length)}`);
-  console.log(`  Unterkünfte  : ${pct(itineraries.filter((r) => r.doc.stays.length > 0).length, itineraries.length)}`);
+  console.log(
+    `  Buchungs-Nr. : ${pct(itineraries.filter((r) => r.doc.bookingReference).length, itineraries.length)}`
+  );
+  console.log(
+    `  Reisedatum   : ${pct(itineraries.filter((r) => r.doc.startDate).length, itineraries.length)}`
+  );
+  console.log(
+    `  Ablauf       : ${pct(itineraries.filter((r) => r.doc.flights.length > 0).length, itineraries.length)}`
+  );
+  console.log(
+    `  Unterkünfte  : ${pct(itineraries.filter((r) => r.doc.stays.length > 0).length, itineraries.length)}`
+  );
 
   if (OUT) {
     fs.writeFileSync(OUT, JSON.stringify(rows, null, 2), "utf8");
@@ -111,18 +130,18 @@ async function main(): Promise<void> {
         `  Buchung ${d.bookingReference ?? "—"} · Code ${d.tripCode ?? "—"} · Start ${d.startDate ?? "—"}\n` +
         `  Name "${d.tripName ?? "—"}" · Reisende ${d.travellers.length} · Preis ${d.totalPrice ?? "—"} ${d.currency ?? ""}\n` +
         `  Flüge ${real.length} echt / ${skipped.length} übersprungen (${[...new Set(skipped.map((f) => f.ignore))].join(", ") || "—"})` +
-        (d.countries.length ? ` · Länder ${d.countries.join(", ")}` : ""),
+        (d.countries.length ? ` · Länder ${d.countries.join(", ")}` : "")
     );
     for (const f of real) {
       console.log(
         `      ${f.date}  ${(f.fromIata ?? f.from).padEnd(22)} -> ${(f.toIata ?? f.to).padEnd(22)}` +
-          `  ${(f.flightNumber ?? "—").padEnd(7)} ${f.departTime ?? ""}${f.arrivesNextDay ? " (+1)" : ""}`,
+          `  ${(f.flightNumber ?? "—").padEnd(7)} ${f.departTime ?? ""}${f.arrivesNextDay ? " (+1)" : ""}`
       );
     }
     for (const s of d.stays) {
       console.log(
         `      ${s.from}-${s.to}  ${s.name.padEnd(34)} | ${s.city ?? "—"} | ${s.country ?? "—"}` +
-          `${s.addressLines.length ? ` | ${s.addressLines.join(" / ")}` : ""}`,
+          `${s.addressLines.length ? ` | ${s.addressLines.join(" / ")}` : ""}`
       );
     }
   }

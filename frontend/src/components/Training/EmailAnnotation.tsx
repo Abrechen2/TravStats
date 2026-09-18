@@ -341,9 +341,7 @@ export default function EmailAnnotation({
     return (
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-(--text-primary) mb-4">Email Annotation</h2>
-        <p className="text-sm text-(--text-muted)">
-          {t("training:annotation.emailTextLoading")}
-        </p>
+        <p className="text-sm text-(--text-muted)">{t("training:annotation.emailTextLoading")}</p>
       </div>
     );
   }
@@ -422,9 +420,7 @@ export default function EmailAnnotation({
       <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
         {t("training:annotation.title")}
       </h2>
-      <p className="text-sm text-(--text-muted) mb-4">
-        {t("training:annotation.description")}
-      </p>
+      <p className="text-sm text-(--text-muted) mb-4">{t("training:annotation.description")}</p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln */}
@@ -526,9 +522,7 @@ export default function EmailAnnotation({
         {/* Email Text Display */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-(--text-primary)">
-              Email Text
-            </label>
+            <label className="block text-sm font-medium text-(--text-primary)">Email Text</label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -567,14 +561,9 @@ export default function EmailAnnotation({
           </div>
           <div className="space-y-4">
             {flights.map((flight, index) => (
-              <div
-                key={index}
-                className="p-4 border border-border rounded-lg bg-(--bg-base)"
-              >
+              <div key={index} className="p-4 border border-border rounded-lg bg-(--bg-base)">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-(--text-primary)">
-                    Flug {index + 1}
-                  </h4>
+                  <h4 className="text-sm font-semibold text-(--text-primary)">Flug {index + 1}</h4>
                   {flights.length > 1 && (
                     <button
                       onClick={() => handleRemoveFlight(index)}

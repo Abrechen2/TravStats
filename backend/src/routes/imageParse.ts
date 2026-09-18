@@ -1,26 +1,23 @@
-import { Router, Response } from 'express';
-import { z } from 'zod';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { boardingPassParseLimiter } from '../middleware/rateLimit';
-import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
-import { getTesseractParser } from '../services/parsers/vision/tesseractParser';
-import { parseDocument, REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
-import { describeParserError } from '../utils/parserErrors';
-import { FILE_LIMITS } from '../config/constants';
-import logger from '../utils/logger';
+import { Router, Response } from "express";
+import { z } from "zod";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { boardingPassParseLimiter } from "../middleware/rateLimit";
+import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
+import { getTesseractParser } from "../services/parsers/vision/tesseractParser";
+import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
+import { describeParserError } from "../utils/parserErrors";
+import { FILE_LIMITS } from "../config/constants";
+import logger from "../utils/logger";
+import { MIN_USABLE_TEXT_LENGTH } from "../services/parsing/usableText";
+import {
+  assertRetainable,
+  parseRetentionFields,
+  readDocumentForParse,
+  recordParse,
+  sendAppError,
+} from "../services/documents/parseRetention";
 
 const router = Router();
-
-/**
- * The shortest OCR result that could plausibly be a booking confirmation.
- *
- * A blank page, a photograph of a wall or a failed scan all come back as a
- * handful of stray glyphs. Handing those to a parser wastes an LLM round trip
- * and answers with an empty result that looks like "we could not read your
- * document" when the truth is "there was nothing on it". Below this, the route
- * says so instead.
- */
-const MIN_USABLE_TEXT_LENGTH = 40;
 
 /**
  * The base64 length that corresponds to the real, decoded byte cap.
@@ -34,13 +31,20 @@ const MIN_USABLE_TEXT_LENGTH = 40;
  */
 const MAX_IMAGE_BASE64_LENGTH = Math.ceil((FILE_LIMITS.BOARDING_PASS_MAX_SIZE * 4) / 3) + 4;
 
-const parseImageSchema = z.object({
-  imageBase64: z
-    .string()
-    .min(1, 'Image data is required')
-    .max(MAX_IMAGE_BASE64_LENGTH, 'Image too large'),
-  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('auto'),
-});
+const parseImageSchema = z
+  .object({
+    imageBase64: z
+      .string()
+      .min(1, "Image data is required")
+      .max(MAX_IMAGE_BASE64_LENGTH, "Image too large")
+      .optional(),
+    domain: z.enum(REQUESTABLE_DOMAINS).optional().default("auto"),
+    // Keep the photograph, or read one already kept (forgejo#116).
+    ...parseRetentionFields,
+  })
+  .refine((b) => !b.imageBase64 !== !b.documentId, {
+    message: "Send imageBase64 or documentId, exactly one of them",
+  });
 
 /**
  * POST /api/v1/parse-image — read any travel document from a photograph.
@@ -64,7 +68,7 @@ const parseImageSchema = z.object({
  * that is the whole premise of Forgejo #57.
  */
 router.post(
-  '/parse-image',
+  "/parse-image",
   authenticate,
   // Deliberately the SAME bucket as the boarding-pass scanner rather than a
   // second one of its own: both spend a Tesseract worker per request, and what
@@ -74,43 +78,51 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parseImageSchema.parse(req.body);
-      const userId = req.userId;
+      const userId = req.userId!;
+      const imageBase64 = parsed.documentId
+        ? (await readDocumentForParse(userId, parsed.documentId, ["image"])).buffer.toString(
+            "base64"
+          )
+        : parsed.imageBase64!;
 
       // The same validation the boarding pass scanner applies: magic-number
       // sniffing, a declared-versus-detected MIME cross-check, and a real
       // decoded-byte cap. Reusing it rather than restating it keeps one answer
       // to "is this an image we accept".
-      const validation = validateBoardingPassImageBase64(parsed.imageBase64);
+      const validation = validateBoardingPassImageBase64(imageBase64);
       if (!validation.valid) {
-        logger.warn(
-          { userId, reason: validation.reason },
-          '[Image Parse] Image validation failed',
-        );
+        logger.warn({ userId, reason: validation.reason }, "[Image Parse] Image validation failed");
         return res.status(400).json({
-          error: 'Validation failed',
+          error: "Validation failed",
           message: `Image validation failed: ${validation.reason}`,
         });
       }
 
-      // `validation.base64`, never `parsed.imageBase64`: a data URI validates
+      const retainInput = {
+        buffer: Buffer.from(validation.base64 ?? imageBase64, "base64"),
+        declaredFormat: "image" as const,
+      };
+      if (parsed.retain && !parsed.documentId) assertRetainable(retainInput);
+
+      // `validation.base64`, never the raw string: a data URI validates
       // fine because the validator strips its prefix, and passing the unstripped
       // string on is what fed Tesseract rubble (forgejo#117).
       let text: string;
       let confidence: number;
       try {
         ({ text, confidence } = await getTesseractParser().recognizeText(
-          validation.base64 ?? parsed.imageBase64,
+          validation.base64 ?? imageBase64
         ));
       } catch (error) {
         // A payload the OCR cannot decode is a CLIENT error. It used to end the
         // process, so the caller saw a 502 from nginx and everyone else lost
         // the service; even contained, a 500 would blame the server for a file
         // the user chose.
-        logger.warn({ userId, err: error }, '[Image Parse] OCR could not read the image');
+        logger.warn({ userId, err: error }, "[Image Parse] OCR could not read the image");
         return res.status(422).json({
-          error: 'Unreadable image',
+          error: "Unreadable image",
           message:
-            'This file could not be read as an image. A JPEG or PNG photograph of the whole page usually works.',
+            "This file could not be read as an image. A JPEG or PNG photograph of the whole page usually works.",
         });
       }
       // One measure of "how much was read", used for BOTH the gate below and
@@ -122,35 +134,45 @@ router.post(
       if (readableLength < MIN_USABLE_TEXT_LENGTH) {
         logger.info(
           { userId, textLength: readableLength, confidence },
-          '[Image Parse] Too little text to parse',
+          "[Image Parse] Too little text to parse"
         );
         return res.status(422).json({
-          error: 'No readable text',
+          error: "No readable text",
           message:
-            'Almost no text could be read from this image. A sharper, straighter photograph of the whole page usually helps.',
+            "Almost no text could be read from this image. A sharper, straighter photograph of the whole page usually helps.",
           ocrConfidence: confidence,
         });
       }
 
       logger.info(
         { userId, chars: text.length, confidence, domain: parsed.domain },
-        '[Image Parse] OCR complete, parsing...',
+        "[Image Parse] OCR complete, parsing..."
       );
 
       const outcome = await parseDocument({
         text,
         domain: parsed.domain,
-        source: 'document',
+        source: "document",
         userId,
       });
 
       logger.info(
         { userId, domain: outcome.domain, domainSource: outcome.domainSource },
-        '[Image Parse] Parsing complete',
+        "[Image Parse] Parsing complete"
       );
+
+      const documentId = await recordParse({
+        userId,
+        documentId: parsed.documentId,
+        retain: parsed.retain,
+        input: retainInput,
+        parsedDomain: outcome.domain,
+        parsedPayload: outcome.body,
+      });
 
       res.json({
         ...outcome.body,
+        ...(documentId ? { documentId } : {}),
         /**
          * Reported, never used as a gate. OCR confidence says how sure the
          * engine is about the GLYPHS, which is a different question from
@@ -160,22 +182,23 @@ router.post(
          */
         ocrConfidence: confidence,
         ocrTextLength: readableLength,
-        ...(outcome.domainSource === 'detected'
+        ...(outcome.domainSource === "detected"
           ? { domainSource: outcome.domainSource, detection: outcome.detection }
           : {}),
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Validation failed', details: error.issues });
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
       }
-      logger.error({ error }, '[Image Parse] Parsing failed');
+      if (sendAppError(res, error)) return;
+      logger.error({ error }, "[Image Parse] Parsing failed");
       const described = describeParserError(error);
       res.status(described.status).json({
-        error: 'Image parsing failed',
+        error: "Image parsing failed",
         message: described.message,
       });
     }
-  },
+  }
 );
 
 export default router;

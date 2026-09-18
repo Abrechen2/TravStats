@@ -14,6 +14,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent, tripResponse } from "./shared";
 import {
   createTripSchema,
@@ -76,6 +77,12 @@ const tripListItem = tripResponse.extend({
     cruises: z.number().int(),
     lodgingStays: z.number().int(),
     routes: z.number().int().describe("Tour sections — the rows served by GET /trips/{id}/routes"),
+    photos: z
+      .number()
+      .int()
+      .describe(
+        "Trip photos — the rows served by GET /trips/{id}/photos, linked and imported alike"
+      ),
   }),
 });
 
@@ -86,7 +93,7 @@ registry.registerPath({
   description:
     "Newest first, capped at 500. Each trip carries its bookings, up to 200 " +
     "flights, cruises and stays each, and `_count` with the size of every " +
-    "linked collection including tour sections (`routes`).",
+    "linked collection including tour sections (`routes`) and photos (`photos`).",
   tags: ["Trips"],
   responses: {
     200: {
@@ -117,7 +124,10 @@ registry.registerPath({
   summary: "Create a trip",
   tags: ["Trips"],
   request: {
-    body: { content: { "application/json": { schema: tripCreateInput } }, required: true },
+    body: {
+      content: { "application/json": { schema: tripCreateInput.and(documentIdsBodySchema) } },
+      required: true,
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: tripResponse } } },

@@ -18,11 +18,14 @@ const rowOutcome = z.object({
     description: "Record id. Null for a create that has not been applied yet.",
   }),
   label: z.string(),
-  message: z.string().optional().openapi({
-    description:
-      "Reason the row was refused. `unknown_id` covers both an id that does not exist " +
-      "and one belonging to another account — the two are deliberately indistinguishable.",
-  }),
+  message: z
+    .string()
+    .optional()
+    .openapi({
+      description:
+        "Reason the row was refused. `unknown_id` covers both an id that does not exist " +
+        "and one belonging to another account — the two are deliberately indistinguishable.",
+    }),
 });
 
 const sheetOutcome = z.object({
@@ -59,7 +62,7 @@ registry.registerPath({
                   description: "Sheet key: `places`, `cruises` or `lodging`.",
                 }),
                 rows: z.array(z.record(z.string(), z.string())),
-              }),
+              })
             ),
           }),
         },

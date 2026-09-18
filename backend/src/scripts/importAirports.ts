@@ -5,8 +5,8 @@
  * Run with: npx ts-node src/scripts/importAirports.ts
  */
 
-import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import axios from "axios";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -28,7 +28,8 @@ interface OpenFlightsAirport {
 }
 
 // OpenFlights airport database URL (CSV format)
-const OPENFLIGHTS_URL = 'https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat';
+const OPENFLIGHTS_URL =
+  "https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat";
 
 /**
  * Parse OpenFlights CSV line
@@ -38,16 +39,26 @@ function parseAirportLine(line: string): OpenFlightsAirport | null {
   try {
     // Split CSV (handling quoted fields with commas)
     const regex = /("(?:[^"\\]|\\.)*"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g;
-    const fields = line.match(regex)?.map(field =>
-      field.replace(/^"|"$/g, '').replace(/\\"/g, '"')
-    ) || [];
+    const fields =
+      line.match(regex)?.map((field) => field.replace(/^"|"$/g, "").replace(/\\"/g, '"')) || [];
 
     if (fields.length < 14) return null;
 
     const [
-      airportId, name, city, country, iata, icao,
-      latitude, longitude, altitude, timezone, dst, tzDatabaseTimezone,
-      type, source
+      airportId,
+      name,
+      city,
+      country,
+      iata,
+      icao,
+      latitude,
+      longitude,
+      altitude,
+      timezone,
+      dst,
+      tzDatabaseTimezone,
+      type,
+      source,
     ] = fields;
 
     return {
@@ -55,11 +66,11 @@ function parseAirportLine(line: string): OpenFlightsAirport | null {
       name,
       city,
       country,
-      iata: iata === '\\N' ? '' : iata,
-      icao: icao === '\\N' ? '' : icao,
+      iata: iata === "\\N" ? "" : iata,
+      icao: icao === "\\N" ? "" : icao,
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
-      altitude: altitude === '\\N' ? 0 : parseInt(altitude),
+      altitude: altitude === "\\N" ? 0 : parseInt(altitude),
       timezone,
       dst,
       tzDatabaseTimezone,
@@ -67,7 +78,7 @@ function parseAirportLine(line: string): OpenFlightsAirport | null {
       source,
     };
   } catch (error) {
-    console.error('Error parsing line:', line, error);
+    console.error("Error parsing line:", line, error);
     return null;
   }
 }
@@ -76,11 +87,11 @@ function parseAirportLine(line: string): OpenFlightsAirport | null {
  * Download and import OpenFlights airport database
  */
 async function importAirports() {
-  console.log('🌍 Downloading OpenFlights airport database...');
+  console.log("🌍 Downloading OpenFlights airport database...");
 
   try {
     const response = await axios.get(OPENFLIGHTS_URL);
-    const lines = response.data.split('\n').filter((line: string) => line.trim());
+    const lines = response.data.split("\n").filter((line: string) => line.trim());
 
     console.log(`📦 Found ${lines.length} airports to process`);
 
@@ -109,8 +120,8 @@ async function importAirports() {
           where: airport.iata
             ? { airports_iata_is_closed_key: { iata: airport.iata, isClosed: false } }
             : airport.icao
-            ? { airports_icao_is_closed_key: { icao: airport.icao, isClosed: false } }
-            : { id: -1 }, // Fallback (will create new)
+              ? { airports_icao_is_closed_key: { icao: airport.icao, isClosed: false } }
+              : { id: -1 }, // Fallback (will create new)
           update: {
             name: airport.name,
             city: airport.city || null,
@@ -141,21 +152,30 @@ async function importAirports() {
         }
       } catch (error: unknown) {
         // Handle duplicate key errors gracefully
-        if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2002') {
+        if (
+          error instanceof Error &&
+          "code" in error &&
+          (error as { code: string }).code === "P2002"
+        ) {
           updated++;
         } else {
-          console.error(`   ❌ Error importing ${airport.name}:`, error instanceof Error ? error.message : 'Unknown error');
+          console.error(
+            `   ❌ Error importing ${airport.name}:`,
+            error instanceof Error ? error.message : "Unknown error"
+          );
         }
       }
     }
 
-    console.log('\n✅ Import completed!');
+    console.log("\n✅ Import completed!");
     console.log(`   Imported: ${imported} airports`);
     console.log(`   Updated: ${updated} airports`);
     console.log(`   Skipped: ${skipped} airports`);
-
   } catch (error: unknown) {
-    console.error('❌ Error downloading or importing airports:', error instanceof Error ? error.message : 'Unknown error');
+    console.error(
+      "❌ Error downloading or importing airports:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
     process.exit(1);
   } finally {
     await prisma.$disconnect();
@@ -166,11 +186,11 @@ async function importAirports() {
 if (require.main === module) {
   importAirports()
     .then(() => {
-      console.log('\n🎉 Airport database is ready!');
+      console.log("\n🎉 Airport database is ready!");
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Fatal error:', error);
+      console.error("Fatal error:", error);
       process.exit(1);
     });
 }

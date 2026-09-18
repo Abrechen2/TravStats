@@ -55,7 +55,7 @@ jest.mock("archiver", () =>
     append: jest.fn(),
     on: jest.fn(),
     finalize: jest.fn(),
-  })),
+  }))
 );
 
 const mockCreateDatabaseDump = jest.fn<() => Promise<void>>();
@@ -109,7 +109,7 @@ describe("createBackup hands the finished archive to the cloud target", () => {
     const completedCall = mockBackupUpdate.mock.invocationCallOrder[0];
     const syncCall = mockSyncToCloudIfEnabled.mock.invocationCallOrder[0];
     expect(mockBackupUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "completed" }) }),
+      expect.objectContaining({ data: expect.objectContaining({ status: "completed" }) })
     );
     expect(completedCall).toBeLessThan(syncCall);
   });
@@ -118,9 +118,9 @@ describe("createBackup hands the finished archive to the cloud target", () => {
     const { createBackup } = await import("../backupService");
     mockCreateDatabaseDump.mockRejectedValue(new Error("pg_dump: connection refused"));
 
-    await expect(
-      createBackup({ type: "full", existingRecord: EXISTING_RECORD }),
-    ).rejects.toThrow(/connection refused/);
+    await expect(createBackup({ type: "full", existingRecord: EXISTING_RECORD })).rejects.toThrow(
+      /connection refused/
+    );
 
     expect(mockSyncToCloudIfEnabled).not.toHaveBeenCalled();
   });
@@ -134,18 +134,15 @@ describe("createBackup hands the finished archive to the cloud target", () => {
     const { createBackup } = await import("../backupService");
     mockSyncToCloudIfEnabled.mockRejectedValue(new Error("507 Insufficient Storage"));
 
-    await expect(
-      createBackup({ type: "full", existingRecord: EXISTING_RECORD }),
-    ).rejects.toThrow(/Insufficient Storage/);
+    await expect(createBackup({ type: "full", existingRecord: EXISTING_RECORD })).rejects.toThrow(
+      /Insufficient Storage/
+    );
 
     // The temp subdirectory is swept on the happy path and that is fine; what
     // must survive is the backup directory holding the archive.
-    expect(mockRmSync).not.toHaveBeenCalledWith(
-      "/data/backups/backup-test-1",
-      expect.anything(),
-    );
+    expect(mockRmSync).not.toHaveBeenCalledWith("/data/backups/backup-test-1", expect.anything());
     expect(mockBackupUpdate).not.toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "failed" }) }),
+      expect.objectContaining({ data: expect.objectContaining({ status: "failed" }) })
     );
   });
 });

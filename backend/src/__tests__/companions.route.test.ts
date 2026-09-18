@@ -1,8 +1,8 @@
-import request from 'supertest';
-import app from '../index';
-import { prisma } from '../db';
+import request from "supertest";
+import app from "../index";
+import { prisma } from "../db";
 
-describe('GET /api/v1/companions', () => {
+describe("GET /api/v1/companions", () => {
   beforeEach(async () => {
     await prisma.companion.deleteMany();
     await prisma.user.deleteMany();
@@ -14,62 +14,56 @@ describe('GET /api/v1/companions', () => {
     await prisma.$disconnect();
   });
 
-  it('rejects an unauthenticated request', async () => {
-    await request(app).get('/api/v1/companions').expect(401);
+  it("rejects an unauthenticated request", async () => {
+    await request(app).get("/api/v1/companions").expect(401);
   });
 
   it("returns the caller's companions with usage counts", async () => {
     const registration = await request(app)
-      .post('/api/v1/auth/register')
-      .send({ username: 'companion-route', password: 'password123' })
+      .post("/api/v1/auth/register")
+      .send({ username: "companion-route", password: "password123" })
       .expect(201);
-    const cookie = registration.headers['set-cookie'];
+    const cookie = registration.headers["set-cookie"];
 
-    const me = await prisma.user.findUniqueOrThrow({ where: { username: 'companion-route' } });
+    const me = await prisma.user.findUniqueOrThrow({ where: { username: "companion-route" } });
     await prisma.companion.create({
       data: {
         userId: me.id,
-        canonicalName: 'anna',
-        displayName: 'Anna',
-        searchName: 'anna',
+        canonicalName: "anna",
+        displayName: "Anna",
+        searchName: "anna",
       },
     });
 
-    const response = await request(app)
-      .get('/api/v1/companions')
-      .set('Cookie', cookie)
-      .expect(200);
+    const response = await request(app).get("/api/v1/companions").set("Cookie", cookie).expect(200);
 
     expect(response.body.companions).toHaveLength(1);
-    expect(response.body.companions[0].name).toBe('Anna');
+    expect(response.body.companions[0].name).toBe("Anna");
     expect(response.body.companions[0].usageCount).toBe(0);
   });
 
   // A row that exists is not a row you own. Without a second user holding a
   // real companion, dropping the userId filter would leave this suite green.
-  it('never returns another user\'s companions', async () => {
+  it("never returns another user's companions", async () => {
     const mine = await request(app)
-      .post('/api/v1/auth/register')
-      .send({ username: 'companion-owner', password: 'password123' })
+      .post("/api/v1/auth/register")
+      .send({ username: "companion-owner", password: "password123" })
       .expect(201);
-    const cookie = mine.headers['set-cookie'];
+    const cookie = mine.headers["set-cookie"];
 
     const victim = await prisma.user.create({
-      data: { username: 'companion-victim', passwordHash: 'x' },
+      data: { username: "companion-victim", passwordHash: "x" },
     });
     await prisma.companion.create({
       data: {
         userId: victim.id,
-        canonicalName: 'geheim',
-        displayName: 'Geheim',
-        searchName: 'geheim',
+        canonicalName: "geheim",
+        displayName: "Geheim",
+        searchName: "geheim",
       },
     });
 
-    const response = await request(app)
-      .get('/api/v1/companions')
-      .set('Cookie', cookie)
-      .expect(200);
+    const response = await request(app).get("/api/v1/companions").set("Cookie", cookie).expect(200);
 
     expect(response.body.companions).toEqual([]);
   });

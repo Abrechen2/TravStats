@@ -1,10 +1,6 @@
 import { create } from "zustand";
 import { loadLodgingColorConfig, saveMapAppearance } from "../components/map/mapAppearance";
-import type {
-  LodgingColorConfig,
-  LodgingColorMode,
-  LodgingColorSlot,
-} from "../lib/lodgingColor";
+import type { LodgingColorConfig, LodgingColorMode, LodgingColorSlot } from "../lib/lodgingColor";
 import type { Rgb } from "../lib/cruiseColor";
 
 /**

@@ -48,11 +48,7 @@ function createMockOllamaServer(handler: http.RequestListener): Promise<{
   });
 }
 
-function respondJson(
-  res: http.ServerResponse,
-  status: number,
-  body: unknown,
-): void {
+function respondJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 }
@@ -63,9 +59,7 @@ function ollamaEnvelope(responseText: string): { response: string } {
 }
 
 const HEADERS = ["Hotel", "Anreise", "Abreise"];
-const SAMPLE_ROWS = [
-  { Hotel: "NH Frankfurt", Anreise: "05.01.2026", Abreise: "07.01.2026" },
-];
+const SAMPLE_ROWS = [{ Hotel: "NH Frankfurt", Anreise: "05.01.2026", Abreise: "07.01.2026" }];
 
 describe("suggestLodgingCsvMapping", () => {
   beforeEach(() => {
@@ -80,7 +74,7 @@ describe("suggestLodgingCsvMapping", () => {
       {
         url: "http://127.0.0.1:1",
         model: "nonexistent",
-      },
+      }
     );
     expect(mapping).toEqual({});
     expect(warnMock).toHaveBeenCalled();
@@ -103,8 +97,8 @@ describe("suggestLodgingCsvMapping", () => {
           ollamaEnvelope(
             JSON.stringify({
               mapping: { name: "Hotel", checkIn: "SomeColumnNotInTheCsv" },
-            }),
-          ),
+            })
+          )
         );
       });
       try {
@@ -127,8 +121,8 @@ describe("suggestLodgingCsvMapping", () => {
           ollamaEnvelope(
             JSON.stringify({
               mapping: { name: "Hotel", totallyMadeUpField: "Anreise" },
-            }),
-          ),
+            })
+          )
         );
       });
       try {
@@ -154,8 +148,8 @@ describe("suggestLodgingCsvMapping", () => {
               // the same header afterwards must be dropped, not silently
               // applied on top of (or instead of) the first.
               mapping: { name: "Hotel", chainName: "Hotel" },
-            }),
-          ),
+            })
+          )
         );
       });
       try {
@@ -176,7 +170,7 @@ describe("suggestLodgingCsvMapping", () => {
         respondJson(
           res,
           200,
-          ollamaEnvelope("Sure! I'd map Hotel to name and Anreise to checkIn."),
+          ollamaEnvelope("Sure! I'd map Hotel to name and Anreise to checkIn.")
         );
       });
       try {
@@ -197,24 +191,21 @@ describe("suggestLodgingCsvMapping", () => {
       ["a top-level array", "[1,2,3]"],
       ["a top-level string", JSON.stringify("just a string")],
       ["null", "null"],
-    ])(
-      "returns {} for valid JSON of the wrong shape: %s",
-      async (_label, modelText) => {
-        const server = await createMockOllamaServer((req, res) => {
-          respondJson(res, 200, ollamaEnvelope(modelText));
+    ])("returns {} for valid JSON of the wrong shape: %s", async (_label, modelText) => {
+      const server = await createMockOllamaServer((req, res) => {
+        respondJson(res, 200, ollamaEnvelope(modelText));
+      });
+      try {
+        const mapping = await suggestLodgingCsvMapping(HEADERS, SAMPLE_ROWS, {
+          url: server.url,
+          model: "mock",
         });
-        try {
-          const mapping = await suggestLodgingCsvMapping(HEADERS, SAMPLE_ROWS, {
-            url: server.url,
-            model: "mock",
-          });
-          expect(mapping).toEqual({});
-          expect(warnMock).toHaveBeenCalled();
-        } finally {
-          await server.close();
-        }
-      },
-    );
+        expect(mapping).toEqual({});
+        expect(warnMock).toHaveBeenCalled();
+      } finally {
+        await server.close();
+      }
+    });
 
     it("returns {} when Ollama responds with a non-200 status", async () => {
       const server = await createMockOllamaServer((req, res) => {
@@ -269,8 +260,8 @@ describe("suggestLodgingCsvMapping", () => {
                 checkIn: "Anreise",
                 checkOut: "Abreise",
               },
-            }),
-          ),
+            })
+          )
         );
       });
       try {
@@ -339,26 +330,18 @@ describe("suggestLodgingCsvMapping", () => {
           VERY_SENSITIVE_HEADER_MARKER_998: "TOP_SECRET_ROW_VALUE_123",
         },
       ];
-      const proseMarker =
-        "I cannot map TOP_SECRET_ROW_VALUE_123, sorry about that.";
+      const proseMarker = "I cannot map TOP_SECRET_ROW_VALUE_123, sorry about that.";
       const server = await createMockOllamaServer((req, res) => {
         respondJson(res, 200, ollamaEnvelope(proseMarker));
       });
       try {
-        const mapping = await suggestLodgingCsvMapping(
-          secretHeaders,
-          secretRows,
-          {
-            url: server.url,
-            model: "mock",
-          },
-        );
+        const mapping = await suggestLodgingCsvMapping(secretHeaders, secretRows, {
+          url: server.url,
+          model: "mock",
+        });
         expect(mapping).toEqual({});
 
-        const allLoggedText = JSON.stringify([
-          ...warnMock.mock.calls,
-          ...infoMock.mock.calls,
-        ]);
+        const allLoggedText = JSON.stringify([...warnMock.mock.calls, ...infoMock.mock.calls]);
         expect(allLoggedText).not.toContain("VERY_SENSITIVE_HEADER_MARKER_998");
         expect(allLoggedText).not.toContain("TOP_SECRET_ROW_VALUE_123");
         expect(allLoggedText).not.toContain(proseMarker);

@@ -1,14 +1,14 @@
-import { calculateDistance } from '../geo';
-import { departureClockOf } from './departureClock';
-import type { FlightData, BusinessStats } from './types';
+import { calculateDistance } from "../geo";
+import { departureClockOf } from "./departureClock";
+import type { FlightData, BusinessStats } from "./types";
 import {
   addFlightDuration,
   averageDurationMinutes,
   emptyDurationTotals,
   flightDurationOf,
   measureFlightMinutes,
-} from '../../shared/flightDuration';
-import { isCountableFlight } from '../../shared/flightCounting';
+} from "../../shared/flightDuration";
+import { isCountableFlight } from "../../shared/flightCounting";
 
 /**
  * Calculate business/informative statistics.
@@ -25,14 +25,11 @@ import { isCountableFlight } from '../../shared/flightCounting';
  *                          reliable enough), totalDistance, totalCost,
  *                          categoryDistribution.
  */
-export function calculateBusinessStats(
-  flights: FlightData[],
-  baseCurrency: string,
-): BusinessStats {
+export function calculateBusinessStats(flights: FlightData[], baseCurrency: string): BusinessStats {
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
-      f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+      f.status === "flown" && f.departureTime !== null && f.arrivalTime !== null
   );
 
   // Time-insensitive subset — flown + historical contribute to distance,
@@ -125,9 +122,10 @@ export function calculateBusinessStats(
     }
   }
 
-  const costPerKm = totalDistanceWithCost > 0 && totalCost > 0
-    ? Math.round((totalCost / totalDistanceWithCost) * 100) / 100
-    : 0;
+  const costPerKm =
+    totalDistanceWithCost > 0 && totalCost > 0
+      ? Math.round((totalCost / totalDistanceWithCost) * 100) / 100
+      : 0;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
   // Flown-only, and the hours come from the shared rule: a DATE_ONLY row's
@@ -168,38 +166,38 @@ export function calculateBusinessStats(
     }
   }
 
-  const costPerHour = totalFlightHoursWithCost > 0 && totalCostForHours > 0
-    ? Math.round((totalCostForHours / totalFlightHoursWithCost) * 100) / 100
-    : 0;
+  const costPerHour =
+    totalFlightHoursWithCost > 0 && totalCostForHours > 0
+      ? Math.round((totalCostForHours / totalFlightHoursWithCost) * 100) / 100
+      : 0;
 
   // Seat class distribution (time-insensitive).
   const seatClassCounts: Record<string, number> = {};
-  countableFlights.forEach(f => {
-    const seatClass = f.seatClass || 'unknown';
+  countableFlights.forEach((f) => {
+    const seatClass = f.seatClass || "unknown";
     seatClassCounts[seatClass] = (seatClassCounts[seatClass] || 0) + 1;
   });
 
   const seatClassDistribution: Record<string, number> = {};
   Object.entries(seatClassCounts).forEach(([seatClass, count]) => {
-    seatClassDistribution[seatClass] = countableFlights.length > 0
-      ? Math.round((count / countableFlights.length) * 100)
-      : 0;
+    seatClassDistribution[seatClass] =
+      countableFlights.length > 0 ? Math.round((count / countableFlights.length) * 100) : 0;
   });
 
   // Category distribution (time-insensitive).
   const categoryCounts: Record<string, number> = {};
-  countableFlights.forEach(f => {
-    const category = f.category || 'unassigned';
+  countableFlights.forEach((f) => {
+    const category = f.category || "unassigned";
     categoryCounts[category] = (categoryCounts[category] || 0) + 1;
   });
 
-  const mostCommonCategory = Object.entries(categoryCounts)
-    .sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+  const mostCommonCategory =
+    Object.entries(categoryCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
 
   // Airport diversity — prefer IATA, fall back to ICAO; one code per physical airport.
   // Time-insensitive.
   const uniqueAirports = new Set<string>();
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     const dep = f.depIata || f.depIcao;
     if (dep) uniqueAirports.add(dep);
     const arr = f.arrIata || f.arrIcao;
@@ -225,7 +223,7 @@ export function calculateBusinessStats(
     // it still holds. What changed is that such a row now contributes a
     // COORDINATE estimate, counted and labelled as one, instead of contributing
     // nothing at all while the overview card on the same screen estimated it.
-    const measuredMinutes = f.status === 'flown' ? measureFlightMinutes(f) : null;
+    const measuredMinutes = f.status === "flown" ? measureFlightMinutes(f) : null;
     durationTotals = addFlightDuration(durationTotals, {
       measuredMinutes,
       depLat: f.depLat,
@@ -242,16 +240,28 @@ export function calculateBusinessStats(
   // default month to January which slightly biases the count toward winter,
   // but the absolute number of such entries is expected to be tiny.
   const flightsByMonth: Record<number, number> = {};
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     const clock = departureClockOf(f);
     if (!clock) return;
     flightsByMonth[clock.month] = (flightsByMonth[clock.month] || 0) + 1;
   });
 
-  const busiestMonth = Object.entries(flightsByMonth)
-    .sort(([, a], [, b]) => b - a)[0];
+  const busiestMonth = Object.entries(flightsByMonth).sort(([, a], [, b]) => b - a)[0];
 
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   return {
     costPerKm,

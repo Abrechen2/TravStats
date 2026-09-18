@@ -26,11 +26,7 @@ import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
-import {
-  mergeImmichAlbums,
-  mergeTripPhotos,
-  retargetCoverUrl,
-} from "./trip/mergeTripRelations";
+import { mergeImmichAlbums, mergeTripPhotos, retargetCoverUrl } from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -69,6 +65,7 @@ export const EMPTY_TRIP_COUNTS = {
   lodgingStays: true,
   placeVisits: true,
   immichAlbums: true,
+  documents: true,
 } as const;
 
 /** The same rule as a Prisma `where` fragment, so a DELETE re-checks it in the
@@ -82,6 +79,7 @@ export const EMPTY_TRIP_WHERE = {
   lodgingStays: { none: {} },
   placeVisits: { none: {} },
   immichAlbums: { none: {} },
+  documents: { none: {} },
   notes: null,
   description: null,
   summary: null,
@@ -261,6 +259,9 @@ export async function mergeTrips(
     // same loss to a user looking for their hotel on the merged trip.
     await tx.lodgingStay.updateMany(move);
     await tx.placeVisit.updateMany(move);
+    // Kept originals filed with a source trip CASCADE with it: a bill that was
+    // never moved is a bill deleted (forgejo#116).
+    await tx.document.updateMany(move);
     // Albums BEFORE photos: an album left on a source trip is cascade-deleted
     // with it, and takes the photos this merge just moved with it (AUD-029).
     const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
@@ -288,7 +289,7 @@ export async function mergeTrips(
           target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
           sourceIds,
           targetId,
-          mergedPhotos.survivorFor,
+          mergedPhotos.survivorFor
         ),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]

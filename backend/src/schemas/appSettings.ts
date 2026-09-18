@@ -26,13 +26,7 @@ export const APP_PREFS_MAX_BYTES = 32 * 1024;
  * while still being validated as well-formed JSON (no functions, undefined,
  * etc. — those can't survive a JSON round-trip anyway).
  */
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([
@@ -51,10 +45,9 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
  */
 const prefsObjectSchema = z
   .record(z.string(), jsonValueSchema)
-  .refine(
-    (value) => Buffer.byteLength(JSON.stringify(value), "utf8") <= APP_PREFS_MAX_BYTES,
-    { message: `prefs exceeds ${APP_PREFS_MAX_BYTES} bytes` }
-  );
+  .refine((value) => Buffer.byteLength(JSON.stringify(value), "utf8") <= APP_PREFS_MAX_BYTES, {
+    message: `prefs exceeds ${APP_PREFS_MAX_BYTES} bytes`,
+  });
 
 /**
  * PUT body. `updatedAt` is optional: when the client supplies it, the

@@ -22,7 +22,7 @@ repos:
         # Natural Earth 10 m at 0.025° is the realistic top end before
         # we'd need a CDN. Going to 0.005° (Bosphorus-precise) would
         # cost ~200 MB and definitely belongs on a CDN.
-        args: ['--maxkb=15000']
+        args: ["--maxkb=15000"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
@@ -33,16 +33,15 @@ repos:
 
   - repo: local
     hooks:
-      - id: prettier-frontend
-        name: Prettier (frontend)
+      # The whole tree since forgejo#61, not frontend/src alone. Prettier
+      # skips anything in the root .prettierignore even when a hook hands it
+      # the path, so the exclusions live in one place, not in this regex.
+      # Pre-commit runs from the root, which is where that file is read.
+      - id: prettier
+        name: Prettier
         language: node
-        # Prettier reads .prettierignore from the directory it runs in, and
-        # pre-commit runs from the repository root — so frontend/.prettierignore,
-        # which exists to keep the GENERATED theme files untouched, was never
-        # read. The hook reformatted tokens.css and the generator warden
-        # (tokens.generated.test.ts) failed on the next run. Name the file.
-        entry: npx --prefix frontend prettier --write --ignore-path frontend/.prettierignore
-        files: ^frontend/src/.*\.(ts|tsx|css)$
+        entry: npx --prefix frontend prettier --write --ignore-unknown
+        files: \.(ts|tsx|js|jsx|mjs|cjs|css|json|ya?ml)$
         pass_filenames: true
 
       # ------------------------------------------------------------------

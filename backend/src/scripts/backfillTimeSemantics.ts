@@ -21,15 +21,15 @@
  * the row as 'UNKNOWN' and are logged so they can be inspected.
  */
 
-import { prisma } from '../db';
-import { legacyFakeUtcToRealUtc } from '../utils/timezone';
-import { getCachedAirport } from '../services/airportCache';
-import logger from '../utils/logger';
+import { prisma } from "../db";
+import { legacyFakeUtcToRealUtc } from "../utils/timezone";
+import { getCachedAirport } from "../services/airportCache";
+import logger from "../utils/logger";
 
-const UTC_SOURCES = new Set(['api_lookup', 'live_update', 'historical_enrichment']);
-const LEGACY_SOURCES = new Set(['manual', 'email_import', 'boarding_pass_scan']);
+const UTC_SOURCES = new Set(["api_lookup", "live_update", "historical_enrichment"]);
+const LEGACY_SOURCES = new Set(["manual", "email_import", "boarding_pass_scan"]);
 
-type Side = 'dep' | 'arr';
+type Side = "dep" | "arr";
 
 interface SideStats {
   utc: number;
@@ -61,7 +61,7 @@ async function resolveTz(iata: string | null): Promise<string | null> {
 }
 
 interface SidePlan {
-  semantics: 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
+  semantics: "UTC" | "LEGACY_FAKE_UTC" | "UNKNOWN";
   newValue: Date | null;
 }
 
@@ -71,55 +71,55 @@ async function planSide(
   iata: string | null,
   side: Side,
   flightId: string,
-  stats: SideStats,
+  stats: SideStats
 ): Promise<SidePlan> {
   if (source && UTC_SOURCES.has(source)) {
     stats.utc += 1;
-    return { semantics: 'UTC', newValue: storedValue };
+    return { semantics: "UTC", newValue: storedValue };
   }
 
   if (source && LEGACY_SOURCES.has(source)) {
     if (!storedValue) {
       stats.legacyConverted += 1;
-      return { semantics: 'LEGACY_FAKE_UTC', newValue: null };
+      return { semantics: "LEGACY_FAKE_UTC", newValue: null };
     }
     const tz = await resolveTz(iata);
     if (!tz) {
       stats.legacySkipped += 1;
       logger.warn({
-        operation: 'backfill_skip_legacy_no_tz',
+        operation: "backfill_skip_legacy_no_tz",
         flightId,
         side,
         iata,
       });
-      return { semantics: 'UNKNOWN', newValue: storedValue };
+      return { semantics: "UNKNOWN", newValue: storedValue };
     }
     try {
       const realUtc = legacyFakeUtcToRealUtc(storedValue, tz);
       stats.legacyConverted += 1;
-      return { semantics: 'LEGACY_FAKE_UTC', newValue: realUtc };
+      return { semantics: "LEGACY_FAKE_UTC", newValue: realUtc };
     } catch (err) {
       stats.legacySkipped += 1;
       logger.warn({
-        operation: 'backfill_legacy_conversion_failed',
+        operation: "backfill_legacy_conversion_failed",
         flightId,
         side,
         iata,
         tz,
-        error: err instanceof Error ? err.message : 'unknown',
+        error: err instanceof Error ? err.message : "unknown",
       });
-      return { semantics: 'UNKNOWN', newValue: storedValue };
+      return { semantics: "UNKNOWN", newValue: storedValue };
     }
   }
 
   stats.unknownLeft += 1;
-  return { semantics: 'UNKNOWN', newValue: storedValue };
+  return { semantics: "UNKNOWN", newValue: storedValue };
 }
 
 async function run(apply: boolean): Promise<BackfillReport> {
   const flights = await prisma.flight.findMany({
     where: {
-      OR: [{ depTimeSemantics: 'UNKNOWN' }, { arrTimeSemantics: 'UNKNOWN' }],
+      OR: [{ depTimeSemantics: "UNKNOWN" }, { arrTimeSemantics: "UNKNOWN" }],
     },
     select: {
       id: true,
@@ -142,16 +142,16 @@ async function run(apply: boolean): Promise<BackfillReport> {
   };
 
   for (const f of flights) {
-    const sourceKey = f.dataSource ?? '<null>';
+    const sourceKey = f.dataSource ?? "<null>";
     report.bySource[sourceKey] = (report.bySource[sourceKey] ?? 0) + 1;
 
     const depPlan =
-      f.depTimeSemantics === 'UNKNOWN'
-        ? await planSide(f.dataSource, f.departureTime, f.depIata, 'dep', f.id, report.dep)
+      f.depTimeSemantics === "UNKNOWN"
+        ? await planSide(f.dataSource, f.departureTime, f.depIata, "dep", f.id, report.dep)
         : null;
     const arrPlan =
-      f.arrTimeSemantics === 'UNKNOWN'
-        ? await planSide(f.dataSource, f.arrivalTime, f.arrIata, 'arr', f.id, report.arr)
+      f.arrTimeSemantics === "UNKNOWN"
+        ? await planSide(f.dataSource, f.arrivalTime, f.arrIata, "arr", f.id, report.arr)
         : null;
 
     if (!apply) continue;
@@ -159,13 +159,13 @@ async function run(apply: boolean): Promise<BackfillReport> {
     const update: Record<string, unknown> = {};
     if (depPlan) {
       update.depTimeSemantics = depPlan.semantics;
-      if (depPlan.semantics === 'LEGACY_FAKE_UTC' && depPlan.newValue) {
+      if (depPlan.semantics === "LEGACY_FAKE_UTC" && depPlan.newValue) {
         update.departureTime = depPlan.newValue;
       }
     }
     if (arrPlan) {
       update.arrTimeSemantics = arrPlan.semantics;
-      if (arrPlan.semantics === 'LEGACY_FAKE_UTC' && arrPlan.newValue) {
+      if (arrPlan.semantics === "LEGACY_FAKE_UTC" && arrPlan.newValue) {
         update.arrivalTime = arrPlan.newValue;
       }
     }
@@ -177,9 +177,9 @@ async function run(apply: boolean): Promise<BackfillReport> {
     } catch (err) {
       report.errors += 1;
       logger.error({
-        operation: 'backfill_update_failed',
+        operation: "backfill_update_failed",
         flightId: f.id,
-        error: err instanceof Error ? err.message : 'unknown',
+        error: err instanceof Error ? err.message : "unknown",
       });
     }
   }
@@ -188,7 +188,7 @@ async function run(apply: boolean): Promise<BackfillReport> {
 }
 
 function printReport(report: BackfillReport, apply: boolean): void {
-  const mode = apply ? 'APPLIED' : 'DRY-RUN';
+  const mode = apply ? "APPLIED" : "DRY-RUN";
 
   process.stdout.write(`\n=== Time-semantics backfill (${mode}) ===\n`);
   process.stdout.write(`Total flights with UNKNOWN side: ${report.total}\n\n`);
@@ -209,11 +209,11 @@ function printReport(report: BackfillReport, apply: boolean): void {
   if (!apply) {
     process.stdout.write(`\n(dry-run — re-run with --apply to write changes)\n`);
   }
-  process.stdout.write('\n');
+  process.stdout.write("\n");
 }
 
 async function main(): Promise<void> {
-  const apply = process.argv.includes('--apply');
+  const apply = process.argv.includes("--apply");
   const report = await run(apply);
   printReport(report, apply);
   await prisma.$disconnect();
@@ -221,6 +221,9 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  logger.error({ operation: 'backfill_fatal', error: err instanceof Error ? err.message : 'unknown' });
+  logger.error({
+    operation: "backfill_fatal",
+    error: err instanceof Error ? err.message : "unknown",
+  });
   process.exit(1);
 });

@@ -1,4 +1,4 @@
-import { z } from './zod';
+import { z } from "./zod";
 
 export const registerSchema = z.object({
   username: z.string().min(3).max(50),
@@ -20,8 +20,8 @@ export const loginSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-  oldPassword: z.string().min(1, 'Old password is required'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters').max(100),
+  oldPassword: z.string().min(1, "Old password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(100),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -43,7 +43,7 @@ export const forceChangePasswordSchema = z.object({
 });
 
 export const adminResetPasswordSchema = z.object({
-  mode: z.enum(['generate', 'set']),
+  mode: z.enum(["generate", "set"]),
   password: z.string().min(8).max(100).optional(),
   mustChangePassword: z.boolean().optional(),
 });

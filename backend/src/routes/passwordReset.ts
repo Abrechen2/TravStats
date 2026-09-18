@@ -1,28 +1,28 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
+import { Router, Request, Response, NextFunction } from "express";
+import crypto from "crypto";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
   forceChangePasswordSchema,
-} from '../schemas/auth';
-import { passwordResetLimiter } from '../middleware/rateLimit';
-import { AppError } from '../middleware/errorHandler';
-import { SMTP_CONFIG_ID } from './admin/smtp';
-import { sendPasswordResetEmail } from '../services/emailService';
-import { getInstanceSettings } from '../services/instanceSettingsService';
-import { isSharedDemoAccount } from '../utils/sharedDemo';
-import logger from '../utils/logger';
+} from "../schemas/auth";
+import { passwordResetLimiter } from "../middleware/rateLimit";
+import { AppError } from "../middleware/errorHandler";
+import { SMTP_CONFIG_ID } from "./admin/smtp";
+import { sendPasswordResetEmail } from "../services/emailService";
+import { getInstanceSettings } from "../services/instanceSettingsService";
+import { isSharedDemoAccount } from "../utils/sharedDemo";
+import logger from "../utils/logger";
 
 const router = Router();
 
 function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 // GET /smtp-status — public, no auth
-router.get('/smtp-status', async (_req: Request, res: Response, next: NextFunction) => {
+router.get("/smtp-status", async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
     // Best-effort admin contact for the "no SMTP" fallback message.
@@ -32,10 +32,10 @@ router.get('/smtp-status', async (_req: Request, res: Response, next: NextFuncti
     const adminUser = await prisma.user.findFirst({
       where: { isAdmin: true, isActive: true, notificationEmail: { not: null } },
       select: { notificationEmail: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
     res.json({
-      smtpEnabled: !!(config?.enabled),
+      smtpEnabled: !!config?.enabled,
       adminContactEmail: adminUser?.notificationEmail ?? null,
     });
   } catch (error) {
@@ -47,7 +47,7 @@ router.get('/smtp-status', async (_req: Request, res: Response, next: NextFuncti
 // Lets the frontend hide / disable the register form before submit when the
 // instance has registration disabled and no user limit slot is open. The
 // first user is always allowed (bootstrap).
-router.get('/registration-status', async (_req: Request, res: Response, next: NextFunction) => {
+router.get("/registration-status", async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const userCount = await prisma.user.count();
     const { allowRegistration, maxUsers } = await getInstanceSettings();
@@ -66,7 +66,7 @@ router.get('/registration-status', async (_req: Request, res: Response, next: Ne
 
 // POST /forgot-password — always 200 to prevent user enumeration
 router.post(
-  '/forgot-password',
+  "/forgot-password",
   passwordResetLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -88,7 +88,7 @@ router.post(
         const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
 
         if (config?.enabled) {
-          const plainToken = crypto.randomBytes(32).toString('hex');
+          const plainToken = crypto.randomBytes(32).toString("hex");
           const hashedToken = hashToken(plainToken);
           const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 min
 
@@ -98,16 +98,16 @@ router.post(
           });
 
           const { frontendUrl } = await getInstanceSettings();
-          const baseUrl = frontendUrl ?? 'http://localhost:3000';
+          const baseUrl = frontendUrl ?? "http://localhost:3000";
           const resetUrl = `${baseUrl}/reset-password?token=${plainToken}`;
 
           try {
             await sendPasswordResetEmail(user.notificationEmail, resetUrl, user.username);
           } catch (emailError) {
             logger.error({
-              operation: 'forgot_password_email_failed',
+              operation: "forgot_password_email_failed",
               error: {
-                message: emailError instanceof Error ? emailError.message : 'Unknown error',
+                message: emailError instanceof Error ? emailError.message : "Unknown error",
               },
             });
             // Don't fail the request — return 200 regardless
@@ -116,18 +116,17 @@ router.post(
       }
 
       res.json({
-        message:
-          'If the username exists and has an email configured, a reset link has been sent.',
+        message: "If the username exists and has an email configured, a reset link has been sent.",
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // POST /reset-password
 router.post(
-  '/reset-password',
+  "/reset-password",
   passwordResetLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -142,7 +141,7 @@ router.post(
       });
 
       if (!user) {
-        throw new AppError('Invalid or expired reset token', 400);
+        throw new AppError("Invalid or expired reset token", 400);
       }
 
       const newHash = await hashPassword(newPassword);
@@ -160,18 +159,18 @@ router.post(
         },
       });
 
-      logger.info({ operation: 'password_reset_completed', userId: user.id });
+      logger.info({ operation: "password_reset_completed", userId: user.id });
 
-      res.json({ message: 'Password has been reset successfully.' });
+      res.json({ message: "Password has been reset successfully." });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // POST /force-change-password — used after login with mustChangePassword=true
 router.post(
-  '/force-change-password',
+  "/force-change-password",
   passwordResetLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -179,7 +178,7 @@ router.post(
       // Read changeToken exclusively from HttpOnly cookie (set during login)
       const changeToken: string | undefined = req.cookies?.change_token;
       if (!changeToken) {
-        throw new AppError('Change token is required', 400);
+        throw new AppError("Change token is required", 400);
       }
       const hashedToken = hashToken(changeToken);
 
@@ -191,7 +190,7 @@ router.post(
       });
 
       if (!user) {
-        throw new AppError('Invalid or expired change token', 400);
+        throw new AppError("Invalid or expired change token", 400);
       }
 
       const newHash = await hashPassword(newPassword);
@@ -207,15 +206,15 @@ router.post(
         },
       });
 
-      logger.info({ operation: 'force_password_change_completed', userId: user.id });
+      logger.info({ operation: "force_password_change_completed", userId: user.id });
 
       // Clear the change_token cookie
-      res.clearCookie('change_token', { path: '/' });
-      res.json({ message: 'Password changed successfully.' });
+      res.clearCookie("change_token", { path: "/" });
+      res.json({ message: "Password changed successfully." });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

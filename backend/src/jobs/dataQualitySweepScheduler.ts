@@ -24,6 +24,9 @@
  * | 03:20 | place address backfill |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
+ * | 04:40 | Dawarich country-day sweep |
+ * | 04:55 | nightly photo-journey scan (opt-in accounts) |
+ * | every :25 | document sweep |
  *
  * The ordering is not just about avoiding contention. Two of those jobs write
  * the very columns these checks read, and reading them first would produce

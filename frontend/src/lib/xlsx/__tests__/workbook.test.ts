@@ -90,8 +90,17 @@ function makePlace(over: Partial<Place> = {}): Place {
     createdAt: "",
     updatedAt: "",
     visits: [
-      { id: "visit-1", placeId: "place-1", tripId: null, visitedAt: "2024-04-05",
-        orderIdx: 0, notes: "Abends", rating: 5, createdAt: "", updatedAt: "" },
+      {
+        id: "visit-1",
+        placeId: "place-1",
+        tripId: null,
+        visitedAt: "2024-04-05",
+        orderIdx: 0,
+        notes: "Abends",
+        rating: 5,
+        createdAt: "",
+        updatedAt: "",
+      },
     ],
     visitCount: 1,
     plannedVisitCount: 0,
@@ -205,12 +214,10 @@ describe("workbook round trip", () => {
     const wb = await buildWorkbook(sheets);
     const buffer = await wb.xlsx.writeBuffer();
 
-    const parsed = await parseWorkbook(buffer as ArrayBuffer, [
-      cruiseSheet(t),
-      lodgingSheet(t),
-      placeSheet(t),
-      placeVisitSheet(t),
-    ] as never[]);
+    const parsed = await parseWorkbook(
+      buffer as ArrayBuffer,
+      [cruiseSheet(t), lodgingSheet(t), placeSheet(t), placeVisitSheet(t)] as never[]
+    );
 
     const byKey = new Map(parsed.map((p) => [p.key, p.rows]));
     expect(byKey.get("cruises")).toHaveLength(1);
@@ -283,7 +290,7 @@ describe("workbook round trip", () => {
 describe("exportFilename", () => {
   it("carries the date so files sort chronologically", () => {
     expect(exportFilename(t, new Date("2026-08-28T10:00:00Z"))).toBe(
-      "xlsx:export.filename-2026-08-28.xlsx",
+      "xlsx:export.filename-2026-08-28.xlsx"
     );
   });
 });

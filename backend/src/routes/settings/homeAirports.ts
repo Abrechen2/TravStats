@@ -1,15 +1,15 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { SettingsDataJson, defaultSettings } from './types';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { SettingsDataJson, defaultSettings } from "./types";
 import {
   HomeAirportEntry,
   applyHomeAirportMove,
   normalizeHistory,
   sortHistory,
-} from '../../utils/homeAirport';
+} from "../../utils/homeAirport";
 
 const router = Router();
 
@@ -41,8 +41,7 @@ async function loadHistory(userId: string): Promise<HomeAirportEntry[]> {
     where: { userId },
     select: { data: true },
   });
-  const data =
-    row?.data && typeof row.data === 'object' ? (row.data as SettingsDataJson) : {};
+  const data = row?.data && typeof row.data === "object" ? (row.data as SettingsDataJson) : {};
   return normalizeHistory(data.homeAirportHistory);
 }
 
@@ -52,9 +51,7 @@ async function saveHistory(userId: string, history: HomeAirportEntry[]): Promise
     select: { data: true },
   });
   const currentData: SettingsDataJson =
-    existing?.data && typeof existing.data === 'object'
-      ? (existing.data as SettingsDataJson)
-      : {};
+    existing?.data && typeof existing.data === "object" ? (existing.data as SettingsDataJson) : {};
   const updated: SettingsDataJson = { ...currentData, homeAirportHistory: history };
   await prisma.userSettings.upsert({
     where: { userId },
@@ -74,7 +71,7 @@ function today(): string {
 }
 
 // GET / — full history, oldest first.
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const history = await loadHistory(req.userId!);
     res.json({ history });
@@ -85,7 +82,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
 // POST / — user moved. Closes the currently-open entry and opens a new one.
 // Body: { iata: string, fromDate?: YYYY-MM-DD (default: today) }
-router.post('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { iata, fromDate } = moveSchema.parse(req.body);
     const moveDate = fromDate || today();
@@ -100,18 +97,18 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction): Pr
 
 // PATCH /:index — correction on an existing entry (e.g. fix a wrong start date).
 router.patch(
-  '/:index',
+  "/:index",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const idx = Number(req.params.index);
       if (!Number.isInteger(idx) || idx < 0) {
-        res.status(400).json({ error: 'Invalid index' });
+        res.status(400).json({ error: "Invalid index" });
         return;
       }
       const patch = editSchema.parse(req.body);
       const history = await loadHistory(req.userId!);
       if (idx >= history.length) {
-        res.status(404).json({ error: 'Entry not found' });
+        res.status(404).json({ error: "Entry not found" });
         return;
       }
       const next: HomeAirportEntry = {
@@ -132,17 +129,17 @@ router.patch(
 
 // DELETE /:index — remove an entry entirely (e.g. accidentally added).
 router.delete(
-  '/:index',
+  "/:index",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const idx = Number(req.params.index);
       if (!Number.isInteger(idx) || idx < 0) {
-        res.status(400).json({ error: 'Invalid index' });
+        res.status(400).json({ error: "Invalid index" });
         return;
       }
       const history = await loadHistory(req.userId!);
       if (idx >= history.length) {
-        res.status(404).json({ error: 'Entry not found' });
+        res.status(404).json({ error: "Entry not found" });
         return;
       }
       const updated = history.filter((_, i) => i !== idx);

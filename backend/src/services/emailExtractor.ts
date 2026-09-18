@@ -1,6 +1,6 @@
-import MsgReader from '@kenjiuno/msgreader';
-import { parse as parseHtml } from 'node-html-parser';
-import logger from '../utils/logger';
+import MsgReader from "@kenjiuno/msgreader";
+import { parse as parseHtml } from "node-html-parser";
+import logger from "../utils/logger";
 
 /**
  * Email Extractor Service
@@ -29,7 +29,7 @@ export interface ExtractedEmail {
 
 /** A Date, or nothing — never an Invalid Date, which poisons every comparison. */
 function toDate(value: unknown): Date | undefined {
-  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  if (typeof value !== "string" || value.trim() === "") return undefined;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
@@ -49,23 +49,26 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
     const fileData = msgReader.getFileData();
 
     if (!fileData) {
-      throw new Error('Failed to read .msg file structure');
+      throw new Error("Failed to read .msg file structure");
     }
 
-    const subject = fileData.subject || '';
-    const body = fileData.body || '';
+    const subject = fileData.subject || "";
+    const body = fileData.body || "";
     const bodyHtml = fileData.bodyHtml || undefined;
     // When the SENDER sent it, preferring submit over delivery: delivery is the
     // receiving server's clock, and a mailbox re-imported years later can carry
     // a delivery stamp from the migration rather than from the booking.
     const sentAt = toDate(fileData.clientSubmitTime) ?? toDate(fileData.messageDeliveryTime);
 
-    logger.debug({
-      subject,
-      bodyLength: body.length,
-      hasHtml: !!bodyHtml,
-      sentAt: sentAt?.toISOString(),
-    }, '[Email Extractor] Extracted .msg file');
+    logger.debug(
+      {
+        subject,
+        bodyLength: body.length,
+        hasHtml: !!bodyHtml,
+        sentAt: sentAt?.toISOString(),
+      },
+      "[Email Extractor] Extracted .msg file"
+    );
 
     return {
       subject,
@@ -74,8 +77,10 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
       sentAt,
     };
   } catch (error) {
-    logger.error({ error }, '[Email Extractor] Failed to extract .msg file');
-    throw new Error(`Failed to parse .msg file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error({ error }, "[Email Extractor] Failed to extract .msg file");
+    throw new Error(
+      `Failed to parse .msg file: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -85,8 +90,8 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
 function extractFromEml(content: string): ExtractedEmail {
   try {
     // Simple EML parser - extract subject and body
-    const lines = content.split('\n');
-    let subject = '';
+    const lines = content.split("\n");
+    let subject = "";
     let sentAt: Date | undefined;
     let bodyStartIndex = 0;
     let inHeaders = true;
@@ -96,27 +101,27 @@ function extractFromEml(content: string): ExtractedEmail {
       const line = lines[i];
 
       if (inHeaders) {
-        if (line.trim() === '') {
+        if (line.trim() === "") {
           // End of headers
           inHeaders = false;
           bodyStartIndex = i + 1;
           break;
         }
 
-        if (line.toLowerCase().startsWith('subject:')) {
+        if (line.toLowerCase().startsWith("subject:")) {
           subject = line.substring(8).trim();
         }
 
         // `Date:` only at the start of a line, so a `Delivery-Date:` or a
         // quoted date inside another header cannot win.
-        if (line.toLowerCase().startsWith('date:')) {
+        if (line.toLowerCase().startsWith("date:")) {
           sentAt = sentAt ?? toDate(line.substring(5).trim());
         }
       }
     }
 
     // Extract body (everything after headers)
-    const body = lines.slice(bodyStartIndex).join('\n').trim();
+    const body = lines.slice(bodyStartIndex).join("\n").trim();
 
     // Try to extract HTML if present (simple approach)
     const htmlMatch = body.match(/<html[\s\S]*?<\/html>/i);
@@ -134,11 +139,14 @@ function extractFromEml(content: string): ExtractedEmail {
       }
     }
 
-    logger.debug({
-      subject,
-      bodyLength: text.length,
-      hasHtml: !!html,
-    }, '[Email Extractor] Extracted .eml file');
+    logger.debug(
+      {
+        subject,
+        bodyLength: text.length,
+        hasHtml: !!html,
+      },
+      "[Email Extractor] Extracted .eml file"
+    );
 
     return {
       subject,
@@ -147,8 +155,10 @@ function extractFromEml(content: string): ExtractedEmail {
       sentAt,
     };
   } catch (error) {
-    logger.error({ error }, '[Email Extractor] Failed to extract .eml file');
-    throw new Error(`Failed to parse .eml file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error({ error }, "[Email Extractor] Failed to extract .eml file");
+    throw new Error(
+      `Failed to parse .eml file: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -156,12 +166,15 @@ function extractFromEml(content: string): ExtractedEmail {
  * Extract email content from plain text file
  */
 function extractFromText(content: string): ExtractedEmail {
-  logger.debug({
-    bodyLength: content.length,
-  }, '[Email Extractor] Extracted .txt file');
+  logger.debug(
+    {
+      bodyLength: content.length,
+    },
+    "[Email Extractor] Extracted .txt file"
+  );
 
   return {
-    subject: '',
+    subject: "",
     text: content.trim(),
   };
 }
@@ -174,29 +187,32 @@ function extractFromText(content: string): ExtractedEmail {
  * @returns Extracted email content (subject, text, html)
  */
 export function extractEmailFromFile(file: Buffer | string, filename: string): ExtractedEmail {
-  const extension = filename.toLowerCase().slice(filename.lastIndexOf('.'));
+  const extension = filename.toLowerCase().slice(filename.lastIndexOf("."));
 
-  logger.info({
-    filename,
-    extension,
-    isBuffer: Buffer.isBuffer(file),
-    size: Buffer.isBuffer(file) ? file.length : file.length,
-  }, '[Email Extractor] Extracting email from file');
+  logger.info(
+    {
+      filename,
+      extension,
+      isBuffer: Buffer.isBuffer(file),
+      size: Buffer.isBuffer(file) ? file.length : file.length,
+    },
+    "[Email Extractor] Extracting email from file"
+  );
 
   switch (extension) {
-    case '.msg':
+    case ".msg":
       if (!Buffer.isBuffer(file)) {
-        throw new Error('.msg files must be provided as Buffer (binary)');
+        throw new Error(".msg files must be provided as Buffer (binary)");
       }
       return extractFromMsg(file);
 
-    case '.eml': {
-      const emlContent = Buffer.isBuffer(file) ? file.toString('utf-8') : file;
+    case ".eml": {
+      const emlContent = Buffer.isBuffer(file) ? file.toString("utf-8") : file;
       return extractFromEml(emlContent);
     }
 
-    case '.txt': {
-      const txtContent = Buffer.isBuffer(file) ? file.toString('utf-8') : file;
+    case ".txt": {
+      const txtContent = Buffer.isBuffer(file) ? file.toString("utf-8") : file;
       return extractFromText(txtContent);
     }
 

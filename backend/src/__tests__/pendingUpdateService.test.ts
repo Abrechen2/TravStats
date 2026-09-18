@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma } from "../db";
 import {
   getPendingUpdates,
   applyPendingUpdate,
@@ -7,10 +7,10 @@ import {
   getPendingUpdateById,
   calculateStatisticsImpact,
   cleanupExpiredUpdates,
-} from '../services/pendingUpdateService';
-import { Flight } from '@prisma/client';
+} from "../services/pendingUpdateService";
+import { Flight } from "@prisma/client";
 
-describe('Pending Update Service', () => {
+describe("Pending Update Service", () => {
   let userId: string;
   let testFlight: Flight;
   let pendingUpdateId: string;
@@ -20,7 +20,7 @@ describe('Pending Update Service', () => {
     const user = await prisma.user.create({
       data: {
         username: `testpending${Date.now()}`,
-        passwordHash: 'testhash',
+        passwordHash: "testhash",
       },
     });
     userId = user.id;
@@ -30,19 +30,19 @@ describe('Pending Update Service', () => {
     testFlight = await prisma.flight.create({
       data: {
         userId,
-        airline: 'Lufthansa',
-        flightNumber: 'LH123',
-        depIata: 'FRA',
-        depIcao: 'EDDF',
-        arrIata: 'LHR',
-        arrIcao: 'EGLL',
+        airline: "Lufthansa",
+        flightNumber: "LH123",
+        depIata: "FRA",
+        depIcao: "EDDF",
+        arrIata: "LHR",
+        arrIcao: "EGLL",
         depLat: 50.0379,
         depLon: 8.5622,
-        arrLat: 51.4700,
+        arrLat: 51.47,
         arrLon: -0.4543,
         departureTime: new Date(now.getTime() - 2 * 60 * 60 * 1000),
         arrivalTime: new Date(now.getTime() + 2 * 60 * 60 * 1000),
-        status: 'scheduled',
+        status: "scheduled",
       },
     });
 
@@ -51,26 +51,26 @@ describe('Pending Update Service', () => {
       data: {
         flightId: testFlight.id,
         userId,
-        status: 'pending',
+        status: "pending",
         originalData: {
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'LHR',
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "LHR",
         },
         proposedData: {
-          airline: 'Lufthansa',
-          depIata: 'FRA',
-          arrIata: 'LGW', // Changed
+          airline: "Lufthansa",
+          depIata: "FRA",
+          arrIata: "LGW", // Changed
         },
         changes: [
           {
-            field: 'arrIata',
-            oldValue: 'LHR',
-            newValue: 'LGW',
-            type: 'changed',
+            field: "arrIata",
+            oldValue: "LHR",
+            newValue: "LGW",
+            type: "changed",
           },
         ],
-        apiSource: 'airlabs',
+        apiSource: "airlabs",
         fetchedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
@@ -87,8 +87,8 @@ describe('Pending Update Service', () => {
     await prisma.$disconnect();
   });
 
-  describe('getPendingUpdates', () => {
-    it('should return all pending updates for user', async () => {
+  describe("getPendingUpdates", () => {
+    it("should return all pending updates for user", async () => {
       const updates = await getPendingUpdates(userId);
 
       expect(updates).toBeDefined();
@@ -96,39 +96,39 @@ describe('Pending Update Service', () => {
       expect(updates[0].userId).toBe(userId);
     });
 
-    it('should filter by status', async () => {
-      const updates = await getPendingUpdates(userId, { status: 'pending' });
+    it("should filter by status", async () => {
+      const updates = await getPendingUpdates(userId, { status: "pending" });
 
-      expect(updates.every(u => u.status === 'pending')).toBe(true);
+      expect(updates.every((u) => u.status === "pending")).toBe(true);
     });
 
-    it('should filter by flightId', async () => {
+    it("should filter by flightId", async () => {
       const updates = await getPendingUpdates(userId, { flightId: testFlight.id });
 
-      expect(updates.every(u => u.flightId === testFlight.id)).toBe(true);
+      expect(updates.every((u) => u.flightId === testFlight.id)).toBe(true);
     });
   });
 
-  describe('getPendingUpdateById', () => {
-    it('should return pending update by id', async () => {
+  describe("getPendingUpdateById", () => {
+    it("should return pending update by id", async () => {
       const update = await getPendingUpdateById(pendingUpdateId, userId);
 
       expect(update).toBeDefined();
       expect(update?.id).toBe(pendingUpdateId);
     });
 
-    it('should return null for non-existent update', async () => {
-      const update = await getPendingUpdateById('non-existent-id', userId);
+    it("should return null for non-existent update", async () => {
+      const update = await getPendingUpdateById("non-existent-id", userId);
 
       expect(update).toBeNull();
     });
 
-    it('should return null for update belonging to different user', async () => {
+    it("should return null for update belonging to different user", async () => {
       // Create another user
       const otherUser = await prisma.user.create({
         data: {
           username: `testother${Date.now()}`,
-          passwordHash: 'testhash',
+          passwordHash: "testhash",
         },
       });
 
@@ -141,60 +141,56 @@ describe('Pending Update Service', () => {
     });
   });
 
-  describe('updatePendingUpdate', () => {
-    it('should update pending update with edited data', async () => {
+  describe("updatePendingUpdate", () => {
+    it("should update pending update with edited data", async () => {
       const editedData = {
-        airline: 'Lufthansa',
-        depIata: 'FRA',
-        arrIata: 'STN', // Different from proposed
+        airline: "Lufthansa",
+        depIata: "FRA",
+        arrIata: "STN", // Different from proposed
       };
 
       const editedChanges = [
         {
-          field: 'arrIata',
-          oldValue: 'LHR',
-          newValue: 'STN',
-          type: 'changed',
+          field: "arrIata",
+          oldValue: "LHR",
+          newValue: "STN",
+          type: "changed",
         },
       ];
 
-      const updated = await updatePendingUpdate(
-        pendingUpdateId,
-        userId,
-        editedData
-      );
+      const updated = await updatePendingUpdate(pendingUpdateId, userId, editedData);
 
       expect(updated).toBeDefined();
-      expect(updated.status).toBe('edited');
+      expect(updated.status).toBe("edited");
       expect(updated.editedData).toBeDefined();
       expect(updated.editedChanges).toBeDefined();
       expect(updated.editedAt).toBeDefined();
     });
   });
 
-  describe('applyPendingUpdate', () => {
-    it('should apply pending update to flight', async () => {
+  describe("applyPendingUpdate", () => {
+    it("should apply pending update to flight", async () => {
       // Create a new pending update for this test
       const newPendingUpdate = await prisma.pendingFlightUpdate.create({
         data: {
           flightId: testFlight.id,
           userId,
-          status: 'pending',
+          status: "pending",
           originalData: {
-            arrIata: 'LHR',
+            arrIata: "LHR",
           },
           proposedData: {
-            arrIata: 'LGW',
+            arrIata: "LGW",
           },
           changes: [
             {
-              field: 'arrIata',
-              oldValue: 'LHR',
-              newValue: 'LGW',
-              type: 'changed',
+              field: "arrIata",
+              oldValue: "LHR",
+              newValue: "LGW",
+              type: "changed",
             },
           ],
-          apiSource: 'airlabs',
+          apiSource: "airlabs",
           fetchedAt: new Date(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
@@ -209,33 +205,33 @@ describe('Pending Update Service', () => {
         where: { id: testFlight.id },
       });
 
-      expect(updatedFlight?.arrIata).toBe('LGW');
+      expect(updatedFlight?.arrIata).toBe("LGW");
     });
   });
 
-  describe('rejectPendingUpdate', () => {
-    it('should reject pending update', async () => {
+  describe("rejectPendingUpdate", () => {
+    it("should reject pending update", async () => {
       // Create a new pending update for this test
       const newPendingUpdate = await prisma.pendingFlightUpdate.create({
         data: {
           flightId: testFlight.id,
           userId,
-          status: 'pending',
+          status: "pending",
           originalData: {
-            arrIata: 'LHR',
+            arrIata: "LHR",
           },
           proposedData: {
-            arrIata: 'LGW',
+            arrIata: "LGW",
           },
           changes: [
             {
-              field: 'arrIata',
-              oldValue: 'LHR',
-              newValue: 'LGW',
-              type: 'changed',
+              field: "arrIata",
+              oldValue: "LHR",
+              newValue: "LGW",
+              type: "changed",
             },
           ],
-          apiSource: 'airlabs',
+          apiSource: "airlabs",
           fetchedAt: new Date(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
@@ -247,31 +243,31 @@ describe('Pending Update Service', () => {
     });
   });
 
-  describe('calculateStatisticsImpact', () => {
-    it('should calculate statistics impact correctly', async () => {
+  describe("calculateStatisticsImpact", () => {
+    it("should calculate statistics impact correctly", async () => {
       // Create additional flights for better statistics
       await prisma.flight.create({
         data: {
           userId,
-          airline: 'British Airways',
-          flightNumber: 'BA456',
-          depIata: 'LHR',
-          depIcao: 'EGLL',
-          arrIata: 'JFK',
-          arrIcao: 'KJFK',
-          depLat: 51.4700,
+          airline: "British Airways",
+          flightNumber: "BA456",
+          depIata: "LHR",
+          depIcao: "EGLL",
+          arrIata: "JFK",
+          arrIcao: "KJFK",
+          depLat: 51.47,
           depLon: -0.4543,
           arrLat: 40.6413,
           arrLon: -73.7781,
           departureTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
           arrivalTime: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
-          status: 'flown',
+          status: "flown",
         },
       });
 
       const proposedData = {
-        arrIata: 'LGW',
-        arrIcao: 'EGKK',
+        arrIata: "LGW",
+        arrIcao: "EGKK",
         arrLat: 51.1537,
         arrLon: -0.1821,
       };
@@ -283,11 +279,7 @@ describe('Pending Update Service', () => {
         arrIcao: testFlight.arrIcao ?? undefined,
       };
 
-      const impact = await calculateStatisticsImpact(
-        testFlight,
-        originalData,
-        proposedData
-      );
+      const impact = await calculateStatisticsImpact(testFlight, originalData, proposedData);
 
       expect(impact).toBeDefined();
       expect(impact.distance).toBeDefined();
@@ -297,18 +289,18 @@ describe('Pending Update Service', () => {
     });
   });
 
-  describe('cleanupExpiredUpdates', () => {
-    it('should mark expired updates as expired', async () => {
+  describe("cleanupExpiredUpdates", () => {
+    it("should mark expired updates as expired", async () => {
       // Create an expired pending update
       const expiredUpdate = await prisma.pendingFlightUpdate.create({
         data: {
           flightId: testFlight.id,
           userId,
-          status: 'pending',
+          status: "pending",
           originalData: {},
           proposedData: {},
           changes: [],
-          apiSource: 'airlabs',
+          apiSource: "airlabs",
           fetchedAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
           expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago (expired)
         },
@@ -320,7 +312,7 @@ describe('Pending Update Service', () => {
         where: { id: expiredUpdate.id },
       });
 
-      expect(updated?.status).toBe('expired');
+      expect(updated?.status).toBe("expired");
     });
   });
 });

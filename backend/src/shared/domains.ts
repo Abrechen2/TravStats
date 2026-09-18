@@ -3,8 +3,8 @@
  * See: docs/superpowers/specs/2026-04-19-multi-domain-foundation-design.md
  */
 
-export const DOMAIN_KEYS = ['flight', 'cruise', 'lodging', 'poi'] as const;
-export type DomainKey = typeof DOMAIN_KEYS[number];
+export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi"] as const;
+export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
   key: DomainKey;
@@ -25,36 +25,36 @@ export interface DomainDescriptor {
 // the backend mirror at backend/src/shared/domains.ts.
 export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   flight: {
-    key: 'flight',
+    key: "flight",
     available: true,
-    i18nKey: 'domain.flight',
-    icon: '✈',
-    color: '#f0a947',
-    routePrefix: '/flights',
+    i18nKey: "domain.flight",
+    icon: "✈",
+    color: "#f0a947",
+    routePrefix: "/flights",
   },
   cruise: {
-    key: 'cruise',
+    key: "cruise",
     available: true,
-    i18nKey: 'domain.cruise',
-    icon: '🚢',
-    color: '#4aa6b0',
-    routePrefix: '/cruises',
+    i18nKey: "domain.cruise",
+    icon: "🚢",
+    color: "#4aa6b0",
+    routePrefix: "/cruises",
   },
   lodging: {
-    key: 'lodging',
+    key: "lodging",
     available: true,
-    i18nKey: 'domain.lodging',
-    icon: '🏨',
-    color: '#5ec2b2',
-    routePrefix: '/lodging',
+    i18nKey: "domain.lodging",
+    icon: "🏨",
+    color: "#5ec2b2",
+    routePrefix: "/lodging",
   },
   poi: {
-    key: 'poi',
+    key: "poi",
     available: true,
-    i18nKey: 'domain.poi',
-    icon: '📍',
-    color: '#e7e3dc',
-    routePrefix: '/places',
+    i18nKey: "domain.poi",
+    icon: "📍",
+    color: "#e7e3dc",
+    routePrefix: "/places",
   },
 };
 
@@ -69,11 +69,9 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
  * place it is written. Mirrors `domainColor.tour` in `design/tokens.json` and
  * `--ts-domain-tour` in the generated theme.
  */
-export const TOUR_COLOR = '#8faa5f';
+export const TOUR_COLOR = "#8faa5f";
 
-export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
-  (k) => DOMAINS[k].available,
-);
+export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[k].available);
 
 /**
  * Subset of domains that have a working parser (email + PDF + boarding
@@ -82,7 +80,11 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
  * as the runtime allow-list for the `domain` field on every parse
  * endpoint — adding lodging parsing means adding `'lodging'` here once.
  */
-export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise', 'lodging'] as const satisfies readonly DomainKey[];
+export const PARSER_SUPPORTED_DOMAINS = [
+  "flight",
+  "cruise",
+  "lodging",
+] as const satisfies readonly DomainKey[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 
 export function isValidDomain(value: string): value is DomainKey {

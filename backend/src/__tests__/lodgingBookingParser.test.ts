@@ -10,7 +10,15 @@ import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplat
 
 jest.mock("../services/parserSettings", () => ({
   getAdminParserSettings: jest.fn(async () => ({ ollamaUrl: null, ollamaModel: null })),
+  // Template-first is the instance default since 2026-09-17 (forgejo#125),
+  // and it is what this file measures: the template answers and the LLM is
+  // never called.
+  getParserOrder: jest.fn(async () => "template_first"),
 }));
+
+const mockGetParserOrder = (
+  jest.requireMock("../services/parserSettings") as { getParserOrder: jest.Mock }
+).getParserOrder;
 
 const mockGetAdminParserSettings = getAdminParserSettings as jest.MockedFunction<
   typeof getAdminParserSettings
@@ -78,7 +86,7 @@ describe("parseLodgingBookingText", () => {
       `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
       // A deliberately unreachable Ollama: if the template path is taken, this
       // is never dialled, so the call must still succeed fast.
-      { url: "http://127.0.0.1:1", model: "nonexistent" },
+      { url: "http://127.0.0.1:1", model: "nonexistent" }
     );
     expect(result.parserUsed).toBe("template");
     expect(result.bookings).toHaveLength(1);
@@ -98,6 +106,47 @@ describe("parseLodgingBookingText", () => {
     expect(result.bookings).toEqual([]);
     expect(result.ollamaAvailable).toBe(false);
     expect(typeof result.fallbackReason).toBe("string");
+  });
+
+  // Cold review, 2026-09-17: under `llm_first` the template has not been tried
+  // yet when the model fails, and the model can fail three ways — unreachable,
+  // empty, or thrown. All three must fall back to the template, or the setting
+  // quietly costs coverage instead of trading it.
+  describe("under llm_first, a failing model never costs a document its template", () => {
+    const KOA = [
+      "Canton KOA Holiday Reservation Confirmation #12874330",
+      "Kampgrounds of America",
+      "RESERVED",
+      "Friday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)",
+      "Estimated Total For Your Stay* \t$47.87 (USD)",
+    ].join("\n");
+
+    beforeEach(() => mockGetParserOrder.mockResolvedValue("llm_first"));
+    afterEach(() => mockGetParserOrder.mockResolvedValue("template_first"));
+
+    it("falls back when the generate call answers garbage", async () => {
+      const server = await createMockOllamaServer((req, res) => {
+        if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end("this is not json{{{");
+      });
+      try {
+        const result = await parseLodgingBookingText(KOA, { url: server.url, model: "mock" });
+        expect(result.parserUsed).toBe("template");
+        expect(result.bookings[0]?.checkIn).toBe("2022-11-25");
+      } finally {
+        await server.close();
+      }
+    });
+
+    it("falls back when the model is not reachable at all", async () => {
+      const result = await parseLodgingBookingText(KOA, {
+        url: "http://127.0.0.1:9",
+        model: "mock",
+      });
+      expect(result.parserUsed).toBe("template");
+      expect(result.bookings[0]?.totalPrice).toBeCloseTo(47.87, 2);
+    });
   });
 
   describe("failure matrix — the LLM must never block or throw", () => {
@@ -172,7 +221,7 @@ describe("parseLodgingBookingText", () => {
   describe("settings resolution order (options > admin_settings > env > default)", () => {
     it("prefers explicit options over a healthy admin-configured endpoint", async () => {
       const healthyAdmin = await createMockOllamaServer((req, res) =>
-        respondJson(res, HEALTHY_TAGS_RESPONSE),
+        respondJson(res, HEALTHY_TAGS_RESPONSE)
       );
       mockGetAdminParserSettings.mockResolvedValue({
         ollamaUrl: healthyAdmin.url,
@@ -289,10 +338,13 @@ describe("parseLodgingBookingText", () => {
       });
     });
     try {
-      const result = await parseLodgingBookingText("Buchungsnummer: 260308233983\nAnreise\nAbreise", {
-        url: server.url,
-        model: "mock",
-      });
+      const result = await parseLodgingBookingText(
+        "Buchungsnummer: 260308233983\nAnreise\nAbreise",
+        {
+          url: server.url,
+          model: "mock",
+        }
+      );
       expect(result.parserUsed).toBe("ollama");
       expect(result.ollamaAvailable).toBe(true);
       expect(result.bookings).toHaveLength(1);
@@ -421,8 +473,14 @@ describe("parseLodgingBookingText", () => {
     }
   });
 
-  describeSamples("real sample: direct hotel booking (LLM fully mocked)", () => {
-    it("does not match the Booking.com template and reaches the mocked LLM fallback", async () => {
+  // This mail used to be the example of "no template can read it, so the LLM
+  // must" — a CHECK24 confirmation, which says "Buchungsnummer" and is
+  // therefore refused by the Booking.com reader on purpose. Since 2026-09-17
+  // it has a reader of its own (`lodging:check24`), and the assertion that
+  // survives is the one that was always the point: the Booking.com reader
+  // still refuses it, and the mail no longer needs a model at all.
+  describeSamples("real sample: a CHECK24 confirmation", () => {
+    it("is refused by the Booking.com reader and read by its own, without the LLM", async () => {
       const file = fs
         .readdirSync(SAMPLE_DIR)
         .find((f) => f.includes("Novina") && f.endsWith(".msg"));
@@ -431,6 +489,8 @@ describe("parseLodgingBookingText", () => {
       const extracted = extractEmailFromFile(buffer, file);
       const text = `${extracted.subject}\n\n${extracted.text}`;
 
+      // A model that would answer with something recognisably wrong, so a
+      // result that came from it could not pass for a template read.
       const server = await createMockOllamaServer((req, res) => {
         if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
         respondJson(res, {
@@ -448,9 +508,11 @@ describe("parseLodgingBookingText", () => {
       });
       try {
         const result = await parseLodgingBookingText(text, { url: server.url, model: "mock" });
-        expect(result.parserUsed).toBe("ollama");
+        expect(result.parserUsed).toBe("template");
         expect(result.bookings).toHaveLength(1);
-        expect(result.bookings[0].hotelName).toBe("Mocked Fallback Hotel");
+        expect(result.bookings[0].parserTemplate).toBe("check24");
+        expect(result.bookings[0].hotelName).toBe("Novina Sleep Inn Herzogenaurach");
+        expect(result.bookings[0].checkIn).toBe("2026-03-10");
       } finally {
         await server.close();
       }
@@ -467,14 +529,17 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
 
   async function withModelAnswer(
     bookings: Record<string, unknown>[],
-    documentText: string,
+    documentText: string
   ): Promise<ParsedLodgingBooking[]> {
     const server = await createMockOllamaServer((req, res) => {
       if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
       respondJson(res, { response: JSON.stringify({ bookings }) });
     });
     try {
-      const result = await parseLodgingBookingText(documentText, { url: server.url, model: "mock" });
+      const result = await parseLodgingBookingText(documentText, {
+        url: server.url,
+        model: "mock",
+      });
       return result.bookings;
     } finally {
       await server.close();
@@ -497,7 +562,7 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
         { hotelName: "Hotel Alpha", ...stay, totalPrice: 100, currency: "EUR" },
         { hotelName: "Hotel Beta", ...stay, totalPrice: 500, currency: "EUR" },
       ],
-      document,
+      document
     );
     expect(bookings.map((b) => [b.hotelName, b.totalPrice])).toEqual([
       ["Hotel Alpha", 100],
@@ -508,10 +573,15 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
   // The labelled total was a EUR conversion under an AED fee. It overruled
   // the model and kept the model's unit: 100 AED.
   it("does not let a labelled total in another currency overrule the model (AUD-050)", async () => {
-    const document = ["Buchungsnummer: 2", "Hotel Gamma", "Local fee: AED 400.00", "Total price: EUR 100.00"].join("\n");
+    const document = [
+      "Buchungsnummer: 2",
+      "Hotel Gamma",
+      "Local fee: AED 400.00",
+      "Total price: EUR 100.00",
+    ].join("\n");
     const [booking] = await withModelAnswer(
       [{ hotelName: "Hotel Gamma", ...stay, totalPrice: 400, currency: "AED" }],
-      document,
+      document
     );
     expect(booking.totalPrice).toBe(400);
     expect(booking.currency).toBe("AED");
@@ -520,8 +590,16 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
   // `Number("")` is 0: textual absence became a free night with nothing missing.
   it("reads a textual null as no price, not as a free night (AUD-051)", async () => {
     const [booking] = await withModelAnswer(
-      [{ hotelName: "Hotel Delta", ...stay, totalPrice: "null", pricePerNight: "n/a", currency: "EUR" }],
-      "Buchungsnummer: 3\nHotel Delta",
+      [
+        {
+          hotelName: "Hotel Delta",
+          ...stay,
+          totalPrice: "null",
+          pricePerNight: "n/a",
+          currency: "EUR",
+        },
+      ],
+      "Buchungsnummer: 3\nHotel Delta"
     );
     expect(booking.totalPrice).toBeNull();
     expect(booking.pricePerNight).toBeNull();
@@ -530,8 +608,16 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
 
   it("reads a string amount in either grouping convention (AUD-051)", async () => {
     const [booking] = await withModelAnswer(
-      [{ hotelName: "Hotel Epsilon", ...stay, totalPrice: "1,234.50", pricePerNight: "1.234,50", currency: "EUR" }],
-      "Buchungsnummer: 4\nHotel Epsilon",
+      [
+        {
+          hotelName: "Hotel Epsilon",
+          ...stay,
+          totalPrice: "1,234.50",
+          pricePerNight: "1.234,50",
+          currency: "EUR",
+        },
+      ],
+      "Buchungsnummer: 4\nHotel Epsilon"
     );
     expect(booking.totalPrice).toBeCloseTo(1234.5, 2);
     expect(booking.pricePerNight).toBeCloseTo(1234.5, 2);
@@ -540,7 +626,7 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
   it("keeps a real zero", async () => {
     const [booking] = await withModelAnswer(
       [{ hotelName: "Hotel Zeta", ...stay, totalPrice: 0, currency: "EUR" }],
-      "Buchungsnummer: 5\nHotel Zeta",
+      "Buchungsnummer: 5\nHotel Zeta"
     );
     expect(booking.totalPrice).toBe(0);
   });

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Client, TextChannel, ThreadChannel } from "discord.js";
-import { findExactMatches, resolveReplyTarget, resolveThread, runReply } from "../src/replyThread.js";
+import {
+  findExactMatches,
+  resolveReplyTarget,
+  resolveThread,
+  runReply,
+} from "../src/replyThread.js";
 
 /** Minimal stand-in — resolveThread only reads `id` and `name`. */
 function thread(id: string, name: string): ThreadChannel {
@@ -146,7 +151,7 @@ describe("runReply promise settlement", () => {
     const client = { login, once, destroy: vi.fn() } as unknown as Client;
 
     await expect(runReply(client, "bad-token", "guild", "support", "hi", false)).rejects.toThrow(
-      "bad token",
+      "bad token"
     );
   });
 });

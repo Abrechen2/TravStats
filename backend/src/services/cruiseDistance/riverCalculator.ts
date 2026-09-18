@@ -33,12 +33,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import logger from "../../utils/logger";
 import { haversineKm } from "../../shared/geo/haversine";
-import type {
-  ComputedLeg,
-  Confidence,
-  DistanceCalculator,
-  PortPoint,
-} from "./types";
+import type { ComputedLeg, Confidence, DistanceCalculator, PortPoint } from "./types";
 
 const RIVER_VERSION = "1.0.0";
 const ROUTER_VERSION = "1.0.0";
@@ -91,11 +86,11 @@ async function loadRivers(): Promise<Map<string, PreparedRiver>> {
             const cur = data.anchors[i];
             cumulative.push(
               cumulative[i - 1] +
-                haversineKm({ lat: prev.lat, lon: prev.lon }, { lat: cur.lat, lon: cur.lon }),
+                haversineKm({ lat: prev.lat, lon: prev.lon }, { lat: cur.lat, lon: cur.lon })
             );
           }
           const hasKm = data.anchors.every(
-            (a): a is AnchorWithKm => typeof (a as AnchorWithKm).km === "number",
+            (a): a is AnchorWithKm => typeof (a as AnchorWithKm).km === "number"
           );
           result.set(data.region, {
             region: data.region,
@@ -132,10 +127,7 @@ interface ProjectionResult {
   segmentT: number;
 }
 
-function projectOntoRiver(
-  port: PortPoint,
-  river: PreparedRiver,
-): ProjectionResult {
+function projectOntoRiver(port: PortPoint, river: PreparedRiver): ProjectionResult {
   let bestSeg = 0;
   let bestT = 0;
   let bestOffset = Infinity;
@@ -154,10 +146,7 @@ function projectOntoRiver(
     }
     const projLon = a.lon + t * dx;
     const projLat = a.lat + t * dy;
-    const offset = haversineKm(
-      { lat: port.lat, lon: port.lon },
-      { lat: projLat, lon: projLon },
-    );
+    const offset = haversineKm({ lat: port.lat, lon: port.lon }, { lat: projLat, lon: projLon });
     if (offset < bestOffset) {
       bestOffset = offset;
       bestSeg = i;
@@ -188,11 +177,7 @@ function projectOntoRiver(
 /** Above this offset (km) from the river polyline → reject (port not on river). */
 const RIVER_OFFSET_REJECT_KM = 25;
 
-function classifyConfidence(
-  fromOffsetKm: number,
-  toOffsetKm: number,
-  hasKm: boolean,
-): Confidence {
+function classifyConfidence(fromOffsetKm: number, toOffsetKm: number, hasKm: boolean): Confidence {
   const worstOffset = Math.max(fromOffsetKm, toOffsetKm);
   if (hasKm && worstOffset < 5) return "high";
   if (worstOffset < 5) return "medium"; // chord-based, no authoritative km
@@ -219,10 +204,7 @@ export const riverCalculator: DistanceCalculator = {
     const fromProj = projectOntoRiver(from, river);
     const toProj = projectOntoRiver(to, river);
 
-    if (
-      fromProj.offsetKm > RIVER_OFFSET_REJECT_KM ||
-      toProj.offsetKm > RIVER_OFFSET_REJECT_KM
-    ) {
+    if (fromProj.offsetKm > RIVER_OFFSET_REJECT_KM || toProj.offsetKm > RIVER_OFFSET_REJECT_KM) {
       return null;
     }
 
@@ -244,11 +226,7 @@ export const riverCalculator: DistanceCalculator = {
       method: "river-osm",
       routerVersion: ROUTER_VERSION,
       dataVersion: `${RIVER_VERSION}:${river.region}`,
-      confidence: classifyConfidence(
-        fromProj.offsetKm,
-        toProj.offsetKm,
-        river.hasKm,
-      ),
+      confidence: classifyConfidence(fromProj.offsetKm, toProj.offsetKm, river.hasKm),
       notes,
     };
   },

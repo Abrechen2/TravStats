@@ -121,7 +121,14 @@ describe("buildCountryDetail", () => {
       [flight("a", "MUC", "FRA")],
       countries,
       [],
-      [{ cruiseId: "c1", portName: "Genova", country: "Italia", at: new Date("2023-07-04T00:00:00Z") }]
+      [
+        {
+          cruiseId: "c1",
+          portName: "Genova",
+          country: "Italia",
+          at: new Date("2023-07-04T00:00:00Z"),
+        },
+      ]
     );
 
     expect(detail?.portCalls).toBe(1);
@@ -222,9 +229,7 @@ describe("buildCountryDetail", () => {
       lodgingId: "l4",
       name: "Hotel Bukarest",
       isoCountryCode: "RO",
-      stays: [
-        { status: "cancelled", checkIn: null, checkOut: new Date("2019-05-04T00:00:00Z") },
-      ],
+      stays: [{ status: "cancelled", checkIn: null, checkOut: new Date("2019-05-04T00:00:00Z") }],
     };
 
     expect(buildCountryDetail("RO", [], countries, [], [], [], [booking])).toBeNull();

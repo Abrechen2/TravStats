@@ -1,9 +1,9 @@
-import axios from 'axios';
-import { ParsedBooking } from './bookingParser';
-import logger from '../utils/logger';
+import axios from "axios";
+import { ParsedBooking } from "./bookingParser";
+import logger from "../utils/logger";
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llava:latest';
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || "llava:latest";
 
 interface OllamaVisionResponse {
   model: string;
@@ -21,8 +21,8 @@ interface OllamaVisionResponse {
  * Supports models: llava, llava:13b, bakllava, etc.
  */
 export async function parseWithOllamaVision(imageBase64: string): Promise<ParsedBooking> {
-  logger.info('[Ollama Vision Parser] Starting boarding pass parsing');
-  logger.info({ model: OLLAMA_VISION_MODEL }, '[Ollama Vision Parser] Model');
+  logger.info("[Ollama Vision Parser] Starting boarding pass parsing");
+  logger.info({ model: OLLAMA_VISION_MODEL }, "[Ollama Vision Parser] Model");
 
   const prompt = `You are an expert boarding pass analyzer. Extract flight information from this boarding pass image.
 
@@ -87,29 +87,32 @@ Return ONLY valid JSON (no markdown formatting) in this exact structure:
       {
         timeout: 60000, // 60 second timeout for vision models
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
 
     const rawResponse = response.data.response.trim();
-    logger.info({ rawResponse: rawResponse.substring(0, 200) }, '[Ollama Vision Parser] Raw response');
+    logger.info(
+      { rawResponse: rawResponse.substring(0, 200) },
+      "[Ollama Vision Parser] Raw response"
+    );
 
     // Clean the response (remove markdown formatting if present)
     let cleanedResponse = rawResponse;
 
     // Remove markdown code blocks
-    if (cleanedResponse.includes('```json')) {
-      cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (cleanedResponse.includes('```')) {
-      cleanedResponse = cleanedResponse.replace(/```\n?/g, '');
+    if (cleanedResponse.includes("```json")) {
+      cleanedResponse = cleanedResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    } else if (cleanedResponse.includes("```")) {
+      cleanedResponse = cleanedResponse.replace(/```\n?/g, "");
     }
 
     // Try to find JSON in the response
     const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      logger.error('[Ollama Vision Parser] No JSON found in response');
-      throw new Error('Invalid response format: No JSON found');
+      logger.error("[Ollama Vision Parser] No JSON found in response");
+      throw new Error("Invalid response format: No JSON found");
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -126,43 +129,50 @@ Return ONLY valid JSON (no markdown formatting) in this exact structure:
 
     // Ensure missing array is present
     const missing: string[] = [];
-    if (!parsed.departureCode) missing.push('departureCode');
-    if (!parsed.arrivalCode) missing.push('arrivalCode');
-    if (!parsed.flightNumber) missing.push('flightNumber');
-    if (!parsed.departureTime) missing.push('departureTime');
+    if (!parsed.departureCode) missing.push("departureCode");
+    if (!parsed.arrivalCode) missing.push("arrivalCode");
+    if (!parsed.flightNumber) missing.push("flightNumber");
+    if (!parsed.departureTime) missing.push("departureTime");
 
     const result: ParsedBooking = {
       ...parsed,
       missing,
     };
 
-    logger.info({
-      flightNumber: result.flightNumber,
-      route: `${result.departureCode} → ${result.arrivalCode}`,
-      missingFields: missing.length,
-    }, '[Ollama Vision Parser] Extraction complete');
+    logger.info(
+      {
+        flightNumber: result.flightNumber,
+        route: `${result.departureCode} → ${result.arrivalCode}`,
+        missingFields: missing.length,
+      },
+      "[Ollama Vision Parser] Extraction complete"
+    );
 
     return result;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNREFUSED') {
-        logger.error('[Ollama Vision Parser] Ollama is not running or not accessible');
-        throw new Error('Ollama Vision service unavailable. Please ensure Ollama is running with a vision model.');
+      if (error.code === "ECONNREFUSED") {
+        logger.error("[Ollama Vision Parser] Ollama is not running or not accessible");
+        throw new Error(
+          "Ollama Vision service unavailable. Please ensure Ollama is running with a vision model."
+        );
       }
       if (error.response?.status === 404) {
         logger.error(`[Ollama Vision Parser] Model ${OLLAMA_VISION_MODEL} not found`);
-        throw new Error(`Vision model '${OLLAMA_VISION_MODEL}' not found. Please install it with: ollama pull ${OLLAMA_VISION_MODEL}`);
+        throw new Error(
+          `Vision model '${OLLAMA_VISION_MODEL}' not found. Please install it with: ollama pull ${OLLAMA_VISION_MODEL}`
+        );
       }
-      logger.error({ error: error.message }, '[Ollama Vision Parser] HTTP error');
+      logger.error({ error: error.message }, "[Ollama Vision Parser] HTTP error");
       throw new Error(`Ollama Vision API error: ${error.message}`);
     }
 
     if (error instanceof SyntaxError) {
-      logger.error({ error: error.message }, '[Ollama Vision Parser] JSON parse error');
-      throw new Error('Failed to parse Ollama Vision response as JSON');
+      logger.error({ error: error.message }, "[Ollama Vision Parser] JSON parse error");
+      throw new Error("Failed to parse Ollama Vision response as JSON");
     }
 
-    logger.error({ error }, '[Ollama Vision Parser] Unexpected error');
+    logger.error({ error }, "[Ollama Vision Parser] Unexpected error");
     throw error;
   }
 }
@@ -177,17 +187,20 @@ export async function checkOllamaVisionAvailability(): Promise<boolean> {
     });
 
     const models = response.data.models || [];
-    const hasVisionModel = models.some((m: { name: string }) =>
-      m.name.includes('llava') || m.name.includes('bakllava') || m.name === OLLAMA_VISION_MODEL
+    const hasVisionModel = models.some(
+      (m: { name: string }) =>
+        m.name.includes("llava") || m.name.includes("bakllava") || m.name === OLLAMA_VISION_MODEL
     );
 
     if (!hasVisionModel) {
-      logger.warn(`[Ollama Vision Parser] No vision model found. Install with: ollama pull ${OLLAMA_VISION_MODEL}`);
+      logger.warn(
+        `[Ollama Vision Parser] No vision model found. Install with: ollama pull ${OLLAMA_VISION_MODEL}`
+      );
     }
 
     return hasVisionModel;
   } catch (_error) {
-    logger.warn('[Ollama Vision Parser] Ollama service not available');
+    logger.warn("[Ollama Vision Parser] Ollama service not available");
     return false;
   }
 }

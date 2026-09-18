@@ -296,30 +296,28 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
             </button>
           )}
         </div>
-      ) : (
-        showGroups ? (
-          <div className="space-y-4">
-            {dayGroups.map((group) => (
-              <div key={group.day ?? "undated"}>
-                {group.day && (
-                  <h4
-                    data-testid="gallery-day-header"
-                    className="mb-1.5 text-sm font-semibold text-slate-300"
-                  >
-                    {dayLabel(group.day)}
-                  </h4>
-                )}
-                <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-                  {group.assets.map((asset) => tile(asset, asset.index))}
-                </div>
+      ) : showGroups ? (
+        <div className="space-y-4">
+          {dayGroups.map((group) => (
+            <div key={group.day ?? "undated"}>
+              {group.day && (
+                <h4
+                  data-testid="gallery-day-header"
+                  className="mb-1.5 text-sm font-semibold text-slate-300"
+                >
+                  {dayLabel(group.day)}
+                </h4>
+              )}
+              <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+                {group.assets.map((asset) => tile(asset, asset.index))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-            {assets.map((asset, index) => tile(asset, index))}
-          </div>
-        )
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+          {assets.map((asset, index) => tile(asset, index))}
+        </div>
       )}
 
       {lightboxIndex !== null && (

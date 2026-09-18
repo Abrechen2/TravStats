@@ -254,9 +254,7 @@ describe("Places API", () => {
     it("reports the total so the client can page the complete set", async () => {
       await create(BASE);
       await create({ ...BASE, name: "Zweiter", lat: 1, lon: 1 });
-      const res = await request(app)
-        .get("/api/v1/places?limit=1")
-        .set("Cookie", authCookie);
+      const res = await request(app).get("/api/v1/places?limit=1").set("Cookie", authCookie);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.meta.total).toBe(2);
     });

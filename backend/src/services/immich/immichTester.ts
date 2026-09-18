@@ -28,7 +28,7 @@ export interface ImmichTestResult {
 
 export async function testImmichConnection(
   baseUrl: string,
-  apiKey: string,
+  apiKey: string
 ): Promise<ImmichTestResult> {
   let normalized: string;
   try {

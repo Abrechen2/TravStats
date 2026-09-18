@@ -2,6 +2,9 @@ import { prisma } from "../../db";
 import {
   briefFromTrip,
   buildSystemPrompt,
+  compactBrief,
+  routeLine,
+  type SummaryBrief,
   buildUserPrompt,
   cleanSummary,
   resolveOllamaTarget,
@@ -62,21 +65,169 @@ describe("tripSummaryService", () => {
       expect(buildUserPrompt("de", "{}")).toMatch(/^Reisedaten:/);
     });
 
-    it("names stays and places among the sources in both languages", () => {
-      expect(buildSystemPrompt("de")).toMatch(/Aufenthalten, Orten/);
-      expect(buildSystemPrompt("en")).toMatch(/stays, places/);
+    it("names the sources of a summary in both languages", () => {
+      expect(buildSystemPrompt("de")).toMatch(/"notes"/);
+      expect(buildSystemPrompt("de")).toMatch(/"journal"/);
+      expect(buildSystemPrompt("en")).toMatch(/"notes"/);
+      expect(buildSystemPrompt("en")).toMatch(/"journal"/);
+    });
+
+    // Measured 2026-09-17 on gemma3:12b: "You took a business trip" in English
+    // and "ich" beside "wir" in one German text, from a rule that left the
+    // choice to the model. The brief decides now, and the prompt says so.
+    it("takes the person from the brief rather than leaving it to the model", () => {
+      for (const language of ["de", "en"] as const) {
+        expect(buildSystemPrompt(language)).toMatch(/"perspective"/);
+      }
     });
 
     // The first probe (2026-09-05, gemma3:12b) wrote a finished trip as
-    // anticipation and remarked that "the occasion isn't specified" — both
-    // are prompt rules now, in both languages.
-    it("ties the tense to the trip status and forbids remarking on missing data", () => {
+    // anticipation, so the tense is tied to the status in both languages.
+    it("ties the tense to the trip status", () => {
       for (const language of ["de", "en"] as const) {
         expect(buildSystemPrompt(language)).toMatch(/"completed"/);
         expect(buildSystemPrompt(language)).toMatch(/"planned"/);
+        expect(buildSystemPrompt(language)).toMatch(/"in_progress"/);
       }
-      expect(buildSystemPrompt("de")).toMatch(/erwähne NIE/);
-      expect(buildSystemPrompt("en")).toMatch(/NEVER say/);
+    });
+  });
+
+  // Measured 2026-09-17: with `companions: []` in the brief, the model wrote
+  // "I embarked on this journey alone, with no companions joining me" — an
+  // absence told as a fact. No wording stopped it; dropping the key did.
+  describe("compactBrief", () => {
+    it("drops what is empty and keeps what is there", () => {
+      const compacted = compactBrief({
+        name: "Trip",
+        perspective: "I",
+        nights: 2,
+        status: "completed",
+        category: null,
+        startDate: "2024-05-01",
+        endDate: "2024-05-03",
+        origin: null,
+        destination: "Porto",
+        countries: [],
+        companions: [],
+        tags: [],
+        flights: [],
+        cruises: [],
+        stays: [
+          {
+            lodging: "Casa",
+            nights: 2,
+            city: "Porto",
+            country: null,
+            checkIn: "2024-05-01",
+            checkOut: "2024-05-03",
+            room: null,
+            notes: null,
+          },
+        ],
+        places: [],
+        stops: [],
+        journal: [],
+        notes: null,
+      });
+      expect(Object.keys(compacted).sort()).toEqual(
+        [
+          "destination",
+          "endDate",
+          "name",
+          "nights",
+          "perspective",
+          "stays",
+          "startDate",
+          "status",
+        ].sort()
+      );
+      expect(compacted.stays).toEqual([
+        {
+          lodging: "Casa",
+          nights: 2,
+          city: "Porto",
+          checkIn: "2024-05-01",
+          checkOut: "2024-05-03",
+        },
+      ]);
+    });
+  });
+
+  // The model counted "five days and six nights" for five, and listed a bakery
+  // and a hotel as stops on the route. Both are written here now.
+  describe("routeLine", () => {
+    const brief = (over: Partial<SummaryBrief>): SummaryBrief =>
+      ({
+        name: "T",
+        perspective: "we",
+        nights: 5,
+        status: "completed",
+        category: null,
+        startDate: null,
+        endDate: null,
+        origin: null,
+        destination: "Lissabon",
+        countries: [],
+        companions: [],
+        tags: [],
+        flights: [],
+        cruises: [],
+        places: [],
+        stops: [],
+        journal: [],
+        notes: null,
+        stays: [],
+        ...over,
+      }) as SummaryBrief;
+
+    it("names the cities in the order they were visited, once each, with the nights", () => {
+      const line = routeLine(
+        brief({
+          stays: [
+            {
+              lodging: "A",
+              nights: 3,
+              city: "Lissabon",
+              country: null,
+              checkIn: null,
+              checkOut: null,
+              room: null,
+              notes: null,
+            },
+            {
+              lodging: "B",
+              nights: 2,
+              city: "Lissabon",
+              country: null,
+              checkIn: null,
+              checkOut: null,
+              room: null,
+              notes: null,
+            },
+          ],
+          places: [
+            {
+              name: "Pena",
+              category: "sight",
+              city: "Sintra",
+              country: null,
+              date: null,
+              notes: null,
+            },
+          ],
+        }),
+        "de"
+      );
+      expect(line).toBe("Route: Lissabon – Sintra. 5 Nächte.");
+    });
+
+    it("says nothing when there is no city or no night count to report", () => {
+      expect(routeLine(brief({ destination: null }), "en")).toBe("");
+      expect(routeLine(brief({ nights: null }), "en")).toBe("");
+    });
+
+    it("counts one night as a night", () => {
+      expect(routeLine(brief({ nights: 1 }), "en")).toBe("Route: Lissabon. 1 night.");
     });
   });
 

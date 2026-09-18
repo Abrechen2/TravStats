@@ -31,12 +31,12 @@ function clamp(instant: Date, start: Date, end: Date): Date {
 export function stopTimesForDay(
   start: Date,
   end: Date,
-  dayIndex: number,
+  dayIndex: number
 ): { arrivalTime: Date; departureTime: Date } {
   const dayStart = Date.UTC(
     start.getUTCFullYear(),
     start.getUTCMonth(),
-    start.getUTCDate() + dayIndex,
+    start.getUTCDate() + dayIndex
   );
   const arrivalTime = clamp(new Date(dayStart + ARRIVAL_HOUR_UTC * 3_600_000), start, end);
   const departureTime = clamp(new Date(dayStart + DEPARTURE_HOUR_UTC * 3_600_000), start, end);

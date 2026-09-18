@@ -31,7 +31,7 @@ beforeEach(() => {
     (error: unknown): boolean =>
       typeof error === "object" &&
       error !== null &&
-      (error as { isAxiosError?: unknown }).isAxiosError === true,
+      (error as { isAxiosError?: unknown }).isAxiosError === true
   );
 });
 
@@ -44,7 +44,7 @@ describe("testLogostreamKey", () => {
     expect(result).toEqual({ success: true, message: "API key is valid", messageKey: "valid" });
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=real-key-1234567890",
-      expect.objectContaining({ responseType: "arraybuffer" }),
+      expect.objectContaining({ responseType: "arraybuffer" })
     );
   });
 
@@ -97,7 +97,7 @@ describe("testGooglePlacesKey", () => {
           "X-Goog-Api-Key": "real-google-key-1234567890",
           "X-Goog-FieldMask": "places.displayName",
         }),
-      }),
+      })
     );
   });
 

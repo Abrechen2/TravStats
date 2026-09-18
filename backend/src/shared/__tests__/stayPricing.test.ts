@@ -17,7 +17,12 @@ describe("stayPricing.nightsBetween", () => {
 describe("stayPricing.deriveStayTotalPrice", () => {
   it("keeps a typed total as the source of truth", () => {
     expect(
-      deriveStayTotalPrice({ totalPrice: 420, pricePerNight: 100, checkIn: "2026-05-01", checkOut: "2026-05-04" })
+      deriveStayTotalPrice({
+        totalPrice: 420,
+        pricePerNight: 100,
+        checkIn: "2026-05-01",
+        checkOut: "2026-05-04",
+      })
     ).toBe(420);
   });
 
@@ -25,13 +30,23 @@ describe("stayPricing.deriveStayTotalPrice", () => {
   // it disagrees with the per-night figure.
   it("prefers the total even when it disagrees with per-night × nights", () => {
     expect(
-      deriveStayTotalPrice({ totalPrice: 399, pricePerNight: 100, checkIn: "2026-05-01", checkOut: "2026-05-04" })
+      deriveStayTotalPrice({
+        totalPrice: 399,
+        pricePerNight: 100,
+        checkIn: "2026-05-01",
+        checkOut: "2026-05-04",
+      })
     ).toBe(399);
   });
 
   it("derives the total from per-night × nights when no total was given", () => {
     expect(
-      deriveStayTotalPrice({ totalPrice: null, pricePerNight: 95, checkIn: "2026-07-26", checkOut: "2026-07-28" })
+      deriveStayTotalPrice({
+        totalPrice: null,
+        pricePerNight: 95,
+        checkIn: "2026-07-26",
+        checkOut: "2026-07-28",
+      })
     ).toBe(190);
   });
 

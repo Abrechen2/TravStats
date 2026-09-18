@@ -350,7 +350,11 @@ export function EventLocationPicker({
 
       <LocationMapModal
         open={modalOpen}
-        value={hasPosition && value.lat !== null && value.lon !== null ? { lat: value.lat, lon: value.lon } : null}
+        value={
+          hasPosition && value.lat !== null && value.lon !== null
+            ? { lat: value.lat, lon: value.lon }
+            : null
+        }
         onClose={() => setModalOpen(false)}
         onConfirm={handleModalConfirm}
         idPrefix={`${idPrefix}-map-modal`}

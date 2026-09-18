@@ -26,10 +26,7 @@ export interface PreviewRowInput {
 }
 
 export type PreviewFlag =
-  | "duration_mismatch"
-  | "unresolvable_airport"
-  | "malformed_datetime"
-  | "missing_required";
+  "duration_mismatch" | "unresolvable_airport" | "malformed_datetime" | "missing_required";
 export type DedupeHint = "exact_match" | "same_day_same_route" | "none";
 
 export interface PreviewRowEnriched extends PreviewRowInput {
@@ -125,14 +122,10 @@ export async function buildPreviewRows(
         // issue #99). When both signals are present we anchor on arr_local
         // and use Duration only to pick the calendar day for trans-meridian
         // flights. The duration_mismatch flag still fires for transparency.
-        const hasDuration =
-          typeof row.durationSeconds === "number" && row.durationSeconds > 0;
+        const hasDuration = typeof row.durationSeconds === "number" && row.durationSeconds > 0;
         if (hasDuration && row.arrTimeLocal) {
           const target = depUtc.getTime() + row.durationSeconds! * 1000;
-          const naiveMs = fromZonedTime(
-            `${row.date}T${row.arrTimeLocal}`,
-            arrTz
-          ).getTime();
+          const naiveMs = fromZonedTime(`${row.date}T${row.arrTimeLocal}`, arrTz).getTime();
           let bestMs = naiveMs;
           let bestDiff = Math.abs(naiveMs - target);
           const dayMs = 24 * 3600 * 1000;

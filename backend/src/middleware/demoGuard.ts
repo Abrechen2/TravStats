@@ -26,7 +26,11 @@ export { isSharedDemoUser };
  *
  * Mount AFTER `authenticate`: it reads `req.userId`.
  */
-export async function rejectDemo(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function rejectDemo(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (!req.userId) {
       next();
@@ -64,7 +68,11 @@ export function rejectDemoWrites(req: AuthRequest, res: Response, next: NextFunc
  * for rows nobody will read, so all of them are refused here, not only the
  * shared one. That is why this is not `rejectDemo` with a different message.
  */
-export async function rejectDemoQuota(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function rejectDemoQuota(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (!req.userId) {
       next();

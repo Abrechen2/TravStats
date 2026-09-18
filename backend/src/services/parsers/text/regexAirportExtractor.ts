@@ -9,17 +9,17 @@ import {
   IATA_CONTEXT_PATTERNS,
   IATA_FALSE_POSITIVES,
   VALID_IATA_CODES,
-} from './regexMappings';
+} from "./regexMappings";
 
 /** Normalize city name for lookup in CITY_TO_IATA */
 export function normalizeCityName(city: string): string {
   return city
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z\s-]/gi, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s-]/gi, "")
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' ');
+    .replace(/\s+/g, " ");
 }
 
 /**
@@ -36,14 +36,19 @@ export function extractAirportCodes(source: string): { departure?: string; arriv
   const sourceUpper = source.toUpperCase();
 
   // Highest priority: "Von: City (MUC)" / "In: City (LUX)" lines
-  const depM = source.match(/(?:^|\n)\s*(?:Von|Ab|From|Departure|Abflug(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
-  const arrM = source.match(/(?:^|\n)\s*(?:In|Nach|To|Arrival|Ankunft(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
+  const depM = source.match(
+    /(?:^|\n)\s*(?:Von|Ab|From|Departure|Abflug(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im
+  );
+  const arrM = source.match(
+    /(?:^|\n)\s*(?:In|Nach|To|Arrival|Ankunft(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im
+  );
   if (depM && isValidIATACode(depM[1])) {
     return { departure: depM[1], arrival: arrM && isValidIATACode(arrM[1]) ? arrM[1] : undefined };
   }
 
   // Try city name mapping
-  const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
+  const cityPattern =
+    /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
   const cityMatch = cityPattern.exec(sourceLower);
 
   if (cityMatch) {
@@ -87,7 +92,9 @@ export function extractAirportCodes(source: string): { departure?: string; arriv
 }
 
 /** Extract all airport code pairs from text (multi-flight support) */
-export function extractAllAirportPairs(source: string): Array<{ departure?: string; arrival?: string }> {
+export function extractAllAirportPairs(
+  source: string
+): Array<{ departure?: string; arrival?: string }> {
   const pairs: Array<{ departure?: string; arrival?: string }> = [];
   const sourceLower = source.toLowerCase();
   const sourceUpper = source.toUpperCase();
@@ -96,8 +103,10 @@ export function extractAllAirportPairs(source: string): Array<{ departure?: stri
   // Variant A: "Von: City Name (MUC)" / "In: City Name (LUX)" — IATA in parens
   const depIataMatches: Array<{ code: string; index: number }> = [];
   const arrIataMatches: Array<{ code: string; index: number }> = [];
-  const depLinePattern = /(?:^|\n)\s*(?:von|ab|from|departure|abflug(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
-  const arrLinePattern = /(?:^|\n)\s*(?:in|nach|to|arrival|ankunft(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
+  const depLinePattern =
+    /(?:^|\n)\s*(?:von|ab|from|departure|abflug(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
+  const arrLinePattern =
+    /(?:^|\n)\s*(?:in|nach|to|arrival|ankunft(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
   for (const m of source.matchAll(depLinePattern)) {
     if (isValidIATACode(m[1])) depIataMatches.push({ code: m[1], index: m.index! });
   }
@@ -123,7 +132,8 @@ export function extractAllAirportPairs(source: string): Array<{ departure?: stri
   }
 
   // Pattern 1: City names (von X nach Y)
-  const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/giu;
+  const cityPattern =
+    /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/giu;
   let cityMatch;
   while ((cityMatch = cityPattern.exec(sourceLower)) !== null) {
     const depCity = normalizeCityName(cityMatch[1]);

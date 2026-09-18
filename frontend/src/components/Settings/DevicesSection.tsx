@@ -19,6 +19,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
+import { formatDateTime } from "../../lib/displayFormat";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -422,7 +423,7 @@ export default function DevicesSection(): JSX.Element {
                     <div className="text-xs" style={{ color: "var(--text-muted)" }}>
                       {dev.lastUsedAt
                         ? t("settings:devices.lastUsed", {
-                            when: new Date(dev.lastUsedAt).toLocaleString(),
+                            when: formatDateTime(dev.lastUsedAt),
                           })
                         : t("settings:devices.neverUsed")}
                       {dev.lastUsedIp && ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}

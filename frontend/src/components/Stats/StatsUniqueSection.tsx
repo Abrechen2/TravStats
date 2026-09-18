@@ -1,6 +1,7 @@
 import type { UniqueStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
+import { formatDate } from "../../lib/displayFormat";
 
 interface StatsUniqueSectionProps {
   uniqueStats: UniqueStats | null;
@@ -204,7 +205,7 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
               value={uniqueStats.mostCountriesInDay}
               description={t("stats:unique.mostCountriesInDayDesc", {
                 count: uniqueStats.mostCountriesInDay,
-                date: new Date(uniqueStats.mostCountriesDate).toLocaleDateString(),
+                date: formatDate(uniqueStats.mostCountriesDate),
               })}
             />
           )}

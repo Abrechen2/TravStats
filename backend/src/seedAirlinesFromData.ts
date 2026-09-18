@@ -22,9 +22,7 @@ export async function seedAirlinesFromData(): Promise<number> {
   const seed = buildAirlineSeed(raw);
 
   const existing = await prisma.airline.findMany({ select: { iata: true } });
-  const existingIatas = new Set(
-    existing.map((a) => a.iata).filter((i): i is string => Boolean(i)),
-  );
+  const existingIatas = new Set(existing.map((a) => a.iata).filter((i): i is string => Boolean(i)));
 
   const toInsert = seed
     .filter((r) => !existingIatas.has(r.iata))

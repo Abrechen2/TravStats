@@ -35,4 +35,6 @@ export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
   "place-photos",
   "profile-pictures",
   "lodging-photos",
+  // Kept originals — bills, PDFs, mails, Wallet passes (forgejo#116).
+  "documents",
 ] as const;

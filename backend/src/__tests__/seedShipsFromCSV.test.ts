@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
-import { prisma } from '../db';
-import { seedShipsFromCSV } from '../seedShipsFromCSV';
+import { describe, it, expect, beforeEach, afterAll } from "@jest/globals";
+import { prisma } from "../db";
+import { seedShipsFromCSV } from "../seedShipsFromCSV";
 
-describe('seedShipsFromCSV', () => {
+describe("seedShipsFromCSV", () => {
   beforeEach(async () => {
     // Wipe ALL rows (incl. isUserAdded) so each test starts clean. The
     // isUserAdded test below relies on AIDAnova not pre-existing.
@@ -16,20 +16,20 @@ describe('seedShipsFromCSV', () => {
     await prisma.$disconnect();
   });
 
-  it('inserts rows from CSV', async () => {
+  it("inserts rows from CSV", async () => {
     const count = await seedShipsFromCSV();
     expect(count).toBeGreaterThanOrEqual(20);
   });
 
-  it('is idempotent', async () => {
+  it("is idempotent", async () => {
     await seedShipsFromCSV();
     const second = await seedShipsFromCSV();
     expect(second).toBe(0);
   });
 
-  it('respects isUserAdded flag', async () => {
+  it("respects isUserAdded flag", async () => {
     const s = await prisma.ship.create({
-      data: { name: 'AIDAnova', imo: '9781865', cruiseLine: 'AIDA Cruises', isUserAdded: true },
+      data: { name: "AIDAnova", imo: "9781865", cruiseLine: "AIDA Cruises", isUserAdded: true },
     });
     await seedShipsFromCSV();
     const reloaded = await prisma.ship.findUnique({ where: { id: s.id } });

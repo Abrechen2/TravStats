@@ -56,9 +56,7 @@ export default function SystemInfo({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:instanceLabel")}</div>
-          <div className="text-2xl font-bold text-(--text-primary)">
-            {systemInfo.instanceName}
-          </div>
+          <div className="text-2xl font-bold text-(--text-primary)">{systemInfo.instanceName}</div>
         </div>
         <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalUsers")}</div>
@@ -74,9 +72,7 @@ export default function SystemInfo({
         </div>
         <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalFlights")}</div>
-          <div className="text-2xl font-bold text-(--text-primary)">
-            {systemInfo.flightCount}
-          </div>
+          <div className="text-2xl font-bold text-(--text-primary)">{systemInfo.flightCount}</div>
         </div>
       </div>
 
@@ -128,9 +124,7 @@ export default function SystemInfo({
         </h2>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm text-(--text-muted)">
-              {t("admin:systemInfo.registration")}
-            </dt>
+            <dt className="text-sm text-(--text-muted)">{t("admin:systemInfo.registration")}</dt>
             <dd className="text-lg font-medium text-(--text-primary)">
               {systemInfo.registrationEnabled
                 ? t("admin:systemInfo.enabled")

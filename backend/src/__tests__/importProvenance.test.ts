@@ -20,7 +20,7 @@ describe("flightExternalRef", () => {
         departureLocal: "2024-05-01T10:35",
         depIata: "fra",
         arrIata: "jfk",
-      }),
+      })
     ).toBe(flightExternalRef(base));
   });
 
@@ -38,7 +38,7 @@ describe("flightExternalRef", () => {
 
   it("separates the same flight number on different days", () => {
     expect(flightExternalRef({ ...base, departureLocal: "2024-05-02T10:35:00" })).not.toBe(
-      flightExternalRef(base),
+      flightExternalRef(base)
     );
   });
 
@@ -47,13 +47,18 @@ describe("flightExternalRef", () => {
   it("refuses to invent a key when the row cannot be identified", () => {
     expect(flightExternalRef({ departureLocal: null, depIata: "FRA", arrIata: "JFK" })).toBeNull();
     expect(
-      flightExternalRef({ flightNumber: null, departureLocal: "2024-05-01T10:00", depIata: null }),
+      flightExternalRef({ flightNumber: null, departureLocal: "2024-05-01T10:00", depIata: null })
     ).toBeNull();
   });
 
   it("still identifies a flight with no number but a full route", () => {
     expect(
-      flightExternalRef({ flightNumber: null, departureLocal: "2024-05-01T10:00", depIata: "FRA", arrIata: "JFK" }),
+      flightExternalRef({
+        flightNumber: null,
+        departureLocal: "2024-05-01T10:00",
+        depIata: "FRA",
+        arrIata: "JFK",
+      })
     ).toBe("import:-:2024-05-01:FRA-JFK");
   });
 
@@ -68,13 +73,13 @@ describe("cruiseExternalRef", () => {
   // A cruise booking reference identifies one cruise, unlike a flight PNR.
   it("uses the booking reference when there is one", () => {
     expect(cruiseExternalRef({ bookingReference: "1C868387", startDate: "2024-11-15" })).toBe(
-      "booking:1C868387",
+      "booking:1C868387"
     );
   });
 
   it("falls back to ship and sailing day", () => {
     expect(
-      cruiseExternalRef({ shipNameOverride: "AIDAluna", startDate: "2024-11-15T00:00:00" }),
+      cruiseExternalRef({ shipNameOverride: "AIDAluna", startDate: "2024-11-15T00:00:00" })
     ).toBe("import:AIDALUNA:2024-11-15");
   });
 

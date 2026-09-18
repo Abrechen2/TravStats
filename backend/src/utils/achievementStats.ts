@@ -2,15 +2,15 @@
 // Extracted from `achievements.ts` so that file stays under the
 // 800-line limit mandated by CLAUDE.md.
 
-import { calculateDistance } from './geo';
-import { getContinent } from './continents';
-import { toCountryCode } from '../shared/countryEvidence';
-import { computeFlightSequenceStats } from './flightSequenceStats';
-import logger from './logger';
-import { getCachedAirports } from '../services/airportCache';
-import { normalizeAircraft } from './aircraftNormalize';
-import { isCountableFlight } from '../shared/flightCounting';
-import { flightDurationOf } from '../shared/flightDuration';
+import { calculateDistance } from "./geo";
+import { getContinent } from "./continents";
+import { toCountryCode } from "../shared/countryEvidence";
+import { computeFlightSequenceStats } from "./flightSequenceStats";
+import logger from "./logger";
+import { getCachedAirports } from "../services/airportCache";
+import { normalizeAircraft } from "./aircraftNormalize";
+import { isCountableFlight } from "../shared/flightCounting";
+import { flightDurationOf } from "../shared/flightDuration";
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
@@ -27,7 +27,7 @@ import {
   airlineAllianceOf,
   isLowCostCarrier,
   matchesAircraftBucket,
-} from './achievementData';
+} from "./achievementData";
 
 export interface FlightData {
   id: string;
@@ -93,11 +93,11 @@ export interface UserStats {
   wideBodyCount: number;
   turboPropCount: number;
   jumboCount: number;
-  airlineAlliances: Set<'star' | 'skyteam' | 'oneworld'>;
+  airlineAlliances: Set<"star" | "skyteam" | "oneworld">;
   airportAlphabet: Set<string>;
   lowcostCount: number;
   firstClassFlights: number;
-  premiumTrifecta: Set<'short' | 'long' | 'ultra'>;
+  premiumTrifecta: Set<"short" | "long" | "ultra">;
   redEyeFlights: number;
   earlyMorningFlights: number;
   windowStreak: number;
@@ -467,11 +467,11 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     }
   } catch (error) {
     logger.error({
-      operation: 'fetch_airports_for_stats',
-      message: 'Failed to fetch airports for user stats calculation',
+      operation: "fetch_airports_for_stats",
+      message: "Failed to fetch airports for user stats calculation",
       context: { flightCount: flights.length, airportCodeCount: airportCodes.size },
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -480,12 +480,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
 
   for (const flight of flights) {
     // Distance
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
+    const distance = calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
     stats.totalDistance += distance;
     stats.longestSingleFlight = Math.max(stats.longestSingleFlight, distance);
     if (distance > 0) {
@@ -515,8 +510,8 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // `UserStats.countries` an all-codes set by construction rather than by
     // luck, so the cross-domain union has one vocabulary to merge into. It
     // also drops the catalogue's placeholder codes, which name no country.
-    const depAirport = airportMap.get(depCode || '');
-    const arrAirport = airportMap.get(arrCode || '');
+    const depAirport = airportMap.get(depCode || "");
+    const arrAirport = airportMap.get(arrCode || "");
     const depCountry = toCountryCode(depAirport?.country);
     const arrCountry = toCountryCode(arrAirport?.country);
     if (depCountry) stats.countries.add(depCountry);
@@ -552,7 +547,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // (monthsWithFlights, flightsByMonth, flightsByYear) is reliable enough
     // for historical flights so those remain inclusive.
     if (flight.departureTime) {
-      if (flight.status === 'flown') {
+      if (flight.status === "flown") {
         // Night flights (00:00 - 06:00)
         const depHour = flight.departureTime.getHours();
         if (depHour >= 0 && depHour < 6) {
@@ -569,7 +564,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       // Months with flights
       const monthKey = `${flight.departureTime.getFullYear()}-${String(
         flight.departureTime.getMonth() + 1
-      ).padStart(2, '0')}`;
+      ).padStart(2, "0")}`;
       stats.monthsWithFlights.add(monthKey);
 
       const monthCount = stats.flightsByMonth.get(monthKey) || 0;
@@ -617,21 +612,21 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     if (isLowCostCarrier(flight.airline)) stats.lowcostCount++;
 
     // Cabin class + premium trifecta (requires distance bucket)
-    if (flight.seatClass === 'first') stats.firstClassFlights++;
-    const isPremium = flight.seatClass === 'first' || flight.seatClass === 'business';
+    if (flight.seatClass === "first") stats.firstClassFlights++;
+    const isPremium = flight.seatClass === "first" || flight.seatClass === "business";
     if (isPremium && distance > 0) {
       if (distance <= SHORT_HAUL_MAX_KM) {
-        stats.premiumTrifecta.add('short');
+        stats.premiumTrifecta.add("short");
       } else if (distance >= ULTRA_LONG_HAUL_MIN_KM) {
-        stats.premiumTrifecta.add('ultra');
+        stats.premiumTrifecta.add("ultra");
       } else if (distance >= LONG_HAUL_MIN_KM) {
-        stats.premiumTrifecta.add('long');
+        stats.premiumTrifecta.add("long");
       }
     }
 
     // Red-eye / not-a-morning-person (departure hour local) — needs precise
     // local hour, so flown-only. Historical placeholders would skew this.
-    if (flight.departureTime && flight.status === 'flown') {
+    if (flight.departureTime && flight.status === "flown") {
       const h = flight.departureTime.getHours();
       if (h >= 23 || h < 5) stats.redEyeFlights++;
       if (h >= 4 && h < 7) stats.earlyMorningFlights++;
@@ -663,23 +658,22 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       const d = flight.departureTime;
       const month = d.getMonth();
       const day = d.getDate();
-      if (month === 11 && day === 7) stats.icaoDayFlights++;           // 7 Dec — ICAO Day
-      if (month === 7 && day === 19) stats.wrightDayFlights++;         // 19 Aug — National Aviation Day
-      if (month === 4 && day === 4) stats.mayFourthFlights++;          // 4 May — Star Wars Day
+      if (month === 11 && day === 7) stats.icaoDayFlights++; // 7 Dec — ICAO Day
+      if (month === 7 && day === 19) stats.wrightDayFlights++; // 19 Aug — National Aviation Day
+      if (month === 4 && day === 4) stats.mayFourthFlights++; // 4 May — Star Wars Day
       if (month === 2 && day === 14) {
-        stats.piDayFlights++;                                          // 14 Mar — Pi Day
+        stats.piDayFlights++; // 14 Mar — Pi Day
         // π Precision: great-circle distance within ±5 % of 3141 km
         if (distance >= 3141 * 0.95 && distance <= 3141 * 1.05) {
           stats.piPrecisionFlights++;
         }
       }
-      if (month === 9 && day === 31) stats.halloweenFlights++;         // 31 Oct — Halloween
+      if (month === 9 && day === 31) stats.halloweenFlights++; // 31 Oct — Halloween
       if (month === 11 && (day === 24 || day === 25)) stats.xmasFlights++; // Christmas
-      if (day === 13 && d.getDay() === 5) stats.friday13Flights++;     // Friday the 13th
+      if (day === 13 && d.getDay() === 5) stats.friday13Flights++; // Friday the 13th
       // Palindrome date: DDMMYYYY reads the same reversed (e.g. 22.02.2022).
-      const dateDigits =
-        `${String(day).padStart(2, '0')}${String(month + 1).padStart(2, '0')}${d.getFullYear()}`;
-      if (dateDigits === dateDigits.split('').reverse().join('')) {
+      const dateDigits = `${String(day).padStart(2, "0")}${String(month + 1).padStart(2, "0")}${d.getFullYear()}`;
+      if (dateDigits === dateDigits.split("").reverse().join("")) {
         stats.palindromeFlights++;
       }
     }
@@ -697,10 +691,10 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // (scheduled eclipse chases are milestones in the real world even
     // before they fly).
     if (flight.specialType) {
-      if (flight.specialType === 'sightseeing') stats.specialSightseeingCount++;
-      else if (flight.specialType === 'zerog') stats.specialZerogCount++;
-      else if (flight.specialType === 'eclipse') stats.specialEclipseCount++;
-      else if (flight.specialType === 'rocket_launch') stats.specialRocketCount++;
+      if (flight.specialType === "sightseeing") stats.specialSightseeingCount++;
+      else if (flight.specialType === "zerog") stats.specialZerogCount++;
+      else if (flight.specialType === "eclipse") stats.specialEclipseCount++;
+      else if (flight.specialType === "rocket_launch") stats.specialRocketCount++;
     }
   }
 
@@ -756,7 +750,7 @@ export function computeFlyAndStayFlags(trips: TripDomainCounts[]): {
 } {
   const flyAndStay = trips.some((t) => t.flightCount > 0 && t.lodgingStayCount > 0);
   const grandTour = trips.some(
-    (t) => t.flightCount > 0 && t.cruiseCount > 0 && t.lodgingStayCount > 0,
+    (t) => t.flightCount > 0 && t.cruiseCount > 0 && t.lodgingStayCount > 0
   );
   return { flyAndStay, grandTour };
 }

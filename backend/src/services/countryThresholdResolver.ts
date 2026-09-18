@@ -70,7 +70,10 @@ export interface ResolvedCountryThreshold {
  * the normal way, never a reason to fail a stats request.
  */
 export async function getInstanceCountryThreshold(): Promise<CountryTier> {
-  const row = await prisma.adminSettings.findFirst({ select: { countryThreshold: true } , orderBy: { id: "asc" } });
+  const row = await prisma.adminSettings.findFirst({
+    select: { countryThreshold: true },
+    orderBy: { id: "asc" },
+  });
   const parsed = parseCountryTier(row?.countryThreshold);
   if (row && parsed === null) {
     logger.warn({
@@ -91,9 +94,7 @@ export async function getInstanceCountryThreshold(): Promise<CountryTier> {
  * instance default, which is the right answer for "this instance's rule" when
  * there is no person to ask.
  */
-export async function resolveCountryThreshold(
-  userId?: string
-): Promise<ResolvedCountryThreshold> {
+export async function resolveCountryThreshold(userId?: string): Promise<ResolvedCountryThreshold> {
   const [instance, userRow] = await Promise.all([
     getInstanceCountryThreshold(),
     userId

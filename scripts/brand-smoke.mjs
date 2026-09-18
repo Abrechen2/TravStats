@@ -27,7 +27,10 @@ const shot = async (page, name) => {
 
 const safeClick = async (page, selector, opts = {}) => {
   try {
-    await page.locator(selector).first().click({ timeout: 3000, ...opts });
+    await page
+      .locator(selector)
+      .first()
+      .click({ timeout: 3000, ...opts });
     return true;
   } catch {
     return false;
@@ -95,7 +98,10 @@ const safeClick = async (page, selector, opts = {}) => {
   await page.goto(`${BASE}/cruises`);
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(1500);
-  await safeClick(page, 'button:has-text("Hinzufügen"), button:has-text("Add"), button:has-text("Neu")');
+  await safeClick(
+    page,
+    'button:has-text("Hinzufügen"), button:has-text("Add"), button:has-text("Neu")'
+  );
   await page.waitForTimeout(700);
   await shot(page, "09-cruise-chooser");
   await page.keyboard.press("Escape");

@@ -264,7 +264,8 @@
       "commit": "Übernehmen",
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",
-      "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen."
+      "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen.",
+      "changedLabel": "geändert"
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "matchedAs": "Zugeordnet zu:",
@@ -298,7 +299,8 @@
     "actions": {
       "choose": "— auswählen —",
       "create": "Anlegen",
-      "skip": "Überspringen"
+      "skip": "Überspringen",
+      "update": "Aktualisieren"
     },
     "flags": {
       "missing_name": "Name fehlt",
@@ -347,8 +349,10 @@
       "failureCodes": {
         "ownership_mismatch": "gehört einem anderen Konto",
         "missing_lodging_reference": "Hotel-Referenz fehlt",
-        "unexpected_error": "unerwarteter Fehler"
-      }
+        "unexpected_error": "unerwarteter Fehler",
+        "missing_stay_reference": "kein Aufenthalt deines Kontos"
+      },
+      "updatedSuffix": " {{count}} bestehende Aufenthalte aktualisiert."
     },
     "batches": {
       "title": "Bisherige Importe",
@@ -384,7 +388,8 @@
       "noRows": "In dieser Datei steht keine Zeile mit einem Namen — ist es wirklich eine gespeicherte Liste aus Takeout?",
       "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
     },
-    "createChain": "„{{name}}\" anlegen"
+    "createChain": "„{{name}}\" anlegen",
+    "changedHint": "Geändert"
   },
   "stats": {
     "more": "+ {{count}} weitere",

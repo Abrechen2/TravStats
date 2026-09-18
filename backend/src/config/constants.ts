@@ -53,8 +53,8 @@ export const FILE_LIMITS = {
   GPX_TRACK_MAX_SIZE: 15 * 1024 * 1024, // 15 MB
 
   // Body parsing limits
-  JSON_BODY_MAX_SIZE: '10mb',
-  URLENCODED_BODY_MAX_SIZE: '10mb',
+  JSON_BODY_MAX_SIZE: "10mb",
+  URLENCODED_BODY_MAX_SIZE: "10mb",
 
   // Text processing limits
   EMAIL_TEXT_MAX_LENGTH: 4000, // characters for basic parser
@@ -111,6 +111,12 @@ export const RATE_LIMITS = {
   // Receipt upload rate limits (prevent disk exhaustion)
   UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   UPLOAD_RECEIPT_MAX: 30, // 30 uploads per hour
+
+  // Kept originals (forgejo#116). Sized for the Companion flushing an offline
+  // queue after a trip without signal (a week abroad is easily 60 originals)
+  // while still bounding a script to about 1 GB an hour at the 10 MB ceiling.
+  DOCUMENT_UPLOAD_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  DOCUMENT_UPLOAD_MAX: 100, // 100 originals per hour per user or token
 
   // Profile picture upload rate limits (prevent disk exhaustion)
   UPLOAD_PROFILE_PICTURE_WINDOW_MS: 60 * 60 * 1000, // 1 hour

@@ -69,9 +69,12 @@ describe("Lodging API", () => {
 
   describe("POST /api/v1/lodging/:id/stays — FX snapshot on write", () => {
     it("snapshots a CHF stay into EUR base on create", async () => {
-      jest
-        .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 424.45, rate: 1.0106, rateDate: "2024-05-13", source: "ecb" });
+      jest.spyOn(fx, "convertToBase").mockResolvedValue({
+        baseAmount: 424.45,
+        rate: 1.0106,
+        rateDate: "2024-05-13",
+        source: "ecb",
+      });
       const res = await request(app)
         .post(`/api/v1/lodging/${lodgingId}/stays`)
         .set("Cookie", authCookie)
@@ -141,15 +144,12 @@ describe("Lodging API", () => {
       const spy = jest
         .spyOn(fx, "convertToBase")
         .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2024-08-20", source: "ecb" });
-      await request(app)
-        .post(`/api/v1/lodging/${lodgingId}/stays`)
-        .set("Cookie", authCookie)
-        .send({
-          checkIn: "2024-08-20T23:30:00.000Z",
-          checkOut: "2024-08-21T10:00:00.000Z",
-          totalPrice: 100,
-          currency: "USD",
-        });
+      await request(app).post(`/api/v1/lodging/${lodgingId}/stays`).set("Cookie", authCookie).send({
+        checkIn: "2024-08-20T23:30:00.000Z",
+        checkOut: "2024-08-21T10:00:00.000Z",
+        totalPrice: 100,
+        currency: "USD",
+      });
       const passedDate = spy.mock.calls[0][3] as Date;
       expect(passedDate.toISOString().slice(0, 10)).toBe("2024-08-20");
     });
@@ -225,9 +225,12 @@ describe("Lodging API", () => {
 
   describe("GET /api/v1/lodging/fx-preview — live rate preview (never the authoritative snapshot)", () => {
     it("returns a conversion preview for a differing currency", async () => {
-      jest
-        .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", source: "ecb" });
+      jest.spyOn(fx, "convertToBase").mockResolvedValue({
+        baseAmount: 391.23,
+        rate: 0.9315,
+        rateDate: "2026-07-11",
+        source: "ecb",
+      });
       const res = await request(app)
         .get("/api/v1/lodging/fx-preview")
         .query({ amount: 420, from: "CHF", date: "2026-07-11" })
@@ -235,7 +238,13 @@ describe("Lodging API", () => {
       expect(res.status).toBe(200);
       // `source` joined the payload with the provider chain: the editor has to
       // be able to say WHICH source answered, and never label an estimate ECB.
-      expect(res.body.data).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", source: "ecb", baseCurrency: "EUR" });
+      expect(res.body.data).toEqual({
+        baseAmount: 391.23,
+        rate: 0.9315,
+        rateDate: "2026-07-11",
+        source: "ecb",
+        baseCurrency: "EUR",
+      });
     });
 
     it("returns null data (never a broken partial) when the ECB lookup fails", async () => {
@@ -305,7 +314,9 @@ describe("Lodging API", () => {
     });
 
     it("re-snapshots FX when totalPrice changes", async () => {
-      jest.spyOn(fx, "convertToBase").mockResolvedValue({ baseAmount: 250, rate: 1, rateDate: "2024-08-01", source: "ecb" });
+      jest
+        .spyOn(fx, "convertToBase")
+        .mockResolvedValue({ baseAmount: 250, rate: 1, rateDate: "2024-08-01", source: "ecb" });
       const res = await request(app)
         .patch(`/api/v1/lodging/${lodgingId}/stays/${stayId}`)
         .set("Cookie", authCookie)
@@ -328,7 +339,9 @@ describe("Lodging API", () => {
     });
 
     it("returns 404 for a stay that does not belong to the given lodging", async () => {
-      const otherLodging = await prisma.lodging.create({ data: { userId, name: "Other Own Hotel" } });
+      const otherLodging = await prisma.lodging.create({
+        data: { userId, name: "Other Own Hotel" },
+      });
       const res = await request(app)
         .patch(`/api/v1/lodging/${otherLodging.id}/stays/${stayId}`)
         .set("Cookie", authCookie)
@@ -358,7 +371,9 @@ describe("Lodging API", () => {
     const originalCheckIn = "2025-02-01T15:00:00.000Z";
     const originalCheckOut = "2025-02-03T11:00:00.000Z";
 
-    const fullEditorPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    const fullEditorPayload = (
+      overrides: Record<string, unknown> = {}
+    ): Record<string, unknown> => ({
       checkIn: originalCheckIn,
       checkOut: originalCheckOut,
       status: "completed",
@@ -594,7 +609,14 @@ describe("Lodging API", () => {
 
     it("does not geocode on a PATCH that does not touch the address", async () => {
       const created = await prisma.lodging.create({
-        data: { userId, name: "Geocode Untouched Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+        data: {
+          userId,
+          name: "Geocode Untouched Inn",
+          city: "Munich",
+          country: "DE",
+          lat: 48.1,
+          lon: 11.5,
+        },
       });
       const spy = jest.spyOn(geo, "resolveCoordinates");
       const res = await request(app)
@@ -609,7 +631,14 @@ describe("Lodging API", () => {
 
     it("re-geocodes on PATCH when the address changes", async () => {
       const created = await prisma.lodging.create({
-        data: { userId, name: "Geocode Update Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+        data: {
+          userId,
+          name: "Geocode Update Inn",
+          city: "Munich",
+          country: "DE",
+          lat: 48.1,
+          lon: 11.5,
+        },
       });
       jest.spyOn(geo, "resolveCoordinates").mockResolvedValue({ lat: 52.52, lon: 13.405 });
       const res = await request(app)
@@ -623,7 +652,14 @@ describe("Lodging API", () => {
 
     it("a failed geocode on PATCH does not wipe existing coordinates", async () => {
       const created = await prisma.lodging.create({
-        data: { userId, name: "Geocode Fail Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+        data: {
+          userId,
+          name: "Geocode Fail Inn",
+          city: "Munich",
+          country: "DE",
+          lat: 48.1,
+          lon: 11.5,
+        },
       });
       jest.spyOn(geo, "resolveCoordinates").mockResolvedValue(null);
       const res = await request(app)
@@ -708,9 +744,7 @@ describe("Lodging API", () => {
           },
         ],
       });
-      const res = await request(app)
-        .get(`/api/v1/lodging/${lodging.id}`)
-        .set("Cookie", authCookie);
+      const res = await request(app).get(`/api/v1/lodging/${lodging.id}`).set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.data.overallRating).toBe(4.5);
       expect(res.body.data.stayCount).toBe(3);
@@ -725,7 +759,9 @@ describe("Lodging API", () => {
       const daysFromNow = (n: number): Date =>
         new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + n));
 
-      const lodging = await prisma.lodging.create({ data: { userId, name: "Checkout Rule Hotel" } });
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "Checkout Rule Hotel" },
+      });
       await prisma.lodgingStay.createMany({
         data: [
           {
@@ -770,7 +806,9 @@ describe("Lodging API", () => {
           checkOut: new Date("2024-01-02T00:00:00.000Z"),
         },
       });
-      const res = await request(app).delete(`/api/v1/lodging/${lodging.id}`).set("Cookie", authCookie);
+      const res = await request(app)
+        .delete(`/api/v1/lodging/${lodging.id}`)
+        .set("Cookie", authCookie);
       expect(res.status).toBe(204);
       const goneStay = await prisma.lodgingStay.findUnique({ where: { id: stay.id } });
       expect(goneStay).toBeNull();
@@ -980,16 +1018,14 @@ describe("Lodging API", () => {
     it("returns the globally-correct page 2 sorted by nights, not a re-sort of the truncated page", async () => {
       // Correct answer: sort ALL 5 rows by nights desc (5,4,3,2,1), then
       // slice offset=2/limit=2 -> the two middle-nights rows (3 and 2).
-      const idByNights = new Map(
-        nightsInCreationOrder.map((n, i) => [n, idsInCreationOrder[i]]),
-      );
+      const idByNights = new Map(nightsInCreationOrder.map((n, i) => [n, idsInCreationOrder[i]]));
       const expectedGlobalOrder = [5, 4, 3, 2, 1].map((n) => idByNights.get(n));
       const res = await request(app)
         .get(`/api/v1/lodging?country=${countryTag}&sort=nights&limit=2&offset=2`)
         .set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.data.map((l: { id: string }) => l.id)).toEqual(
-        expectedGlobalOrder.slice(2, 4),
+        expectedGlobalOrder.slice(2, 4)
       );
     });
   });
@@ -1026,13 +1062,17 @@ describe("Lodging API", () => {
 
   describe("Ownership isolation (no cross-user data leak)", () => {
     it("404s reading another user's lodging", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel" } });
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel" },
+      });
       const res = await request(app).get(`/api/v1/lodging/${foreign.id}`).set("Cookie", authCookie);
       expect(res.status).toBe(404);
     });
 
     it("404s updating another user's lodging", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel 2" } });
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel 2" },
+      });
       const res = await request(app)
         .patch(`/api/v1/lodging/${foreign.id}`)
         .set("Cookie", authCookie)
@@ -1041,15 +1081,21 @@ describe("Lodging API", () => {
     });
 
     it("404s deleting another user's lodging (row survives)", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel 3" } });
-      const res = await request(app).delete(`/api/v1/lodging/${foreign.id}`).set("Cookie", authCookie);
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel 3" },
+      });
+      const res = await request(app)
+        .delete(`/api/v1/lodging/${foreign.id}`)
+        .set("Cookie", authCookie);
       expect(res.status).toBe(404);
       const still = await prisma.lodging.findUnique({ where: { id: foreign.id } });
       expect(still).not.toBeNull();
     });
 
     it("404s creating a stay under another user's lodging", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel 4" } });
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel 4" },
+      });
       const res = await request(app)
         .post(`/api/v1/lodging/${foreign.id}/stays`)
         .set("Cookie", authCookie)
@@ -1058,7 +1104,9 @@ describe("Lodging API", () => {
     });
 
     it("404s patching a stay belonging to another user's lodging (row untouched)", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel 5" } });
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel 5" },
+      });
       const foreignStay = await prisma.lodgingStay.create({
         data: {
           lodgingId: foreign.id,
@@ -1077,7 +1125,9 @@ describe("Lodging API", () => {
     });
 
     it("404s deleting a stay belonging to another user's lodging (row survives)", async () => {
-      const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel 6" } });
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Foreign Hotel 6" },
+      });
       const foreignStay = await prisma.lodgingStay.create({
         data: {
           lodgingId: foreign.id,

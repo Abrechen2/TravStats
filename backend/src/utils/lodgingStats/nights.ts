@@ -42,7 +42,7 @@ export function walkNights(
   checkIn: Date,
   checkOut: Date,
   nightsByYear: Record<string, number>,
-  nightsByMonth: Record<string, number>,
+  nightsByMonth: Record<string, number>
 ): number {
   let nights = 0;
   let cursor = Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate());
@@ -83,7 +83,7 @@ export function bucketNights(
     canBucketByMonth: boolean;
   },
   nightsByYear: Record<string, number>,
-  nightsByMonth: Record<string, number>,
+  nightsByMonth: Record<string, number>
 ): number {
   const { nights, anchor } = timing;
   if (nights <= 0 || anchor === null) return Math.max(0, nights);

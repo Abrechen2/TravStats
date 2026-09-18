@@ -156,8 +156,6 @@ describe("GET /stats/cruise — a scheduled cruise is not counted as sailed", ()
     expect(res.body.cruisesCount).toBe(1);
     expect(res.body.totalPortCalls).toBe(2);
     expect(res.body.countries).toEqual(expect.arrayContaining(["Germany", "Norway"]));
-    expect(res.body.countries).not.toEqual(
-      expect.arrayContaining(["Portugal", "Morocco"]),
-    );
+    expect(res.body.countries).not.toEqual(expect.arrayContaining(["Portugal", "Morocco"]));
   });
 });

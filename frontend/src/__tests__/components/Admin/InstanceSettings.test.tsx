@@ -41,7 +41,10 @@ const notConfigured = { usable: false, reason: "notConfigured" };
 describe("InstanceSettings (#190 — typing must not be reset by the load effect)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getInstanceSettings.mockResolvedValue({ settings: serverSettings, passkeyStatus: notConfigured });
+    getInstanceSettings.mockResolvedValue({
+      settings: serverSettings,
+      passkeyStatus: notConfigured,
+    });
   });
 
   it("keeps a typed public URL instead of resetting it to the server value", async () => {

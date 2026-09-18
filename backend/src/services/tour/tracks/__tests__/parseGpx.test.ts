@@ -227,7 +227,8 @@ describe("parseGpx", () => {
 
       const lat = 50 + (i % 1000) * 0.0001;
       const lon = 10 + (i % 1000) * 0.0001;
-      trkptParts[i] = `<trkpt lat="${lat}" lon="${lon}"><time>${new Date(timeMs).toISOString()}</time></trkpt>`;
+      trkptParts[i] =
+        `<trkpt lat="${lat}" lon="${lon}"><time>${new Date(timeMs).toISOString()}</time></trkpt>`;
     }
 
     const xml = `<gpx><trk><trkseg>${trkptParts.join("")}</trkseg></trk></gpx>`;

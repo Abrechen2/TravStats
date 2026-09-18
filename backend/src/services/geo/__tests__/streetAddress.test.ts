@@ -22,7 +22,7 @@ describe("formatStreetAddress", () => {
 
   it("puts the number first where the language does", () => {
     expect(formatStreetAddress("Southwest Morrison Street", "50", "us")).toBe(
-      "50 Southwest Morrison Street",
+      "50 Southwest Morrison Street"
     );
     expect(formatStreetAddress("Oxford Street", "12", "GB")).toBe("12 Oxford Street");
     expect(formatStreetAddress("Rue de Rivoli", "7", "fr")).toBe("7 Rue de Rivoli");
@@ -31,7 +31,7 @@ describe("formatStreetAddress", () => {
 
   it("falls back to the street when there is no number", () => {
     expect(formatStreetAddress("Southwest Morrison Street", null, "us")).toBe(
-      "Southwest Morrison Street",
+      "Southwest Morrison Street"
     );
     expect(formatStreetAddress("Kronenbergstrasse", undefined, "de")).toBe("Kronenbergstrasse");
   });

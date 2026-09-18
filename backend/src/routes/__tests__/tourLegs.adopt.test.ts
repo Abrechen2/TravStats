@@ -43,7 +43,7 @@ describe("Tour route legs — adopting a track", () => {
 
   async function createTrack(
     forRouteId: string,
-    geometry: Array<[number, number]>,
+    geometry: Array<[number, number]>
   ): Promise<string> {
     const track = await prisma.tripRouteTrack.create({
       data: {
@@ -103,7 +103,10 @@ describe("Tour route legs — adopting a track", () => {
   it("adopts a covering track: stores the segment and the measured distance", async () => {
     const trackId = await createTrack(routeId, coveringTrack);
 
-    const res = await request(app).put(legUrl()).set("Cookie", cookie).send({ source: "track", trackId });
+    const res = await request(app)
+      .put(legUrl())
+      .set("Cookie", cookie)
+      .send({ source: "track", trackId });
 
     expect(res.status).toBe(200);
     expect(res.body.leg.source).toBe("track");
@@ -113,7 +116,9 @@ describe("Tour route legs — adopting a track", () => {
     expect(res.body.leg.distanceKm).toBeGreaterThan(0);
 
     const stored = await prisma.tripRouteLeg.findUnique({
-      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
     });
     expect(stored?.source).toBe("track");
     expect(stored?.waypoints).toEqual(coveringTrack);
@@ -146,7 +151,9 @@ describe("Tour route legs — adopting a track", () => {
     expect(res.body.leg.waypoints).not.toEqual(decoyWaypoints);
 
     const stored = await prisma.tripRouteLeg.findUnique({
-      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
     });
     expect(stored?.waypoints).toEqual(coveringTrack);
     expect(stored?.waypoints).not.toEqual(decoyWaypoints);
@@ -155,24 +162,28 @@ describe("Tour route legs — adopting a track", () => {
   it("a non-covering track 409s and leaves the leg completely unchanged", async () => {
     // Establish a known baseline: a plain straight chord, exactly what a
     // freshly-assigned leg starts as.
-    await request(app)
-      .delete(legUrl())
-      .set("Cookie", cookie)
-      .send();
+    await request(app).delete(legUrl()).set("Cookie", cookie).send();
     const before = await prisma.tripRouteLeg.findUnique({
-      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
     });
     expect(before?.source).toBe("straight");
 
     const trackId = await createTrack(routeId, nonCoveringTrack);
 
-    const res = await request(app).put(legUrl()).set("Cookie", cookie).send({ source: "track", trackId });
+    const res = await request(app)
+      .put(legUrl())
+      .set("Cookie", cookie)
+      .send({ source: "track", trackId });
 
     expect(res.status).toBe(409);
     expect(String(res.body.error ?? "")).toMatch(/\d/); // names the anchor tolerance (a number)
 
     const after = await prisma.tripRouteLeg.findUnique({
-      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
     });
     expect(after?.source).toBe(before?.source);
     expect(after?.distanceKm).toBe(before?.distanceKm);
@@ -180,7 +191,12 @@ describe("Tour route legs — adopting a track", () => {
   });
 
   it("a trackId belonging to a DIFFERENT route 404s rather than adopting", async () => {
-    const otherTrip = await prisma.trip.create({ data: { userId: (await prisma.user.findUniqueOrThrow({ where: { username: "touradoptother" } })).id, name: "Other" } });
+    const otherTrip = await prisma.trip.create({
+      data: {
+        userId: (await prisma.user.findUniqueOrThrow({ where: { username: "touradoptother" } })).id,
+        name: "Other",
+      },
+    });
     const otherRoute = await prisma.tripRoute.create({
       data: { tripId: otherTrip.id, name: "Other section", mode: "road" },
     });
@@ -194,7 +210,7 @@ describe("Tour route legs — adopting a track", () => {
     expect(res.status).toBe(404);
   });
 
-  it("{ source: \"track\" } with no trackId is a 400 from Zod, not a 500", async () => {
+  it('{ source: "track" } with no trackId is a 400 from Zod, not a 500', async () => {
     const res = await request(app).put(legUrl()).set("Cookie", cookie).send({ source: "track" });
 
     expect(res.status).toBe(400);

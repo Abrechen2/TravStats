@@ -28,10 +28,7 @@ export type Translate = (key: string, options?: Record<string, unknown>) => stri
 export type ActivityKind = "flight" | "cruise" | "lodging" | "poi";
 
 export type ActivityPayload =
-  | { flightId: string }
-  | { cruise: Cruise }
-  | { lodging: Lodging }
-  | { place: Place };
+  { flightId: string } | { cruise: Cruise } | { lodging: Lodging } | { place: Place };
 
 export interface ActivityItem {
   id: string;

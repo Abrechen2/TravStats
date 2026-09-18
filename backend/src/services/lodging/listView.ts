@@ -31,7 +31,9 @@ export interface AggregateStayFx {
  * everything under the CURRENT base currency's label would silently add
  * amounts that were never actually converted into it (finding 2).
  */
-export function sumSpendBaseByCurrency<T extends AggregateStayFx>(stays: T[]): Record<string, number> {
+export function sumSpendBaseByCurrency<T extends AggregateStayFx>(
+  stays: T[]
+): Record<string, number> {
   const byCurrency: Record<string, number> = {};
   for (const s of stays) {
     if (s.totalPriceBase === null || s.fxBaseCurrency === null) continue;
@@ -67,7 +69,7 @@ export interface LodgingAggregates {
 
 export function computeAggregates(
   stays: AggregateStay[],
-  currentBaseCurrency: string,
+  currentBaseCurrency: string
 ): LodgingAggregates {
   // The check-out rule (shared/lodgingCounting): a stay counts once it is
   // over. Future and cancelled bookings contribute nothing to any figure —
@@ -90,7 +92,7 @@ export type LodgingListItem = LodgingListRow & LodgingAggregates;
 
 export function sortLodgings(
   items: LodgingListItem[],
-  sort: LodgingQueryInput["sort"],
+  sort: LodgingQueryInput["sort"]
 ): LodgingListItem[] {
   switch (sort) {
     case "name":

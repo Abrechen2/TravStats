@@ -189,7 +189,7 @@ async function pullWindow(
   accumulator: ReturnType<typeof createCountryDayAccumulator>,
   run: WindowRun,
   startAt: Date,
-  endAtExclusive: Date,
+  endAtExclusive: Date
 ): Promise<void> {
   run.windows += 1;
   const { points, truncated } = await deps.client.getPoints({
@@ -217,8 +217,8 @@ async function pullWindow(
   const mid = new Date(
     Math.min(
       Math.max(rawMid.getTime(), startAt.getTime() + DAY_MS),
-      endAtExclusive.getTime() - DAY_MS,
-    ),
+      endAtExclusive.getTime() - DAY_MS
+    )
   );
 
   await pullWindow(deps, accumulator, run, startAt, mid);
@@ -236,7 +236,7 @@ interface MonthResult {
 async function sweepMonth(
   deps: CountryDaySweepDeps,
   userId: string,
-  monthStart: Date,
+  monthStart: Date
 ): Promise<MonthResult> {
   const monthEndExclusive = addUtcMonths(monthStart, 1);
   const accumulator = createCountryDayAccumulator();
@@ -250,7 +250,7 @@ async function sweepMonth(
     SOURCE,
     { startAt: monthStart, endAtExclusive: monthEndExclusive },
     observations,
-    run.partialDays,
+    run.partialDays
   );
 
   if (run.partialDays.size > 0) {
@@ -261,7 +261,7 @@ async function sweepMonth(
         month: monthLabel(monthStart),
         partialDays: run.partialDays.size,
       },
-      "A single-day Dawarich window was still truncated — those days are stored as partial",
+      "A single-day Dawarich window was still truncated — those days are stored as partial"
     );
   }
 
@@ -282,7 +282,7 @@ interface SweepCursors {
 async function persistCursors(
   userId: string,
   cursors: SweepCursors,
-  extra: { lastRunAt?: Date; lastErrorKind?: string | null; lastTruncatedAt?: Date },
+  extra: { lastRunAt?: Date; lastErrorKind?: string | null; lastTruncatedAt?: Date }
 ): Promise<void> {
   const data = { ...cursors, ...extra };
   await prisma.dawarichSweepState.upsert({
@@ -302,7 +302,7 @@ async function persistCursors(
  */
 export async function sweepUserCountryDays(
   userId: string,
-  deps: CountryDaySweepDeps,
+  deps: CountryDaySweepDeps
 ): Promise<UserSweepOutcome> {
   const stored = await prisma.dawarichSweepState.findUnique({ where: { userId } });
 
@@ -403,7 +403,7 @@ export async function sweepUserCountryDays(
         kind: error.kind,
         monthsSwept: outcome.monthsSwept,
       },
-      "Dawarich did not answer — this account's sweep stopped where it stood",
+      "Dawarich did not answer — this account's sweep stopped where it stood"
     );
   }
 

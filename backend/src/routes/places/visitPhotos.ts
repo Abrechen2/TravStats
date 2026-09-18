@@ -7,15 +7,21 @@ import fsp from "fs/promises";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
+import { uploadPlacePhotos, getPlacePhotoDir, deletePlacePhotoFile } from "../../middleware/upload";
 import {
-  uploadPlacePhotos,
-  getPlacePhotoDir,
-  deletePlacePhotoFile,
-} from "../../middleware/upload";
-import { uploadReceiptLimiter } from "../../middleware/rateLimit";
+  immichImportLimiter,
+  immichProxyLimiter,
+  uploadReceiptLimiter,
+} from "../../middleware/rateLimit";
 import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import { assetSizeSchema } from "../../schemas/immich";
+import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
+import { createImmichClient } from "../../services/immich/immichClient";
+import { getImmichConnection } from "../../services/immich/immichResolver";
+import { ImmichError } from "../../services/immich/types";
+import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
 
 /**
  * Photo proof for a place visit.
@@ -196,7 +202,12 @@ router.post(
       );
 
       logger.info(
-        { operation: "place_photo_upload", userId, visitId: req.params.visitId, count: created.length },
+        {
+          operation: "place_photo_upload",
+          userId,
+          visitId: req.params.visitId,
+          count: created.length,
+        },
         "Place visit photos uploaded"
       );
       res.status(201).json({ success: true, data: created.map(toPhotoDto) });
@@ -224,8 +235,15 @@ router.post(
   }
 );
 
+/**
+ * The photo's bytes: the copy on disk, or — once it has become a link
+ * (forgejo#21) — the Immich asset stored on this row. The row is the grant: the
+ * visit is the caller's, the photo is that visit's, and the asset id comes from
+ * the row, never from the request.
+ */
 router.get(
   "/visits/:visitId/photos/:photoId/file",
+  immichProxyLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -234,6 +252,24 @@ router.get(
         where: { id: req.params.photoId, placeVisitId: req.params.visitId },
       });
       if (!photo) throw new AppError("Photo not found", 404);
+
+      if (photo.filename === null) {
+        if (!photo.immichAssetId) throw new AppError("File missing", 404);
+        const size = assetSizeSchema.safeParse(req.query.size ?? "preview");
+        if (!size.success) throw new AppError("Invalid size", 400);
+        const etag = `"${photo.immichAssetId}-${size.data}"`;
+        if (req.headers["if-none-match"] === etag) {
+          res.status(304).end();
+          return;
+        }
+        const conn = await getImmichConnection(userId);
+        if (!conn) {
+          res.status(409).json({ error: "notConfigured" });
+          return;
+        }
+        await streamAsset(res, createImmichClient(conn), photo.immichAssetId, size.data, etag);
+        return;
+      }
 
       const filePath = path.join(getPlacePhotoDir(), path.basename(photo.filename));
       if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
@@ -245,6 +281,37 @@ router.get(
       res.type(photo.mimetype);
       res.sendFile(filePath);
     } catch (error) {
+      if (error instanceof ImmichError) {
+        logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
+        sendPlaceholder(res, error.kind === "notFound" ? 404 : 502);
+        return;
+      }
+      next(error);
+    }
+  }
+);
+
+/**
+ * Turn the caller's photo copies into Immich links, where the library holds the
+ * same bytes (forgejo#21). Rare and heavy — one search per photo against the
+ * user's Immich — so it shares the import limiter.
+ */
+router.post(
+  "/visits/photos/immich-link",
+  immichImportLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const outcome = await linkVisitPhotosToImmich(req.userId!);
+      if (outcome.kind === "notConfigured") {
+        res.status(409).json({ error: "notConfigured" });
+        return;
+      }
+      res.json({ success: true, data: { checked: outcome.checked, linked: outcome.linked } });
+    } catch (error) {
+      if (error instanceof ImmichError) {
+        res.status(502).json({ error: error.kind });
+        return;
+      }
       next(error);
     }
   }
@@ -294,7 +361,7 @@ router.delete(
       // fail the row, which leaves a photo the UI still lists and can never
       // show — a broken thumbnail is worse than a byte we did not reclaim.
       await prisma.placeVisitPhoto.delete({ where: { id: photo.id } });
-      deletePlacePhotoFile(photo.filename);
+      if (photo.filename) deletePlacePhotoFile(photo.filename);
 
       res.status(204).send();
     } catch (error) {

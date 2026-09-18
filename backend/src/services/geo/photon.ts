@@ -12,10 +12,7 @@
 import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
 import { z } from "zod";
 import { formatStreetAddress } from "./streetAddress";
-import {
-  resolveGeocoderUrls,
-  DEFAULT_PHOTON_URL,
-} from "../instanceSettingsService";
+import { resolveGeocoderUrls, DEFAULT_PHOTON_URL } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 
 const DEFAULT_LIMIT = 6;
@@ -47,9 +44,7 @@ function getSearchTimeoutMs(): number {
 function getMaxResponseBytes(): number {
   const raw = process.env.PHOTON_SEARCH_MAX_BYTES;
   const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0
-    ? parsed
-    : DEFAULT_MAX_RESPONSE_BYTES;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_RESPONSE_BYTES;
 }
 
 export interface PlaceResult {
@@ -239,7 +234,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
           stage: "http_status",
           status: res.status,
         },
-        "[Photon] non-OK response — degrading to empty result",
+        "[Photon] non-OK response — degrading to empty result"
       );
       return { ok: false, stage: "http_status" };
     }
@@ -248,7 +243,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     if (contentLength && Number(contentLength) > maxBytes) {
       logger.warn(
         { operation: "photon_search_failed", stage: "size_cap" },
-        "[Photon] response exceeded size cap — degrading to empty result",
+        "[Photon] response exceeded size cap — degrading to empty result"
       );
       return { ok: false, stage: "size_cap" };
     }
@@ -257,7 +252,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     if (Buffer.byteLength(text) > maxBytes) {
       logger.warn(
         { operation: "photon_search_failed", stage: "size_cap" },
-        "[Photon] response exceeded size cap — degrading to empty result",
+        "[Photon] response exceeded size cap — degrading to empty result"
       );
       return { ok: false, stage: "size_cap" };
     }
@@ -266,7 +261,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     if (json === PARSE_FAILED) {
       logger.warn(
         { operation: "photon_search_failed", stage: "invalid_json" },
-        "[Photon] response was not valid JSON — degrading to empty result",
+        "[Photon] response was not valid JSON — degrading to empty result"
       );
       return { ok: false, stage: "invalid_json" };
     }
@@ -275,7 +270,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     if (!parsed.success) {
       logger.warn(
         { operation: "photon_search_failed", stage: "schema" },
-        "[Photon] response failed schema validation — degrading to empty result",
+        "[Photon] response failed schema validation — degrading to empty result"
       );
       return { ok: false, stage: "schema" };
     }
@@ -295,7 +290,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
         stage: "network",
         error: error instanceof Error ? error.message : String(error),
       },
-      "[Photon] search failed — degrading to empty result",
+      "[Photon] search failed — degrading to empty result"
     );
     return { ok: false, stage: "network" };
   }
@@ -314,7 +309,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
  */
 export async function searchPlacesDetailed(
   query: string,
-  options?: SearchPlacesOptions,
+  options?: SearchPlacesOptions
 ): Promise<PlaceSearchOutcome> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return { results: [], degraded: false };
@@ -334,7 +329,7 @@ export async function searchPlacesDetailed(
     photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
     logger.warn(
       { error },
-      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL",
+      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL"
     );
   }
 
@@ -366,7 +361,7 @@ export async function searchPlacesDetailed(
 export async function reversePlacesDetailed(
   lat: number,
   lon: number,
-  options?: SearchPlacesOptions,
+  options?: SearchPlacesOptions
 ): Promise<PlaceSearchOutcome> {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { results: [], degraded: false };
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { results: [], degraded: false };
@@ -381,7 +376,7 @@ export async function reversePlacesDetailed(
     photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
     logger.warn(
       { error },
-      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL",
+      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL"
     );
   }
 
@@ -419,7 +414,7 @@ export async function reversePlacesDetailed(
  */
 export async function searchPlaces(
   query: string,
-  options?: SearchPlacesOptions,
+  options?: SearchPlacesOptions
 ): Promise<PlaceResult[]> {
   const outcome = await searchPlacesDetailed(query, options);
   return outcome.results;

@@ -1,36 +1,36 @@
-import { PrismaClient } from '@prisma/client';
-import { hashPassword } from './utils/password';
+import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "./utils/password";
 
 const prisma = new PrismaClient();
 
 const airports = [
-  { icao: 'EDDF', iata: 'FRA', name: 'Frankfurt Airport', lat: 50.0379, lon: 8.5622 },
-  { icao: 'EGLL', iata: 'LHR', name: 'London Heathrow', lat: 51.4700, lon: -0.4543 },
-  { icao: 'KJFK', iata: 'JFK', name: 'John F. Kennedy International', lat: 40.6413, lon: -73.7781 },
-  { icao: 'LFPG', iata: 'CDG', name: 'Charles de Gaulle', lat: 49.0097, lon: 2.5479 },
-  { icao: 'EHAM', iata: 'AMS', name: 'Amsterdam Schiphol', lat: 52.3105, lon: 4.7683 },
-  { icao: 'LEMD', iata: 'MAD', name: 'Adolfo Suárez Madrid-Barajas', lat: 40.4983, lon: -3.5676 },
-  { icao: 'LIRF', iata: 'FCO', name: 'Leonardo da Vinci-Fiumicino', lat: 41.8003, lon: 12.2389 },
-  { icao: 'LOWW', iata: 'VIE', name: 'Vienna International', lat: 48.1103, lon: 16.5697 },
-  { icao: 'LSZH', iata: 'ZRH', name: 'Zurich Airport', lat: 47.4647, lon: 8.5492 },
-  { icao: 'EDDM', iata: 'MUC', name: 'Munich Airport', lat: 48.3538, lon: 11.7861 },
-  { icao: 'EDDB', iata: 'BER', name: 'Berlin Brandenburg', lat: 52.3667, lon: 13.5033 },
-  { icao: 'LPPT', iata: 'LIS', name: 'Lisbon Portela', lat: 38.7742, lon: -9.1342 },
-  { icao: 'EDDH', iata: 'HAM', name: 'Hamburg Airport', lat: 53.6304, lon: 9.9882 },
-  { icao: 'EKCH', iata: 'CPH', name: 'Copenhagen Airport', lat: 55.6181, lon: 12.6561 },
-  { icao: 'ESSA', iata: 'ARN', name: 'Stockholm Arlanda', lat: 59.6519, lon: 17.9186 },
+  { icao: "EDDF", iata: "FRA", name: "Frankfurt Airport", lat: 50.0379, lon: 8.5622 },
+  { icao: "EGLL", iata: "LHR", name: "London Heathrow", lat: 51.47, lon: -0.4543 },
+  { icao: "KJFK", iata: "JFK", name: "John F. Kennedy International", lat: 40.6413, lon: -73.7781 },
+  { icao: "LFPG", iata: "CDG", name: "Charles de Gaulle", lat: 49.0097, lon: 2.5479 },
+  { icao: "EHAM", iata: "AMS", name: "Amsterdam Schiphol", lat: 52.3105, lon: 4.7683 },
+  { icao: "LEMD", iata: "MAD", name: "Adolfo Suárez Madrid-Barajas", lat: 40.4983, lon: -3.5676 },
+  { icao: "LIRF", iata: "FCO", name: "Leonardo da Vinci-Fiumicino", lat: 41.8003, lon: 12.2389 },
+  { icao: "LOWW", iata: "VIE", name: "Vienna International", lat: 48.1103, lon: 16.5697 },
+  { icao: "LSZH", iata: "ZRH", name: "Zurich Airport", lat: 47.4647, lon: 8.5492 },
+  { icao: "EDDM", iata: "MUC", name: "Munich Airport", lat: 48.3538, lon: 11.7861 },
+  { icao: "EDDB", iata: "BER", name: "Berlin Brandenburg", lat: 52.3667, lon: 13.5033 },
+  { icao: "LPPT", iata: "LIS", name: "Lisbon Portela", lat: 38.7742, lon: -9.1342 },
+  { icao: "EDDH", iata: "HAM", name: "Hamburg Airport", lat: 53.6304, lon: 9.9882 },
+  { icao: "EKCH", iata: "CPH", name: "Copenhagen Airport", lat: 55.6181, lon: 12.6561 },
+  { icao: "ESSA", iata: "ARN", name: "Stockholm Arlanda", lat: 59.6519, lon: 17.9186 },
 ];
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log("🌱 Seeding database...");
 
   // Create demo user
-  const passwordHash = await hashPassword('demo123');
+  const passwordHash = await hashPassword("demo123");
   const user = await prisma.user.upsert({
-    where: { username: 'demo' },
+    where: { username: "demo" },
     update: {},
     create: {
-      username: 'demo',
+      username: "demo",
       passwordHash,
     },
   });
@@ -40,15 +40,15 @@ async function main() {
   // Generate sample flights
   const flights = [];
   const airlines = [
-    { name: 'Lufthansa', prefix: 'LH' },
-    { name: 'British Airways', prefix: 'BA' },
-    { name: 'Air France', prefix: 'AF' },
-    { name: 'KLM', prefix: 'KL' },
-    { name: 'Swiss', prefix: 'LX' },
+    { name: "Lufthansa", prefix: "LH" },
+    { name: "British Airways", prefix: "BA" },
+    { name: "Air France", prefix: "AF" },
+    { name: "KLM", prefix: "KL" },
+    { name: "Swiss", prefix: "LX" },
   ];
 
-  const aircraftTypes = ['A320', 'A321', 'B737', 'B738', 'A319', 'E190'];
-  const statuses = ['scheduled', 'flown', 'flown', 'flown', 'cancelled']; // More flown flights
+  const aircraftTypes = ["A320", "A321", "B737", "B738", "A319", "E190"];
+  const statuses = ["scheduled", "flown", "flown", "flown", "cancelled"]; // More flown flights
 
   // Create 50 sample flights
   for (let i = 0; i < 50; i++) {
@@ -94,7 +94,7 @@ async function main() {
       departureTime,
       arrivalTime,
       status,
-      notes: i % 5 === 0 ? 'Sample flight note' : null,
+      notes: i % 5 === 0 ? "Sample flight note" : null,
     });
   }
 
@@ -104,15 +104,15 @@ async function main() {
   });
 
   console.log(`✅ Created ${flights.length} sample flights`);
-  console.log('🎉 Seeding completed!');
-  console.log('\nDemo credentials:');
-  console.log('  Username: demo');
-  console.log('  Password: demo123');
+  console.log("🎉 Seeding completed!");
+  console.log("\nDemo credentials:");
+  console.log("  Username: demo");
+  console.log("  Password: demo123");
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e);
+    console.error("❌ Seeding failed:", e);
     process.exit(1);
   })
   .finally(async () => {

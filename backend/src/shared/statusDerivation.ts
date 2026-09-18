@@ -127,7 +127,7 @@ export function deriveLodgingStatus(input: {
  */
 export function tripDateBounds(
   flights: Array<{ departureTime: Date | null; arrivalTime: Date | null }>,
-  cruises: Array<{ startDate: Date | null; endDate: Date | null }>,
+  cruises: Array<{ startDate: Date | null; endDate: Date | null }>
 ): { earliestStart: Date | null; latestEnd: Date | null } {
   const starts = [
     ...flights.map((f) => f.departureTime),

@@ -29,21 +29,13 @@ export function markUtc(value: string | undefined): string | undefined {
   const v = value.trim();
   if (!v) return undefined;
   if (/[zZ]$/.test(v) || /[+-]\d{2}:?\d{2}$/.test(v)) return v;
-  return `${v.replace(' ', 'T')}Z`;
+  return `${v.replace(" ", "T")}Z`;
 }
 
 /** Absolute day difference between two YYYY-MM-DD strings (positive when a > b). */
 export function dayDiff(a: string, b: string): number {
-  const aMs = Date.UTC(
-    Number(a.slice(0, 4)),
-    Number(a.slice(5, 7)) - 1,
-    Number(a.slice(8, 10)),
-  );
-  const bMs = Date.UTC(
-    Number(b.slice(0, 4)),
-    Number(b.slice(5, 7)) - 1,
-    Number(b.slice(8, 10)),
-  );
+  const aMs = Date.UTC(Number(a.slice(0, 4)), Number(a.slice(5, 7)) - 1, Number(a.slice(8, 10)));
+  const bMs = Date.UTC(Number(b.slice(0, 4)), Number(b.slice(5, 7)) - 1, Number(b.slice(8, 10)));
   return Math.round((aMs - bMs) / (24 * 60 * 60 * 1000));
 }
 

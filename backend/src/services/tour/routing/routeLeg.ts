@@ -108,13 +108,13 @@ function isTrustworthy(
   from: Coord,
   to: Coord,
   chordKm: number,
-  providerId: string,
+  providerId: string
 ): boolean {
   const line = result.waypoints;
   if (line.length < 2) {
     logger.warn(
       { providerId, waypointCount: line.length },
-      "routing provider returned fewer than two waypoints; falling back to straight line",
+      "routing provider returned fewer than two waypoints; falling back to straight line"
     );
     return false;
   }
@@ -122,7 +122,7 @@ function isTrustworthy(
   if (!finite(result.distanceKm) || result.distanceKm < 0) {
     logger.warn(
       { providerId, distanceKm: result.distanceKm },
-      "routing provider returned a non-finite or negative distance; falling back to straight line",
+      "routing provider returned a non-finite or negative distance; falling back to straight line"
     );
     return false;
   }
@@ -131,7 +131,7 @@ function isTrustworthy(
     if (!finite(lon) || !finite(lat)) {
       logger.warn(
         { providerId, lon, lat },
-        "routing provider returned a non-finite waypoint coordinate; falling back to straight line",
+        "routing provider returned a non-finite waypoint coordinate; falling back to straight line"
       );
       return false;
     }
@@ -144,7 +144,7 @@ function isTrustworthy(
   if (headOff > ANCHOR_TOLERANCE_KM || tailOff > ANCHOR_TOLERANCE_KM) {
     logger.warn(
       { providerId, headOffKm: headOff, tailOffKm: tailOff, toleranceKm: ANCHOR_TOLERANCE_KM },
-      "routing provider's line does not anchor at the requested stops; falling back to straight line",
+      "routing provider's line does not anchor at the requested stops; falling back to straight line"
     );
     return false;
   }
@@ -152,7 +152,7 @@ function isTrustworthy(
   if (chordKm >= MIN_CHORD_FOR_SANITY_KM && result.distanceKm > chordKm * SANITY_RATIO) {
     logger.warn(
       { providerId, distanceKm: result.distanceKm, chordKm, ratio: result.distanceKm / chordKm },
-      "routing provider's distance is implausible relative to the straight-line chord; falling back to straight line",
+      "routing provider's distance is implausible relative to the straight-line chord; falling back to straight line"
     );
     return false;
   }
@@ -184,7 +184,7 @@ function isTrustworthy(
  */
 export async function routeLegGeometry(
   provider: RouteProvider | null,
-  input: { from: Coord; to: Coord; mode: LegMode },
+  input: { from: Coord; to: Coord; mode: LegMode }
 ): Promise<RoutedLeg> {
   const { from, to, mode } = input;
 

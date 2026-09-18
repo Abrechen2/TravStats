@@ -4,7 +4,13 @@ import { CATEGORIES, ROLES, BETA_REACTION } from "../src/config.js";
 describe("config", () => {
   it("defines all seven categories in order", () => {
     expect(CATEGORIES.map((c) => c.name)).toEqual([
-      "INFO", "COMMUNITY", "SUPPORT", "DEV", "BETA", "STAFF", "VOICE",
+      "INFO",
+      "COMMUNITY",
+      "SUPPORT",
+      "DEV",
+      "BETA",
+      "STAFF",
+      "VOICE",
     ]);
   });
 
@@ -17,8 +23,7 @@ describe("config", () => {
   });
 
   it("marks bug-report and feature-request as forum channels", () => {
-    const forums = CATEGORIES
-      .flatMap((c) => c.channels)
+    const forums = CATEGORIES.flatMap((c) => c.channels)
       .filter((ch) => ch.kind === "forum")
       .map((ch) => ch.name);
     expect(forums).toEqual(["bug-report", "feature-request"]);

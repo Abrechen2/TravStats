@@ -50,7 +50,7 @@ describe("aircraft short forms measured in real data", () => {
   it("still leaves a genuinely unknown type untouched", () => {
     expect(normalizeAircraft("Helikopter")).toBe("Helikopter");
     expect(normalizeAircraft("Some Experimental Prototype 9000")).toBe(
-      "Some Experimental Prototype 9000",
+      "Some Experimental Prototype 9000"
     );
   });
 });

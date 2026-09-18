@@ -10,7 +10,7 @@
  * lets them live in a file the cascade does not.
  */
 
-import { prisma } from '../../db';
+import { prisma } from "../../db";
 
 // In-memory cooldown for Aviationstack 429 (Free tier is 100 req/month —
 // a single 429 means we've hit the wall; retrying minutely would be wasteful).
@@ -64,15 +64,15 @@ export function markAviationstackDateFilterRestricted(): void {
 
 /** Treat `now ± 3 hours` and "still en route" as the live window. */
 const LIVE_WINDOW_BEFORE_DEPARTURE_MS = 3 * 60 * 60 * 1000; // 3h
-const LIVE_WINDOW_AFTER_ARRIVAL_MS = 2 * 60 * 60 * 1000;    // 2h
+const LIVE_WINDOW_AFTER_ARRIVAL_MS = 2 * 60 * 60 * 1000; // 2h
 
 export function isInLiveWindow(
   departureTime: Date | string | null | undefined,
   arrivalTime: Date | string | null | undefined,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): boolean {
   if (!departureTime) return false;
-  const dep = typeof departureTime === 'string' ? new Date(departureTime) : departureTime;
+  const dep = typeof departureTime === "string" ? new Date(departureTime) : departureTime;
   if (isNaN(dep.getTime())) return false;
 
   const nowMs = now.getTime();
@@ -85,7 +85,7 @@ export function isInLiveWindow(
   // In-flight and up to 2h past scheduled arrival — needed to capture actual
   // arrival time and final delay. Fall through to false if no arrival given.
   if (depMs < nowMs && arrivalTime) {
-    const arr = typeof arrivalTime === 'string' ? new Date(arrivalTime) : arrivalTime;
+    const arr = typeof arrivalTime === "string" ? new Date(arrivalTime) : arrivalTime;
     if (!isNaN(arr.getTime()) && nowMs <= arr.getTime() + LIVE_WINDOW_AFTER_ARRIVAL_MS) {
       return true;
     }

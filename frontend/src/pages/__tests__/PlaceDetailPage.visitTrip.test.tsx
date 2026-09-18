@@ -72,10 +72,7 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
 
     await waitFor(() =>
-      expect(createVisit).toHaveBeenCalledWith(
-        "p1",
-        expect.objectContaining({ tripId: "t1" })
-      )
+      expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: "t1" }))
     );
   });
 
@@ -89,10 +86,7 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
 
     await waitFor(() =>
-      expect(createVisit).toHaveBeenCalledWith(
-        "p1",
-        expect.objectContaining({ tripId: null })
-      )
+      expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: null }))
     );
   });
 });

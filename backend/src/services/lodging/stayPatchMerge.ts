@@ -60,7 +60,7 @@ export function merged<T>(sent: T | null | undefined, stored: T | null): T | nul
  */
 export function resolveEffectiveStayDates(
   input: StayPatchInput,
-  stay: StoredStayDates,
+  stay: StoredStayDates
 ): EffectiveStayDates {
   const sentCheckIn =
     input.checkIn !== undefined ? (input.checkIn ? new Date(input.checkIn) : null) : undefined;

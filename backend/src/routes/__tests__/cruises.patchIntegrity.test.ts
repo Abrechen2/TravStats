@@ -8,15 +8,15 @@
  * "clear this date" at all, because the schema turned an explicit null into an
  * omitted field.
  */
-import request from 'supertest';
-import app from '../../index';
-import { prisma } from '../../db';
-import { hashPassword } from '../../utils/password';
-import { generateToken } from '../../utils/jwt';
+import request from "supertest";
+import app from "../../index";
+import { prisma } from "../../db";
+import { hashPassword } from "../../utils/password";
+import { generateToken } from "../../utils/jwt";
 
-const USERS = ['cruisepatch', 'cruisepatchother'];
+const USERS = ["cruisepatch", "cruisepatchother"];
 
-describe('a cruise PATCH is held to the same rules as a POST', () => {
+describe("a cruise PATCH is held to the same rules as a POST", () => {
   let cookie: string;
   let userId: string;
   let otherUserId: string;
@@ -30,13 +30,13 @@ describe('a cruise PATCH is held to the same rules as a POST', () => {
   beforeAll(async () => {
     await cleanup();
     const u = await prisma.user.create({
-      data: { username: USERS[0], passwordHash: await hashPassword('password123') },
+      data: { username: USERS[0], passwordHash: await hashPassword("password123") },
     });
     userId = u.id;
     cookie = `auth_token=${generateToken(u.id)}`;
 
     const other = await prisma.user.create({
-      data: { username: USERS[1], passwordHash: await hashPassword('password123') },
+      data: { username: USERS[1], passwordHash: await hashPassword("password123") },
     });
     otherUserId = other.id;
   });
@@ -51,61 +51,61 @@ describe('a cruise PATCH is held to the same rules as a POST', () => {
     const cruise = await prisma.cruise.create({
       data: {
         userId,
-        cruiseLine: 'Testreederei',
-        startDate: new Date('2025-06-01T00:00:00Z'),
-        endDate: new Date('2025-06-08T00:00:00Z'),
-        status: 'completed',
+        cruiseLine: "Testreederei",
+        startDate: new Date("2025-06-01T00:00:00Z"),
+        endDate: new Date("2025-06-08T00:00:00Z"),
+        status: "completed",
       },
     });
     return cruise.id;
   }
 
   const patch = (id: string, body: unknown) =>
-    request(app).patch(`/api/v1/cruises/${id}`).set('Cookie', cookie).send(body);
+    request(app).patch(`/api/v1/cruises/${id}`).set("Cookie", cookie).send(body);
 
-  describe('AUD-088 — the dates it would END UP with have to make sense', () => {
-    it('refuses a full swap that a POST would also refuse', async () => {
+  describe("AUD-088 — the dates it would END UP with have to make sense", () => {
+    it("refuses a full swap that a POST would also refuse", async () => {
       const id = await makeCruise();
 
       const res = await patch(id, {
-        startDate: '2025-06-10T00:00:00.000Z',
-        endDate: '2025-06-01T00:00:00.000Z',
+        startDate: "2025-06-10T00:00:00.000Z",
+        endDate: "2025-06-01T00:00:00.000Z",
       });
 
       expect(res.status).toBe(400);
       // Refused BEFORE any mutation — the row is untouched, not half-written.
       const after = await prisma.cruise.findUniqueOrThrow({ where: { id } });
-      expect(after.startDate?.toISOString()).toBe('2025-06-01T00:00:00.000Z');
-      expect(after.endDate?.toISOString()).toBe('2025-06-08T00:00:00.000Z');
+      expect(after.startDate?.toISOString()).toBe("2025-06-01T00:00:00.000Z");
+      expect(after.endDate?.toISOString()).toBe("2025-06-08T00:00:00.000Z");
     });
 
-    it('refuses a ONE-SIDED end moved behind the stored start', async () => {
+    it("refuses a ONE-SIDED end moved behind the stored start", async () => {
       // The case the payload alone cannot see: nothing in this request is
       // wrong by itself.
       const id = await makeCruise();
 
-      const res = await patch(id, { endDate: '2025-05-01T00:00:00.000Z' });
+      const res = await patch(id, { endDate: "2025-05-01T00:00:00.000Z" });
 
       expect(res.status).toBe(400);
       expect(
-        (await prisma.cruise.findUniqueOrThrow({ where: { id } })).endDate?.toISOString(),
-      ).toBe('2025-06-08T00:00:00.000Z');
+        (await prisma.cruise.findUniqueOrThrow({ where: { id } })).endDate?.toISOString()
+      ).toBe("2025-06-08T00:00:00.000Z");
     });
 
-    it('still accepts an ordinary date change', async () => {
+    it("still accepts an ordinary date change", async () => {
       const id = await makeCruise();
 
-      const res = await patch(id, { endDate: '2025-06-12T00:00:00.000Z' });
+      const res = await patch(id, { endDate: "2025-06-12T00:00:00.000Z" });
 
       expect(res.status).toBe(200);
       expect(
-        (await prisma.cruise.findUniqueOrThrow({ where: { id } })).endDate?.toISOString(),
-      ).toBe('2025-06-12T00:00:00.000Z');
+        (await prisma.cruise.findUniqueOrThrow({ where: { id } })).endDate?.toISOString()
+      ).toBe("2025-06-12T00:00:00.000Z");
     });
   });
 
-  describe('AUD-089 — a date can be cleared again', () => {
-    it('clears both dates on an explicit null', async () => {
+  describe("AUD-089 — a date can be cleared again", () => {
+    it("clears both dates on an explicit null", async () => {
       const id = await makeCruise();
 
       const res = await patch(id, { startDate: null, endDate: null });
@@ -118,10 +118,10 @@ describe('a cruise PATCH is held to the same rules as a POST', () => {
       expect(after.endDate).toBeNull();
     });
 
-    it('clears on an empty string too, which is what an emptied input sends', async () => {
+    it("clears on an empty string too, which is what an emptied input sends", async () => {
       const id = await makeCruise();
 
-      const res = await patch(id, { startDate: '', endDate: '' });
+      const res = await patch(id, { startDate: "", endDate: "" });
 
       expect(res.status).toBe(200);
       const after = await prisma.cruise.findUniqueOrThrow({ where: { id } });
@@ -129,23 +129,23 @@ describe('a cruise PATCH is held to the same rules as a POST', () => {
       expect(after.endDate).toBeNull();
     });
 
-    it('leaves an omitted date alone', async () => {
+    it("leaves an omitted date alone", async () => {
       // The control. Clearing and not mentioning must stay different requests.
       const id = await makeCruise();
 
-      const res = await patch(id, { cruiseLine: 'Andere Reederei' });
+      const res = await patch(id, { cruiseLine: "Andere Reederei" });
 
       expect(res.status).toBe(200);
       const after = await prisma.cruise.findUniqueOrThrow({ where: { id } });
-      expect(after.startDate?.toISOString()).toBe('2025-06-01T00:00:00.000Z');
-      expect(after.cruiseLine).toBe('Andere Reederei');
+      expect(after.startDate?.toISOString()).toBe("2025-06-01T00:00:00.000Z");
+      expect(after.cruiseLine).toBe("Andere Reederei");
     });
   });
 
   describe("AUD-090 — a cruise cannot join a stranger's import run", () => {
     it("drops a batch id belonging to someone else", async () => {
       const foreign = await prisma.importBatch.create({
-        data: { userId: otherUserId, domain: 'cruise', source: 'csv', fileName: 'theirs.csv' },
+        data: { userId: otherUserId, domain: "cruise", source: "csv", fileName: "theirs.csv" },
       });
       const id = await makeCruise();
 
@@ -159,20 +159,22 @@ describe('a cruise PATCH is held to the same rules as a POST', () => {
 
     it("keeps the caller's OWN batch id", async () => {
       const mine = await prisma.importBatch.create({
-        data: { userId, domain: 'cruise', source: 'csv', fileName: 'mine.csv' },
+        data: { userId, domain: "cruise", source: "csv", fileName: "mine.csv" },
       });
       const id = await makeCruise();
 
       const res = await patch(id, { importBatchId: mine.id });
 
       expect(res.status).toBe(200);
-      expect((await prisma.cruise.findUniqueOrThrow({ where: { id } })).importBatchId).toBe(mine.id);
+      expect((await prisma.cruise.findUniqueOrThrow({ where: { id } })).importBatchId).toBe(
+        mine.id
+      );
     });
 
     it("drops a batch id from the caller's own but WRONG domain", async () => {
       // Same check the create path makes: provenance has to match the thing.
       const lodgingBatch = await prisma.importBatch.create({
-        data: { userId, domain: 'lodging', source: 'csv', fileName: 'hotels.csv' },
+        data: { userId, domain: "lodging", source: "csv", fileName: "hotels.csv" },
       });
       const id = await makeCruise();
 

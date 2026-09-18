@@ -15,7 +15,16 @@ vi.mock("../../../hooks/useTranslation", () => ({
 import { TripInsightsBar } from "../TripInsightsBar";
 
 const trip = (over: Partial<Trip>): Trip =>
-  ({ id: "t", name: "Trip", countries: [], flights: [], cruises: [], bookings: [], lodgingStays: [], ...over }) as Trip;
+  ({
+    id: "t",
+    name: "Trip",
+    countries: [],
+    flights: [],
+    cruises: [],
+    bookings: [],
+    lodgingStays: [],
+    ...over,
+  }) as Trip;
 
 const render_ = (trips: Trip[]): ReturnType<typeof render> =>
   render(

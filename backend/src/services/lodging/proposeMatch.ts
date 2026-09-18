@@ -135,7 +135,7 @@ function fillsFieldsFor(stored: StoredLodging, incoming: IncomingLodging): strin
 function toMatch(
   stored: StoredLodging,
   incoming: IncomingLodging,
-  distanceMetres: number | null,
+  distanceMetres: number | null
 ): LodgingMatch {
   return {
     id: stored.id,
@@ -159,14 +159,14 @@ function toMatch(
  */
 export function proposeLodgingMatch(
   stored: ReadonlyArray<StoredLodging>,
-  incoming: IncomingLodging,
+  incoming: IncomingLodging
 ): LodgingProposal {
   const pinned =
     typeof incoming.lat === "number" && typeof incoming.lon === "number"
       ? stored
           .filter(
             (c): c is StoredLodging & { lat: number; lon: number } =>
-              typeof c.lat === "number" && typeof c.lon === "number",
+              typeof c.lat === "number" && typeof c.lon === "number"
           )
           .map((candidate) => ({
             candidate,
@@ -174,7 +174,7 @@ export function proposeLodgingMatch(
               incoming.lat as number,
               incoming.lon as number,
               candidate.lat,
-              candidate.lon,
+              candidate.lon
             ),
           }))
           .sort((a, b) => a.distance - b.distance)
@@ -187,9 +187,7 @@ export function proposeLodgingMatch(
       match: toMatch(nearest.candidate, incoming, nearest.distance),
       reason: "coordinates",
       confidence:
-        nearest.distance <= SAME_BUILDING_METRES
-          ? CONFIDENCE.sameBuilding
-          : CONFIDENCE.sameBlock,
+        nearest.distance <= SAME_BUILDING_METRES ? CONFIDENCE.sameBuilding : CONFIDENCE.sameBlock,
     };
   }
 

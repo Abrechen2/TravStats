@@ -60,9 +60,7 @@ describe("POST /api/v1/flights — timezone from the airport", () => {
 
     // 08:25 in Munich on that date is 06:25 UTC. Reading it as UTC — the
     // failure this guards — would store 08:25Z and shift the flight two hours.
-    expect(new Date(res.body.flight.departureTime).toISOString()).toBe(
-      "2007-07-26T06:25:00.000Z",
-    );
+    expect(new Date(res.body.flight.departureTime).toISOString()).toBe("2007-07-26T06:25:00.000Z");
     expect(res.body.flight.depTimeSemantics).toBe("UTC");
   });
 

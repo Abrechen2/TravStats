@@ -132,10 +132,22 @@ describe("normalizeGuestCount", () => {
 // "Hurghada 2" all reached the city column verbatim, from both parsers.
 describe("splitPostcodeFromCity", () => {
   it("moves a six-digit or state-prefixed postcode out of the city", () => {
-    expect(splitPostcodeFromCity("188973 Singapur")).toEqual({ postcode: "188973", city: "Singapur" });
-    expect(splitPostcodeFromCity("BW 78467 Konstanz")).toEqual({ postcode: "78467", city: "Konstanz" });
-    expect(splitPostcodeFromCity("2718 RL Zoetermeer")).toEqual({ postcode: "2718 RL", city: "Zoetermeer" });
-    expect(splitPostcodeFromCity("L-5836 Luxemburg")).toEqual({ postcode: "L-5836", city: "Luxemburg" });
+    expect(splitPostcodeFromCity("188973 Singapur")).toEqual({
+      postcode: "188973",
+      city: "Singapur",
+    });
+    expect(splitPostcodeFromCity("BW 78467 Konstanz")).toEqual({
+      postcode: "78467",
+      city: "Konstanz",
+    });
+    expect(splitPostcodeFromCity("2718 RL Zoetermeer")).toEqual({
+      postcode: "2718 RL",
+      city: "Zoetermeer",
+    });
+    expect(splitPostcodeFromCity("L-5836 Luxemburg")).toEqual({
+      postcode: "L-5836",
+      city: "Luxemburg",
+    });
     expect(splitPostcodeFromCity("TX 78401 Corpus Christi")).toEqual({
       postcode: "78401",
       city: "Corpus Christi",
@@ -149,8 +161,14 @@ describe("splitPostcodeFromCity", () => {
 
   it("leaves a plain city, and a city with a number in its name, untouched", () => {
     expect(splitPostcodeFromCity("Konstanz")).toEqual({ postcode: null, city: "Konstanz" });
-    expect(splitPostcodeFromCity("Frankfurt am Main")).toEqual({ postcode: null, city: "Frankfurt am Main" });
-    expect(splitPostcodeFromCity("Ciudad Juárez 2000")).toEqual({ postcode: null, city: "Ciudad Juárez 2000" });
+    expect(splitPostcodeFromCity("Frankfurt am Main")).toEqual({
+      postcode: null,
+      city: "Frankfurt am Main",
+    });
+    expect(splitPostcodeFromCity("Ciudad Juárez 2000")).toEqual({
+      postcode: null,
+      city: "Ciudad Juárez 2000",
+    });
     expect(splitPostcodeFromCity(null)).toEqual({ postcode: null, city: null });
   });
 });

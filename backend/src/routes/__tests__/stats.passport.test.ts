@@ -80,9 +80,7 @@ describe("GET /api/v1/stats/passport", () => {
 
   afterAll(async () => {
     if (!catalogReady) return;
-    await prisma.user
-      .deleteMany({ where: { id: { in: [user.id, stranger.id] } } })
-      .catch(() => {});
+    await prisma.user.deleteMany({ where: { id: { in: [user.id, stranger.id] } } }).catch(() => {});
   });
 
   it("resolves each airport's country from the catalogue", async () => {

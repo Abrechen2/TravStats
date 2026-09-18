@@ -44,7 +44,7 @@ describe("resolveLocation", () => {
     it("does not geocode when address, city and country are all cleared", async () => {
       const patch = await resolveLocation(
         { name: stored.name, address: null, city: null, country: null, lat: null, lon: null },
-        stored,
+        stored
       );
 
       expect(resolveCoordinates).not.toHaveBeenCalled();
@@ -62,7 +62,7 @@ describe("resolveLocation", () => {
 
       const patch = await resolveLocation(
         { name: stored.name, address: null, city: null, country: null },
-        stored,
+        stored
       );
 
       expect(patch.address).toBeUndefined();
@@ -78,7 +78,7 @@ describe("resolveLocation", () => {
 
       const patch = await resolveLocation(
         { name: stored.name, address: "Eine andere Strasse 5", lat: null, lon: null },
-        stored,
+        stored
       );
 
       expect(patch.lat).toBeUndefined();
@@ -115,17 +115,22 @@ describe("resolveLocation", () => {
     it("retries a row that has an address but never got a pin", async () => {
       resolveCoordinates.mockResolvedValue({ lat: 48.1, lon: 11.6 });
 
-      const patch = await resolveLocation(
-        { notes: "unrelated edit" } as never,
-        { ...stored, lat: null, lon: null },
-      );
+      const patch = await resolveLocation({ notes: "unrelated edit" } as never, {
+        ...stored,
+        lat: null,
+        lon: null,
+      });
 
       expect(resolveCoordinates).toHaveBeenCalled();
       expect(patch.lat).toBe(48.1);
     });
 
     it("fills an address field the request did not mention", async () => {
-      completeAddress.mockResolvedValue({ address: "Hauptstr. 1", city: "St. Martin", country: null });
+      completeAddress.mockResolvedValue({
+        address: "Hauptstr. 1",
+        city: "St. Martin",
+        country: null,
+      });
 
       const patch = await resolveLocation({ lat: 49.3, lon: 8.1 }, { ...stored, city: null });
 

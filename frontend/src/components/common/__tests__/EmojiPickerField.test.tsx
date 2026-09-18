@@ -89,9 +89,7 @@ describe("EmojiPickerField", () => {
     fireEvent.click(screen.getByText("common:emojiPicker.open"));
     await waitFor(() => expect(lastPicker).not.toBeNull());
 
-    lastPicker?.dispatchEvent(
-      new CustomEvent("emoji-click", { detail: { unicode: "🍟" } })
-    );
+    lastPicker?.dispatchEvent(new CustomEvent("emoji-click", { detail: { unicode: "🍟" } }));
 
     expect(onChange).toHaveBeenCalledWith("🍟");
     // A click on an emoji IS the decision — it must not wait for a blur that
@@ -135,9 +133,7 @@ describe("EmojiPickerField", () => {
     const { onChange } = setup();
     fireEvent.click(screen.getByText("common:emojiPicker.open"));
 
-    await waitFor(() =>
-      expect(screen.getByText("common:emojiPicker.unavailable")).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByText("common:emojiPicker.unavailable")).toBeTruthy());
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "🏨" } });
     expect(onChange).toHaveBeenCalledWith("🏨");
   });

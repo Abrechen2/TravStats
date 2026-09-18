@@ -9,24 +9,31 @@
  * dated 2026 (#285).
  */
 
-import { z } from './zod';
+import { z } from "./zod";
 
-import { REQUESTABLE_DOMAINS } from '../services/parsing/parseDocument';
+import { REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
+import { parseRetentionFields } from "./document";
 
-export const parseEmailSchema = z.object({
-  emailContent: z.string().min(1, 'Email content is required').refine(
-    (val) => val.length <= 10 * 1024 * 1024,
-    { message: 'Email content too large (max 10MB)' }
-  ),
-  subject: z.string().optional().refine(
-    (val) => !val || val.length <= 1000,
-    { message: 'Subject too long (max 1000 characters)' }
-  ),
+export const parseEmailBodySchema = z.object({
+  /** Required unless `documentId` names a kept mail to read instead. */
+  emailContent: z
+    .string()
+    .min(1, "Email content is required")
+    .refine((val) => val.length <= 10 * 1024 * 1024, {
+      message: "Email content too large (max 10MB)",
+    })
+    .optional(),
+  subject: z
+    .string()
+    .optional()
+    .refine((val) => !val || val.length <= 1000, {
+      message: "Subject too long (max 1000 characters)",
+    }),
   /**
    * `auto` asks the server to decide what the document is (#57). The default
    * stays `flight`, so no existing caller changes behaviour by upgrading.
    */
-  domain: z.enum(REQUESTABLE_DOMAINS).optional().default('flight'),
+  domain: z.enum(REQUESTABLE_DOMAINS).optional().default("flight"),
   /**
    * When the email was SENT — normally straight from its own Date: header.
    *
@@ -43,4 +50,13 @@ export const parseEmailSchema = z.object({
     .datetime({ offset: true })
     .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .optional(),
+  /** Keep the pasted mail as a document, or read a kept one (forgejo#116). */
+  ...parseRetentionFields,
 });
+
+export const parseEmailSchema = parseEmailBodySchema.refine(
+  (b) => !b.emailContent !== !b.documentId,
+  {
+    message: "Send emailContent or documentId, exactly one of them",
+  }
+);

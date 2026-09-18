@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MembershipsSection from "../MembershipsSection";
-import { listMemberships, listLodgings, listChains, updateMembership } from "../../../lib/api/lodging";
+import {
+  listMemberships,
+  listLodgings,
+  listChains,
+  updateMembership,
+} from "../../../lib/api/lodging";
 import type { Lodging, LodgingMembership } from "../../../types/lodging";
 
 vi.mock("../../../lib/api/lodging", () => ({

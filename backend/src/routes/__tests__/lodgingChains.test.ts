@@ -204,7 +204,9 @@ describe("Lodging Chains API", () => {
       });
       createdChainIds.push(sibling.id);
       // A chain sharing no program with anything — must never show up as a sibling.
-      const unrelated = await prisma.lodgingChain.create({ data: { name: "Unrelated Detail Test" } });
+      const unrelated = await prisma.lodgingChain.create({
+        data: { name: "Unrelated Detail Test" },
+      });
       createdChainIds.push(unrelated.id);
 
       const lodging = await prisma.lodging.create({
@@ -325,7 +327,10 @@ describe("Lodging Chains API", () => {
       const chain = await prisma.lodgingChain.create({ data: { name: "Isolation Test Chain" } });
       createdChainIds.push(chain.id);
       const other = await prisma.user.create({
-        data: { username: "lodgingchaintest-other", passwordHash: await hashPassword("password123") },
+        data: {
+          username: "lodgingchaintest-other",
+          passwordHash: await hashPassword("password123"),
+        },
       });
       await prisma.lodging.create({
         data: { userId: other.id, name: "Someone Else's Hotel", chainId: chain.id },

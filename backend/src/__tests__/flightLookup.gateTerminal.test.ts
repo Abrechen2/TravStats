@@ -29,7 +29,7 @@ jest.mock("../services/apiKeyResolver", () => ({
   // aviationstack stays unconfigured so we deterministically fall through to
   // AirLabs (the path this test suite exercises).
   getApiKey: jest.fn(async (provider: string) =>
-    provider === "airlabs" ? "test-airlabs-key" : null,
+    provider === "airlabs" ? "test-airlabs-key" : null
   ),
   getOpenSkyCredentials: jest.fn(async () => null),
 }));

@@ -23,14 +23,10 @@ import { toCountryCode } from "../../shared/countryEvidence";
  * plainly spans two. The stored column still wins when the user filled it.
  */
 export async function airportFactsFor(
-  flights: Array<{ depIata: string | null; arrIata: string | null }>,
+  flights: Array<{ depIata: string | null; arrIata: string | null }>
 ): Promise<Map<string, { country: string | null; timezone: string | null }>> {
   const codes = [
-    ...new Set(
-      flights
-        .flatMap((f) => [f.depIata, f.arrIata])
-        .filter((c): c is string => !!c),
-    ),
+    ...new Set(flights.flatMap((f) => [f.depIata, f.arrIata]).filter((c): c is string => !!c)),
   ];
   if (codes.length === 0) return new Map();
   const airports = await prisma.airport.findMany({
@@ -40,7 +36,7 @@ export async function airportFactsFor(
   return new Map(
     airports
       .filter((a): a is typeof a & { iata: string } => !!a.iata)
-      .map((a) => [a.iata, { country: a.country, timezone: a.timezone }]),
+      .map((a) => [a.iata, { country: a.country, timezone: a.timezone }])
   );
 }
 
@@ -60,7 +56,7 @@ export function tripCountries(
   flights: Array<{ depIata: string | null; arrIata: string | null }>,
   facts: Map<string, { country: string | null; timezone: string | null }>,
   cruiseCountries: string[] = [],
-  lodgingCountries: string[] = [],
+  lodgingCountries: string[] = []
 ): string[] {
   // A list the user filled in themselves is theirs — returned untouched.
   if (stored.length) return stored;

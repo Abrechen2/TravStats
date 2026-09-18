@@ -181,9 +181,7 @@ export default function StatisticsImpactPreview({
           {data.airlines.added && data.airlines.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 mb-1">{t("pendingUpdates:preview.added")}</div>
-              <div className="text-sm text-(--text-primary)">
-                {data.airlines.added.join(", ")}
-              </div>
+              <div className="text-sm text-(--text-primary)">{data.airlines.added.join(", ")}</div>
             </div>
           )}
         </div>
@@ -220,9 +218,7 @@ export default function StatisticsImpactPreview({
           {data.airports.added && data.airports.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 mb-1">{t("pendingUpdates:preview.added")}</div>
-              <div className="text-sm text-(--text-primary)">
-                {data.airports.added.join(", ")}
-              </div>
+              <div className="text-sm text-(--text-primary)">{data.airports.added.join(", ")}</div>
             </div>
           )}
         </div>

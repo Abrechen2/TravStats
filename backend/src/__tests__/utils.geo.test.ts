@@ -1,93 +1,68 @@
-import { describe, it, expect } from '@jest/globals';
-import { calculateDistance, generateArcPoints } from '../utils/geo';
+import { describe, it, expect } from "@jest/globals";
+import { calculateDistance, generateArcPoints } from "../utils/geo";
 
-describe('Geo Utils', () => {
-  describe('calculateDistance', () => {
-    it('should calculate distance between two coordinates', () => {
+describe("Geo Utils", () => {
+  describe("calculateDistance", () => {
+    it("should calculate distance between two coordinates", () => {
       // Munich (MUC) to Luxembourg (LUX)
-      const munich = { lat: 48.1351, lon: 11.5820 };
+      const munich = { lat: 48.1351, lon: 11.582 };
       const luxembourg = { lat: 49.6233, lon: 6.2044 };
 
-      const distance = calculateDistance(
-        munich.lat,
-        munich.lon,
-        luxembourg.lat,
-        luxembourg.lon
-      );
+      const distance = calculateDistance(munich.lat, munich.lon, luxembourg.lat, luxembourg.lon);
 
       // Expected distance is approximately 426 km
       expect(distance).toBeGreaterThan(420);
       expect(distance).toBeLessThan(435);
     });
 
-    it('should return 0 for same coordinates', () => {
-      const distance = calculateDistance(48.1351, 11.5820, 48.1351, 11.5820);
+    it("should return 0 for same coordinates", () => {
+      const distance = calculateDistance(48.1351, 11.582, 48.1351, 11.582);
 
       expect(distance).toBeLessThan(0.01); // Very close to 0
     });
 
-    it('should calculate long distances correctly', () => {
+    it("should calculate long distances correctly", () => {
       // New York to London
-      const newYork = { lat: 40.7128, lon: -74.0060 };
+      const newYork = { lat: 40.7128, lon: -74.006 };
       const london = { lat: 51.5074, lon: -0.1278 };
 
-      const distance = calculateDistance(
-        newYork.lat,
-        newYork.lon,
-        london.lat,
-        london.lon
-      );
+      const distance = calculateDistance(newYork.lat, newYork.lon, london.lat, london.lon);
 
       // Expected distance is approximately 5,570 km
       expect(distance).toBeGreaterThan(5500);
       expect(distance).toBeLessThan(5600);
     });
 
-    it('should handle southern hemisphere coordinates', () => {
+    it("should handle southern hemisphere coordinates", () => {
       // Sydney to Melbourne
       const sydney = { lat: -33.8688, lon: 151.2093 };
       const melbourne = { lat: -37.8136, lon: 144.9631 };
 
-      const distance = calculateDistance(
-        sydney.lat,
-        sydney.lon,
-        melbourne.lat,
-        melbourne.lon
-      );
+      const distance = calculateDistance(sydney.lat, sydney.lon, melbourne.lat, melbourne.lon);
 
       // Expected distance is approximately 715 km
       expect(distance).toBeGreaterThan(700);
       expect(distance).toBeLessThan(730);
     });
 
-    it('should handle coordinates across dateline', () => {
+    it("should handle coordinates across dateline", () => {
       // Tokyo to San Francisco
       const tokyo = { lat: 35.6762, lon: 139.6503 };
       const sanFrancisco = { lat: 37.7749, lon: -122.4194 };
 
-      const distance = calculateDistance(
-        tokyo.lat,
-        tokyo.lon,
-        sanFrancisco.lat,
-        sanFrancisco.lon
-      );
+      const distance = calculateDistance(tokyo.lat, tokyo.lon, sanFrancisco.lat, sanFrancisco.lon);
 
       // Expected distance is approximately 8,280 km
       expect(distance).toBeGreaterThan(8200);
       expect(distance).toBeLessThan(8400);
     });
 
-    it('should calculate distance for equator crossing', () => {
+    it("should calculate distance for equator crossing", () => {
       // Singapore (northern hemisphere) to Jakarta (near equator)
       const singapore = { lat: 1.3521, lon: 103.8198 };
       const jakarta = { lat: -6.2088, lon: 106.8456 };
 
-      const distance = calculateDistance(
-        singapore.lat,
-        singapore.lon,
-        jakarta.lat,
-        jakarta.lon
-      );
+      const distance = calculateDistance(singapore.lat, singapore.lon, jakarta.lat, jakarta.lon);
 
       // Expected distance is approximately 890 km
       expect(distance).toBeGreaterThan(850);
@@ -95,9 +70,9 @@ describe('Geo Utils', () => {
     });
   });
 
-  describe('generateArcPoints', () => {
-    it('should generate points along great circle arc', () => {
-      const start: [number, number] = [11.5820, 48.1351]; // Munich [lon, lat]
+  describe("generateArcPoints", () => {
+    it("should generate points along great circle arc", () => {
+      const start: [number, number] = [11.582, 48.1351]; // Munich [lon, lat]
       const end: [number, number] = [6.2044, 49.6233]; // Luxembourg [lon, lat]
 
       const points = generateArcPoints(start, end, 10);
@@ -109,7 +84,7 @@ describe('Geo Utils', () => {
       expect(points[10][1]).toBeCloseTo(end[1], 4);
     });
 
-    it('should generate default 50 points when numPoints not specified', () => {
+    it("should generate default 50 points when numPoints not specified", () => {
       const start: [number, number] = [0, 0];
       const end: [number, number] = [10, 10];
 
@@ -118,7 +93,7 @@ describe('Geo Utils', () => {
       expect(points).toHaveLength(51); // 50 segments = 51 points
     });
 
-    it('should handle antimeridian crossing', () => {
+    it("should handle antimeridian crossing", () => {
       // Tokyo to San Francisco (crosses dateline)
       const tokyo: [number, number] = [139.6503, 35.6762];
       const sanFrancisco: [number, number] = [-122.4194, 37.7749];
@@ -133,7 +108,7 @@ describe('Geo Utils', () => {
       }
     });
 
-    it('should handle westward dateline crossing', () => {
+    it("should handle westward dateline crossing", () => {
       // San Francisco to Tokyo (crosses dateline westward)
       const sanFrancisco: [number, number] = [-122.4194, 37.7749];
       const tokyo: [number, number] = [139.6503, 35.6762];
@@ -148,7 +123,7 @@ describe('Geo Utils', () => {
       }
     });
 
-    it('should generate smooth arc', () => {
+    it("should generate smooth arc", () => {
       const start: [number, number] = [0, 0];
       const end: [number, number] = [10, 10];
 
@@ -167,7 +142,7 @@ describe('Geo Utils', () => {
       expect(midPoint[1]).toBeLessThan(10);
     });
 
-    it('should handle poles', () => {
+    it("should handle poles", () => {
       // North pole to South pole
       const northPole: [number, number] = [0, 90];
       const southPole: [number, number] = [0, -90];
@@ -179,7 +154,7 @@ describe('Geo Utils', () => {
       expect(points[10][1]).toBeCloseTo(-90, 1);
     });
 
-    it('should handle zero-length arcs', () => {
+    it("should handle zero-length arcs", () => {
       const point: [number, number] = [10, 20];
 
       const points = generateArcPoints(point, point, 5);
@@ -191,7 +166,7 @@ describe('Geo Utils', () => {
       expect(points[5]).toBeDefined();
     });
 
-    it('should maintain latitude bounds', () => {
+    it("should maintain latitude bounds", () => {
       const start: [number, number] = [-120, 45];
       const end: [number, number] = [120, -45];
 
@@ -205,13 +180,13 @@ describe('Geo Utils', () => {
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle very small distances', () => {
+  describe("Edge Cases", () => {
+    it("should handle very small distances", () => {
       // Two points 1 meter apart
       const lat1 = 48.1351;
-      const lon1 = 11.5820;
+      const lon1 = 11.582;
       const lat2 = 48.1351 + 0.00001; // ~1 meter
-      const lon2 = 11.5820;
+      const lon2 = 11.582;
 
       const distance = calculateDistance(lat1, lon1, lat2, lon2);
 
@@ -219,17 +194,12 @@ describe('Geo Utils', () => {
       expect(distance).toBeGreaterThan(0); // But not zero
     });
 
-    it('should handle maximum distance (antipodal points)', () => {
+    it("should handle maximum distance (antipodal points)", () => {
       // Points on opposite sides of Earth
       const point1 = { lat: 0, lon: 0 };
       const point2 = { lat: 0, lon: 180 };
 
-      const distance = calculateDistance(
-        point1.lat,
-        point1.lon,
-        point2.lat,
-        point2.lon
-      );
+      const distance = calculateDistance(point1.lat, point1.lon, point2.lat, point2.lon);
 
       // Half the circumference of Earth (~20,000 km)
       expect(distance).toBeGreaterThan(19900);

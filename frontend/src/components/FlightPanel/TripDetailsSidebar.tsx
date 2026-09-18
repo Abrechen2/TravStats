@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import { sortFlightsByLegOrder } from "../../lib/flightLegSort";
 import type { Flight } from "../../types";
+import { formatDate, formatTime } from "../../lib/displayFormat";
 
 interface TripDetailsSidebarProps {
   flights: Flight[];
@@ -61,10 +62,7 @@ export function TripDetailsSidebar({
         ← {t("common:buttons.back")}
       </button>
 
-      <div
-        className="px-3 py-3 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
+      <div className="px-3 py-3 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <div className="flex items-start justify-between gap-2">
           <div className="font-bold text-sm flex-1 min-w-0 truncate" style={{ color: tripColor }}>
             {tripName}
@@ -145,26 +143,9 @@ export function TripDetailsSidebar({
           // 12:00 placeholder is meaningless and would mislead the user.
           const depDateOnly = f.depTimeSemantics === "DATE_ONLY";
           const arrDateOnly = f.arrTimeSemantics === "DATE_ONLY";
-          const depTime =
-            f.departureTime && !depDateOnly
-              ? new Date(f.departureTime).toLocaleTimeString(locale, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "";
-          const arrTime =
-            f.arrivalTime && !arrDateOnly
-              ? new Date(f.arrivalTime).toLocaleTimeString(locale, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "";
-          const depDate = f.departureTime
-            ? new Date(f.departureTime).toLocaleDateString(locale, {
-                day: "2-digit",
-                month: "short",
-              })
-            : "";
+          const depTime = f.departureTime && !depDateOnly ? formatTime(f.departureTime) : "";
+          const arrTime = f.arrivalTime && !arrDateOnly ? formatTime(f.arrivalTime) : "";
+          const depDate = f.departureTime ? formatDate(f.departureTime, { omitYear: true }) : "";
 
           const isHovered = hoveredId === f.id;
           return (

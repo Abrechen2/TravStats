@@ -1,4 +1,4 @@
-import { toCountryCode } from '../../shared/countryEvidence';
+import { toCountryCode } from "../../shared/countryEvidence";
 
 /**
  * The key everything GROUPS or COUNTS on — never the free text.
@@ -23,6 +23,9 @@ import { toCountryCode } from '../../shared/countryEvidence';
  * deliberately coarse coordinate guess — and a house without
  * coordinates lost its continent altogether.
  */
-export function lodgingCountryKey(l: { country: string | null; isoCountryCode: string | null }): string | null {
+export function lodgingCountryKey(l: {
+  country: string | null;
+  isoCountryCode: string | null;
+}): string | null {
   return l.isoCountryCode ?? toCountryCode(l.country) ?? l.country;
 }

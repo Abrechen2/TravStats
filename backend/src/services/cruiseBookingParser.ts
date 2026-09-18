@@ -2,7 +2,7 @@ import http from "http";
 import https from "https";
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import logger from "../utils/logger";
-import { getAdminParserSettings } from "./parserSettings";
+import { getAdminParserSettings, getParserOrder } from "./parserSettings";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
@@ -74,8 +74,17 @@ export interface CruiseParseResult {
    * tried first, so an instance without Ollama can still import the formats it
    * covers.
    */
-  parserUsed: "template" | "ollama";
+  parserUsed: "template" | "ollama" | "none";
   ollamaAvailable: boolean;
+  /**
+   * Why nothing was read, when `parserUsed` is "none". Same shape the lodging
+   * parser answers with, and for the same reason: an unreadable document is
+   * not a server fault. Until 2026-09-17 this path THREW, and the route turned
+   * that into a 503 — so a cruise line no template covers, on an instance with
+   * no model, met an error page where a hotel in the same position offered
+   * manual entry.
+   */
+  fallbackReason?: string;
 }
 
 // Exported for the prompt-contract tests — extraction truthfulness rules
@@ -132,7 +141,7 @@ function fetchJson(url: string, body: string): Promise<string> {
       res.on("end", () => resolve(data));
     });
     req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
-      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`)),
+      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`))
     );
     req.on("error", reject);
     req.write(body);
@@ -158,7 +167,7 @@ function fetchGet(url: string): Promise<string> {
           data += chunk;
         });
         res.on("end", () => resolve(data));
-      },
+      }
     );
     req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
     req.on("error", reject);
@@ -181,7 +190,10 @@ function asString(value: unknown): string | undefined {
 function asNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const cleaned = value.replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".");
+    const cleaned = value
+      .replace(/[^\d.,-]/g, "")
+      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+      .replace(",", ".");
     const n = Number(cleaned);
     return Number.isFinite(n) ? n : undefined;
   }
@@ -308,7 +320,7 @@ function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
 function normalizeCruise(raw: RawCruise, sourceText: string): ParsedCruise {
   const stopsArray = Array.isArray(raw.stops) ? (raw.stops as unknown[]) : [];
   const stops = stopsArray.map((entry, index) =>
-    normalizeStop((entry ?? {}) as RawCruiseStop, index),
+    normalizeStop((entry ?? {}) as RawCruiseStop, index)
   );
 
   // Re-sequence dayNumber so it is monotonically increasing 1..N regardless of
@@ -404,7 +416,7 @@ export class CruiseBookingParser {
 
     logger.info(
       { model: this.model, url: this.url, chars: snippet.length },
-      "[Cruise Parser] Sending text to Ollama",
+      "[Cruise Parser] Sending text to Ollama"
     );
 
     const raw = await fetchJson(`${this.url}/api/generate`, body);
@@ -436,7 +448,7 @@ export class CruiseBookingParser {
         const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
           { model: this.model, responsePreview: preview },
-          "[Cruise Parser] No JSON array found in Ollama response",
+          "[Cruise Parser] No JSON array found in Ollama response"
         );
         throw new Error("No JSON array found in Ollama response");
       }
@@ -450,7 +462,7 @@ export class CruiseBookingParser {
             matchPreview: preview,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[Cruise Parser] JSON.parse failed on matched array",
+          "[Cruise Parser] JSON.parse failed on matched array"
         );
         throw new Error("Ollama response JSON parse failed");
       }
@@ -461,7 +473,7 @@ export class CruiseBookingParser {
       const preview = JSON.stringify(parsed).slice(0, 300);
       logger.warn(
         { model: this.model, preview },
-        "[Cruise Parser] Parsed JSON did not yield a cruise array",
+        "[Cruise Parser] Parsed JSON did not yield a cruise array"
       );
       throw new Error("Ollama response did not contain a cruise array");
     }
@@ -499,7 +511,7 @@ export function getCruiseBookingParser(options?: CruiseBookingParserOptions): Cr
 
 export async function parseCruiseBookingText(
   text: string,
-  options?: CruiseBookingParserOptions,
+  options?: CruiseBookingParserOptions
 ): Promise<CruiseParseResult> {
   // Resolve the Ollama endpoint from admin settings first, mirroring the flight
   // text parser (services/parsers/config.ts). The Settings "Test" button reads
@@ -512,21 +524,45 @@ export async function parseCruiseBookingText(
   // if it did not, so an instance without a local model could not import a
   // cruise booking at all — measured on the sample set, every TUI confirmation
   // failed for that reason alone.
-  const templated = parseTuiCruisesConfirmation(text);
-  if (templated.length > 0) {
-    return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+  // Which reader looks first is one admin setting for all four domains
+  // (`getParserOrder`), default template-first — which is what this domain
+  // has always done.
+  const order = await getParserOrder();
+  if (order === "template_first") {
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
   }
 
   const resolved = await resolveCruiseParserOptions(options);
   const parser = getCruiseBookingParser(resolved);
   const ollamaAvailable = await parser.checkAvailability();
   if (!ollamaAvailable) {
-    throw new Error(
-      `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
-        `Check the parser configuration in Settings (Ollama URL / model).`,
-    );
+    // Under `llm_first` the template has not been tried yet, and an
+    // unreachable model must not cost a booking the template can read.
+    const templated = order === "llm_first" ? parseTuiCruisesConfirmation(text) : [];
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+    }
+    return {
+      cruises: [],
+      parserUsed: "none",
+      ollamaAvailable: false,
+      fallbackReason:
+        `Ollama is not reachable at ${parser.endpoint} — ` +
+        `check the parser configuration in Settings (Ollama URL / model).`,
+    };
   }
   const cruises = await parser.parseText(text);
+  if (cruises.length === 0 && order === "llm_first") {
+    // Same rule as lodging: the model finding nothing is not a reason to
+    // leave a template hit on the table.
+    const templated = parseTuiCruisesConfirmation(text);
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: true };
+    }
+  }
   return { cruises, parserUsed: "ollama", ollamaAvailable: true };
 }
 
@@ -536,7 +572,7 @@ export async function parseCruiseBookingText(
  * own env/localhost fallback unchanged.
  */
 async function resolveCruiseParserOptions(
-  options?: CruiseBookingParserOptions,
+  options?: CruiseBookingParserOptions
 ): Promise<CruiseBookingParserOptions | undefined> {
   if (options?.url && options?.model) return options;
   let adminUrl: string | undefined;

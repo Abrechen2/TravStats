@@ -188,7 +188,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       include: LIST_INCLUDE,
     });
 
-    logger.info({ operation: "place_list_create", userId, listId: created.id }, "Place list created");
+    logger.info(
+      { operation: "place_list_create", userId, listId: created.id },
+      "Place list created"
+    );
     res.status(201).json({ success: true, data: present(created, true) });
   } catch (error) {
     next(error);
@@ -232,7 +235,12 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     await prisma.placeList.delete({ where: { id: existing.id } });
 
     logger.info(
-      { operation: "place_list_delete", userId, listId: existing.id, entries: existing.entries.length },
+      {
+        operation: "place_list_delete",
+        userId,
+        listId: existing.id,
+        entries: existing.entries.length,
+      },
       "Place list deleted"
     );
     res.json({ success: true });
@@ -278,24 +286,27 @@ router.post("/:id/entries", async (req: AuthRequest, res: Response, next: NextFu
   }
 });
 
-router.delete("/:id/entries/:placeId", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const list = await findOwned(req.params.id, userId);
-    assertEditableAs(list, "membership");
+router.delete(
+  "/:id/entries/:placeId",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const list = await findOwned(req.params.id, userId);
+      assertEditableAs(list, "membership");
 
-    // deleteMany, not delete: removing a place that is not in the list is not an
-    // error worth surfacing, and `delete` would throw P2025 for it.
-    await prisma.placeListEntry.deleteMany({
-      where: { listId: list.id, placeId: req.params.placeId },
-    });
+      // deleteMany, not delete: removing a place that is not in the list is not an
+      // error worth surfacing, and `delete` would throw P2025 for it.
+      await prisma.placeListEntry.deleteMany({
+        where: { listId: list.id, placeId: req.params.placeId },
+      });
 
-    const fresh = await findOwned(list.id, userId);
-    res.json({ success: true, data: present(fresh, true) });
-  } catch (error) {
-    next(error);
+      const fresh = await findOwned(list.id, userId);
+      res.json({ success: true, data: present(fresh, true) });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 router.put("/:id/entries/order", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

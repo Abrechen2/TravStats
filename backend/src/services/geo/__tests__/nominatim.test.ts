@@ -12,8 +12,7 @@ import {
 } from "../nominatim";
 import { resolveGeocoderUrls } from "../../instanceSettingsService";
 
-const okResponse = (rows: unknown) =>
-  ({ ok: true, json: async () => rows }) as unknown as Response;
+const okResponse = (rows: unknown) => ({ ok: true, json: async () => rows }) as unknown as Response;
 
 const mockResolveGeocoderUrls = resolveGeocoderUrls as jest.Mock;
 
@@ -36,7 +35,7 @@ describe("nominatim geocoder", () => {
     global.fetch = jest
       .fn()
       .mockResolvedValue(
-        okResponse([{ lat: "47.3769", lon: "8.5417" }]),
+        okResponse([{ lat: "47.3769", lon: "8.5417" }])
       ) as unknown as typeof fetch;
     const out = await geocodeAddress({
       address: "Bahnhofstrasse 1",
@@ -47,41 +46,29 @@ describe("nominatim geocoder", () => {
   });
 
   it("sends a descriptive User-Agent (Nominatim usage policy)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "1", lon: "2" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "1", lon: "2" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
     await geocodeAddress({ city: "Berlin" });
     const init = fetchMock.mock.calls[0][1] as RequestInit;
-    expect((init.headers as Record<string, string>)["User-Agent"]).toMatch(
-      /TravStats/,
-    );
+    expect((init.headers as Record<string, string>)["User-Agent"]).toMatch(/TravStats/);
   });
 
   it("returns null on empty input without any network call", async () => {
     const fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
-    expect(
-      await geocodeAddress({ address: "", city: null, country: null }),
-    ).toBeNull();
+    expect(await geocodeAddress({ address: "", city: null, country: null })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns null (never throws) when the API fails or finds nothing", async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error("network")) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error("network")) as unknown as typeof fetch;
     expect(await geocodeAddress({ city: "Nowhere" })).toBeNull();
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(okResponse([])) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue(okResponse([])) as unknown as typeof fetch;
     expect(await geocodeAddress({ city: "Nowhere" })).toBeNull();
   });
 
   it("caches a repeated query (one network call)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "52.52", lon: "13.405" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "52.52", lon: "13.405" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
     await geocodeAddress({ city: "Berlin", country: "DE" });
     await geocodeAddress({ city: "Berlin", country: "DE" });
@@ -91,9 +78,7 @@ describe("nominatim geocoder", () => {
   it("never geocodes when the caller supplied coordinates", async () => {
     const fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
-    expect(
-      await resolveCoordinates({ lat: 1, lon: 2, city: "Berlin" }),
-    ).toBeNull();
+    expect(await resolveCoordinates({ lat: 1, lon: 2, city: "Berlin" })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -102,9 +87,7 @@ describe("nominatim geocoder", () => {
       photonUrl: "https://photon.komoot.io",
       nominatimUrl: "https://nominatim.self-hosted.example",
     });
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "10", lon: "20" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "10", lon: "20" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
     await geocodeAddress({ city: "Configured City" });
     const url = fetchMock.mock.calls[0][0] as string;
@@ -116,9 +99,7 @@ describe("nominatim geocoder", () => {
       photonUrl: "https://photon.komoot.io",
       nominatimUrl: "https://nominatim.instance-a.example",
     });
-    const fetchA = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "1", lon: "1" }]));
+    const fetchA = jest.fn().mockResolvedValue(okResponse([{ lat: "1", lon: "1" }]));
     global.fetch = fetchA as unknown as typeof fetch;
     const resultA = await geocodeAddress({ city: "Shared Query City" });
     expect(resultA).toEqual({ lat: 1, lon: 1 });
@@ -128,9 +109,7 @@ describe("nominatim geocoder", () => {
       photonUrl: "https://photon.komoot.io",
       nominatimUrl: "https://nominatim.instance-b.example",
     });
-    const fetchB = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "2", lon: "2" }]));
+    const fetchB = jest.fn().mockResolvedValue(okResponse([{ lat: "2", lon: "2" }]));
     global.fetch = fetchB as unknown as typeof fetch;
     const resultB = await geocodeAddress({ city: "Shared Query City" });
     expect(resultB).toEqual({ lat: 2, lon: 2 });
@@ -140,12 +119,8 @@ describe("nominatim geocoder", () => {
   });
 
   it("never throws when resolveGeocoderUrls rejects, falls back to default URL", async () => {
-    mockResolveGeocoderUrls.mockRejectedValue(
-      new Error("DB connection failed"),
-    );
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "47.3769", lon: "8.5417" }]));
+    mockResolveGeocoderUrls.mockRejectedValue(new Error("DB connection failed"));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "47.3769", lon: "8.5417" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
     const result = await geocodeAddress({ city: "Fallback Test City" });
     // Should resolve with coordinates, not throw
@@ -160,19 +135,13 @@ describe("nominatim geocoder", () => {
     const realEnv = process.env.NOMINATIM_URL;
     process.env.NOMINATIM_URL = "https://nominatim.env-configured.example";
     try {
-      mockResolveGeocoderUrls.mockRejectedValue(
-        new Error("DB connection failed"),
-      );
-      const fetchMock = jest
-        .fn()
-        .mockResolvedValue(okResponse([{ lat: "5", lon: "6" }]));
+      mockResolveGeocoderUrls.mockRejectedValue(new Error("DB connection failed"));
+      const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "5", lon: "6" }]));
       global.fetch = fetchMock as unknown as typeof fetch;
       const result = await geocodeAddress({ city: "Env Fallback City" });
       expect(result).toEqual({ lat: 5, lon: 6 });
       const url = fetchMock.mock.calls[0][0] as string;
-      expect(url).toMatch(
-        /^https:\/\/nominatim\.env-configured\.example\/search\?/,
-      );
+      expect(url).toMatch(/^https:\/\/nominatim\.env-configured\.example\/search\?/);
     } finally {
       if (realEnv === undefined) delete process.env.NOMINATIM_URL;
       else process.env.NOMINATIM_URL = realEnv;
@@ -188,9 +157,7 @@ describe("nominatim geocoder", () => {
   // with no city either, never ran at all.
 
   it("uses the name when there is no street address — the parsed-email case", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "52.516", lon: "13.379" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "52.516", lon: "13.379" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const out = await geocodeAddress({
@@ -206,9 +173,7 @@ describe("nominatim geocoder", () => {
   });
 
   it("geocodes a name-only lodging instead of refusing to look", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "1", lon: "2" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "1", lon: "2" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     expect(await geocodeAddress({ name: "Schlosshotel Kronberg" })).toEqual({
@@ -219,9 +184,7 @@ describe("nominatim geocoder", () => {
   });
 
   it("prefers the street address over the name when both exist (no regression)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(okResponse([{ lat: "3", lon: "4" }]));
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "3", lon: "4" }]));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     // Distinct from every other query in this file — the module-level cache
@@ -243,7 +206,7 @@ describe("nominatim geocoder", () => {
     const fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
     expect(
-      await geocodeAddress({ name: "  ", address: null, city: null, country: null }),
+      await geocodeAddress({ name: "  ", address: null, city: null, country: null })
     ).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -263,7 +226,7 @@ describe("nominatim geocoder", () => {
         house_number: "77",
         city: "Berlin",
         country: "Deutschland",
-      }),
+      })
     ) as unknown as typeof fetch;
     expect(await reverseGeocode(52.516, 13.379)).toEqual({
       address: "Unter den Linden 77",
@@ -281,7 +244,7 @@ describe("nominatim geocoder", () => {
       global.fetch = jest
         .fn()
         .mockResolvedValue(
-          reverseResponse({ [key]: `Place-${key}`, country: "DE" }),
+          reverseResponse({ [key]: `Place-${key}`, country: "DE" })
         ) as unknown as typeof fetch;
       // Distinct coordinates per iteration — the cache is keyed on them.
       n += 1;
@@ -309,7 +272,9 @@ describe("nominatim geocoder", () => {
     for (const [address, _expected] of cases) {
       global.fetch = jest
         .fn()
-        .mockResolvedValue(reverseResponse({ ...address, country: "X" })) as unknown as typeof fetch;
+        .mockResolvedValue(
+          reverseResponse({ ...address, country: "X" })
+        ) as unknown as typeof fetch;
       n += 1;
       const out = await reverseGeocode(70 + n, 30 + n);
       seen.push(out?.city ?? "MISSING");
@@ -318,14 +283,10 @@ describe("nominatim geocoder", () => {
   }, 10_000);
 
   it("returns null (never throws) when reverse lookup fails or is empty", async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error("network")) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error("network")) as unknown as typeof fetch;
     expect(await reverseGeocode(10.1, 20.1)).toBeNull();
 
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(reverseResponse({})) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue(reverseResponse({})) as unknown as typeof fetch;
     expect(await reverseGeocode(10.2, 20.2)).toBeNull();
   });
 
@@ -339,9 +300,7 @@ describe("nominatim geocoder", () => {
   });
 
   it("caches by rounded coordinate so nudging a pin a few metres is one call", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(reverseResponse({ city: "Cached Town" }));
+    const fetchMock = jest.fn().mockResolvedValue(reverseResponse({ city: "Cached Town" }));
     global.fetch = fetchMock as unknown as typeof fetch;
     await reverseGeocode(48.1374, 11.575);
     await reverseGeocode(48.137401, 11.575001);
@@ -354,7 +313,7 @@ describe("nominatim geocoder", () => {
         road: "Nominatim Street",
         city: "Nominatim City",
         country: "Nominatim Country",
-      }),
+      })
     ) as unknown as typeof fetch;
 
     const out = await completeAddressFromCoordinates({
@@ -384,7 +343,7 @@ describe("nominatim geocoder", () => {
         // A REAL country: the placeholder "C" used to stand here, and it now
         // counts as "present but not a country" — see the next test.
         country: "Schweiz",
-      }),
+      })
     ).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -409,9 +368,7 @@ describe("nominatim geocoder", () => {
   it("does not call the geocoder without coordinates to reverse", async () => {
     const fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
-    expect(
-      await completeAddressFromCoordinates({ lat: null, lon: null, city: null }),
-    ).toBeNull();
+    expect(await completeAddressFromCoordinates({ lat: null, lon: null, city: null })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

@@ -127,16 +127,18 @@ router.get(
       if (!query.success || !codes) {
         res.status(400).json({
           error: "invalid_request",
-          details: [`codes: 1–${MAX_BATCH_CODES} comma-separated ISO 3166-1 alpha-2 codes; variant: flat|square`],
+          details: [
+            `codes: 1–${MAX_BATCH_CODES} comma-separated ISO 3166-1 alpha-2 codes; variant: flat|square`,
+          ],
         });
         return;
       }
 
       const entries = await Promise.all(
-        codes.map(async (code) => [code, await readFlag(code, query.data.variant)] as const),
+        codes.map(async (code) => [code, await readFlag(code, query.data.variant)] as const)
       );
       const flags = Object.fromEntries(
-        entries.flatMap(([code, entry]) => (entry ? [[code, entry.body.toString("utf8")]] : [])),
+        entries.flatMap(([code, entry]) => (entry ? [[code, entry.body.toString("utf8")]] : []))
       );
       const missing = entries.flatMap(([code, entry]) => (entry ? [] : [code]));
 
@@ -151,7 +153,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** GET /country-flags/:iso?variant=flat|square — one flag as SVG. */
@@ -175,7 +177,10 @@ router.get(
       if (!entry) {
         // A 404 is a real answer here — the code is well-formed, the package
         // simply has no flag for it — so the client may cache it like a hit.
-        res.setHeader("Cache-Control", CACHE_CONTROL).status(404).json({ error: "unknown_country" });
+        res
+          .setHeader("Cache-Control", CACHE_CONTROL)
+          .status(404)
+          .json({ error: "unknown_country" });
         return;
       }
 
@@ -187,7 +192,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

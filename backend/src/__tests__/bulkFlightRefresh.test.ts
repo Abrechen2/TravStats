@@ -43,10 +43,7 @@ jest.mock("../utils/logger", () => ({
 }));
 
 // ─── Import after mocks ─────────────────────────────────────────────────────
-import {
-  hasHistoricalProvider,
-  runBulkRefresh,
-} from "../services/bulkFlightRefresh";
+import { hasHistoricalProvider, runBulkRefresh } from "../services/bulkFlightRefresh";
 
 const USER_ID = "user-1";
 
@@ -62,14 +59,14 @@ describe("hasHistoricalProvider", () => {
 
   it("returns true when Aviationstack is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider) =>
-      provider === "aviationstack" ? "av-key" : null,
+      provider === "aviationstack" ? "av-key" : null
     );
     expect(await hasHistoricalProvider(USER_ID)).toBe(true);
   });
 
   it("returns true when AeroDataBox is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider) =>
-      provider === "aerodatabox" ? "adb-key" : null,
+      provider === "aerodatabox" ? "adb-key" : null
     );
     expect(await hasHistoricalProvider(USER_ID)).toBe(true);
   });
@@ -128,7 +125,6 @@ describe("runBulkRefresh", () => {
       },
     });
   });
-
 
   /**
    * The owner's report, 2026-09-03: three recently flown flights with no
@@ -223,9 +219,7 @@ describe("runBulkRefresh", () => {
     await runBulkRefresh(USER_ID);
 
     const where = prismaMock.flight.findMany.mock.calls[0][0].where;
-    expect(where.OR).toEqual(
-      expect.arrayContaining([{ aircraft: null }, { aircraft: "" }])
-    );
+    expect(where.OR).toEqual(expect.arrayContaining([{ aircraft: null }, { aircraft: "" }]));
   });
 
   it("counts provider 'no_provider' / empty result as no_data and writes nothing", async () => {

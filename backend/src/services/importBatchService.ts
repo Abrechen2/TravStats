@@ -42,7 +42,9 @@ export interface ImportBatchSummary {
  * `revertImportBatch`) now refuses an unrecognised one instead of guessing.
  */
 function asDomain(value: string): ImportDomain {
-  return (IMPORT_DOMAINS as readonly string[]).includes(value) ? (value as ImportDomain) : "lodging";
+  return (IMPORT_DOMAINS as readonly string[]).includes(value)
+    ? (value as ImportDomain)
+    : "lodging";
 }
 
 function asSource(value: string): ImportSource {
@@ -53,7 +55,7 @@ export async function createImportBatch(
   userId: string,
   domain: ImportDomain,
   source: ImportSource,
-  fileName: string | null,
+  fileName: string | null
 ): Promise<{ id: string }> {
   const batch = await prisma.importBatch.create({
     data: { userId, domain, source, fileName },
@@ -89,7 +91,9 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
     },
     orderBy: { createdAt: "desc" },
     include: {
-      _count: { select: { lodgings: true, stays: true, flights: true, cruises: true, places: true } },
+      _count: {
+        select: { lodgings: true, stays: true, flights: true, cruises: true, places: true },
+      },
     },
   });
 
@@ -147,7 +151,7 @@ const ITEM_CAP = 50;
 
 export async function listImportBatchItems(
   userId: string,
-  batchId: string,
+  batchId: string
 ): Promise<ImportBatchItems> {
   // Ownership first: a batch belonging to someone else must be indistinguishable
   // from one that does not exist.

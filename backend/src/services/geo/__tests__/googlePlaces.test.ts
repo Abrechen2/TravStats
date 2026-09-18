@@ -5,7 +5,9 @@ jest.mock("../../apiKeyResolver", () => ({ getApiKey: jest.fn() }));
 
 const mockedKey = getApiKey as jest.MockedFunction<typeof getApiKey>;
 const answer = (body: unknown, ok = true): void => {
-  global.fetch = jest.fn().mockResolvedValue({ ok, json: async () => body }) as unknown as typeof fetch;
+  global.fetch = jest
+    .fn()
+    .mockResolvedValue({ ok, json: async () => body }) as unknown as typeof fetch;
 };
 
 const place = (primaryType: string) => ({
@@ -60,13 +62,13 @@ describe("Google Places tier", () => {
 
     await findLodgingPlace("JI Hotel Shanghai");
 
-    const body = JSON.parse(
-      (global.fetch as jest.Mock).mock.calls[0][1].body as string,
-    ) as { languageCode?: string };
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string) as {
+      languageCode?: string;
+    };
     expect(body.languageCode).toBe("de");
   });
 
-  it("reports the country as an ISO code — a flag cannot be drawn from \"China\"", async () => {
+  it('reports the country as an ISO code — a flag cannot be drawn from "China"', async () => {
     mockedKey.mockResolvedValue("test-key");
     answer(place("hotel"));
     expect((await findLodgingPlace("JI Hotel Shanghai"))?.countryCode).toBe("CN");
@@ -78,7 +80,7 @@ describe("Google Places tier", () => {
     withSite.places[0] = {
       ...withSite.places[0],
       websiteUri: "https://www.ihg.com/garner/hotels/de/de/erlangen",
-    } as typeof withSite.places[0];
+    } as (typeof withSite.places)[0];
     answer(withSite);
 
     expect((await findLodgingPlace("Garner Hotel Erlangen Süd by IHG"))?.chainName).toBe("IHG");
@@ -109,7 +111,9 @@ describe("Google Places tier", () => {
     answer({ error: { status: "PERMISSION_DENIED" } }, false);
     expect(await findLodgingPlace("Abgelehnt")).toBeNull();
 
-    global.fetch = jest.fn().mockRejectedValue(new Error("network down")) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error("network down")) as unknown as typeof fetch;
     expect(await findLodgingPlace("Offline")).toBeNull();
   });
 });

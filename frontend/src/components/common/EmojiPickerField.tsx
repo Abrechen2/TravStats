@@ -95,7 +95,9 @@ export function EmojiPickerField({
         // interface — caught in a browser, not by any test.
         const [{ Picker }, strings] = await Promise.all([
           import("emoji-picker-element"),
-          locale === "de" ? import("emoji-picker-element/i18n/de") : import("emoji-picker-element/i18n/en"),
+          locale === "de"
+            ? import("emoji-picker-element/i18n/de")
+            : import("emoji-picker-element/i18n/en"),
         ]);
         if (cancelled) return;
         picker = new Picker({

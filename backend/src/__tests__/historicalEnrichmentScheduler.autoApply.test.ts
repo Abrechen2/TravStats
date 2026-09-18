@@ -76,16 +76,11 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
 
   it("auto-applies created enrichments when user has requireApproval=false", async () => {
     mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: false });
-    mockFindEnrichmentCandidates.mockResolvedValue([
-      mockCandidate("f1"),
-      mockCandidate("f2"),
-    ]);
+    mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1"), mockCandidate("f2")]);
     mockFlightFindUnique.mockImplementation(async ({ where }: { where: { id: string } }) =>
-      mockFlight(where.id),
+      mockFlight(where.id)
     );
-    mockCreateHistoricalEnrichment.mockImplementation(
-      async (flightId: string) => `pu-${flightId}`,
-    );
+    mockCreateHistoricalEnrichment.mockImplementation(async (flightId: string) => `pu-${flightId}`);
     mockApplyPendingUpdate.mockResolvedValue({ id: "dummy" });
 
     const result = await processUserHistoricalEnrichment(USER_ID);
@@ -124,20 +119,13 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
 
   it("continues to the next candidate when one applyPendingUpdate fails", async () => {
     mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: false });
-    mockFindEnrichmentCandidates.mockResolvedValue([
-      mockCandidate("f1"),
-      mockCandidate("f2"),
-    ]);
+    mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1"), mockCandidate("f2")]);
     mockFlightFindUnique.mockImplementation(async ({ where }: { where: { id: string } }) =>
-      mockFlight(where.id),
+      mockFlight(where.id)
     );
-    mockCreateHistoricalEnrichment.mockImplementation(
-      async (flightId: string) => `pu-${flightId}`,
-    );
+    mockCreateHistoricalEnrichment.mockImplementation(async (flightId: string) => `pu-${flightId}`);
     // First apply returns null (failure), second succeeds
-    mockApplyPendingUpdate
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "dummy" });
+    mockApplyPendingUpdate.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "dummy" });
 
     const result = await processUserHistoricalEnrichment(USER_ID);
 

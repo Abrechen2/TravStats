@@ -1,4 +1,8 @@
-import type { DawarichClient, DawarichPoint, DawarichPointsWindow } from "../../dawarich/dawarichClient";
+import type {
+  DawarichClient,
+  DawarichPoint,
+  DawarichPointsWindow,
+} from "../../dawarich/dawarichClient";
 import { tripDateBounds } from "../../../shared/statusDerivation";
 import { ingestTrack, IngestedTrack } from "./ingestTrack";
 import type { ParsedTrack } from "./parseGpx";
@@ -46,7 +50,7 @@ export interface DawarichWindowOverride {
  */
 export function resolveDawarichWindow(
   stops: SectionStopDates[],
-  override: DawarichWindowOverride,
+  override: DawarichWindowOverride
 ): { startAt: Date; endAt: Date } | null {
   const bounds = tripDateBounds([], stops);
   const startAt = override.startedAt ?? bounds.earliestStart;
@@ -102,13 +106,11 @@ export interface PulledDawarichTrack {
  */
 export async function pullDawarichWindow(
   client: DawarichClient,
-  window: DawarichPointsWindow,
+  window: DawarichPointsWindow
 ): Promise<PulledDawarichTrack> {
   const { points, truncated } = await client.getPoints(window);
   if (points.length === 0) {
-    throw new EmptyDawarichWindowError(
-      "No location data was found in the requested time window",
-    );
+    throw new EmptyDawarichWindowError("No location data was found in the requested time window");
   }
 
   const parsed = toParsedTrack(points);
@@ -119,7 +121,7 @@ export async function pullDawarichWindow(
     // minimum-points rule rejected a window with exactly one point — the
     // one case genuinely distinct from "no points at all" above.
     throw new EmptyDawarichWindowError(
-      "The requested time window has too few location points to form a track",
+      "The requested time window has too few location points to form a track"
     );
   }
   return { ingested, truncated };

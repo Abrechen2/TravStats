@@ -62,15 +62,13 @@ describe("spreadsheet import", () => {
     rows: Record<string, string>[],
     dryRun = false,
     key = "places",
-    mode: "add" | "merge" | "replace" = "merge",
+    mode: "add" | "merge" | "replace" = "merge"
   ) => importSheets([{ key, rows }], { userId, dryRun, mode });
 
   // ------------------------------------------------------------- ownership
 
   it("refuses a row carrying another account's place id", async () => {
-    const [result] = await run([
-      { id: victimPlaceId, name: "Übernommen", lat: "10", lon: "10" },
-    ]);
+    const [result] = await run([{ id: victimPlaceId, name: "Übernommen", lat: "10", lon: "10" }]);
 
     expect(result.errors).toBe(1);
     expect(result.updated).toBe(0);
@@ -82,7 +80,11 @@ describe("spreadsheet import", () => {
   });
 
   it("refuses a row carrying another account's cruise id", async () => {
-    const [result] = await run([{ id: victimCruiseId, cruiseLine: "Übernommen" }], false, "cruises");
+    const [result] = await run(
+      [{ id: victimCruiseId, cruiseLine: "Übernommen" }],
+      false,
+      "cruises"
+    );
 
     expect(result.errors).toBe(1);
     const victimCruise = await prisma.cruise.findUnique({ where: { id: victimCruiseId } });
@@ -166,7 +168,7 @@ describe("spreadsheet import", () => {
         { id: own.id, name: "Geändert" },
         { id: "", name: "Ganz neu", lat: "5", lon: "5" },
       ],
-      true,
+      true
     );
 
     expect(result.updated).toBe(1);
@@ -264,7 +266,7 @@ describe("import modes", () => {
   const runMode = (
     rows: Record<string, string>[],
     mode: "add" | "merge" | "replace",
-    dryRun = false,
+    dryRun = false
   ) => importSheets([{ key: "places", rows }], { userId: modeUserId, dryRun, mode });
 
   it("add: leaves an existing row untouched instead of updating it", async () => {
@@ -388,11 +390,25 @@ describe("place visits", () => {
     strangerId = st.id;
 
     const own = await prisma.place.create({
-      data: { userId: ownerId, name: "McDonald's Eching", category: "restaurant", lat: 48.5, lon: 12.0, visited: true },
+      data: {
+        userId: ownerId,
+        name: "McDonald's Eching",
+        category: "restaurant",
+        lat: 48.5,
+        lon: 12.0,
+        visited: true,
+      },
     });
     ownPlaceId = own.id;
     const foreign = await prisma.place.create({
-      data: { userId: strangerId, name: "Fremder Ort", category: "landmark", lat: 1, lon: 1, visited: true },
+      data: {
+        userId: strangerId,
+        name: "Fremder Ort",
+        category: "landmark",
+        lat: 1,
+        lon: 1,
+        visited: true,
+      },
     });
     strangerPlaceId = foreign.id;
   });
@@ -410,12 +426,17 @@ describe("place visits", () => {
   const runVisits = (
     rows: Record<string, string>[],
     mode: "add" | "merge" | "replace" = "merge",
-    dryRun = false,
+    dryRun = false
   ) => importSheets([{ key: "placeVisits", rows }], { userId: ownerId, dryRun, mode });
 
   it("creates a visit against the caller's own place", async () => {
     const [r] = await runVisits([
-      { id: "", placeId: `McDonald's Eching [${ownPlaceId}]`, visitedAt: "2026-03-11", notes: "Bestellung" },
+      {
+        id: "",
+        placeId: `McDonald's Eching [${ownPlaceId}]`,
+        visitedAt: "2026-03-11",
+        notes: "Bestellung",
+      },
     ]);
 
     expect(r.created).toBe(1);
@@ -480,20 +501,21 @@ describe("place visits", () => {
     const [r] = await runVisits([{ id: foreign.id, notes: "Uebernommen" }]);
 
     expect(r.errors).toBe(1);
-    expect((await prisma.placeVisit.findUnique({ where: { id: foreign.id } }))?.notes).toBe("Fremd");
+    expect((await prisma.placeVisit.findUnique({ where: { id: foreign.id } }))?.notes).toBe(
+      "Fremd"
+    );
   });
 
   it("writes nothing on a dry run", async () => {
     const [r] = await runVisits(
       [{ id: "", placeId: `x [${ownPlaceId}]`, visitedAt: "2026-03-11" }],
       "merge",
-      true,
+      true
     );
     expect(r.created).toBe(1);
     expect(await prisma.placeVisit.count({ where: { userId: ownerId } })).toBe(0);
   });
 });
-
 
 /**
  * Flights, and the airport resolution that makes creating one possible.
@@ -538,7 +560,7 @@ describe("flights", () => {
   const runFlights = (
     rows: Record<string, string>[],
     mode: "add" | "merge" | "replace" = "merge",
-    dryRun = false,
+    dryRun = false
   ) => importSheets([{ key: "flights", rows }], { userId: flightUserId, dryRun, mode });
 
   it("creates a flight from IATA codes, resolving both airports", async () => {
@@ -681,7 +703,7 @@ describe("flights", () => {
         },
       ],
       "merge",
-      true,
+      true
     );
     expect(r.created).toBe(1);
     expect(await prisma.flight.count({ where: { userId: flightUserId } })).toBe(0);

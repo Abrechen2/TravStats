@@ -3,8 +3,8 @@
  * domain='flight' to domain='shared', so cruise ports contribute.
  * Safe to re-run — idempotent UPDATE.
  */
-import { prisma } from '../db';
-import logger from '../utils/logger';
+import { prisma } from "../db";
+import logger from "../utils/logger";
 
 export const SHARED_ACHIEVEMENT_CODE_PATTERNS: RegExp[] = [
   /^COUNTRY_/i,
@@ -25,9 +25,9 @@ export async function migrateAchievementDomain(): Promise<{ updated: number }> {
   }
   const result = await prisma.achievement.updateMany({
     where: { id: { in: sharedIds } },
-    data: { domain: 'shared' },
+    data: { domain: "shared" },
   });
-  logger.info({ operation: 'migrateAchievementDomain', updated: result.count });
+  logger.info({ operation: "migrateAchievementDomain", updated: result.count });
   return { updated: result.count };
 }
 

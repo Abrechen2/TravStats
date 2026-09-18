@@ -45,9 +45,7 @@ export default function GlobalApiKeysManager({
           <h2 className="text-xl font-semibold text-(--text-primary)">
             {t("admin:globalApiKeys.title")}
           </h2>
-          <p className="text-sm text-(--text-muted) mt-1">
-            {t("admin:globalApiKeys.description")}
-          </p>
+          <p className="text-sm text-(--text-muted) mt-1">{t("admin:globalApiKeys.description")}</p>
         </div>
         <button
           onClick={onSave}
@@ -57,7 +55,6 @@ export default function GlobalApiKeysManager({
           {saving ? t("common:buttons.saving") : t("admin:globalApiKeys.save")}
         </button>
       </div>
-
 
       {(!globalApiKeys || !parserSettings) && (
         <div

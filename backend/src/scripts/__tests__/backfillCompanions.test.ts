@@ -1,7 +1,7 @@
-import { prisma } from '../../db';
-import { backfillCompanions } from '../backfillCompanions';
+import { prisma } from "../../db";
+import { backfillCompanions } from "../backfillCompanions";
 
-describe('backfillCompanions', () => {
+describe("backfillCompanions", () => {
   let userId: string;
 
   beforeEach(async () => {
@@ -14,7 +14,7 @@ describe('backfillCompanions', () => {
     await prisma.trip.deleteMany();
     await prisma.user.deleteMany();
     const user = await prisma.user.create({
-      data: { username: 'backfill-companions', passwordHash: 'x' },
+      data: { username: "backfill-companions", passwordHash: "x" },
     });
     userId = user.id;
   });
@@ -36,23 +36,31 @@ describe('backfillCompanions', () => {
       // depLat/depLon/arrLat/arrLon are required (non-nullable, no default) on
       // Flight; the brief's literal test snippet omits them, so they are added
       // here with dummy values to satisfy the schema. Not part of the brief.
-      data: { userId, flightNumber: 'LH400', companions, depLat: 0, depLon: 0, arrLat: 0, arrLon: 0 },
+      data: {
+        userId,
+        flightNumber: "LH400",
+        companions,
+        depLat: 0,
+        depLon: 0,
+        arrLat: 0,
+        arrLon: 0,
+      },
     });
 
-  it('reproduces the legacy array exactly, in order', async () => {
-    const flight = await legacyFlight(['Anna', 'Jonas']);
+  it("reproduces the legacy array exactly, in order", async () => {
+    const flight = await legacyFlight(["Anna", "Jonas"]);
     await backfillCompanions();
 
     const links = await prisma.flightCompanion.findMany({
       where: { flightId: flight.id },
       include: { companion: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
-    expect(links.map((l) => l.companion.displayName)).toEqual(['Anna', 'Jonas']);
+    expect(links.map((l) => l.companion.displayName)).toEqual(["Anna", "Jonas"]);
   });
 
-  it('is idempotent', async () => {
-    await legacyFlight(['Anna', 'Jonas']);
+  it("is idempotent", async () => {
+    await legacyFlight(["Anna", "Jonas"]);
     await backfillCompanions();
     const afterFirst = await prisma.flightCompanion.count();
     await backfillCompanions();
@@ -60,74 +68,74 @@ describe('backfillCompanions', () => {
     expect(await prisma.companion.count()).toBe(2);
   });
 
-  it('drops blank entries but keeps odd real ones', async () => {
-    await legacyFlight(['  ', 'MUELLER/ANNA MS']);
+  it("drops blank entries but keeps odd real ones", async () => {
+    await legacyFlight(["  ", "MUELLER/ANNA MS"]);
     await backfillCompanions();
     const names = (await prisma.companion.findMany()).map((c) => c.displayName);
-    expect(names).toEqual(['MUELLER/ANNA MS']);
+    expect(names).toEqual(["MUELLER/ANNA MS"]);
   });
 
-  it('collapses spellings that share an identity into one companion', async () => {
-    await legacyFlight(['Anna']);
-    await legacyFlight(['  anna ']);
+  it("collapses spellings that share an identity into one companion", async () => {
+    await legacyFlight(["Anna"]);
+    await legacyFlight(["  anna "]);
     await backfillCompanions();
     expect(await prisma.companion.count({ where: { userId } })).toBe(1);
   });
 
-  it('backfills trips and cruises too, not only flights', async () => {
+  it("backfills trips and cruises too, not only flights", async () => {
     const trip = await prisma.trip.create({
-      data: { userId, name: 'Legacy Trip', companions: ['Bea', 'Cem'] },
+      data: { userId, name: "Legacy Trip", companions: ["Bea", "Cem"] },
     });
     const cruise = await prisma.cruise.create({
-      data: { userId, companions: ['Dora'] },
+      data: { userId, companions: ["Dora"] },
     });
     await backfillCompanions();
 
     const tripLinks = await prisma.tripCompanion.findMany({
       where: { tripId: trip.id },
       include: { companion: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
-    expect(tripLinks.map((l) => l.companion.displayName)).toEqual(['Bea', 'Cem']);
+    expect(tripLinks.map((l) => l.companion.displayName)).toEqual(["Bea", "Cem"]);
 
     const cruiseLinks = await prisma.cruiseCompanion.findMany({
       where: { cruiseId: cruise.id },
       include: { companion: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
-    expect(cruiseLinks.map((l) => l.companion.displayName)).toEqual(['Dora']);
+    expect(cruiseLinks.map((l) => l.companion.displayName)).toEqual(["Dora"]);
   });
 
-  it('keeps the most frequent trimmed spelling as displayName across records', async () => {
-    await legacyFlight(['Anna']);
-    await legacyFlight(['Anna']);
-    await legacyFlight(['anna']);
+  it("keeps the most frequent trimmed spelling as displayName across records", async () => {
+    await legacyFlight(["Anna"]);
+    await legacyFlight(["Anna"]);
+    await legacyFlight(["anna"]);
     await backfillCompanions();
 
     const companion = await prisma.companion.findFirst({ where: { userId } });
-    expect(companion?.displayName).toBe('Anna');
+    expect(companion?.displayName).toBe("Anna");
   });
 
-  it('breaks frequency ties by the lexicographically smaller trimmed spelling', async () => {
+  it("breaks frequency ties by the lexicographically smaller trimmed spelling", async () => {
     // Equal counts (one record each) but "Zoe" is created before "zoe" is
     // processed only by luck of UUID ordering -- the point of this test is
     // that the winner is decided by the tie-break rule, not by which record
     // happened to be resolved last.
-    await legacyFlight(['Zoe']);
-    await legacyFlight(['zoe']);
+    await legacyFlight(["Zoe"]);
+    await legacyFlight(["zoe"]);
     await backfillCompanions();
 
     const companion = await prisma.companion.findFirst({ where: { userId } });
-    expect(companion?.displayName).toBe('Zoe');
+    expect(companion?.displayName).toBe("Zoe");
   });
 
-  it('is a true no-op on a second run: no companion updatedAt changes', async () => {
-    await legacyFlight(['Anna', 'Jonas']);
+  it("is a true no-op on a second run: no companion updatedAt changes", async () => {
+    await legacyFlight(["Anna", "Jonas"]);
     await backfillCompanions();
 
     const before = await prisma.companion.findMany({
       where: { userId },
-      orderBy: { canonicalName: 'asc' },
+      orderBy: { canonicalName: "asc" },
       select: { id: true, updatedAt: true },
     });
     expect(before).toHaveLength(2);
@@ -136,7 +144,7 @@ describe('backfillCompanions', () => {
 
     const after = await prisma.companion.findMany({
       where: { userId },
-      orderBy: { canonicalName: 'asc' },
+      orderBy: { canonicalName: "asc" },
       select: { id: true, updatedAt: true },
     });
     expect(after).toEqual(before);
@@ -149,22 +157,22 @@ describe('backfillCompanions', () => {
   // `companionLinks: { none: {} } }` filter permanently skipped any record
   // that already had links, so this edit would be lost once the legacy
   // column is dropped.
-  it('repairs links after a rollback edit touches only the legacy array', async () => {
-    const flight = await legacyFlight(['Anna']);
+  it("repairs links after a rollback edit touches only the legacy array", async () => {
+    const flight = await legacyFlight(["Anna"]);
     await backfillCompanions();
 
     const firstPass = await prisma.flightCompanion.findMany({
       where: { flightId: flight.id },
       include: { companion: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
-    expect(firstPass.map((l) => l.companion.displayName)).toEqual(['Anna']);
+    expect(firstPass.map((l) => l.companion.displayName)).toEqual(["Anna"]);
 
     // Simulate the previous image: only the legacy array is written, links
     // are left exactly as they were.
     await prisma.flight.update({
       where: { id: flight.id },
-      data: { companions: { set: ['Anna', 'Ben'] } },
+      data: { companions: { set: ["Anna", "Ben"] } },
     });
 
     await backfillCompanions();
@@ -172,8 +180,8 @@ describe('backfillCompanions', () => {
     const repaired = await prisma.flightCompanion.findMany({
       where: { flightId: flight.id },
       include: { companion: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
-    expect(repaired.map((l) => l.companion.displayName)).toEqual(['Anna', 'Ben']);
+    expect(repaired.map((l) => l.companion.displayName)).toEqual(["Anna", "Ben"]);
   });
 });

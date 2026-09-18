@@ -37,7 +37,7 @@ describe("getServerVersion", () => {
     expect(version).toBe("1.138.2");
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://immich.lan/api/server/version",
-      expect.objectContaining({ headers: { "x-api-key": "secret-key" } }),
+      expect.objectContaining({ headers: { "x-api-key": "secret-key" } })
     );
   });
 
@@ -70,7 +70,7 @@ describe("getServerVersion", () => {
         // The log payload names the failing endpoint under `endpoint`, not the
         // confusing `context: { context }` doubling.
         context: { endpoint: "server/version" },
-      }),
+      })
     );
   });
 });
@@ -110,7 +110,7 @@ describe("listAlbums", () => {
     const albums = await createImmichClient(CONN).listAlbums();
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://immich.lan/api/albums",
-      expect.anything(),
+      expect.anything()
     );
     expect(albums).toEqual([
       { id: "a1", albumName: "Rome", assetCount: 12, thumbnailAssetId: "t1" },
@@ -158,13 +158,13 @@ describe("listAlbumAssets", () => {
       1,
       "https://immich.lan/api/search/metadata",
       { albumIds: ["album-1"], withExif: true, page: 1, size: 1000 },
-      expect.objectContaining({ headers: { "x-api-key": "secret-key" } }),
+      expect.objectContaining({ headers: { "x-api-key": "secret-key" } })
     );
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       2,
       "https://immich.lan/api/search/metadata",
       { albumIds: ["album-1"], withExif: true, page: 2, size: 1000 },
-      expect.anything(),
+      expect.anything()
     );
     expect(assets.map((a) => a.id)).toEqual(["p1", "p2"]);
   });
@@ -219,7 +219,7 @@ describe("listAlbumAssets", () => {
           maxPages: 50,
           collectedCount: 50,
         }),
-      }),
+      })
     );
   });
 
@@ -278,7 +278,7 @@ describe("fetchAssetStream", () => {
     const res = await createImmichClient(CONN).fetchAssetStream("asset-1", "preview");
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://immich.lan/api/assets/asset-1/thumbnail?size=preview",
-      expect.objectContaining({ responseType: "stream" }),
+      expect.objectContaining({ responseType: "stream" })
     );
     expect(res).toEqual({ stream: "stream", contentType: "image/webp", contentLength: 123 });
   });
@@ -291,7 +291,7 @@ describe("fetchAssetStream", () => {
     const res = await createImmichClient(CONN).fetchAssetStream("asset-1", "original");
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://immich.lan/api/assets/asset-1/original",
-      expect.objectContaining({ responseType: "stream" }),
+      expect.objectContaining({ responseType: "stream" })
     );
     expect(res.contentLength).toBeNull();
   });
@@ -302,7 +302,7 @@ describe("fetchAssetStream", () => {
       response: { status: 502, data: {} },
     });
     await expect(
-      createImmichClient(CONN).fetchAssetStream("asset-1", "thumbnail"),
+      createImmichClient(CONN).fetchAssetStream("asset-1", "thumbnail")
     ).rejects.toBeInstanceOf(ImmichError);
   });
 });

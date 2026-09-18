@@ -3,12 +3,12 @@
  * Uses AES-256-GCM for authenticated encryption
  */
 
-import crypto from 'crypto';
-import logger from './logger';
-import { SECURITY } from '../config/constants';
-import { initializeEncryptionKey } from './encryptionKey';
+import crypto from "crypto";
+import logger from "./logger";
+import { SECURITY } from "../config/constants";
+import { initializeEncryptionKey } from "./encryptionKey";
 
-const ALGORITHM = 'aes-256-gcm';
+const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16; // 128 bits
 const SALT_LENGTH = 64; // 512 bits
 const TAG_LENGTH = 16; // 128 bits
@@ -39,11 +39,11 @@ function getEncryptionKey(): Buffer {
   if (envKey) {
     // Validate key length (should be 64 hex characters = 32 bytes)
     if (envKey.length === 64 && /^[0-9a-fA-F]+$/.test(envKey)) {
-      return Buffer.from(envKey, 'hex');
+      return Buffer.from(envKey, "hex");
     } else {
       logger.warn({
-        operation: 'encryption_key_invalid',
-        message: 'ENCRYPTION_KEY has invalid format, using fallback',
+        operation: "encryption_key_invalid",
+        message: "ENCRYPTION_KEY has invalid format, using fallback",
       });
     }
   }
@@ -51,9 +51,9 @@ function getEncryptionKey(): Buffer {
   // Fallback: Use JWT_SECRET as base for encryption key (should not happen after initialization)
   const fallbackSecret = process.env.JWT_SECRET;
   if (!fallbackSecret) {
-    throw new Error('Neither ENCRYPTION_KEY nor JWT_SECRET is set. Cannot derive encryption key.');
+    throw new Error("Neither ENCRYPTION_KEY nor JWT_SECRET is set. Cannot derive encryption key.");
   }
-  return crypto.pbkdf2Sync(fallbackSecret, 'encryption-salt', ITERATIONS, KEY_LENGTH, 'sha256');
+  return crypto.pbkdf2Sync(fallbackSecret, "encryption-salt", ITERATIONS, KEY_LENGTH, "sha256");
 }
 
 /**
@@ -72,28 +72,28 @@ export function encrypt(text: string): string {
     const iv = crypto.randomBytes(IV_LENGTH);
 
     // Derive key from master key and salt
-    const derivedKey = crypto.pbkdf2Sync(key, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+    const derivedKey = crypto.pbkdf2Sync(key, salt, ITERATIONS, KEY_LENGTH, "sha256");
 
     const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, iv);
-    cipher.setAAD(Buffer.from('travstats-api-key', 'utf8')); // Additional authenticated data
+    cipher.setAAD(Buffer.from("travstats-api-key", "utf8")); // Additional authenticated data
 
-    let encrypted = cipher.update(text, 'utf8');
+    let encrypted = cipher.update(text, "utf8");
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     const tag = cipher.getAuthTag();
 
     // Combine salt:iv:tag:encrypted
     const combined = Buffer.concat([salt, iv, tag, encrypted]);
-    return combined.toString('base64');
+    return combined.toString("base64");
   } catch (error) {
     logger.error({
-      operation: 'encryption_error',
-      message: 'Failed to encrypt value',
+      operation: "encryption_error",
+      message: "Failed to encrypt value",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
-    throw new Error('Encryption failed');
+    throw new Error("Encryption failed");
   }
 }
 
@@ -110,7 +110,7 @@ export function decrypt(encryptedText: string): string {
 
   try {
     const key = getEncryptionKey();
-    const combined = Buffer.from(encryptedText, 'base64');
+    const combined = Buffer.from(encryptedText, "base64");
 
     // Extract components
     const salt = combined.subarray(0, SALT_LENGTH);
@@ -119,20 +119,20 @@ export function decrypt(encryptedText: string): string {
     const encrypted = combined.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
 
     // Derive key from master key and salt
-    const derivedKey = crypto.pbkdf2Sync(key, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+    const derivedKey = crypto.pbkdf2Sync(key, salt, ITERATIONS, KEY_LENGTH, "sha256");
 
     const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv);
     decipher.setAuthTag(tag);
-    decipher.setAAD(Buffer.from('travstats-api-key', 'utf8'));
+    decipher.setAAD(Buffer.from("travstats-api-key", "utf8"));
 
     let decrypted = decipher.update(encrypted);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
 
-    return decrypted.toString('utf8');
+    return decrypted.toString("utf8");
   } catch (_error) {
     // Don't log here - let the caller (decryptApiKey) handle logging
     // This prevents duplicate log entries
-    throw new Error('Decryption failed - value may be corrupted or encrypted with different key');
+    throw new Error("Decryption failed - value may be corrupted or encrypted with different key");
   }
 }
 
@@ -160,7 +160,7 @@ export function isEncrypted(text: string): boolean {
     }
 
     // Try to decode as base64
-    const decoded = Buffer.from(text, 'base64');
+    const decoded = Buffer.from(text, "base64");
     // Check if it has the expected structure (salt + iv + tag + >= 1 byte data)
     return decoded.length >= SALT_LENGTH + IV_LENGTH + TAG_LENGTH + 1;
   } catch {
@@ -183,7 +183,7 @@ export function isEncrypted(text: string): boolean {
  * without the marker is decided by the old heuristic, because that is what the
  * rows written before today look like.
  */
-const CIPHERTEXT_MARKER = 'tsenc:v1:';
+const CIPHERTEXT_MARKER = "tsenc:v1:";
 
 /** Does this value carry our own marker — asked, not guessed. */
 export function isMarkedCiphertext(text: string): boolean {
@@ -255,19 +255,21 @@ export function decryptApiKey(encryptedApiKey: string | null | undefined): strin
     // Only log warning if we haven't seen this specific encrypted value before
     // or if enough time has passed since last warning
     const now = Date.now();
-    const shouldWarn = !failedDecryptionCache.has(encryptedApiKey) ||
-                       (now - lastDecryptionWarning) > DECRYPTION_WARN_INTERVAL;
+    const shouldWarn =
+      !failedDecryptionCache.has(encryptedApiKey) ||
+      now - lastDecryptionWarning > DECRYPTION_WARN_INTERVAL;
 
     if (shouldWarn) {
       failedDecryptionCache.add(encryptedApiKey);
       lastDecryptionWarning = now;
 
       logger.warn({
-        operation: 'api_key_decryption_error',
-        message: 'Failed to decrypt API key - value may be corrupted or encrypted with different key',
-        hint: 'User may need to re-enter their API keys in settings',
+        operation: "api_key_decryption_error",
+        message:
+          "Failed to decrypt API key - value may be corrupted or encrypted with different key",
+        hint: "User may need to re-enter their API keys in settings",
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
         },
       });
     }

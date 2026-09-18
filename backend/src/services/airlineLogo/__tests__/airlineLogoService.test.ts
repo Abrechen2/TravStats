@@ -31,9 +31,11 @@ afterEach(() => {
 });
 
 function mockFetchOnce(status: number, body: Buffer, contentType: string): jest.Mock {
-  const fn = jest.fn().mockResolvedValue(
-    new Response(new Uint8Array(body), { status, headers: { "content-type": contentType } })
-  );
+  const fn = jest
+    .fn()
+    .mockResolvedValue(
+      new Response(new Uint8Array(body), { status, headers: { "content-type": contentType } })
+    );
   global.fetch = fn as unknown as typeof fetch;
   return fn;
 }
@@ -170,7 +172,10 @@ describe("resolveAirlineLogo", () => {
       .fn()
       .mockResolvedValueOnce(new Response(new Uint8Array(), { status: 404 })) // kiwi miss
       .mockResolvedValueOnce(
-        new Response(new Uint8Array(body), { status: 200, headers: { "content-type": "image/png" } })
+        new Response(new Uint8Array(body), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        })
       );
     global.fetch = fn as unknown as typeof fetch;
     const r = await resolveAirlineLogo("Q9", "icon");
@@ -191,11 +196,17 @@ describe("resolveAirlineLogo", () => {
     const FAKE_KEY = "FREE-TEST-KEY-000000";
     jest.spyOn(resolver, "getApiKey").mockResolvedValue(FAKE_KEY);
     jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
-    const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => undefined as unknown as void);
+    const warnSpy = jest
+      .spyOn(logger, "warn")
+      .mockImplementation(() => undefined as unknown as void);
     // Simulate an error message that embeds the key (simulating a future fetch implementation detail)
-    global.fetch = jest.fn().mockRejectedValue(
-      new Error(`request to https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=${FAKE_KEY} failed`)
-    ) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(
+        new Error(
+          `request to https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=${FAKE_KEY} failed`
+        )
+      ) as unknown as typeof fetch;
 
     // Deliberately an airline the vendored snapshot does NOT hold, so the whole
     // chain still ends in a miss and the assertion below is about the log, not

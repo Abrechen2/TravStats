@@ -66,29 +66,76 @@ function getGenerateTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_GENERATE_TIMEOUT_MS;
 }
 
+/**
+ * The rules, and why each is worded the way it is (measured 2026-09-17 on
+ * gemma3:12b with three real-shaped trips):
+ *
+ * - The first version asked for the trip's OCCASION in the first paragraph and
+ *   for MOOD, VERDICT and OUTLOOK in the third. The data holds none of those,
+ *   so the model supplied them: "a bit spontaneous", "a trip we had wanted for
+ *   years", "left feeling accomplished", "already planning to come back". In a
+ *   personal travel diary an invented motive reads as wrong, not as warm. Both
+ *   now appear only when the notes, the journal or the tags say so.
+ * - "you or I, whichever the data suggests" produced "You took a business
+ *   trip" in English and "ich" and "wir" in one German text. The perspective
+ *   is decided here, from the companions, and handed to the model as a fact
+ *   (`perspective` in the brief).
+ * - Airport codes leaked into the prose ("from MUC to HND"). Cities, never codes.
+ * - Told not to invent an occasion, the second version wrote "no particular
+ *   reason is known" instead — naming a rule's subject invites a sentence
+ *   about it. Rule 6 now names the phrasing it forbids.
+ * - It counted "five days and six nights" for 12-17 April. A language model
+ *   is not a calculator: nights are computed here (`nights` on the trip and
+ *   each stay) and the prompt forbids computing them.
+ * - With little data it padded ("a straightforward journey", "a successful
+ *   business trip"). Two paragraphs are allowed now, and verdicts are named
+ *   as invention.
+ * - The third version described the DATA instead of the trip: "was categorized
+ *   as a road trip", "the order of the stops was Lisbon, Pastéis de Belém,
+ *   Sintra" — a bakery is not a stop.
+ * - Forbidding those by name made it worse, which is the lesson this file
+ *   keeps: a 12B model picks up the words a prohibition uses. The fourth
+ *   version, with eleven rules and six of them negative, answered "according
+ *   to the data", "described in the data as" and "the data does not contain
+ *   information about any other stops". The rules are positive instructions
+ *   now, and short: say what to write, not what to avoid.
+ * - What no wording fixed: "I embarked on this journey alone, with no
+ *   companions joining me" for an empty companion list, and a miscounted
+ *   route ("three nights in Lisbon and two in the Pestana Palace" — a hotel
+ *   is not a city). Both are now impossible rather than discouraged:
+ *   `compactBrief` DROPS every empty field before the brief is sent, so
+ *   there is no absence to remark on, and the closing line with the route and
+ *   the nights is written by `routeLine` in code. The model narrates; it does
+ *   not count and it does not summarise.
+ * - qwen3:30b-a3b was measured against the same four trips: 48-138 s per
+ *   summary, one timeout at 180 s, and it emitted its reasoning. Not a
+ *   candidate for a screen someone is waiting in front of.
+ */
 const SYSTEM_PROMPTS: Record<SummaryLanguage, string> = {
-  de: `Du bist ein Reisetagebuch-Autor. Aus den strukturierten Reisedaten schreibst du eine warme, persönliche Zusammenfassung.
+  de: `Du schreibst ein Reisetagebuch. Du erhältst die Daten einer Reise und erzählst sie nach.
 
-REGELN:
-1. Genau 3 Absätze, je 2-4 Sätze. KEIN Markdown, KEINE Listen, KEINE Aufzählungen.
-2. Erster Absatz: Reisezeitpunkt + Hauptziel + Anlass.
-3. Zweiter Absatz: konkrete Erlebnisse aus Aufenthalten, Orten, Stopps und Tagebucheinträgen — bevorzuge Eigennamen aus den Daten (Orte, Hotels, Sehenswürdigkeiten) statt generischer Floskeln.
-4. Dritter Absatz: Stimmung / Bilanz / Ausblick.
-5. Sprache: Deutsch, lockerer Reisetagebuch-Ton, „du" oder „ich" je nachdem was die Daten nahelegen — nicht beides mischen.
-6. Erfinde NICHTS, was nicht in den Daten steht. Wenn ein Aspekt fehlt, lass ihn weg statt zu spekulieren — und erwähne NIE, dass etwas fehlt oder nicht angegeben ist.
-7. Zeitform nach dem Feld "status": "completed" → Vergangenheit (die Reise ist vorbei), "in_progress" → Gegenwart, "planned" → Zukunft. Schreibe nie eine abgeschlossene Reise als Vorfreude.
-8. Antworte NUR mit dem Fließtext. Keine Überschrift, keine Anführungszeichen, kein Vorwort.`,
-  en: `You write travel diaries. From the structured trip data you write a warm, personal summary.
+SO SCHREIBST DU:
+1. Zwei Absätze Fließtext, je 2-4 Sätze, ohne Markdown und ohne Listen.
+2. Absatz 1: Zeitraum und Ziel der Reise, und wer mitgereist ist.
+3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit den Namen aus den Daten — Hotels, Orte, Stopps — und "notes" sowie "journal" frei nacherzählt.
+4. Du erzählst ausschließlich, was in den Daten steht. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.
+5. "perspective" bestimmt die Person: "we" → „wir", "I" → „ich", durchgehend.
+6. Städtenamen statt Flughafencodes.
+7. "status": "completed" → Vergangenheit, "in_progress" → Gegenwart, "planned" → Zukunft.
+8. Sprache: Deutsch, lockerer Reisetagebuch-Ton.
+9. Antworte nur mit den zwei Absätzen, ohne Überschrift und ohne Anführungszeichen.`,
+  en: `You write a travel diary. You are given the data of one trip and you retell it.
 
-RULES:
-1. Exactly 3 paragraphs of 2-4 sentences each. NO markdown, NO lists, NO bullet points.
-2. First paragraph: when the trip was, the main destination, the occasion.
-3. Second paragraph: concrete experiences from the stays, places, stops and journal entries — prefer proper names from the data (places, hotels, sights) over generic phrases.
-4. Third paragraph: mood, verdict, outlook.
-5. Language: English, relaxed travel-diary tone, "you" or "I" depending on what the data suggests — never mix the two.
-6. Invent NOTHING that is not in the data. If an aspect is missing, leave it out rather than speculate — and NEVER say that something is missing or unspecified.
-7. Tense follows the "status" field: "completed" → past tense (the trip is over), "in_progress" → present, "planned" → future. Never write a finished trip as anticipation.
-8. Answer ONLY with the prose. No heading, no quotation marks, no preamble.`,
+HOW YOU WRITE:
+1. Two paragraphs of prose, 2-4 sentences each, without markdown and without lists.
+2. Paragraph 1: when the trip was and where to, and who came along.
+3. Paragraph 2: the stops in order of time, with the names from the data — hotels, places, stops — and "notes" and "journal" retold freely.
+4. You retell only what the data holds. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.
+5. "perspective" sets the person: "we" → "we", "I" → "I", throughout.
+6. City names instead of airport codes.
+7. "status": "completed" → past tense, "in_progress" → present, "planned" → future.
+8. Language: English, relaxed travel-diary tone.
+9. Answer with the two paragraphs only, no heading and no quotation marks.`,
 };
 
 const USER_PROMPTS: Record<SummaryLanguage, (briefJson: string) => string> = {
@@ -108,6 +155,10 @@ export function buildUserPrompt(language: SummaryLanguage, briefJson: string): s
 
 export interface SummaryBrief {
   name: string;
+  /** Nights from start to end, computed here — the model must never count. */
+  nights: number | null;
+  /** Whose diary this is: "we" when companions travelled along, otherwise "I". */
+  perspective: "we" | "I";
   status: string;
   category: string | null;
   startDate: string | null;
@@ -121,6 +172,7 @@ export interface SummaryBrief {
   cruises: Array<{ line: string | null; start: string | null; end: string | null }>;
   stays: Array<{
     lodging: string;
+    nights: number | null;
     city: string | null;
     country: string | null;
     checkIn: string | null;
@@ -158,6 +210,16 @@ const JOURNAL_BODY_MAX = 600;
 const NOTE_MAX = 300;
 const TRIP_NOTES_MAX = 1000;
 
+const DAY_MS = 86_400_000;
+/** Whole nights between two calendar days, or null when either is unknown. */
+const nightsBetween = (
+  from: Date | null | undefined,
+  to: Date | null | undefined
+): number | null =>
+  from && to
+    ? Math.max(0, Math.round((Date.parse(isoDate(to)!) - Date.parse(isoDate(from)!)) / DAY_MS))
+    : null;
+
 const isoDate = (d: Date | null | undefined): string | null =>
   d ? d.toISOString().slice(0, 10) : null;
 const clip = (text: string | null | undefined, max: number): string | null =>
@@ -175,6 +237,7 @@ export function briefFromTrip(trip: TripForBrief): SummaryBrief {
   return {
     name: trip.name,
     status: trip.status,
+    nights: nightsBetween(trip.startDate, trip.endDate),
     category: trip.category ?? null,
     startDate: isoDate(trip.startDate),
     endDate: isoDate(trip.endDate),
@@ -182,6 +245,7 @@ export function briefFromTrip(trip: TripForBrief): SummaryBrief {
     destination: trip.destinationLabel ?? null,
     countries: trip.countries ?? [],
     companions: trip.companions ?? [],
+    perspective: (trip.companions ?? []).length > 0 ? "we" : "I",
     tags: trip.tags ?? [],
     flights: trip.flights.map((f) => ({
       from: f.depIata ?? f.depIcao ?? "?",
@@ -195,6 +259,7 @@ export function briefFromTrip(trip: TripForBrief): SummaryBrief {
     })),
     stays: trip.lodgingStays.map((s) => ({
       lodging: s.lodging.name,
+      nights: nightsBetween(s.checkIn, s.checkOut),
       city: s.lodging.city ?? null,
       country: s.lodging.country ?? null,
       checkIn: isoDate(s.checkIn),
@@ -222,6 +287,57 @@ export function briefFromTrip(trip: TripForBrief): SummaryBrief {
     })),
     notes: clip(trip.notes, TRIP_NOTES_MAX),
   };
+}
+
+/**
+ * The brief with every empty field removed.
+ *
+ * A field that is not there cannot be talked about. With `companions: []` in
+ * the JSON, gemma3 wrote "I embarked on this journey alone, with no companions
+ * joining me" — an absence stated as a fact about the trip. No wording of the
+ * rules stopped that; dropping the key did.
+ */
+export function compactBrief(brief: SummaryBrief): Record<string, unknown> {
+  const keep = (value: unknown): boolean =>
+    value !== null &&
+    value !== undefined &&
+    value !== "" &&
+    !(Array.isArray(value) && value.length === 0);
+  const clean = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(clean)
+      : typeof value === "object" && value !== null
+        ? Object.fromEntries(
+            Object.entries(value as Record<string, unknown>)
+              .filter(([, v]) => keep(v))
+              .map(([k, v]) => [k, clean(v)])
+          )
+        : value;
+  return clean(brief) as Record<string, unknown>;
+}
+
+/**
+ * The closing line: the cities in the order they were visited, and the nights.
+ *
+ * Written here rather than asked for, because the model got it wrong in every
+ * shape the prompt took — counting nights itself ("five days and six nights"
+ * for five) and listing a bakery and a hotel as stops on the route. Code has
+ * the dates and the city names; it cannot miscount them.
+ */
+export function routeLine(brief: SummaryBrief, language: SummaryLanguage): string {
+  const cities: string[] = [];
+  for (const city of [
+    ...brief.stays.map((s) => s.city),
+    ...brief.places.map((p) => p.city),
+    brief.destination,
+  ]) {
+    if (city && !cities.includes(city)) cities.push(city);
+  }
+  if (cities.length === 0 || brief.nights === null) return "";
+  const route = cities.join(" – ");
+  return language === "de"
+    ? `Route: ${route}. ${brief.nights} ${brief.nights === 1 ? "Nacht" : "Nächte"}.`
+    : `Route: ${route}. ${brief.nights} ${brief.nights === 1 ? "night" : "nights"}.`;
 }
 
 /**
@@ -398,7 +514,8 @@ export async function summariseTrip(
   });
   if (!trip) throw new Error("Trip not found");
 
-  const briefJson = JSON.stringify(briefFromTrip(trip), null, 2);
+  const brief = briefFromTrip(trip);
+  const briefJson = JSON.stringify(compactBrief(brief), null, 2);
   const startedAt = Date.now();
   logger.info(
     { model: target.model, url: target.url, tripId, language, briefBytes: briefJson.length },
@@ -409,8 +526,15 @@ export async function summariseTrip(
     system: buildSystemPrompt(language),
     prompt: buildUserPrompt(language, briefJson),
   });
-  const summary = cleanSummary(raw);
-  if (!summary) throw new Error("Ollama returned empty summary");
+  const narrated = cleanSummary(raw);
+  if (!narrated) throw new Error("Ollama returned empty summary");
+  // The route and the nights are ours, not the model's — see `routeLine`.
+  const closing = routeLine(brief, language);
+  const summary = closing
+    ? `${narrated}
+
+${closing}`
+    : narrated;
 
   const durationMs = Date.now() - startedAt;
   logger.info(

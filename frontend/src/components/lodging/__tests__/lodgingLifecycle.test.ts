@@ -26,9 +26,9 @@ const lodging = (name: string, statuses: StayStatus[], extra: Partial<Lodging> =
 
 describe("lodgingLifecycleStatus", () => {
   it("prefers a running stay over everything else", () => {
-    expect(lodgingLifecycleStatus([stay("completed"), stay("in_progress"), stay("scheduled")])).toBe(
-      "in_progress"
-    );
+    expect(
+      lodgingLifecycleStatus([stay("completed"), stay("in_progress"), stay("scheduled")])
+    ).toBe("in_progress");
   });
 
   it("prefers a booked stay over history", () => {

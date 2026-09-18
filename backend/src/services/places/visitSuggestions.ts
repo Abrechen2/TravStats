@@ -340,7 +340,9 @@ function buildFlightAnchors(flights: readonly FlightAnchorInput[]): SuggestionAn
   const out: SuggestionAnchor[] = [];
 
   for (const group of byAirport.values()) {
-    const dated = group.filter((m) => m.at !== null).sort((a, b) => a.at!.getTime() - b.at!.getTime());
+    const dated = group
+      .filter((m) => m.at !== null)
+      .sort((a, b) => a.at!.getTime() - b.at!.getTime());
 
     // A layover is an arrival followed closely by a departure, and BOTH sides
     // of that pair have to go. Dropping only the arrival leaves the departure

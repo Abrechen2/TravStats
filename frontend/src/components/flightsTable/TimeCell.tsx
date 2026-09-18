@@ -2,12 +2,7 @@ import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { dayShift } from "../../lib/dayShift";
 
-import { flightDateFmt as dateFmt } from "./flightDateFormat";
-
-const timeFmt = (iso: string, tz: string): string =>
-  new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(
-    new Date(iso)
-  );
+import { useDisplayFormat } from "../../lib/displayFormat";
 
 type DelayState = "late" | "early" | "onTime";
 
@@ -29,7 +24,17 @@ const DELAY_COLOR: Record<DelayState, string> = {
 
 /** One ab/an row pair: weekday + compact date + airport-local time, +N overnight marker. */
 export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
-  const { t, i18n } = useTranslation(["flights"]);
+  const { t } = useTranslation(["flights"]);
+  // Both the date and the clock follow Settings → Display, in the airport's own
+  // zone. The round-4 decision was that the four logbooks must not each invent
+  // their own format (audit B11); the setting answers that better than a
+  // hardcoded one, because `YYYY-MM-DD` is one of the three it offers — and a
+  // tester reported on 2026-09-17 that this table ignored their choice.
+  // Weekday and two-digit year stay: the column is dense.
+  const format = useDisplayFormat();
+  const dateFmt = (iso: string, tz: string): string =>
+    format.date(iso, { timeZone: tz, weekday: true, shortYear: true });
+  const timeFmt = (iso: string, tz: string): string => format.time(iso, { timeZone: tz });
   const isDateOnly = (s: Flight["depTimeSemantics"]) => s === "DATE_ONLY" || s === "UNKNOWN";
   const depDateOnly = isDateOnly(flight.depTimeSemantics);
   const arrDateOnly = isDateOnly(flight.arrTimeSemantics);
@@ -64,7 +69,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
       </span>
       {iso ? (
         <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 whitespace-nowrap">
-          <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
+          <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz)}</span>
           {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
           {/* The recorded time, beside the planned one rather than replacing
               it — the point is the difference between the two. Formatted in

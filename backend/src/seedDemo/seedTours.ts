@@ -28,6 +28,8 @@ export async function seedTour(tripId: string, tour: StoryTour, orderIdx: number
       })
     );
   }
-  await prisma.$transaction((tx) => recomputeLegs(tx, route.id, tour.mode, stops), { timeout: 30_000 });
+  await prisma.$transaction((tx) => recomputeLegs(tx, route.id, tour.mode, stops), {
+    timeout: 30_000,
+  });
   return route.id;
 }

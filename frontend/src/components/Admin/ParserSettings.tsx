@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
+import type { ParserOrder } from "../../lib/api/admin";
 
 export interface ParserSettingsData {
   allowUserApiKeys: boolean;
   /** Whether this instance may ask jsDelivr for rates the ECB does not carry. */
   fxCdnFallbackEnabled: boolean;
-  defaultVisionParser: string;
-  defaultTextParser: string;
+  /** Who reads a booking document first, in every domain. Absent on a backend
+   *  older than 2.7, which always read templates last for flights. */
+  parserOrder?: ParserOrder;
   ollamaUrl: string | null;
   ollamaModel: string | null;
 }
@@ -112,7 +114,6 @@ export default function ParserSettings({
         </button>
       </div>
 
-
       {/* Parser Info */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
@@ -121,6 +122,38 @@ export default function ParserSettings({
         <p className="text-sm text-(--text-muted) mb-4">
           {t("admin:parserSettings.defaultSettingsDescription")}
         </p>
+        {/*
+          Who looks first. Until 2026-09-17 this was three hardcoded orders —
+          flights asked the model first whenever an Ollama was configured,
+          lodging and cruise always asked their template first — and no way to
+          say otherwise. The default is template-first because that is what
+          measured better; the other direction stays one click away for an
+          instance whose senders no template knows.
+        */}
+        <div className="mb-4">
+          <label
+            htmlFor="parser-order"
+            className="block text-sm font-medium text-(--text-primary) mb-1"
+          >
+            {t("admin:parserSettings.order.label")}
+          </label>
+          <select
+            id="parser-order"
+            data-testid="parser-order-select"
+            value={parserSettings.parserOrder ?? "template_first"}
+            onChange={(e): void =>
+              onParserSettingsChange({
+                ...parserSettings,
+                parserOrder: e.target.value as ParserOrder,
+              })
+            }
+            className="w-full md:w-96 rounded-lg border border-(--color-border) bg-(--bg-base) px-3 py-2 text-sm text-(--text-primary)"
+          >
+            <option value="template_first">{t("admin:parserSettings.order.templateFirst")}</option>
+            <option value="llm_first">{t("admin:parserSettings.order.llmFirst")}</option>
+          </select>
+          <p className="mt-1 text-xs text-(--text-muted)">{t("admin:parserSettings.order.hint")}</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-2 p-3 bg-(--bg-base) rounded-lg">
             <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">

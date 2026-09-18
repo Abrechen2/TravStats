@@ -3,8 +3,12 @@ import { sumByCurrency, tripCostSources } from "../bookingCost";
 
 describe("sumByCurrency", () => {
   it("sums a single currency", () => {
-    expect(sumByCurrency([{ price: 100, currency: "EUR" }, { price: 50, currency: "EUR" }]))
-      .toEqual([{ currency: "EUR", total: 150 }]);
+    expect(
+      sumByCurrency([
+        { price: 100, currency: "EUR" },
+        { price: 50, currency: "EUR" },
+      ])
+    ).toEqual([{ currency: "EUR", total: 150 }]);
   });
 
   it("keeps currencies separate, EUR first, rest alphabetical", () => {
@@ -51,11 +55,7 @@ describe("tripCostSources", () => {
   // A cruise-only trip totalled to "—" although its cruises carried prices:
   // the cost model knew about bookings and flights, never about cruises.
   it("counts a cruise that carries its own price", () => {
-    const sources = tripCostSources(
-      [],
-      [],
-      [{ price: 1290, currency: "EUR", bookingId: null }]
-    );
+    const sources = tripCostSources([], [], [{ price: 1290, currency: "EUR", bookingId: null }]);
     expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 1290 }]);
   });
 
@@ -83,7 +83,12 @@ describe("tripCostSources", () => {
   // A hotel-only trip totalled to "—" for the same reason a cruise-only one
   // did: a stay prices itself as `totalPrice`, which the cost model never read.
   it("counts a lodging stay that carries its own price", () => {
-    const sources = tripCostSources([], [], [], [{ totalPrice: 420, currency: "EUR", bookingId: null }]);
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [{ totalPrice: 420, currency: "EUR", bookingId: null }]
+    );
     expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
   });
 
@@ -113,7 +118,12 @@ describe("tripCostSources", () => {
   // The FX snapshot on a stay is a second opinion about the same money, never
   // an addition — only the raw amount may reach the total.
   it("ignores a stay with no price at all", () => {
-    const sources = tripCostSources([], [], [], [{ totalPrice: null, currency: "EUR", bookingId: null }]);
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [{ totalPrice: null, currency: "EUR", bookingId: null }]
+    );
     expect(sumByCurrency(sources)).toEqual([]);
   });
 

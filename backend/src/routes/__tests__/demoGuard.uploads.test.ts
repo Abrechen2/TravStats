@@ -4,7 +4,12 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { getUploadDir, getTripPhotoDir, getPlacePhotoDir, getLodgingPhotoDir } from "../../middleware/upload";
+import {
+  getUploadDir,
+  getTripPhotoDir,
+  getPlacePhotoDir,
+  getLodgingPhotoDir,
+} from "../../middleware/upload";
 import { getTrainingUploadDir } from "../../routes/training";
 
 /**

@@ -90,7 +90,7 @@ export interface FlightCostShare {
  */
 export function flightCostShare(
   flight: CostFlight,
-  countedBookingIds: Set<string>,
+  countedBookingIds: Set<string>
 ): FlightCostShare {
   if (flight.bookingId && flight.booking?.price) {
     // Every segment of a priced booking is a priced flight, even though the
@@ -128,7 +128,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     amount: number,
     amountBase: number | null,
     snapshotCurrency: string | null,
-    ownCurrency: string | null,
+    ownCurrency: string | null
   ): void => {
     if (amount === 0) return;
     // An amount already IN the base currency needs no conversion and no
@@ -152,7 +152,8 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     // No unit recorded is its own bucket. It is NOT assumed to be the base
     // currency — that assumption is how 11,662 AED became €11,662 once already.
     const key = ownCurrency ?? "unknown";
-    unconvertedByCurrency[key] = Math.round(((unconvertedByCurrency[key] ?? 0) + amount) * 100) / 100;
+    unconvertedByCurrency[key] =
+      Math.round(((unconvertedByCurrency[key] ?? 0) + amount) * 100) / 100;
   };
 
   for (const flight of flights) {

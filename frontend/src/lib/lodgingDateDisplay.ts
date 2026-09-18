@@ -1,5 +1,6 @@
 import { resolveStayTiming, type LodgingDatePrecision } from "../shared/lodgingTiming";
 import type { LodgingStay } from "../types/lodging";
+import { formatDate } from "./displayFormat";
 
 /**
  * How a stay's dates are WRITTEN, given how much of them is known.
@@ -59,7 +60,7 @@ export interface StayPeriodParts {
 export function formatStayPeriod(
   stay: DisplayableStay,
   locale: string,
-  t: (key: string) => string,
+  t: (key: string) => string
 ): StayPeriodParts {
   const checkIn = toDate(stay.checkIn);
   const checkOut = toDate(stay.checkOut);
@@ -70,8 +71,9 @@ export function formatStayPeriod(
     nights: stay.nights,
   });
 
-  const day = (d: Date): string =>
-    d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+  // The user's date format (Settings → Display). `locale` still names the month
+  // for a month-precision stay below, where there is no day order to choose.
+  const day = (d: Date): string => formatDate(d, { timeZone: "UTC" });
 
   switch (timing.precision) {
     case "DAY": {
@@ -88,7 +90,11 @@ export function formatStayPeriod(
     case "MONTH": {
       const anchor = timing.anchor!;
       return {
-        label: anchor.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" }),
+        label: anchor.toLocaleDateString(locale, {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
         precision: "MONTH",
       };
     }

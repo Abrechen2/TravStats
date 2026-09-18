@@ -54,9 +54,7 @@ const MAX_RESPONSE_BYTES = 2_000_000;
 function getSuggestTimeoutMs(): number {
   const raw = process.env.LODGING_MAPPING_TIMEOUT_MS;
   const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0
-    ? parsed
-    : DEFAULT_SUGGEST_TIMEOUT_MS;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SUGGEST_TIMEOUT_MS;
 }
 
 const SYSTEM_PROMPT = `You map spreadsheet column headers to TravStats lodging fields.
@@ -113,11 +111,7 @@ function postJson(url: string, body: string): Promise<string> {
           receivedBytes += chunk.length;
           if (receivedBytes > MAX_RESPONSE_BYTES) {
             settle(() =>
-              reject(
-                new Error(
-                  `Mapping suggestion response exceeded ${MAX_RESPONSE_BYTES} bytes`,
-                ),
-              ),
+              reject(new Error(`Mapping suggestion response exceeded ${MAX_RESPONSE_BYTES} bytes`))
             );
             req.destroy();
             return;
@@ -128,20 +122,16 @@ function postJson(url: string, body: string): Promise<string> {
           if (settled) return;
           const statusCode = res.statusCode ?? 0;
           if (statusCode !== 200) {
-            settle(() =>
-              reject(new Error(`Ollama returned HTTP ${statusCode}`)),
-            );
+            settle(() => reject(new Error(`Ollama returned HTTP ${statusCode}`)));
             return;
           }
           settle(() => resolve(data));
         });
-      },
+      }
     );
 
     deadline = setTimeout(() => {
-      settle(() =>
-        reject(new Error(`Mapping suggestion timeout after ${timeoutMs}ms`)),
-      );
+      settle(() => reject(new Error(`Mapping suggestion timeout after ${timeoutMs}ms`)));
       req.destroy();
     }, timeoutMs);
 
@@ -161,7 +151,7 @@ function postJson(url: string, body: string): Promise<string> {
  * (tests) must never be overridden by whatever is in the database.
  */
 async function resolveOptions(
-  options?: MappingSuggestionOptions,
+  options?: MappingSuggestionOptions
 ): Promise<Required<MappingSuggestionOptions>> {
   let adminUrl: string | undefined;
   let adminModel: string | undefined;
@@ -171,20 +161,12 @@ async function resolveOptions(
       adminUrl = admin?.ollamaUrl ?? undefined;
       adminModel = admin?.ollamaModel ?? undefined;
     } catch (err) {
-      logger.warn(
-        { err },
-        "[Lodging Mapping] Failed to load admin parser settings",
-      );
+      logger.warn({ err }, "[Lodging Mapping] Failed to load admin parser settings");
     }
   }
   return {
-    url:
-      options?.url ??
-      adminUrl ??
-      process.env.OLLAMA_URL ??
-      "http://localhost:11434",
-    model:
-      options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? "gemma3:12b",
+    url: options?.url ?? adminUrl ?? process.env.OLLAMA_URL ?? "http://localhost:11434",
+    model: options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? "gemma3:12b",
   };
 }
 
@@ -201,10 +183,7 @@ function isLodgingField(value: string): value is LodgingCsvField {
  */
 const PARSE_FAILED = Symbol("lodging-mapping-parse-failed");
 
-function safeJsonParse(
-  text: string,
-  stage: string,
-): unknown | typeof PARSE_FAILED {
+function safeJsonParse(text: string, stage: string): unknown | typeof PARSE_FAILED {
   try {
     return JSON.parse(text);
   } catch {
@@ -214,7 +193,7 @@ function safeJsonParse(
         stage,
         reason: "invalid_json",
       },
-      "[Lodging Mapping] Ollama returned invalid JSON — degrading to empty mapping",
+      "[Lodging Mapping] Ollama returned invalid JSON — degrading to empty mapping"
     );
     return PARSE_FAILED;
   }
@@ -236,24 +215,20 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
         stage: "sanitize",
         reason: "not_an_object",
       },
-      "[Lodging Mapping] Model response was not a JSON object — degrading to empty mapping",
+      "[Lodging Mapping] Model response was not a JSON object — degrading to empty mapping"
     );
     return {};
   }
   const container = raw as Record<string, unknown>;
   const mappingRaw = container.mapping ?? container;
-  if (
-    typeof mappingRaw !== "object" ||
-    mappingRaw === null ||
-    Array.isArray(mappingRaw)
-  ) {
+  if (typeof mappingRaw !== "object" || mappingRaw === null || Array.isArray(mappingRaw)) {
     logger.warn(
       {
         operation: "lodging_mapping_suggest_failed",
         stage: "sanitize",
         reason: "mapping_not_an_object",
       },
-      "[Lodging Mapping] `mapping` was not a JSON object — degrading to empty mapping",
+      "[Lodging Mapping] `mapping` was not a JSON object — degrading to empty mapping"
     );
     return {};
   }
@@ -264,9 +239,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
   let droppedUnknownHeader = 0;
   let droppedUnknownField = 0;
   let droppedDuplicate = 0;
-  for (const [field, header] of Object.entries(
-    mappingRaw as Record<string, unknown>,
-  )) {
+  for (const [field, header] of Object.entries(mappingRaw as Record<string, unknown>)) {
     if (typeof header !== "string" || !headerSet.has(header)) {
       droppedUnknownHeader += 1;
       continue;
@@ -283,11 +256,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
     used.add(header);
   }
 
-  if (
-    droppedUnknownHeader > 0 ||
-    droppedUnknownField > 0 ||
-    droppedDuplicate > 0
-  ) {
+  if (droppedUnknownHeader > 0 || droppedUnknownField > 0 || droppedDuplicate > 0) {
     logger.warn(
       {
         operation: "lodging_mapping_sanitize_dropped",
@@ -296,7 +265,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
         droppedDuplicate,
         keptFields: Object.keys(mapping).length,
       },
-      "[Lodging Mapping] Dropped one or more hallucinated/invalid pairs from the model's suggestion",
+      "[Lodging Mapping] Dropped one or more hallucinated/invalid pairs from the model's suggestion"
     );
   }
   return mapping;
@@ -325,7 +294,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
 export async function suggestLodgingCsvMapping(
   headers: string[],
   sampleRows: Record<string, string>[],
-  options?: MappingSuggestionOptions,
+  options?: MappingSuggestionOptions
 ): Promise<LodgingCsvMapping> {
   try {
     const { url, model } = await resolveOptions(options);
@@ -333,7 +302,7 @@ export async function suggestLodgingCsvMapping(
       model,
       system: SYSTEM_PROMPT,
       prompt: `CSV headers: ${JSON.stringify(headers)}\nSample rows: ${JSON.stringify(
-        sampleRows.slice(0, 3),
+        sampleRows.slice(0, 3)
       )}\n\nReturn the mapping JSON.`,
       stream: false,
       think: false,
@@ -345,18 +314,14 @@ export async function suggestLodgingCsvMapping(
 
     const envelope = safeJsonParse(raw, "envelope");
     if (envelope === PARSE_FAILED) return {};
-    if (
-      typeof envelope !== "object" ||
-      envelope === null ||
-      !("response" in envelope)
-    ) {
+    if (typeof envelope !== "object" || envelope === null || !("response" in envelope)) {
       logger.warn(
         {
           operation: "lodging_mapping_suggest_failed",
           stage: "envelope",
           reason: "unexpected_shape",
         },
-        "[Lodging Mapping] Ollama response envelope had an unexpected shape — degrading to empty mapping",
+        "[Lodging Mapping] Ollama response envelope had an unexpected shape — degrading to empty mapping"
       );
       return {};
     }
@@ -368,7 +333,7 @@ export async function suggestLodgingCsvMapping(
           stage: "envelope",
           reason: "response_not_string",
         },
-        "[Lodging Mapping] Ollama response.response was not a string — degrading to empty mapping",
+        "[Lodging Mapping] Ollama response.response was not a string — degrading to empty mapping"
       );
       return {};
     }
@@ -387,13 +352,13 @@ export async function suggestLodgingCsvMapping(
         operation: "lodging_mapping_suggested",
         fields: Object.keys(mapping).length,
       },
-      "Lodging CSV mapping suggested",
+      "Lodging CSV mapping suggested"
     );
     return mapping;
   } catch (err) {
     logger.warn(
       { err: err instanceof Error ? err.message : String(err) },
-      "[Lodging Mapping] Suggestion failed — the client falls back to its heuristic",
+      "[Lodging Mapping] Suggestion failed — the client falls back to its heuristic"
     );
     return {};
   }

@@ -1,25 +1,25 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { updateSchedule } from '../../services/backupScheduler';
-import logger from '../../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { updateSchedule } from "../../services/backupScheduler";
+import logger from "../../utils/logger";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 const backupSettingsSchema = z.object({
   backupEnabled: z.boolean().optional(),
-  backupInterval: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  backupInterval: z.enum(["daily", "weekly", "monthly"]).optional(),
   backupRetentionDays: z.number().int().min(1).max(365).optional(),
 });
 
 const router = Router();
 
-router.get('/backup-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/backup-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
       backupEnabled: adminSettings?.backupEnabled ?? false,
-      backupInterval: adminSettings?.backupInterval ?? 'weekly',
+      backupInterval: adminSettings?.backupInterval ?? "weekly",
       backupRetentionDays: adminSettings?.backupRetentionDays ?? 30,
     });
   } catch (error) {
@@ -27,9 +27,11 @@ router.get('/backup-settings', async (req: AuthRequest, res: Response, next: Nex
   }
 });
 
-router.put('/backup-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/backup-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { backupEnabled, backupInterval, backupRetentionDays } = backupSettingsSchema.parse(req.body);
+    const { backupEnabled, backupInterval, backupRetentionDays } = backupSettingsSchema.parse(
+      req.body
+    );
 
     let adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
@@ -50,10 +52,10 @@ router.put('/backup-settings', async (req: AuthRequest, res: Response, next: Nex
 
     await updateSchedule();
 
-    logger.info({ operation: 'backup_settings_updated', context: updateData });
+    logger.info({ operation: "backup_settings_updated", context: updateData });
 
     res.json({
-      message: 'Backup settings updated',
+      message: "Backup settings updated",
       backupEnabled: adminSettings.backupEnabled,
       backupInterval: adminSettings.backupInterval,
       backupRetentionDays: adminSettings.backupRetentionDays,

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 // A visit must never attach itself to someone else's trip by id. The rule
 // lived here first and now serves every domain that links to a trip (AUD-038).
 import { assertTripOwned } from "../utils/ownedReferences";
@@ -161,12 +162,15 @@ const orderByFor = (
  * it, and afterwards there is nothing left to ask which files they named.
  */
 async function placePhotoFilenames(
-  scope: { placeId: string } | { placeVisitId: string },
+  scope: { placeId: string } | { placeVisitId: string }
 ): Promise<string[]> {
   const where: Prisma.PlaceVisitPhotoWhereInput =
-    "placeId" in scope ? { visit: { placeId: scope.placeId } } : { placeVisitId: scope.placeVisitId };
+    "placeId" in scope
+      ? { visit: { placeId: scope.placeId } }
+      : { placeVisitId: scope.placeVisitId };
   const rows = await prisma.placeVisitPhoto.findMany({ where, select: { filename: true } });
-  return rows.map((r) => r.filename);
+  // A photo that became an Immich link has no copy to remove (forgejo#21).
+  return rows.flatMap((r) => (r.filename ? [r.filename] : []));
 }
 
 /**
@@ -186,7 +190,7 @@ function removePlacePhotoFiles(filenames: readonly string[]): void {
     } catch (error) {
       logger.warn(
         { operation: "place_photo_file_orphaned", filename, error },
-        "photo row deleted but its file could not be removed",
+        "photo row deleted but its file could not be removed"
       );
     }
   }
@@ -428,6 +432,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
+    const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
     // promotes the place out of the wishlist in the SAME transaction. Leaving
@@ -465,6 +470,10 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
       writes.push(prisma.place.update({ where: { id: place.id }, data: { visited: true } }));
     }
     const [visit] = await prisma.$transaction(writes);
+    await linkDocuments(userId, documentIds, {
+      type: "placeVisit",
+      id: (visit as { id: string }).id,
+    });
 
     await recheckAchievements(userId, "visit create");
 

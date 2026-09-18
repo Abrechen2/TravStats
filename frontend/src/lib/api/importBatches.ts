@@ -41,7 +41,7 @@ export async function listImportBatches(): Promise<ImportBatchSummary[]> {
 export async function createImportBatch(
   domain: ImportBatchDomain,
   source: ImportBatchSource,
-  fileName: string | null,
+  fileName: string | null
 ): Promise<string> {
   const res = await api.post<Envelope<{ id: string }>>("/import-batches", {
     domain,

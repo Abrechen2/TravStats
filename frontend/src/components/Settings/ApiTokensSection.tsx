@@ -28,6 +28,7 @@ import {
   type CreatedApiToken,
 } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
+import { formatDateTime } from "../../lib/displayFormat";
 
 const SCOPES: ApiTokenScope[] = ["read", "write", "admin"];
 
@@ -140,7 +141,7 @@ export default function ApiTokensSection(): JSX.Element {
                     {tok.prefix}…
                     {tok.lastUsedAt
                       ? ` · ${t("settings:apiTokens.lastUsed", {
-                          when: new Date(tok.lastUsedAt).toLocaleString(),
+                          when: formatDateTime(tok.lastUsedAt),
                         })}`
                       : ` · ${t("settings:apiTokens.neverUsed")}`}
                   </span>

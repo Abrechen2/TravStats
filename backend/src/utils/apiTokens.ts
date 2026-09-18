@@ -84,5 +84,4 @@ export function looksLikeApiToken(s: string): boolean {
   return body.length === TOKEN_BYTES * 2 && /^[0-9a-f]+$/i.test(body);
 }
 
-const sha256Hex = (input: string): string =>
-  createHash("sha256").update(input).digest("hex");
+const sha256Hex = (input: string): string => createHash("sha256").update(input).digest("hex");

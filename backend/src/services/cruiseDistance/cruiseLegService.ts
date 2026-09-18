@@ -23,7 +23,7 @@ export const ORCHESTRATOR_VERSION = "1.0.0";
 
 export async function recomputeLegsForCruise(
   cruiseId: string,
-  tx?: Prisma.TransactionClient,
+  tx?: Prisma.TransactionClient
 ): Promise<number> {
   const client = tx ?? prisma;
 
@@ -68,7 +68,7 @@ export async function recomputeLegsForCruise(
   const sequence = buildEffectivePortSequence(
     cruise?.departurePort ? toPortPoint(cruise.departurePort) : null,
     portCallPorts,
-    cruise?.arrivalPort ? toPortPoint(cruise.arrivalPort) : null,
+    cruise?.arrivalPort ? toPortPoint(cruise.arrivalPort) : null
   );
 
   await client.cruiseLeg.deleteMany({ where: { cruiseId } });

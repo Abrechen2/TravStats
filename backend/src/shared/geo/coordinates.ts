@@ -50,10 +50,7 @@ export function isPlausibleCoordinate(lat: unknown, lon: unknown): boolean {
 }
 
 /** The pair, or null when it is not usable. Convenience over the two above. */
-export function toCoordinates(
-  lat: unknown,
-  lon: unknown,
-): { lat: number; lon: number } | null {
+export function toCoordinates(lat: unknown, lon: unknown): { lat: number; lon: number } | null {
   if (!isPlausibleCoordinate(lat, lon)) return null;
   return { lat: parseCoordinate(lat) as number, lon: parseCoordinate(lon) as number };
 }

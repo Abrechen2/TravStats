@@ -1,33 +1,33 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import archiver from 'archiver';
-import { prisma } from '../../db';
-import { getInstanceSettings } from '../instanceSettingsService';
-import { BACKED_UP_UPLOAD_DIRS } from '../../config/uploadDirs';
-import logger from '../../utils/logger';
+import * as fs from "fs";
+import * as path from "path";
+import archiver from "archiver";
+import { prisma } from "../../db";
+import { getInstanceSettings } from "../instanceSettingsService";
+import { BACKED_UP_UPLOAD_DIRS } from "../../config/uploadDirs";
+import logger from "../../utils/logger";
 
 /**
  * Archive upload directories
  */
 export async function archiveUploads(outputPath: string): Promise<number> {
   return new Promise((resolve, reject) => {
-    const uploadsDir = path.join(__dirname, '../../../uploads');
+    const uploadsDir = path.join(__dirname, "../../../uploads");
 
     if (!fs.existsSync(uploadsDir)) {
-      logger.warn({ operation: 'backup_files_missing', message: 'Uploads directory not found' });
+      logger.warn({ operation: "backup_files_missing", message: "Uploads directory not found" });
       // Create empty archive
-      const archive = archiver('tar', { gzip: true });
+      const archive = archiver("tar", { gzip: true });
       const output = fs.createWriteStream(outputPath);
 
       archive.pipe(output);
       archive.finalize();
 
-      output.on('close', () => resolve(0));
-      output.on('error', reject);
+      output.on("close", () => resolve(0));
+      output.on("error", reject);
       return;
     }
 
-    const archive = archiver('tar', { gzip: true });
+    const archive = archiver("tar", { gzip: true });
     const output = fs.createWriteStream(outputPath);
 
     archive.pipe(output);
@@ -46,16 +46,16 @@ export async function archiveUploads(outputPath: string): Promise<number> {
       }
     });
 
-    archive.on('error', (err: Error) => {
+    archive.on("error", (err: Error) => {
       logger.error({
-        operation: 'backup_files_error',
-        message: 'File archive creation failed',
+        operation: "backup_files_error",
+        message: "File archive creation failed",
         error: err.message,
       });
       reject(err);
     });
 
-    output.on('close', () => {
+    output.on("close", () => {
       resolve(archive.pointer());
     });
 

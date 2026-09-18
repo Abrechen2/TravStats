@@ -99,32 +99,24 @@ describe("LocationMapModal", () => {
   });
 
   it("renders nothing while closed", () => {
-    render(
-      <LocationMapModal open={false} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
-    );
+    render(<LocationMapModal open={false} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("a map click sets the pin and confirm reports the coordinates", async () => {
     const onConfirm = vi.fn();
-    render(
-      <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
-    );
+    render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
 
     await userEvent.click(screen.getByTestId("mock-map"));
     await userEvent.click(screen.getByText("location:mapModal.confirm"));
 
-    expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ lat: 52.516, lon: 13.38 })
-    );
+    expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ lat: 52.516, lon: 13.38 }));
   });
 
   it("reverse-geocodes the pin and confirm carries the resolved address", async () => {
     vi.mocked(reverseGeocode).mockResolvedValue(adlon);
     const onConfirm = vi.fn();
-    render(
-      <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
-    );
+    render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
 
     await userEvent.click(screen.getByTestId("mock-map"));
 
@@ -150,9 +142,7 @@ describe("LocationMapModal", () => {
     vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     vi.mocked(reverseGeocode).mockResolvedValue(adlon);
     const onConfirm = vi.fn();
-    render(
-      <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
-    );
+    render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
 
     await userEvent.type(screen.getByRole("combobox"), "zuri");
     const option = await screen.findByRole("option", { name: /Zürich/ });
@@ -173,9 +163,7 @@ describe("LocationMapModal", () => {
   it("cancel closes without confirming", async () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
-    render(
-      <LocationMapModal open={true} value={null} onClose={onClose} onConfirm={onConfirm} />
-    );
+    render(<LocationMapModal open={true} value={null} onClose={onClose} onConfirm={onConfirm} />);
 
     await userEvent.click(screen.getByText("location:mapModal.cancel"));
     expect(onClose).toHaveBeenCalled();
@@ -228,9 +216,7 @@ describe("LocationMapModal", () => {
         results: [adlonPoi, bahnhofPoi],
         degraded: false,
       });
-      render(
-        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
-      );
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
 
       await userEvent.click(screen.getByTestId("mock-map"));
 
@@ -241,9 +227,7 @@ describe("LocationMapModal", () => {
     it("picking a place makes confirm report its full fields", async () => {
       vi.mocked(reversePlaces).mockResolvedValue({ results: [adlonPoi], degraded: false });
       const onConfirm = vi.fn();
-      render(
-        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
-      );
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
 
       await userEvent.click(screen.getByTestId("mock-map"));
       await userEvent.click(await screen.findByText("Hotel Adlon Kempinski"));
@@ -263,9 +247,7 @@ describe("LocationMapModal", () => {
     it("a new map click clears the picked place again", async () => {
       vi.mocked(reversePlaces).mockResolvedValue({ results: [adlonPoi], degraded: false });
       const onConfirm = vi.fn();
-      render(
-        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
-      );
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
 
       await userEvent.click(screen.getByTestId("mock-map"));
       await userEvent.click(await screen.findByText("Hotel Adlon Kempinski"));
@@ -279,9 +261,7 @@ describe("LocationMapModal", () => {
 
     it("shows no list when nothing is nearby", async () => {
       vi.mocked(reversePlaces).mockResolvedValue({ results: [], degraded: false });
-      render(
-        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
-      );
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
 
       await userEvent.click(screen.getByTestId("mock-map"));
       await new Promise((r) => setTimeout(r, 700));

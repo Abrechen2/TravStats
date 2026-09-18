@@ -1,9 +1,6 @@
 import type { Cruise } from "../../types/cruise";
 import type { GeoJSONFeature } from "../../types";
-import {
-  effectiveTimedSequence,
-  type EffectiveSequenceEntry,
-} from "../Cruise/cruisePorts";
+import { effectiveTimedSequence, type EffectiveSequenceEntry } from "../Cruise/cruisePorts";
 
 /**
  * Helpers that drive the Globe time-slider. Everything here is pure

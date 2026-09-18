@@ -1,15 +1,16 @@
-import { formatIsoDate } from "../../lib/dateUtils";
+import { formatDate } from "../../lib/displayFormat";
 
 /**
- * The flights list's date, in one place: `YYYY-MM-DD` in the airport's own
- * zone (round-4 decision E7, ISO in tables).
+ * The flights list's date, in one place — shared by `TimeCell` and the narrow
+ * row summary in `FlightRow`, so one screen never shows two formats (D-07).
  *
- * It lived inside `TimeCell`; the narrow row summary needs the same string,
- * and a second copy is how a list ends up showing two date formats on one
- * screen — the finding (D-07) that round was handed. It was "Mo 09.11.26"
- * until the CT106 audit (B11) found the four logbooks in four formats. The
- * language no longer changes it, which is the point; `lang` stays so callers
- * do not have to change shape.
+ * It rendered a fixed `YYYY-MM-DD` until 2026-09-18. That came from round-4
+ * decision E7, taken when the four logbooks each invented their own format
+ * (audit B11) — but a tester reported on 2026-09-17 that the table ignored the
+ * format they had chosen in Settings, and the setting solves the same problem
+ * better: `YYYY-MM-DD` is one of the three it offers. `lang` stays in the
+ * signature so callers did not have to change shape; it is unused, because the
+ * reader's locale is not what decides this any more.
  */
 export const flightDateFmt = (iso: string, tz: string, _lang?: string): string =>
-  formatIsoDate(iso, tz);
+  formatDate(iso, { timeZone: tz });

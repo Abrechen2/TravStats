@@ -16,6 +16,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "lint": "npm run lint:backend && npm run lint:frontend",
+    "format": "npx --prefix frontend prettier --write --ignore-unknown .",
+    "format:check": "npx --prefix frontend prettier --check --ignore-unknown .",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",

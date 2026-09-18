@@ -35,18 +35,18 @@
  * NOT used for IATA/ICAO resolution — that goes through the catalogue.
  */
 export const AIRLINE_ALIASES: Record<string, string> = {
-  'egyptair': 'EgyptAir',
-  'egypt air': 'EgyptAir',
-  'air canada': 'Air Canada',
-  'vietnam airline': 'Vietnam Airlines',
-  'vietnam airlines': 'Vietnam Airlines',
-  'dba': 'dba',
-  'sas scandinavian airlines': 'SAS Scandinavian Airlines',
-  'lot polish airlines': 'LOT Polish Airlines',
-  'lot - polish airlines': 'LOT Polish Airlines',
-  'lot': 'LOT Polish Airlines',
-  'swiss': 'SWISS',
-  'swiss international air lines': 'SWISS',
+  egyptair: "EgyptAir",
+  "egypt air": "EgyptAir",
+  "air canada": "Air Canada",
+  "vietnam airline": "Vietnam Airlines",
+  "vietnam airlines": "Vietnam Airlines",
+  dba: "dba",
+  "sas scandinavian airlines": "SAS Scandinavian Airlines",
+  "lot polish airlines": "LOT Polish Airlines",
+  "lot - polish airlines": "LOT Polish Airlines",
+  lot: "LOT Polish Airlines",
+  swiss: "SWISS",
+  "swiss international air lines": "SWISS",
 };
 
 /**
@@ -62,9 +62,7 @@ export function normalizeAirline(name: string): string {
  * Merge airline counts that differ only by spelling/casing. Groups are
  * collapsed into the canonical name.
  */
-export function mergeAirlineCounts(
-  counts: Record<string, number>,
-): Record<string, number> {
+export function mergeAirlineCounts(counts: Record<string, number>): Record<string, number> {
   const merged: Record<string, number> = {};
   for (const [name, count] of Object.entries(counts)) {
     const canonical = normalizeAirline(name);
@@ -99,10 +97,7 @@ export interface AirlineResolvers {
  * is not an airline and must never become a group (the empty row of
  * forgejo#81).
  */
-export function airlineGroupKey(
-  row: AirlineIdentity,
-  resolvers: AirlineResolvers,
-): string | null {
+export function airlineGroupKey(row: AirlineIdentity, resolvers: AirlineResolvers): string | null {
   const iata = row.airlineIata?.trim().toUpperCase();
   if (iata) return `iata:${iata}`;
   const icao = row.airlineIcao?.trim().toUpperCase();
@@ -136,7 +131,7 @@ export interface AirlineGroup {
  */
 export function groupAirlines(
   rows: ReadonlyArray<AirlineIdentity & { count: number }>,
-  resolvers: AirlineResolvers,
+  resolvers: AirlineResolvers
 ): { groups: AirlineGroup[]; withoutAirline: number } {
   const acc = new Map<string, { count: number; spellings: Map<string, number> }>();
   let withoutAirline = 0;
@@ -156,7 +151,7 @@ export function groupAirlines(
 
   const groups: AirlineGroup[] = [];
   for (const [key, entry] of acc.entries()) {
-    const iata = key.startsWith('iata:') ? key.slice(5) : null;
+    const iata = key.startsWith("iata:") ? key.slice(5) : null;
     const catalogueName = iata ? resolvers.nameForIata(iata) : null;
     const mostFrequent = [...entry.spellings.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
     groups.push({

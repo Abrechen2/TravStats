@@ -1,12 +1,12 @@
-import { Router, Response, NextFunction } from 'express';
-import type { ApiToken } from '@prisma/client';
+import { Router, Response, NextFunction } from "express";
+import type { ApiToken } from "@prisma/client";
 
-import { AppError } from '../../middleware/errorHandler';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { createApiTokenSchema, type SanitizedApiToken } from '../../schemas/apiToken';
-import { generateApiToken } from '../../utils/apiTokens';
-import logger, { securityLogger } from '../../utils/logger';
+import { AppError } from "../../middleware/errorHandler";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { createApiTokenSchema, type SanitizedApiToken } from "../../schemas/apiToken";
+import { generateApiToken } from "../../utils/apiTokens";
+import logger, { securityLogger } from "../../utils/logger";
 
 /**
  * Personal Access Token (PAT) management routes.
@@ -28,16 +28,16 @@ const router = Router();
 router.use((req: AuthRequest, _res: Response, next: NextFunction) => {
   if (req.apiToken) {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'PAT-authenticated request attempted to manage tokens',
+      operation: "security_event",
+      message: "PAT-authenticated request attempted to manage tokens",
       context: {
-        eventType: 'pat_self_management_blocked',
+        eventType: "pat_self_management_blocked",
         tokenId: req.apiToken.id,
         userId: req.userId,
         url: req.url,
       },
     });
-    next(new AppError('Token management requires a browser session, not an API token', 403));
+    next(new AppError("Token management requires a browser session, not an API token", 403));
     return;
   }
   next();
@@ -46,7 +46,7 @@ router.use((req: AuthRequest, _res: Response, next: NextFunction) => {
 const sanitize = (t: ApiToken): SanitizedApiToken => ({
   id: t.id,
   label: t.label,
-  scope: t.scope as SanitizedApiToken['scope'],
+  scope: t.scope as SanitizedApiToken["scope"],
   prefix: t.prefix,
   lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
   lastUsedIp: t.lastUsedIp,
@@ -57,12 +57,12 @@ const sanitize = (t: ApiToken): SanitizedApiToken => ({
   platform: t.platform,
 });
 
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    if (!req.userId) throw new AppError('Unauthorized', 401);
+    if (!req.userId) throw new AppError("Unauthorized", 401);
     const tokens = await prisma.apiToken.findMany({
       where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
     res.json({ tokens: tokens.map(sanitize) });
   } catch (err) {
@@ -70,12 +70,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
-router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    if (!req.userId) throw new AppError('Unauthorized', 401);
+    if (!req.userId) throw new AppError("Unauthorized", 401);
     const parsed = createApiTokenSchema.safeParse(req.body);
     if (!parsed.success) {
-      throw new AppError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
+      throw new AppError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
     }
     const { label, scope, expiresAt } = parsed.data;
 
@@ -92,10 +92,10 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     });
 
     securityLogger.info({
-      operation: 'security_event',
-      message: 'API token created',
+      operation: "security_event",
+      message: "API token created",
       context: {
-        eventType: 'pat_created',
+        eventType: "pat_created",
         tokenId: created.id,
         userId: req.userId,
         scope,
@@ -114,15 +114,15 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
   }
 });
 
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    if (!req.userId) throw new AppError('Unauthorized', 401);
+    if (!req.userId) throw new AppError("Unauthorized", 401);
     const { id } = req.params;
     const token = await prisma.apiToken.findUnique({ where: { id } });
     if (!token || token.userId !== req.userId) {
       // 404 (not 403) on cross-user — never leak the existence of
       // other users' token IDs.
-      throw new AppError('Token not found', 404);
+      throw new AppError("Token not found", 404);
     }
     if (token.revokedAt) {
       res.json({ ...sanitize(token), alreadyRevoked: true });
@@ -133,10 +133,10 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
       data: { revokedAt: new Date() },
     });
     securityLogger.info({
-      operation: 'security_event',
-      message: 'API token revoked',
+      operation: "security_event",
+      message: "API token revoked",
       context: {
-        eventType: 'pat_revoked',
+        eventType: "pat_revoked",
         tokenId: revoked.id,
         userId: req.userId,
         ip: req.ip,
@@ -144,7 +144,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     });
     res.json(sanitize(revoked));
   } catch (err) {
-    logger.error({ message: 'Failed to revoke API token', err });
+    logger.error({ message: "Failed to revoke API token", err });
     next(err);
   }
 });

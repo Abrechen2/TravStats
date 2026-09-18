@@ -28,11 +28,14 @@ export const aircraftTypeItemSchema = z.object({
 
 export const aircraftTypesResponseSchema = z.object({
   aircraftTypes: z.array(aircraftTypeItemSchema),
-  total: z.number().int().openapi({
-    description:
-      "The user's total flight count, shared as a denominator with " +
-      "/stats/airlines so the two rankings are comparable.",
-  }),
+  total: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "The user's total flight count, shared as a denominator with " +
+        "/stats/airlines so the two rankings are comparable.",
+    }),
 });
 
 export const aircraftRankingItemSchema = z.object({
@@ -47,12 +50,15 @@ export const aircraftRankingItemSchema = z.object({
 
 export const aircraftRankingResponseSchema = z.object({
   aircraft: z.array(aircraftRankingItemSchema),
-  total: z.number().int().openapi({
-    description:
-      "How many distinct airframes are ranked — NOT the user's flight count. " +
-      "Only flights carrying a registration appear here, so this is a count of " +
-      "the rows above and nothing wider.",
-  }),
+  total: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "How many distinct airframes are ranked — NOT the user's flight count. " +
+        "Only flights carrying a registration appear here, so this is a count of " +
+        "the rows above and nothing wider.",
+    }),
 });
 
 export const aircraftProfileFlightSchema = z.object({

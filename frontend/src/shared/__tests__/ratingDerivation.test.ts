@@ -23,7 +23,9 @@ describe("deriveStayOverallRating", () => {
   });
 
   it("keeps an explicit overall when no component rating exists", () => {
-    expect(deriveStayOverallRating({ room: null, breakfast: null, service: null, current: 4 })).toBe(4);
+    expect(
+      deriveStayOverallRating({ room: null, breakfast: null, service: null, current: 4 })
+    ).toBe(4);
   });
 
   it("is null when the stay carries no rating at all", () => {

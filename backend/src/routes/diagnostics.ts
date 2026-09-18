@@ -1,15 +1,18 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { diagnosticExportLimiter } from '../middleware/rateLimit';
-import { buildDiagnosticsBundle } from '../services/diagnosticsBundle';
-import logger from '../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { diagnosticExportLimiter } from "../middleware/rateLimit";
+import { buildDiagnosticsBundle } from "../services/diagnosticsBundle";
+import logger from "../utils/logger";
 
 const router = Router();
 
 const splitMaybeArray = (v: unknown): string[] | undefined => {
-  if (typeof v !== 'string' || v.trim() === '') return undefined;
-  return v.split(',').map((s) => s.trim()).filter(Boolean);
+  if (typeof v !== "string" || v.trim() === "") return undefined;
+  return v
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 };
 
 const querySchema = z.object({
@@ -35,7 +38,7 @@ const querySchema = z.object({
  * `recentErrors` is reserved for v1.5.x — see issue #105 discussion.
  */
 router.get(
-  '/diagnostics',
+  "/diagnostics",
   authenticate,
   diagnosticExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -49,7 +52,7 @@ router.get(
       };
       const bundle = await buildDiagnosticsBundle(req.userId!, filters);
       logger.info({
-        operation: 'diagnostics_bundle',
+        operation: "diagnostics_bundle",
         userId: req.userId,
         context: {
           flightCount: bundle.counts.flights,
@@ -61,7 +64,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

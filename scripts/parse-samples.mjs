@@ -17,9 +17,7 @@ import http from "node:http";
 import { createRequire } from "node:module";
 
 // msgreader lives in backend/node_modules
-const require = createRequire(
-  new URL("../backend/package.json", import.meta.url)
-);
+const require = createRequire(new URL("../backend/package.json", import.meta.url));
 const MsgReader = require("@kenjiuno/msgreader").default ?? require("@kenjiuno/msgreader");
 
 // ---------- Config ----------
@@ -28,16 +26,13 @@ const SAMPLES_DIR = path.resolve("test-samples/emails");
 const SAMPLES_JSON = path.join(SAMPLES_DIR, "samples.json");
 const TIMEOUT_MS = 300_000;
 
-const ALL_MODELS = [
-  "gemma3:12b",
-  "gemma4:latest",
-  "qwen3:30b-a3b",
-];
+const ALL_MODELS = ["gemma3:12b", "gemma4:latest", "qwen3:30b-a3b"];
 
 // ---------- CLI args ----------
 const args = process.argv.slice(2);
-const singleModel = args.find((a) => a.startsWith("--model="))?.split("=")[1]
-  || (args.includes("--model") ? args[args.indexOf("--model") + 1] : null);
+const singleModel =
+  args.find((a) => a.startsWith("--model="))?.split("=")[1] ||
+  (args.includes("--model") ? args[args.indexOf("--model") + 1] : null);
 const testAll = args.includes("--all");
 const MODELS = singleModel ? [singleModel] : ALL_MODELS;
 
@@ -82,12 +77,12 @@ function fetchJson(url, body) {
     };
     const req = http.request(options, (res) => {
       let data = "";
-      res.on("data", (chunk) => { data += chunk; });
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
       res.on("end", () => resolve(data));
     });
-    req.setTimeout(TIMEOUT_MS, () =>
-      req.destroy(new Error(`Timeout after ${TIMEOUT_MS}ms`))
-    );
+    req.setTimeout(TIMEOUT_MS, () => req.destroy(new Error(`Timeout after ${TIMEOUT_MS}ms`)));
     req.on("error", reject);
     req.write(body);
     req.end();
@@ -104,7 +99,10 @@ function cleanEmailBody(text) {
   } while (out !== prev);
   out = out.replace(/https?:\/\/[^\s<>]+/gi, "");
   out = out.replace(/www\.[^\s<>]+/gi, "");
-  out = out.split("\n").map((l) => l.trim()).join("\n");
+  out = out
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n");
   out = out.replace(/\n{2,}/g, "\n");
   out = out.replace(/[ \t]{2,}/g, " ");
   return out.trim();
@@ -112,10 +110,7 @@ function cleanEmailBody(text) {
 
 function extractMsg(filePath) {
   const buffer = fs.readFileSync(filePath);
-  const arrayBuffer = buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
-  );
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
   const reader = new MsgReader(arrayBuffer);
   const data = reader.getFileData();
   return {
@@ -159,9 +154,10 @@ async function parseWithModel(model, subject, text) {
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
   const { flights, meta } = parseOllamaResponse(raw);
 
-  const tokensPerSec = meta.eval_count && meta.eval_duration
-    ? (meta.eval_count / (meta.eval_duration / 1e9)).toFixed(1)
-    : "?";
+  const tokensPerSec =
+    meta.eval_count && meta.eval_duration
+      ? (meta.eval_count / (meta.eval_duration / 1e9)).toFixed(1)
+      : "?";
 
   return { flights, elapsed, tokensPerSec };
 }
@@ -174,7 +170,15 @@ function normalizeTime(t) {
 }
 
 function compareFlight(actual, expected) {
-  const fields = ["flightNumber", "departureCode", "arrivalCode", "departureTime", "arrivalTime", "pnr", "seat"];
+  const fields = [
+    "flightNumber",
+    "departureCode",
+    "arrivalCode",
+    "departureTime",
+    "arrivalTime",
+    "pnr",
+    "seat",
+  ];
   const results = {};
   let matches = 0;
   let total = 0;
@@ -188,25 +192,31 @@ function compareFlight(actual, expected) {
       const expNorm = normalizeTime(exp);
       if (exp !== null) {
         total++;
-        if (act === expNorm) { matches++; results[f] = "OK"; }
-        else results[f] = `MISMATCH: got "${act}" expected "${expNorm}"`;
+        if (act === expNorm) {
+          matches++;
+          results[f] = "OK";
+        } else results[f] = `MISMATCH: got "${act}" expected "${expNorm}"`;
       }
     } else if (f === "flightNumber") {
       total++;
       const actClean = (act || "").replace(/\s+/g, "").toUpperCase();
       const expClean = (exp || "").replace(/\s+/g, "").toUpperCase();
-      if (actClean === expClean) { matches++; results[f] = "OK"; }
-      else results[f] = `MISMATCH: got "${act}" expected "${exp}"`;
+      if (actClean === expClean) {
+        matches++;
+        results[f] = "OK";
+      } else results[f] = `MISMATCH: got "${act}" expected "${exp}"`;
     } else if (exp !== null && exp !== undefined) {
       total++;
       const actUpper = (act || "").toUpperCase();
       const expUpper = (exp || "").toUpperCase();
-      if (actUpper === expUpper) { matches++; results[f] = "OK"; }
-      else results[f] = `MISMATCH: got "${act}" expected "${exp}"`;
+      if (actUpper === expUpper) {
+        matches++;
+        results[f] = "OK";
+      } else results[f] = `MISMATCH: got "${act}" expected "${exp}"`;
     }
   }
 
-  return { results, matches, total, score: total > 0 ? (matches / total * 100) : 0 };
+  return { results, matches, total, score: total > 0 ? (matches / total) * 100 : 0 };
 }
 
 function compareFlights(actualFlights, expectedFlights) {
@@ -218,13 +228,22 @@ function compareFlights(actualFlights, expectedFlights) {
 
   for (let i = 0; i < expectedFlights.length; i++) {
     const expected = expectedFlights[i];
-    const actual = actualFlights.find(
-      (a) => (a.flightNumber || "").replace(/\s/g, "").toUpperCase() ===
-             (expected.flightNumber || "").replace(/\s/g, "").toUpperCase()
-    ) || actualFlights[i] || null;
+    const actual =
+      actualFlights.find(
+        (a) =>
+          (a.flightNumber || "").replace(/\s/g, "").toUpperCase() ===
+          (expected.flightNumber || "").replace(/\s/g, "").toUpperCase()
+      ) ||
+      actualFlights[i] ||
+      null;
 
     if (!actual) {
-      comparisons.push({ expected: expected.flightNumber, status: "MISSING", score: 0, details: {} });
+      comparisons.push({
+        expected: expected.flightNumber,
+        status: "MISSING",
+        score: 0,
+        details: {},
+      });
       totalFields += 7;
       continue;
     }
@@ -241,10 +260,12 @@ function compareFlights(actualFlights, expectedFlights) {
   }
 
   const extraFlights = actualFlights.filter(
-    (a) => !expectedFlights.some(
-      (e) => (a.flightNumber || "").replace(/\s/g, "").toUpperCase() ===
-             (e.flightNumber || "").replace(/\s/g, "").toUpperCase()
-    )
+    (a) =>
+      !expectedFlights.some(
+        (e) =>
+          (a.flightNumber || "").replace(/\s/g, "").toUpperCase() ===
+          (e.flightNumber || "").replace(/\s/g, "").toUpperCase()
+      )
   );
 
   return {
@@ -253,7 +274,7 @@ function compareFlights(actualFlights, expectedFlights) {
     expectedCount: expectedFlights.length,
     extraFlights: extraFlights.length,
     comparisons,
-    overallScore: totalFields > 0 ? (totalMatches / totalFields * 100) : 0,
+    overallScore: totalFields > 0 ? (totalMatches / totalFields) * 100 : 0,
   };
 }
 
@@ -279,7 +300,12 @@ async function main() {
     const allMsgs = fs.readdirSync(SAMPLES_DIR).filter((f) => f.endsWith(".msg"));
     for (const msg of allMsgs) {
       if (!testFiles.some((t) => t.filename === msg)) {
-        testFiles.push({ filename: msg, filepath: path.join(SAMPLES_DIR, msg), expected: null, notes: null });
+        testFiles.push({
+          filename: msg,
+          filepath: path.join(SAMPLES_DIR, msg),
+          expected: null,
+          notes: null,
+        });
       }
     }
   }
@@ -294,8 +320,13 @@ async function main() {
     console.log("-".repeat(80));
 
     modelScores[model] = {
-      totalScore: 0, totalFiles: 0, perfectFlights: 0,
-      totalExpectedFlights: 0, totalTime: 0, errors: 0, countMismatches: 0,
+      totalScore: 0,
+      totalFiles: 0,
+      perfectFlights: 0,
+      totalExpectedFlights: 0,
+      totalTime: 0,
+      errors: 0,
+      countMismatches: 0,
     };
 
     for (const testFile of testFiles) {
@@ -305,7 +336,11 @@ async function main() {
       try {
         const email = extractMsg(testFile.filepath);
         const cleaned = cleanEmailBody(email.text);
-        const { flights, elapsed, tokensPerSec } = await parseWithModel(model, email.subject, cleaned);
+        const { flights, elapsed, tokensPerSec } = await parseWithModel(
+          model,
+          email.subject,
+          cleaned
+        );
 
         modelScores[model].totalTime += parseFloat(elapsed);
 
@@ -343,7 +378,9 @@ async function main() {
           const flightStrs = flights.map(
             (f) => `${f.flightNumber || "?"} ${f.departureCode}-${f.arrivalCode}`
           );
-          console.log(`${flights.length} flights  ${elapsed}s  ${tokensPerSec} t/s  [${flightStrs.join(", ")}]`);
+          console.log(
+            `${flights.length} flights  ${elapsed}s  ${tokensPerSec} t/s  [${flightStrs.join(", ")}]`
+          );
         }
       } catch (err) {
         modelScores[model].errors++;
@@ -357,7 +394,8 @@ async function main() {
   console.log("SUMMARY");
   console.log("=".repeat(80));
 
-  const header = "Model".padEnd(25) +
+  const header =
+    "Model".padEnd(25) +
     "Avg Score".padStart(10) +
     "Perfect".padStart(10) +
     "Count Err".padStart(10) +
@@ -370,15 +408,16 @@ async function main() {
     const s = modelScores[model];
     const avgScore = s.totalFiles > 0 ? (s.totalScore / s.totalFiles).toFixed(1) : "N/A";
     const perfectStr = `${s.perfectFlights}/${s.totalExpectedFlights}`;
-    const avgTime = testFiles.length > 0 ? (s.totalTime / testFiles.length).toFixed(1) + "s" : "N/A";
+    const avgTime =
+      testFiles.length > 0 ? (s.totalTime / testFiles.length).toFixed(1) + "s" : "N/A";
 
     console.log(
       model.padEnd(25) +
-      (avgScore + "%").padStart(10) +
-      perfectStr.padStart(10) +
-      String(s.countMismatches).padStart(10) +
-      String(s.errors).padStart(8) +
-      avgTime.padStart(10)
+        (avgScore + "%").padStart(10) +
+        perfectStr.padStart(10) +
+        String(s.countMismatches).padStart(10) +
+        String(s.errors).padStart(8) +
+        avgTime.padStart(10)
     );
   }
 

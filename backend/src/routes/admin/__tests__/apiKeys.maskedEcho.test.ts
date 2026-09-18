@@ -45,8 +45,6 @@ describe("PUT /api/v1/admin/api-keys — masked-echo overwrite protection", () =
       await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          defaultVisionParser: "auto",
-          defaultTextParser: "auto",
           allowUserFlightApiKeys: true,
         },
       });
@@ -81,9 +79,7 @@ describe("PUT /api/v1/admin/api-keys — masked-echo overwrite protection", () =
     });
 
     // Fetch the mask exactly as the admin UI would via GET.
-    const getRes = await request(app)
-      .get("/api/v1/admin/api-keys")
-      .set("Cookie", adminCookie);
+    const getRes = await request(app).get("/api/v1/admin/api-keys").set("Cookie", adminCookie);
     expect(getRes.status).toBe(200);
     const maskedAirlabs = getRes.body.globalAirlabsApiKey as string;
     expect(maskedAirlabs).toContain("****");
@@ -151,9 +147,7 @@ describe("PUT /api/v1/admin/api-keys — masked-echo overwrite protection", () =
       },
     });
 
-    const getRes = await request(app)
-      .get("/api/v1/admin/api-keys")
-      .set("Cookie", adminCookie);
+    const getRes = await request(app).get("/api/v1/admin/api-keys").set("Cookie", adminCookie);
     expect(getRes.status).toBe(200);
 
     const putRes = await request(app)
@@ -176,7 +170,7 @@ describe("PUT /api/v1/admin/api-keys — masked-echo overwrite protection", () =
     expect(decryptApiKey(row?.globalOpenskyUsername ?? null)).toBe(REAL_USERNAME);
     expect(decryptApiKey(row?.globalOpenskyPassword ?? null)).toBe(REAL_PASSWORD);
     expect(decryptApiKey(row?.globalAviationstackApiKey ?? null)).toBe(
-      "another-fresh-key-11223344",
+      "another-fresh-key-11223344"
     );
   });
 });

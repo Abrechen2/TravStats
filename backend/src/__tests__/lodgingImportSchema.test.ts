@@ -71,7 +71,7 @@ describe("lodging import schema", () => {
       data: { userId, name: "Dup A", externalRef: "google:ChIJdup" },
     });
     await expect(
-      prisma.lodging.create({ data: { userId, name: "Dup B", externalRef: "google:ChIJdup" } }),
+      prisma.lodging.create({ data: { userId, name: "Dup B", externalRef: "google:ChIJdup" } })
     ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     await prisma.lodging.delete({ where: { id: first.id } });
   });
@@ -96,7 +96,7 @@ describe("lodging import schema", () => {
           checkOut: new Date("2026-03-02T00:00:00.000Z"),
           externalRef: "booking:2222222222",
         },
-      }),
+      })
     ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     await prisma.lodgingStay.delete({ where: { id: first.id } });
     await prisma.lodging.delete({ where: { id: lodging.id } });

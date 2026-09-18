@@ -78,7 +78,7 @@ describe("lookupFlightWithHistorical", () => {
 
   it("returns FlightData[] shape for today's flight via AirLabs", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     mockedAxios.get.mockResolvedValueOnce({
@@ -121,7 +121,7 @@ describe("lookupFlightWithHistorical", () => {
 
   it("reports no_provider for any past date when no Aviationstack key is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     const oldDate = new Date(Date.now() - 90 * ONE_DAY_MS);
@@ -135,7 +135,7 @@ describe("lookupFlightWithHistorical", () => {
 
   it("reports no_provider for any future date when no Aviationstack key is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     const futureDate = new Date(Date.now() + 30 * ONE_DAY_MS);
@@ -149,7 +149,7 @@ describe("lookupFlightWithHistorical", () => {
 
   it("reports no_provider for a recent past date (yesterday) when no Aviationstack key is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     const yesterday = new Date(Date.now() - ONE_DAY_MS);
@@ -272,7 +272,7 @@ describe("lookupFlightWithHistorical", () => {
 
   it("returns an empty array (no unavailableReason) when today's lookup finds nothing", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     mockedAxios.get.mockResolvedValueOnce({ data: { response: [] } });

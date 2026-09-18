@@ -50,7 +50,7 @@ describe("ChainPicker", () => {
     render(<ChainPicker value={null} onChange={onChange} />);
     await userEvent.type(screen.getByRole("combobox"), "hilton");
 
-    const addButton = await screen.findByText('lodging:chainPicker.addMissing');
+    const addButton = await screen.findByText("lodging:chainPicker.addMissing");
     await userEvent.click(addButton);
 
     const confirmButton = await screen.findByRole("button", {
@@ -84,7 +84,7 @@ describe("ChainPicker", () => {
     render(<ChainPicker value={null} onChange={onChange} />);
     await userEvent.type(screen.getByRole("combobox"), "Novotel Business");
 
-    const addButton = await screen.findByText('lodging:chainPicker.addMissing');
+    const addButton = await screen.findByText("lodging:chainPicker.addMissing");
     await userEvent.click(addButton);
     const confirmButton = await screen.findByRole("button", { name: /chainPicker\.addMissing/ });
     await userEvent.click(confirmButton);

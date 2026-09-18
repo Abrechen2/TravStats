@@ -19,7 +19,7 @@ const RAD_PER_DEG = Math.PI / 180;
  */
 export function haversineKm(
   a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
+  b: { lat: number; lon: number }
 ): number {
   const dLat = (b.lat - a.lat) * RAD_PER_DEG;
   const dLon = (b.lon - a.lon) * RAD_PER_DEG;
@@ -48,7 +48,7 @@ const DEG_PER_RAD = 180 / Math.PI;
 export function slerp(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number },
-  t: number,
+  t: number
 ): { lat: number; lon: number } {
   const lat1 = a.lat * RAD_PER_DEG;
   const lon1 = a.lon * RAD_PER_DEG;
@@ -62,8 +62,8 @@ export function slerp(
     Math.asin(
       Math.sqrt(
         Math.sin((lat2 - lat1) / 2) ** 2 +
-          Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2,
-      ),
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
+      )
     );
   if (d < 1e-9) return { lat: a.lat, lon: a.lon };
 
@@ -98,14 +98,14 @@ export function polylineLengthKm(coords: ReadonlyArray<{ lat: number; lon: numbe
  */
 export function bearingDeg(
   a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
+  b: { lat: number; lon: number }
 ): number {
   const lat1 = a.lat * RAD_PER_DEG;
   const lat2 = b.lat * RAD_PER_DEG;
   const dLon = (b.lon - a.lon) * RAD_PER_DEG;
   const y = Math.sin(dLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * DEG_PER_RAD) + 360) % 360;
+  return (Math.atan2(y, x) * DEG_PER_RAD + 360) % 360;
 }
 
 /**

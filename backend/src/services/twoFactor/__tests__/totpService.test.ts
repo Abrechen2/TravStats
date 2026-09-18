@@ -33,7 +33,8 @@ describe("totpService", () => {
   it("accepts the previous and next step, but not two steps away", () => {
     const secret = generateSecret();
     const now = Math.floor(Date.now() / 1000);
-    const at = (offsetSeconds: number): string => generateSync({ secret, epoch: now + offsetSeconds });
+    const at = (offsetSeconds: number): string =>
+      generateSync({ secret, epoch: now + offsetSeconds });
     expect(verifyCode(secret, at(-30))).toBe(true);
     expect(verifyCode(secret, at(30))).toBe(true);
     expect(verifyCode(secret, at(-120))).toBe(false);
@@ -67,7 +68,10 @@ describe("totpService", () => {
     const legacy = "JBSWY3DPEHPK3PXP";
     // The generator side has the same floor, so the test must lower it too;
     // the service under test must NOT need telling.
-    const code = generateSync({ secret: legacy, guardrails: createGuardrails({ MIN_SECRET_BYTES: 10 }) });
+    const code = generateSync({
+      secret: legacy,
+      guardrails: createGuardrails({ MIN_SECRET_BYTES: 10 }),
+    });
     expect(verifyCode(legacy, code)).toBe(true);
   });
 

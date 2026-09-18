@@ -24,7 +24,10 @@ describe("seedTour writes a tour the app can draw", () => {
     const tour = STORIES.find((s) => s.tour)!.tour!;
     const routeId = await seedTour(tripId, tour, 0);
 
-    const stops = await prisma.tripStop.findMany({ where: { routeId }, orderBy: { routeOrderIdx: "asc" } });
+    const stops = await prisma.tripStop.findMany({
+      where: { routeId },
+      orderBy: { routeOrderIdx: "asc" },
+    });
     expect(stops.map((s) => s.title)).toEqual(tour.stops.map((s) => s.name));
     const legs = await prisma.tripRouteLeg.findMany({ where: { routeId } });
     expect(legs).toHaveLength(stops.length - 1);

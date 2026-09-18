@@ -1,13 +1,13 @@
-import { calculateDistance } from '../geo';
-import { getCachedAirports } from '../../services/airportCache';
-import { tzAwareDurationMinutes, toLocalDateString, type FlightTimeSemantics } from '../timezone';
-import logger from '../logger';
-import { getContinent } from '../continents';
-import { departureClockOf } from './departureClock';
-import type { AirportData } from '../../services/airportLookup';
-import type { FlightData, UniqueStats } from './types';
-import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
-import { isCountableFlight } from '../../shared/flightCounting';
+import { calculateDistance } from "../geo";
+import { getCachedAirports } from "../../services/airportCache";
+import { tzAwareDurationMinutes, toLocalDateString, type FlightTimeSemantics } from "../timezone";
+import logger from "../logger";
+import { getContinent } from "../continents";
+import { departureClockOf } from "./departureClock";
+import type { AirportData } from "../../services/airportLookup";
+import type { FlightData, UniqueStats } from "./types";
+import { HomeAirportEntry, getHomeAirportAt } from "../homeAirport";
+import { isCountableFlight } from "../../shared/flightCounting";
 
 /** Max duration counted as a "layover". Anything longer is a stopover / trip gap. */
 const LAYOVER_CAP_HOURS = 24;
@@ -42,7 +42,7 @@ export async function calculateUniqueStats(
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
-      f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+      f.status === "flown" && f.departureTime !== null && f.arrivalTime !== null
   );
 
   // Time-insensitive subset — flown + historical contribute to geographic
@@ -77,8 +77,8 @@ export async function calculateUniqueStats(
     }
   } catch (error) {
     logger.error({
-      operation: 'calculate_unique_stats',
-      message: 'Failed to fetch airports for time-travel calculation',
+      operation: "calculate_unique_stats",
+      message: "Failed to fetch airports for time-travel calculation",
       error,
     });
   }
@@ -105,7 +105,7 @@ export async function calculateUniqueStats(
 
   // Equator crossings — geographic, time-insensitive.
   let equatorCrossings = 0;
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     if (f.depLat != null && f.arrLat != null) {
       // Check if flight crosses equator (one hemisphere to another)
       if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
@@ -116,14 +116,16 @@ export async function calculateUniqueStats(
 
   // Arctic circle flights (north of 66.5°) — geographic, time-insensitive.
   const arcticCircle = 66.5;
-  const arcticFlights = countableFlights.filter(f => {
-    return (f.depLat != null && f.depLat >= arcticCircle) ||
-           (f.arrLat != null && f.arrLat >= arcticCircle);
+  const arcticFlights = countableFlights.filter((f) => {
+    return (
+      (f.depLat != null && f.depLat >= arcticCircle) ||
+      (f.arrLat != null && f.arrLat >= arcticCircle)
+    );
   }).length;
 
   // Ocean crossings - simplified heuristic: flights over 5000km likely cross
   // an ocean. Distance-based, time-insensitive.
-  const oceanCrossings = countableFlights.filter(f => {
+  const oceanCrossings = countableFlights.filter((f) => {
     if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) return false;
     const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
     return dist > 5000;
@@ -134,9 +136,10 @@ export async function calculateUniqueStats(
 
   try {
     // If the timezone fetch above failed, do a fresh fetch; otherwise reuse cached data
-    const airportsForAltitude = airportsForTimezone.size > 0
-      ? airportsForTimezone
-      : await getCachedAirports(Array.from(airportCodes));
+    const airportsForAltitude =
+      airportsForTimezone.size > 0
+        ? airportsForTimezone
+        : await getCachedAirports(Array.from(airportCodes));
     for (const [code, airport] of airportsForAltitude.entries()) {
       if (airport && airport.altitude != null) {
         if (!highestAirport || airport.altitude > highestAirport.altitude) {
@@ -149,28 +152,32 @@ export async function calculateUniqueStats(
       }
     }
   } catch (error) {
-    logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for altitude calculation', error });
+    logger.error({
+      operation: "calculate_unique_stats",
+      message: "Failed to fetch airports for altitude calculation",
+      error,
+    });
   }
 
   // Northernmost and southernmost points — geographic, time-insensitive.
   let northernmost: { lat: number; code: string } | null = null;
   let southernmost: { lat: number; code: string } | null = null;
 
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     if (f.depLat != null) {
       if (!northernmost || f.depLat > northernmost.lat) {
-        northernmost = { lat: f.depLat, code: f.depIata || f.depIcao || '?' };
+        northernmost = { lat: f.depLat, code: f.depIata || f.depIcao || "?" };
       }
       if (!southernmost || f.depLat < southernmost.lat) {
-        southernmost = { lat: f.depLat, code: f.depIata || f.depIcao || '?' };
+        southernmost = { lat: f.depLat, code: f.depIata || f.depIcao || "?" };
       }
     }
     if (f.arrLat != null) {
       if (!northernmost || f.arrLat > northernmost.lat) {
-        northernmost = { lat: f.arrLat, code: f.arrIata || f.arrIcao || '?' };
+        northernmost = { lat: f.arrLat, code: f.arrIata || f.arrIcao || "?" };
       }
       if (!southernmost || f.arrLat < southernmost.lat) {
-        southernmost = { lat: f.arrLat, code: f.arrIata || f.arrIcao || '?' };
+        southernmost = { lat: f.arrLat, code: f.arrIata || f.arrIcao || "?" };
       }
     }
   });
@@ -178,8 +185,8 @@ export async function calculateUniqueStats(
   // Longest travel chain (consecutive flights)
   let longestChain = 0;
   if (flownFlights.length > 0) {
-    const sortedFlights = [...flownFlights].sort((a, b) =>
-      new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+    const sortedFlights = [...flownFlights].sort(
+      (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
     );
 
     let currentChain = 1;
@@ -190,10 +197,17 @@ export async function calculateUniqueStats(
       // Check if current flight departs from where previous arrived (within 24 hours)
       const prevArrCode = prev.arrIata || prev.arrIcao;
       const currDepCode = curr.depIata || curr.depIcao;
-      const timeDiff = new Date(curr.departureTime).getTime() - new Date(prev.arrivalTime).getTime();
+      const timeDiff =
+        new Date(curr.departureTime).getTime() - new Date(prev.arrivalTime).getTime();
       const hoursDiff = timeDiff / (1000 * 60 * 60);
 
-      if (prevArrCode && currDepCode && prevArrCode === currDepCode && hoursDiff >= 0 && hoursDiff <= 24) {
+      if (
+        prevArrCode &&
+        currDepCode &&
+        prevArrCode === currDepCode &&
+        hoursDiff >= 0 &&
+        hoursDiff <= 24
+      ) {
         currentChain++;
       } else {
         longestChain = Math.max(longestChain, currentChain);
@@ -206,7 +220,7 @@ export async function calculateUniqueStats(
   // Fastest route (highest average ground speed) — timezone-aware duration
   let fastestRoute: { route: string; speed: number } | null = null;
 
-  flownFlights.forEach(f => {
+  flownFlights.forEach((f) => {
     if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
       const distance = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
 
@@ -234,17 +248,18 @@ export async function calculateUniqueStats(
         depTz,
         arrTz,
         (f as { depTimeSemantics?: FlightTimeSemantics }).depTimeSemantics,
-        (f as { arrTimeSemantics?: FlightTimeSemantics }).arrTimeSemantics,
+        (f as { arrTimeSemantics?: FlightTimeSemantics }).arrTimeSemantics
       );
       // DATE_ONLY rows return null and are skipped from the fastest-route
       // tournament — placeholder times would produce nonsense ground speeds.
       const durationHours = durationMinutes === null ? 0 : durationMinutes / 60;
 
-      if (durationHours > 0.5) { // Ignore flights with <30min duration (likely bad data)
+      if (durationHours > 0.5) {
+        // Ignore flights with <30min duration (likely bad data)
         const speed = distance / durationHours; // km/h
         if (speed <= 1200 && (!fastestRoute || speed > fastestRoute.speed)) {
           fastestRoute = {
-            route: `${f.depIata || f.depIcao || '?'}-${f.arrIata || f.arrIcao || '?'}`,
+            route: `${f.depIata || f.depIcao || "?"}-${f.arrIata || f.arrIcao || "?"}`,
             speed: Math.round(speed),
           };
         }
@@ -258,7 +273,7 @@ export async function calculateUniqueStats(
   // same screen used to disagree about which day a flight belonged to: the
   // same-day and midnight counters below already read the local clock.
   const flightsByDate: Record<string, FlightData[]> = {};
-  flownFlights.forEach(f => {
+  flownFlights.forEach((f) => {
     const dateKey = departureClockOf(f)?.date;
     if (!dateKey) return;
     if (!flightsByDate[dateKey]) {
@@ -271,13 +286,14 @@ export async function calculateUniqueStats(
   let mostCountriesDate: string | null = null;
 
   try {
-    const airports = airportsForTimezone.size > 0
-      ? airportsForTimezone
-      : await getCachedAirports(Array.from(airportCodes));
+    const airports =
+      airportsForTimezone.size > 0
+        ? airportsForTimezone
+        : await getCachedAirports(Array.from(airportCodes));
 
     Object.entries(flightsByDate).forEach(([date, dayFlights]) => {
       const countries = new Set<string>();
-      dayFlights.forEach(f => {
+      dayFlights.forEach((f) => {
         const depCode = f.depIata || f.depIcao;
         const arrCode = f.arrIata || f.arrIcao;
 
@@ -297,13 +313,17 @@ export async function calculateUniqueStats(
       }
     });
   } catch (error) {
-    logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for country calculation', error });
+    logger.error({
+      operation: "calculate_unique_stats",
+      message: "Failed to fetch airports for country calculation",
+      error,
+    });
   }
 
   // Hemisphere hopper — flights crossing between northern and southern
   // hemisphere. Geographic, time-insensitive.
   let hemisphereHops = 0;
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     if (f.depLat != null && f.arrLat != null) {
       // Check if flight crosses from one hemisphere to another
       if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
@@ -315,7 +335,7 @@ export async function calculateUniqueStats(
   // Date line crosser — flights crossing the International Date Line (180°
   // longitude). Geographic, time-insensitive.
   let dateLineCrossings = 0;
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     if (f.depLon != null && f.arrLon != null) {
       // Check if flight crosses the date line (180° or -180°)
       const lonDiff = Math.abs(f.arrLon - f.depLon);
@@ -329,10 +349,11 @@ export async function calculateUniqueStats(
   // Continental explorer — count unique continents. Time-insensitive.
   const continents = new Set<string>();
   try {
-    const airports = airportsForTimezone.size > 0
-      ? airportsForTimezone
-      : await getCachedAirports(Array.from(airportCodes));
-    countableFlights.forEach(f => {
+    const airports =
+      airportsForTimezone.size > 0
+        ? airportsForTimezone
+        : await getCachedAirports(Array.from(airportCodes));
+    countableFlights.forEach((f) => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
 
@@ -352,14 +373,18 @@ export async function calculateUniqueStats(
       }
     });
   } catch (error) {
-    logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for continent calculation', error });
+    logger.error({
+      operation: "calculate_unique_stats",
+      message: "Failed to fetch airports for continent calculation",
+      error,
+    });
   }
 
   // Tropics traveler — flights within the tropics (between 23.5°N and
   // 23.5°S). Geographic, time-insensitive.
   const tropicOfCancer = 23.5;
   const tropicOfCapricorn = -23.5;
-  const tropicsFlights = countableFlights.filter(f => {
+  const tropicsFlights = countableFlights.filter((f) => {
     if (f.depLat == null || f.arrLat == null) return false;
     // Check if both departure and arrival are within tropics
     const depInTropics = f.depLat >= tropicOfCapricorn && f.depLat <= tropicOfCancer;
@@ -371,7 +396,7 @@ export async function calculateUniqueStats(
   // time-insensitive.
   let eastwardFlights = 0;
   let westwardFlights = 0;
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     if (f.depLon != null && f.arrLon != null) {
       let lonDiff = f.arrLon - f.depLon;
       // Handle date line crossing
@@ -384,7 +409,7 @@ export async function calculateUniqueStats(
   });
 
   // Same-day flights - flights that depart and arrive on the same local calendar day
-  const sameDayFlights = flownFlights.filter(f => {
+  const sameDayFlights = flownFlights.filter((f) => {
     const depTz =
       (f.depIata && timezoneMap.get(f.depIata)) ||
       (f.depIcao && timezoneMap.get(f.depIcao)) ||
@@ -399,7 +424,7 @@ export async function calculateUniqueStats(
   }).length;
 
   // Midnight flyer - flights that cross midnight (local time)
-  const midnightFlights = flownFlights.filter(f => {
+  const midnightFlights = flownFlights.filter((f) => {
     const depTz =
       (f.depIata && timezoneMap.get(f.depIata)) ||
       (f.depIcao && timezoneMap.get(f.depIcao)) ||
@@ -417,7 +442,7 @@ export async function calculateUniqueStats(
   // historical flights when the user knows it; UNKNOWN-year-only entries
   // bias toward winter (month defaults to 01) but the volume is small.
   const seasons = new Set<number>();
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     const clock = departureClockOf(f);
     if (!clock) return;
     const month = clock.month; // 0-11
@@ -432,10 +457,11 @@ export async function calculateUniqueStats(
   let internationalFlights = 0;
   let domesticFlights = 0;
   try {
-    const airports = airportsForTimezone.size > 0
-      ? airportsForTimezone
-      : await getCachedAirports(Array.from(airportCodes));
-    countableFlights.forEach(f => {
+    const airports =
+      airportsForTimezone.size > 0
+        ? airportsForTimezone
+        : await getCachedAirports(Array.from(airportCodes));
+    countableFlights.forEach((f) => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
 
@@ -453,7 +479,11 @@ export async function calculateUniqueStats(
       }
     });
   } catch (error) {
-    logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for international/domestic calculation', error });
+    logger.error({
+      operation: "calculate_unique_stats",
+      message: "Failed to fetch airports for international/domestic calculation",
+      error,
+    });
   }
 
   // Layovers — the waiting time between two consecutive flights at the same
@@ -473,8 +503,8 @@ export async function calculateUniqueStats(
       const current = sortedFlights[i];
       const next = sortedFlights[i + 1];
 
-      const currentArrCode = current.arrIata || current.arrIcao || '?';
-      const nextDepCode = next.depIata || next.depIcao || '?';
+      const currentArrCode = current.arrIata || current.arrIcao || "?";
+      const nextDepCode = next.depIata || next.depIcao || "?";
 
       // Same airport for end-of-current and start-of-next?
       if (currentArrCode !== nextDepCode) continue;
@@ -508,7 +538,7 @@ export async function calculateUniqueStats(
   // only one exists. Legs cannot be paired more often than the scarcer
   // direction allows.
   const legsByDirection = new Map<string, number>();
-  countableFlights.forEach(f => {
+  countableFlights.forEach((f) => {
     const depCode = f.depIata || f.depIcao;
     const arrCode = f.arrIata || f.arrIcao;
     if (!depCode || !arrCode) return;
@@ -519,13 +549,13 @@ export async function calculateUniqueStats(
   const countedPairs = new Set<string>();
   let roundTripCount = 0;
   for (const [key, thereCount] of legsByDirection.entries()) {
-    const [dep, arr] = key.split('-');
+    const [dep, arr] = key.split("-");
     const reverseKey = `${arr}-${dep}`;
     const backCount = legsByDirection.get(reverseKey);
     if (backCount === undefined) continue;
     // Each unordered pair once — otherwise A-B and B-A both add the same
     // round trips.
-    const pairKey = [key, reverseKey].sort().join('|');
+    const pairKey = [key, reverseKey].sort().join("|");
     if (countedPairs.has(pairKey)) continue;
     countedPairs.add(pairKey);
     roundTripCount += Math.min(thereCount, backCount);
@@ -551,7 +581,10 @@ export async function calculateUniqueStats(
     eastWestBalance: {
       eastward: eastwardFlights,
       westward: westwardFlights,
-      ratio: westwardFlights > 0 ? Math.round((eastwardFlights / westwardFlights) * 100) / 100 : eastwardFlights,
+      ratio:
+        westwardFlights > 0
+          ? Math.round((eastwardFlights / westwardFlights) * 100) / 100
+          : eastwardFlights,
     },
     sameDayFlights,
     midnightFlights,
@@ -560,7 +593,10 @@ export async function calculateUniqueStats(
     internationalVsDomestic: {
       international: internationalFlights,
       domestic: domesticFlights,
-      ratio: domesticFlights > 0 ? Math.round((internationalFlights / domesticFlights) * 100) / 100 : internationalFlights,
+      ratio:
+        domesticFlights > 0
+          ? Math.round((internationalFlights / domesticFlights) * 100) / 100
+          : internationalFlights,
     },
     longestLayover,
     shortestLayover,
@@ -575,14 +611,14 @@ export async function calculateUniqueStats(
  */
 function toLocalMinutes(date: Date, timezone: string): number {
   try {
-    const parts = new Intl.DateTimeFormat('en', {
+    const parts = new Intl.DateTimeFormat("en", {
       timeZone: timezone,
-      hour: 'numeric',
-      minute: 'numeric',
+      hour: "numeric",
+      minute: "numeric",
       hour12: false,
     }).formatToParts(date);
-    const h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10);
-    const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0', 10);
+    const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+    const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
     return h * 60 + m;
   } catch {
     // Fallback to UTC if the timezone string is invalid/unrecognised
@@ -593,4 +629,3 @@ function toLocalMinutes(date: Date, timezone: string): number {
 // toLocalDateString now lives in utils/timezone alongside localWallClockOf —
 // had been copied here, and a second copy was about to be written for the
 // year-scoped country index.
-

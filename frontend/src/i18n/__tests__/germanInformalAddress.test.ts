@@ -62,9 +62,10 @@ describe("German UI uses informal address (#236)", () => {
   it("keeps every allowlist entry real — a stale exception is a silent hole", () => {
     for (const entry of ALLOWED) {
       const raw = fs.readFileSync(path.join(DE_DIR, entry.file), "utf-8");
-      expect(raw, `Allowlisted fragment no longer present in ${entry.file}: ${entry.why}`).toContain(
-        entry.fragment
-      );
+      expect(
+        raw,
+        `Allowlisted fragment no longer present in ${entry.file}: ${entry.why}`
+      ).toContain(entry.fragment);
     }
   });
 });

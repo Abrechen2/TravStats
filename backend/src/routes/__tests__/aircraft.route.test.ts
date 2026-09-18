@@ -35,7 +35,9 @@ describe("Aircraft API", () => {
       const res = await request(app).get("/api/v1/aircraft?q=a320").set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(
-        res.body.data.some((a: { icao: string; name: string }) => a.icao === "A320" && a.name === "Airbus A320")
+        res.body.data.some(
+          (a: { icao: string; name: string }) => a.icao === "A320" && a.name === "Airbus A320"
+        )
       ).toBe(true);
     });
 
@@ -58,9 +60,7 @@ describe("Aircraft API", () => {
 
       const listRes = await request(app).get("/api/v1/aircraft?q=test").set("Cookie", authCookie);
       expect(listRes.status).toBe(200);
-      expect(listRes.body.data.some((a: { icao: string }) => a.icao === THROWAWAY_ICAO)).toBe(
-        true
-      );
+      expect(listRes.body.data.some((a: { icao: string }) => a.icao === THROWAWAY_ICAO)).toBe(true);
     });
 
     it("returns 409 for a duplicate ICAO (seeded type)", async () => {

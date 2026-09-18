@@ -13,8 +13,9 @@ describe("planRoles", () => {
 
 describe("permissionsFor", () => {
   it("gives the Maintainer Administrator", () => {
-    expect(permissionsFor({ name: "Maintainer", color: "#f0a947", admin: true }))
-      .toBe(PermissionFlagsBits.Administrator);
+    expect(permissionsFor({ name: "Maintainer", color: "#f0a947", admin: true })).toBe(
+      PermissionFlagsBits.Administrator
+    );
   });
 
   it("gives the Beta-Tester no permissions", () => {
@@ -23,11 +24,21 @@ describe("permissionsFor", () => {
 
   it("gives the Moderator kick + ban + moderate", () => {
     const perms = permissionsFor({ name: "Moderator", color: "#4aa6b0", mod: true });
-    expect((perms & PermissionFlagsBits.KickMembers) === PermissionFlagsBits.KickMembers).toBe(true);
+    expect((perms & PermissionFlagsBits.KickMembers) === PermissionFlagsBits.KickMembers).toBe(
+      true
+    );
     expect((perms & PermissionFlagsBits.BanMembers) === PermissionFlagsBits.BanMembers).toBe(true);
-    expect((perms & PermissionFlagsBits.ModerateMembers) === PermissionFlagsBits.ModerateMembers).toBe(true);
-    expect((perms & PermissionFlagsBits.ManageMessages) === PermissionFlagsBits.ManageMessages).toBe(true);
-    expect((perms & PermissionFlagsBits.ManageThreads) === PermissionFlagsBits.ManageThreads).toBe(true);
-    expect((perms & PermissionFlagsBits.ViewAuditLog) === PermissionFlagsBits.ViewAuditLog).toBe(true);
+    expect(
+      (perms & PermissionFlagsBits.ModerateMembers) === PermissionFlagsBits.ModerateMembers
+    ).toBe(true);
+    expect(
+      (perms & PermissionFlagsBits.ManageMessages) === PermissionFlagsBits.ManageMessages
+    ).toBe(true);
+    expect((perms & PermissionFlagsBits.ManageThreads) === PermissionFlagsBits.ManageThreads).toBe(
+      true
+    );
+    expect((perms & PermissionFlagsBits.ViewAuditLog) === PermissionFlagsBits.ViewAuditLog).toBe(
+      true
+    );
   });
 });

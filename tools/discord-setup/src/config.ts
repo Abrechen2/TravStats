@@ -35,17 +35,31 @@ export const CATEGORIES: readonly CategoryDef[] = [
     name: "INFO",
     visibility: "public",
     channels: [
-      { name: "rules", kind: "text", readOnly: true, topic: "Server rules — react ✈️ to unlock beta." },
+      {
+        name: "rules",
+        kind: "text",
+        readOnly: true,
+        topic: "Server rules — react ✈️ to unlock beta.",
+      },
       { name: "welcome", kind: "text", readOnly: true, topic: "Start here." },
       { name: "announcements", kind: "announcement", readOnly: true },
-      { name: "changelog", kind: "announcement", readOnly: true, topic: "Release notes mirrored from CHANGELOG.md." },
+      {
+        name: "changelog",
+        kind: "announcement",
+        readOnly: true,
+        topic: "Release notes mirrored from CHANGELOG.md.",
+      },
     ],
   },
   {
     name: "COMMUNITY",
     visibility: "public",
     channels: [
-      { name: "showcase", kind: "text", topic: "Show off your travel maps, stats and screenshots." },
+      {
+        name: "showcase",
+        kind: "text",
+        topic: "Show off your travel maps, stats and screenshots.",
+      },
       { name: "off-topic", kind: "text" },
       { name: "general", kind: "text" },
     ],
@@ -54,9 +68,17 @@ export const CATEGORIES: readonly CategoryDef[] = [
     name: "SUPPORT",
     visibility: "public",
     channels: [
-      { name: "bug-report", kind: "forum", topic: "Report bugs. Search first, one issue per post." },
+      {
+        name: "bug-report",
+        kind: "forum",
+        topic: "Report bugs. Search first, one issue per post.",
+      },
       { name: "install-help", kind: "text", topic: "Docker, reverse proxy, first-run help." },
-      { name: "import-help", kind: "text", topic: "Flight/cruise booking parsing, email/PDF import, API keys." },
+      {
+        name: "import-help",
+        kind: "text",
+        topic: "Flight/cruise booking parsing, email/PDF import, API keys.",
+      },
       { name: "translation", kind: "text", topic: "i18n DE/EN wording and fixes." },
     ],
   },
@@ -83,7 +105,11 @@ export const CATEGORIES: readonly CategoryDef[] = [
         kind: "text",
         topic: "Release candidates (-rc.N) — the build lined up to ship, final testing.",
       },
-      { name: "beta-feedback", kind: "text", topic: "Feedback + bug reports for beta and RC builds." },
+      {
+        name: "beta-feedback",
+        kind: "text",
+        topic: "Feedback + bug reports for beta and RC builds.",
+      },
     ],
   },
   {

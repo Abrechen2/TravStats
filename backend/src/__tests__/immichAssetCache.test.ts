@@ -82,7 +82,7 @@ describe("getCachedAlbumAssets", () => {
       () =>
         new Promise<ImmichAsset[]>((resolve) => {
           resolveLoad = resolve;
-        }),
+        })
     );
 
     const a = getCachedAlbumAssets("u1", "a1", load);
@@ -110,7 +110,7 @@ describe("invalidateAlbumAssets", () => {
       () =>
         new Promise<ImmichAsset[]>((resolve) => {
           resolveLoad = resolve;
-        }),
+        })
     );
 
     // Caller X starts a load; it is registered in-flight but not yet
@@ -147,7 +147,7 @@ describe("invalidateAlbumAssets", () => {
       () =>
         new Promise<ImmichAsset[]>((resolve) => {
           resolveLoadX = resolve;
-        }),
+        })
     );
     const callX = getCachedAlbumAssets("u1", "a1", loadX);
 
@@ -161,7 +161,7 @@ describe("invalidateAlbumAssets", () => {
       () =>
         new Promise<ImmichAsset[]>((resolve) => {
           resolveLoadZ = resolve;
-        }),
+        })
     );
     const callZ = getCachedAlbumAssets("u1", "a1", loadZ);
 
@@ -182,7 +182,7 @@ describe("invalidateAlbumAssets", () => {
       () =>
         new Promise<ImmichAsset[]>((resolve) => {
           resolveLoadW = resolve;
-        }),
+        })
     );
     const callW = getCachedAlbumAssets("u1", "a1", loadW);
 

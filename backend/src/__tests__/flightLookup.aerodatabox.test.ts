@@ -56,7 +56,10 @@ jest.mock("../utils/logger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-import { lookupFlightAerodatabox, __resetAerodataboxCacheForTests } from "../services/aerodataboxLookup";
+import {
+  lookupFlightAerodatabox,
+  __resetAerodataboxCacheForTests,
+} from "../services/aerodataboxLookup";
 import logger from "../utils/logger";
 import {
   lookupFlightWithHistorical,
@@ -83,7 +86,7 @@ describe("lookupFlightAerodatabox", () => {
 
   it("calls AeroDataBox with the RapidAPI host + key headers", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "aerodatabox" ? "secret-key" : null,
+      provider === "aerodatabox" ? "secret-key" : null
     );
 
     mockedAxios.get.mockResolvedValueOnce({ data: [] });
@@ -91,7 +94,10 @@ describe("lookupFlightAerodatabox", () => {
     await lookupFlightAerodatabox("LH400", "2026-04-15");
 
     expect(mockedAxios.get).toHaveBeenCalledTimes(1);
-    const [url, config] = mockedAxios.get.mock.calls[0] as [string, { headers: Record<string, string> }];
+    const [url, config] = mockedAxios.get.mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ];
     expect(url).toContain("aerodatabox.p.rapidapi.com");
     expect(url).toContain("/flights/number/LH400/2026-04-15");
     expect(config.headers["x-rapidapi-host"]).toBe("aerodatabox.p.rapidapi.com");
@@ -120,11 +126,11 @@ describe("lookupFlightAerodatabox", () => {
     expect(result).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ operation: "unexpected_response_shape", receivedType: "object" }),
-      expect.stringContaining("not a flight list"),
+      expect.stringContaining("not a flight list")
     );
     expect(logger.warn).not.toHaveBeenCalledWith(
       expect.objectContaining({ operation: "api_call_error" }),
-      expect.anything(),
+      expect.anything()
     );
 
     // Not cached — the next ask goes back to the provider.
@@ -510,7 +516,7 @@ describe("lookupFlightWithHistorical — AeroDataBox cascade integration", () =>
     // the historical gate hard-required Aviationstack. The new gate must
     // accept AeroDataBox alone.
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "aerodatabox" ? "secret-aerodatabox-key" : null,
+      provider === "aerodatabox" ? "secret-aerodatabox-key" : null
     );
 
     const requestedDate = new Date(Date.now() - 90 * ONE_DAY_MS);
@@ -548,7 +554,7 @@ describe("lookupFlightWithHistorical — AeroDataBox cascade integration", () =>
 
   it("still returns no_provider for past dates when neither Aviationstack nor AeroDataBox is configured", async () => {
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "airlabs" ? "test-airlabs-key" : null,
+      provider === "airlabs" ? "test-airlabs-key" : null
     );
 
     const oldDate = new Date(Date.now() - 90 * ONE_DAY_MS);
@@ -565,7 +571,7 @@ describe("aerodataboxLookup — extended-field mapping (v1.5)", () => {
     jest.clearAllMocks();
     __resetAerodataboxCacheForTests();
     apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
-      provider === "aerodatabox" ? "secret-key" : null,
+      provider === "aerodatabox" ? "secret-key" : null
     );
   });
 
@@ -608,7 +614,7 @@ describe("aerodataboxLookup — extended-field mapping (v1.5)", () => {
     expect(result?.runwayArrivalTime?.toISOString()).toBe("2024-01-15T18:25:00.000Z");
     expect(result?.isCargo).toBe(false);
     expect(result?.aerodataboxQualityTags).toEqual(["Basic", "Live"]);
-    expect(result?.baggageBelt).toBe("3");       // arrival side — passenger picks up here
+    expect(result?.baggageBelt).toBe("3"); // arrival side — passenger picks up here
     expect(result?.checkInDesk).toBe("120-150"); // departure side — passenger checks in here
     expect(result?.aerodataboxLastUpdatedUtc?.toISOString()).toBe("2024-01-15T18:30:00.000Z");
   });

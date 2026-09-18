@@ -1,38 +1,39 @@
-import { Router, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
-import { z } from 'zod';
-import { prisma } from '../db';
-import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
-import { statsLimiter } from '../middleware/rateLimit';
-import { AppError } from '../middleware/errorHandler';
-import { assertReferencesOwned } from '../utils/ownedReferences';
-import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
-import { checkAndUpdateAchievements } from '../utils/achievements';
-import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
-import { buildLegRouteOverrideMap, portLegRouteKey } from '../shared/cruise/legRouteKey';
-import { computeSchematicRoute } from '../services/schematicRouter';
-import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
-import { cruiseExternalRef } from '../services/importProvenance';
-import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
-import { recomputeTripStatus } from '../services/tripStatusService';
-import { resolveCompanions, linkRowsFor } from '../services/companionService';
-import logger from '../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+import { prisma } from "../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { statsLimiter } from "../middleware/rateLimit";
+import { AppError } from "../middleware/errorHandler";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { assertReferencesOwned } from "../utils/ownedReferences";
+import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from "../schemas/cruise";
+import { checkAndUpdateAchievements } from "../utils/achievements";
+import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
+import { buildLegRouteOverrideMap, portLegRouteKey } from "../shared/cruise/legRouteKey";
+import { computeSchematicRoute } from "../services/schematicRouter";
+import { recomputeLegsForCruise } from "../services/cruiseDistance/cruiseLegService";
+import { cruiseExternalRef } from "../services/importProvenance";
+import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
+import { recomputeTripStatus } from "../services/tripStatusService";
+import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import logger from "../utils/logger";
 
 interface GeometryFeature {
-  type: 'Feature';
-  geometry: { type: 'LineString'; coordinates: [number, number][] };
+  type: "Feature";
+  geometry: { type: "LineString"; coordinates: [number, number][] };
   properties: {
     fromPortId: number;
     toPortId: number;
     routed: boolean;
     protectedPrefixCount: number;
     protectedSuffixCount: number;
-    method: 'short_hop' | 'maritime_graph' | 'coarse_a_star' | 'direct' | 'manual_polyline';
+    method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct" | "manual_polyline";
   };
 }
 
 interface GeometryFeatureCollection {
-  type: 'FeatureCollection';
+  type: "FeatureCollection";
   features: GeometryFeature[];
 }
 
@@ -62,7 +63,7 @@ interface CruiseGeometryInput {
  * first miss.
  */
 async function buildCruiseGeometry(
-  cruise: CruiseGeometryInput,
+  cruise: CruiseGeometryInput
 ): Promise<{ collection: GeometryFeatureCollection; routedLegs: number; directLegs: number }> {
   const portCalls = cruise.stops
     .filter((s) => !s.isAtSea && s.port !== null)
@@ -84,15 +85,15 @@ async function buildCruiseGeometry(
     const manual = overrideByLeg.get(portLegRouteKey(a.id, b.id));
     if (manual && manual.length >= 2) {
       features.push({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: manual },
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: manual },
         properties: {
           fromPortId: a.id,
           toPortId: b.id,
           routed: false,
           protectedPrefixCount: 0,
           protectedSuffixCount: 0,
-          method: 'manual_polyline',
+          method: "manual_polyline",
         },
       });
       directLegs++;
@@ -100,12 +101,28 @@ async function buildCruiseGeometry(
     }
 
     const route = await computeSchematicRoute(
-      { id: a.id, name: a.name, city: a.city, country: a.country, unlocode: a.unlocode, lat: a.lat, lon: a.lon },
-      { id: b.id, name: b.name, city: b.city, country: b.country, unlocode: b.unlocode, lat: b.lat, lon: b.lon },
+      {
+        id: a.id,
+        name: a.name,
+        city: a.city,
+        country: a.country,
+        unlocode: a.unlocode,
+        lat: a.lat,
+        lon: a.lon,
+      },
+      {
+        id: b.id,
+        name: b.name,
+        city: b.city,
+        country: b.country,
+        unlocode: b.unlocode,
+        lat: b.lat,
+        lon: b.lon,
+      }
     );
     features.push({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: route.waypoints },
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: route.waypoints },
       properties: {
         fromPortId: a.id,
         toPortId: b.id,
@@ -119,7 +136,7 @@ async function buildCruiseGeometry(
     else directLegs++;
   }
 
-  return { collection: { type: 'FeatureCollection', features }, routedLegs, directLegs };
+  return { collection: { type: "FeatureCollection", features }, routedLegs, directLegs };
 }
 
 const router = Router();
@@ -136,25 +153,25 @@ const CRUISE_INCLUDE = {
   // cruise belongs to, and pulling the whole Trip row (with its own relations)
   // into every list entry would be paid on all 500 rows for two fields.
   trip: { select: { id: true, name: true, color: true } },
-  stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
-  legs: { orderBy: { ordinal: 'asc' as const } },
+  stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+  legs: { orderBy: { ordinal: "asc" as const } },
 } satisfies Prisma.CruiseInclude;
 
 const requireUser = (req: AuthRequest): string => {
-  if (!req.userId) throw new AppError('Not authenticated', 401);
+  if (!req.userId) throw new AppError("Not authenticated", 401);
   return req.userId;
 };
 
 const buildWhere = (q: Record<string, unknown>, userId: string): Prisma.CruiseWhereInput => {
   const where: Prisma.CruiseWhereInput = { userId };
-  if (typeof q.cruiseLine === 'string') where.cruiseLine = q.cruiseLine;
-  if (typeof q.status === 'string') where.status = q.status;
-  if (typeof q.tripId === 'string') where.tripId = q.tripId;
-  if (typeof q.year === 'number') {
+  if (typeof q.cruiseLine === "string") where.cruiseLine = q.cruiseLine;
+  if (typeof q.status === "string") where.status = q.status;
+  if (typeof q.tripId === "string") where.tripId = q.tripId;
+  if (typeof q.year === "number") {
     const y = q.year;
     where.startDate = { gte: new Date(`${y}-01-01`), lt: new Date(`${y + 1}-01-01`) };
   }
-  if (typeof q.region === 'string') {
+  if (typeof q.region === "string") {
     const region = q.region;
     where.OR = [
       { departurePort: { region } },
@@ -165,7 +182,7 @@ const buildWhere = (q: Record<string, unknown>, userId: string): Prisma.CruiseWh
   return where;
 };
 
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = cruiseQuerySchema.safeParse(req.query);
@@ -175,7 +192,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const cruises = await prisma.cruise.findMany({
       where,
       include: CRUISE_INCLUDE,
-      orderBy: { startDate: 'desc' },
+      orderBy: { startDate: "desc" },
       take: parsed.data.limit ?? 500,
       skip: parsed.data.offset ?? 0,
     });
@@ -185,14 +202,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
-router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const cruise = await prisma.cruise.findFirst({
       where: { id: req.params.id, userId },
       include: CRUISE_INCLUDE,
     });
-    if (!cruise) throw new AppError('Cruise not found', 404);
+    if (!cruise) throw new AppError("Cruise not found", 404);
     res.json({ success: true, data: cruise });
   } catch (err) {
     next(err);
@@ -246,102 +263,120 @@ const geometryBatchSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
 });
 
-router.post('/geometry/batch', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const parsed = geometryBatchSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.post(
+  "/geometry/batch",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const parsed = geometryBatchSchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const cruises = await prisma.cruise.findMany({
-      where: { id: { in: parsed.data.ids }, userId },
-      include: {
-        stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
-        departurePort: true,
-        arrivalPort: true,
-        legRoutes: true,
-      },
-    });
+      const cruises = await prisma.cruise.findMany({
+        where: { id: { in: parsed.data.ids }, userId },
+        include: {
+          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+          departurePort: true,
+          arrivalPort: true,
+          legRoutes: true,
+        },
+      });
 
-    const computedAt = Date.now();
-    const data: Record<string, GeometryFeatureCollection> = {};
-    let totalRouted = 0;
-    let totalDirect = 0;
+      const computedAt = Date.now();
+      const data: Record<string, GeometryFeatureCollection> = {};
+      let totalRouted = 0;
+      let totalDirect = 0;
 
-    // Parallel — each leg lookup is sub-millisecond after the first
-    // miss, so concurrency just amortises the cache misses across
-    // cruises without overloading anything.
-    const results = await Promise.all(
-      cruises.map(async (cruise) => ({ id: cruise.id, ...(await buildCruiseGeometry(cruise)) })),
-    );
-    for (const r of results) {
-      data[r.id] = r.collection;
-      totalRouted += r.routedLegs;
-      totalDirect += r.directLegs;
+      // Parallel — each leg lookup is sub-millisecond after the first
+      // miss, so concurrency just amortises the cache misses across
+      // cruises without overloading anything.
+      const results = await Promise.all(
+        cruises.map(async (cruise) => ({ id: cruise.id, ...(await buildCruiseGeometry(cruise)) }))
+      );
+      for (const r of results) {
+        data[r.id] = r.collection;
+        totalRouted += r.routedLegs;
+        totalDirect += r.directLegs;
+      }
+
+      logger.info({
+        operation: "cruise_geometry_batch",
+        userId,
+        requested: parsed.data.ids.length,
+        returned: cruises.length,
+        routedLegs: totalRouted,
+        directLegs: totalDirect,
+        durationMs: Date.now() - computedAt,
+      });
+
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
     }
-
-    logger.info({
-      operation: 'cruise_geometry_batch',
-      userId,
-      requested: parsed.data.ids.length,
-      returned: cruises.length,
-      routedLegs: totalRouted,
-      directLegs: totalDirect,
-      durationMs: Date.now() - computedAt,
-    });
-
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // Same routing cost as the batch route above, one cruise at a time — same bucket.
-router.get('/:id/geometry', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const cruise = await prisma.cruise.findFirst({
-      where: { id: req.params.id, userId },
-      include: {
-        stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
-        departurePort: true,
-        arrivalPort: true,
-        legRoutes: true,
-      },
-    });
-    if (!cruise) throw new AppError('Cruise not found', 404);
+router.get(
+  "/:id/geometry",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const cruise = await prisma.cruise.findFirst({
+        where: { id: req.params.id, userId },
+        include: {
+          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+          departurePort: true,
+          arrivalPort: true,
+          legRoutes: true,
+        },
+      });
+      if (!cruise) throw new AppError("Cruise not found", 404);
 
-    const computedAt = Date.now();
-    const { collection, routedLegs, directLegs } = await buildCruiseGeometry(cruise);
+      const computedAt = Date.now();
+      const { collection, routedLegs, directLegs } = await buildCruiseGeometry(cruise);
 
-    logger.info({
-      operation: 'cruise_geometry_computed',
-      cruiseId: cruise.id,
-      userId,
-      stops: cruise.stops.filter((s) => !s.isAtSea && s.port !== null).length,
-      routedLegs,
-      directLegs,
-      durationMs: Date.now() - computedAt,
-    });
+      logger.info({
+        operation: "cruise_geometry_computed",
+        cruiseId: cruise.id,
+        userId,
+        stops: cruise.stops.filter((s) => !s.isAtSea && s.port !== null).length,
+        routedLegs,
+        directLegs,
+        durationMs: Date.now() - computedAt,
+      });
 
-    res.json({ success: true, data: collection });
-  } catch (err) {
-    next(err);
+      res.json({ success: true, data: collection });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
-router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = createCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, tripId, bookingId, status, companions, importBatchId, ...rest } =
-      parsed.data;
+    const {
+      stops,
+      startDate,
+      endDate,
+      tripId,
+      bookingId,
+      status,
+      companions,
+      importBatchId,
+      ...rest
+    } = parsed.data;
 
     // Prisma enforces that the trip and booking EXIST, never whose they are —
     // so without this a cruise could be filed under a stranger's trip and
     // would show up on their timeline (AUD-038).
     await assertReferencesOwned(userId, { tripId, bookingId });
+    const documentIds = await takeDocumentIds(userId, req.body);
 
     // A batch id means "this came from an import". It is client-supplied, so
     // ownership is checked here — otherwise it is a handle into someone
@@ -380,7 +415,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       if (existing) {
         res.status(409).json({
           success: false,
-          error: 'already_imported',
+          error: "already_imported",
           data: { id: existing.id },
         });
         return;
@@ -455,6 +490,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       await recomputeLegsForCruise(created.id, tx);
       return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
     });
+    await linkDocuments(userId, documentIds, { type: "cruise", id: cruise.id });
 
     // Status derivation (spec 2026-07-17-status-from-dates) needs to read
     // the cruise it just linked, so recomputeTripStatus() runs AFTER the
@@ -473,31 +509,30 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       await checkAndUpdateAchievements(userId);
     } catch (achErr) {
       logger.error({
-        operation: 'cruise_achievement_check_failed',
+        operation: "cruise_achievement_check_failed",
         error: achErr instanceof Error ? achErr.message : achErr,
       });
     }
 
-    logger.info({ operation: 'cruise_create', cruiseId: cruise.id, userId });
+    logger.info({ operation: "cruise_create", cruiseId: cruise.id, userId });
     res.status(201).json({ success: true, data: cruise });
   } catch (err) {
     next(err);
   }
 });
 
-router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const existing = await prisma.cruise.findFirst({ where: { id: req.params.id, userId } });
-    if (!existing) throw new AppError('Cruise not found', 404);
+    if (!existing) throw new AppError("Cruise not found", 404);
 
     const parsed = updateCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     // Re-linking is a write too — see the create path (AUD-038).
     await assertReferencesOwned(userId, parsed.data);
 
-    const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } =
-      parsed.data;
+    const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } = parsed.data;
 
     const nextStartDate =
       startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
@@ -516,7 +551,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       finalEndDate !== null &&
       finalEndDate.getTime() < finalStartDate.getTime()
     ) {
-      throw new AppError('endDate must not precede startDate', 400);
+      throw new AppError("endDate must not precede startDate", 400);
     }
 
     // A batch id is client-supplied and is a handle into an import's undo
@@ -527,7 +562,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
     // filtered it out (AUD-090).
     if (rest.importBatchId !== undefined && rest.importBatchId !== null) {
       const batch = await prisma.importBatch.findFirst({
-        where: { id: rest.importBatchId, userId, domain: 'cruise' },
+        where: { id: rest.importBatchId, userId, domain: "cruise" },
         select: { id: true },
       });
       // Dropped rather than refused, exactly as on create: the edit the user
@@ -543,7 +578,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       requestedStatus !== undefined &&
       (CRUISE_PASSTHROUGH as readonly string[]).includes(requestedStatus);
     const currentIsPassthrough = (CRUISE_PASSTHROUGH as readonly string[]).includes(
-      existing.status,
+      existing.status
     );
     let effectiveStatus: string | undefined;
     if (isRequestedPassthrough) {
@@ -624,8 +659,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 
       // Legs span departure port → stops → arrival port, so a changed
       // departure/arrival port invalidates them just like changed stops.
-      const portsChanged =
-        'departurePortId' in parsed.data || 'arrivalPortId' in parsed.data;
+      const portsChanged = "departurePortId" in parsed.data || "arrivalPortId" in parsed.data;
       if (stops !== undefined || portsChanged) {
         await recomputeLegsForCruise(existing.id, tx);
       }
@@ -639,7 +673,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
     // already-linked cruise AND a tripId move — recompute whichever of the
     // old/new trip the cruise was or is now linked to (both, if it moved).
     const oldTripId = existing.tripId;
-    const newTripId = 'tripId' in rest ? (rest.tripId ?? null) : oldTripId;
+    const newTripId = "tripId" in rest ? (rest.tripId ?? null) : oldTripId;
     const tripIdsToRecompute = new Set<string>();
     if (oldTripId) tripIdsToRecompute.add(oldTripId);
     if (newTripId) tripIdsToRecompute.add(newTripId);
@@ -657,7 +691,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       await checkAndUpdateAchievements(userId);
     } catch (achErr) {
       logger.error({
-        operation: 'cruise_achievement_check_failed',
+        operation: "cruise_achievement_check_failed",
         error: achErr instanceof Error ? achErr.message : achErr,
       });
     }
@@ -668,11 +702,11 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
   }
 });
 
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const existing = await prisma.cruise.findFirst({ where: { id: req.params.id, userId } });
-    if (!existing) throw new AppError('Cruise not found', 404);
+    if (!existing) throw new AppError("Cruise not found", 404);
     await prisma.cruise.delete({ where: { id: existing.id } });
     res.status(204).send();
   } catch (err) {

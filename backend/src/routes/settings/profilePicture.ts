@@ -1,20 +1,20 @@
-import { Router, Response, NextFunction, Request } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { Prisma } from '@prisma/client';
-import { AuthRequest } from '../../middleware/auth';
+import { Router, Response, NextFunction, Request } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { Prisma } from "@prisma/client";
+import { AuthRequest } from "../../middleware/auth";
 import {
   uploadProfilePicture,
   deleteProfilePictureFile,
   getProfilePictureDir,
-} from '../../middleware/upload';
-import { uploadProfilePictureLimiter } from '../../middleware/rateLimit';
-import { AppError } from '../../middleware/errorHandler';
-import { validateProfilePictureFile } from '../../utils/fileValidation';
-import { prisma } from '../../db';
-import logger from '../../utils/logger';
-import { SettingsDataJson, defaultSettings } from './types';
+} from "../../middleware/upload";
+import { uploadProfilePictureLimiter } from "../../middleware/rateLimit";
+import { AppError } from "../../middleware/errorHandler";
+import { validateProfilePictureFile } from "../../utils/fileValidation";
+import { prisma } from "../../db";
+import logger from "../../utils/logger";
+import { SettingsDataJson, defaultSettings } from "./types";
 
 const router = Router();
 
@@ -26,18 +26,18 @@ const router = Router();
  * frontend fell back to a doomed `blob:` URL).
  */
 router.post(
-  '/',
+  "/",
   uploadProfilePictureLimiter,
   // Wrap multer manually so oversized / invalid-mimetype uploads surface as
   // a normal 400 AppError instead of falling through to the generic 500
   // path the shared errorHandler uses for unrecognised MulterError objects.
   (req: Request, res: Response, next: NextFunction) => {
-    uploadProfilePicture.single('profilePicture')(req, res, (err: unknown) => {
+    uploadProfilePicture.single("profilePicture")(req, res, (err: unknown) => {
       if (err) {
-        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-          return next(new AppError('File too large. Maximum size is 5 MB.', 400));
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return next(new AppError("File too large. Maximum size is 5 MB.", 400));
         }
-        const message = err instanceof Error ? err.message : 'Upload failed';
+        const message = err instanceof Error ? err.message : "Upload failed";
         return next(new AppError(message, 400));
       }
       next();
@@ -49,7 +49,7 @@ router.post(
       const userId = req.userId!;
 
       if (!req.file) {
-        throw new AppError('No file uploaded', 400);
+        throw new AppError("No file uploaded", 400);
       }
       // Rebuild the cleanup path from the trusted upload dir + the basename of
       // multer's server-generated filename, never the raw req.file.path. The
@@ -65,8 +65,8 @@ router.post(
           fs.unlinkSync(filePath);
         }
         logger.warn({
-          operation: 'profile_picture_upload_validation_failed',
-          message: 'Profile picture validation failed',
+          operation: "profile_picture_upload_validation_failed",
+          message: "Profile picture validation failed",
           context: {
             userId,
             filename: req.file.originalname,
@@ -82,11 +82,10 @@ router.post(
       // Look up any previous avatar so it can be deleted after the new one
       // is safely persisted — otherwise every replacement leaks a file.
       const existing = await prisma.userSettings.findUnique({ where: { userId } });
-      const existingData = (
-        typeof existing?.data === 'object' && existing.data !== null
+      const existingData =
+        typeof existing?.data === "object" && existing.data !== null
           ? (existing.data as SettingsDataJson)
-          : {}
-      );
+          : {};
       const previousUrl = existingData.profile?.profilePicture;
 
       const merged: SettingsDataJson = {
@@ -114,7 +113,7 @@ router.post(
           historicalEnrichmentEnabled: false,
           historicalEnrichmentMinConfidence: 60,
           historicalEnrichmentMaxPerDay: 50,
-          enabledDomains: ['flight'],
+          enabledDomains: ["flight"],
         },
       });
 
@@ -122,10 +121,10 @@ router.post(
       // if it's actually a locally-served avatar (not a legacy external URL).
       if (
         previousUrl &&
-        typeof previousUrl === 'string' &&
-        previousUrl.startsWith('/api/v1/settings/profile-picture/')
+        typeof previousUrl === "string" &&
+        previousUrl.startsWith("/api/v1/settings/profile-picture/")
       ) {
-        const previousFilename = previousUrl.split('/').pop();
+        const previousFilename = previousUrl.split("/").pop();
         if (previousFilename && previousFilename !== req.file.filename) {
           deleteProfilePictureFile(previousFilename);
         }
@@ -138,8 +137,8 @@ router.post(
           fs.unlinkSync(filePath);
         } catch (_cleanupError) {
           logger.error({
-            operation: 'profile_picture_upload_cleanup_error',
-            message: 'Failed to cleanup file after error',
+            operation: "profile_picture_upload_cleanup_error",
+            message: "Failed to cleanup file after error",
             context: { filePath },
           });
         }
@@ -156,49 +155,46 @@ router.post(
  * replacement path). Idempotent — deleting with no avatar set is a 200
  * no-op, so the UI never has to special-case "was there one?".
  */
-router.delete(
-  '/',
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const existing = await prisma.userSettings.findUnique({ where: { userId } });
-      const existingData =
-        typeof existing?.data === 'object' && existing.data !== null
-          ? (existing.data as SettingsDataJson)
-          : {};
-      const previousUrl = existingData.profile?.profilePicture;
+router.delete("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const existing = await prisma.userSettings.findUnique({ where: { userId } });
+    const existingData =
+      typeof existing?.data === "object" && existing.data !== null
+        ? (existing.data as SettingsDataJson)
+        : {};
+    const previousUrl = existingData.profile?.profilePicture;
 
-      if (existing && previousUrl) {
-        const merged: SettingsDataJson = {
-          ...existingData,
-          profile: {
-            ...existingData.profile,
-            profilePicture: null,
-          },
-        };
-        await prisma.userSettings.update({
-          where: { userId },
-          data: { data: merged as Prisma.InputJsonValue },
-        });
-      }
-
-      if (
-        previousUrl &&
-        typeof previousUrl === 'string' &&
-        previousUrl.startsWith('/api/v1/settings/profile-picture/')
-      ) {
-        const previousFilename = previousUrl.split('/').pop();
-        if (previousFilename) {
-          deleteProfilePictureFile(previousFilename);
-        }
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      next(error);
+    if (existing && previousUrl) {
+      const merged: SettingsDataJson = {
+        ...existingData,
+        profile: {
+          ...existingData.profile,
+          profilePicture: null,
+        },
+      };
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { data: merged as Prisma.InputJsonValue },
+      });
     }
+
+    if (
+      previousUrl &&
+      typeof previousUrl === "string" &&
+      previousUrl.startsWith("/api/v1/settings/profile-picture/")
+    ) {
+      const previousFilename = previousUrl.split("/").pop();
+      if (previousFilename) {
+        deleteProfilePictureFile(previousFilename);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * GET /api/v1/settings/profile-picture/:filename
@@ -208,7 +204,7 @@ router.delete(
  * by guessing a filename.
  */
 router.get(
-  '/:filename',
+  "/:filename",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -217,14 +213,14 @@ router.get(
       // Sanitize to prevent directory traversal.
       const sanitized = path.basename(filename);
 
-      const ownerId = sanitized.split('_')[0];
+      const ownerId = sanitized.split("_")[0];
       if (!ownerId || ownerId !== userId) {
-        throw new AppError('File not found or access denied', 404);
+        throw new AppError("File not found or access denied", 404);
       }
 
       const filePath = path.join(getProfilePictureDir(), sanitized);
       if (!fs.existsSync(filePath)) {
-        throw new AppError('File not found', 404);
+        throw new AppError("File not found", 404);
       }
 
       res.sendFile(filePath);

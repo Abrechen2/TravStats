@@ -90,9 +90,7 @@ describe("Photon reverse places", () => {
   });
 
   it("marks a geocoder failure as degraded and never throws", async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error("boom")) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error("boom")) as unknown as typeof fetch;
 
     const outcome = await reversePlacesDetailed(52, 13);
 

@@ -1,36 +1,36 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from "express";
 import type { Prisma } from "@prisma/client";
 import { appVersion } from "../utils/version";
-import { z } from 'zod';
-import { prisma } from '../db';
-import { hashPassword } from '../utils/password';
-import { issueAuthCookie } from '../utils/session';
-import { AppError } from '../middleware/errorHandler';
-import { takeUserCountLock } from '../utils/userCountLock';
-import { getSeedingStatus } from '../services/airportSeedingService';
-import { updateInstanceSettings } from '../services/instanceSettingsService';
-import { authLimiter } from '../middleware/rateLimit';
-import { DOMAIN_KEYS, type DomainKey } from '../shared/domains';
-import logger from '../utils/logger';
+import { z } from "zod";
+import { prisma } from "../db";
+import { hashPassword } from "../utils/password";
+import { issueAuthCookie } from "../utils/session";
+import { AppError } from "../middleware/errorHandler";
+import { takeUserCountLock } from "../utils/userCountLock";
+import { getSeedingStatus } from "../services/airportSeedingService";
+import { updateInstanceSettings } from "../services/instanceSettingsService";
+import { authLimiter } from "../middleware/rateLimit";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
+import logger from "../utils/logger";
 
 const initializeSchema = z.object({
-  username: z.string().min(1, 'Username is required').max(50),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  username: z.string().min(1, "Username is required").max(50),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
   instanceName: z.string().max(100).optional(),
-  frontendUrl: z.string().url('Frontend URL must be a valid URL').max(500).optional(),
+  frontendUrl: z.string().url("Frontend URL must be a valid URL").max(500).optional(),
   maxUsers: z.number().int().min(1).max(1000).optional(),
   allowRegistration: z.boolean().optional(),
   enabledDomains: z
     .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
     .optional()
-    .default(['flight']),
-  usageStatsConsent: z.enum(['granted', 'denied']).optional(),
+    .default(["flight"]),
+  usageStatsConsent: z.enum(["granted", "denied"]).optional(),
 });
 
 const router = Router();
 
 // Check setup status
-router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/status", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userCount = await prisma.user.count();
     const adminCount = await prisma.user.count({
@@ -45,12 +45,12 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
       requiresSetup: !setupComplete,
       // Read at request time, not from the cached env schema — the test flips
       // it per case, and a real instance is never restarted just for this flag.
-      publicDemoLogin: process.env.PUBLIC_DEMO_LOGIN === 'true',
+      publicDemoLogin: process.env.PUBLIC_DEMO_LOGIN === "true",
       message: setupComplete
-        ? 'Instance is configured'
+        ? "Instance is configured"
         : userCount === 0
-        ? 'Please create the first admin account'
-        : 'Please create an admin account',
+          ? "Please create the first admin account"
+          : "Please create an admin account",
     });
   } catch (error) {
     next(error);
@@ -58,7 +58,7 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Initialize instance (only works if no admin users exist)
-router.post('/initialize', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/initialize", authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = initializeSchema.parse(req.body);
     const {
@@ -89,7 +89,7 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
         where: { isAdmin: true },
       });
       if (adminCount > 0) {
-        throw new AppError('Setup already completed - admin user exists', 400);
+        throw new AppError("Setup already completed - admin user exists", 400);
       }
 
       return tx.user.create({
@@ -133,10 +133,10 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
     // DB error inside setConsent must not abort an otherwise-successful setup.
     if (usageStatsConsent) {
       try {
-        const { applyConsentChange } = await import('./admin/usageStats');
+        const { applyConsentChange } = await import("./admin/usageStats");
         await applyConsentChange(usageStatsConsent);
       } catch (error) {
-        logger.debug({ error }, 'usage-stats consent could not be applied during setup');
+        logger.debug({ error }, "usage-stats consent could not be applied during setup");
       }
     }
 
@@ -146,7 +146,7 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
 
     res.json({
       success: true,
-      message: 'Setup complete! You can now log in as admin.',
+      message: "Setup complete! You can now log in as admin.",
       user: {
         id: user.id,
         username: user.username,
@@ -159,14 +159,14 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
 });
 
 // Get airport seeding status
-router.get('/airport-seeding-status', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/airport-seeding-status", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const status = await getSeedingStatus();
 
     if (!status) {
       // No seeding needed or no status record
       return res.json({
-        status: 'completed',
+        status: "completed",
         progress: 1,
         estimatedSecondsRemaining: 0,
       });

@@ -56,7 +56,10 @@ registry.registerPath({
     "is one list in the code with a test that the backup actually uses it — a " +
     "backup that carried the rows but not the files looked complete and was not.",
   tags: backupTag,
-  responses: { 202: { description: "Started" }, 409: { description: "Already running", content: errorContent } },
+  responses: {
+    202: { description: "Started" },
+    409: { description: "Already running", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -66,7 +69,10 @@ registry.registerPath({
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },
   responses: {
-    200: { description: "Archive", content: { "application/octet-stream": { schema: z.string() } } },
+    200: {
+      description: "Archive",
+      content: { "application/octet-stream": { schema: z.string() } },
+    },
     404: notFound,
   },
 });
@@ -291,7 +297,11 @@ registry.registerPath({
   summary: "Apply a proposal to its flight",
   tags: pendingTag,
   request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Applied" }, 404: notFound, 410: { description: "Expired", content: errorContent } },
+  responses: {
+    200: { description: "Applied" },
+    404: notFound,
+    410: { description: "Expired", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -379,7 +389,10 @@ registry.registerPath({
     "airports' own coordinates — those are not populated on this payload.",
   tags: flightsTag,
   request: {
-    query: z.object({ page: z.coerce.number().int().optional(), limit: z.coerce.number().int().optional() }),
+    query: z.object({
+      page: z.coerce.number().int().optional(),
+      limit: z.coerce.number().int().optional(),
+    }),
   },
   responses: { 200: { description: "GeoJSON features" } },
 });
@@ -407,7 +420,11 @@ registry.registerPath({
   summary: "Fill in one historical flight from a provider",
   tags: flightsTag,
   request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Enriched" }, 404: notFound, 503: { description: "No provider configured", content: errorContent } },
+  responses: {
+    200: { description: "Enriched" },
+    404: notFound,
+    503: { description: "No provider configured", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -415,8 +432,7 @@ registry.registerPath({
   path: "/flights/refresh-historical-bulk/preview",
   summary: "What a bulk refresh would touch, and what it would cost",
   description:
-    "Provider calls are metered, so the count matters before the run rather than " +
-    "after it.",
+    "Provider calls are metered, so the count matters before the run rather than " + "after it.",
   tags: flightsTag,
   responses: { 200: { description: "Preview" } },
 });
@@ -426,7 +442,10 @@ registry.registerPath({
   path: "/flights/refresh-historical-bulk",
   summary: "Refresh many historical flights",
   tags: flightsTag,
-  responses: { 202: { description: "Started" }, 503: { description: "No provider configured", content: errorContent } },
+  responses: {
+    202: { description: "Started" },
+    503: { description: "No provider configured", content: errorContent },
+  },
 });
 
 // ------------------------------------------------------------- airports
@@ -471,7 +490,10 @@ registry.registerPath({
   path: "/airports/enrich",
   summary: "Fill in missing airport details from a provider",
   tags: airportsTag,
-  responses: { 200: { description: "Enriched" }, 503: { description: "No provider configured", content: errorContent } },
+  responses: {
+    200: { description: "Enriched" },
+    503: { description: "No provider configured", content: errorContent },
+  },
 });
 
 // ----------------------------------------------------------------- auth
@@ -524,7 +546,10 @@ registry.registerPath({
   path: "/auth/me",
   summary: "Who the caller is",
   tags: authTag,
-  responses: { 200: { description: "The current user" }, 401: { description: "Not signed in", content: errorContent } },
+  responses: {
+    200: { description: "The current user" },
+    401: { description: "Not signed in", content: errorContent },
+  },
 });
 
 registry.registerPath({
@@ -532,5 +557,9 @@ registry.registerPath({
   path: "/auth/change-password",
   summary: "Change the password",
   tags: authTag,
-  responses: { 200: { description: "Changed" }, 400: badInput, 401: { description: "Wrong current password", content: errorContent } },
+  responses: {
+    200: { description: "Changed" },
+    400: badInput,
+    401: { description: "Wrong current password", content: errorContent },
+  },
 });

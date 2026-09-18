@@ -45,7 +45,7 @@ describe("lodging schema constraints", () => {
   it("rejects a second membership for the same user + program", async () => {
     await prisma.lodgingMembership.create({ data: { userId, programName: "TEST_Bonvoy" } });
     await expect(
-      prisma.lodgingMembership.create({ data: { userId, programName: "TEST_Bonvoy" } }),
+      prisma.lodgingMembership.create({ data: { userId, programName: "TEST_Bonvoy" } })
     ).rejects.toThrow();
   });
 

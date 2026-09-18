@@ -32,7 +32,7 @@ describe("withReadOnlyDeny", () => {
   it("merges SendMessages into an existing @everyone deny (single entry, both perms)", () => {
     const result = withReadOnlyDeny(
       [{ id: "everyone", deny: [PermissionFlagsBits.ViewChannel] }],
-      "everyone",
+      "everyone"
     );
     const everyone = result.filter((o) => o.id === "everyone");
     expect(everyone).toHaveLength(1);

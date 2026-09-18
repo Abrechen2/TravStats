@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { BACKED_UP_UPLOAD_DIRS } from '../uploadDirs';
+import * as fs from "fs";
+import * as path from "path";
+import { BACKED_UP_UPLOAD_DIRS } from "../uploadDirs";
 
 /**
  * The guard that would have caught the original defect: three of six upload
@@ -11,7 +11,7 @@ import { BACKED_UP_UPLOAD_DIRS } from '../uploadDirs';
  * without adding it here fails here, not in someone's restore.
  */
 function collectUploadDirNamesFromSource(): Set<string> {
-  const root = path.join(__dirname, '../..');
+  const root = path.join(__dirname, "../..");
   const found = new Set<string>();
   // Only the constant form — `path.join(__dirname, '../../uploads/<name>')`,
   // anchored on the `../../` prefix that form always carries.
@@ -28,10 +28,10 @@ function collectUploadDirNamesFromSource(): Set<string> {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
+        if (entry.name === "node_modules" || entry.name === "__tests__") continue;
         walk(full);
-      } else if (entry.name.endsWith('.ts')) {
-        const text = fs.readFileSync(full, 'utf8');
+      } else if (entry.name.endsWith(".ts")) {
+        const text = fs.readFileSync(full, "utf8");
         let m: RegExpExecArray | null;
         while ((m = pattern.exec(text)) !== null) found.add(m[1]);
       }
@@ -41,8 +41,8 @@ function collectUploadDirNamesFromSource(): Set<string> {
   return found;
 }
 
-describe('upload directories', () => {
-  it('backs up every upload directory the source defines', () => {
+describe("upload directories", () => {
+  it("backs up every upload directory the source defines", () => {
     const inSource = collectUploadDirNamesFromSource();
     // Sanity: the scan must actually find something, or this test passes for
     // the wrong reason forever.
@@ -52,7 +52,7 @@ describe('upload directories', () => {
     expect(missing).toEqual([]);
   });
 
-  it('lists no directory twice', () => {
+  it("lists no directory twice", () => {
     expect(new Set(BACKED_UP_UPLOAD_DIRS).size).toBe(BACKED_UP_UPLOAD_DIRS.length);
   });
 });

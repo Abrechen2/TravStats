@@ -170,7 +170,11 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   const flights = chainCoherentSort(dbFlights);
 
   if (flights.length === 0) {
-    return await finalizeWithCleanup({ proposed: [], created: [], orphansRemoved: 0 }, userId, dryRun);
+    return await finalizeWithCleanup(
+      { proposed: [], created: [], orphansRemoved: 0 },
+      userId,
+      dryRun
+    );
   }
 
   const homeHistory = await loadHomeHistory(userId);
@@ -297,7 +301,9 @@ function dropCancelledDuplicates(flights: FlightLite[]): FlightLite[] {
 }
 
 function spanDays(flights: FlightLite[]): number {
-  const dates = flights.map((f) => f.departureTime?.getTime()).filter((t): t is number => typeof t === "number");
+  const dates = flights
+    .map((f) => f.departureTime?.getTime())
+    .filter((t): t is number => typeof t === "number");
   if (dates.length === 0) return 0;
   return Math.round((Math.max(...dates) - Math.min(...dates)) / MS_PER_DAY);
 }
@@ -434,11 +440,7 @@ function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
-      if (
-        day[i].arrIata &&
-        day[j].depIata &&
-        day[i].arrIata === day[j].depIata
-      ) {
+      if (day[i].arrIata && day[j].depIata && day[i].arrIata === day[j].depIata) {
         adj[i].push(j);
         inDegree[j]++;
       }
@@ -446,8 +448,7 @@ function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
   }
 
   const byDepTime = (a: number, b: number): number =>
-    (day[a].departureTime?.getTime() ?? 0) -
-    (day[b].departureTime?.getTime() ?? 0);
+    (day[a].departureTime?.getTime() ?? 0) - (day[b].departureTime?.getTime() ?? 0);
 
   // Initial frontier: in-degree-0 nodes sorted by depTime (stable tiebreak
   // for two unrelated chains starting on the same day).
@@ -489,10 +490,10 @@ function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
 function makeProposal(
   source: ProposedTrip["source"],
   flights: FlightLite[],
-  pnr: string | null,
+  pnr: string | null
 ): ProposedTrip {
   const sorted = [...flights].sort(
-    (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0),
+    (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0)
   );
   const origin = sorted[0]?.depIata ?? "?";
   const lastArrival = sorted[sorted.length - 1]?.arrIata ?? "?";
@@ -504,9 +505,7 @@ function makeProposal(
   // final arrival, which feels more natural than picking the middle leg.
   const isLoop = source === "home_loop" || origin === lastArrival;
   const destination = isLoop ? furthestFromOrigin(sorted, origin) : lastArrival;
-  const from = sorted[0]?.departureTime
-    ? toYmd(sorted[0].departureTime)
-    : "";
+  const from = sorted[0]?.departureTime ? toYmd(sorted[0].departureTime) : "";
   const to = sorted[sorted.length - 1]?.departureTime
     ? toYmd(sorted[sorted.length - 1].departureTime as Date)
     : "";
@@ -560,7 +559,7 @@ function furthestFromOrigin(flights: FlightLite[], origin: string): string {
 
 async function commitProposals(
   userId: string,
-  proposals: ProposedTrip[],
+  proposals: ProposedTrip[]
 ): Promise<DetectionResult> {
   if (proposals.length === 0) {
     return { proposed: proposals, created: [], orphansRemoved: 0 };
@@ -612,7 +611,7 @@ async function commitProposals(
       }
       return out;
     },
-    { timeout: 30_000, maxWait: 5_000 },
+    { timeout: 30_000, maxWait: 5_000 }
   );
 
   // Now that the transaction has committed, derive each newly-created
@@ -631,7 +630,7 @@ async function commitProposals(
 async function finalizeWithCleanup(
   result: DetectionResult,
   userId: string,
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<DetectionResult> {
   if (dryRun) return result;
 

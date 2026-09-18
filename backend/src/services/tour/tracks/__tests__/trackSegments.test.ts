@@ -74,9 +74,11 @@ describe("adopting a whole track", () => {
     const pts: string[] = [];
     for (let i = 0; i <= 100; i++) {
       const lat = i % 2 === 0 ? 0 : 0.0002;
-      pts.push(`<trkpt lat="${lat}" lon="${(i * 0.0001).toFixed(6)}"><time>2026-05-01T10:00:${String(
-        i % 60,
-      ).padStart(2, "0")}Z</time></trkpt>`);
+      pts.push(
+        `<trkpt lat="${lat}" lon="${(i * 0.0001).toFixed(6)}"><time>2026-05-01T10:00:${String(
+          i % 60
+        ).padStart(2, "0")}Z</time></trkpt>`
+      );
     }
     return `<?xml version="1.0"?>
 <gpx version="1.1" creator="test"><trk><trkseg>${pts.join("")}</trkseg></trk></gpx>`;
@@ -94,7 +96,7 @@ describe("adopting a whole track", () => {
       ingested.geometry,
       { lat: first[1], lon: first[0] },
       { lat: last[1], lon: last[0] },
-      { cumulativeKm: ingested.cumulativeKm },
+      { cumulativeKm: ingested.cumulativeKm }
     );
 
     expect(adoption).not.toBeNull();
@@ -112,7 +114,7 @@ describe("adopting a whole track", () => {
       ingested.geometry,
       { lat: first[1], lon: first[0] },
       { lat: last[1], lon: last[0] },
-      { cumulativeKm: null },
+      { cumulativeKm: null }
     );
 
     expect(adoption!.basis).toBe("simplified");
@@ -138,7 +140,7 @@ describe("adopting across a recording gap", () => {
         maxAnchorKm: 5000,
         cumulativeKm: ingested.cumulativeKm,
         segmentStarts: ingested.segmentStarts,
-      },
+      }
     );
 
     expect(adoption).not.toBeNull();
@@ -154,7 +156,7 @@ describe("adopting across a recording gap", () => {
       ingested.geometry,
       { lat: a[1], lon: a[0] },
       { lat: b[1], lon: b[0] },
-      { cumulativeKm: ingested.cumulativeKm, segmentStarts: ingested.segmentStarts },
+      { cumulativeKm: ingested.cumulativeKm, segmentStarts: ingested.segmentStarts }
     );
 
     expect(adoption!.spansRecordingGap).toBe(false);

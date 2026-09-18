@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import ChangeDiffView from "./ChangeDiffView";
 import PendingUpdateEditor from "./PendingUpdateEditor";
+import { formatDateTime } from "../lib/displayFormat";
 
 interface FlightUpdateData {
   airline?: string;
@@ -274,12 +275,12 @@ export default function PendingUpdateCard({
           <div className="p-4 border-t border-border text-sm text-(--text-muted)">
             {update.status === "applied" && update.appliedAt && (
               <div>
-                {t("pendingUpdates:appliedAt")} {new Date(update.appliedAt).toLocaleString()}
+                {t("pendingUpdates:appliedAt")} {formatDateTime(update.appliedAt)}
               </div>
             )}
             {update.status === "rejected" && update.rejectedAt && (
               <div>
-                {t("pendingUpdates:rejectedAt")} {new Date(update.rejectedAt).toLocaleString()}
+                {t("pendingUpdates:rejectedAt")} {formatDateTime(update.rejectedAt)}
               </div>
             )}
           </div>

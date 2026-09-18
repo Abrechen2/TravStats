@@ -1,4 +1,9 @@
-import { createGuardrails, generateSecret as otpGenerateSecret, generateURI, verifySync } from "otplib";
+import {
+  createGuardrails,
+  generateSecret as otpGenerateSecret,
+  generateURI,
+  verifySync,
+} from "otplib";
 import { encrypt, decrypt } from "../../utils/encryption";
 
 // One step (30s) of tolerance either side. Phone clocks drift; two steps would
@@ -41,7 +46,12 @@ export function verifyCode(secret: string, code: string): boolean {
   const normalised = code.replace(/\s+/g, "");
   if (!/^\d{6}$/.test(normalised)) return false;
   try {
-    return verifySync({ secret, token: normalised, epochTolerance: EPOCH_TOLERANCE_SECONDS, guardrails }).valid;
+    return verifySync({
+      secret,
+      token: normalised,
+      epochTolerance: EPOCH_TOLERANCE_SECONDS,
+      guardrails,
+    }).valid;
   } catch {
     return false;
   }

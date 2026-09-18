@@ -130,7 +130,7 @@ export function accumulateCountryDays(
   accumulator: CountryDayAccumulator,
   points: readonly TimedPosition[],
   countryAt: (lat: number, lon: number) => string | null,
-  atKnownAirport: KnownAirportTest = () => false,
+  atKnownAirport: KnownAirportTest = () => false
 ): void {
   for (const point of points) {
     if (!Number.isFinite(point.timestampMs)) continue;
@@ -187,13 +187,13 @@ export function drainCountryDays(accumulator: CountryDayAccumulator): CountryDay
       airportPointCount: bucket.airportPointCount,
       spanKm: haversineKm(
         { lat: bucket.minLat, lon: bucket.minLon },
-        { lat: bucket.maxLat, lon: bucket.maxLon },
+        { lat: bucket.maxLat, lon: bucket.maxLon }
       ),
     });
   }
 
   return observations.sort(
-    (a, b) => a.date.localeCompare(b.date) || a.countryCode.localeCompare(b.countryCode),
+    (a, b) => a.date.localeCompare(b.date) || a.countryCode.localeCompare(b.countryCode)
   );
 }
 
@@ -201,7 +201,7 @@ export function drainCountryDays(accumulator: CountryDayAccumulator): CountryDay
 export function reduceToCountryDays(
   points: readonly TimedPosition[],
   countryAt: (lat: number, lon: number) => string | null,
-  atKnownAirport?: KnownAirportTest,
+  atKnownAirport?: KnownAirportTest
 ): CountryDayObservation[] {
   const accumulator = createCountryDayAccumulator();
   accumulateCountryDays(accumulator, points, countryAt, atKnownAirport);

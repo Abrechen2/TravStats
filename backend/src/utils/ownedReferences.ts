@@ -31,7 +31,7 @@ export interface OwnedReferences {
  */
 export async function assertTripOwned(
   tripId: string | null | undefined,
-  userId: string,
+  userId: string
 ): Promise<void> {
   if (!tripId) return;
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
@@ -40,7 +40,7 @@ export async function assertTripOwned(
 
 export async function assertBookingOwned(
   bookingId: string | null | undefined,
-  userId: string,
+  userId: string
 ): Promise<void> {
   if (!bookingId) return;
   const booking = await prisma.booking.findFirst({
@@ -52,7 +52,7 @@ export async function assertBookingOwned(
 
 export async function assertMembershipOwned(
   membershipId: string | null | undefined,
-  userId: string,
+  userId: string
 ): Promise<void> {
   if (!membershipId) return;
   const membership = await prisma.lodgingMembership.findFirst({
@@ -63,10 +63,7 @@ export async function assertMembershipOwned(
 }
 
 /** All three at once, for a write path that accepts all three. */
-export async function assertReferencesOwned(
-  userId: string,
-  refs: OwnedReferences,
-): Promise<void> {
+export async function assertReferencesOwned(userId: string, refs: OwnedReferences): Promise<void> {
   await Promise.all([
     assertTripOwned(refs.tripId, userId),
     assertBookingOwned(refs.bookingId, userId),

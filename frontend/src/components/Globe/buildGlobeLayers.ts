@@ -7,12 +7,7 @@
 // caller wraps this in `useMemo` and supplies the same dependency list
 // it would have used inline; nothing in here depends on render scope.
 
-import {
-  ColumnLayer,
-  PathLayer,
-  ScatterplotLayer,
-  SolidPolygonLayer,
-} from "@deck.gl/layers";
+import { ColumnLayer, PathLayer, ScatterplotLayer, SolidPolygonLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import {
@@ -460,7 +455,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] &
+      EarthOcclusionExtensionProps),
     // NOTE: IATA / UN-LOCODE labels are intentionally NOT a deck.gl
     // TextLayer here. deck.gl 9's billboard TextLayer/IconLayer does not
     // render under MapLibre's globe projection in interleaved mode (the

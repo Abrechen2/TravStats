@@ -56,10 +56,7 @@ interface FlightFixture {
 // Build a fixture whose departureTime falls inside the precise reminder
 // window (now + hoursAhead ± 15 min) so the scheduler's in-process check
 // accepts it. depTimeSemantics='UTC' lets the scheduler skip airport lookup.
-function makeFlight(
-  overrides: Partial<FlightFixture> = {},
-  hoursAhead = 24,
-): FlightFixture {
+function makeFlight(overrides: Partial<FlightFixture> = {}, hoursAhead = 24): FlightFixture {
   const departureTime = new Date(Date.now() + hoursAhead * 60 * 60 * 1000);
   return {
     id: "flight-a",
@@ -92,9 +89,8 @@ describe("reminderScheduler", () => {
 
   describe("startReminderScheduler", () => {
     it("schedules a cron job every 15 minutes", async () => {
-      const { startReminderScheduler, stopReminderScheduler } = await import(
-        "../services/reminderScheduler"
-      );
+      const { startReminderScheduler, stopReminderScheduler } =
+        await import("../services/reminderScheduler");
 
       startReminderScheduler();
 
@@ -105,9 +101,8 @@ describe("reminderScheduler", () => {
     });
 
     it("does not start twice when called repeatedly", async () => {
-      const { startReminderScheduler, stopReminderScheduler } = await import(
-        "../services/reminderScheduler"
-      );
+      const { startReminderScheduler, stopReminderScheduler } =
+        await import("../services/reminderScheduler");
 
       startReminderScheduler();
       startReminderScheduler();
@@ -122,9 +117,8 @@ describe("reminderScheduler", () => {
     // Capture the tick handler that startReminderScheduler registers with node-cron,
     // then invoke it directly to exercise the whole query + send logic.
     async function runOneTick(): Promise<void> {
-      const { startReminderScheduler, stopReminderScheduler } = await import(
-        "../services/reminderScheduler"
-      );
+      const { startReminderScheduler, stopReminderScheduler } =
+        await import("../services/reminderScheduler");
       startReminderScheduler();
 
       const handler = mockCronSchedule.mock.calls[0][1] as () => Promise<void>;
@@ -192,9 +186,8 @@ describe("reminderScheduler", () => {
       mockFindMany.mockResolvedValueOnce([]);
       mockSendFlightReminder.mockResolvedValue(undefined);
 
-      const { startReminderScheduler, stopReminderScheduler } = await import(
-        "../services/reminderScheduler"
-      );
+      const { startReminderScheduler, stopReminderScheduler } =
+        await import("../services/reminderScheduler");
       startReminderScheduler();
       const handler = mockCronSchedule.mock.calls[0][1] as () => Promise<void>;
 

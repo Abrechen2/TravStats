@@ -12,7 +12,9 @@ describe("PATCH /api/v1/trips/bookings/:id", () => {
   let flightId: string;
 
   beforeAll(async () => {
-    await prisma.user.deleteMany({ where: { username: { in: ["bookingpatch", "bookingpatch2"] } } });
+    await prisma.user.deleteMany({
+      where: { username: { in: ["bookingpatch", "bookingpatch2"] } },
+    });
     const user = await prisma.user.create({
       data: { username: "bookingpatch", passwordHash: await hashPassword("password123") },
     });

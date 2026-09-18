@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PoiStatsDetail } from "../../../lib/stats/poiStatsDetail";
 import StatCard from "../StatCard";
+import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 
 interface Props {
   detail: PoiStatsDetail;
@@ -10,8 +11,7 @@ interface Props {
   locale: string;
 }
 
-const formatDate = (iso: string | Date, locale: string): string =>
-  new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit" });
+const formatDate = (iso: string | Date, _locale: string): string => formatUserDate(iso);
 
 /**
  * The figures that are fun rather than useful — the places counterpart to the

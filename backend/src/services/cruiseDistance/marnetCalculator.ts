@@ -22,12 +22,7 @@
 
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import { routeMarnet } from "../marnet/marnetRouter";
-import type {
-  ComputedLeg,
-  Confidence,
-  DistanceCalculator,
-  PortPoint,
-} from "./types";
+import type { ComputedLeg, Confidence, DistanceCalculator, PortPoint } from "./types";
 
 /** Below this snap distance (km) → high confidence. */
 const SNAP_HIGH_CONFIDENCE_KM = 25;
@@ -73,10 +68,7 @@ const MARNET_OVERSHOOT_CAP = 3.5;
 const MARNET_VERSION = "1.0.0";
 const ROUTER_VERSION = "1.0.0";
 
-function classifyConfidence(
-  fromSnapKm: number,
-  toSnapKm: number,
-): Confidence {
+function classifyConfidence(fromSnapKm: number, toSnapKm: number): Confidence {
   const worst = Math.max(fromSnapKm, toSnapKm);
   if (worst <= SNAP_HIGH_CONFIDENCE_KM) return "high";
   if (worst <= 80) return "medium";
@@ -90,14 +82,11 @@ function isInlandPort(port: PortPoint): boolean {
   return port.region?.startsWith("river_") === true;
 }
 
-async function computeMarnetDistance(
-  from: PortPoint,
-  to: PortPoint,
-): Promise<ComputedLeg | null> {
+async function computeMarnetDistance(from: PortPoint, to: PortPoint): Promise<ComputedLeg | null> {
   const route = await routeMarnet(
     { lat: from.lat, lon: from.lon },
     { lat: to.lat, lon: to.lon },
-    { maxSnapKm: SNAP_REJECT_KM },
+    { maxSnapKm: SNAP_REJECT_KM }
   );
   if (route === null) return null;
   if (route.coords.length < 2) return null;
@@ -110,14 +99,9 @@ async function computeMarnetDistance(
   const fromSnapKm = route.snapDepKm;
   const toSnapKm = route.snapArrKm;
 
-  const polylineKm = polylineLengthKm(
-    route.coords.map(([lon, lat]) => ({ lat, lon })),
-  );
+  const polylineKm = polylineLengthKm(route.coords.map(([lon, lat]) => ({ lat, lon })));
   const routedKm = polylineKm + fromSnapKm + toSnapKm;
-  const chordKm = haversineKm(
-    { lat: from.lat, lon: from.lon },
-    { lat: to.lat, lon: to.lon },
-  );
+  const chordKm = haversineKm({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon });
   const ratio = routedKm / Math.max(chordKm, 1);
 
   // Open-ocean direct routes: marnet adds snap noise without insight.

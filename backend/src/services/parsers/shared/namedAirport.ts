@@ -1,5 +1,5 @@
-import logger from '../../../utils/logger';
-import type { ParsedBooking } from '../../bookingParser';
+import logger from "../../../utils/logger";
+import type { ParsedBooking } from "../../bookingParser";
 
 /**
  * A named airport beats a city code (GitHub #287, the follow-up case).
@@ -40,37 +40,41 @@ export interface CatalogueAirport {
 export type AirportsInCityOf = (code: string) => Promise<CatalogueAirport[]>;
 
 const GENERIC_WORDS = new Set([
-  'airport',
-  'airfield',
-  'aerodrome',
-  'flughafen',
-  'flugplatz',
-  'international',
-  'intl',
-  'regional',
-  'heliport',
-  'helipad',
+  "airport",
+  "airfield",
+  "aerodrome",
+  "flughafen",
+  "flugplatz",
+  "international",
+  "intl",
+  "regional",
+  "heliport",
+  "helipad",
 ]);
 
 /** Lower-case, umlauts to their two-letter spelling, other marks stripped, letters only. */
 export function foldForMatch(text: string): string {
   return text
     .toLowerCase()
-    .replace(/ä/g, 'ae')
-    .replace(/ö/g, 'oe')
-    .replace(/ü/g, 'ue')
-    .replace(/ß/g, 'ss')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z]+/g, ' ')
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]+/g, " ")
     .trim();
 }
 
 /** The words of an airport's name that could only mean this airport. */
 export function distinctiveWords(airport: CatalogueAirport): string[] {
-  const cityWords = new Set(foldForMatch(airport.city ?? '').split(' ').filter(Boolean));
+  const cityWords = new Set(
+    foldForMatch(airport.city ?? "")
+      .split(" ")
+      .filter(Boolean)
+  );
   return foldForMatch(airport.name)
-    .split(' ')
+    .split(" ")
     .filter((word) => word.length >= 5 && !GENERIC_WORDS.has(word) && !cityWords.has(word));
 }
 
@@ -120,14 +124,14 @@ export async function preferNamedAirports(
   const result: ParsedBooking[] = [];
   for (const flight of flights) {
     let next = flight;
-    for (const side of ['departureCode', 'arrivalCode'] as const) {
+    for (const side of ["departureCode", "arrivalCode"] as const) {
       const code = next[side];
       if (!code) continue;
       const named = namedAirportCode(code, folded, await cityOf(code));
       if (!named) continue;
       logger.info(
-        { operation: 'parser_named_airport', side, from: code, to: named },
-        'A named airport beats the city code'
+        { operation: "parser_named_airport", side, from: code, to: named },
+        "A named airport beats the city code"
       );
       next = { ...next, [side]: named };
     }

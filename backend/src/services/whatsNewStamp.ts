@@ -21,7 +21,7 @@ import logger from "../utils/logger";
  */
 export async function stampWhatsNewSeen(
   db: PrismaClient | Prisma.TransactionClient,
-  userId: string,
+  userId: string
 ): Promise<void> {
   try {
     // The flag lives INSIDE the `data` JSON blob, not in a column of its own —
@@ -41,7 +41,7 @@ export async function stampWhatsNewSeen(
         context: { userId },
         error: { message: error instanceof Error ? error.message : "Unknown error" },
       },
-      "[WhatsNew] Could not stamp the seen version for a new account",
+      "[WhatsNew] Could not stamp the seen version for a new account"
     );
   }
 }

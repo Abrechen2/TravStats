@@ -14,11 +14,7 @@ const FLAG_ASPECT = 4 / 3;
 // The resolver moved to `shared/geo/countryCode.ts` — the SERVER needs it too,
 // to group by country instead of by whatever text an import wrote. Re-exported
 // here so every existing import of this module keeps working.
-export {
-  countryFromUnlocode,
-  countryName,
-  resolveCountryCode,
-} from "../shared/geo/countryCode";
+export { countryFromUnlocode, countryName, resolveCountryCode } from "../shared/geo/countryCode";
 import { resolveCountryCode, countryName } from "../shared/geo/countryCode";
 
 // flagcdn serves LOWERCASE codes only — `/DE.svg` is a 404. Everything that

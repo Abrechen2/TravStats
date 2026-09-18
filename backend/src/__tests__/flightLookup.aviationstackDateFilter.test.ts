@@ -87,9 +87,9 @@ const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 type AxiosGetParams = { params?: Record<string, string> };
 
 function avsCalls(): Array<[string, AxiosGetParams | undefined]> {
-  return (
-    mockedAxios.get.mock.calls as Array<[string, AxiosGetParams | undefined]>
-  ).filter(([url]) => url === AVS_URL);
+  return (mockedAxios.get.mock.calls as Array<[string, AxiosGetParams | undefined]>).filter(
+    ([url]) => url === AVS_URL
+  );
 }
 
 function aviationstackBody(flightDate: string) {
@@ -203,7 +203,7 @@ describe("Aviationstack date-filter restriction handling", () => {
       "2026-05-01",
       undefined,
       landedLongAgo,
-      alsoLongAgo,
+      alsoLongAgo
     );
 
     expect(result).toBeNull();

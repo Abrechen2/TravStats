@@ -183,19 +183,17 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     const order: string[] = [];
     const realUpdate = prisma.user.update.bind(prisma.user);
     const realWipe = prisma.placeVisit.deleteMany.bind(prisma.placeVisit);
-    const updateSpy = jest
-      .spyOn(prisma.user, "update")
-      .mockImplementation(((args: never) => {
-        order.push("lock");
-        return realUpdate(args);
-      }) as never);
+    const updateSpy = jest.spyOn(prisma.user, "update").mockImplementation(((args: never) => {
+      order.push("lock");
+      return realUpdate(args);
+    }) as never);
     // The first statement of `wipeDemoUser`.
-    const wipeSpy = jest
-      .spyOn(prisma.placeVisit, "deleteMany")
-      .mockImplementation(((args: never) => {
-        order.push("wipe");
-        return realWipe(args);
-      }) as never);
+    const wipeSpy = jest.spyOn(prisma.placeVisit, "deleteMany").mockImplementation(((
+      args: never
+    ) => {
+      order.push("wipe");
+      return realWipe(args);
+    }) as never);
 
     try {
       await ensureUser();
@@ -279,7 +277,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       select: { data: true },
     });
     expect((reseeded?.data as { whatsNewSeenVersion?: string })?.whatsNewSeenVersion).toBe(
-      appVersion,
+      appVersion
     );
   });
 

@@ -13,7 +13,10 @@ const companionResponse = registry.register(
     .object({
       id: z.string().uuid(),
       name: z.string(),
-      usageCount: z.number().int().describe("Flights + trips + cruises this companion is linked to"),
+      usageCount: z
+        .number()
+        .int()
+        .describe("Flights + trips + cruises this companion is linked to"),
     })
     .openapi("Companion")
 );

@@ -13,7 +13,7 @@
 // too because such an import carries a real date even when its time of day is a
 // placeholder. That distinction is easy to lose inside a 350-line loop.
 
-import type { FlightData } from './achievementStats';
+import type { FlightData } from "./achievementStats";
 
 export interface FlightSequenceStats {
   windowStreak: number;
@@ -29,8 +29,8 @@ export interface FlightSequenceStats {
 
 export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenceStats {
   const sorted = [...flights]
-    .filter((f) => f.status === 'flown' && f.departureTime)
-    .sort((a, b) => (a.departureTime!.getTime() - b.departureTime!.getTime()));
+    .filter((f) => f.status === "flown" && f.departureTime)
+    .sort((a, b) => a.departureTime!.getTime() - b.departureTime!.getTime());
 
   // Window / Middle / Aisle streaks (based on seatNumber last char: A/F typically
   // window, B/E middle, C/D aisle — rough; G/H are the wide-body aisle letters)
@@ -49,17 +49,17 @@ export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenc
       continue;
     }
     // Conventional narrow-body mapping: A / F / K = window, C / D = aisle, B / E = middle
-    if (seat === 'A' || seat === 'F' || seat === 'K') {
+    if (seat === "A" || seat === "F" || seat === "K") {
       winRun++;
       maxWin = Math.max(maxWin, winRun);
       midRun = 0;
       aisleRun = 0;
-    } else if (seat === 'B' || seat === 'E') {
+    } else if (seat === "B" || seat === "E") {
       midRun++;
       maxMid = Math.max(maxMid, midRun);
       winRun = 0;
       aisleRun = 0;
-    } else if (seat === 'C' || seat === 'D' || seat === 'G' || seat === 'H') {
+    } else if (seat === "C" || seat === "D" || seat === "G" || seat === "H") {
       aisleRun++;
       maxAisle = Math.max(maxAisle, aisleRun);
       winRun = 0;
@@ -85,7 +85,7 @@ export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenc
   // Groundhog Day — same route on three consecutive calendar days
   const routesByDay = new Map<string, Set<string>>();
   for (const f of sorted) {
-    const key = (f.departureTime!.toISOString().slice(0, 10));
+    const key = f.departureTime!.toISOString().slice(0, 10);
     const route = `${f.depIata || f.depIcao}-${f.arrIata || f.arrIcao}`;
     if (!routesByDay.has(key)) routesByDay.set(key, new Set());
     routesByDay.get(key)!.add(route);
@@ -114,8 +114,8 @@ export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenc
   // reverse. Reuses the flown-only routesByDay map built for Groundhog Day.
   const hasReversePair = (routes: Set<string>): boolean => {
     for (const route of routes) {
-      const [a, b] = route.split('-');
-      if (a && b && a !== 'null' && b !== 'null' && a !== b && routes.has(`${b}-${a}`)) {
+      const [a, b] = route.split("-");
+      if (a && b && a !== "null" && b !== "null" && a !== b && routes.has(`${b}-${a}`)) {
         return true;
       }
     }

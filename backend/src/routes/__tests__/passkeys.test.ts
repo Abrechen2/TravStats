@@ -136,13 +136,11 @@ describe("passkey endpoints", () => {
       .set("Cookie", cookie)
       .send({ name: "Bitwarden" });
     expect(renamed.status).toBe(200);
-    expect(
-      (await prisma.webAuthnCredential.findUnique({ where: { id: row.id } }))?.name
-    ).toBe("Bitwarden");
+    expect((await prisma.webAuthnCredential.findUnique({ where: { id: row.id } }))?.name).toBe(
+      "Bitwarden"
+    );
 
-    const del = await request(app)
-      .delete(`/api/v1/auth/passkeys/${row.id}`)
-      .set("Cookie", cookie);
+    const del = await request(app).delete(`/api/v1/auth/passkeys/${row.id}`).set("Cookie", cookie);
     expect(del.status).toBe(200);
     expect(await prisma.webAuthnCredential.count({ where: { userId } })).toBe(0);
   });
@@ -161,9 +159,7 @@ describe("passkey endpoints", () => {
       },
     });
 
-    const del = await request(app)
-      .delete(`/api/v1/auth/passkeys/${row.id}`)
-      .set("Cookie", cookie);
+    const del = await request(app).delete(`/api/v1/auth/passkeys/${row.id}`).set("Cookie", cookie);
     expect(del.status).toBe(404);
 
     const renamed = await request(app)

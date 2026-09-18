@@ -56,7 +56,9 @@ describe("pending updates can be answered in bulk", () => {
   });
 
   afterAll(async () => {
-    await prisma.pendingFlightUpdate.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.pendingFlightUpdate.deleteMany({
+      where: { userId: { in: [userId, otherUserId] } },
+    });
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
   });

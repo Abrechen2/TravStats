@@ -25,11 +25,7 @@ if (!block || pairs.length === 0) {
   process.exit(1);
 }
 
-const outDir = resolve(
-  here,
-  "../ClaudeDesign/screenshots/design-system",
-  block,
-);
+const outDir = resolve(here, "../ClaudeDesign/screenshots/design-system", block);
 mkdirSync(outDir, { recursive: true });
 
 const VIEWPORTS = [

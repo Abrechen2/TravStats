@@ -166,9 +166,9 @@ export function ingestTrack(
  */
 function segmentBounds(total: number, starts: number[] | undefined): Array<[number, number]> {
   const usable = Array.isArray(starts) ? starts : [];
-  const cleaned = [...new Set(usable.filter((i) => Number.isInteger(i) && i >= 0 && i < total))].sort(
-    (a, b) => a - b
-  );
+  const cleaned = [
+    ...new Set(usable.filter((i) => Number.isInteger(i) && i >= 0 && i < total)),
+  ].sort((a, b) => a - b);
   if (cleaned.length === 0 || cleaned[0] !== 0) cleaned.unshift(0);
 
   const bounds: Array<[number, number]> = [];

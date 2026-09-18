@@ -30,9 +30,7 @@ jest.mock("../services/pendingUpdateService", () => ({
 // stays REAL — that is the guard this suite pins.
 let mockScope: "read" | "write" = "read";
 jest.mock("../middleware/auth", () => {
-  const actual = jest.requireActual<typeof import("../middleware/auth")>(
-    "../middleware/auth",
-  );
+  const actual = jest.requireActual<typeof import("../middleware/auth")>("../middleware/auth");
   return {
     ...actual,
     authenticate: (req: unknown, _res: unknown, next: () => void) => {

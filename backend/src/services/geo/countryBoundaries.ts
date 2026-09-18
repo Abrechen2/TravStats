@@ -363,7 +363,7 @@ export async function loadCountryBoundaryIndex(
   const features: RawFeature[] = [];
   // Walked with indexOf rather than `split("\n")`: the split would hold a
   // second full copy of a 10 MB document alongside the first for no gain.
-  for (let from = 0; from < text.length; ) {
+  for (let from = 0; from < text.length;) {
     const end = text.indexOf("\n", from);
     const line = text.slice(from, end === -1 ? text.length : end);
     from = end === -1 ? text.length : end + 1;
@@ -371,7 +371,9 @@ export async function loadCountryBoundaryIndex(
     features.push(JSON.parse(line.endsWith(",") ? line.slice(0, -1) : line) as RawFeature);
   }
   if (features.length === 0) {
-    throw new Error(`No country features in ${filePath} — the vendored dataset is missing or empty`);
+    throw new Error(
+      `No country features in ${filePath} — the vendored dataset is missing or empty`
+    );
   }
   return buildCountryBoundaryIndex(features);
 }

@@ -166,7 +166,10 @@ export async function seedCuratedPlacesFromCSV(): Promise<number> {
   // `as const` matters: without the literal `columns: true`, csv-parse's
   // overload resolves to `string[][]` and the header row is lost.
   const parseOptions = { columns: true, skip_empty_lines: true, trim: true } as const;
-  const listRows = parse(fs.readFileSync(LISTS_CSV_PATH, "utf-8"), parseOptions) as CSVCuratedList[];
+  const listRows = parse(
+    fs.readFileSync(LISTS_CSV_PATH, "utf-8"),
+    parseOptions
+  ) as CSVCuratedList[];
   const placeRows = placesPaths.flatMap(
     (file) => parse(fs.readFileSync(file, "utf-8"), parseOptions) as CSVCuratedPlace[]
   );

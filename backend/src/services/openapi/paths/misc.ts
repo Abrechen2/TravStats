@@ -10,15 +10,14 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
 
 const achievement = registry.register(
   "Achievement",
   z
     .object({
-      id: z.string(),
-      category: z.string(),
-      points: z.number().int(),
-      unlocked: z.boolean(),
+      ...prismaColumns("Achievement"),
+      isUnlocked: z.boolean().describe("Progress has reached the requirement"),
       isRetired: z
         .boolean()
         .describe(
@@ -26,7 +25,15 @@ const achievement = registry.register(
             "Its points count, but it is outside totalAchievements/unlockedAchievements."
         ),
       unlockedAt: z.string().datetime().nullable(),
-      progress: z.number().describe("0–1 completion toward unlocking"),
+      progress: z
+        .number()
+        .describe(
+          "Absolute progress in the requirement's own unit (flights, km, countries …), not a fraction"
+        ),
+      progressPercentage: z
+        .number()
+        .int()
+        .describe("progress / requirement, as 0–100, capped at 100"),
     })
     .describe(
       "Identifiers and rank values are stable slugs, never display copy — " +
@@ -99,7 +106,8 @@ registry.registerPath({
   method: "get",
   path: "/achievements/leaderboard",
   summary: "Instance leaderboard",
-  description: "Ranks the users of this instance by points. Small, self-hosted instances may return a single row.",
+  description:
+    "Ranks the users of this instance by points. Small, self-hosted instances may return a single row.",
   tags: ["Achievements"],
   responses: {
     200: {
@@ -152,8 +160,13 @@ registry.registerPath({
                   startsAt: z.string().datetime(),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),
-                  primary: z.string().describe("Headline, e.g. 'MUC → VIE', a ship or a hotel name"),
-                  secondary: z.string().nullable().describe("Qualifier: flight number, cruise line, city"),
+                  primary: z
+                    .string()
+                    .describe("Headline, e.g. 'MUC → VIE', a ship or a hotel name"),
+                  secondary: z
+                    .string()
+                    .nullable()
+                    .describe("Qualifier: flight number, cruise line, city"),
                 })
               ),
             }),

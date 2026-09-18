@@ -1,13 +1,13 @@
-import { Router, Response, NextFunction } from 'express';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { defaultSettings } from './types';
+import { Router, Response, NextFunction } from "express";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { defaultSettings } from "./types";
 
 const router = Router();
 
 // GET /
 // Returns parser status (Tesseract OCR and Regex always available)
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
@@ -27,8 +27,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     }
 
     res.json({
-      visionProvider: 'tesseract',
-      textProvider: 'regex',
+      visionProvider: "tesseract",
+      textProvider: "regex",
     });
   } catch (error) {
     next(error);
@@ -36,9 +36,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 });
 
 // PUT / — parser providers are fixed (Tesseract OCR + Regex), no configurable settings
-router.put('/', (_req: AuthRequest, res: Response): void => {
+router.put("/", (_req: AuthRequest, res: Response): void => {
   res.status(501).json({
-    error: 'Parser settings are not configurable. Vision provider is Tesseract OCR, text provider is Regex.',
+    error:
+      "Parser settings are not configurable. Vision provider is Tesseract OCR, text provider is Regex.",
   });
 });
 

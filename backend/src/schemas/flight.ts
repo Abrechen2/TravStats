@@ -1,6 +1,6 @@
-import { z } from './zod';
-import { receiptUrlValidator } from './receiptUrl';
-import { chronologyProblem, departsInFuture } from '../shared/flightChronology';
+import { z } from "./zod";
+import { receiptUrlValidator } from "./receiptUrl";
+import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
 import { partialForUpdate } from "./partialUpdate";
 
 export const airportSchema = z.object({
@@ -26,19 +26,17 @@ const emptyStringToNull = z
 const LOCAL_DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 const localDateTime = z
   .string()
-  .regex(LOCAL_DATETIME_REGEX, 'Expected YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss');
+  .regex(LOCAL_DATETIME_REGEX, "Expected YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss");
 
 function isValidIanaTimezone(tz: string): boolean {
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
     return true;
   } catch {
     return false;
   }
 }
-const ianaTimezone = z
-  .string()
-  .refine(isValidIanaTimezone, { message: 'Invalid IANA timezone' });
+const ianaTimezone = z.string().refine(isValidIanaTimezone, { message: "Invalid IANA timezone" });
 
 /**
  * Canonical flight-number normalisation: strip every whitespace character
@@ -145,8 +143,8 @@ const baseFlightSchema = z.object({
         "given here always wins over the catalogue, so a caller who knows better (a " +
         "historical flight from an airport that has since changed zone) can say so."
     ),
-  depTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
-  arrTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
+  depTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
+  arrTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
   actualDepartureLocal: localDateTime.optional().nullable(),
   actualDepartureTz: ianaTimezone
     .optional()
@@ -176,7 +174,9 @@ const baseFlightSchema = z.object({
   // shared/statusDerivation.ts; spec 2026-07-17-status-from-dates).
   // 'cancelled'/'historical'/'duplicated' are passthrough: always stored
   // verbatim, never overridden by derivation.
-  status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
+  status: z
+    .enum(["scheduled", "flown", "cancelled", "historical", "duplicated"])
+    .default("scheduled"),
   notes: z
     .string()
     .transform((v) => {
@@ -186,7 +186,7 @@ const baseFlightSchema = z.object({
       let prev: string;
       do {
         prev = out;
-        out = out.replace(/<[^>]*>/g, '');
+        out = out.replace(/<[^>]*>/g, "");
       } while (out !== prev);
       return out;
     })
@@ -199,7 +199,7 @@ const baseFlightSchema = z.object({
   // formatting natively for every code it supports.
   currency: z
     .string()
-    .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
+    .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
     .optional(),
   taxes: z.number().min(0).nullable().optional(),
   fees: z.number().min(0).nullable().optional(),
@@ -207,8 +207,8 @@ const baseFlightSchema = z.object({
   // and clearing must be expressible on the wire. `undefined` means "don't
   // change" on update, `null` means "clear" — without the nullable, the clear
   // silently kept the old value while the UI showed it removed.
-  category: z.enum(['business', 'private', 'vacation']).nullable().optional(),
-  seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).nullable().optional(),
+  category: z.enum(["business", "private", "vacation"]).nullable().optional(),
+  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable().optional(),
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
   // `.nullable()` at the use site, not in the shared validator: the flight
@@ -225,18 +225,20 @@ const baseFlightSchema = z.object({
    * restate.
    */
   importBatchId: z.string().uuid().nullable().optional(),
-  dataSource: z.enum([
-    'manual',
-    'email_import',
-    'boarding_pass_scan',
-    'historical_enrichment',
-    'live_update',
-    'api_lookup',
-    'bulk_import',
-    'imported_fr24',
-    'imported_generic_csv',
-    'imported_roundtrip',
-  ]).optional(),
+  dataSource: z
+    .enum([
+      "manual",
+      "email_import",
+      "boarding_pass_scan",
+      "historical_enrichment",
+      "live_update",
+      "api_lookup",
+      "bulk_import",
+      "imported_fr24",
+      "imported_generic_csv",
+      "imported_roundtrip",
+    ])
+    .optional(),
   // Boarding pass / email import fields
   seatNumber: z.string().max(10).nullable().optional(),
   boardingGroup: z.string().max(20).nullable().optional(),
@@ -259,14 +261,14 @@ const baseFlightSchema = z.object({
   // Special flights (Sonder-Flüge) — flight subtype, see schema.prisma
   specialType: z
     .enum([
-      'sightseeing',
-      'eclipse',
-      'rocket_launch',
-      'zerog',
-      'aurora',
-      'training',
-      'ferry',
-      'test',
+      "sightseeing",
+      "eclipse",
+      "rocket_launch",
+      "zerog",
+      "aurora",
+      "training",
+      "ferry",
+      "test",
     ])
     .nullable()
     .optional(),
@@ -279,20 +281,24 @@ const baseFlightSchema = z.object({
 });
 
 type LocalTzPair =
-  | 'departureLocal' | 'depTimezone'
-  | 'arrivalLocal' | 'arrTimezone'
-  | 'actualDepartureLocal' | 'actualDepartureTz'
-  | 'actualArrivalLocal' | 'actualArrivalTz';
+  | "departureLocal"
+  | "depTimezone"
+  | "arrivalLocal"
+  | "arrTimezone"
+  | "actualDepartureLocal"
+  | "actualDepartureTz"
+  | "actualArrivalLocal"
+  | "actualArrivalTz";
 
 const requirePairedTimezone = (
   data: Partial<Record<LocalTzPair, string | null | undefined>>,
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ): void => {
   const pairs: Array<[LocalTzPair, LocalTzPair]> = [
-    ['departureLocal', 'depTimezone'],
-    ['arrivalLocal', 'arrTimezone'],
-    ['actualDepartureLocal', 'actualDepartureTz'],
-    ['actualArrivalLocal', 'actualArrivalTz'],
+    ["departureLocal", "depTimezone"],
+    ["arrivalLocal", "arrTimezone"],
+    ["actualDepartureLocal", "actualDepartureTz"],
+    ["actualArrivalLocal", "actualArrivalTz"],
   ];
   for (const [localField, tzField] of pairs) {
     const local = data[localField];
@@ -340,7 +346,7 @@ const requireChronologicalOrder = (
     depTimeSemantics?: string | null;
     arrTimeSemantics?: string | null;
   },
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ): void => {
   // The rule itself — including why a DATE_ONLY row is still compared by day
   // and a precise one by instant — lives in `shared/flightChronology.ts`.
@@ -356,17 +362,17 @@ const requireChronologicalOrder = (
 
 const requireStatusTimeAxisSanity = (
   data: { status?: string; departureLocal?: string | null; depTimezone?: string | null },
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ): void => {
   if (!data.departureLocal) return;
   if (
-    (data.status === 'historical' || data.status === 'flown') &&
+    (data.status === "historical" || data.status === "flown") &&
     departsInFuture(data.departureLocal, data.depTimezone)
   ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `${data.status} flights cannot have a departureLocal in the future`,
-      path: ['departureLocal'],
+      path: ["departureLocal"],
     });
   }
 };
@@ -377,15 +383,15 @@ export const createFlightSchema = baseFlightSchema
   .superRefine(requireStatusTimeAxisSanity)
   .refine(
     (data) => {
-      if (data.status === 'historical' || data.status === 'duplicated') return true;
+      if (data.status === "historical" || data.status === "duplicated") return true;
       // `flown` and `scheduled` need both dep + arr times — historicals can
       // legitimately omit arrival (date-only bulk imports). Chronological
       // order itself is now handled in `requireChronologicalOrder` above.
       return Boolean(data.departureLocal && data.arrivalLocal);
     },
     {
-      message: 'Non-historical flights require both departureLocal and arrivalLocal',
-      path: ['arrivalLocal'],
+      message: "Non-historical flights require both departureLocal and arrivalLocal",
+      path: ["arrivalLocal"],
     }
   );
 
@@ -393,12 +399,9 @@ export const updateFlightSchema = partialForUpdate(baseFlightSchema)
   .superRefine(requirePairedTimezone)
   .superRefine(requireChronologicalOrder)
   .superRefine(requireStatusTimeAxisSanity)
-  .refine(
-    (data) => Object.keys(data).length > 0,
-    {
-      message: 'At least one field must be provided for update',
-    }
-  );
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided for update",
+  });
 
 export const flightQuerySchema = z.object({
   airline: z.union([z.string(), z.array(z.string())]).optional(),
@@ -407,8 +410,13 @@ export const flightQuerySchema = z.object({
   arrivalAirport: z.string().optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
-  status: z.union([z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']), z.array(z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']))]).optional(),
-  category: z.enum(['business', 'private', 'vacation']).optional(),
+  status: z
+    .union([
+      z.enum(["scheduled", "flown", "cancelled", "historical", "duplicated"]),
+      z.array(z.enum(["scheduled", "flown", "cancelled", "historical", "duplicated"])),
+    ])
+    .optional(),
+  category: z.enum(["business", "private", "vacation"]).optional(),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),

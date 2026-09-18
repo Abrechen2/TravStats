@@ -34,9 +34,7 @@ export function applyHillshade(map: MapLibreMap, show: boolean): void {
         // Insert just below the first symbol layer so place names stay
         // legible on top of the relief (falls back to top of stack for
         // label-less raster styles).
-        const firstSymbol = map
-          .getStyle()
-          .layers?.find((l) => l.type === "symbol")?.id;
+        const firstSymbol = map.getStyle().layers?.find((l) => l.type === "symbol")?.id;
         map.addLayer(
           {
             id: HILLSHADE_LAYER,

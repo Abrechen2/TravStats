@@ -9,9 +9,9 @@
  * Skips silently otherwise so the entrypoint can call it on every boot.
  */
 
-import { PrismaClient } from '@prisma/client';
-import { seedAirportsFromCSV } from '../seedAirportsFromCSV';
-import logger from '../utils/logger';
+import { PrismaClient } from "@prisma/client";
+import { seedAirportsFromCSV } from "../seedAirportsFromCSV";
+import logger from "../utils/logger";
 
 const prisma = new PrismaClient();
 
@@ -24,8 +24,9 @@ async function main(): Promise<void> {
 
   if (activeCount === 0) {
     logger.info({
-      operation: 'backfill_closed_airports_skip',
-      message: 'No active airports yet — initial seed has not run, skipping closed-airport backfill',
+      operation: "backfill_closed_airports_skip",
+      message:
+        "No active airports yet — initial seed has not run, skipping closed-airport backfill",
       context: { activeCount, closedCount },
     });
     return;
@@ -33,16 +34,16 @@ async function main(): Promise<void> {
 
   if (closedCount > 0) {
     logger.info({
-      operation: 'backfill_closed_airports_skip',
-      message: 'Closed airports already present, no backfill needed',
+      operation: "backfill_closed_airports_skip",
+      message: "Closed airports already present, no backfill needed",
       context: { activeCount, closedCount },
     });
     return;
   }
 
   logger.info({
-    operation: 'backfill_closed_airports_start',
-    message: 'Backfilling closed airports from OurAirports CSV',
+    operation: "backfill_closed_airports_start",
+    message: "Backfilling closed airports from OurAirports CSV",
     context: { activeCount, closedCount },
   });
 
@@ -50,8 +51,8 @@ async function main(): Promise<void> {
 
   const newClosedCount = await prisma.airport.count({ where: { isClosed: true } });
   logger.info({
-    operation: 'backfill_closed_airports_complete',
-    message: 'Closed-airport backfill completed',
+    operation: "backfill_closed_airports_complete",
+    message: "Closed-airport backfill completed",
     context: { closedCount: newClosedCount },
   });
 }
@@ -59,10 +60,10 @@ async function main(): Promise<void> {
 main()
   .catch((error) => {
     logger.error({
-      operation: 'backfill_closed_airports_failed',
-      message: 'Closed-airport backfill failed',
+      operation: "backfill_closed_airports_failed",
+      message: "Closed-airport backfill failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });

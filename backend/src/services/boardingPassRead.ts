@@ -12,12 +12,12 @@
  * enrichment on one side, airport resolution and duplicate matching on the
  * other. Neither is redundant; only this part was duplicated.
  */
-import { ParsedBooking } from './bookingParser';
-import { getParserConfig, parseBoardingPass } from './parsers/factory';
-import { getMissingFields } from './parsers/shared/utils';
-import { decodeBarcodeFromImageBase64 } from '../utils/barcodeImage';
-import { decodeBcbp, looksLikeBcbp, type DecodedBcbp } from '../utils/bcbp';
-import logger from '../utils/logger';
+import { ParsedBooking } from "./bookingParser";
+import { getParserConfig, parseBoardingPass } from "./parsers/factory";
+import { getMissingFields } from "./parsers/shared/utils";
+import { decodeBarcodeFromImageBase64 } from "../utils/barcodeImage";
+import { decodeBcbp, looksLikeBcbp, type DecodedBcbp } from "../utils/bcbp";
+import logger from "../utils/logger";
 
 export interface BoardingPassReading {
   /** The decoded BCBP, or null when there was no readable boarding-pass barcode. */
@@ -50,9 +50,7 @@ export function isEmpty(reading: BoardingPassReading): boolean {
   return reading.decoded === null && reading.ocr === undefined;
 }
 
-export async function readBoardingPass(
-  input: BoardingPassInput
-): Promise<BoardingPassReading> {
+export async function readBoardingPass(input: BoardingPassInput): Promise<BoardingPassReading> {
   const { imageBase64, barcode, userId, allowOcr = true } = input;
 
   // --- 1. The barcode -----------------------------------------------------
@@ -66,7 +64,7 @@ export async function readBoardingPass(
   if (decoded && barcode === undefined) {
     logger.info(
       { flightNumber: decoded.flightNumber, route: `${decoded.fromCode} → ${decoded.toCode}` },
-      '[BoardingPassRead] barcode read from image'
+      "[BoardingPassRead] barcode read from image"
     );
   }
 
@@ -75,7 +73,7 @@ export async function readBoardingPass(
   // this runs even when the barcode decoded. It is allowed to fail there:
   // losing the gate must not cost a flight the barcode already spelled out.
   let ocr: ParsedBooking | undefined;
-  let provider = 'barcode';
+  let provider = "barcode";
   let fallbackUsed = false;
   if (imageBase64 !== undefined && allowOcr) {
     try {
@@ -88,7 +86,7 @@ export async function readBoardingPass(
       if (decoded === null) {
         throw error;
       }
-      logger.warn({ err: error }, '[BoardingPassRead] OCR failed, continuing with barcode only');
+      logger.warn({ err: error }, "[BoardingPassRead] OCR failed, continuing with barcode only");
     }
   }
 
@@ -129,7 +127,7 @@ export async function readBoardingPass(
       flightNumber: merged.flightNumber,
       route: `${merged.departureCode} → ${merged.arrivalCode}`,
     },
-    '[BoardingPassRead] reading complete'
+    "[BoardingPassRead] reading complete"
   );
 
   return {

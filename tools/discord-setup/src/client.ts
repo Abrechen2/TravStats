@@ -6,8 +6,10 @@ loadDotenv();
 export function loadEnv(): { token: string; guildId: string } {
   const token = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
-  if (!token) throw new Error("DISCORD_BOT_TOKEN is missing — copy .env.example to .env and fill it in.");
-  if (!guildId) throw new Error("DISCORD_GUILD_ID is missing — copy .env.example to .env and fill it in.");
+  if (!token)
+    throw new Error("DISCORD_BOT_TOKEN is missing — copy .env.example to .env and fill it in.");
+  if (!guildId)
+    throw new Error("DISCORD_GUILD_ID is missing — copy .env.example to .env and fill it in.");
   return { token, guildId };
 }
 

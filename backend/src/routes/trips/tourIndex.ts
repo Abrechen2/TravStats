@@ -70,9 +70,10 @@ const TOUR_SUMMARY_SELECT = {
  * stop), matching how `Trip`'s own timeline treats a dateless single point.
  * Both sides are `null` when no stop in the section carries a date.
  */
-function sectionDateSpan(
-  stops: TourSummaryRow["stops"],
-): { startDate: string | null; endDate: string | null } {
+function sectionDateSpan(stops: TourSummaryRow["stops"]): {
+  startDate: string | null;
+  endDate: string | null;
+} {
   let earliestStart: Date | null = null;
   let latestEnd: Date | null = null;
 
@@ -132,7 +133,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -170,7 +171,10 @@ router.post(
       const computedAt = Date.now();
       const data: Record<string, RouteGeometryFeatureCollection> = {};
       const results = await Promise.all(
-        routes.map(async (route) => ({ id: route.id, collection: await buildRouteGeometry(route.id) })),
+        routes.map(async (route) => ({
+          id: route.id,
+          collection: await buildRouteGeometry(route.id),
+        }))
       );
       for (const r of results) {
         data[r.id] = r.collection;
@@ -188,7 +192,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

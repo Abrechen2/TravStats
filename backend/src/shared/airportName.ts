@@ -37,7 +37,7 @@ export const DUPLICATE_MARKER_PATTERN = String.raw`[([{][^)\]}]*duplicate[^)\]}]
 
 const WHITESPACE_RUN = String.raw`\s+`;
 
-const DUPLICATE_MARKER = new RegExp(DUPLICATE_MARKER_PATTERN, 'gi');
+const DUPLICATE_MARKER = new RegExp(DUPLICATE_MARKER_PATTERN, "gi");
 
 /**
  * The catalogue name for a CSV row.
@@ -47,7 +47,7 @@ const DUPLICATE_MARKER = new RegExp(DUPLICATE_MARKER_PATTERN, 'gi');
  * worse than an ugly one.
  */
 export function normalizeAirportName(rawName: string): string {
-  const stripped = rawName.replace(DUPLICATE_MARKER, ' ').replace(/\s+/g, ' ').trim();
+  const stripped = rawName.replace(DUPLICATE_MARKER, " ").replace(/\s+/g, " ").trim();
   return stripped.length > 0 ? stripped : rawName.trim();
 }
 
@@ -75,5 +75,5 @@ export function buildDuplicateMarkerCleanupSql(table: string, column: string): s
     `SET "${column}" = ${cleaned}`,
     `WHERE "${column}" ~* '${DUPLICATE_MARKER_PATTERN}'`,
     `  AND ${cleaned} <> '';`,
-  ].join('\n');
+  ].join("\n");
 }

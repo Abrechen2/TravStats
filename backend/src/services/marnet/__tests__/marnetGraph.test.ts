@@ -55,7 +55,7 @@ describe("marnetGraph — internals", () => {
             [1, 0],
             [2, 0],
           ]),
-        ]),
+        ])
       );
       // Shared (1,0) point becomes one node, total 3 unique nodes.
       expect(graph.nodes.size).toBe(3);
@@ -75,7 +75,7 @@ describe("marnetGraph — internals", () => {
             [1, 0],
             [2, 0],
           ]),
-        ]),
+        ])
       );
       expect(graph.nodes.size).toBe(3);
     });
@@ -87,7 +87,7 @@ describe("marnetGraph — internals", () => {
             [0, 0],
             [1, 0],
           ]),
-        ]),
+        ])
       );
       const a = graph.nodes.get(nodeKey(0, 0))!;
       // 1° of longitude at the equator ≈ 111.195 km via haversine.
@@ -102,7 +102,7 @@ describe("marnetGraph — internals", () => {
             [0.00001, 0.00001], // collapses to the same key
             [1, 0],
           ]),
-        ]),
+        ])
       );
       const start = graph.nodes.get(nodeKey(0, 0))!;
       // Only one edge — the degenerate self-edge was suppressed.
@@ -124,7 +124,7 @@ describe("marnetGraph — internals", () => {
             [50, 50],
             [51, 50],
           ]),
-        ]),
+        ])
       );
       expect(graph.componentSizes.size).toBe(2);
       const sizes = [...graph.componentSizes.values()].sort((a, b) => b - a);
@@ -145,7 +145,7 @@ describe("marnetGraph — internals", () => {
             [1, 0],
             [2, 0],
           ]),
-        ]),
+        ])
       );
       const result = findNearestNode(graph, 0.4, 1.1);
       expect(result).not.toBeNull();
@@ -160,7 +160,7 @@ describe("marnetGraph — internals", () => {
             [0, 0],
             [1, 0],
           ]),
-        ]),
+        ])
       );
       const result = findNearestNode(graph, 0, 25);
       expect(result).not.toBeNull();
@@ -181,7 +181,7 @@ describe("marnetGraph — internals", () => {
             [10, 10],
             [10.5, 10.5],
           ]),
-        ]),
+        ])
       );
       const result = findNearestNode(graph, 10, 10);
       // With onlyMainComponent=true (default), the (10,10) point is
@@ -203,7 +203,7 @@ describe("marnetGraph — internals", () => {
             [10, 10],
             [10.5, 10.5],
           ]),
-        ]),
+        ])
       );
       const result = findNearestNode(graph, 10, 10, { onlyMainComponent: false });
       expect(result).not.toBeNull();
@@ -219,7 +219,7 @@ describe("marnetGraph — internals", () => {
             [-179, 0],
             [-178, 0],
           ]),
-        ]),
+        ])
       );
       const result = findNearestNode(graph, 0, 179);
       expect(result).not.toBeNull();
@@ -238,7 +238,7 @@ describe("marnetGraph — internals", () => {
             [0, 0],
             [1, 0],
           ]),
-        ]),
+        ])
       );
       const path = findMarnetPath(graph, nodeKey(0, 0), nodeKey(0, 0));
       expect(path).not.toBeNull();
@@ -256,7 +256,7 @@ describe("marnetGraph — internals", () => {
             [3, 0],
             [4, 0],
           ]),
-        ]),
+        ])
       );
       const path = findMarnetPath(graph, nodeKey(0, 0), nodeKey(4, 0));
       expect(path).not.toBeNull();
@@ -285,7 +285,7 @@ describe("marnetGraph — internals", () => {
             [5, 5],
             [0.02, 0],
           ]),
-        ]),
+        ])
       );
       const path = findMarnetPath(graph, nodeKey(0, 0), nodeKey(0.02, 0));
       expect(path).not.toBeNull();
@@ -307,7 +307,7 @@ describe("marnetGraph — internals", () => {
             [50, 50],
             [51, 50],
           ]),
-        ]),
+        ])
       );
       const path = findMarnetPath(graph, nodeKey(0, 0), nodeKey(50, 50));
       expect(path).toBeNull();
@@ -320,7 +320,7 @@ describe("marnetGraph — internals", () => {
             [0, 0],
             [1, 0],
           ]),
-        ]),
+        ])
       );
       expect(findMarnetPath(graph, "9.9999,9.9999", nodeKey(1, 0))).toBeNull();
       expect(findMarnetPath(graph, nodeKey(0, 0), "9.9999,9.9999")).toBeNull();
@@ -345,7 +345,7 @@ describe("marnetGraph — internals", () => {
             [1, 0],
             [1, 0], // self-edge — must be ignored
           ]),
-        ]),
+        ])
       );
       const path = findMarnetPath(graph, nodeKey(0, 0), nodeKey(2, 0));
       expect(path).not.toBeNull();

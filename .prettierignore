@@ -1,0 +1,46 @@
+# One ignore list for the whole tree (forgejo#61). Prettier reads it from the
+# directory it runs in, so every check runs from the repository root.
+#
+# Each block below is excluded for a reason, not for convenience. A new entry
+# should say why the file must not be formatted — "it is noisy" is not a reason.
+
+# Dependencies and build output.
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+*.min.js
+package-lock.json
+
+# Generated, and compared byte for byte against their generator. Formatting
+# them would turn the next regeneration into a diff, or a guard red.
+frontend/src/lib/generated/
+frontend/src/theme/tokens.css
+frontend/src/theme/tokens.ts
+
+# Written back at runtime by the template registry, with JSON.stringify.
+backend/src/services/parsers/templates/**/*.json
+
+# Vendored data: datasets taken as published, not source we write.
+backend/data/
+frontend/public/
+*.geojson
+
+# Design source and exports. `design/tokens.json` is edited upstream in the
+# Companion; `ClaudeDesign/export/` is a delivered package and stays as sent.
+design/
+ClaudeDesign/
+
+# Recorded evidence — audit probes and their outputs as they actually ran.
+# Rewriting them after the fact would make them a different record.
+docs/
+
+# Prose and mockups. Markdown is read, not compiled; CHANGELOG.md belongs to
+# /deploy. HTML here is exported mockups only.
+*.md
+*.html
+
+# Parser test fixtures are inputs, byte for byte.
+test-samples/

@@ -50,10 +50,8 @@ export default function CostFields({
   const labelClass = `label ${labelClassName}`.trim();
   const inputClass = `input ${inputClassName}`.trim();
 
-  const set = <K extends keyof CostFieldsValue>(
-    field: K,
-    fieldValue: CostFieldsValue[K]
-  ): void => onChange({ ...value, [field]: fieldValue });
+  const set = <K extends keyof CostFieldsValue>(field: K, fieldValue: CostFieldsValue[K]): void =>
+    onChange({ ...value, [field]: fieldValue });
 
   return (
     <>

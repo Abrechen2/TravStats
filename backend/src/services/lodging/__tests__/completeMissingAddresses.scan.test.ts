@@ -51,7 +51,11 @@ describe("completeMissingAddresses — the limit bounds the work, not the scan",
     const late = await prisma.lodging.create({
       data: { userId, name: "Die 501.", type: "hotel", lat: 47.37, lon: 8.54 },
     });
-    reverseGeocode.mockResolvedValue({ address: "Bahnhofstrasse 2", city: "Zürich", country: "Schweiz" });
+    reverseGeocode.mockResolvedValue({
+      address: "Bahnhofstrasse 2",
+      city: "Zürich",
+      country: "Schweiz",
+    });
 
     const result = await completeMissingAddresses(userId);
 

@@ -32,7 +32,7 @@ export async function recomputeLegs(
   tx: Tx,
   routeId: string,
   defaultMode: string,
-  orderedStops: readonly StopCoords[],
+  orderedStops: readonly StopCoords[]
 ): Promise<void> {
   const existing = await tx.tripRouteLeg.findMany({
     where: { routeId },
@@ -41,7 +41,7 @@ export async function recomputeLegs(
 
   const plan = planLegs(
     orderedStops.map((s) => s.id),
-    existing,
+    existing
   );
 
   if (plan.deleteIds.length > 0) {
@@ -60,7 +60,14 @@ export async function recomputeLegs(
     const to = byId.get(pair.toStopId);
     // Guarded by the caller, which rejects coordinate-less stops before
     // reaching here; the check keeps the invariant local and typed.
-    if (!from || !to || from.lat === null || from.lon === null || to.lat === null || to.lon === null) {
+    if (
+      !from ||
+      !to ||
+      from.lat === null ||
+      from.lon === null ||
+      to.lat === null ||
+      to.lon === null
+    ) {
       throw new AppError("Every route stop needs a coordinate", 400);
     }
     return {
@@ -103,10 +110,7 @@ export async function recomputeLegs(
  *   drops to `low`, which is the signal the UI already understands, and the
  *   geometry stays for the user to re-anchor.
  */
-export async function refreshLegsForMovedStop(
-  tx: Tx,
-  stopId: string,
-): Promise<void> {
+export async function refreshLegsForMovedStop(tx: Tx, stopId: string): Promise<void> {
   const legs = await tx.tripRouteLeg.findMany({
     where: { OR: [{ fromStopId: stopId }, { toStopId: stopId }] },
     select: { id: true, source: true, fromStopId: true, toStopId: true },
@@ -133,9 +137,12 @@ export async function refreshLegsForMovedStop(
     const from = byId.get(leg.fromStopId);
     const to = byId.get(leg.toStopId);
     if (
-      !from || !to ||
-      from.lat === null || from.lon === null ||
-      to.lat === null || to.lon === null
+      !from ||
+      !to ||
+      from.lat === null ||
+      from.lon === null ||
+      to.lat === null ||
+      to.lon === null
     ) {
       // The PATCH route refuses to clear a route member's coordinates, so this
       // is unreachable through the API; skipping beats writing a wrong number.
@@ -186,7 +193,7 @@ export async function updateStopAndLegs(
   prismaClient: PrismaLike,
   stopId: string,
   body: StopPatch,
-  existing: { routeId: string | null; lat: number | null; lon: number | null },
+  existing: { routeId: string | null; lat: number | null; lon: number | null }
 ) {
   const moved =
     existing.routeId !== null &&

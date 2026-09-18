@@ -671,10 +671,9 @@ export async function testGraphHopperKey(
     params.append("points_encoded", "false");
     params.append("key", key);
 
-    const response = await axios.get(
-      `https://graphhopper.com/api/1/route?${params.toString()}`,
-      { timeout: 10000 }
-    );
+    const response = await axios.get(`https://graphhopper.com/api/1/route?${params.toString()}`, {
+      timeout: 10000,
+    });
 
     if (response.status === 200) {
       return {

@@ -55,7 +55,11 @@ describe("bucketSeries", () => {
   it("zero-fills every month in the window and slots rows by month", () => {
     const from = new Date(Date.UTC(2025, 0, 1));
     const to = new Date(Date.UTC(2025, 3, 1)); // Jan, Feb, Mar
-    const rows = [row("2025-01-10", 100, 60), row("2025-01-20", 50, 30), row("2025-03-05", 200, 120)];
+    const rows = [
+      row("2025-01-10", 100, 60),
+      row("2025-01-20", 50, 30),
+      row("2025-03-05", 200, 120),
+    ];
     const series = bucketSeries(rows, "month", from, to);
     expect(series.map((p) => p.period)).toEqual(["2025-01", "2025-02", "2025-03"]);
     expect(series[0]).toEqual({ period: "2025-01", count: 2, distanceKm: 150, durationMin: 90 });
@@ -104,7 +108,14 @@ describe("trimZeroEdges", () => {
   });
 
   it("removes leading and trailing zero buckets but keeps interior gaps", () => {
-    const series = [pt("1970", 0), pt("2019", 0), pt("2020", 3), pt("2021", 0), pt("2022", 5), pt("2023", 0)];
+    const series = [
+      pt("1970", 0),
+      pt("2019", 0),
+      pt("2020", 3),
+      pt("2021", 0),
+      pt("2022", 5),
+      pt("2023", 0),
+    ];
     expect(trimZeroEdges(series).map((p) => p.period)).toEqual(["2020", "2021", "2022"]);
   });
 

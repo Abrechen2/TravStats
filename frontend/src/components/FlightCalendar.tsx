@@ -5,6 +5,7 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
+import { formatTime } from "../lib/displayFormat";
 
 interface FlightCalendarProps {
   flights: Flight[];
@@ -17,7 +18,7 @@ interface DayData {
 }
 
 export default function FlightCalendar({ flights }: FlightCalendarProps) {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
 
@@ -156,10 +157,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
       <div className="grid grid-cols-7 gap-1 mb-4">
         {/* Week day headers */}
         {weekDays.map((day) => (
-          <div
-            key={day}
-            className="text-center text-sm font-semibold text-(--text-muted) py-2"
-          >
+          <div key={day} className="text-center text-sm font-semibold text-(--text-muted) py-2">
             {day}
           </div>
         ))}
@@ -207,7 +205,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
         <div className="mt-6 p-4 bg-(--bg-base) rounded-lg border border-border">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-(--text-primary)">
-              {selectedDay.date.toLocaleDateString("de-DE", {
+              {selectedDay.date.toLocaleDateString(i18n.language, {
                 weekday: "long",
                 year: "numeric",
                 month: "long",
@@ -251,10 +249,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                   <div className="text-right">
                     <p className="text-sm text-(--text-muted)">
                       {flight.departureTime && flight.depTimeSemantics !== "DATE_ONLY"
-                        ? new Date(flight.departureTime).toLocaleTimeString("de-DE", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                        ? formatTime(flight.departureTime)
                         : "—"}
                     </p>
                     {flight.seatClass && (

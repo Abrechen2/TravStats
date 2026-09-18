@@ -82,9 +82,7 @@ function renderList(
   props?: Partial<{ onReverted: () => void | Promise<void>; reloadKey: unknown }>
 ) {
   const onReverted = props?.onReverted ?? vi.fn();
-  const utils = render(
-    <ImportLogSection onReverted={onReverted} reloadKey={props?.reloadKey} />
-  );
+  const utils = render(<ImportLogSection onReverted={onReverted} reloadKey={props?.reloadKey} />);
   return { ...utils, onReverted };
 }
 
@@ -286,8 +284,20 @@ describe("ImportLogSection", () => {
       vi.mocked(listImportBatches).mockResolvedValue([batch]);
       vi.mocked(listImportBatchItems).mockResolvedValue({
         items: [
-          { kind: "flight", id: "f1", label: "LH100", date: "2024-05-01T08:00:00.000Z", detail: "FRA → LHR" },
-          { kind: "flight", id: "f2", label: "LH200", date: "2024-05-03T08:00:00.000Z", detail: "LHR → FRA" },
+          {
+            kind: "flight",
+            id: "f1",
+            label: "LH100",
+            date: "2024-05-01T08:00:00.000Z",
+            detail: "FRA → LHR",
+          },
+          {
+            kind: "flight",
+            id: "f2",
+            label: "LH200",
+            date: "2024-05-03T08:00:00.000Z",
+            detail: "LHR → FRA",
+          },
         ],
         total: 2,
         truncated: false,
@@ -325,9 +335,7 @@ describe("ImportLogSection", () => {
 
     it("says the list is shortened rather than pretending it is complete", async () => {
       vi.mocked(listImportBatchItems).mockResolvedValue({
-        items: [
-          { kind: "flight", id: "f1", label: "LH100", date: null, detail: null },
-        ],
+        items: [{ kind: "flight", id: "f1", label: "LH100", date: null, detail: null }],
         total: 900,
         truncated: true,
       });

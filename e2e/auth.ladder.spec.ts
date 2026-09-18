@@ -79,7 +79,9 @@ test.describe("password, then second factor", () => {
     await page.fill("input#twofa-input", wrong);
     await page.click('button[type="submit"]');
 
-    await expect(page.locator("text=/Der Code stimmt nicht|code is not right|incorrect/i").first()).toBeVisible({
+    await expect(
+      page.locator("text=/Der Code stimmt nicht|code is not right|incorrect/i").first()
+    ).toBeVisible({
       timeout: 10_000,
     });
     await expect(page).toHaveURL(/\/2fa$/);
@@ -203,7 +205,10 @@ test.describe("passkey", () => {
     await deleteAccount(admin, account);
     if (previous) {
       await admin.put("/api/v1/admin/instance-settings", {
-        data: { webauthnRpId: previous.webauthnRpId ?? "", webauthnOrigins: previous.webauthnOrigins },
+        data: {
+          webauthnRpId: previous.webauthnRpId ?? "",
+          webauthnOrigins: previous.webauthnOrigins,
+        },
       });
     }
     await admin.dispose();
@@ -244,7 +249,9 @@ test.describe("passkey", () => {
     await page.context().clearCookies();
 
     await page.goto("/login");
-    await page.getByRole("button", { name: /Mit Passkey anmelden|Sign in with a passkey|passkey/i }).click();
+    await page
+      .getByRole("button", { name: /Mit Passkey anmelden|Sign in with a passkey|passkey/i })
+      .click();
 
     await expectSignedIn(page);
     // Never shown the code prompt: the passkey satisfied both factors.

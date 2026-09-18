@@ -23,9 +23,9 @@
  *   cd backend && npx tsx scripts/generate-airline-catalog.ts
  */
 
-import { promises as fs, readFileSync } from 'fs';
-import path from 'path';
-import { buildAirlineSeed } from '../src/data/openflights/buildAirlineSeed';
+import { promises as fs, readFileSync } from "fs";
+import path from "path";
+import { buildAirlineSeed } from "../src/data/openflights/buildAirlineSeed";
 
 export interface Airline {
   iata: string;
@@ -33,19 +33,16 @@ export interface Airline {
   name: string;
 }
 
-const OUTPUT_PATH = path.join(
-  __dirname,
-  '../../frontend/src/lib/generated/airlineCatalog.ts',
-);
+const OUTPUT_PATH = path.join(__dirname, "../../frontend/src/lib/generated/airlineCatalog.ts");
 
-const AIRLINES_DAT_PATH = path.join(__dirname, '../data/openflights/airlines.dat');
+const AIRLINES_DAT_PATH = path.join(__dirname, "../data/openflights/airlines.dat");
 
 /**
  * Loads the airline seed (OpenFlights ∪ curated AIRLINES, IATA-keyed) and
  * maps it to the flat shape the catalogue generator emits.
  */
 export function loadSeed(): Airline[] {
-  const raw = readFileSync(AIRLINES_DAT_PATH, 'utf-8');
+  const raw = readFileSync(AIRLINES_DAT_PATH, "utf-8");
   return buildAirlineSeed(raw).map((r) => ({
     iata: r.iata,
     icao: r.icao ?? undefined,
@@ -81,13 +78,13 @@ export const AIRLINE_CATALOG: AirlineCatalogEntry[] = [
 `;
 
   const rows = airlines.map((a) => {
-    const icaoPart = a.icao ? ` icao: ${JSON.stringify(a.icao)},` : '';
+    const icaoPart = a.icao ? ` icao: ${JSON.stringify(a.icao)},` : "";
     return `  { iata: ${JSON.stringify(a.iata)},${icaoPart} name: ${JSON.stringify(a.name)} },`;
   });
 
   const footer = `];\n`;
 
-  return header + rows.join('\n') + '\n' + footer;
+  return header + rows.join("\n") + "\n" + footer;
 }
 
 async function main(): Promise<void> {
@@ -95,7 +92,7 @@ async function main(): Promise<void> {
   const contents = generateAirlineCatalogContents(airlines);
 
   await fs.mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
-  await fs.writeFile(OUTPUT_PATH, contents, 'utf-8');
+  await fs.writeFile(OUTPUT_PATH, contents, "utf-8");
   console.log(`Wrote ${airlines.length} airline entries to ${OUTPUT_PATH}`);
 }
 

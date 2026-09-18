@@ -70,12 +70,8 @@ const RIVER_LEGS: Array<[keyof typeof RIVER_PORTS, keyof typeof RIVER_PORTS, num
 
 async function main(): Promise<void> {
   process.env.NODE_ENV = "production";
-  console.log(
-    "leg                 | haversine | marnet   | reference | Δ-marnet",
-  );
-  console.log(
-    "--------------------+-----------+----------+-----------+---------",
-  );
+  console.log("leg                 | haversine | marnet   | reference | Δ-marnet");
+  console.log("--------------------+-----------+----------+-----------+---------");
   for (const [a, b, ref] of LEGS) {
     const from = PORTS[a];
     const to = PORTS[b];
@@ -85,7 +81,9 @@ async function main(): Promise<void> {
     console.log(
       `${a} → ${b}            | ${hav.toFixed(0).padStart(7)} | ${result.distanceKm
         .toFixed(0)
-        .padStart(7)} (${result.method}, ${result.confidence}) | ${ref.toString().padStart(7)} | ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`,
+        .padStart(
+          7
+        )} (${result.method}, ${result.confidence}) | ${ref.toString().padStart(7)} | ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`
     );
   }
 
@@ -99,7 +97,9 @@ async function main(): Promise<void> {
     console.log(
       `${a} → ${b}        | ${hav.toFixed(0).padStart(7)} | ${result.distanceKm
         .toFixed(0)
-        .padStart(7)} (${result.method}, ${result.confidence}) | ${ref.toString().padStart(7)} | ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`,
+        .padStart(
+          7
+        )} (${result.method}, ${result.confidence}) | ${ref.toString().padStart(7)} | ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`
     );
   }
 }

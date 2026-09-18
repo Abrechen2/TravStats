@@ -1,15 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { AppError } from './errorHandler';
-import { JWT_SECRET } from '../utils/jwtSecret';
-import { prisma } from '../db';
-import { securityLogger } from '../utils/logger';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { AppError } from "./errorHandler";
+import { JWT_SECRET } from "../utils/jwtSecret";
+import { prisma } from "../db";
+import { securityLogger } from "../utils/logger";
 import {
   ApiTokenScope,
   looksLikeApiToken,
   tokenLookupHash,
   verifyApiToken,
-} from '../utils/apiTokens';
+} from "../utils/apiTokens";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -40,11 +40,7 @@ export interface AuthRequest extends Request {
  * If both are present, the Bearer header wins. This matches GitHub /
  * GitLab behaviour: explicit credentials beat ambient session.
  */
-export const authenticate = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const bearer = extractBearer(req.headers.authorization);
     if (bearer) {
@@ -56,17 +52,17 @@ export const authenticate = async (
     const cookieToken = req.cookies?.auth_token as string | undefined;
     if (!cookieToken) {
       securityLogger.warn({
-        operation: 'security_event',
-        message: 'Authentication failed: No token provided',
+        operation: "security_event",
+        message: "Authentication failed: No token provided",
         context: {
-          eventType: 'auth_failure',
-          reason: 'no_token',
+          eventType: "auth_failure",
+          reason: "no_token",
           ip: req.ip,
-          userAgent: req.get('user-agent'),
+          userAgent: req.get("user-agent"),
           url: req.url,
         },
       });
-      throw new AppError('No token provided', 401);
+      throw new AppError("No token provided", 401);
     }
 
     const decoded = jwt.verify(cookieToken, JWT_SECRET) as { userId: string; epoch?: number };
@@ -78,18 +74,18 @@ export const authenticate = async (
 
     if (!user) {
       securityLogger.warn({
-        operation: 'security_event',
-        message: 'Authentication failed: User not found',
+        operation: "security_event",
+        message: "Authentication failed: User not found",
         context: {
-          eventType: 'auth_failure',
-          reason: 'user_not_found',
+          eventType: "auth_failure",
+          reason: "user_not_found",
           userId: decoded.userId,
           ip: req.ip,
-          userAgent: req.get('user-agent'),
+          userAgent: req.get("user-agent"),
           url: req.url,
         },
       });
-      throw new AppError('Invalid token - user not found', 401);
+      throw new AppError("Invalid token - user not found", 401);
     }
 
     // A signature that is still valid does not mean the session still is.
@@ -108,33 +104,33 @@ export const authenticate = async (
       const tokenEpoch = decoded.epoch ?? 0;
       if (tokenEpoch < user.sessionEpoch) {
         securityLogger.warn({
-          operation: 'security_event',
-          message: 'Authentication failed: Session revoked by a password change',
+          operation: "security_event",
+          message: "Authentication failed: Session revoked by a password change",
           context: {
-            eventType: 'auth_failure',
-            reason: 'session_revoked',
+            eventType: "auth_failure",
+            reason: "session_revoked",
             userId: user.id,
             ip: req.ip,
             url: req.url,
           },
         });
-        throw new AppError('Session expired - please sign in again', 401);
+        throw new AppError("Session expired - please sign in again", 401);
       }
     }
     if (!user.isActive) {
       securityLogger.warn({
-        operation: 'security_event',
-        message: 'Authentication failed: Account deactivated',
+        operation: "security_event",
+        message: "Authentication failed: Account deactivated",
         context: {
-          eventType: 'auth_failure',
-          reason: 'account_deactivated',
+          eventType: "auth_failure",
+          reason: "account_deactivated",
           userId: decoded.userId,
           ip: req.ip,
-          userAgent: req.get('user-agent'),
+          userAgent: req.get("user-agent"),
           url: req.url,
         },
       });
-      throw new AppError('Account has been deactivated', 403);
+      throw new AppError("Account has been deactivated", 403);
     }
 
     req.userId = decoded.userId;
@@ -142,17 +138,17 @@ export const authenticate = async (
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       securityLogger.warn({
-        operation: 'security_event',
-        message: 'Authentication failed: Invalid token',
+        operation: "security_event",
+        message: "Authentication failed: Invalid token",
         context: {
-          eventType: 'invalid_token',
+          eventType: "invalid_token",
           reason: error.message,
           ip: req.ip,
-          userAgent: req.get('user-agent'),
+          userAgent: req.get("user-agent"),
           url: req.url,
         },
       });
-      next(new AppError('Invalid token', 401));
+      next(new AppError("Invalid token", 401));
     } else {
       next(error);
     }
@@ -171,17 +167,17 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   // turn into a bcrypt-comparison DoS.
   if (!looksLikeApiToken(plaintext)) {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'API token rejected: malformed',
+      operation: "security_event",
+      message: "API token rejected: malformed",
       context: {
-        eventType: 'auth_failure',
-        reason: 'malformed_pat',
+        eventType: "auth_failure",
+        reason: "malformed_pat",
         ip: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get("user-agent"),
         url: req.url,
       },
     });
-    throw new AppError('Invalid API token', 401);
+    throw new AppError("Invalid API token", 401);
   }
 
   const lookup = tokenLookupHash(plaintext);
@@ -192,37 +188,37 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
 
   if (!token) {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'API token rejected: unknown',
+      operation: "security_event",
+      message: "API token rejected: unknown",
       context: {
-        eventType: 'auth_failure',
-        reason: 'unknown_pat',
+        eventType: "auth_failure",
+        reason: "unknown_pat",
         ip: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get("user-agent"),
         url: req.url,
       },
     });
-    throw new AppError('Invalid API token', 401);
+    throw new AppError("Invalid API token", 401);
   }
 
   if (token.revokedAt) {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'API token rejected: revoked',
+      operation: "security_event",
+      message: "API token rejected: revoked",
       context: {
-        eventType: 'auth_failure',
-        reason: 'revoked_pat',
+        eventType: "auth_failure",
+        reason: "revoked_pat",
         tokenId: token.id,
         userId: token.userId,
         ip: req.ip,
         url: req.url,
       },
     });
-    throw new AppError('API token revoked', 401);
+    throw new AppError("API token revoked", 401);
   }
 
   if (token.expiresAt && token.expiresAt.getTime() < Date.now()) {
-    throw new AppError('API token expired', 401);
+    throw new AppError("API token expired", 401);
   }
 
   // Constant-time secret check — never short-circuit on the lookup
@@ -230,22 +226,22 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   const ok = await verifyApiToken(plaintext, token.hash);
   if (!ok) {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'API token rejected: hash mismatch',
+      operation: "security_event",
+      message: "API token rejected: hash mismatch",
       context: {
-        eventType: 'auth_failure',
-        reason: 'pat_hash_mismatch',
+        eventType: "auth_failure",
+        reason: "pat_hash_mismatch",
         tokenId: token.id,
         userId: token.userId,
         ip: req.ip,
         url: req.url,
       },
     });
-    throw new AppError('Invalid API token', 401);
+    throw new AppError("Invalid API token", 401);
   }
 
   if (!token.user.isActive) {
-    throw new AppError('Account has been deactivated', 403);
+    throw new AppError("Account has been deactivated", 403);
   }
 
   req.userId = token.userId;
@@ -300,64 +296,56 @@ export const requireBrowserSession = (
     return;
   }
   securityLogger.warn({
-    operation: 'security_event',
-    message: 'API token denied: browser session required',
+    operation: "security_event",
+    message: "API token denied: browser session required",
     context: {
-      eventType: 'pat_browser_only_blocked',
+      eventType: "pat_browser_only_blocked",
       tokenId: req.apiToken.id,
       userId: req.userId,
       url: req.url,
     },
   });
-  next(new AppError('This action requires a browser session, not an API token', 403));
+  next(new AppError("This action requires a browser session, not an API token", 403));
 };
 
-export const requireWriteScope = (
-  req: AuthRequest,
-  _res: Response,
-  next: NextFunction
-) => {
+export const requireWriteScope = (req: AuthRequest, _res: Response, next: NextFunction) => {
   if (!req.apiToken) {
     next();
     return;
   }
-  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
     next();
     return;
   }
-  if (req.apiToken.scope === 'read') {
+  if (req.apiToken.scope === "read") {
     securityLogger.warn({
-      operation: 'security_event',
-      message: 'API token denied: insufficient scope (write required)',
+      operation: "security_event",
+      message: "API token denied: insufficient scope (write required)",
       context: {
-        eventType: 'auth_failure',
-        reason: 'pat_scope_insufficient',
+        eventType: "auth_failure",
+        reason: "pat_scope_insufficient",
         tokenId: req.apiToken.id,
         userId: req.userId,
         url: req.url,
       },
     });
-    next(new AppError('API token lacks write scope', 403));
+    next(new AppError("API token lacks write scope", 403));
     return;
   }
   next();
 };
 
-export const requireAdmin = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.userId) {
-      throw new AppError('Unauthorized', 401);
+      throw new AppError("Unauthorized", 401);
     }
 
     // PATs need an explicit admin scope on top of the user's admin flag —
     // a write-scoped token must NOT inherit admin privileges just because
     // the owning user happens to be an admin.
-    if (req.apiToken && req.apiToken.scope !== 'admin') {
-      throw new AppError('API token lacks admin scope', 403);
+    if (req.apiToken && req.apiToken.scope !== "admin") {
+      throw new AppError("API token lacks admin scope", 403);
     }
 
     const user = await prisma.user.findUnique({
@@ -366,26 +354,26 @@ export const requireAdmin = async (
     });
 
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
 
     if (!user.isActive) {
-      throw new AppError('Account has been deactivated', 403);
+      throw new AppError("Account has been deactivated", 403);
     }
 
     if (!user.isAdmin) {
       securityLogger.warn({
-        operation: 'security_event',
-        message: 'Admin access denied',
+        operation: "security_event",
+        message: "Admin access denied",
         context: {
-          eventType: 'admin_access_denied',
+          eventType: "admin_access_denied",
           userId: req.userId,
           ip: req.ip,
-          userAgent: req.get('user-agent'),
+          userAgent: req.get("user-agent"),
           url: req.url,
         },
       });
-      throw new AppError('Admin access required', 403);
+      throw new AppError("Admin access required", 403);
     }
 
     next();

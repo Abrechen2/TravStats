@@ -23,12 +23,15 @@ export const punctualityGroupSchema = z.object({
 });
 
 export const punctualityStatsSchema = z.object({
-  sampleSize: z.number().int().openapi({
-    description:
-      "Flights that carry a delay figure — the sample every number here rests " +
-      "on. A flight with scheduled times alone is NOT counted as on time; it is " +
-      "outside the sample entirely.",
-  }),
+  sampleSize: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Flights that carry a delay figure — the sample every number here rests " +
+        "on. A flight with scheduled times alone is NOT counted as on time; it is " +
+        "outside the sample entirely.",
+    }),
   avgDelayMinutes: z.number(),
   onTimeRate: z.number().openapi({
     description:
@@ -80,12 +83,15 @@ export const airlineRankingItemSchema = z.object({
 export const airlineRankingResponseSchema = z.object({
   airlines: z.array(airlineRankingItemSchema),
   total: z.number().int(),
-  flightsWithoutAirline: z.number().int().openapi({
-    description:
-      "Flights carrying no airline. Excluded from the ranking AND from the " +
-      "percentage denominator, reported so the gap is visible rather than " +
-      "ranked as a carrier called \"Unknown\".",
-  }),
+  flightsWithoutAirline: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Flights carrying no airline. Excluded from the ranking AND from the " +
+        "percentage denominator, reported so the gap is visible rather than " +
+        'ranked as a carrier called "Unknown".',
+    }),
 });
 
 // ─── /stats/countries ────────────────────────────────────────────────────────
@@ -104,7 +110,7 @@ export const countryStatsResponseSchema = z.object({
     description:
       "Counting vocabulary: lifetime countries VISITED as ISO alpha-2 — every " +
       "country either end of a flight touched, not only departures — with " +
-      "\"Unknown\" and the catalogue's placeholders dropped. Entries that cannot " +
+      '"Unknown" and the catalogue\'s placeholders dropped. Entries that cannot ' +
       "be resolved are left out rather than counted as things that cannot be " +
       "deduplicated.",
   }),
@@ -176,9 +182,7 @@ export const uniqueStatsSchema = z.object({
   equatorCrossings: z.number().int(),
   arcticFlights: z.number().int(),
   oceanCrossings: z.number().int(),
-  highestAirport: z
-    .object({ code: z.string(), name: z.string(), altitude: z.number() })
-    .nullable(),
+  highestAirport: z.object({ code: z.string(), name: z.string(), altitude: z.number() }).nullable(),
   northernmost: z.object({ lat: z.number(), code: z.string() }).nullable(),
   southernmost: z.object({ lat: z.number(), code: z.string() }).nullable(),
   longestTravelChain: z.number().int(),
@@ -223,13 +227,16 @@ export const airportStatsSchema = z.object({
   }),
   countryCount: z.number().int(),
   continentCount: z.number().int(),
-  continentTotal: z.number().int().openapi({
-    description:
-      "The denominator for `continentCount` — how many continents the shared " +
-      "table knows, Antarctica included. Sent rather than hard-coded on the " +
-      "client: the tile printed \"/ 6\" for months while its own caption said " +
-      "\"of the 7\". One source, one number.",
-  }),
+  continentTotal: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "The denominator for `continentCount` — how many continents the shared " +
+        "table knows, Antarctica included. Sent rather than hard-coded on the " +
+        'client: the tile printed "/ 6" for months while its own caption said ' +
+        '"of the 7". One source, one number.',
+    }),
   topAirports: z.array(airportRefSchema.extend({ visits: z.number().int() })),
   rarestAirports: z.array(airportRefSchema).openapi({
     description: "Airports visited exactly once. Capped, to keep the payload small.",
@@ -240,14 +247,13 @@ export const airportStatsSchema = z.object({
     .nullable()
     .openapi({
       description:
-        "\"Home\" is the home airport that was active on the flight's date, not " +
-        "today's.",
+        '"Home" is the home airport that was active on the flight\'s date, not ' + "today's.",
     }),
   topCountries: z.array(z.object({ country: z.string(), count: z.number().int() })),
   continentDistribution: z.record(z.string(), z.number().int()).openapi({
     description:
       "Flights per continent, keyed by the name `utils/continents.ts` gives. " +
-      "\"Other\" holds the flights whose airport resolved to NO continent — the " +
+      '"Other" holds the flights whose airport resolved to NO continent — the ' +
       "absence of one, never a further one.",
   }),
 });
@@ -288,32 +294,34 @@ export const timeseriesResponseSchema = z.object({
 
 // ─── /stats/fun ──────────────────────────────────────────────────────────────
 
-export const funStatsSchema = z.object({
-  timezoneHopper: z.number().int(),
-  earlyBird: z.number().int(),
-  afternoon: z.number().int(),
-  nightOwl: z.number().int(),
-  weekendWarrior: z.number().int(),
-  weekendPercentage: z.number(),
-  loyaltyScore: z.number(),
-  mostUsedAirline: z.string().nullable(),
-  shortHaulKing: z.number().int(),
-  longHaulPilot: z.number().int(),
-  fastestDay: z.string().nullable(),
-  fastestDayFlights: z.number().int(),
-  co2FootprintKg: z.number(),
-  co2InElephants: z.number(),
-  milestoneYear: z.number().int().nullable(),
-  milestoneYearFlights: z.number().int(),
-  routeMaster: z.string().nullable(),
-  routeMasterCount: z.number().int(),
-}).openapi({
-  description:
-    "Every time-of-day figure here reads the clock at the departure airport, " +
-    "not UTC. A date-only historical row reports no hour at all: it counts in " +
-    "everything daily and above and is left out of anything hourly, rather " +
-    "than being counted at its 12:00 placeholder.",
-});
+export const funStatsSchema = z
+  .object({
+    timezoneHopper: z.number().int(),
+    earlyBird: z.number().int(),
+    afternoon: z.number().int(),
+    nightOwl: z.number().int(),
+    weekendWarrior: z.number().int(),
+    weekendPercentage: z.number(),
+    loyaltyScore: z.number(),
+    mostUsedAirline: z.string().nullable(),
+    shortHaulKing: z.number().int(),
+    longHaulPilot: z.number().int(),
+    fastestDay: z.string().nullable(),
+    fastestDayFlights: z.number().int(),
+    co2FootprintKg: z.number(),
+    co2InElephants: z.number(),
+    milestoneYear: z.number().int().nullable(),
+    milestoneYearFlights: z.number().int(),
+    routeMaster: z.string().nullable(),
+    routeMasterCount: z.number().int(),
+  })
+  .openapi({
+    description:
+      "Every time-of-day figure here reads the clock at the departure airport, " +
+      "not UTC. A date-only historical row reports no hour at all: it counts in " +
+      "everything daily and above and is left out of anything hourly, rather " +
+      "than being counted at its 12:00 placeholder.",
+  });
 
 export type PunctualityGroup = z.infer<typeof punctualityGroupSchema>;
 export type PunctualityStats = z.infer<typeof punctualityStatsSchema>;

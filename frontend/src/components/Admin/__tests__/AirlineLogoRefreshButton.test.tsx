@@ -65,24 +65,20 @@ describe("AirlineLogoRefreshButton", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it(
-    "treats a 409 (already running) as running and polls until done",
-    async () => {
-      vi.spyOn(api, "post").mockRejectedValue({
-        response: { status: 409, data: { error: "A logo refresh is already running" } },
-        isAxiosError: true,
-      });
-      const get = vi
-        .spyOn(api, "get")
-        .mockResolvedValueOnce({ data: { running: true, checked: null, refreshed: null } })
-        .mockResolvedValueOnce({ data: { running: false, checked: 5, refreshed: 1 } });
+  it("treats a 409 (already running) as running and polls until done", async () => {
+    vi.spyOn(api, "post").mockRejectedValue({
+      response: { status: 409, data: { error: "A logo refresh is already running" } },
+      isAxiosError: true,
+    });
+    const get = vi
+      .spyOn(api, "get")
+      .mockResolvedValueOnce({ data: { running: true, checked: null, refreshed: null } })
+      .mockResolvedValueOnce({ data: { running: false, checked: 5, refreshed: 1 } });
 
-      render(<AirlineLogoRefreshButton />);
-      fireEvent.click(screen.getByRole("button", { name: /logos aktualisieren/i }));
+    render(<AirlineLogoRefreshButton />);
+    fireEvent.click(screen.getByRole("button", { name: /logos aktualisieren/i }));
 
-      await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(screen.getByText(/1 von 5/i)).toBeTruthy(), { timeout: 6000 });
-    },
-    8000
-  );
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText(/1 von 5/i)).toBeTruthy(), { timeout: 6000 });
+  }, 8000);
 });

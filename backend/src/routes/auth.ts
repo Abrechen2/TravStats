@@ -1,29 +1,29 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import type { User } from '@prisma/client';
-import { takeUserCountLock } from '../utils/userCountLock';
-import crypto from 'crypto';
-import { prisma } from '../db';
-import { hashPassword, comparePassword } from '../utils/password';
-import { registerSchema, loginSchema, changePasswordSchema } from '../schemas/auth';
-import { AppError } from '../middleware/errorHandler';
-import { authLimiter } from '../middleware/rateLimit';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { rejectDemo } from '../middleware/demoGuard';
-import { isSharedDemoAccount } from '../utils/sharedDemo';
-import { getInstanceSettings } from '../services/instanceSettingsService';
-import logger from '../utils/logger';
+import { Router, Request, Response, NextFunction } from "express";
+import type { User } from "@prisma/client";
+import { takeUserCountLock } from "../utils/userCountLock";
+import crypto from "crypto";
+import { prisma } from "../db";
+import { hashPassword, comparePassword } from "../utils/password";
+import { registerSchema, loginSchema, changePasswordSchema } from "../schemas/auth";
+import { AppError } from "../middleware/errorHandler";
+import { authLimiter } from "../middleware/rateLimit";
+import { authenticate, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
+import { isSharedDemoAccount } from "../utils/sharedDemo";
+import { getInstanceSettings } from "../services/instanceSettingsService";
+import logger from "../utils/logger";
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
 import {
   getAuthCookieOptions,
   getCookieSecure,
   issueAuthCookie,
   issuePasswordChangeChallenge,
-} from '../utils/session';
+} from "../utils/session";
 
 const router = Router();
 
 // Dummy bcrypt hash used to prevent timing oracle on login (constant-time for unknown users)
-const DUMMY_BCRYPT_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
+const DUMMY_BCRYPT_HASH = "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
 
 // Cookie shaping and session issuance moved to utils/session.ts so that EVERY
 // route minting `auth_token` passes the same deactivation check (Forgejo #31).
@@ -31,15 +31,14 @@ const DUMMY_BCRYPT_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWX
 // from this module.
 export { getAuthCookieOptions };
 
-
 // Register
-router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/register", authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate required fields
     const { username, password } = registerSchema.parse(req.body);
     const rawToken = req.body.invitationToken;
     const invitationToken =
-      typeof rawToken === 'string' && rawToken.length <= 128 ? rawToken : undefined;
+      typeof rawToken === "string" && rawToken.length <= 128 ? rawToken : undefined;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -47,7 +46,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     });
 
     if (existingUser) {
-      throw new AppError('Username already exists', 400);
+      throw new AppError("Username already exists", 400);
     }
 
     // Instance policy is read out here on purpose: the value that races is the
@@ -68,89 +67,92 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     // here means two racing registrations touch the same rows and one of them
     // loses, which is the outcome the isolation level exists to produce.
     const runRegistration = (): Promise<{ created: User; isFirstUser: boolean }> =>
-      prisma.$transaction(async (tx) => {
-      // Serialise the decision, do not merely hope the isolation level does.
-      //
-      // Measured on 2026-09-09 against a real PostgreSQL: four registrations
-      // racing on an empty instance ALL read zero inside their own Serializable
-      // transactions, and two of them committed as admin. An isolated probe with
-      // longer-running transactions DID produce one winner and three P2034s — so
-      // the protection is real, but it depends on how the transactions happen to
-      // overlap, and "usually aborts" is not a property to hand the bootstrap
-      // administrator of an instance (audit finding AUD-004).
-      //
-      // The advisory lock makes it exact and cheap: it is held to the end of THIS
-      // transaction, so between the count and the insert no other registration
-      // can slip in. It costs one round trip on a path that runs a handful of
-      // times in an instance's whole life.
-      await takeUserCountLock(tx);
+      prisma.$transaction(
+        async (tx) => {
+          // Serialise the decision, do not merely hope the isolation level does.
+          //
+          // Measured on 2026-09-09 against a real PostgreSQL: four registrations
+          // racing on an empty instance ALL read zero inside their own Serializable
+          // transactions, and two of them committed as admin. An isolated probe with
+          // longer-running transactions DID produce one winner and three P2034s — so
+          // the protection is real, but it depends on how the transactions happen to
+          // overlap, and "usually aborts" is not a property to hand the bootstrap
+          // administrator of an instance (audit finding AUD-004).
+          //
+          // The advisory lock makes it exact and cheap: it is held to the end of THIS
+          // transaction, so between the count and the insert no other registration
+          // can slip in. It costs one round trip on a path that runs a handful of
+          // times in an instance's whole life.
+          await takeUserCountLock(tx);
 
-      const userCount = await tx.user.count();
-      const isFirstUser = userCount === 0;
+          const userCount = await tx.user.count();
+          const isFirstUser = userCount === 0;
 
-      // Enforce MAX_USERS hard limit regardless of registration mode
-      if (!isFirstUser && userCount >= maxUsers) {
-        throw new AppError('User limit reached', 409);
-      }
+          // Enforce MAX_USERS hard limit regardless of registration mode
+          if (!isFirstUser && userCount >= maxUsers) {
+            throw new AppError("User limit reached", 409);
+          }
 
-      // Validate registration is allowed
-      if (!isFirstUser && !allowRegistration && !invitationToken) {
-        throw new AppError('Registration is disabled. Please use an invitation link.', 403);
-      }
+          // Validate registration is allowed
+          if (!isFirstUser && !allowRegistration && !invitationToken) {
+            throw new AppError("Registration is disabled. Please use an invitation link.", 403);
+          }
 
-      // Validate invitation token if provided
-      let invitedBy: string | undefined;
-      let invitationEmail: string | undefined;
-      if (invitationToken) {
-        const invitation = await tx.invitation.findUnique({
-          where: { token: invitationToken },
-        });
+          // Validate invitation token if provided
+          let invitedBy: string | undefined;
+          let invitationEmail: string | undefined;
+          if (invitationToken) {
+            const invitation = await tx.invitation.findUnique({
+              where: { token: invitationToken },
+            });
 
-        if (!invitation) {
-          throw new AppError('Invalid invitation token', 400);
-        }
+            if (!invitation) {
+              throw new AppError("Invalid invitation token", 400);
+            }
 
-        if (invitation.usedAt) {
-          throw new AppError('Invitation token already used', 400);
-        }
+            if (invitation.usedAt) {
+              throw new AppError("Invitation token already used", 400);
+            }
 
-        if (invitation.expiresAt < new Date()) {
-          throw new AppError('Invitation token has expired', 400);
-        }
+            if (invitation.expiresAt < new Date()) {
+              throw new AppError("Invitation token has expired", 400);
+            }
 
-        invitedBy = invitation.createdBy;
-        invitationEmail = invitation.email ?? undefined;
-      }
+            invitedBy = invitation.createdBy;
+            invitationEmail = invitation.email ?? undefined;
+          }
 
-      // Create user (first user becomes admin)
-      const created = await tx.user.create({
-        data: {
-          username,
-          passwordHash,
-          isAdmin: isFirstUser,
-          invitedBy,
-          notificationEmail: invitationEmail,
+          // Create user (first user becomes admin)
+          const created = await tx.user.create({
+            data: {
+              username,
+              passwordHash,
+              isAdmin: isFirstUser,
+              invitedBy,
+              notificationEmail: invitationEmail,
+            },
+          });
+
+          // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
+          await stampWhatsNewSeen(tx, created.id);
+
+          // Mark invitation as used within the same transaction
+          if (invitationToken) {
+            await tx.invitation.update({
+              where: { token: invitationToken },
+              data: {
+                usedAt: new Date(),
+                usedBy: created.id,
+              },
+            });
+          }
+
+          return { created, isFirstUser };
         },
-      });
-
-      // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
-      await stampWhatsNewSeen(tx, created.id);
-
-      // Mark invitation as used within the same transaction
-      if (invitationToken) {
-        await tx.invitation.update({
-          where: { token: invitationToken },
-          data: {
-            usedAt: new Date(),
-            usedBy: created.id,
-          },
-        });
-      }
-
-      return { created, isFirstUser };
-      }, {
-        isolationLevel: 'Serializable',
-      });
+        {
+          isolationLevel: "Serializable",
+        }
+      );
 
     // A serialization conflict here is the guard WORKING — two registrations
     // met on the same rows and one had to lose. The loser deserves the real
@@ -163,7 +165,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         break;
       } catch (error) {
         const code = (error as { code?: string }).code;
-        const retryable = code === 'P2034' || code === '40001';
+        const retryable = code === "P2034" || code === "40001";
         if (!retryable || attempt === 3) throw error;
       }
     }
@@ -187,7 +189,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         firstName: user.firstName,
         lastName: user.lastName,
       },
-      message: isFirstUser ? 'Welcome! You are the admin of this instance.' : 'Account created successfully',
+      message: isFirstUser
+        ? "Welcome! You are the admin of this instance."
+        : "Account created successfully",
     });
   } catch (error) {
     next(error);
@@ -195,7 +199,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
 });
 
 // Login
-router.post('/login', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/login", authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, password } = loginSchema.parse(req.body);
 
@@ -206,7 +210,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
 
     const isValid = await comparePassword(password, user?.passwordHash ?? DUMMY_BCRYPT_HASH);
     if (!user || !isValid) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError("Invalid credentials", 401);
     }
 
     // A deactivated account is refused HERE, before any cookie is written —
@@ -216,7 +220,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     // handed to a disabled account, and the answer says why on the first
     // request rather than on the next one.
     if (!user.isActive) {
-      throw new AppError('This account has been deactivated', 403);
+      throw new AppError("This account has been deactivated", 403);
     }
 
     // Two-factor: the password was right, so the session is withheld until the
@@ -229,8 +233,8 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     // only that cookie — so an attacker who knows the password could set a new
     // one and never meet the second factor. Two-factor first, always.
     if (user.twoFactorEnabledAt) {
-      const plainChallenge = crypto.randomBytes(32).toString('hex');
-      const hashedChallenge = crypto.createHash('sha256').update(plainChallenge).digest('hex');
+      const plainChallenge = crypto.randomBytes(32).toString("hex");
+      const hashedChallenge = crypto.createHash("sha256").update(plainChallenge).digest("hex");
 
       await prisma.user.update({
         where: { id: user.id },
@@ -240,12 +244,12 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         },
       });
 
-      res.cookie('twofa_token', plainChallenge, {
+      res.cookie("twofa_token", plainChallenge, {
         httpOnly: true,
         secure: getCookieSecure(req),
-        sameSite: 'strict',
+        sameSite: "strict",
         maxAge: 5 * 60 * 1000,
-        path: '/',
+        path: "/",
       });
       return res.json({ requiresTwoFactor: true });
     }
@@ -265,39 +269,39 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     // never got a second chance, and the missing airports resolved no timezone
     // and no country for the life of the instance.
     try {
-      const { isAirportCatalogueHealthy } = await import('../services/airportSeedingService');
+      const { isAirportCatalogueHealthy } = await import("../services/airportSeedingService");
       const catalogueHealthy = await isAirportCatalogueHealthy();
       const seedAirportsEnv = process.env.SEED_AIRPORTS;
-      const shouldSeedAirports = seedAirportsEnv !== 'false';
+      const shouldSeedAirports = seedAirportsEnv !== "false";
 
       if (shouldSeedAirports && !catalogueHealthy) {
         // Check if seeding is already running
         const existingStatus = await prisma.airportSeedingStatus.findFirst({
           where: {
-            status: { in: ['pending', 'running'] },
+            status: { in: ["pending", "running"] },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         });
 
         if (!existingStatus) {
           try {
             // Try to create a new seeding status record
             // This will fail if another process already created one (race condition protection)
-            const { startAirportSeeding } = await import('../services/airportSeedingService');
+            const { startAirportSeeding } = await import("../services/airportSeedingService");
             await startAirportSeeding();
             logger.info({
-              operation: 'login_start_airport_seeding',
-              message: 'Airport seeding started after first login',
+              operation: "login_start_airport_seeding",
+              message: "Airport seeding started after first login",
               context: { userId: user.id, username: user.username },
             });
           } catch (error: unknown) {
             // If another process already started seeding, ignore the error
             const prismaError = error as { code?: string };
-            if (prismaError.code === 'P2002') {
+            if (prismaError.code === "P2002") {
               // P2002 = unique constraint violation (if we add a unique constraint)
               logger.debug({
-                operation: 'login_airport_seeding_already_running',
-                message: 'Airport seeding already started by another process',
+                operation: "login_airport_seeding_already_running",
+                message: "Airport seeding already started by another process",
                 context: { userId: user.id },
               });
             } else {
@@ -310,10 +314,10 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     } catch (error) {
       // Log error but don't fail login
       logger.warn({
-        operation: 'login_airport_seeding_error',
-        message: 'Failed to start airport seeding after login',
+        operation: "login_airport_seeding_error",
+        message: "Failed to start airport seeding after login",
         error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : "Unknown error",
         },
       });
     }
@@ -344,10 +348,10 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
 // has no expiry, while the auth cookie expires after 7 days — so on boot it must
 // ask the server whether the session is still real before rendering anything
 // protected. Returns the same user shape as login.
-router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.userId) {
-      throw new AppError('No token provided', 401);
+      throw new AppError("No token provided", 401);
     }
 
     const user = await prisma.user.findUnique({
@@ -363,71 +367,79 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: Ne
     });
 
     if (!user) {
-      throw new AppError('Invalid token - user not found', 401);
+      throw new AppError("Invalid token - user not found", 401);
     }
 
     const { isDemo, ...rest } = user;
-    res.json({ user: { ...rest, isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }) } });
+    res.json({
+      user: { ...rest, isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }) },
+    });
   } catch (error) {
     next(error);
   }
 });
 
 // Logout
-router.post('/logout', (req: Request, res: Response) => {
+router.post("/logout", (req: Request, res: Response) => {
   // Clear the auth cookie (use same options as when setting it)
-  res.clearCookie('auth_token', getAuthCookieOptions(req));
+  res.clearCookie("auth_token", getAuthCookieOptions(req));
 
-  res.json({ message: 'Logged out successfully' });
+  res.json({ message: "Logged out successfully" });
 });
 
 // Change Password (requires authentication)
-router.post('/change-password', authenticate, rejectDemo, authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
-    const userId = req.userId!;
+router.post(
+  "/change-password",
+  authenticate,
+  rejectDemo,
+  authLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
+      const userId = req.userId!;
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+      // Find user
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-    if (!user) {
-      throw new AppError('User not found', 404);
+      if (!user) {
+        throw new AppError("User not found", 404);
+      }
+
+      // Verify old password
+      const isValid = await comparePassword(oldPassword, user.passwordHash);
+      if (!isValid) {
+        throw new AppError("Current password is incorrect", 401);
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Update password AND close every session that predates it. A password
+      // change that leaves old cookies working is not a change anybody can rely
+      // on (audit finding AUD-003).
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: newPasswordHash, sessionEpoch: { increment: 1 } },
+      });
+
+      // The caller keeps theirs: they just proved the old password and are sitting
+      // in front of the app. A fresh cookie is minted AFTER the cutoff, so the
+      // revocation applies to everyone else.
+      issueAuthCookie(req, res, updated);
+
+      logger.info({
+        operation: "password_changed",
+        message: "User changed password",
+        context: { userId },
+      });
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      next(error);
     }
-
-    // Verify old password
-    const isValid = await comparePassword(oldPassword, user.passwordHash);
-    if (!isValid) {
-      throw new AppError('Current password is incorrect', 401);
-    }
-
-    // Hash new password
-    const newPasswordHash = await hashPassword(newPassword);
-
-    // Update password AND close every session that predates it. A password
-    // change that leaves old cookies working is not a change anybody can rely
-    // on (audit finding AUD-003).
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: newPasswordHash, sessionEpoch: { increment: 1 } },
-    });
-
-    // The caller keeps theirs: they just proved the old password and are sitting
-    // in front of the app. A fresh cookie is minted AFTER the cutoff, so the
-    // revocation applies to everyone else.
-    issueAuthCookie(req, res, updated);
-
-    logger.info({
-      operation: 'password_changed',
-      message: 'User changed password',
-      context: { userId },
-    });
-
-    res.json({ message: 'Password changed successfully' });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 export default router;

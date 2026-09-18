@@ -1,15 +1,15 @@
-import { createWorker, Worker } from 'tesseract.js';
-import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
-import { ParsedBooking } from '../../bookingParser';
+import { createWorker, Worker } from "tesseract.js";
+import { IVisionParser, ProviderAvailability, VisionProvider } from "../types";
+import { ParsedBooking } from "../../bookingParser";
 import {
   normalizeParsedBooking,
   extractFlightDataFromText,
   validateIATACode,
   PATTERNS,
-} from '../shared/utils';
-import { CITY_TO_IATA } from '../text/regexMappings';
-import { normalizeCityName } from '../text/regexAirportExtractor';
-import logger from '../../../utils/logger';
+} from "../shared/utils";
+import { CITY_TO_IATA } from "../text/regexMappings";
+import { normalizeCityName } from "../text/regexAirportExtractor";
+import logger from "../../../utils/logger";
 
 /**
  * Three-letter tokens that are printed ON boarding passes but are not
@@ -23,16 +23,40 @@ import logger from '../../../utils/logger';
  */
 const NOT_AIRPORT_CODES = new Set([
   // Pre-existing entries: ordinary English words that survive OCR.
-  'THE', 'AND', 'FOR', 'NOT', 'ARE', 'YOU',
+  "THE",
+  "AND",
+  "FOR",
+  "NOT",
+  "ARE",
+  "YOU",
   // Column headings and field labels, German and English.
-  'GRP', 'SEQ', 'PNR', 'SEC', 'REF', 'FLT', 'TKT', 'ETK', 'ZON', 'ROW',
-  'DEP', 'ARR', 'GRO', 'CLS', 'STS', 'NBR',
+  "GRP",
+  "SEQ",
+  "PNR",
+  "SEC",
+  "REF",
+  "FLT",
+  "TKT",
+  "ETK",
+  "ZON",
+  "ROW",
+  "DEP",
+  "ARR",
+  "GRO",
+  "CLS",
+  "STS",
+  "NBR",
   // Frequent-flyer and status printing (Lufthansa: "FTL LH*S").
-  'FTL', 'FTV', 'SEN', 'HON',
+  "FTL",
+  "FTV",
+  "SEN",
+  "HON",
   // Honorifics in the passenger row.
-  'MRS', 'MSS',
+  "MRS",
+  "MSS",
   // Clock/zone words.
-  'GMT', 'UTC',
+  "GMT",
+  "UTC",
 ]);
 
 /**
@@ -80,7 +104,7 @@ function expandYear(captured: string | undefined): string {
  * recall-for-precision trade. It also costs nothing: one parameter, no
  * preprocessing step and no new dependency.
  */
-const THRESHOLDING_SAUVOLA = '2';
+const THRESHOLDING_SAUVOLA = "2";
 
 /**
  * Does this line look like the OCR reading a barcode rather than words?
@@ -96,20 +120,23 @@ const THRESHOLDING_SAUVOLA = '2';
  * a short genuine line ("MUC = FRA", two real tokens and a stray glyph) stays.
  */
 function looksLikeRubble(line: string): boolean {
-  const tokens = line.trim().split(/\s+/).filter((t) => t !== '');
+  const tokens = line
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t !== "");
   if (tokens.length < 3) {
     return false;
   }
-  const fragments = tokens.filter((t) => t.replace(/[^A-Za-z0-9]/g, '').length <= 2);
+  const fragments = tokens.filter((t) => t.replace(/[^A-Za-z0-9]/g, "").length <= 2);
   return fragments.length * 2 > tokens.length;
 }
 
 /** The pass with the OCR's rubble lines dropped. */
 function readableLines(text: string): string {
   return text
-    .split('\n')
+    .split("\n")
     .filter((line) => !looksLikeRubble(line))
-    .join('\n');
+    .join("\n");
 }
 
 /**
@@ -120,9 +147,7 @@ function readableLines(text: string): string {
  * trip. Order is reading order, which is the order a pass prints departure and
  * destination in.
  */
-function citiesToCodes(
-  text: string,
-): { departure: string; arrival: string } | null {
+function citiesToCodes(text: string): { departure: string; arrival: string } | null {
   const found: string[] = [];
   for (const word of text.split(/[^A-Za-zÀ-ÿ]+/)) {
     if (word.length < 3) continue;
@@ -154,7 +179,7 @@ function citiesToCodes(
  */
 function containWorkerErrors(context: string) {
   return (error: unknown): void => {
-    logger.warn({ err: error, context }, '[Tesseract Parser] OCR worker reported a failure');
+    logger.warn({ err: error, context }, "[Tesseract Parser] OCR worker reported a failure");
   };
 }
 
@@ -164,7 +189,7 @@ function containWorkerErrors(context: string) {
  * Provides free, local OCR-based boarding pass parsing without requiring external APIs.
  */
 export class TesseractVisionParser implements IVisionParser {
-  readonly provider: VisionProvider = 'tesseract';
+  readonly provider: VisionProvider = "tesseract";
   private worker: Worker | null = null;
   private isInitialized = false;
 
@@ -176,15 +201,15 @@ export class TesseractVisionParser implements IVisionParser {
       return this.worker;
     }
 
-    logger.info('[Tesseract Parser] Initializing OCR worker...');
+    logger.info("[Tesseract Parser] Initializing OCR worker...");
 
-    this.worker = await createWorker('eng', 1, {
+    this.worker = await createWorker("eng", 1, {
       logger: (m) => {
-        if (m.status === 'recognizing text') {
+        if (m.status === "recognizing text") {
           logger.debug(`[Tesseract Parser] OCR Progress: ${Math.round(m.progress * 100)}%`);
         }
       },
-      errorHandler: containWorkerErrors('boardingpass'),
+      errorHandler: containWorkerErrors("boardingpass"),
     });
 
     // Set on the worker, not per call: the worker is cached and reused, and
@@ -194,7 +219,7 @@ export class TesseractVisionParser implements IVisionParser {
     });
 
     this.isInitialized = true;
-    logger.info('[Tesseract Parser] OCR worker initialized');
+    logger.info("[Tesseract Parser] OCR worker initialized");
 
     return this.worker;
   }
@@ -222,10 +247,10 @@ export class TesseractVisionParser implements IVisionParser {
     if (this.docWorker) return this.docWorker;
 
     try {
-      this.docWorker = await createWorker(['eng', 'deu'], 1, {
-        errorHandler: containWorkerErrors('document'),
+      this.docWorker = await createWorker(["eng", "deu"], 1, {
+        errorHandler: containWorkerErrors("document"),
       });
-      logger.info('[Tesseract Parser] Document OCR worker initialized (eng+deu)');
+      logger.info("[Tesseract Parser] Document OCR worker initialized (eng+deu)");
     } catch (error) {
       // The German pack could not be fetched — offline, or no cache. English
       // still reads Latin script, so a degraded answer beats no answer; it is
@@ -233,10 +258,10 @@ export class TesseractVisionParser implements IVisionParser {
       // badly, rather than looking like a parser bug.
       logger.warn(
         { error },
-        '[Tesseract Parser] German language pack unavailable, falling back to English only'
+        "[Tesseract Parser] German language pack unavailable, falling back to English only"
       );
-      this.docWorker = await createWorker('eng', 1, {
-        errorHandler: containWorkerErrors('document-fallback'),
+      this.docWorker = await createWorker("eng", 1, {
+        errorHandler: containWorkerErrors("document-fallback"),
       });
     }
 
@@ -253,11 +278,11 @@ export class TesseractVisionParser implements IVisionParser {
    */
   async recognizeText(imageBase64: string): Promise<{ text: string; confidence: number }> {
     const worker = await this.ensureDocumentWorker();
-    const { data } = await worker.recognize(Buffer.from(imageBase64, 'base64'));
+    const { data } = await worker.recognize(Buffer.from(imageBase64, "base64"));
 
     logger.info(
       { confidence: data.confidence, textLength: data.text.length },
-      '[Tesseract Parser] Document OCR complete'
+      "[Tesseract Parser] Document OCR complete"
     );
 
     return { text: data.text, confidence: data.confidence };
@@ -271,12 +296,12 @@ export class TesseractVisionParser implements IVisionParser {
       await this.worker.terminate();
       this.worker = null;
       this.isInitialized = false;
-      logger.info('[Tesseract Parser] OCR worker terminated');
+      logger.info("[Tesseract Parser] OCR worker terminated");
     }
     if (this.docWorker) {
       await this.docWorker.terminate();
       this.docWorker = null;
-      logger.info('[Tesseract Parser] Document OCR worker terminated');
+      logger.info("[Tesseract Parser] Document OCR worker terminated");
     }
   }
 
@@ -285,22 +310,22 @@ export class TesseractVisionParser implements IVisionParser {
     return {
       available: true,
       metadata: {
-        provider: 'tesseract',
-        version: '4.x',
-        language: 'eng',
-        cost: 'free',
+        provider: "tesseract",
+        version: "4.x",
+        language: "eng",
+        cost: "free",
       },
     };
   }
 
   async parseImage(imageBase64: string): Promise<ParsedBooking> {
-    logger.info('[Tesseract Parser] Starting OCR boarding pass parsing');
+    logger.info("[Tesseract Parser] Starting OCR boarding pass parsing");
 
     try {
       const worker = await this.ensureWorker();
 
       // Convert base64 to buffer
-      const imageBuffer = Buffer.from(imageBase64, 'base64');
+      const imageBuffer = Buffer.from(imageBase64, "base64");
 
       // Perform OCR
       const { data } = await worker.recognize(imageBuffer);
@@ -311,9 +336,9 @@ export class TesseractVisionParser implements IVisionParser {
           confidence: data.confidence,
           textLength: extractedText.length,
         },
-        '[Tesseract Parser] OCR extraction complete'
+        "[Tesseract Parser] OCR extraction complete"
       );
-      logger.debug({ extractedText }, '[Tesseract Parser] Extracted text');
+      logger.debug({ extractedText }, "[Tesseract Parser] Extracted text");
 
       // Extract flight data using pattern matching
       const parsedData = this.parseOCRText(extractedText);
@@ -333,13 +358,15 @@ export class TesseractVisionParser implements IVisionParser {
           route: `${result.departureCode} -> ${result.arrivalCode}`,
           missingFields: result.missing.length,
         },
-        '[Tesseract Parser] Parsing complete'
+        "[Tesseract Parser] Parsing complete"
       );
 
       return result;
     } catch (error) {
-      logger.error({ error }, '[Tesseract Parser] OCR parsing failed');
-      throw new Error(`Tesseract OCR parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error({ error }, "[Tesseract Parser] OCR parsing failed");
+      throw new Error(
+        `Tesseract OCR parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -485,7 +512,8 @@ export class TesseractVisionParser implements IVisionParser {
 
     // Try to extract from common boarding pass formats
     // Example: "05 DEC 2025 14:30" or "DEC 5 14:30"
-    const datePattern = /(\d{1,2})\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{4})?\s*(\d{1,2}):(\d{2})/gi;
+    const datePattern =
+      /(\d{1,2})\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{4})?\s*(\d{1,2}):(\d{2})/gi;
     const dateMatches = Array.from(text.matchAll(datePattern));
 
     if (dateMatches.length > 0 && !result.departure) {
@@ -495,12 +523,12 @@ export class TesseractVisionParser implements IVisionParser {
       const yearCaptured = match[3];
       const year = yearCaptured || new Date().getFullYear().toString();
       const month = this.monthToNumber(match[2]);
-      const day = match[1].padStart(2, '0');
-      const hour = match[4].padStart(2, '0');
+      const day = match[1].padStart(2, "0");
+      const hour = match[4].padStart(2, "0");
       const minute = match[5];
       result.departure = `${year}-${month}-${day}T${hour}:${minute}`;
       if (!yearCaptured) {
-        result.inferredFields.push('departureTime');
+        result.inferredFields.push("departureTime");
       }
     }
 
@@ -524,10 +552,10 @@ export class TesseractVisionParser implements IVisionParser {
         const yearCaptured = dateOnly[3];
         const year = expandYear(yearCaptured);
         const month = this.monthToNumber(dateOnly[2]);
-        const day = dateOnly[1].padStart(2, '0');
+        const day = dateOnly[1].padStart(2, "0");
         result.departure = `${year}-${month}-${day}T00:00`;
         if (!yearCaptured) {
-          result.inferredFields.push('departureTime');
+          result.inferredFields.push("departureTime");
         }
       }
     }
@@ -540,15 +568,15 @@ export class TesseractVisionParser implements IVisionParser {
    */
   private extractAirline(text: string): string | undefined {
     const airlines = [
-      { pattern: /LUFTHANSA/i, name: 'Lufthansa' },
-      { pattern: /RYANAIR/i, name: 'Ryanair' },
-      { pattern: /EASYJET/i, name: 'easyJet' },
-      { pattern: /EUROWINGS/i, name: 'Eurowings' },
-      { pattern: /BRITISH AIRWAYS/i, name: 'British Airways' },
-      { pattern: /AIR FRANCE/i, name: 'Air France' },
-      { pattern: /KLM/i, name: 'KLM' },
-      { pattern: /SWISS/i, name: 'Swiss' },
-      { pattern: /AUSTRIAN/i, name: 'Austrian Airlines' },
+      { pattern: /LUFTHANSA/i, name: "Lufthansa" },
+      { pattern: /RYANAIR/i, name: "Ryanair" },
+      { pattern: /EASYJET/i, name: "easyJet" },
+      { pattern: /EUROWINGS/i, name: "Eurowings" },
+      { pattern: /BRITISH AIRWAYS/i, name: "British Airways" },
+      { pattern: /AIR FRANCE/i, name: "Air France" },
+      { pattern: /KLM/i, name: "KLM" },
+      { pattern: /SWISS/i, name: "Swiss" },
+      { pattern: /AUSTRIAN/i, name: "Austrian Airlines" },
     ];
 
     for (const { pattern, name } of airlines) {
@@ -564,11 +592,11 @@ export class TesseractVisionParser implements IVisionParser {
    * Extract seat class
    */
   private extractSeatClass(text: string): string | undefined {
-    if (/BUSINESS\s*CLASS/i.test(text)) return 'Business';
-    if (/FIRST\s*CLASS/i.test(text)) return 'First';
-    if (/PREMIUM\s*ECONOMY/i.test(text)) return 'Premium Economy';
-    if (/ECONOMY\s*LIGHT/i.test(text)) return 'Economy Light';
-    if (/ECONOMY/i.test(text)) return 'Economy';
+    if (/BUSINESS\s*CLASS/i.test(text)) return "Business";
+    if (/FIRST\s*CLASS/i.test(text)) return "First";
+    if (/PREMIUM\s*ECONOMY/i.test(text)) return "Premium Economy";
+    if (/ECONOMY\s*LIGHT/i.test(text)) return "Economy Light";
+    if (/ECONOMY/i.test(text)) return "Economy";
     return undefined;
   }
 
@@ -590,20 +618,20 @@ export class TesseractVisionParser implements IVisionParser {
    */
   private monthToNumber(month: string): string {
     const months: Record<string, string> = {
-      JAN: '01',
-      FEB: '02',
-      MAR: '03',
-      APR: '04',
-      MAY: '05',
-      JUN: '06',
-      JUL: '07',
-      AUG: '08',
-      SEP: '09',
-      OCT: '10',
-      NOV: '11',
-      DEC: '12',
+      JAN: "01",
+      FEB: "02",
+      MAR: "03",
+      APR: "04",
+      MAY: "05",
+      JUN: "06",
+      JUL: "07",
+      AUG: "08",
+      SEP: "09",
+      OCT: "10",
+      NOV: "11",
+      DEC: "12",
     };
-    return months[month.toUpperCase()] || '01';
+    return months[month.toUpperCase()] || "01";
   }
 }
 
@@ -618,7 +646,7 @@ export function getTesseractParser(): TesseractVisionParser {
 }
 
 // Cleanup on process exit
-process.on('beforeExit', async () => {
+process.on("beforeExit", async () => {
   if (instance) {
     await instance.cleanup();
   }

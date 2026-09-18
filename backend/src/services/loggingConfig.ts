@@ -1,6 +1,6 @@
-import { prisma, setDbQueryLoggingEnabled } from '../db';
-import { systemLogger } from '../utils/logger';
-import { CACHE_TTL, LOGGING_DEFAULTS } from '../config/constants';
+import { prisma, setDbQueryLoggingEnabled } from "../db";
+import { systemLogger } from "../utils/logger";
+import { CACHE_TTL, LOGGING_DEFAULTS } from "../config/constants";
 import { ensureAdminSettingsRow } from "./adminSettingsRow";
 
 /**
@@ -41,7 +41,7 @@ export async function getLoggingConfig(): Promise<LogConfig> {
     const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const config: LogConfig = {
-      logLevel: settings?.logLevel ?? 'info',
+      logLevel: settings?.logLevel ?? "info",
       maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
       maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
       logHttpRequests: settings?.logHttpRequests ?? false,
@@ -57,16 +57,16 @@ export async function getLoggingConfig(): Promise<LogConfig> {
     return config;
   } catch (error) {
     systemLogger.error({
-      operation: 'get_logging_config_failed',
+      operation: "get_logging_config_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
 
     // Return defaults on error
     return {
-      logLevel: 'info',
+      logLevel: "info",
       maxLogFileSize: LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
       maxLogFiles: LOGGING_DEFAULTS.MAX_LOG_FILES,
       logHttpRequests: false,
@@ -95,12 +95,11 @@ export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<
 
     // Mirror to the sync flag in db.ts so the prisma middleware picks up
     // the new value immediately without waiting for the 30s refresh tick.
-    const isDebugLevel =
-      (settings.logLevel === 'debug' || settings.logLevel === 'trace');
+    const isDebugLevel = settings.logLevel === "debug" || settings.logLevel === "trace";
     setDbQueryLoggingEnabled(Boolean(settings.logDatabaseQueries) && isDebugLevel);
 
     systemLogger.info({
-      operation: 'logging_config_updated',
+      operation: "logging_config_updated",
       context: {
         updates,
       },
@@ -110,9 +109,9 @@ export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<
     return getLoggingConfig();
   } catch (error) {
     systemLogger.error({
-      operation: 'update_logging_config_failed',
+      operation: "update_logging_config_failed",
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
@@ -125,10 +124,10 @@ export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<
  * Sets logLevel to 'debug' when enabled, 'info' when disabled
  */
 export async function toggleDebugLogging(enabled: boolean): Promise<void> {
-  await updateLoggingConfig({ logLevel: enabled ? 'debug' : 'info' });
+  await updateLoggingConfig({ logLevel: enabled ? "debug" : "info" });
 
   systemLogger.info({
-    operation: 'debug_logging_toggled',
+    operation: "debug_logging_toggled",
     context: {
       enabled,
     },
@@ -141,7 +140,7 @@ export async function toggleDebugLogging(enabled: boolean): Promise<void> {
  */
 export async function isDebugEnabled(): Promise<boolean> {
   const config = await getLoggingConfig();
-  return config.logLevel === 'debug' || config.logLevel === 'trace';
+  return config.logLevel === "debug" || config.logLevel === "trace";
 }
 
 /**
@@ -149,7 +148,7 @@ export async function isDebugEnabled(): Promise<boolean> {
  */
 export async function shouldLogHttpRequests(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === 'debug' || config.logLevel === 'trace';
+  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
   return config.logHttpRequests && isDebugLevel;
 }
 
@@ -158,7 +157,7 @@ export async function shouldLogHttpRequests(): Promise<boolean> {
  */
 export async function shouldLogDatabaseQueries(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === 'debug' || config.logLevel === 'trace';
+  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
   return config.logDatabaseQueries && isDebugLevel;
 }
 
@@ -167,7 +166,7 @@ export async function shouldLogDatabaseQueries(): Promise<boolean> {
  */
 export async function shouldLogParserOperations(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === 'debug' || config.logLevel === 'trace';
+  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
   return config.logParserOperations && isDebugLevel;
 }
 
@@ -187,6 +186,6 @@ export async function invalidateCacheAndReinit(): Promise<void> {
   invalidateCache();
 
   // Reinitialize logger streams with new config
-  const { reinitializeCategoryStreams } = await import('../utils/logger');
+  const { reinitializeCategoryStreams } = await import("../utils/logger");
   await reinitializeCategoryStreams();
 }

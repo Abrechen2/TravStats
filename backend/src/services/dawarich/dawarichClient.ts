@@ -192,10 +192,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
         throw new DawarichError("protocol", "Dawarich health check returned no JSON body");
       }
       if (!isRecord(data) || data.status !== "ok") {
-        throw new DawarichError(
-          "protocol",
-          "Dawarich health check returned an unexpected payload",
-        );
+        throw new DawarichError("protocol", "Dawarich health check returned an unexpected payload");
       }
       return { reachable: true, version };
     },
@@ -224,7 +221,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
         if (!Array.isArray(data)) {
           throw new DawarichError(
             "protocol",
-            "Dawarich returned an unexpected points payload — expected a bare array",
+            "Dawarich returned an unexpected points payload — expected a bare array"
           );
         }
 

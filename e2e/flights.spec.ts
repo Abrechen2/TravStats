@@ -46,7 +46,9 @@ test.describe("Flight list", () => {
   test("offers the search field the page documents", async ({ page }) => {
     // The real placeholder from `flights:filter.searchPlaceholder`, not a
     // `placeholder*="search"` guess that matched nothing and was skipped.
-    const search = page.getByPlaceholder(/Airline, Flugnummer oder Flughafen|Airline, flight number/i);
+    const search = page.getByPlaceholder(
+      /Airline, Flugnummer oder Flughafen|Airline, flight number/i
+    );
     await expect(search).toBeVisible({ timeout: 15_000 });
 
     await search.fill("LH");
@@ -56,7 +58,9 @@ test.describe("Flight list", () => {
   });
 
   test("keeps the filter in the URL so a filtered list can be shared", async ({ page }) => {
-    const search = page.getByPlaceholder(/Airline, Flugnummer oder Flughafen|Airline, flight number/i);
+    const search = page.getByPlaceholder(
+      /Airline, Flugnummer oder Flughafen|Airline, flight number/i
+    );
     await search.fill("LH");
     await expect(search).toHaveValue("LH");
     // Whatever the list then shows, the page must still be the flight list

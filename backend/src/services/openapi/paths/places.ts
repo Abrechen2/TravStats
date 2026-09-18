@@ -18,12 +18,12 @@
 
 import { z } from "zod";
 
-import {
-  placeImportCommitSchema,
-  placeImportPreviewSchema,
-} from "../../../schemas/placeImport";
+import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
+import { documentIdsBodySchema } from "../../../schemas/document";
+import { createVisitSchema } from "../../../schemas/place";
 import { errorContent } from "./shared";
 import {
   createPlaceListSchema,
@@ -42,6 +42,7 @@ const place = registry.register(
   "Place",
   z
     .object({
+      ...prismaColumns("Place"),
       id: uuid,
       userId: uuid,
       name: z.string(),
@@ -58,7 +59,11 @@ const place = registry.register(
       visited: z
         .boolean()
         .describe("False means a wishlist entry — somewhere wanted, not somewhere been."),
-      visitCount: z.number().int(),
+      visitCount: z.number().int().describe("Visits that happened; future-dated ones excluded"),
+      plannedVisitCount: z.number().int().describe("Future-dated visits, counted apart"),
+      lastVisitAt: z.string().datetime().nullable().describe("Most recent completed visit"),
+      continent: z.string().nullable(),
+      visits: z.array(includedRow("visit")).optional().describe("Included by GET /places/{id}"),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
     })
@@ -69,6 +74,7 @@ const placeList = registry.register(
   "PlaceList",
   z
     .object({
+      ...prismaColumns("PlaceList"),
       id: uuid,
       userId: uuid,
       name: z.string(),
@@ -112,6 +118,10 @@ const placeList = registry.register(
             "a real denominator (47 of 1,248, not 47 of 47). Null for an " +
             "ordinary list, where placeCount is already the total."
         ),
+      entries: z
+        .array(includedRow("list entry"))
+        .optional()
+        .describe("Only when the entries were asked for"),
     })
     .openapi("PlaceList")
 );
@@ -178,9 +188,16 @@ registry.registerPath({
   summary: "Record a visit",
   description:
     "Several visits to the same place on the same day stay several visits — the " +
-    "day is not a key.",
+    "day is not a key. `documentIds` files kept documents with the new visit.",
   tags: placesTag,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: {
+      content: {
+        "application/json": { schema: createVisitSchema.extend(documentIdsBodySchema.shape) },
+      },
+    },
+  },
   responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 
@@ -217,12 +234,48 @@ registry.registerPath({
   summary: "Fetch a visit photo's bytes",
   description:
     "Ownership-checked, and sets its own `Cache-Control: private` over the " +
-    "API-wide `no-store`. Private, never public.",
+    "API-wide `no-store`. Private, never public. A photo that has become an Immich " +
+    "link (`immichAssetId` set, no copy on disk) is streamed from the owner's Immich; " +
+    "the asset id comes from the row, never from the request. `size` picks the " +
+    "rendition for a link: thumbnail, preview (default) or original.",
   tags: placesTag,
-  request: { params: z.object({ visitId: uuid, photoId: uuid }) },
+  request: {
+    params: z.object({ visitId: uuid, photoId: uuid }),
+    query: z.object({ size: z.enum(["thumbnail", "preview", "original"]).optional() }),
+  },
   responses: {
     200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
+    304: { description: "Unchanged (a link's ETag matched)" },
     404: notFound,
+    409: { description: "A link, and Immich is not configured", content: errorContent },
+    502: { description: "Immich did not deliver the asset" },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/places/visits/photos/immich-link",
+  summary: "Turn visit photo copies into Immich links",
+  description:
+    "Looks every photo copy of the caller that carries a checksum up in their Immich by " +
+    "that checksum (SHA-1, base64, the value Immich keeps). A match keeps the row, gains " +
+    "`immichAssetId` and loses the copy on disk. Photos without a checksum stay copies: " +
+    "matching them by name would be a guess. At most 500 per call.",
+  tags: placesTag,
+  responses: {
+    200: {
+      description: "How many copies were checked and linked",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ checked: z.number().int(), linked: z.number().int() }),
+          }),
+        },
+      },
+    },
+    409: { description: "Immich is not configured for this user", content: errorContent },
+    502: { description: "Immich could not be asked", content: errorContent },
   },
 });
 
@@ -350,7 +403,11 @@ registry.registerPath({
   summary: "Take a place out of a list",
   tags: placesTag,
   request: { params: z.object({ id: uuid, placeId: uuid }) },
-  responses: { 204: deleted, 404: notFound, 409: { description: "Fixed membership", content: errorContent } },
+  responses: {
+    204: deleted,
+    404: notFound,
+    409: { description: "Fixed membership", content: errorContent },
+  },
 });
 
 registry.registerPath({

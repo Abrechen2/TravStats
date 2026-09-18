@@ -74,11 +74,10 @@ const NO_SNAPSHOT: SeedFxColumns = {
 
 export function seedFxColumns(
   stay: { totalPrice: number | null; currency: string; checkIn: Date },
-  baseCurrency: string,
+  baseCurrency: string
 ): SeedFxColumns {
   if (stay.totalPrice === null) return { ...NO_SNAPSHOT };
-  const rate =
-    stay.currency === baseCurrency ? 1 : (SEED_FX_RATES[stay.currency] ?? null);
+  const rate = stay.currency === baseCurrency ? 1 : (SEED_FX_RATES[stay.currency] ?? null);
   if (rate === null) return { ...NO_SNAPSHOT };
   // Round to the BASE currency's own precision, exactly as `convertToBase`
   // does — a fixed 2 stores a phantom fraction for a yen total.

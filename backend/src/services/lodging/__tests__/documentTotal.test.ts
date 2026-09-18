@@ -78,7 +78,9 @@ describe("findLabelledTotal", () => {
   it("is not fooled by the phrase 'total number of nights'", () => {
     // "total" on its own is prose. Only the specific money labels count —
     // otherwise this very document hands back a night count.
-    expect(findLabelledTotal("throughout the total number of nights selected, 3 nights")).toBeNull();
+    expect(
+      findLabelledTotal("throughout the total number of nights selected, 3 nights")
+    ).toBeNull();
   });
 
   it("reads the German labels", () => {

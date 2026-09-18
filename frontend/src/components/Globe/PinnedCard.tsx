@@ -14,6 +14,7 @@ import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
 import { getAirportStats, getArcStats, getCruiseStats, getPortStats } from "./cardStats";
+import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
 interface PinnedCardProps {
   pinned: GlobePinned;
@@ -559,16 +560,9 @@ function formatKmNumber(km: number): string {
   return Math.round(km).toLocaleString("de-DE");
 }
 
-function formatDate(iso: string, locale: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso.slice(0, 10);
-  }
+/** In the user's date format (Settings → Display); the locale no longer decides. */
+function formatDate(iso: string, _locale: string): string {
+  return formatUserDate(iso) || iso.slice(0, 10);
 }
 
 function formatDuration(minutes: number, t: ReturnType<typeof useTranslation>["t"]): string {

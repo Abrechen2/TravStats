@@ -4,7 +4,7 @@ import { stripMarkdown } from "./markdownPreview";
 describe("stripMarkdown", () => {
   it("drops bold markers but keeps the word", () => {
     expect(stripMarkdown("Heute hat unsere **Keniareise** begonnen.")).toBe(
-      "Heute hat unsere Keniareise begonnen.",
+      "Heute hat unsere Keniareise begonnen."
     );
   });
 
@@ -14,7 +14,7 @@ describe("stripMarkdown", () => {
 
   it("keeps a link's text and drops its target", () => {
     expect(stripMarkdown("Siehe [die Karte](https://example.com/a_b) dort")).toBe(
-      "Siehe die Karte dort",
+      "Siehe die Karte dort"
     );
   });
 
@@ -28,7 +28,7 @@ describe("stripMarkdown", () => {
 
   it("leaves plain text untouched", () => {
     expect(stripMarkdown("Angekommen am Bahnhof, fuhr auch...")).toBe(
-      "Angekommen am Bahnhof, fuhr auch...",
+      "Angekommen am Bahnhof, fuhr auch..."
     );
   });
 
@@ -38,7 +38,7 @@ describe("stripMarkdown", () => {
 
   it("drops an image entirely rather than leaving a stray exclamation mark", () => {
     expect(stripMarkdown("Vorher ![Strand](https://example.com/s.jpg) nachher")).toBe(
-      "Vorher nachher",
+      "Vorher nachher"
     );
   });
 
@@ -48,7 +48,7 @@ describe("stripMarkdown", () => {
 
   it("drops underscore emphasis", () => {
     expect(stripMarkdown("Ein __wichtiger__ und _schöner_ Tag")).toBe(
-      "Ein wichtiger und schöner Tag",
+      "Ein wichtiger und schöner Tag"
     );
   });
 

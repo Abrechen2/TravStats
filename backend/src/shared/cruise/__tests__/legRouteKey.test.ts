@@ -23,9 +23,21 @@ describe("legRouteKey", () => {
 describe("buildLegRouteOverrideMap", () => {
   it("skips a row whose waypoints is not an array", () => {
     const map = buildLegRouteOverrideMap([
-      { fromKind: "port", fromRef: "1", toKind: "port", toRef: "2", waypoints: { not: "an array" } },
+      {
+        fromKind: "port",
+        fromRef: "1",
+        toKind: "port",
+        toRef: "2",
+        waypoints: { not: "an array" },
+      },
       { fromKind: "port", fromRef: "3", toKind: "port", toRef: "4", waypoints: null },
-      { fromKind: "port", fromRef: "5", toKind: "port", toRef: "6", waypoints: "also not an array" },
+      {
+        fromKind: "port",
+        fromRef: "5",
+        toKind: "port",
+        toRef: "6",
+        waypoints: "also not an array",
+      },
     ]);
     expect(map.size).toBe(0);
   });

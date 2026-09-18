@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
-import request from 'supertest';
+import { describe, it, expect, beforeEach, afterAll } from "@jest/globals";
+import request from "supertest";
 
-import app from '../index';
-import { prisma } from '../db';
-import { clearAvailabilityCache } from '../services/parsers/config';
+import app from "../index";
+import { prisma } from "../db";
+import { clearAvailabilityCache } from "../services/parsers/config";
 
 /**
  * What the screen says about the parser has to match what the parser does.
@@ -22,7 +22,7 @@ import { clearAvailabilityCache } from '../services/parsers/config';
  *
  * The env case is the one that was broken, so it is the one asserted first.
  */
-describe('GET /parser-capabilities', () => {
+describe("GET /parser-capabilities", () => {
   const savedUrl = process.env.OLLAMA_URL;
   const savedModel = process.env.OLLAMA_MODEL;
 
@@ -43,27 +43,27 @@ describe('GET /parser-capabilities', () => {
     else process.env.OLLAMA_MODEL = savedModel;
   });
 
-  it('reports an LLM that is configured through the environment', async () => {
+  it("reports an LLM that is configured through the environment", async () => {
     await clearAdminOllama();
-    process.env.OLLAMA_URL = 'http://192.0.2.10:11434';
-    process.env.OLLAMA_MODEL = 'gemma3:12b';
+    process.env.OLLAMA_URL = "http://192.0.2.10:11434";
+    process.env.OLLAMA_MODEL = "gemma3:12b";
 
-    const res = await request(app).get('/api/v1/parser-capabilities').expect(200);
+    const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
     expect(res.body.hasLlm).toBe(true);
   });
 
-  it('reports none when neither the admin settings nor the environment name one', async () => {
+  it("reports none when neither the admin settings nor the environment name one", async () => {
     await clearAdminOllama();
 
-    const res = await request(app).get('/api/v1/parser-capabilities').expect(200);
+    const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
     expect(res.body.hasLlm).toBe(false);
   });
 
-  it('needs both halves — a URL without a model is not a working parser', async () => {
+  it("needs both halves — a URL without a model is not a working parser", async () => {
     await clearAdminOllama();
-    process.env.OLLAMA_URL = 'http://192.0.2.10:11434';
+    process.env.OLLAMA_URL = "http://192.0.2.10:11434";
 
-    const res = await request(app).get('/api/v1/parser-capabilities').expect(200);
+    const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
     expect(res.body.hasLlm).toBe(false);
   });
 });

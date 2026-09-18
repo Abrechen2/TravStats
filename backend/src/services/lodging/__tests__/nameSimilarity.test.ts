@@ -1,5 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
-import { namesCouldBeOneHouse, significantTokens, sharedSignificantTokens } from "../nameSimilarity";
+import {
+  namesCouldBeOneHouse,
+  significantTokens,
+  sharedSignificantTokens,
+} from "../nameSimilarity";
 
 /**
  * Every pair below is real, from the owner's own library, where one house was
@@ -24,7 +28,7 @@ describe("significantTokens", () => {
 
   it("drops company suffixes, which a booking mail never prints", () => {
     expect(
-      significantTokens("Kiekenstein Hotel-Restaurant, Inh. Strathmann GmbH & Co. KG"),
+      significantTokens("Kiekenstein Hotel-Restaurant, Inh. Strathmann GmbH & Co. KG")
     ).toEqual(["kiekenstein", "strathmann"]);
   });
 
@@ -42,7 +46,7 @@ describe("significantTokens", () => {
 describe("sharedSignificantTokens", () => {
   it("finds the two words the live duplicate had in common", () => {
     expect(
-      sharedSignificantTokens("Emirates Palace Mandarin Oriental", "Emirates Palace, Abu Dhabi"),
+      sharedSignificantTokens("Emirates Palace Mandarin Oriental", "Emirates Palace, Abu Dhabi")
     ).toEqual(["emirates", "palace"]);
   });
 
@@ -54,22 +58,25 @@ describe("sharedSignificantTokens", () => {
     expect(sharedSignificantTokens("Hotel Fortuna", "Hotel - Restaurant Fortuna")).toEqual([
       "fortuna",
     ]);
-    expect(
-      sharedSignificantTokens("Super 8 Freiburg", "Super 8 by Wyndham Freiburg"),
-    ).toEqual(["super", "8", "freiburg"]);
+    expect(sharedSignificantTokens("Super 8 Freiburg", "Super 8 by Wyndham Freiburg")).toEqual([
+      "super",
+      "8",
+      "freiburg",
+    ]);
   });
 
   it("is symmetric — which side came from the mail must not matter", () => {
     expect(sharedSignificantTokens("Hotel NH Ludwigsburg", "NH Ludwigsburg")).toEqual(
-      sharedSignificantTokens("NH Ludwigsburg", "Hotel NH Ludwigsburg"),
+      sharedSignificantTokens("NH Ludwigsburg", "Hotel NH Ludwigsburg")
     );
   });
 
   it("reports the overlap of two different houses honestly", () => {
     // One shared word. The CALLER decides that one is not enough — this
     // function counts, it does not judge.
-    expect(sharedSignificantTokens("Park Inn Berlin Alexanderplatz", "Park Inn Frankfurt Flughafen"))
-      .toEqual(["park", "inn"]);
+    expect(
+      sharedSignificantTokens("Park Inn Berlin Alexanderplatz", "Park Inn Frankfurt Flughafen")
+    ).toEqual(["park", "inn"]);
     expect(sharedSignificantTokens("Hotel Fortuna", "Hotel Adler")).toEqual([]);
   });
 
@@ -92,9 +99,17 @@ describe("namesCouldBeOneHouse", () => {
   });
 
   it("needs two identifying words, or full containment, when the town is unknown", () => {
-    expect(namesCouldBeOneHouse("Emirates Palace, Abu Dhabi", "Emirates Palace Mandarin Oriental", null)).toBe(true);
+    expect(
+      namesCouldBeOneHouse("Emirates Palace, Abu Dhabi", "Emirates Palace Mandarin Oriental", null)
+    ).toBe(true);
     expect(namesCouldBeOneHouse("Krafft Basel", "Hotel Krafft Basel", null)).toBe(true);
-    expect(namesCouldBeOneHouse("Corpus Christi KOA Journey", "Rockport / Corpus Christi KOA Journey", null)).toBe(true);
+    expect(
+      namesCouldBeOneHouse(
+        "Corpus Christi KOA Journey",
+        "Rockport / Corpus Christi KOA Journey",
+        null
+      )
+    ).toBe(true);
     expect(namesCouldBeOneHouse("Hotel Meteora", "Hotel Restaurant Meteora", null)).toBe(false);
     expect(namesCouldBeOneHouse("Hotel Post", "Hotel Post Garni", null)).toBe(false);
   });

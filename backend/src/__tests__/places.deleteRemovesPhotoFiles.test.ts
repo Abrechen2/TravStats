@@ -75,9 +75,7 @@ describe("deleting a place or a visit takes its photo files with it", () => {
     const b = await attachPhoto(visitId, "visit-b");
     expect(onDisk(a)).toBe(true);
 
-    const res = await request(app)
-      .delete(`/api/v1/places/visits/${visitId}`)
-      .set("Cookie", cookie);
+    const res = await request(app).delete(`/api/v1/places/visits/${visitId}`).set("Cookie", cookie);
 
     expect(res.status).toBe(200);
     expect(await prisma.placeVisitPhoto.count({ where: { placeVisitId: visitId } })).toBe(0);

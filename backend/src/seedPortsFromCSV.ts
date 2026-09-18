@@ -1,8 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import { parse } from 'csv-parse/sync';
-import { prisma } from './db';
-import logger from './utils/logger';
+import fs from "fs";
+import path from "path";
+import { parse } from "csv-parse/sync";
+import { prisma } from "./db";
+import logger from "./utils/logger";
 
 interface CSVPort {
   name: string;
@@ -15,7 +15,7 @@ interface CSVPort {
   region: string;
 }
 
-const CSV_PATH = path.resolve(__dirname, 'seedData', 'ports.csv');
+const CSV_PATH = path.resolve(__dirname, "seedData", "ports.csv");
 
 /**
  * Idempotent port seeder. Bulk pattern: one query loads existing UNLOCODEs,
@@ -29,11 +29,11 @@ const CSV_PATH = path.resolve(__dirname, 'seedData', 'ports.csv');
  */
 export async function seedPortsFromCSV(): Promise<number> {
   if (!fs.existsSync(CSV_PATH)) {
-    logger.warn({ operation: 'seed_ports_skip', reason: 'csv_missing', path: CSV_PATH });
+    logger.warn({ operation: "seed_ports_skip", reason: "csv_missing", path: CSV_PATH });
     return 0;
   }
 
-  const raw = fs.readFileSync(CSV_PATH, 'utf-8');
+  const raw = fs.readFileSync(CSV_PATH, "utf-8");
   const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true }) as CSVPort[];
 
   // Drop malformed rows up-front so we don't ship them to Prisma.
@@ -49,10 +49,10 @@ export async function seedPortsFromCSV(): Promise<number> {
     select: { unlocode: true, name: true, country: true },
   });
   const existingUnlocodes = new Set(
-    existing.map((p) => p.unlocode).filter((u): u is string => Boolean(u)),
+    existing.map((p) => p.unlocode).filter((u): u is string => Boolean(u))
   );
   const existingNameCountry = new Set(
-    existing.map((p) => `${p.name.toLowerCase()}\x00${(p.country ?? "").toLowerCase()}`),
+    existing.map((p) => `${p.name.toLowerCase()}\x00${(p.country ?? "").toLowerCase()}`)
   );
 
   const toInsert = valid
@@ -76,7 +76,7 @@ export async function seedPortsFromCSV(): Promise<number> {
     }));
 
   if (toInsert.length === 0) {
-    logger.info({ operation: 'seed_ports_done', inserted: 0, total: valid.length });
+    logger.info({ operation: "seed_ports_done", inserted: 0, total: valid.length });
     return 0;
   }
 
@@ -91,7 +91,7 @@ export async function seedPortsFromCSV(): Promise<number> {
   });
 
   logger.info({
-    operation: 'seed_ports_done',
+    operation: "seed_ports_done",
     inserted: result.count,
     skipped: valid.length - result.count,
     total: valid.length,

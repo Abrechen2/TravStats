@@ -63,9 +63,7 @@ describe("openapi spec", () => {
   it("flags POST /flights with the merge query parameter", () => {
     const post = doc.paths?.["/flights"]?.post;
     expect(post).toBeDefined();
-    const query = post?.parameters?.find(
-      (p) => "name" in p && p.name === "merge"
-    );
+    const query = post?.parameters?.find((p) => "name" in p && p.name === "merge");
     expect(query).toBeDefined();
   });
 

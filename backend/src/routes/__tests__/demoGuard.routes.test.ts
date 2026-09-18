@@ -52,7 +52,11 @@ describe("demo account guard", () => {
   });
 
   const locked: Array<[string, "post" | "put" | "patch" | "delete", object]> = [
-    ["/api/v1/auth/change-password", "post", { oldPassword: "demo123", newPassword: "whatever123!" }],
+    [
+      "/api/v1/auth/change-password",
+      "post",
+      { oldPassword: "demo123", newPassword: "whatever123!" },
+    ],
     ["/api/v1/auth/2fa/setup", "post", {}],
     ["/api/v1/auth/2fa/activate", "post", { code: "123456" }],
     ["/api/v1/auth/2fa/disable", "post", { password: "demo123" }],
@@ -100,10 +104,13 @@ describe("demo account guard", () => {
   ]);
   const lockedForNormalAccount = locked.filter(([path]) => !outboundRoutes.has(path));
 
-  it.each(lockedForNormalAccount)("does not refuse %s (%s) for a normal account", async (path, method, body) => {
-    const res = await request(app)[method](path).set("Cookie", userCookie).send(body);
-    expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
-  });
+  it.each(lockedForNormalAccount)(
+    "does not refuse %s (%s) for a normal account",
+    async (path, method, body) => {
+      const res = await request(app)[method](path).set("Cookie", userCookie).send(body);
+      expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+    }
+  );
 
   // Finding C1: `seedDemoUser` sets `isDemo` on every account it creates, so
   // the preview's `admin`, `alex` and `claude` and the local dev admin all

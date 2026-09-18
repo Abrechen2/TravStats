@@ -416,9 +416,7 @@ describe("Place lists API", () => {
       await stayInRome();
       const res = await suggestions();
 
-      const hit = res.body.data.suggestions.find(
-        (s: { itemId: string }) => s.itemId === COLOSSEUM
-      );
+      const hit = res.body.data.suggestions.find((s: { itemId: string }) => s.itemId === COLOSSEUM);
       expect(hit).toMatchObject({
         confidence: "high",
         anchorKind: "lodging",
@@ -554,7 +552,6 @@ describe("Place lists API", () => {
     });
   });
 
-
   describe("progress without the catalogue (Forgejo #22)", () => {
     /**
      * `/progress` returns every item with both blurbs — 1,248 rows for the
@@ -678,7 +675,7 @@ describe("Place lists API", () => {
       });
       await subscribe();
       expect(
-        await prisma.placeListEntry.count({ where: { list: { userId: roundtripUserId } } }),
+        await prisma.placeListEntry.count({ where: { list: { userId: roundtripUserId } } })
       ).toBe(before);
     });
   });

@@ -26,7 +26,7 @@ describe("placeCountryLabel", () => {
 
   it("falls back to the stored text when there is no code", () => {
     expect(placeCountryLabel({ country: "Freistaat Bayern", isoCountryCode: null }, "de")).toBe(
-      "Freistaat Bayern",
+      "Freistaat Bayern"
     );
   });
 

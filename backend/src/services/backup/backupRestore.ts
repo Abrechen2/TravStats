@@ -1,13 +1,13 @@
-import { spawn } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import { prisma } from '../../db';
-import logger from '../../utils/logger';
-import { DATABASE_URL } from '../../utils/database';
-import { BACKUP_BASE_DIR, DOCKER_DB_CONTAINER, RestoreOptions } from './backupConfig';
-import { parseDatabaseUrl } from './backupDatabase';
-import { AppError } from '../../middleware/errorHandler';
-import { reconcileInterruptedBackups } from './reconcileBackups';
+import { spawn } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+import { prisma } from "../../db";
+import logger from "../../utils/logger";
+import { DATABASE_URL } from "../../utils/database";
+import { BACKUP_BASE_DIR, DOCKER_DB_CONTAINER, RestoreOptions } from "./backupConfig";
+import { parseDatabaseUrl } from "./backupDatabase";
+import { AppError } from "../../middleware/errorHandler";
+import { reconcileInterruptedBackups } from "./reconcileBackups";
 
 /**
  * The columns of `admin_settings` that describe THIS MACHINE rather than the
@@ -31,11 +31,11 @@ import { reconcileInterruptedBackups } from './reconcileBackups';
  * instance back on its own ENV rather than persisting it into the database.
  */
 const INSTANCE_IDENTITY_COLUMNS = [
-  'frontendUrl',
-  'publicUrl',
-  'lanUrl',
-  'webauthnRpId',
-  'webauthnOrigins',
+  "frontendUrl",
+  "publicUrl",
+  "lanUrl",
+  "webauthnRpId",
+  "webauthnOrigins",
 ] as const;
 
 type InstanceIdentity = {
@@ -48,7 +48,7 @@ type InstanceIdentity = {
 
 export async function readInstanceIdentity(): Promise<InstanceIdentity | null> {
   const row = await prisma.adminSettings.findFirst({
-    orderBy: { id: 'asc' },
+    orderBy: { id: "asc" },
     select: {
       frontendUrl: true,
       publicUrl: true,
@@ -75,7 +75,7 @@ export async function restoreInstanceIdentity(before: InstanceIdentity | null): 
   if (!before) return;
 
   const row = await prisma.adminSettings.findFirst({
-    orderBy: { id: 'asc' },
+    orderBy: { id: "asc" },
     select: {
       id: true,
       frontendUrl: true,
@@ -109,7 +109,7 @@ export async function restoreInstanceIdentity(before: InstanceIdentity | null): 
   });
 
   logger.warn({
-    operation: 'restore_instance_identity_kept',
+    operation: "restore_instance_identity_kept",
     message:
       "The archive carried another instance's identity; this instance kept its own. Set these under Settings -> Instance if the archive's values were the intended ones.",
     fields: changed,
@@ -153,42 +153,45 @@ export async function restoreInstanceIdentity(before: InstanceIdentity | null): 
  * Exported for the round-trip test: the pairing of layout and target is the
  * thing that broke, and a test that only reads the tarball cannot see it.
  */
-export async function extractUploadsArchive(archivePath: string, uploadsDir: string): Promise<void> {
+export async function extractUploadsArchive(
+  archivePath: string,
+  uploadsDir: string
+): Promise<void> {
   fs.mkdirSync(uploadsDir, { recursive: true });
   const uploadsParent = path.dirname(uploadsDir);
 
   await new Promise<void>((resolve, reject) => {
-    const tar = spawn('tar', ['-xzf', archivePath, '-C', uploadsParent], {
-      stdio: ['ignore', 'ignore', 'pipe'],
+    const tar = spawn("tar", ["-xzf", archivePath, "-C", uploadsParent], {
+      stdio: ["ignore", "ignore", "pipe"],
     });
 
     // Carry tar's own complaint into the error. A restore that fails is the
     // moment somebody most needs to know WHY, and an exit code alone sends them
     // looking in the wrong place.
-    let stderr = '';
-    tar.stderr.on('data', (chunk: Buffer) => {
+    let stderr = "";
+    tar.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
     });
 
-    tar.on('close', (code: number) => {
+    tar.on("close", (code: number) => {
       if (code !== 0) {
-        const detail = stderr.trim().split('\n').slice(0, 3).join('; ');
-        reject(new Error(`tar extraction failed with code ${code}${detail ? `: ${detail}` : ''}`));
+        const detail = stderr.trim().split("\n").slice(0, 3).join("; ");
+        reject(new Error(`tar extraction failed with code ${code}${detail ? `: ${detail}` : ""}`));
       } else {
         resolve();
       }
     });
 
-    tar.on('error', reject);
+    tar.on("error", reject);
   });
 }
 
-const PSQL_STRICT = ['-v', 'ON_ERROR_STOP=1', '--single-transaction'] as const;
+const PSQL_STRICT = ["-v", "ON_ERROR_STOP=1", "--single-transaction"] as const;
 
 export async function restoreBackup(
   id: string,
   options: RestoreOptions,
-  createBackupFn: (opts: { type: 'full' }) => Promise<string>,
+  createBackupFn: (opts: { type: "full" }) => Promise<string>
 ): Promise<void> {
   const backup = await prisma.backup.findUnique({
     where: { id },
@@ -198,36 +201,36 @@ export async function restoreBackup(
   // error straight to errorHandler, and a bare Error would reach the admin as
   // a 500 — a server fault — for an id that simply does not exist.
   if (!backup) {
-    throw new AppError('Backup not found', 404);
+    throw new AppError("Backup not found", 404);
   }
 
-  if (backup.status !== 'completed') {
-    throw new AppError('Backup is not completed', 400);
+  if (backup.status !== "completed") {
+    throw new AppError("Backup is not completed", 400);
   }
 
   if (!backup.backupPath || !fs.existsSync(backup.backupPath)) {
-    throw new AppError('Backup file not found', 404);
+    throw new AppError("Backup file not found", 404);
   }
 
   // Create backup before restore if requested
   if (options.createBackupBefore) {
     logger.info({
-      operation: 'restore_backup_before',
-      message: 'Creating backup before restore',
+      operation: "restore_backup_before",
+      message: "Creating backup before restore",
     });
-    await createBackupFn({ type: 'full' });
+    await createBackupFn({ type: "full" });
   }
 
-  const tempDir = path.join(BACKUP_BASE_DIR, 'restore-temp');
+  const tempDir = path.join(BACKUP_BASE_DIR, "restore-temp");
   fs.mkdirSync(tempDir, { recursive: true });
 
   try {
     // Extract archive
-    logger.info({ operation: 'restore_extract', message: 'Extracting backup archive' });
+    logger.info({ operation: "restore_extract", message: "Extracting backup archive" });
     await new Promise<void>((resolve, reject) => {
-      const tar = spawn('tar', ['-xzf', backup.backupPath!, '-C', tempDir]);
+      const tar = spawn("tar", ["-xzf", backup.backupPath!, "-C", tempDir]);
 
-      tar.on('close', (code: number) => {
+      tar.on("close", (code: number) => {
         if (code !== 0) {
           reject(new Error(`tar extraction failed with code ${code}`));
         } else {
@@ -235,19 +238,19 @@ export async function restoreBackup(
         }
       });
 
-      tar.on('error', reject);
+      tar.on("error", reject);
     });
 
-    const dbBackupPath = path.join(tempDir, 'database.sql');
-    const filesBackupPath = path.join(tempDir, 'uploads.tar.gz');
+    const dbBackupPath = path.join(tempDir, "database.sql");
+    const filesBackupPath = path.join(tempDir, "uploads.tar.gz");
 
     // Restore database if requested
-    if (options.scope === 'full' || options.scope === 'database') {
+    if (options.scope === "full" || options.scope === "database") {
       if (!fs.existsSync(dbBackupPath)) {
-        throw new Error('Database backup file not found in archive');
+        throw new Error("Database backup file not found in archive");
       }
 
-      logger.info({ operation: 'restore_db', message: 'Restoring database' });
+      logger.info({ operation: "restore_db", message: "Restoring database" });
       // Read BEFORE psql runs — afterwards the row belongs to the archive.
       const identityBefore = await readInstanceIdentity();
       // NOTE: no HTTP surface sets `targetDatabaseUrl`. The admin UI used to
@@ -259,7 +262,7 @@ export async function restoreBackup(
       const dbUrl = options.targetDatabaseUrl || DATABASE_URL;
       const dbInfo = parseDatabaseUrl(dbUrl);
 
-      const isDocker = process.env.DOCKER === 'true';
+      const isDocker = process.env.DOCKER === "true";
       const dbContainer = process.env.DOCKER_DB_CONTAINER || DOCKER_DB_CONTAINER;
 
       // Use spawn with array args to prevent shell injection (never interpolate into shell strings)
@@ -268,18 +271,20 @@ export async function restoreBackup(
           const inputFile = fs.createReadStream(dbBackupPath);
           const proc = spawn(cmd, args, {
             env,
-            stdio: ['pipe', 'pipe', 'pipe'],
+            stdio: ["pipe", "pipe", "pipe"],
           });
 
           inputFile.pipe(proc.stdin);
-          proc.stdout.on('data', (data) => {
-            logger.debug({ operation: 'restore_db_stdout', message: data.toString() });
+          proc.stdout.on("data", (data) => {
+            logger.debug({ operation: "restore_db_stdout", message: data.toString() });
           });
-          proc.stderr.on('data', (data) => {
-            logger.warn({ operation: 'restore_db_stderr', message: data.toString() });
+          proc.stderr.on("data", (data) => {
+            logger.warn({ operation: "restore_db_stderr", message: data.toString() });
           });
-          proc.on('error', (error) => reject(new Error(`Failed to start ${cmd}: ${error.message}`)));
-          proc.on('close', (code) => {
+          proc.on("error", (error) =>
+            reject(new Error(`Failed to start ${cmd}: ${error.message}`))
+          );
+          proc.on("close", (code) => {
             if (code === 0) resolve();
             else reject(new Error(`${cmd} exited with code ${code}`));
           });
@@ -291,31 +296,70 @@ export async function restoreBackup(
         try {
           // Verify container exists using spawn (no shell interpolation)
           await new Promise<void>((resolve, reject) => {
-            const proc = spawn('docker', ['ps', '--filter', `name=${dbContainer}`, '--format', '{{.Names}}'], { stdio: ['ignore', 'pipe', 'pipe'] });
-            proc.on('close', (code) => code === 0 ? resolve() : reject(new Error('Docker container not found')));
-            proc.on('error', reject);
+            const proc = spawn(
+              "docker",
+              ["ps", "--filter", `name=${dbContainer}`, "--format", "{{.Names}}"],
+              { stdio: ["ignore", "pipe", "pipe"] }
+            );
+            proc.on("close", (code) =>
+              code === 0 ? resolve() : reject(new Error("Docker container not found"))
+            );
+            proc.on("error", reject);
           });
-          await spawnRestore('docker', ['exec', '-i', dbContainer, 'psql', ...PSQL_STRICT, '-U', dbInfo.user, dbInfo.database], restoreEnv);
+          await spawnRestore(
+            "docker",
+            ["exec", "-i", dbContainer, "psql", ...PSQL_STRICT, "-U", dbInfo.user, dbInfo.database],
+            restoreEnv
+          );
         } catch (_error) {
           // Fallback to direct psql if Docker not available
-          await spawnRestore('psql', [...PSQL_STRICT, '-h', dbInfo.host, '-p', dbInfo.port.toString(), '-U', dbInfo.user, dbInfo.database], restoreEnv);
+          await spawnRestore(
+            "psql",
+            [
+              ...PSQL_STRICT,
+              "-h",
+              dbInfo.host,
+              "-p",
+              dbInfo.port.toString(),
+              "-U",
+              dbInfo.user,
+              dbInfo.database,
+            ],
+            restoreEnv
+          );
         }
       } else {
-        await spawnRestore('psql', [...PSQL_STRICT, '-h', dbInfo.host, '-p', dbInfo.port.toString(), '-U', dbInfo.user, dbInfo.database], restoreEnv);
+        await spawnRestore(
+          "psql",
+          [
+            ...PSQL_STRICT,
+            "-h",
+            dbInfo.host,
+            "-p",
+            dbInfo.port.toString(),
+            "-U",
+            dbInfo.user,
+            dbInfo.database,
+          ],
+          restoreEnv
+        );
       }
-      logger.info({ operation: 'restore_db_complete', message: 'Database restored' });
+      logger.info({ operation: "restore_db_complete", message: "Database restored" });
       await restoreInstanceIdentity(identityBefore);
     }
 
     // Restore files if requested
-    if (options.scope === 'full' || options.scope === 'files') {
+    if (options.scope === "full" || options.scope === "files") {
       if (!fs.existsSync(filesBackupPath)) {
-        logger.warn({ operation: 'restore_files_missing', message: 'Files backup not found in archive' });
+        logger.warn({
+          operation: "restore_files_missing",
+          message: "Files backup not found in archive",
+        });
       } else {
-        logger.info({ operation: 'restore_files', message: 'Restoring files' });
-        const uploadsDir = path.join(__dirname, '../../../uploads');
+        logger.info({ operation: "restore_files", message: "Restoring files" });
+        const uploadsDir = path.join(__dirname, "../../../uploads");
         await extractUploadsArchive(filesBackupPath, uploadsDir);
-        logger.info({ operation: 'restore_files_complete', message: 'Files restored' });
+        logger.info({ operation: "restore_files_complete", message: "Files restored" });
       }
     }
 
@@ -325,7 +369,7 @@ export async function restoreBackup(
     // further backups and restores answer 409 and the scheduler skips. The
     // route verified no operation was running before this restore began, so
     // anything in flight now came out of the archive (AUD-069).
-    if (options.scope === 'full' || options.scope === 'database') {
+    if (options.scope === "full" || options.scope === "database") {
       await reconcileInterruptedBackups(`restore of backup ${id}`);
     }
 
@@ -333,8 +377,8 @@ export async function restoreBackup(
     fs.rmSync(tempDir, { recursive: true, force: true });
 
     logger.info({
-      operation: 'restore_complete',
-      message: 'Backup restored successfully',
+      operation: "restore_complete",
+      message: "Backup restored successfully",
       backupId: id,
       scope: options.scope,
     });
@@ -345,10 +389,10 @@ export async function restoreBackup(
     }
 
     logger.error({
-      operation: 'restore_failed',
-      message: 'Restore failed',
+      operation: "restore_failed",
+      message: "Restore failed",
       backupId: id,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
 
     throw error;

@@ -48,7 +48,9 @@ describe("Tour tracks — upload and CRUD", () => {
   let routeId: string;
 
   beforeAll(async () => {
-    await prisma.user.deleteMany({ where: { username: { in: ["tourtracks", "tourtracksother"] } } });
+    await prisma.user.deleteMany({
+      where: { username: { in: ["tourtracks", "tourtracksother"] } },
+    });
 
     const u = await prisma.user.create({
       data: { username: "tourtracks", passwordHash: await hashPassword("password123") },
@@ -71,7 +73,9 @@ describe("Tour tracks — upload and CRUD", () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { username: { in: ["tourtracks", "tourtracksother"] } } });
+    await prisma.user.deleteMany({
+      where: { username: { in: ["tourtracks", "tourtracksother"] } },
+    });
     await prisma.$disconnect();
   });
 

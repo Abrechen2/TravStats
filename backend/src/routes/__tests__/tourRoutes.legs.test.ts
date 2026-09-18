@@ -55,8 +55,7 @@ describe("Tour route sections — leg overrides", () => {
     await prisma.$disconnect();
   });
 
-  const url = (f = fromId, t = toId) =>
-    `/api/v1/trips/${tripId}/routes/${routeId}/legs/${f}/${t}`;
+  const url = (f = fromId, t = toId) => `/api/v1/trips/${tripId}/routes/${routeId}/legs/${f}/${t}`;
 
   it("stores a drawn line and measures it", async () => {
     const before = await prisma.tripRouteLeg.findFirstOrThrow({ where: { routeId } });
@@ -141,10 +140,7 @@ describe("Tour route sections — leg overrides", () => {
       .set("Cookie", cookie)
       .send({ source: "straight", drivingMinutes: 90 });
 
-    const res = await request(app)
-      .put(url())
-      .set("Cookie", cookie)
-      .send({ source: "straight" });
+    const res = await request(app).put(url()).set("Cookie", cookie).send({ source: "straight" });
 
     expect(res.status).toBe(200);
     expect(res.body.leg.drivingMinutes).toBe(90);

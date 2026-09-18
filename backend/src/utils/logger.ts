@@ -1,9 +1,9 @@
-import pino from 'pino';
-import { createStream } from 'rotating-file-stream';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { Request } from 'express';
-import { getLoggingConfig } from '../services/loggingConfig';
+import pino from "pino";
+import { createStream } from "rotating-file-stream";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import { Request } from "express";
+import { getLoggingConfig } from "../services/loggingConfig";
 
 /**
  * AI-Optimized Structured Logger with Rolling File Support
@@ -18,23 +18,27 @@ import { getLoggingConfig } from '../services/loggingConfig';
  */
 
 // Log directory path
-const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
+const LOG_DIR = path.join(process.cwd(), "..", "data", "logs");
 
 // Create rotating file stream with error handling
-function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles: number = 7): NodeJS.WritableStream | null {
+function createRotatingStream(
+  category: string,
+  maxSizeMB: number = 10,
+  maxFiles: number = 7
+): NodeJS.WritableStream | null {
   try {
     const stream = createStream(`${category}.log`, {
-      size: `${maxSizeMB}M`,  // Rotate at configured size
-      interval: '1d',  // Daily rotation
+      size: `${maxSizeMB}M`, // Rotate at configured size
+      interval: "1d", // Daily rotation
       path: LOG_DIR,
-      compress: 'gzip',  // Compress rotated files
-      maxFiles,  // Keep configured number of files
+      compress: "gzip", // Compress rotated files
+      maxFiles, // Keep configured number of files
     });
 
     // Register error handler to prevent unhandled errors from crashing the process
-    stream.on('error', (error: NodeJS.ErrnoException) => {
+    stream.on("error", (error: NodeJS.ErrnoException) => {
       // Check if it's a permission error
-      if (error.code === 'EACCES' || error.code === 'EPERM') {
+      if (error.code === "EACCES" || error.code === "EPERM") {
         console.warn(`[Logger] Permission denied for log file ${category}.log: ${error.message}`);
         console.warn(`[Logger] File logging disabled for ${category} - using console only`);
       } else {
@@ -43,7 +47,7 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
 
       // Close the stream gracefully
       try {
-        if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
+        if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === "function") {
           (stream as NodeJS.WritableStream & { end: () => void }).end();
         }
       } catch (_closeError) {
@@ -66,7 +70,7 @@ const categoryStreams: Map<string, pino.StreamEntry> = new Map();
 
 // Pino configuration for AI-optimized output
 const pinoConfig: pino.LoggerOptions = {
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
 
   // Serializers run before the `log` formatter and turn Error instances into
   // plain, enumerable objects. Without this, `logger.error({ error }, ...)`
@@ -76,8 +80,7 @@ const pinoConfig: pino.LoggerOptions = {
   // through untouched so existing `{ error: someObject }` sites are unaffected.
   serializers: {
     err: pino.stdSerializers.err,
-    error: (value: unknown) =>
-      value instanceof Error ? pino.stdSerializers.err(value) : value,
+    error: (value: unknown) => (value instanceof Error ? pino.stdSerializers.err(value) : value),
   },
 
   formatters: {
@@ -91,7 +94,7 @@ const pinoConfig: pino.LoggerOptions = {
       const result: Record<string, unknown> = {
         timestamp: time ? new Date(time as number).toISOString() : new Date().toISOString(),
         level,
-        category: category || 'general',
+        category: category || "general",
         message: msg,
       };
 
@@ -109,30 +112,30 @@ const pinoConfig: pino.LoggerOptions = {
   // Redact sensitive fields
   redact: {
     paths: [
-      'password',
-      'passwordHash',
-      'token',
-      'auth_token',
-      'authorization',
-      'cookie',
-      'JWT_SECRET',
-      'IMPORT_SECRET',
-      'AIRLABS_API_KEY',
-      'OPENSKY_CLIENT_SECRET',
-      'apiKey',
-      'api_key',
-      'openaiApiKey',
-      'claudeApiKey',
-      'globalOpenaiApiKey',
-      'globalClaudeApiKey',
-      '*.password',
-      '*.passwordHash',
-      '*.token',
-      '*.apiKey',
-      'context.apiKey',
-      'args.data.passwordHash',
-      'args.data.openaiApiKey',
-      'args.data.claudeApiKey',
+      "password",
+      "passwordHash",
+      "token",
+      "auth_token",
+      "authorization",
+      "cookie",
+      "JWT_SECRET",
+      "IMPORT_SECRET",
+      "AIRLABS_API_KEY",
+      "OPENSKY_CLIENT_SECRET",
+      "apiKey",
+      "api_key",
+      "openaiApiKey",
+      "claudeApiKey",
+      "globalOpenaiApiKey",
+      "globalClaudeApiKey",
+      "*.password",
+      "*.passwordHash",
+      "*.token",
+      "*.apiKey",
+      "context.apiKey",
+      "args.data.passwordHash",
+      "args.data.openaiApiKey",
+      "args.data.claudeApiKey",
     ],
     remove: true,
   },
@@ -142,24 +145,25 @@ const pinoConfig: pino.LoggerOptions = {
 const streams: pino.StreamEntry[] = [
   // Console stream (always enabled)
   {
-    level: 'trace',
-    stream: process.env.NODE_ENV === 'development'
-      ? pino.transport({
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
-          },
-        })
-      : process.stdout,
+    level: "trace",
+    stream:
+      process.env.NODE_ENV === "development"
+        ? pino.transport({
+            target: "pino-pretty",
+            options: {
+              colorize: true,
+              translateTime: "HH:MM:ss Z",
+              ignore: "pid,hostname",
+            },
+          })
+        : process.stdout,
   },
 ];
 
 // Add file streams (always enabled for error logging, debug mode adds more)
 try {
   // Ensure log directory exists
-  const fs = require('fs');
+  const fs = require("fs");
   try {
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
@@ -169,7 +173,7 @@ try {
     // The application will still work with console-only logging
     const errMsg = mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
     console.warn(`Could not create log directory ${LOG_DIR}:`, errMsg);
-    console.warn('Logging to files disabled - using console only');
+    console.warn("Logging to files disabled - using console only");
     // Don't throw - allow application to continue with console logging
   }
 
@@ -177,42 +181,42 @@ try {
   if (fs.existsSync(LOG_DIR)) {
     try {
       // Test write permissions by creating a test file
-      const testFile = require('path').join(LOG_DIR, '.write-test');
+      const testFile = require("path").join(LOG_DIR, ".write-test");
       try {
-        fs.writeFileSync(testFile, 'test');
+        fs.writeFileSync(testFile, "test");
         fs.unlinkSync(testFile);
       } catch {
         // Directory exists but not writable - skip file streams
-        throw new Error('Log directory is not writable');
+        throw new Error("Log directory is not writable");
       }
 
       // App log (all levels) - always enabled
-      const appStream = createRotatingStream('app');
+      const appStream = createRotatingStream("app");
       if (appStream) {
         streams.push({
-          level: 'trace',
+          level: "trace",
           stream: appStream,
         });
       }
 
       // Error log (errors only) - always enabled
-      const errorStream = createRotatingStream('error');
+      const errorStream = createRotatingStream("error");
       if (errorStream) {
         streams.push({
-          level: 'error',
+          level: "error",
           stream: errorStream,
         });
       }
     } catch (streamError: unknown) {
       const errMsg = streamError instanceof Error ? streamError.message : String(streamError);
-      console.warn('Could not create log file streams:', errMsg);
-      console.warn('Logging to files disabled - using console only');
+      console.warn("Could not create log file streams:", errMsg);
+      console.warn("Logging to files disabled - using console only");
     }
   }
 
   // Category-specific logs will be added dynamically via initializeCategoryStreams()
 } catch (error) {
-  console.warn('Could not create log file streams:', error);
+  console.warn("Could not create log file streams:", error);
 }
 
 // Create multi-stream logger
@@ -227,7 +231,7 @@ export default logger;
 export async function initializeCategoryStreams(): Promise<void> {
   try {
     const config = await getLoggingConfig();
-    const fs = require('fs');
+    const fs = require("fs");
 
     // Ensure log directory exists
     try {
@@ -250,75 +254,101 @@ export async function initializeCategoryStreams(): Promise<void> {
     categoryStreams.clear();
 
     // Always create security log (security events should always be logged)
-    const securityStream = createRotatingStream('security', config.maxLogFileSize, config.maxLogFiles);
+    const securityStream = createRotatingStream(
+      "security",
+      config.maxLogFileSize,
+      config.maxLogFiles
+    );
     if (securityStream) {
-      categoryStreams.set('security', {
-        level: 'warn', // Only warnings and errors for security
+      categoryStreams.set("security", {
+        level: "warn", // Only warnings and errors for security
         stream: securityStream,
       });
     }
 
     // Parser logs (if enabled)
-    if (config.logParserOperations && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
+    if (
+      config.logParserOperations &&
+      (config.logLevel === "debug" || config.logLevel === "trace")
+    ) {
       // Main parser log (all parser operations)
-      const parserStream = createRotatingStream('parser', config.maxLogFileSize, config.maxLogFiles);
+      const parserStream = createRotatingStream(
+        "parser",
+        config.maxLogFileSize,
+        config.maxLogFiles
+      );
       if (parserStream) {
-        categoryStreams.set('parser', {
-          level: 'debug',
+        categoryStreams.set("parser", {
+          level: "debug",
           stream: parserStream,
         });
       }
 
       // Detailed parser category logs
-      const parserVisionStream = createRotatingStream('parser-vision', config.maxLogFileSize, config.maxLogFiles);
+      const parserVisionStream = createRotatingStream(
+        "parser-vision",
+        config.maxLogFileSize,
+        config.maxLogFiles
+      );
       if (parserVisionStream) {
-        categoryStreams.set('parser-vision', {
-          level: 'debug',
+        categoryStreams.set("parser-vision", {
+          level: "debug",
           stream: parserVisionStream,
         });
       }
 
-      const parserTextStream = createRotatingStream('parser-text', config.maxLogFileSize, config.maxLogFiles);
+      const parserTextStream = createRotatingStream(
+        "parser-text",
+        config.maxLogFileSize,
+        config.maxLogFiles
+      );
       if (parserTextStream) {
-        categoryStreams.set('parser-text', {
-          level: 'debug',
+        categoryStreams.set("parser-text", {
+          level: "debug",
           stream: parserTextStream,
         });
       }
 
-      const parserFactoryStream = createRotatingStream('parser-factory', config.maxLogFileSize, config.maxLogFiles);
+      const parserFactoryStream = createRotatingStream(
+        "parser-factory",
+        config.maxLogFileSize,
+        config.maxLogFiles
+      );
       if (parserFactoryStream) {
-        categoryStreams.set('parser-factory', {
-          level: 'debug',
+        categoryStreams.set("parser-factory", {
+          level: "debug",
           stream: parserFactoryStream,
         });
       }
     }
 
     // HTTP logs (if enabled)
-    if (config.logHttpRequests && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
-      const httpStream = createRotatingStream('http', config.maxLogFileSize, config.maxLogFiles);
+    if (config.logHttpRequests && (config.logLevel === "debug" || config.logLevel === "trace")) {
+      const httpStream = createRotatingStream("http", config.maxLogFileSize, config.maxLogFiles);
       if (httpStream) {
-        categoryStreams.set('http', {
-          level: 'debug',
+        categoryStreams.set("http", {
+          level: "debug",
           stream: httpStream,
         });
       }
     }
 
     // Database logs (if enabled)
-    if (config.logDatabaseQueries && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
-      const databaseStream = createRotatingStream('database', config.maxLogFileSize, config.maxLogFiles);
+    if (config.logDatabaseQueries && (config.logLevel === "debug" || config.logLevel === "trace")) {
+      const databaseStream = createRotatingStream(
+        "database",
+        config.maxLogFileSize,
+        config.maxLogFiles
+      );
       if (databaseStream) {
-        categoryStreams.set('database', {
-          level: 'debug',
+        categoryStreams.set("database", {
+          level: "debug",
           stream: databaseStream,
         });
       }
     }
-
   } catch (error) {
-    console.warn('Could not initialize category streams:', error);
+    console.warn("Could not initialize category streams:", error);
   }
 }
 
@@ -329,7 +359,10 @@ export async function initializeCategoryStreams(): Promise<void> {
 export async function reinitializeCategoryStreams(): Promise<void> {
   // Close existing streams before creating new ones
   for (const streamEntry of categoryStreams.values()) {
-    if (streamEntry.stream && typeof (streamEntry.stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
+    if (
+      streamEntry.stream &&
+      typeof (streamEntry.stream as NodeJS.WritableStream & { end?: () => void }).end === "function"
+    ) {
       (streamEntry.stream as NodeJS.WritableStream & { end: () => void }).end();
     }
   }
@@ -349,17 +382,18 @@ function createCategoryStreams(category: string): pino.StreamEntry[] {
   const categoryStreamsArray: pino.StreamEntry[] = [
     // Always include console
     {
-      level: 'trace',
-      stream: process.env.NODE_ENV === 'development'
-        ? pino.transport({
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname',
-            },
-          })
-        : process.stdout,
+      level: "trace",
+      stream:
+        process.env.NODE_ENV === "development"
+          ? pino.transport({
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+                translateTime: "HH:MM:ss Z",
+                ignore: "pid,hostname",
+              },
+            })
+          : process.stdout,
     },
   ];
 
@@ -371,15 +405,15 @@ function createCategoryStreams(category: string): pino.StreamEntry[] {
 
   // Also add to main app.log and error.log (always available)
   try {
-    const fs = require('fs');
+    const fs = require("fs");
     if (fs.existsSync(LOG_DIR)) {
-      const appStream = createRotatingStream('app');
-      const errorStream = createRotatingStream('error');
+      const appStream = createRotatingStream("app");
+      const errorStream = createRotatingStream("error");
       if (appStream) {
-        categoryStreamsArray.push({ level: 'trace', stream: appStream });
+        categoryStreamsArray.push({ level: "trace", stream: appStream });
       }
       if (errorStream) {
-        categoryStreamsArray.push({ level: 'error', stream: errorStream });
+        categoryStreamsArray.push({ level: "error", stream: errorStream });
       }
     }
   } catch (_error) {
@@ -426,14 +460,14 @@ function resetCategoryLoggerCache(): void {
  * These loggers use the base logger but will also write to category-specific
  * files when streams are initialized via initializeCategoryStreams().
  */
-export const httpLogger = getCategoryLogger('http');
-export const dbLogger = getCategoryLogger('database');
-export const parserLogger = getCategoryLogger('parser');
-export const parserVisionLogger = getCategoryLogger('parser-vision');
-export const parserTextLogger = getCategoryLogger('parser-text');
-export const parserFactoryLogger = getCategoryLogger('parser-factory');
-export const securityLogger = getCategoryLogger('security');
-export const systemLogger = getCategoryLogger('system');
+export const httpLogger = getCategoryLogger("http");
+export const dbLogger = getCategoryLogger("database");
+export const parserLogger = getCategoryLogger("parser");
+export const parserVisionLogger = getCategoryLogger("parser-vision");
+export const parserTextLogger = getCategoryLogger("parser-text");
+export const parserFactoryLogger = getCategoryLogger("parser-factory");
+export const securityLogger = getCategoryLogger("security");
+export const systemLogger = getCategoryLogger("system");
 
 /**
  * Performance Tracker for measuring operation duration
@@ -454,7 +488,11 @@ export class PerformanceTracker {
   private context: Record<string, unknown>;
   private loggerInstance: pino.Logger;
 
-  constructor(operation: string, context?: Record<string, unknown>, loggerInstance: pino.Logger = logger) {
+  constructor(
+    operation: string,
+    context?: Record<string, unknown>,
+    loggerInstance: pino.Logger = logger
+  ) {
     this.operation = operation;
     this.context = context || {};
     this.startTime = Date.now();
@@ -518,7 +556,7 @@ export function enrichWithRequest(req: Request): Record<string, unknown> {
     method: req.method,
     url: req.url,
     ip: req.ip,
-    userAgent: req.get('user-agent'),
+    userAgent: req.get("user-agent"),
     userId: reqWithCtx.user?.id,
     requestId: reqWithCtx.requestId,
   };
@@ -530,13 +568,13 @@ export function enrichWithRequest(req: Request): Record<string, unknown> {
 export function logRequest(req: Request, res: { statusCode: number }, duration: number): void {
   const reqWithCtx = req as RequestWithContext;
   httpLogger.info({
-    operation: 'http_request',
+    operation: "http_request",
     context: {
       method: req.method,
       url: req.url,
       status: res.statusCode,
       ip: req.ip,
-      userAgent: req.get('user-agent'),
+      userAgent: req.get("user-agent"),
       userId: reqWithCtx.user?.id,
     },
     performance: {
@@ -550,7 +588,7 @@ export function logRequest(req: Request, res: { statusCode: number }, duration: 
  */
 export function logQuery(query: string, duration: number): void {
   dbLogger.debug({
-    operation: 'database_query',
+    operation: "database_query",
     context: {
       query,
     },
@@ -563,10 +601,15 @@ export function logQuery(query: string, duration: number): void {
 /**
  * Log external API call
  */
-export function logApiCall(service: string, endpoint: string, duration: number, success: boolean): void {
+export function logApiCall(
+  service: string,
+  endpoint: string,
+  duration: number,
+  success: boolean
+): void {
   logger.info({
-    category: 'api_call',
-    operation: 'external_api_call',
+    category: "api_call",
+    operation: "external_api_call",
     context: {
       service,
       endpoint,
@@ -581,10 +624,14 @@ export function logApiCall(service: string, endpoint: string, duration: number, 
 /**
  * Log achievement unlock
  */
-export function logAchievement(userId: string, achievementId: string, achievementName: string): void {
+export function logAchievement(
+  userId: string,
+  achievementId: string,
+  achievementName: string
+): void {
   logger.info({
-    category: 'achievement',
-    operation: 'achievement_unlock',
+    category: "achievement",
+    operation: "achievement_unlock",
     context: {
       userId,
       achievementId,
@@ -597,12 +644,12 @@ export function logAchievement(userId: string, achievementId: string, achievemen
  * Log security event
  */
 export function logSecurityEvent(
-  type: 'rate_limit' | 'auth_failure' | 'invalid_token' | 'admin_action' | 'suspicious_activity',
+  type: "rate_limit" | "auth_failure" | "invalid_token" | "admin_action" | "suspicious_activity",
   ip: string,
   details?: Record<string, unknown>
 ): void {
   securityLogger.warn({
-    operation: 'security_event',
+    operation: "security_event",
     context: {
       eventType: type,
       ip,

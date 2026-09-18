@@ -83,9 +83,30 @@ describe("ImmichAlbumSection", () => {
      days by a header, with the grouping optional. */
 
   const DATED = [
-    { id: "d1", url: "/1.jpg", previewUrl: "/1.jpg", takenAt: "2026-05-01T12:00:00.000Z", lat: null, lon: null },
-    { id: "d2", url: "/2.jpg", previewUrl: "/2.jpg", takenAt: "2026-05-01T15:00:00.000Z", lat: null, lon: null },
-    { id: "d3", url: "/3.jpg", previewUrl: "/3.jpg", takenAt: "2026-05-02T12:00:00.000Z", lat: null, lon: null },
+    {
+      id: "d1",
+      url: "/1.jpg",
+      previewUrl: "/1.jpg",
+      takenAt: "2026-05-01T12:00:00.000Z",
+      lat: null,
+      lon: null,
+    },
+    {
+      id: "d2",
+      url: "/2.jpg",
+      previewUrl: "/2.jpg",
+      takenAt: "2026-05-01T15:00:00.000Z",
+      lat: null,
+      lon: null,
+    },
+    {
+      id: "d3",
+      url: "/3.jpg",
+      previewUrl: "/3.jpg",
+      takenAt: "2026-05-02T12:00:00.000Z",
+      lat: null,
+      lon: null,
+    },
   ];
 
   it("divides the album into days with a header between the pictures", async () => {
@@ -121,7 +142,7 @@ describe("ImmichAlbumSection", () => {
     await userEvent.click(sw);
     expect(screen.getByRole("switch", { name: "albums.groupByDay" })).toHaveAttribute(
       "aria-checked",
-      "false",
+      "false"
     );
   });
 

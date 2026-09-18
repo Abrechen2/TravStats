@@ -48,128 +48,133 @@ const normalize = (s: string): string => s.replace(/\s+/g, "").toUpperCase();
  * Open endpoint — no Pro gating. PAT bearer auth (read scope is enough; it does
  * not persist anything).
  */
-router.post("/propose", authenticate, boardingPassParseLimiter, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const { barcode, imageBase64 } = proposeSchema.parse(req.body);
+router.post(
+  "/propose",
+  authenticate,
+  boardingPassParseLimiter,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { barcode, imageBase64 } = proposeSchema.parse(req.body);
 
-    // --- 1+2. Barcode, then OCR for what it does not carry -----------------
-    // Shared with /parse-boardingpass — see services/boardingPassRead. A
-    // supplied barcode wins over re-reading one out of the image, which is what
-    // the live scanner path relies on: it decodes from a camera frame and
-    // sends no photograph at all.
-    //
-    // An image that fails validation still has its barcode read; only OCR is
-    // skipped. A picture too poor to read text off can hold a perfectly good
-    // error-corrected barcode.
-    const validation =
-      imageBase64 === undefined ? null : validateBoardingPassImageBase64(imageBase64);
-    if (validation !== null && !validation.valid) {
-      logger.warn(
-        { reason: validation.reason },
-        "[BoardingPassPropose] image rejected by validation, continuing with barcode only"
-      );
+      // --- 1+2. Barcode, then OCR for what it does not carry -----------------
+      // Shared with /parse-boardingpass — see services/boardingPassRead. A
+      // supplied barcode wins over re-reading one out of the image, which is what
+      // the live scanner path relies on: it decodes from a camera frame and
+      // sends no photograph at all.
+      //
+      // An image that fails validation still has its barcode read; only OCR is
+      // skipped. A picture too poor to read text off can hold a perfectly good
+      // error-corrected barcode.
+      const validation =
+        imageBase64 === undefined ? null : validateBoardingPassImageBase64(imageBase64);
+      if (validation !== null && !validation.valid) {
+        logger.warn(
+          { reason: validation.reason },
+          "[BoardingPassPropose] image rejected by validation, continuing with barcode only"
+        );
+      }
+      const reading = await readBoardingPass({
+        // The validated bytes when validation ran and passed — see forgejo#117.
+        // A rejected or absent image falls through unchanged; OCR is off for it
+        // anyway and the barcode reader takes the original.
+        imageBase64: validation?.valid ? (validation.base64 ?? imageBase64) : imageBase64,
+        barcode,
+        userId,
+        allowOcr: validation === null ? false : validation.valid,
+      });
+
+      const { decoded, merged } = reading;
+      const flightNumber = merged.flightNumber;
+      const fromCode = merged.departureCode;
+      const toCode = merged.arrivalCode;
+      const date = merged.departureTime?.slice(0, 10);
+      const seatNumber = merged.seat;
+      const bookingClassLetter = merged.bookingClassLetter;
+      const pnr = merged.pnr ?? merged.bookingReference;
+      const airline = merged.airline;
+      const passengerName = decoded?.passengerName;
+      // The barcode never carries these four, so OCR is their only source.
+      const gate = merged.gate;
+      const terminal = merged.terminal;
+      const boardingGroup = merged.boardingGroup;
+      const aircraft = merged.aircraft;
+      const ocrUsed = reading.sources.ocr;
+
+      // --- 3. Resolve airports (IATA -> coords) so the result is save-ready ---
+      const departure = await resolveAirport(fromCode);
+      const arrival = await resolveAirport(toCode);
+
+      // --- 4. Match against an existing flight (preview only) -----------------
+      // Pass the departure timezone so the day-window is computed the same way
+      // the create path stores `departureTime` (local midnight → UTC). Without
+      // this, a flight from a UTC+ airport is stored on the previous UTC day and
+      // the matcher misses it → false "create" → duplicate on re-scan.
+      const match = await findExistingFlight({
+        userId,
+        flightNumber,
+        date,
+        pnr,
+        depTimezone: departure?.timezone,
+        depIata: fromCode,
+        arrIata: toCode,
+      });
+      let fillsFields: string[] = [];
+      if (match) {
+        if (seatNumber && !match.seatNumber) fillsFields.push("seatNumber");
+        if (gate && !match.gate) fillsFields.push("gate");
+        if (terminal && !match.terminal) fillsFields.push("terminal");
+        if (pnr && !match.bookingReference) fillsFields.push("bookingReference");
+        if (bookingClassLetter && !match.bookingClassLetter) fillsFields.push("bookingClassLetter");
+      }
+
+      const missing: string[] = [];
+      if (!flightNumber) missing.push("flightNumber");
+      if (!departure) missing.push("departure");
+      if (!arrival) missing.push("arrival");
+      if (!date) missing.push("date");
+
+      res.json({
+        recognized: {
+          flightNumber: flightNumber ?? null,
+          airline: airline ?? null,
+          departure,
+          arrival,
+          date: date ?? null,
+          seatNumber: seatNumber ?? null,
+          bookingClassLetter: bookingClassLetter ?? null,
+          pnr: pnr ?? null,
+          gate: gate ?? null,
+          terminal: terminal ?? null,
+          boardingGroup: boardingGroup ?? null,
+          aircraft: aircraft ?? null,
+          passengerName: passengerName ?? null,
+        },
+        sources: { barcode: Boolean(decoded), ocr: ocrUsed },
+        missing,
+        action: match ? "merge" : "create",
+        match: match
+          ? {
+              id: match.id,
+              flightNumber: match.flightNumber,
+              date: match.departureTime,
+              route: `${match.depIata ?? "?"} → ${match.arrIata ?? "?"}`,
+              fillsFields,
+            }
+          : null,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      }
+      logger.error({ error }, "[BoardingPassPropose] failed");
+      res.status(500).json({
+        error: "Boarding pass proposal failed",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-    const reading = await readBoardingPass({
-      // The validated bytes when validation ran and passed — see forgejo#117.
-      // A rejected or absent image falls through unchanged; OCR is off for it
-      // anyway and the barcode reader takes the original.
-      imageBase64: validation?.valid ? (validation.base64 ?? imageBase64) : imageBase64,
-      barcode,
-      userId,
-      allowOcr: validation === null ? false : validation.valid,
-    });
-
-    const { decoded, merged } = reading;
-    const flightNumber = merged.flightNumber;
-    const fromCode = merged.departureCode;
-    const toCode = merged.arrivalCode;
-    const date = merged.departureTime?.slice(0, 10);
-    const seatNumber = merged.seat;
-    const bookingClassLetter = merged.bookingClassLetter;
-    const pnr = merged.pnr ?? merged.bookingReference;
-    const airline = merged.airline;
-    const passengerName = decoded?.passengerName;
-    // The barcode never carries these four, so OCR is their only source.
-    const gate = merged.gate;
-    const terminal = merged.terminal;
-    const boardingGroup = merged.boardingGroup;
-    const aircraft = merged.aircraft;
-    const ocrUsed = reading.sources.ocr;
-
-    // --- 3. Resolve airports (IATA -> coords) so the result is save-ready ---
-    const departure = await resolveAirport(fromCode);
-    const arrival = await resolveAirport(toCode);
-
-    // --- 4. Match against an existing flight (preview only) -----------------
-    // Pass the departure timezone so the day-window is computed the same way
-    // the create path stores `departureTime` (local midnight → UTC). Without
-    // this, a flight from a UTC+ airport is stored on the previous UTC day and
-    // the matcher misses it → false "create" → duplicate on re-scan.
-    const match = await findExistingFlight({
-      userId,
-      flightNumber,
-      date,
-      pnr,
-      depTimezone: departure?.timezone,
-      depIata: fromCode,
-      arrIata: toCode,
-    });
-    let fillsFields: string[] = [];
-    if (match) {
-      if (seatNumber && !match.seatNumber) fillsFields.push("seatNumber");
-      if (gate && !match.gate) fillsFields.push("gate");
-      if (terminal && !match.terminal) fillsFields.push("terminal");
-      if (pnr && !match.bookingReference) fillsFields.push("bookingReference");
-      if (bookingClassLetter && !match.bookingClassLetter) fillsFields.push("bookingClassLetter");
-    }
-
-    const missing: string[] = [];
-    if (!flightNumber) missing.push("flightNumber");
-    if (!departure) missing.push("departure");
-    if (!arrival) missing.push("arrival");
-    if (!date) missing.push("date");
-
-    res.json({
-      recognized: {
-        flightNumber: flightNumber ?? null,
-        airline: airline ?? null,
-        departure,
-        arrival,
-        date: date ?? null,
-        seatNumber: seatNumber ?? null,
-        bookingClassLetter: bookingClassLetter ?? null,
-        pnr: pnr ?? null,
-        gate: gate ?? null,
-        terminal: terminal ?? null,
-        boardingGroup: boardingGroup ?? null,
-        aircraft: aircraft ?? null,
-        passengerName: passengerName ?? null,
-      },
-      sources: { barcode: Boolean(decoded), ocr: ocrUsed },
-      missing,
-      action: match ? "merge" : "create",
-      match: match
-        ? {
-            id: match.id,
-            flightNumber: match.flightNumber,
-            date: match.departureTime,
-            route: `${match.depIata ?? "?"} → ${match.arrIata ?? "?"}`,
-            fillsFields,
-          }
-        : null,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: error.issues });
-    }
-    logger.error({ error }, "[BoardingPassPropose] failed");
-    res.status(500).json({
-      error: "Boarding pass proposal failed",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
   }
-});
+);
 
 async function resolveAirport(code: string | undefined): Promise<AirportDto | null> {
   if (!code) return null;

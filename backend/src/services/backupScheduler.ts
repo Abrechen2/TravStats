@@ -1,16 +1,16 @@
-import cron from 'node-cron';
-import { prisma } from '../db';
-import logger from '../utils/logger';
-import { createBackup } from './backupService';
+import cron from "node-cron";
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import { createBackup } from "./backupService";
 
-const VALID_INTERVALS = ['daily', 'weekly', 'monthly'] as const;
+const VALID_INTERVALS = ["daily", "weekly", "monthly"] as const;
 type BackupInterval = (typeof VALID_INTERVALS)[number];
 
 function toBackupInterval(value: string | null | undefined): BackupInterval {
   if (value && (VALID_INTERVALS as readonly string[]).includes(value)) {
     return value as BackupInterval;
   }
-  return 'weekly';
+  return "weekly";
 }
 
 let scheduledJob: cron.ScheduledTask | null = null;
@@ -20,7 +20,7 @@ let scheduledJob: cron.ScheduledTask | null = null;
  */
 async function getBackupSettings(): Promise<{
   enabled: boolean;
-  interval: 'daily' | 'weekly' | 'monthly';
+  interval: "daily" | "weekly" | "monthly";
   retentionDays: number;
 }> {
   const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
@@ -34,16 +34,16 @@ async function getBackupSettings(): Promise<{
 /**
  * Get cron pattern for backup interval
  */
-function getCronPattern(interval: 'daily' | 'weekly' | 'monthly'): string {
+function getCronPattern(interval: "daily" | "weekly" | "monthly"): string {
   switch (interval) {
-    case 'daily':
-      return '0 2 * * *'; // 2 AM daily
-    case 'weekly':
-      return '0 2 * * 0'; // 2 AM on Sunday
-    case 'monthly':
-      return '0 2 1 * *'; // 2 AM on 1st of month
+    case "daily":
+      return "0 2 * * *"; // 2 AM daily
+    case "weekly":
+      return "0 2 * * 0"; // 2 AM on Sunday
+    case "monthly":
+      return "0 2 1 * *"; // 2 AM on 1st of month
     default:
-      return '0 2 * * 0'; // Default to weekly
+      return "0 2 * * 0"; // Default to weekly
   }
 }
 
@@ -56,8 +56,8 @@ async function checkAndRunBackup(): Promise<void> {
 
     if (!autoBackup) {
       logger.debug({
-        operation: 'backup_scheduler_skip',
-        message: 'Auto backup is disabled',
+        operation: "backup_scheduler_skip",
+        message: "Auto backup is disabled",
       });
       return;
     }
@@ -65,36 +65,36 @@ async function checkAndRunBackup(): Promise<void> {
     // Check if there's already a running backup
     const runningBackup = await prisma.backup.findFirst({
       where: {
-        status: 'running',
+        status: "running",
       },
     });
 
     if (runningBackup) {
       logger.warn({
-        operation: 'backup_scheduler_skip',
-        message: 'Backup already running, skipping scheduled backup',
+        operation: "backup_scheduler_skip",
+        message: "Backup already running, skipping scheduled backup",
         backupId: runningBackup.id,
       });
       return;
     }
 
     logger.info({
-      operation: 'backup_scheduler_start',
-      message: 'Starting scheduled backup',
+      operation: "backup_scheduler_start",
+      message: "Starting scheduled backup",
       interval: backupInterval,
     });
 
-    await createBackup({ type: 'full' });
+    await createBackup({ type: "full" });
 
     logger.info({
-      operation: 'backup_scheduler_complete',
-      message: 'Scheduled backup completed',
+      operation: "backup_scheduler_complete",
+      message: "Scheduled backup completed",
     });
   } catch (error) {
     logger.error({
-      operation: 'backup_scheduler_error',
-      message: 'Scheduled backup failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      operation: "backup_scheduler_error",
+      message: "Scheduled backup failed",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
@@ -105,8 +105,8 @@ async function checkAndRunBackup(): Promise<void> {
 export async function startScheduler(): Promise<void> {
   if (scheduledJob) {
     logger.warn({
-      operation: 'backup_scheduler_already_running',
-      message: 'Backup scheduler is already running',
+      operation: "backup_scheduler_already_running",
+      message: "Backup scheduler is already running",
     });
     return;
   }
@@ -115,8 +115,8 @@ export async function startScheduler(): Promise<void> {
 
   if (!autoBackup) {
     logger.info({
-      operation: 'backup_scheduler_disabled',
-      message: 'Auto backup is disabled, scheduler not started',
+      operation: "backup_scheduler_disabled",
+      message: "Auto backup is disabled, scheduler not started",
     });
     return;
   }
@@ -124,8 +124,8 @@ export async function startScheduler(): Promise<void> {
   const cronPattern = getCronPattern(backupInterval);
 
   logger.info({
-    operation: 'backup_scheduler_start',
-    message: 'Starting backup scheduler',
+    operation: "backup_scheduler_start",
+    message: "Starting backup scheduler",
     cronPattern,
     interval: backupInterval,
   });
@@ -137,8 +137,8 @@ export async function startScheduler(): Promise<void> {
   scheduledJob.start();
 
   logger.info({
-    operation: 'backup_scheduler_started',
-    message: 'Backup scheduler started successfully',
+    operation: "backup_scheduler_started",
+    message: "Backup scheduler started successfully",
   });
 }
 
@@ -150,8 +150,8 @@ export function stopScheduler(): void {
     scheduledJob.stop();
     scheduledJob = null;
     logger.info({
-      operation: 'backup_scheduler_stopped',
-      message: 'Backup scheduler stopped',
+      operation: "backup_scheduler_stopped",
+      message: "Backup scheduler stopped",
     });
   }
 }

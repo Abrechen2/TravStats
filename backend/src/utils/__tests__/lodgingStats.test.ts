@@ -34,10 +34,7 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
 
 describe("calculateLodgingStats", () => {
   it("sums nights and base spend, excluding cancelled", () => {
-    const s = calculateLodgingStats([
-      stay({}),
-      stay({ status: "cancelled", totalPriceBase: 999 }),
-    ]);
+    const s = calculateLodgingStats([stay({}), stay({ status: "cancelled", totalPriceBase: 999 })]);
     expect(s.totalNights).toBe(2);
     expect(s.staysCount).toBe(1);
     expect(s.spendBaseTotal).toBe(190);
@@ -139,7 +136,7 @@ describe("calculateLodgingStats", () => {
         stay({ lodgingId: "l1", fxBaseCurrency: "EUR", totalPriceBase: 190 }),
         stay({ lodgingId: "l2", fxBaseCurrency: "CHF", totalPriceBase: 424 }),
       ],
-      "CHF",
+      "CHF"
     );
     expect(s.spendBaseTotal).toBe(424); // ONLY the CHF-snapshotted stay
     expect(s.spendBaseByCurrency).toEqual({ EUR: 190, CHF: 424 });
@@ -197,9 +194,7 @@ describe("calculateLodgingStats", () => {
   });
 
   it("does not leak a null country/city/chain into a Set or count", () => {
-    const s = calculateLodgingStats([
-      stay({ country: null, city: null, chainId: null }),
-    ]);
+    const s = calculateLodgingStats([stay({ country: null, city: null, chainId: null })]);
     expect(s.countries.size).toBe(0);
     expect(s.countriesCount).toBe(0);
     expect(s.citiesUnique).toBe(0);
@@ -214,8 +209,8 @@ describe("calculateLodgingStats", () => {
           ...s,
           checkIn: s.checkIn.toISOString(),
           checkOut: s.checkOut.toISOString(),
-        })),
-      ),
+        }))
+      )
     );
     calculateLodgingStats(stays);
     const afterCopy = JSON.parse(
@@ -224,8 +219,8 @@ describe("calculateLodgingStats", () => {
           ...s,
           checkIn: s.checkIn.toISOString(),
           checkOut: s.checkOut.toISOString(),
-        })),
-      ),
+        }))
+      )
     );
     expect(afterCopy).toEqual(frozenCopy);
   });
@@ -251,14 +246,37 @@ describe("calculateLodgingStats", () => {
   it("keys the countries of stays that happened by their check-in year (forgejo#80)", () => {
     const s = calculateLodgingStats(
       [
-        stay({ lodgingId: "l1", country: "DE", checkIn: new Date("2024-03-01T00:00:00Z"), checkOut: new Date("2024-03-03T00:00:00Z") }),
-        stay({ lodgingId: "l2", country: "CH", checkIn: new Date("2025-07-01T00:00:00Z"), checkOut: new Date("2025-07-02T00:00:00Z") }),
+        stay({
+          lodgingId: "l1",
+          country: "DE",
+          checkIn: new Date("2024-03-01T00:00:00Z"),
+          checkOut: new Date("2024-03-03T00:00:00Z"),
+        }),
+        stay({
+          lodgingId: "l2",
+          country: "CH",
+          checkIn: new Date("2025-07-01T00:00:00Z"),
+          checkOut: new Date("2025-07-02T00:00:00Z"),
+        }),
         // Undated: in the lifetime set, in no year — like an undated flight.
-        stay({ lodgingId: "l3", country: "IT", checkIn: null, checkOut: null, datePrecision: "NONE", nights: 2, status: "completed" }),
+        stay({
+          lodgingId: "l3",
+          country: "IT",
+          checkIn: null,
+          checkOut: null,
+          datePrecision: "NONE",
+          nights: 2,
+          status: "completed",
+        }),
         // Still ahead: nowhere yet.
-        stay({ lodgingId: "l4", country: "ES", checkIn: new Date("2099-01-01T00:00:00Z"), checkOut: new Date("2099-01-03T00:00:00Z") }),
+        stay({
+          lodgingId: "l4",
+          country: "ES",
+          checkIn: new Date("2099-01-01T00:00:00Z"),
+          checkOut: new Date("2099-01-03T00:00:00Z"),
+        }),
       ],
-      "EUR",
+      "EUR"
     );
     expect(s.countriesByYear).toEqual({ "2024": ["DE"], "2025": ["CH"] });
     expect([...s.countries].sort()).toEqual(["CH", "DE", "IT"]);
@@ -271,11 +289,13 @@ describe("calculateLodgingStats", () => {
   });
 
   it("does not double-count a lodging that both has a stay and appears in the lodgings list", () => {
-    const lodgings = [{ id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true }];
+    const lodgings = [
+      { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true },
+    ];
     const s = calculateLodgingStats(
       [stay({ lodgingId: "l1", chainId: 1 }), stay({ lodgingId: "l1", chainId: 1 })],
       "EUR",
-      lodgings,
+      lodgings
     );
     expect(s.lodgingsCount).toBe(1);
     expect(s.chainsUnique).toBe(1);
@@ -317,7 +337,7 @@ describe("calculateLodgingStats", () => {
         ],
         "EUR",
         undefined,
-        NOW,
+        NOW
       );
       expect(s.staysCount).toBe(0);
       expect(s.plannedStaysCount).toBe(1);
@@ -364,7 +384,7 @@ describe("calculateLodgingStats", () => {
         ],
         "EUR",
         lodgings,
-        NOW,
+        NOW
       );
       expect(s.lodgingsCount).toBe(1);
       expect(s.chainsUnique).toBe(1);
@@ -390,7 +410,7 @@ describe("calculateLodgingStats", () => {
         ],
         "EUR",
         lodgings,
-        NOW,
+        NOW
       );
       expect(s.lodgingsCount).toBe(1);
       expect(s.countries.has("PT")).toBe(true);
@@ -412,12 +432,7 @@ describe("calculateLodgingStats", () => {
     });
 
     it("counts a long-past stay whose status column was never converged", () => {
-      const s = calculateLodgingStats(
-        [stay({ status: "scheduled" })],
-        "EUR",
-        undefined,
-        NOW,
-      );
+      const s = calculateLodgingStats([stay({ status: "scheduled" })], "EUR", undefined, NOW);
       expect(s.staysCount).toBe(1);
       expect(s.totalNights).toBe(2);
     });

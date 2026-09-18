@@ -90,8 +90,7 @@ const LOOKAHEAD_CHARS = 120;
  * correct $135.87. A number is money only if it carries a currency marker or
  * has a two-digit decimal tail; a bare integer in prose is a count.
  */
-const MONEY_RE =
-  /(?<pre>[A-Z]{3}|[€$£¥])?\s*(?<num>\d[\d.,]*\d|\d)\s*(?<post>[A-Z]{3}|[€$£¥])?/g;
+const MONEY_RE = /(?<pre>[A-Z]{3}|[€$£¥])?\s*(?<num>\d[\d.,]*\d|\d)\s*(?<post>[A-Z]{3}|[€$£¥])?/g;
 
 function looksLikeMoney(num: string, pre?: string, post?: string): boolean {
   if (pre || post) return true;
@@ -180,7 +179,7 @@ export function findLabelledTotal(text: string): number | null {
 export function documentSectionFor(
   text: string,
   hotelName: string | null,
-  otherHotelNames: readonly string[],
+  otherHotelNames: readonly string[]
 ): string {
   if (otherHotelNames.length === 0) return text;
   if (!hotelName) return "";
@@ -219,7 +218,7 @@ const AGREEMENT_EPSILON = 0.01;
 export function reconcileTotalPrice(
   modelValue: number | null,
   text: string,
-  modelCurrency?: string | null,
+  modelCurrency?: string | null
 ): ReconciledTotal {
   const labelled = findLabelledMoney(text);
   const documentValue =
@@ -228,7 +227,9 @@ export function reconcileTotalPrice(
       : labelled.value;
 
   if (documentValue === null) {
-    return modelValue === null ? { value: null, source: "none" } : { value: modelValue, source: "model" };
+    return modelValue === null
+      ? { value: null, source: "none" }
+      : { value: modelValue, source: "model" };
   }
   if (modelValue === null) return { value: documentValue, source: "document" };
   if (Math.abs(modelValue - documentValue) < AGREEMENT_EPSILON) {

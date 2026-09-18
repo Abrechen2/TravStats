@@ -203,10 +203,7 @@ router.post(
 
       const ingested = ingestTrack(parsed);
       if (!ingested) {
-        throw new AppError(
-          "This GPX file has no timestamps, so it cannot be placed in time",
-          400,
-        );
+        throw new AppError("This GPX file has no timestamps, so it cannot be placed in time", 400);
       }
 
       const source = trackSource.parse("gpx");
@@ -243,7 +240,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -304,7 +301,7 @@ router.post(
       if (!window) {
         throw new AppError(
           "This section has no dated stops to derive a time window from — provide startedAt/endedAt",
-          400,
+          400
         );
       }
       if (window.startAt.getTime() > window.endAt.getTime()) {
@@ -376,7 +373,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -405,7 +402,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /** GET /trips/:id/routes/:routeId/tracks/:trackId — WITH geometry. */
@@ -424,7 +421,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 /**
@@ -461,7 +458,7 @@ router.delete(
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 export default router;

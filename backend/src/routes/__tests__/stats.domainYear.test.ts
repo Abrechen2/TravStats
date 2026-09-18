@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 const mockCruiseFindMany = jest.fn();
 const mockStayFindMany = jest.fn();
@@ -7,7 +7,7 @@ const mockUserFindUnique = jest.fn();
 const mockSettingsFindUnique = jest.fn();
 const mockMembershipFindMany = jest.fn();
 
-jest.mock('../../db', () => ({
+jest.mock("../../db", () => ({
   prisma: {
     cruise: { findMany: mockCruiseFindMany },
     lodgingStay: { findMany: mockStayFindMany },
@@ -17,19 +17,19 @@ jest.mock('../../db', () => ({
     lodgingMembership: { findMany: mockMembershipFindMany },
   },
 }));
-jest.mock('../../middleware/auth', () => ({
+jest.mock("../../middleware/auth", () => ({
   authenticate: (req: { userId?: string }, _res: unknown, next: () => void) => {
-    req.userId = 'u1';
+    req.userId = "u1";
     next();
   },
   AuthRequest: {},
 }));
-jest.mock('../../middleware/rateLimit', () => ({
+jest.mock("../../middleware/rateLimit", () => ({
   statsLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
-import request from 'supertest';
-import express from 'express';
+import request from "supertest";
+import express from "express";
 
 /**
  * `?year=` on the two domain rollups.
@@ -44,7 +44,7 @@ import express from 'express';
  * year asks for. The arithmetic belongs to `calculateCruiseStats` and
  * `calculateLodgingStats` and has its own tests.
  */
-describe('domain stats honour ?year=', () => {
+describe("domain stats honour ?year=", () => {
   let app: express.Express;
 
   beforeEach(async () => {
@@ -58,16 +58,16 @@ describe('domain stats honour ?year=', () => {
     mockStayFindMany.mockResolvedValue([]);
     mockLodgingFindMany.mockResolvedValue([]);
     mockUserFindUnique.mockResolvedValue({ birthdate: null });
-    mockSettingsFindUnique.mockResolvedValue({ baseCurrency: 'EUR' });
+    mockSettingsFindUnique.mockResolvedValue({ baseCurrency: "EUR" });
     mockMembershipFindMany.mockResolvedValue([]);
-    const { default: statsRoutes } = await import('../stats');
+    const { default: statsRoutes } = await import("../stats");
     app = express();
     app.use(express.json());
-    app.use('/api/v1/stats', statsRoutes);
+    app.use("/api/v1/stats", statsRoutes);
   });
 
-  it('asks for cruises that STARTED in the year, as a half-open window', async () => {
-    await request(app).get('/api/v1/stats/cruise?year=2024').expect(200);
+  it("asks for cruises that STARTED in the year, as a half-open window", async () => {
+    await request(app).get("/api/v1/stats/cruise?year=2024").expect(200);
 
     const where = mockCruiseFindMany.mock.calls[0]?.[0]?.where;
     expect(where.startDate).toEqual({
@@ -76,13 +76,13 @@ describe('domain stats honour ?year=', () => {
     });
   });
 
-  it('asks for every cruise when no year is given', async () => {
-    await request(app).get('/api/v1/stats/cruise').expect(200);
+  it("asks for every cruise when no year is given", async () => {
+    await request(app).get("/api/v1/stats/cruise").expect(200);
     expect(mockCruiseFindMany.mock.calls[0]?.[0]?.where.startDate).toBeUndefined();
   });
 
-  it('dates a stay by its check-in, so a New Year stay belongs to the year it began', async () => {
-    await request(app).get('/api/v1/stats/lodging?year=2024').expect(200);
+  it("dates a stay by its check-in, so a New Year stay belongs to the year it began", async () => {
+    await request(app).get("/api/v1/stats/lodging?year=2024").expect(200);
 
     const where = mockStayFindMany.mock.calls[0]?.[0]?.where;
     expect(where.checkIn).toEqual({
@@ -91,19 +91,35 @@ describe('domain stats honour ?year=', () => {
     });
   });
 
-  it('counts only the houses that year was spent in, not every house on file', async () => {
+  it("counts only the houses that year was spent in, not every house on file", async () => {
     // Two houses exist; one stay, at the first. A bookmarked house has no date
     // at all, so it belongs to the lifetime view and to no year.
     mockLodgingFindMany.mockResolvedValue([
-      { id: 'h1', chainId: null, type: 'hotel', country: 'DE', isoCountryCode: 'DE', city: 'Köln', visited: true },
-      { id: 'h2', chainId: null, type: 'hotel', country: 'DE', isoCountryCode: 'DE', city: 'Bonn', visited: false },
+      {
+        id: "h1",
+        chainId: null,
+        type: "hotel",
+        country: "DE",
+        isoCountryCode: "DE",
+        city: "Köln",
+        visited: true,
+      },
+      {
+        id: "h2",
+        chainId: null,
+        type: "hotel",
+        country: "DE",
+        isoCountryCode: "DE",
+        city: "Bonn",
+        visited: false,
+      },
     ]);
     mockStayFindMany.mockResolvedValue([
       {
-        id: 's1',
-        lodgingId: 'h1',
-        checkIn: new Date('2024-03-01'),
-        checkOut: new Date('2024-03-03'),
+        id: "s1",
+        lodgingId: "h1",
+        checkIn: new Date("2024-03-01"),
+        checkOut: new Date("2024-03-03"),
         price: null,
         currency: null,
         priceBase: null,
@@ -114,16 +130,25 @@ describe('domain stats honour ?year=', () => {
         serviceRating: null,
         board: null,
         roomType: null,
-        lodging: { id: 'h1', chainId: null, type: 'hotel', country: 'DE', isoCountryCode: 'DE', city: 'Köln', visited: true, chain: null },
+        lodging: {
+          id: "h1",
+          chainId: null,
+          type: "hotel",
+          country: "DE",
+          isoCountryCode: "DE",
+          city: "Köln",
+          visited: true,
+          chain: null,
+        },
       },
     ]);
 
-    const res = await request(app).get('/api/v1/stats/lodging?year=2024').expect(200);
+    const res = await request(app).get("/api/v1/stats/lodging?year=2024").expect(200);
     expect(res.body.data.lodgingsCount).toBe(1);
   });
 
-  it('refuses a year that is not one', async () => {
-    await request(app).get('/api/v1/stats/cruise?year=neunzehn').expect(400);
-    await request(app).get('/api/v1/stats/lodging?year=12').expect(400);
+  it("refuses a year that is not one", async () => {
+    await request(app).get("/api/v1/stats/cruise?year=neunzehn").expect(400);
+    await request(app).get("/api/v1/stats/lodging?year=12").expect(400);
   });
 });

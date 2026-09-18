@@ -6,10 +6,7 @@ import {
   type LodgingImportBatchSummary,
   type LodgingImportSource,
 } from "../../schemas/lodgingImport";
-import {
-  collectLodgingPhotoFilenames,
-  removeLodgingPhotoFiles,
-} from "./deleteLodgingPhotoFiles";
+import { collectLodgingPhotoFilenames, removeLodgingPhotoFiles } from "./deleteLodgingPhotoFiles";
 
 /** The column is a plain String; narrow it back to the union on the way out. */
 function asSource(value: string): LodgingImportSource {
@@ -19,7 +16,7 @@ function asSource(value: string): LodgingImportSource {
 }
 
 export async function listLodgingImportBatches(
-  userId: string,
+  userId: string
 ): Promise<LodgingImportBatchSummary[]> {
   // This is the LODGING log. Filtering on the user alone listed the flight
   // and cruise imports here too, and the revert below then deleted a flight
@@ -85,7 +82,7 @@ export interface RevertResult {
  */
 export async function revertLodgingImportBatch(
   userId: string,
-  batchId: string,
+  batchId: string
 ): Promise<RevertResult> {
   let orphanedPhotoFiles: string[] = [];
   const result = await prisma.$transaction(
@@ -140,7 +137,7 @@ export async function revertLodgingImportBatch(
         detachedLodgings: detached.count,
       };
     },
-    { isolationLevel: "Serializable" },
+    { isolationLevel: "Serializable" }
   );
 
   logger.info(
@@ -152,7 +149,7 @@ export async function revertLodgingImportBatch(
       deletedLodgings: result.deletedLodgings,
       detachedLodgings: result.detachedLodgings,
     },
-    "Lodging import batch reverted",
+    "Lodging import batch reverted"
   );
 
   removeLodgingPhotoFiles(orphanedPhotoFiles);

@@ -1,10 +1,7 @@
 import http from "http";
 import { AddressInfo } from "net";
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
-import {
-  OllamaTextParser,
-  buildSystemPrompt,
-} from "../services/parsers/text/ollamaTextParser";
+import { OllamaTextParser, buildSystemPrompt } from "../services/parsers/text/ollamaTextParser";
 
 jest.mock("../utils/logger", () => ({
   __esModule: true,
@@ -50,7 +47,9 @@ describe("Ollama text parser price extraction", () => {
       server = http.createServer((req, res) => {
         if (req.method === "POST" && req.url === "/api/generate") {
           let body = "";
-          req.on("data", (c: string) => { body += c; });
+          req.on("data", (c: string) => {
+            body += c;
+          });
           req.on("end", () => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ response: JSON.stringify(nextResponse) }));
@@ -87,7 +86,13 @@ describe("Ollama text parser price extraction", () => {
     it("maps totalPrice and currency onto every leg's ParsedBooking", async () => {
       nextResponse = [
         leg({ totalPrice: 4359.14, currency: "EUR" }),
-        leg({ flightNumber: "LH507", departureCode: "GRU", arrivalCode: "FRA", totalPrice: 4359.14, currency: "EUR" }),
+        leg({
+          flightNumber: "LH507",
+          departureCode: "GRU",
+          arrivalCode: "FRA",
+          totalPrice: 4359.14,
+          currency: "EUR",
+        }),
       ];
       const parser = new OllamaTextParser(baseUrl, "test-model");
       const result = await parser.parseEmail("Buchung", "Endpreis EUR 4,359.14");

@@ -144,18 +144,30 @@ describe("useNavItems — Mehr › Werkzeuge", () => {
     expect(tools.map((c) => c.id)).not.toContain("admin");
   });
 
-  it("still offers Parser (beta) to admins while the instance beta switch is on", () => {
+  /**
+   * The Parser left the beta registry on 2026-09-17 (owner decision, main):
+   * the gate asked for the template and regex parsers to be measured against
+   * the sample set, and they were. So it is offered to admins whatever the
+   * instance beta switch says, and carries no badge — a badge without a gate
+   * behind it is the thing owner decision no. 10 of 2026-09-05 forbids.
+   */
+  it("offers Parser to admins while the instance beta switch is on, without a badge", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const tools = section(run().more, "tools");
     expect(tools.map((c) => c.path)).toEqual(["/parser"]);
-    expect(tools[0].betaBadge).toBe(true);
+    expect(tools[0].betaBadge).toBeUndefined();
   });
 
-  // Owner decision 2026-09-05 (no. 10): the Beta badge has a gate behind it.
-  it("leaves Werkzeuge empty for admins while the instance beta switch is off", () => {
+  it("offers Parser to admins with the switch OFF too — there is no gate any more", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+    expect(section(run().more, "tools").map((c) => c.path)).toEqual(["/parser"]);
+  });
+
+  it("leaves Werkzeuge empty for a normal user", () => {
+    authState.user = { isAdmin: false };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     expect(section(run().more, "tools")).toEqual([]);
   });
 

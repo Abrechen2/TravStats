@@ -1,7 +1,7 @@
-import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
-import { ParsedBooking } from '../../bookingParser';
-import { getTesseractParser } from './tesseractParser';
-import logger from '../../../utils/logger';
+import { IVisionParser, ProviderAvailability, VisionProvider } from "../types";
+import { ParsedBooking } from "../../bookingParser";
+import { getTesseractParser } from "./tesseractParser";
+import logger from "../../../utils/logger";
 
 /**
  * Manual Vision Parser
@@ -20,7 +20,7 @@ import logger from '../../../utils/logger';
  * - Only useful as last resort
  */
 export class ManualParser implements IVisionParser {
-  readonly provider: VisionProvider = 'manual';
+  readonly provider: VisionProvider = "manual";
   private tesseractParser = getTesseractParser();
 
   async checkAvailability(): Promise<ProviderAvailability> {
@@ -28,21 +28,21 @@ export class ManualParser implements IVisionParser {
     return {
       available: true,
       metadata: {
-        provider: 'manual',
-        description: 'OCR text extraction + manual field entry',
-        cost: 'free',
+        provider: "manual",
+        description: "OCR text extraction + manual field entry",
+        cost: "free",
       },
     };
   }
 
   async parseImage(imageBase64: string): Promise<ParsedBooking> {
-    logger.info('[Manual Parser] Extracting text for manual review');
+    logger.info("[Manual Parser] Extracting text for manual review");
 
     try {
       // Use Tesseract to extract text
       const tesseractResult = await this.tesseractParser.parseImage(imageBase64);
 
-      logger.info('[Manual Parser] OCR extraction complete - returning for manual review');
+      logger.info("[Manual Parser] OCR extraction complete - returning for manual review");
 
       // Return result with all fields potentially empty
       // The user will fill them manually in the review modal
@@ -51,14 +51,14 @@ export class ManualParser implements IVisionParser {
         // Ensure missing array contains all critical fields if not found
         missing: [
           ...(tesseractResult.missing || []),
-          ...(!tesseractResult.flightNumber ? ['flightNumber'] : []),
-          ...(!tesseractResult.departureCode ? ['departureCode'] : []),
-          ...(!tesseractResult.arrivalCode ? ['arrivalCode'] : []),
-          ...(!tesseractResult.departureTime ? ['departureTime'] : []),
+          ...(!tesseractResult.flightNumber ? ["flightNumber"] : []),
+          ...(!tesseractResult.departureCode ? ["departureCode"] : []),
+          ...(!tesseractResult.arrivalCode ? ["arrivalCode"] : []),
+          ...(!tesseractResult.departureTime ? ["departureTime"] : []),
         ].filter((v, i, a) => a.indexOf(v) === i), // Remove duplicates
       };
     } catch (error) {
-      logger.warn({ error }, '[Manual Parser] OCR extraction failed - returning empty fields');
+      logger.warn({ error }, "[Manual Parser] OCR extraction failed - returning empty fields");
 
       // Even if OCR fails, return an empty structure for manual entry
       return {
@@ -81,7 +81,7 @@ export class ManualParser implements IVisionParser {
         boardingGroup: undefined,
         taxes: undefined,
         fees: undefined,
-        missing: ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime', 'arrivalTime'],
+        missing: ["flightNumber", "departureCode", "arrivalCode", "departureTime", "arrivalTime"],
       };
     }
   }

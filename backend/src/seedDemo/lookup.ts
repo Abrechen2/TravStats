@@ -18,7 +18,9 @@ export async function portIdByLocode(locode: string): Promise<number> {
   return port.id;
 }
 
-export async function shipByName(name: string): Promise<{ id: number; name: string; cruiseLine: string }> {
+export async function shipByName(
+  name: string
+): Promise<{ id: number; name: string; cruiseLine: string }> {
   const ship = await prisma.ship.findFirst({
     where: { name },
     select: { id: true, name: true, cruiseLine: true },

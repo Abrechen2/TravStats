@@ -35,7 +35,7 @@ afterEach(() => {
 const writeJsonl = (filename: string, entries: object[]): void => {
   fs.writeFileSync(
     path.join(logDir, filename),
-    entries.map(e => JSON.stringify(e)).join("\n") + "\n",
+    entries.map((e) => JSON.stringify(e)).join("\n") + "\n"
   );
 };
 
@@ -53,7 +53,7 @@ describe("readLogWindow — active file, time cutoff", () => {
     const entries = await readLogWindow("app", 60 * 60 * 1000); // 1h window
 
     expect(entries).toHaveLength(2);
-    expect(entries.map(e => e.msg)).toEqual(["inside-1s", "inside-1min"]);
+    expect(entries.map((e) => e.msg)).toEqual(["inside-1s", "inside-1min"]);
   });
 });
 
@@ -63,36 +63,36 @@ describe("readLogWindow — rotated .gz files", () => {
     writeJsonl("app.log", [{ time: iso(-1000), level: "info", msg: "recent" }]);
 
     // Rotated gz: older entries still inside window
-    const rotatedLines = [
-      { time: iso(-2 * 60 * 60_000), level: "info", msg: "gz-2h" },
-      { time: iso(-1.5 * 60 * 60_000), level: "info", msg: "gz-1.5h" },
-    ]
-      .map(e => JSON.stringify(e))
-      .join("\n") + "\n";
+    const rotatedLines =
+      [
+        { time: iso(-2 * 60 * 60_000), level: "info", msg: "gz-2h" },
+        { time: iso(-1.5 * 60 * 60_000), level: "info", msg: "gz-1.5h" },
+      ]
+        .map((e) => JSON.stringify(e))
+        .join("\n") + "\n";
     fs.writeFileSync(
       path.join(logDir, "20260416-0000-01-app.log.gz"),
-      zlib.gzipSync(Buffer.from(rotatedLines)),
+      zlib.gzipSync(Buffer.from(rotatedLines))
     );
 
     const { readLogWindow } = await import("../services/logManager");
     // 3h window — captures all three
     const entries = await readLogWindow("app", 3 * 60 * 60 * 1000);
 
-    expect(entries.map(e => e.msg).sort()).toEqual(["gz-1.5h", "gz-2h", "recent"]);
+    expect(entries.map((e) => e.msg).sort()).toEqual(["gz-1.5h", "gz-2h", "recent"]);
   });
 
   it("stops descending into gz files once cutoff is crossed", async () => {
     writeJsonl("app.log", [{ time: iso(-1000), level: "info", msg: "recent" }]);
 
     // Very old gz — outside the window
-    const oldLines = [
-      { time: iso(-48 * 60 * 60_000), level: "info", msg: "gz-2d" },
-    ]
-      .map(e => JSON.stringify(e))
-      .join("\n") + "\n";
+    const oldLines =
+      [{ time: iso(-48 * 60 * 60_000), level: "info", msg: "gz-2d" }]
+        .map((e) => JSON.stringify(e))
+        .join("\n") + "\n";
     fs.writeFileSync(
       path.join(logDir, "20260414-0000-01-app.log.gz"),
-      zlib.gzipSync(Buffer.from(oldLines)),
+      zlib.gzipSync(Buffer.from(oldLines))
     );
 
     const { readLogWindow } = await import("../services/logManager");
@@ -113,16 +113,16 @@ describe("readLogWindow — rotated .gz files", () => {
         path.join(logDir, bogus),
         zlib.gzipSync(
           Buffer.from(
-            JSON.stringify({ time: iso(-30 * 60_000), level: "info", msg: `bogus-${bogus}` }) + "\n",
-          ),
-        ),
+            JSON.stringify({ time: iso(-30 * 60_000), level: "info", msg: `bogus-${bogus}` }) + "\n"
+          )
+        )
       );
     }
 
     const { readLogWindow } = await import("../services/logManager");
     const entries = await readLogWindow("app", 60 * 60 * 1000);
 
-    expect(entries.map(e => e.msg)).toEqual(["recent"]);
+    expect(entries.map((e) => e.msg)).toEqual(["recent"]);
   });
 });
 
@@ -162,9 +162,7 @@ describe("readLogWindow — caps", () => {
 describe("readLogWindow — Pino dedupe", () => {
   it("drops `timestamp` when it equals `time`", async () => {
     const ts = iso(-5000);
-    writeJsonl("app.log", [
-      { time: ts, timestamp: ts, level: "info", msg: "dup" },
-    ]);
+    writeJsonl("app.log", [{ time: ts, timestamp: ts, level: "info", msg: "dup" }]);
 
     const { readLogWindow } = await import("../services/logManager");
     const entries = await readLogWindow("app", 60 * 60 * 1000);
@@ -176,9 +174,7 @@ describe("readLogWindow — Pino dedupe", () => {
   it("keeps `timestamp` when it differs from `time`", async () => {
     const t = iso(-5000);
     const other = iso(-4000);
-    writeJsonl("app.log", [
-      { time: t, timestamp: other, level: "info", msg: "distinct" },
-    ]);
+    writeJsonl("app.log", [{ time: t, timestamp: other, level: "info", msg: "distinct" }]);
 
     const { readLogWindow } = await import("../services/logManager");
     const entries = await readLogWindow("app", 60 * 60 * 1000);
@@ -193,7 +189,7 @@ describe("readLogWindow — corrupt gz", () => {
     // Not valid gzip content
     fs.writeFileSync(
       path.join(logDir, "20260416-0000-01-app.log.gz"),
-      Buffer.from("not really a gzip file"),
+      Buffer.from("not really a gzip file")
     );
 
     const { readLogWindow } = await import("../services/logManager");

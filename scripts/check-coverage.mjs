@@ -73,13 +73,19 @@ function publish(tree, actual, recorded) {
   const target = process.env.GITHUB_STEP_SUMMARY;
   if (!target) return;
   const rows = METRICS.map(
-    (m) => `| ${m} | ${actual[m].toFixed(2)} % | ${recorded ? `${recorded[m].toFixed(2)} %` : "—"} |`
+    (m) =>
+      `| ${m} | ${actual[m].toFixed(2)} % | ${recorded ? `${recorded[m].toFixed(2)} %` : "—"} |`
   );
   appendFileSync(
     target,
-    [`### Coverage — ${tree}`, "", "| metric | this run | baseline |", "|---|---|---|", ...rows, ""].join(
-      "\n"
-    ) + "\n"
+    [
+      `### Coverage — ${tree}`,
+      "",
+      "| metric | this run | baseline |",
+      "|---|---|---|",
+      ...rows,
+      "",
+    ].join("\n") + "\n"
   );
 }
 
@@ -103,7 +109,9 @@ function main() {
       );
     }
     writeFileSync(BASELINE_PATH, JSON.stringify({ ...baseline, [tree]: actual }, null, 2) + "\n");
-    console.log(`Baseline written for ${tree}: ${METRICS.map((m) => `${m} ${actual[m]}%`).join(", ")}`);
+    console.log(
+      `Baseline written for ${tree}: ${METRICS.map((m) => `${m} ${actual[m]}%`).join(", ")}`
+    );
     return;
   }
 
@@ -111,7 +119,9 @@ function main() {
 
   const regressions = METRICS.filter((m) => actual[m] < recorded[m] - TOLERANCE);
   for (const m of METRICS) {
-    console.log(`  ${m.padEnd(10)} ${actual[m].toFixed(2)} %   (baseline ${recorded[m].toFixed(2)} %)`);
+    console.log(
+      `  ${m.padEnd(10)} ${actual[m].toFixed(2)} %   (baseline ${recorded[m].toFixed(2)} %)`
+    );
   }
   if (regressions.length > 0) {
     fail(

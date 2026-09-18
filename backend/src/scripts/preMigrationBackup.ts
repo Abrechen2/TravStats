@@ -20,7 +20,7 @@ async function main(): Promise<void> {
 
   if (ctx.firstUpgradeFromPreMarker) {
     console.log(
-      `[pre-migration-backup] First upgrade with last-version marker → ${ctx.currentVersion}`,
+      `[pre-migration-backup] First upgrade with last-version marker → ${ctx.currentVersion}`
     );
   } else if (ctx.shouldBackup) {
     // These lines still said "Major bump" and "Same major" long after #246
@@ -29,22 +29,18 @@ async function main(): Promise<void> {
     // the behaviour was right and the sentence was wrong, which is the kind of
     // thing an operator reads at 3am while deciding whether to roll back.
     console.log(
-      `[pre-migration-backup] Version change ${ctx.previousVersion} → ${ctx.currentVersion}`,
+      `[pre-migration-backup] Version change ${ctx.previousVersion} → ${ctx.currentVersion}`
     );
   } else if (ctx.previousVersion === null) {
     console.log("[pre-migration-backup] Fresh install — no backup needed");
   } else {
-    console.log(
-      `[pre-migration-backup] Same version (${ctx.currentVersion}) — no backup needed`,
-    );
+    console.log(`[pre-migration-backup] Same version (${ctx.currentVersion}) — no backup needed`);
   }
 
   if (ctx.backupCreated) {
     console.log(`[pre-migration-backup] Backup written: ${ctx.backupCreated}`);
   } else if (ctx.shouldBackup) {
-    console.log(
-      "[pre-migration-backup] WARNING: version changed but backup failed — continuing",
-    );
+    console.log("[pre-migration-backup] WARNING: version changed but backup failed — continuing");
   }
 }
 

@@ -24,7 +24,10 @@ describe("seedBulk", () => {
     expect(result.stays).toBe(BULK_CITIES.length);
     expect(result.places).toBe(BULK_CITIES.reduce((n, c) => n + c.places.length, 0));
     expect(result.lists).toBe(2);
-    const lists = await prisma.placeList.findMany({ where: { userId }, include: { entries: true } });
+    const lists = await prisma.placeList.findMany({
+      where: { userId },
+      include: { entries: true },
+    });
     for (const list of lists) {
       if (list.entries.length === 0) throw new Error(`${list.name}: expected at least one entry`);
     }

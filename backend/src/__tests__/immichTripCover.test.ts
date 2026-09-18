@@ -143,7 +143,7 @@ describe("POST /trips/:id/immich/cover", () => {
 
   it("returns 502 when the album membership lookup fails upstream", async () => {
     const { ImmichError } = jest.requireActual<typeof import("../services/immich/types")>(
-      "../services/immich/types",
+      "../services/immich/types"
     );
     listAlbumAssets.mockRejectedValue(new ImmichError("auth", "Immich rejected the API key", 401));
 
@@ -174,7 +174,7 @@ describe("POST /trips/:id/photos/:photoId/cover", () => {
   it("404s for a photo belonging to another trip", async () => {
     findFirstPhoto.mockResolvedValue(null);
     const res = await request(makeApp()).post(
-      `/api/v1/trips/trip-1/photos/${OTHER_ASSET_ID}/cover`,
+      `/api/v1/trips/trip-1/photos/${OTHER_ASSET_ID}/cover`
     );
     expect(res.status).toBe(404);
     expect(tripUpdate).not.toHaveBeenCalled();

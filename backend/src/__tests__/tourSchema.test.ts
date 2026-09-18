@@ -64,12 +64,20 @@ describe("legOverrideSchema", () => {
   });
 
   it("requires at least two points for a drawn line", () => {
-    expect(() => legOverrideSchema.parse({ source: "drawn", waypoints: [[10.75, 59.91]] })).toThrow();
+    expect(() =>
+      legOverrideSchema.parse({ source: "drawn", waypoints: [[10.75, 59.91]] })
+    ).toThrow();
   });
 
   it("rejects coordinates outside the world", () => {
     expect(() =>
-      legOverrideSchema.parse({ source: "drawn", waypoints: [[200, 59.91], [11.97, 57.71]] }),
+      legOverrideSchema.parse({
+        source: "drawn",
+        waypoints: [
+          [200, 59.91],
+          [11.97, 57.71],
+        ],
+      })
     ).toThrow();
   });
 
@@ -81,7 +89,7 @@ describe("legOverrideSchema", () => {
     expect(legOverrideSchema.parse({ source: "straight" }).source).toBe("straight");
   });
 
-  it("refuses source \"routed\" — that geometry comes from the routing endpoint, not a request body", () => {
+  it('refuses source "routed" — that geometry comes from the routing endpoint, not a request body', () => {
     // Fix round 1: the manual override endpoint and the routing endpoint own
     // DIFFERENT source vocabularies (MANUAL_LEG_SOURCES vs
     // ACCEPTED_LEG_SOURCES) — see the doc comment on both in schemas/tour.ts.
@@ -101,7 +109,7 @@ describe("legOverrideSchema", () => {
     expect(String(error)).toContain("/legs/{fromStopId}/{toStopId}/route");
   });
 
-  it("accepts source \"track\" with a trackId — the geometry comes from the referenced track, not this body", () => {
+  it('accepts source "track" with a trackId — the geometry comes from the referenced track, not this body', () => {
     const trackId = "e5e5f1f0-9b1a-4e2a-9b1a-4e2a9b1a4e2c";
     expect(legOverrideSchema.parse({ source: "track", trackId })).toEqual({
       source: "track",
@@ -109,7 +117,7 @@ describe("legOverrideSchema", () => {
     });
   });
 
-  it("rejects source \"track\" with no trackId — trackId is required, track itself is NOT refused", () => {
+  it('rejects source "track" with no trackId — trackId is required, track itself is NOT refused', () => {
     // Fix round 1: this test used to be titled "still rejects track — phase
     // 3b owns producing it, not this task", from before track was a
     // valid source at all. Phase 3b IS this task now, and track IS

@@ -10,6 +10,8 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { includedRow, prismaColumns } from "../prismaColumns";
+import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
   createCruiseSchema,
@@ -22,6 +24,7 @@ const cruiseStop = registry.register(
   "CruiseStop",
   z
     .object({
+      ...prismaColumns("CruiseStop"),
       id: z.string().uuid(),
       dayNumber: z.number().int().min(1).describe("1-based, always renumbered to match order"),
       portId: z.number().int().nullable(),
@@ -34,6 +37,7 @@ const cruiseStop = registry.register(
       arrivalTime: z.string().datetime().nullable(),
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
+      port: includedRow("port").nullable().optional(),
     })
     .describe(
       "A stop is exactly one of three states: a matched port (portId set, " +
@@ -50,12 +54,16 @@ const cruise = registry.register(
   "Cruise",
   z
     .object({
+      ...prismaColumns("Cruise"),
       id: z.string().uuid(),
       userId: z.string().uuid(),
       shipId: z.number().int().nullable(),
       shipNameOverride: z.string().nullable(),
       cruiseLine: z.string().nullable(),
-      routeName: z.string().nullable().describe("Itinerary name from the booking, e.g. 'Kanaren mit Marokko'"),
+      routeName: z
+        .string()
+        .nullable()
+        .describe("Itinerary name from the booking, e.g. 'Kanaren mit Marokko'"),
       departurePortId: z.number().int().nullable(),
       arrivalPortId: z.number().int().nullable(),
       startDate: z.string().datetime().nullable(),
@@ -72,8 +80,16 @@ const cruise = registry.register(
       companions: z.array(z.string()),
       tripId: z.string().uuid().nullable(),
       bookingId: z.string().uuid().nullable(),
-      color: z.string().nullable().describe("User-chosen map colour; null falls back to the auto-derived one"),
+      color: z
+        .string()
+        .nullable()
+        .describe("User-chosen map colour; null falls back to the auto-derived one"),
       stops: z.array(cruiseStop).optional(),
+      ship: includedRow("ship").nullable().optional(),
+      departurePort: includedRow("port").nullable().optional(),
+      arrivalPort: includedRow("port").nullable().optional(),
+      trip: includedRow("trip (id, name, color)").nullable().optional(),
+      legs: z.array(includedRow("leg")).optional(),
       createdAt: z.string().datetime(),
     })
     .openapi("Cruise")
@@ -132,7 +148,13 @@ registry.registerPath({
     "and lets the server derive the provenance key itself.",
   tags: ["Cruises"],
   request: {
-    body: { content: { "application/json": { schema: createCruiseSchema.openapi("CruiseCreateInput") } } },
+    body: {
+      content: {
+        "application/json": {
+          schema: createCruiseSchema.openapi("CruiseCreateInput").and(documentIdsBodySchema),
+        },
+      },
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },
@@ -151,7 +173,9 @@ registry.registerPath({
   tags: ["Cruises"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: updateCruiseSchema.openapi("CruiseUpdateInput") } } },
+    body: {
+      content: { "application/json": { schema: updateCruiseSchema.openapi("CruiseUpdateInput") } },
+    },
   },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: envelope(cruise) } } },
@@ -205,7 +229,10 @@ registry.registerPath({
   tags: ["Cruises"],
   request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
-    200: { description: "Route geometry", content: { "application/json": { schema: envelope(geometry) } } },
+    200: {
+      description: "Route geometry",
+      content: { "application/json": { schema: envelope(geometry) } },
+    },
     404: { description: "Not found", content: errorContent },
   },
 });
@@ -214,7 +241,8 @@ registry.registerPath({
   method: "post",
   path: "/cruises/geometry/batch",
   summary: "Sea route geometry for several cruises",
-  description: "Same payload as the per-cruise endpoint, keyed by cruise id — one round trip for a map view.",
+  description:
+    "Same payload as the per-cruise endpoint, keyed by cruise id — one round trip for a map view.",
   tags: ["Cruises"],
   request: {
     body: {
@@ -246,7 +274,11 @@ registry.registerPath({
   tags: ["Cruises"],
   request: {
     params: z.object({ id: z.string().uuid() }),
-    body: { content: { "application/json": { schema: routeOverrideSchema.openapi("CruiseRouteOverride") } } },
+    body: {
+      content: {
+        "application/json": { schema: routeOverrideSchema.openapi("CruiseRouteOverride") },
+      },
+    },
   },
   responses: {
     200: { description: "Override replaced" },

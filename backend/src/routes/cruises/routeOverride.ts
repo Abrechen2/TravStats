@@ -1,13 +1,13 @@
-import { Router, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
-import { prisma } from '../../db';
-import { authenticate, requireWriteScope, AuthRequest } from '../../middleware/auth';
-import { AppError } from '../../middleware/errorHandler';
-import { routeOverrideSchema, routeOverrideKeySchema } from '../../schemas/cruise';
-import { buildEffectivePortSequence } from '../../shared/cruise/portSequence';
-import { haversineKm } from '../../shared/geo/haversine';
-import { recomputeLegsForCruise } from '../../services/cruiseDistance/cruiseLegService';
-import logger from '../../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
+import { AppError } from "../../middleware/errorHandler";
+import { routeOverrideSchema, routeOverrideKeySchema } from "../../schemas/cruise";
+import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
+import { haversineKm } from "../../shared/geo/haversine";
+import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
+import logger from "../../utils/logger";
 
 /**
  * `PUT`/`DELETE /api/v1/cruises/:id/route-override` — split out of
@@ -38,7 +38,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 const requireUser = (req: AuthRequest): string => {
-  if (!req.userId) throw new AppError('Not authenticated', 401);
+  if (!req.userId) throw new AppError("Not authenticated", 401);
   return req.userId;
 };
 
@@ -55,7 +55,7 @@ async function findLegPorts(
   cruiseId: string,
   userId: string,
   fromRef: string,
-  toRef: string,
+  toRef: string
 ): Promise<{ from: PortRow; to: PortRow } | null> {
   const cruise = await prisma.cruise.findFirst({
     where: { id: cruiseId, userId },
@@ -64,7 +64,7 @@ async function findLegPorts(
       arrivalPort: true,
       stops: {
         where: { isAtSea: false, portId: { not: null } },
-        orderBy: { dayNumber: 'asc' },
+        orderBy: { dayNumber: "asc" },
         include: { port: true },
       },
     },
@@ -100,16 +100,19 @@ const ROUTE_ANCHOR_TOLERANCE_KM = 1;
 function assertRouteAnchored(
   waypoints: ReadonlyArray<[number, number]>,
   from: PortRow,
-  to: PortRow,
+  to: PortRow
 ): void {
   const [firstLon, firstLat] = waypoints[0];
   const [lastLon, lastLat] = waypoints[waypoints.length - 1];
 
-  const startOffsetKm = haversineKm({ lat: from.lat, lon: from.lon }, { lat: firstLat, lon: firstLon });
+  const startOffsetKm = haversineKm(
+    { lat: from.lat, lon: from.lon },
+    { lat: firstLat, lon: firstLon }
+  );
   if (startOffsetKm > ROUTE_ANCHOR_TOLERANCE_KM) {
     throw new AppError(
       `Route does not start at the leg's departure port (${startOffsetKm.toFixed(1)} km away)`,
-      400,
+      400
     );
   }
 
@@ -117,12 +120,12 @@ function assertRouteAnchored(
   if (endOffsetKm > ROUTE_ANCHOR_TOLERANCE_KM) {
     throw new AppError(
       `Route does not end at the leg's arrival port (${endOffsetKm.toFixed(1)} km away)`,
-      400,
+      400
     );
   }
 }
 
-router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = routeOverrideSchema.safeParse(req.body);
@@ -130,7 +133,7 @@ router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: 
     const { fromKind, fromRef, toKind, toRef, waypoints } = parsed.data;
 
     const legPorts = await findLegPorts(req.params.id, userId, fromRef, toRef);
-    if (!legPorts) throw new AppError('Cruise or leg not found', 404);
+    if (!legPorts) throw new AppError("Cruise or leg not found", 404);
     assertRouteAnchored(waypoints, legPorts.from, legPorts.to);
 
     const key = { cruiseId: req.params.id, fromKind, fromRef, toKind, toRef };
@@ -159,7 +162,7 @@ router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: 
     });
 
     logger.info({
-      operation: 'cruise_route_override_saved',
+      operation: "cruise_route_override_saved",
       cruiseId: req.params.id,
       userId,
       fromRef,
@@ -175,7 +178,7 @@ router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: 
 });
 
 router.delete(
-  '/:id/route-override',
+  "/:id/route-override",
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
@@ -186,7 +189,7 @@ router.delete(
         where: { id: req.params.id, userId },
         select: { id: true },
       });
-      if (!owned) throw new AppError('Cruise not found', 404);
+      if (!owned) throw new AppError("Cruise not found", 404);
 
       // Delete and recompute must commit together, same reasoning as the PUT
       // handler above. The recompute only runs when something was actually
@@ -205,7 +208,7 @@ router.delete(
       });
 
       logger.info({
-        operation: 'cruise_route_override_cleared',
+        operation: "cruise_route_override_cleared",
         cruiseId: req.params.id,
         userId,
         fromRef: parsed.data.fromRef,
@@ -217,7 +220,7 @@ router.delete(
     } catch (err) {
       next(err);
     }
-  },
+  }
 );
 
 export default router;

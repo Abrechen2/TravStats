@@ -5,9 +5,13 @@ import type { ParsedBooking } from "../../bookingParser";
 
 jest.mock("../providers");
 jest.mock("../userTemplates/matcher", () => ({ findMatchingTemplate: jest.fn(async () => null) }));
-jest.mock("../../parserLogging", () => ({ shouldLogParserOperations: jest.fn(async () => false) }), {
-  virtual: true,
-});
+jest.mock(
+  "../../parserLogging",
+  () => ({ shouldLogParserOperations: jest.fn(async () => false) }),
+  {
+    virtual: true,
+  }
+);
 
 /**
  * Forgejo #35: the #17 evidence gate lived in `regexParser` alone, and
@@ -32,11 +36,17 @@ function providerReturning(flights: ParsedBooking[]): ITextParser {
   } as unknown as ITextParser;
 }
 
-// `ollamaConfigured` in email.ts is `!!config.ollamaUrl && fallbacks.includes("ollama")`
-// — both halves are required to reach the branch this test is about.
+// This test is about what the factory KEEPS, not about who reads first — so
+// it pins the order it needs rather than inheriting the instance default,
+// which became template-first on 2026-09-17 (forgejo#125). `ollamaConfigured`
+// in email.ts also needs both halves of `!!config.ollamaUrl &&
+// fallbacks.includes("ollama")` to reach the branch this test drives.
+jest.mock("../../parserSettings", () => ({ getParserOrder: jest.fn(async () => "llm_first") }));
+
 const config = {
   textProvider: "ollama",
   textFallbacks: ["ollama"],
+  visionFallbacks: [],
   ollamaUrl: "http://ollama.invalid:11434",
   ollamaModel: "gemma3:12b",
 } as never;
@@ -45,9 +55,7 @@ describe("the parser factory drops candidates that identify no flight", () => {
   afterEach(() => jest.clearAllMocks());
 
   it("returns nothing when the provider invents three empty candidates", async () => {
-    mockedGetTextParserInstance.mockReturnValue(
-      providerReturning([{}, {}, {}] as ParsedBooking[])
-    );
+    mockedGetTextParserInstance.mockReturnValue(providerReturning([{}, {}, {}] as ParsedBooking[]));
 
     const result = await parseEmail(
       "Nur 7 Tage gültig: Ihr 30 EUR Oster-Geschenk",

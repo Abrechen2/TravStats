@@ -139,7 +139,7 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  */
 export async function loadPassport(
   userId: string,
-  prefetchedFlights?: PassportLoaderFlight[],
+  prefetchedFlights?: PassportLoaderFlight[]
 ): Promise<ReturnType<typeof buildPassport>> {
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.

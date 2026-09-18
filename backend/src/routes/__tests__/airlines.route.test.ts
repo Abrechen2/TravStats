@@ -36,7 +36,9 @@ describe("Airlines API", () => {
       const res = await request(app).get("/api/v1/airlines?q=luft").set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(
-        res.body.data.some((a: { iata: string; name: string }) => a.iata === "LH" && a.name === "Lufthansa")
+        res.body.data.some(
+          (a: { iata: string; name: string }) => a.iata === "LH" && a.name === "Lufthansa"
+        )
       ).toBe(true);
     });
 
@@ -69,9 +71,7 @@ describe("Airlines API", () => {
 
       const listRes = await request(app).get("/api/v1/airlines?q=test").set("Cookie", authCookie);
       expect(listRes.status).toBe(200);
-      expect(listRes.body.data.some((a: { iata: string }) => a.iata === THROWAWAY_IATA)).toBe(
-        true
-      );
+      expect(listRes.body.data.some((a: { iata: string }) => a.iata === THROWAWAY_IATA)).toBe(true);
     });
 
     it("returns 409 for a duplicate IATA (seeded carrier)", async () => {

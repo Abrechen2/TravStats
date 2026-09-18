@@ -1,6 +1,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
 import AirlineLogo from "../AirlineLogo";
+import { formatDateTime } from "../../lib/displayFormat";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -84,8 +85,7 @@ export default function FlightSelectStep({
                 )}
                 {flight.departure.scheduledTime && (
                   <div className={`text-xs ${mutedTextClass} mt-1`}>
-                    {t("flights:lookup.departs")}:{" "}
-                    {new Date(flight.departure.scheduledTime).toLocaleString()}
+                    {t("flights:lookup.departs")}: {formatDateTime(flight.departure.scheduledTime)}
                   </div>
                 )}
               </div>

@@ -52,7 +52,12 @@ const DATE_FIELDS = [
     tz: "actualDepartureTz",
     scheduled: false,
   },
-  { existing: "actualArrival", local: "actualArrivalLocal", tz: "actualArrivalTz", scheduled: false },
+  {
+    existing: "actualArrival",
+    local: "actualArrivalLocal",
+    tz: "actualArrivalTz",
+    scheduled: false,
+  },
 ] as const;
 
 const ARRAY_FIELDS = ["tags", "coPassengers"] as const;
@@ -74,12 +79,7 @@ type ArrayField = (typeof ARRAY_FIELDS)[number] | typeof COMPANIONS_FIELD;
 /** Only ever merged on a rebooking — see {@link FlightMergeOptions.rebooking}. */
 type RebookingField = "flightNumber";
 
-export type MergeableField =
-  | StringField
-  | NumberField
-  | DateField
-  | ArrayField
-  | RebookingField;
+export type MergeableField = StringField | NumberField | DateField | ArrayField | RebookingField;
 
 export interface FlightMergeOptions {
   /**
@@ -132,7 +132,7 @@ const normalizeStringInput = (v: unknown): string | undefined => {
 export function buildFlightMergePatch(
   existing: Flight,
   incoming: CreateFlightInput,
-  options: FlightMergeOptions = {},
+  options: FlightMergeOptions = {}
 ): FlightMergeResult {
   const patch: Prisma.FlightUpdateInput = {};
   const mergedFields: MergeableField[] = [];
@@ -153,7 +153,12 @@ export function buildFlightMergePatch(
     mergedFields.push(field);
   }
 
-  for (const { existing: existingField, local: localField, tz: tzField, scheduled } of DATE_FIELDS) {
+  for (const {
+    existing: existingField,
+    local: localField,
+    tz: tzField,
+    scheduled,
+  } of DATE_FIELDS) {
     const currentValue = (existing as Record<string, unknown>)[existingField];
     const mayReschedule = options.rebooking === true && scheduled;
     if (!isMissingDate(currentValue) && !mayReschedule) continue;
@@ -208,23 +213,21 @@ export function buildFlightMergePatch(
   // A rebooking moves the scheduled departure under an actual one that was
   // already recorded, so the stored delay becomes a measurement against a time
   // that no longer exists. Recompute it there too, from whichever side moved.
-  const departureRescheduled =
-    options.rebooking === true && mergedFields.includes("departureTime");
+  const departureRescheduled = options.rebooking === true && mergedFields.includes("departureTime");
   if (mergedFields.includes("actualDeparture") || departureRescheduled) {
     const patchRecord = patch as Record<string, unknown>;
     const depRaw =
       mergedFields.includes("departureTime") && patchRecord.departureTime instanceof Date
         ? patchRecord.departureTime
         : existing.departureTime;
-    const actualDepRaw = patchRecord.actualDeparture instanceof Date
-      ? patchRecord.actualDeparture
-      : departureRescheduled
-        ? existing.actualDeparture
-        : null;
+    const actualDepRaw =
+      patchRecord.actualDeparture instanceof Date
+        ? patchRecord.actualDeparture
+        : departureRescheduled
+          ? existing.actualDeparture
+          : null;
     if (depRaw && actualDepRaw) {
-      patch.delayMinutes = Math.round(
-        (actualDepRaw.getTime() - depRaw.getTime()) / 60000,
-      );
+      patch.delayMinutes = Math.round((actualDepRaw.getTime() - depRaw.getTime()) / 60000);
     }
   }
 

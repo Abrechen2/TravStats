@@ -167,7 +167,17 @@ describe("meta copy goes through the translator", () => {
 
 describe("sortActivityItems", () => {
   const it_ = (id: string, sortDate: string) =>
-    ({ id, kind: "flight", label: id, sublabel: null, meta: null, sortDate, displayDate: "", mappable: true, payload: { flightId: id } }) as never;
+    ({
+      id,
+      kind: "flight",
+      label: id,
+      sublabel: null,
+      meta: null,
+      sortDate,
+      displayDate: "",
+      mappable: true,
+      payload: { flightId: id },
+    }) as never;
 
   it("puts the newest first and undated last", () => {
     const out = sortActivityItems([

@@ -55,10 +55,7 @@ describe("POST /api/v1/setup/initialize — usageStatsConsent", () => {
   });
 
   it("defaults to unset consent and mints no install id when the field is omitted", async () => {
-    const res = await request(app)
-      .post("/api/v1/setup/initialize")
-      .send(basePayload())
-      .expect(200);
+    const res = await request(app).post("/api/v1/setup/initialize").send(basePayload()).expect(200);
 
     expect(res.body.success).toBe(true);
 
@@ -105,7 +102,7 @@ describe("POST /api/v1/setup/initialize — usageStatsConsent", () => {
 
       const adminCount = await prisma.user.count({ where: { isAdmin: true } });
       expect(adminCount).toBe(0);
-    },
+    }
   );
 
   it("does not abort a valid install when a consent choice is present", async () => {

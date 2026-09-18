@@ -61,7 +61,12 @@ describe("import preview: a row without a city still finds the hotel", () => {
     });
 
     const withCity = await buildLodgingPreviewRows(userId, [
-      { sourceRowIndex: 0, lodging: { name: "Hotel Post", type: "hotel", city: "Bozen" }, lodgingName: "Hotel Post", stay: null },
+      {
+        sourceRowIndex: 0,
+        lodging: { name: "Hotel Post", type: "hotel", city: "Bozen" },
+        lodgingName: "Hotel Post",
+        stay: null,
+      },
     ]);
     expect(withCity.rows[0].matchedLodgingId).not.toBeNull();
 

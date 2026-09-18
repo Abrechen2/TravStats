@@ -1,6 +1,6 @@
-import { Request } from 'express';
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import { RATE_LIMITS } from '../config/constants';
+import { Request } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { RATE_LIMITS } from "../config/constants";
 
 /**
  * Rate-limit bucket key.
@@ -25,7 +25,7 @@ const userOrIpKey = (req: Request): string => {
   const r = req as { userId?: string; apiToken?: { id: string } };
   if (r.apiToken) return `pat:${r.apiToken.id}`;
   if (r.userId) return `user:${r.userId}`;
-  return `ip:${req.ip ? ipKeyGenerator(req.ip) : 'unknown'}`;
+  return `ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
 };
 
 /**
@@ -41,10 +41,12 @@ const userOrIpKey = (req: Request): string => {
  * concurrent agent users on the same PAT pool.
  */
 const PAT_MULTIPLIER = 10;
-const patAwareMax = (baseMax: number) => (req: Request): number => {
-  const r = req as { apiToken?: { id: string } };
-  return r.apiToken ? baseMax * PAT_MULTIPLIER : baseMax;
-};
+const patAwareMax =
+  (baseMax: number) =>
+  (req: Request): number => {
+    const r = req as { apiToken?: { id: string } };
+    return r.apiToken ? baseMax * PAT_MULTIPLIER : baseMax;
+  };
 
 /**
  * Rate limiter for public airport search endpoints. Two layers stacked:
@@ -66,7 +68,7 @@ const patAwareMax = (baseMax: number) => (req: Request): number => {
 export const airportSearchLimiter = rateLimit({
   windowMs: RATE_LIMITS.AIRPORT_SEARCH_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.AIRPORT_SEARCH_MAX),
-  message: 'Too many airport search requests, please try again later',
+  message: "Too many airport search requests, please try again later",
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   keyGenerator: userOrIpKey,
@@ -76,7 +78,7 @@ export const airportSearchLimiter = rateLimit({
 export const airportSearchBurstLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: patAwareMax(30),
-  message: 'Too many airport search requests in a short burst — slow down',
+  message: "Too many airport search requests in a short burst — slow down",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -95,7 +97,7 @@ export const airportSearchBurstLimiter = rateLimit({
 export const portGeocodeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: patAwareMax(30),
-  message: 'Too many port lookups in a short time — please slow down',
+  message: "Too many port lookups in a short time — please slow down",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -115,7 +117,7 @@ export const portGeocodeLimiter = rateLimit({
 export const photonSearchLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: patAwareMax(30),
-  message: 'Too many place searches in a short time — please slow down',
+  message: "Too many place searches in a short time — please slow down",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -135,7 +137,7 @@ export const photonSearchLimiter = rateLimit({
 export const fxPreviewLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: patAwareMax(30),
-  message: 'Too many FX preview requests in a short time — please slow down',
+  message: "Too many FX preview requests in a short time — please slow down",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -172,7 +174,7 @@ export const lodgingImportLimiter = rateLimit({
   max: patAwareMax(60),
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many import requests, please try again later' },
+  message: { error: "Too many import requests, please try again later" },
   keyGenerator: userOrIpKey,
 });
 
@@ -183,7 +185,7 @@ export const lodgingImportLimiter = rateLimit({
 export const flightCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
-  message: 'Too many flights created, please try again later',
+  message: "Too many flights created, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting for successful requests (only count failed/repeated attempts)
@@ -198,7 +200,7 @@ export const flightCreationLimiter = rateLimit({
 export const generalLimiter = rateLimit({
   windowMs: RATE_LIMITS.GENERAL_WINDOW_MS,
   max: RATE_LIMITS.GENERAL_MAX_REQUESTS,
-  message: 'Too many requests, please try again later',
+  message: "Too many requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -215,7 +217,7 @@ export const generalLimiter = rateLimit({
  * under NODE_ENV=test and must see it bite.
  */
 export function skipInDevelopment(): boolean {
-  return process.env.NODE_ENV === 'development';
+  return process.env.NODE_ENV === "development";
 }
 
 /**
@@ -228,7 +230,7 @@ export function skipInDevelopment(): boolean {
  * 429 from a limiter of five (forgejo#56).
  */
 export function skipOutsideProduction(): boolean {
-  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+  return process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 }
 
 /**
@@ -239,7 +241,7 @@ export function skipOutsideProduction(): boolean {
 export const authLimiter = rateLimit({
   windowMs: RATE_LIMITS.AUTH_WINDOW_MS,
   max: RATE_LIMITS.AUTH_MAX_ATTEMPTS,
-  message: 'Too many authentication attempts, please try again later',
+  message: "Too many authentication attempts, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   // Bypass in dev/test envs so Playwright e2e suites that loop through
@@ -261,7 +263,7 @@ export const authLimiter = rateLimit({
 export const flightLookupLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_LOOKUP_WINDOW_MS,
   max: RATE_LIMITS.FLIGHT_LOOKUP_MAX,
-  message: 'Too many flight lookup requests, please try again later',
+  message: "Too many flight lookup requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -276,7 +278,7 @@ export const flightLookupLimiter = rateLimit({
 export const analyticsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per window
-  message: 'Too many analytics requests, please try again later',
+  message: "Too many analytics requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -290,7 +292,7 @@ export const analyticsLimiter = rateLimit({
 export const backupRestoreLimiter = rateLimit({
   windowMs: RATE_LIMITS.BACKUP_RESTORE_WINDOW_MS,
   max: RATE_LIMITS.BACKUP_RESTORE_MAX,
-  message: 'Too many restore operations, please try again later',
+  message: "Too many restore operations, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -310,7 +312,7 @@ export const backupRestoreLimiter = rateLimit({
 export const boardingPassParseLimiter = rateLimit({
   windowMs: RATE_LIMITS.BOARDING_PASS_PARSE_WINDOW_MS,
   max: RATE_LIMITS.BOARDING_PASS_PARSE_MAX,
-  message: 'Too many boarding pass parse requests, please try again later',
+  message: "Too many boarding pass parse requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -323,7 +325,7 @@ export const boardingPassParseLimiter = rateLimit({
 export const emailParseLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  message: { error: 'Too many parse requests, please try again later' },
+  message: { error: "Too many parse requests, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -336,7 +338,7 @@ export const emailParseLimiter = rateLimit({
 export const statsLimiter = rateLimit({
   windowMs: RATE_LIMITS.STATS_WINDOW_MS,
   max: RATE_LIMITS.STATS_MAX_REQUESTS,
-  message: 'Too many stats requests, please try again later',
+  message: "Too many stats requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -349,7 +351,7 @@ export const statsLimiter = rateLimit({
 export const adminExportLimiter = rateLimit({
   windowMs: RATE_LIMITS.ADMIN_EXPORT_WINDOW_MS,
   max: RATE_LIMITS.ADMIN_EXPORT_MAX,
-  message: 'Too many export requests, please try again later',
+  message: "Too many export requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -371,7 +373,7 @@ export const adminExportLimiter = rateLimit({
 export const adminReseedLimiter = rateLimit({
   windowMs: RATE_LIMITS.ADMIN_RESEED_WINDOW_MS,
   max: RATE_LIMITS.ADMIN_RESEED_MAX,
-  message: 'Too many reseed requests, please try again later',
+  message: "Too many reseed requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -386,7 +388,7 @@ export const adminReseedLimiter = rateLimit({
 export const pdfParseLimiter = rateLimit({
   windowMs: RATE_LIMITS.PDF_PARSE_WINDOW_MS,
   max: RATE_LIMITS.PDF_PARSE_MAX,
-  message: 'Too many PDF parse requests, please try again later',
+  message: "Too many PDF parse requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -400,7 +402,7 @@ export const pdfParseLimiter = rateLimit({
 export const batchCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: patAwareMax(50), // 50/h cookie, 500/h with PAT (bulk imports)
-  message: 'Too many batch requests, please try again later',
+  message: "Too many batch requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -425,12 +427,31 @@ export const batchCreationLimiter = rateLimit({
 export const uploadReceiptLimiter = rateLimit({
   windowMs: RATE_LIMITS.UPLOAD_RECEIPT_WINDOW_MS,
   max: RATE_LIMITS.UPLOAD_RECEIPT_MAX,
-  message: 'Too many file uploads, please try again later',
+  message: "Too many file uploads, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   // Per-user, like every other limiter in this file. It was per-IP until the
   // upload surfaces above started sharing it: on a LAN deployment behind a
   // reverse proxy that is one 30/h bucket for every user in the house.
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Uploads of kept originals (forgejo#116), per user or token.
+ *
+ * Not `uploadReceiptLimiter`: that bucket is 30 an hour and shared by every
+ * receipt and photo surface, and the Companion sends its offline queue in one
+ * burst. A trip's worth of boarding passes and bills arriving together must
+ * not spend the budget of the next receipt the user attaches by hand.
+ *
+ * Mount it BEFORE multer: a rejected request must not be read into memory first.
+ */
+export const documentUploadLimiter = rateLimit({
+  windowMs: RATE_LIMITS.DOCUMENT_UPLOAD_WINDOW_MS,
+  max: RATE_LIMITS.DOCUMENT_UPLOAD_MAX,
+  message: "Too many document uploads, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
 
@@ -442,7 +463,7 @@ export const uploadReceiptLimiter = rateLimit({
 export const uploadProfilePictureLimiter = rateLimit({
   windowMs: RATE_LIMITS.UPLOAD_PROFILE_PICTURE_WINDOW_MS,
   max: RATE_LIMITS.UPLOAD_PROFILE_PICTURE_MAX,
-  message: 'Too many profile picture uploads, please try again later',
+  message: "Too many profile picture uploads, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -456,7 +477,7 @@ export const uploadProfilePictureLimiter = rateLimit({
 export const settingsLimiter = rateLimit({
   windowMs: RATE_LIMITS.SETTINGS_WINDOW_MS,
   max: RATE_LIMITS.SETTINGS_MAX_REQUESTS,
-  message: 'Too many settings requests, please try again later',
+  message: "Too many settings requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -470,7 +491,7 @@ export const settingsLimiter = rateLimit({
 export const passwordResetLimiter = rateLimit({
   windowMs: RATE_LIMITS.PASSWORD_RESET_WINDOW_MS,
   max: RATE_LIMITS.PASSWORD_RESET_MAX,
-  message: 'Too many password reset attempts, please try again later',
+  message: "Too many password reset attempts, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipOutsideProduction,
@@ -488,7 +509,7 @@ export const passwordResetLimiter = rateLimit({
 export const pairingClaimLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'Too many pairing attempts, please try again later',
+  message: "Too many pairing attempts, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -501,7 +522,7 @@ export const pairingClaimLimiter = rateLimit({
 export const diagnosticExportLimiter = rateLimit({
   windowMs: RATE_LIMITS.DIAGNOSTIC_EXPORT_WINDOW_MS,
   max: RATE_LIMITS.DIAGNOSTIC_EXPORT_MAX,
-  message: 'Too many diagnostic export requests, please try again later',
+  message: "Too many diagnostic export requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -552,7 +573,7 @@ export const immichImportLimiter = rateLimit({
 export const airlineLogoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600,
-  message: 'Too many airline logo requests, please try again later',
+  message: "Too many airline logo requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -567,7 +588,7 @@ export const airlineLogoLimiter = rateLimit({
 export const countryFlagLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600,
-  message: 'Too many country flag requests, please try again later',
+  message: "Too many country flag requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,

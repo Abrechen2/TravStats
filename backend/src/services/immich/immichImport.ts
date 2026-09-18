@@ -56,7 +56,7 @@ export function createByteCapStream(maxBytes: number): Transform {
       if (total > maxBytes) {
         const error: AssetTooLargeError = Object.assign(
           new Error(`Asset exceeds ${maxBytes} bytes`),
-          { code: ASSET_TOO_LARGE_CODE, bytes: total } as const,
+          { code: ASSET_TOO_LARGE_CODE, bytes: total } as const
         );
         cb(error);
         return;
@@ -165,7 +165,7 @@ export async function getImportJob(linkId: string): Promise<ImportJobDto | null>
  */
 export async function estimateAlbumImport(
   userId: string,
-  albumId: string,
+  albumId: string
 ): Promise<{ assetCount: number; totalBytes: number }> {
   const conn = await getImmichConnection(userId);
   if (!conn) return { assetCount: 0, totalBytes: 0 };
@@ -188,7 +188,7 @@ async function importAsset(
   client: ReturnType<typeof createImmichClient>,
   tripId: string,
   linkId: string,
-  asset: ImmichAsset,
+  asset: ImmichAsset
 ): Promise<boolean> {
   // Cheap pre-flight: if Immich already reports the asset as oversized, skip it
   // before spending bandwidth or disk. Counts as a per-asset failure (M2).
@@ -225,7 +225,7 @@ async function importAsset(
     await pipeline(
       upstream.stream,
       createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES),
-      fs.createWriteStream(filePath),
+      fs.createWriteStream(filePath)
     );
 
     await prisma.tripPhoto.create({
@@ -360,7 +360,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
           const chunk = todo.slice(i, i + CHUNK_SIZE);
           const results = await Promise.all(
-            chunk.map((asset) => importAsset(client, link.tripId, linkId, asset)),
+            chunk.map((asset) => importAsset(client, link.tripId, linkId, asset))
           );
           processed += results.filter(Boolean).length;
           failed += results.filter((ok) => !ok).length;

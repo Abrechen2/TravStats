@@ -1,5 +1,5 @@
-import type { Response } from 'express';
-import { z } from 'zod';
+import type { Response } from "express";
+import { z } from "zod";
 
 /**
  * `?year=` for the domain rollups (`/stats/cruise`, `/stats/lodging`).
@@ -26,7 +26,7 @@ export const YearQuerySchema = z.object({
 export function readYearQuery(query: unknown, res: Response): number | undefined | null {
   const parsed = YearQuerySchema.safeParse(query);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+    res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
     return null;
   }
   return parsed.data.year;

@@ -558,9 +558,7 @@ export default function BoardingPassAnnotation({
 
   return (
     <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
-        Boarding Pass Annotation
-      </h2>
+      <h2 className="text-xl font-semibold text-(--text-primary) mb-4">Boarding Pass Annotation</h2>
       <p className="text-sm text-(--text-muted) mb-4">
         {t("training:annotation.drawBoundingBoxes")}
       </p>

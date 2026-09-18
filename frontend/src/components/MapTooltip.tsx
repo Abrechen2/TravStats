@@ -4,6 +4,7 @@ import { formatDuration } from "../lib/formatters";
 import { FlagImg } from "../lib/countryFlag";
 import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
+import { formatDate } from "../lib/displayFormat";
 
 interface MapTooltipProps {
   flight: Flight;
@@ -51,9 +52,7 @@ export function MapTooltip({
   if (flight.co2Kg != null)
     statParts.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString(locale)} kg`);
 
-  const departureDate = flight.departureTime
-    ? new Date(flight.departureTime).toLocaleDateString(locale)
-    : null;
+  const departureDate = flight.departureTime ? formatDate(flight.departureTime) : null;
 
   const metaParts: string[] = [
     flight.airline ?? null,
@@ -64,7 +63,10 @@ export function MapTooltip({
 
   return (
     <TooltipContainer screenX={screenX} screenY={screenY} minWidth="220px">
-      <div className="flex items-center gap-1.5 font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
+      <div
+        className="flex items-center gap-1.5 font-mono font-bold text-sm"
+        style={{ color: "var(--accent)" }}
+      >
         <FlagImg country={depCountry} height={14} />
         <span>{flight.depIata ?? flight.depIcao ?? "?"}</span>
         <span className="opacity-60">→</span>
