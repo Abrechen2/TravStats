@@ -44,8 +44,15 @@ import { FLIGHT_FUN_MEASURES } from "./evidenceMeasuresFlightFun";
 import { CROSS_DOMAIN_MEASURES } from "./evidenceMeasuresCrossDomain";
 import { DOMAIN_MEASURES } from "./evidenceMeasuresDomains";
 import { ACHIEVEMENT_MEASURES } from "./evidenceMeasuresAchievements";
-
-export type Aggregation = "sum" | "distinct" | "extremum" | "ratio" | "boolean" | "sequence";
+/**
+ * `Aggregation` is owned by `./evidence` — the contract the payload is
+ * described in — not redeclared here. Two structurally identical unions of
+ * the same six-word vocabulary, one per file, is exactly the shape
+ * `utils/continents.ts` exists to warn about ("two byte-identical copies …
+ * had already drifted"); importing keeps this registry unable to say
+ * anything `evidence.ts` doesn't.
+ */
+import type { Aggregation } from "./evidence";
 
 /** What population the number was measured over. Mirrors the surface. */
 export type MeasureScope = "allTime" | "year" | "rolling12m" | "domainFiltered";
