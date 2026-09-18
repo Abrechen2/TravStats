@@ -12,9 +12,19 @@ const UNIQUE_CALCULATOR = "GET /stats/unique (utils/stats/uniqueStats.ts calcula
 
 export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   // ── Fun statistics ──
+  /**
+   * A DISTINCT count of TIMEZONES, not of flights. `calculateFunStats`
+   * answers this tile with `timezones.size` — the union of the IANA zones of
+   * every airport the countable set touches — so the `sum` / `flights` this
+   * entry carried until 2026-09-19 described neither the aggregation nor the
+   * unit of the number on screen. Corrected while serving it (task 7b-1),
+   * against the calculator this entry itself names. The KEY keeps its
+   * misleading name on purpose: a key is an address, and renaming one breaks
+   * every `?evidence=` link already in the wild for a wording fix.
+   */
   timezoneHopperFlightCount: {
-    aggregation: "sum",
-    unit: "flights",
+    aggregation: "distinct",
+    unit: "timezones",
     scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,

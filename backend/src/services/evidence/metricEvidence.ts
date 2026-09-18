@@ -27,6 +27,15 @@ import {
   resolveScorecardDistanceKm,
   resolveScorecardFlightTimeMinutes,
 } from "./metricEvidenceScorecard";
+import {
+  resolveTimezoneHopperFlightCount,
+  resolveEarlyBirdFlightCount,
+  resolveNightOwlFlightCount,
+  resolveWeekendFlightCount,
+  resolveShortHaulFlightCount,
+  resolveLongHaulFlightCount,
+  resolveCo2FootprintKg,
+} from "./metricEvidenceFlightFun";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -38,9 +47,11 @@ import {
  *
  * Only `servedIn: 1` keys are wired: eighteen of
  * `evidenceMeasuresFlightCore.ts`'s own measures (every `sum`/`distinct` key
- * on that surface) plus none yet from `evidenceMeasuresFlightFun.ts`,
- * `evidenceMeasuresCrossDomain.ts` or `evidenceMeasuresDomains.ts` — see
- * task-7-report.md for the exact count served vs. outstanding.
+ * on that surface, Task 7) plus the seven `sum`/`distinct` keys of
+ * `evidenceMeasuresFlightFun.ts`'s fun half (Task 7b-1) — twenty-five in
+ * all, with that file's fifteen unique keys following. Nothing yet
+ * from `evidenceMeasuresCrossDomain.ts` or `evidenceMeasuresDomains.ts`; see
+ * task-7-report.md and task-7b-1-report.md for served vs. outstanding.
  */
 type MetricResolver = (
   userId: string,
@@ -67,6 +78,13 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   scorecardFlightCount: resolveScorecardFlightCount,
   scorecardDistanceKm: resolveScorecardDistanceKm,
   scorecardFlightTimeMinutes: resolveScorecardFlightTimeMinutes,
+  timezoneHopperFlightCount: resolveTimezoneHopperFlightCount,
+  earlyBirdFlightCount: resolveEarlyBirdFlightCount,
+  nightOwlFlightCount: resolveNightOwlFlightCount,
+  weekendFlightCount: resolveWeekendFlightCount,
+  shortHaulFlightCount: resolveShortHaulFlightCount,
+  longHaulFlightCount: resolveLongHaulFlightCount,
+  co2FootprintKg: resolveCo2FootprintKg,
 };
 
 /**
