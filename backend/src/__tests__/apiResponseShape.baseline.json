@@ -30,6 +30,7 @@
     "diagnosticExport.ts",
     "diagnostics.ts",
     "emailParse.ts",
+    "evidence.ts",
     "flightLookup.ts",
     "flights.ts",
     "flights/queryFilters.ts",

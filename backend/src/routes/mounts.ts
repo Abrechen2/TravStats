@@ -28,6 +28,7 @@ import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
 import achievementRoutes from "./achievements";
+import evidenceRoutes from "./evidence";
 import settingsRoutes from "./settings";
 import analyticsRoutes from "./analytics";
 import uploadsRoutes from "./uploads";
@@ -127,6 +128,9 @@ export const apiMounts: ApiMount[] = [
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
   { id: "countryFlags", base: "/api/v1/country-flags", router: countryFlagRoutes },
   { id: "achievements", base: "/api/v1/achievements", router: achievementRoutes },
+  // "Which entries produced this number" — plumbing only until Task 5 wires
+  // a resolver (task-3-brief.md); every metric/ranking request 404s until then.
+  { id: "evidence", base: "/api/v1/evidence", router: evidenceRoutes },
   { id: "settings", base: "/api/v1/settings", router: settingsRoutes },
   { id: "analytics", base: "/api/v1/analytics", router: analyticsRoutes },
   { id: "uploads", base: "/api/v1/uploads", router: uploadsRoutes },
