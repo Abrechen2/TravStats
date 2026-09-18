@@ -150,17 +150,28 @@ export type EvidenceResponse = z.infer<typeof evidenceResponseSchema>;
  * the shared module has to keep stating the shape for its mirror, while
  * this file's `z.infer` types are what the backend actually runs against.
  * Two declarations of one payload drift the first time a field is added
- * (the exact failure `Aggregation` used to have, fixed one commit before
- * this one) unless something other than a reader catches it. `Exact` turns
- * that drift into a `tsc --noEmit` failure: a field added here and
- * forgotten in `shared/evidence.ts` is a payload the frontend's type says
- * does not exist, and the reverse is a promise the backend never keeps —
- * either direction fails one of these three lines.
+ * (the exact failure `Aggregation` used to have) unless something other
+ * than a reader catches it.
+ *
+ * `Equals` is the conditional-type identity check, not the simpler
+ * `[A] extends [B] ? [B] extends [A] ? true : never : never` form a first
+ * pass at this used — that form is BLIND to optional-field drift: TS
+ * lets a type with an extra optional property satisfy a mutual-extends
+ * check against one without it, which describes most of this contract
+ * (`numerator`, `denominator`, `contribution`, `credits`, `label.values`,
+ * `scope.domains`, `subtitle`). A guard that is green exactly where the
+ * drift actually happens is worse than no guard, because it looks like
+ * one. Wrapping both sides in a distributive conditional over a bare type
+ * parameter (`<T>() => T extends A ? 1 : 2`) makes optionality part of
+ * what is compared, so this version fails on the same drift the first one
+ * missed — proven by deliberately breaking it once (see the commit that
+ * introduced this comment) before trusting it.
  */
-type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
-const _measureMatchesContract: Exact<EvidenceMeasure, SharedEvidenceMeasure> = true;
-const _entryMatchesContract: Exact<EvidenceEntry, SharedEvidenceEntry> = true;
-const _responseMatchesContract: Exact<EvidenceResponse, SharedEvidenceResponse> = true;
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+const _measureMatchesContract: Equals<EvidenceMeasure, SharedEvidenceMeasure> = true;
+const _entryMatchesContract: Equals<EvidenceEntry, SharedEvidenceEntry> = true;
+const _responseMatchesContract: Equals<EvidenceResponse, SharedEvidenceResponse> = true;
 void _measureMatchesContract;
 void _entryMatchesContract;
 void _responseMatchesContract;
@@ -178,8 +189,16 @@ const FIRST_PLAUSIBLE_TRAVEL_YEAR = 1900;
 /**
  * Query params. `domains` arrives comma-separated (`flight,cruise`), the
  * same convention `routes/countryFlags.ts` uses for its `codes` list.
- * `year` is required exactly when `period=year` — checked with `.refine`
- * because Zod's own unions can't cross-validate two sibling fields.
+ *
+ * `year` and `period` are checked in BOTH directions, with `.refine`
+ * because Zod's own unions can't cross-validate two sibling fields:
+ * missing when `period=year` (nothing to scope by), but also present
+ * when `period` is anything else. The second direction matters as much
+ * as the first — `?period=allTime&year=2026` used to pass validation and
+ * have `evidenceScopeFromQuery` silently drop the year, which hides a
+ * frontend bug exactly where every other case in this endpoint refuses
+ * to: an unrecognised request should fail loudly, not look like a
+ * working `allTime` query that happens to ignore one of its params.
  *
  * `year` is bounded rather than a bare `int()`: unbounded, `?period=year&
  * year=999999` passed validation and handed every resolver a year that
@@ -218,6 +237,10 @@ export const evidenceQuerySchema = z
   })
   .refine((query) => query.period !== "year" || query.year !== undefined, {
     message: "year is required when period=year",
+    path: ["year"],
+  })
+  .refine((query) => query.period === "year" || query.year === undefined, {
+    message: "year is only valid when period=year",
     path: ["year"],
   });
 export type EvidenceQuery = z.infer<typeof evidenceQuerySchema>;

@@ -79,6 +79,18 @@ describe("GET /api/v1/evidence/:kind/:key — contract", () => {
     expect(res.status).toBe(400);
   });
 
+  /**
+   * A stray `year` with a non-year period used to pass validation and get
+   * silently dropped by `evidenceScopeFromQuery` — hiding a frontend bug
+   * exactly where every other malformed request here fails loudly instead.
+   */
+  it("answers 400 when year is sent alongside a period other than 'year'", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/flights.total?period=allTime&year=2026")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(400);
+  });
+
   it("answers no-store on the 404 path like every other /api response", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/flights.total")

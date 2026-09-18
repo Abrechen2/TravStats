@@ -13,6 +13,7 @@ import { registry } from "../registry";
 import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
 import { evidenceResponseSchema } from "../../../schemas/evidence";
+import { EVIDENCE_PAGE_SIZE } from "../../../shared/evidence";
 
 const achievement = registry.register(
   "Achievement",
@@ -234,7 +235,13 @@ registry.registerPath({
       year: z.coerce.number().int().optional().describe("Required when period=year"),
       domains: z.string().optional().describe("Comma-separated domains, e.g. `flight,cruise`"),
       offset: z.coerce.number().int().min(0).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional().describe("Default 100"),
+      limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(EVIDENCE_PAGE_SIZE)
+        .optional()
+        .describe(`Default and max ${EVIDENCE_PAGE_SIZE} — one page per request`),
     }),
   },
   responses: {
