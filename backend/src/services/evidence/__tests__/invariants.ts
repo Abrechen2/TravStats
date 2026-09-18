@@ -95,12 +95,34 @@ export function assertSumInvariant(res: EvidenceResponse, round: (n: number) => 
       return entry.contribution;
     })
   );
+  // `round` is applied to BOTH sides. A resolver whose `value` is itself a
+  // raw float sum (the scorecard family reports unrounded kilometres and
+  // minutes) would otherwise force its caller to pass the identity function,
+  // and an identity rounder turns this into strict float equality — green
+  // only while the two additions happen to associate the same way. Rounding
+  // both sides keeps the property the parameter exists for: two
+  // contributions of 0.6 still fail a `value` of 2 under `Math.round`,
+  // because 2 rounds to 2 and 1.2 rounds to 1.
   const total = round(returnedContribution + (res.omitted.contribution ?? 0));
-  if (total !== res.measure.value) {
+  const expected = round(res.measure.value);
+  if (total !== expected) {
     throw new Error(
-      `sum invariant failed: round(${returnedContribution} returned + ${res.omitted.contribution ?? 0} omitted) = ${total}, expected ${res.measure.value}`
+      `sum invariant failed: round(${returnedContribution} returned + ${res.omitted.contribution ?? 0} omitted) = ${total}, expected round(${res.measure.value}) = ${expected}`
     );
   }
+}
+
+/**
+ * The rounder for a measure that reports a RAW float — the scorecard's
+ * kilometres and minutes. `(n) => n` was passed there, which made the
+ * assertion strict float equality between two independent additions over the
+ * same set: correct today only because they happen to associate identically,
+ * and a latent flake the moment paging changes the order of one of them.
+ * Six decimals is far finer than any figure this product shows and far
+ * coarser than the dust two float sums differ by.
+ */
+export function roundToTolerance(n: number): number {
+  return Math.round(n * 1e6) / 1e6;
 }
 
 /**

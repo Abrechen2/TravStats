@@ -21,6 +21,8 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
   let userACookie: string;
   let userBId: string;
   let userBCookie: string;
+  let userCId: string;
+  let userCCookie: string;
 
   function flightFixture(
     userId: string,
@@ -46,9 +48,11 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
 
   beforeAll(async () => {
     await prisma.user.deleteMany({
-      where: { username: { in: ["evidencemetriccoreA", "evidencemetriccoreB"] } },
+      where: {
+        username: { in: ["evidencemetriccoreA", "evidencemetriccoreB", "evidencemetriccoreC"] },
+      },
     });
-    const [userA, userB] = await Promise.all([
+    const [userA, userB, userC] = await Promise.all([
       prisma.user.create({
         data: {
           username: "evidencemetriccoreA",
@@ -61,11 +65,19 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
           passwordHash: await hashPassword("password123"),
         },
       }),
+      prisma.user.create({
+        data: {
+          username: "evidencemetriccoreC",
+          passwordHash: await hashPassword("password123"),
+        },
+      }),
     ]);
     userAId = userA.id;
     userBId = userB.id;
+    userCId = userC.id;
     userACookie = `auth_token=${generateToken(userA.id)}`;
     userBCookie = `auth_token=${generateToken(userB.id)}`;
+    userCCookie = `auth_token=${generateToken(userC.id)}`;
 
     await prisma.flight.createMany({
       data: [
@@ -124,11 +136,24 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
         delayMinutes: 1,
       }),
     });
+
+    // User C: ONE flight, priced in a currency that is not the base one and
+    // carrying no FX snapshot (`priceBase`/`fxBaseCurrency` null, which is
+    // every row written before #267). Nothing this account owns can reach
+    // EUR, so `businessTotalCost` has no honest answer to give.
+    await prisma.flight.create({
+      data: flightFixture(userCId, "2025-02-20", {
+        airline: "Emirates",
+        flightNumber: "CC100",
+        price: 11662,
+        currency: "AED",
+      }),
+    });
   });
 
   afterAll(async () => {
-    await prisma.flight.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-    await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
+    await prisma.flight.deleteMany({ where: { userId: { in: [userAId, userBId, userCId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId, userCId] } } });
   });
 
   it("flightCount: counts the four countable flights, excluding the cancelled one", async () => {
@@ -215,6 +240,27 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
     expect(evidence.status).toBe(200);
     expect(business.status).toBe(200);
     expect(evidence.body.measure.value).toBe(business.body.totalCost);
+  });
+
+  /**
+   * The abstention branch, against the REAL resolver rather than an injected
+   * fake. `value: null` means "cannot be derived" and must never be drawn as
+   * 0 — 11,662 AED is not €11,662, which is a mistake this codebase has made
+   * once already (`dedupedCost.ts`'s own note). The contract also requires a
+   * REASON whenever the value is null, which is what `assertSumInvariant`'s
+   * `requireReasonForNull` checks here.
+   */
+  it("businessTotalCost: answers null, with a reason, when no amount can reach the base currency", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/businessTotalCost")
+      .set("Cookie", userCCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.measure.value).toBeNull();
+    expect(res.body.unattributed).toEqual([{ count: 1, reason: "notPerEntry" }]);
+    // The row is still shown: "we cannot total this" is not "we have nothing".
+    const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
+    expect(flightNumbers).toEqual(["CC100"]);
+    assertSumInvariant(res.body, (n: number) => Math.round(n * 100) / 100);
   });
 
   it("punctualitySampleSize: samples only the countable flights carrying a recorded delay", async () => {

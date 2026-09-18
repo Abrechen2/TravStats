@@ -224,11 +224,16 @@ describe("EvidencePanel", () => {
   });
 
   /**
-   * The paging arithmetic, at the size that exposed it. `omitted.count` is
-   * every known row absent from THIS page — before or after it — so reading
-   * it as "rows ahead" left the button on screen on the last page and printed
-   * a count that included what the reader was already looking at. Three real
-   * resolver-shaped pages over 250 rows, asserted at both ends.
+   * The paging arithmetic. `omitted.count` is every known row absent from
+   * THIS page — before or after it — so reading it as "rows ahead" left the
+   * button on screen on the last page and printed a count that included what
+   * the reader was already looking at. Three resolver-shaped pages, asserted
+   * at both ends.
+   *
+   * 25 rows in pages of 10, not the 250-in-100s that exposed the bug in the
+   * field: the arithmetic is identical and the fixture renders 750 list rows
+   * fewer. `useEvidence.test.tsx` keeps the full-size case, where it costs no
+   * DOM at all.
    */
   it("counts down the 'not loaded yet' line and drops 'load more' on the last of three pages", async () => {
     const row = (n: number) => ({
@@ -248,34 +253,34 @@ describe("EvidencePanel", () => {
           aggregation: "sum",
           label: { key: "evidence.metric.flightCount" },
           unit: "flights",
-          value: 250,
+          value: 25,
           scope: { period: { kind: "allTime" } },
         },
         entries: Array.from({ length: size }, (_, i) => row(offset + i)),
         returned: size,
-        omitted: { count: 250 - size, contribution: 250 - size },
-        page: { offset, limit: 100 },
+        omitted: { count: 25 - size, contribution: 25 - size },
+        page: { offset, limit: 10 },
       });
 
     vi.mocked(evidenceApi.get)
-      .mockResolvedValueOnce(pageOf(0, 100))
-      .mockResolvedValueOnce(pageOf(100, 100))
-      .mockResolvedValueOnce(pageOf(200, 50));
+      .mockResolvedValueOnce(pageOf(0, 10))
+      .mockResolvedValueOnce(pageOf(10, 10))
+      .mockResolvedValueOnce(pageOf(20, 5));
 
     renderPanel(["/stats?evidence=metric%3AflightCount"]);
     await screen.findByText("LH0");
 
-    // 250 known, 100 in hand: 150 still to come — not the raw 150 omitted by
-    // coincidence, which is why the third page below is the real assertion.
-    expect(screen.getByText('evidence:panel.bucket.omitted({"count":150})')).toBeInTheDocument();
+    // 25 known, 10 in hand: 15 still to come — which happens to equal the raw
+    // `omitted.count` on page one, so the pages below are the real assertion.
+    expect(screen.getByText('evidence:panel.bucket.omitted({"count":15})')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
-    await screen.findByText("LH100");
-    // 200 in hand of 250: 50 left, although `omitted.count` still says 150.
-    expect(screen.getByText('evidence:panel.bucket.omitted({"count":50})')).toBeInTheDocument();
+    await screen.findByText("LH10");
+    // 20 in hand of 25: 5 left, although `omitted.count` still says 15.
+    expect(screen.getByText('evidence:panel.bucket.omitted({"count":5})')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
-    await screen.findByText("LH200");
+    await screen.findByText("LH20");
     expect(screen.queryByText(/panel\.bucket\.omitted/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "evidence:panel.loadMore" })

@@ -76,7 +76,12 @@ export default function StatsFlightBreakdown({
               scope={ALL_TIME}
               renderedValue={flightsWithoutAirline}
               label={t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
-              className="mb-3 text-xs"
+              // `block`: this trigger replaced a `<p>`, and `EvidenceTrigger`
+              // deliberately leaves `display` to the caller (a ranking row
+              // needs `flex`). A `<button>` without one is inline-block, which
+              // reserves descender space under a line of text the `<p>` did
+              // not — a few px of drift where nothing changed but the tag.
+              className="mb-3 block text-xs"
               style={{ color: "var(--text-muted)" }}
             >
               {t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}

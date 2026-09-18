@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { assertSumInvariant } from "../../services/evidence/__tests__/invariants";
+import { assertSumInvariant, roundToTolerance } from "../../services/evidence/__tests__/invariants";
 
 /**
  * `metric` evidence, `scorecard/FlightScorecardBlock` family (task-7-brief.md):
@@ -76,7 +76,7 @@ describe("GET /api/v1/evidence/metric/... — the FlightScorecardBlock family", 
     expect(res.body.measure.value).toBe(3);
     const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
     expect(flightNumbers.sort()).toEqual(["SC-2023", "SC-2025", "SC-OLD"]);
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 
   it("year=2025: only SC-2025, not the 2010 or 2023 flights", async () => {
@@ -87,7 +87,7 @@ describe("GET /api/v1/evidence/metric/... — the FlightScorecardBlock family", 
     expect(res.body.measure.value).toBe(1);
     const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
     expect(flightNumbers).toEqual(["SC-2025"]);
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 
   it("rolling12m: excludes the 2010 and 2023 flights, which are older than 12 months from any 'now'", async () => {
@@ -98,7 +98,7 @@ describe("GET /api/v1/evidence/metric/... — the FlightScorecardBlock family", 
     const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
     expect(flightNumbers).not.toContain("SC-OLD");
     expect(flightNumbers).not.toContain("SC-2023");
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 
   it("scorecardDistanceKm holds the raw (unrounded) sum invariant for allTime", async () => {
@@ -106,7 +106,7 @@ describe("GET /api/v1/evidence/metric/... — the FlightScorecardBlock family", 
       .get("/api/v1/evidence/metric/scorecardDistanceKm")
       .set("Cookie", userACookie);
     expect(res.status).toBe(200);
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 
   it("scorecardFlightTimeMinutes: 90 measured minutes per flight, summed over allTime", async () => {
@@ -115,6 +115,6 @@ describe("GET /api/v1/evidence/metric/... — the FlightScorecardBlock family", 
       .set("Cookie", userACookie);
     expect(res.status).toBe(200);
     expect(res.body.measure.value).toBe(90 * 3);
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 });

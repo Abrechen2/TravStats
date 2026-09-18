@@ -63,7 +63,10 @@ export default function PunctualitySection(): JSX.Element | null {
         scope={{ period: "allTime" }}
         renderedValue={stats.sampleSize}
         label={t("stats:punctuality.subtitle", { count: stats.sampleSize })}
-        className="mb-6 text-sm"
+        // `block` for the same reason as the airlines line in
+        // `StatsFlightBreakdown`: this replaced a `<p>`, and an inline-block
+        // button reserves descender space a paragraph does not.
+        className="mb-6 block text-sm"
         style={{ color: "var(--text-muted)" }}
       >
         {t("stats:punctuality.subtitle", { count: stats.sampleSize })}

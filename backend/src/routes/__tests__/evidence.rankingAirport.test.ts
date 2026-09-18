@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { assertSumInvariant } from "../../services/evidence/__tests__/invariants";
+import { assertSumInvariant, roundToTolerance } from "../../services/evidence/__tests__/invariants";
 
 /**
  * The airport resolver (`.superpowers/sdd/2026-09-18-evidence-panel/task-6-brief.md`).
@@ -156,7 +156,7 @@ describe("GET /api/v1/evidence/ranking/airport:... — the airport resolver", ()
     expect(res.body.measure.value).toBe(row.visits);
     const flightNumbers = res.body.entries.map((e: { title: { text: string } }) => e.title.text);
     expect(flightNumbers).toContain("AF500");
-    assertSumInvariant(res.body, (n: number) => n);
+    assertSumInvariant(res.body, roundToTolerance);
   });
 
   it("holds the sum invariant against the ranking's own visit count", async () => {
