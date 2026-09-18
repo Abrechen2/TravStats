@@ -20,6 +20,7 @@ import {
   addFlightDuration,
   averageDurationMinutes,
   emptyDurationTotals,
+  resolveFlightDuration,
 } from "../../shared/flightDuration";
 import { withDepartureClock } from "./departureClock";
 import { countableFlightWhere } from "../../shared/flightCounting";
@@ -72,6 +73,35 @@ export interface SummaryStats {
    */
   totalCostUnconverted: Record<string, number>;
   byCategory: Record<string, number>;
+}
+
+/**
+ * One countable flight's own contribution to `SummaryStats`, RAW and
+ * unrounded — rounding happens once, at the surface. `computeSummary` used to
+ * fold these straight into its totals and let the rows themselves go out of
+ * scope, so nothing downstream could say WHICH flight a year's distance or
+ * cost came from — adding `id` to a `select` would not have fixed that on its
+ * own, because the row still never left the function. This is the fix:
+ * `computeSummary` now returns both the totals AND the rows that produced
+ * them, over the exact same query and the exact same predicate, for
+ * `services/evidence/metricEvidenceFlightYear.ts` to build evidence from.
+ */
+export interface SummaryFlightRow {
+  id: string;
+  departureTime: Date | null;
+  /** Great-circle distance in km; 0 when a coordinate is missing (matches `calculateDistance`). */
+  distanceKm: number;
+  /** Measured or estimated minutes, per `shared/flightDuration.ts`; null when neither clocks nor coordinates answer. */
+  durationMinutes: number | null;
+  /** This row's own share of `stats.totalCost`, in `stats.totalCostCurrency` — see `DedupedCost.perFlightBaseContribution`. */
+  costContributionBase: number;
+  /** True when this row's own price or its booking's price was recorded — matches `stats.unpricedFlights`'s complement. */
+  priced: boolean;
+}
+
+export interface SummaryComputation {
+  stats: SummaryStats;
+  rows: SummaryFlightRow[];
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -163,7 +193,7 @@ export async function buildWhere(
 export async function computeSummary(
   where: Prisma.FlightWhereInput,
   baseCurrency: string
-): Promise<SummaryStats> {
+): Promise<SummaryComputation> {
   // EVERY headline figure describes the same population: flights that actually
   // happened. `totalFlights` and `totalCost` used to run on the unfiltered
   // `where`, so the year card put "14 flights" next to a distance covering ten
@@ -179,79 +209,79 @@ export async function computeSummary(
   // booked is reported as `plannedFlights` instead of being folded in.
   const geoWhere: Prisma.FlightWhereInput = { ...where, ...countableFlightWhere() };
 
-  const [
-    flownFlights,
-    totalFlights,
-    plannedFlights,
-    statusCounts,
-    airlineCounts,
-    categoryCounts,
-    costFlights,
-  ] = await Promise.all([
-    prisma.flight.findMany({
-      where: geoWhere,
-      select: {
-        depIata: true,
-        depIcao: true,
-        depLat: true,
-        depLon: true,
-        arrIata: true,
-        arrIcao: true,
-        arrLat: true,
-        arrLon: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        arrTimeSemantics: true,
-        // The stored measurement (forgejo#45). The semantics columns above
-        // stay selected because they decide whether it can be trusted.
-        durationMinutes: true,
-        status: true,
-      },
-    }),
-    prisma.flight.count({ where: geoWhere }),
-    prisma.flight.count({ where: { ...where, status: "scheduled" } }),
-    prisma.flight.groupBy({
-      by: ["status"],
-      where,
-      _count: true,
-    }),
-    prisma.flight.groupBy({
-      by: ["airline"],
-      where,
-      _count: true,
-    }),
-    prisma.flight.groupBy({
-      by: ["category"],
-      where,
-      _count: true,
-    }),
-    prisma.flight.findMany({
-      // Same population as the count above: a cost total that included flights
-      // still to come could not be read next to "flights" or "distance".
-      where: geoWhere,
-      select: {
-        price: true,
-        taxes: true,
-        fees: true,
-        currency: true,
-        priceBase: true,
-        fxBaseCurrency: true,
-        bookingId: true,
-        booking: {
-          select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
+  const [identityRows, totalFlights, plannedFlights, statusCounts, airlineCounts, categoryCounts] =
+    await Promise.all([
+      // ONE query for the countable population, carrying `id` plus every
+      // column both the geo/duration fold AND the cost fold need. This used
+      // to be two separate `findMany` calls (`flownFlights`, `costFlights`)
+      // over the identical `geoWhere` — same rows, fetched twice, and neither
+      // copy carried its own identity, so nothing downstream of `computeSummary`
+      // could say WHICH flight a total came from. Evidence needs exactly that.
+      prisma.flight.findMany({
+        where: geoWhere,
+        select: {
+          id: true,
+          depIata: true,
+          depIcao: true,
+          depLat: true,
+          depLon: true,
+          arrIata: true,
+          arrIcao: true,
+          arrLat: true,
+          arrLon: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimeSemantics: true,
+          arrTimeSemantics: true,
+          // The stored measurement (forgejo#45). The semantics columns above
+          // stay selected because they decide whether it can be trusted.
+          durationMinutes: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          currency: true,
+          priceBase: true,
+          fxBaseCurrency: true,
+          bookingId: true,
+          booking: {
+            select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
+          },
         },
-      },
-    }),
-  ]);
+      }),
+      prisma.flight.count({ where: geoWhere }),
+      prisma.flight.count({ where: { ...where, status: "scheduled" } }),
+      prisma.flight.groupBy({
+        by: ["status"],
+        where,
+        _count: true,
+      }),
+      prisma.flight.groupBy({
+        by: ["airline"],
+        where,
+        _count: true,
+      }),
+      prisma.flight.groupBy({
+        by: ["category"],
+        where,
+        _count: true,
+      }),
+    ]);
 
   let totalDistance = 0;
   let distanceFlightCount = 0;
   let durationTotals = emptyDurationTotals();
+  // Per-row evidence, filled by the SAME loop that folds the totals below —
+  // never a second pass recomputing the same distance/duration a different
+  // way. `resolveFlightDuration`'s own three-rule order (measured, else
+  // estimated, else null) is reused directly rather than re-derived from
+  // `durationTotals`, which only carries the sums.
+  const distanceByFlightId = new Map<string, number>();
+  const durationByFlightId = new Map<string, number | null>();
 
   // Build timezone map for all airports referenced in flown flights
   const allCodes = new Set<string>();
-  for (const f of flownFlights) {
+  for (const f of identityRows) {
     if (f.depIata) allCodes.add(f.depIata);
     if (f.depIcao) allCodes.add(f.depIcao);
     if (f.arrIata) allCodes.add(f.arrIata);
@@ -267,10 +297,11 @@ export async function computeSummary(
     // timezone lookup failed — durations will use naïve diff
   }
 
-  flownFlights.forEach((flight) => {
+  identityRows.forEach((flight) => {
     const distance = calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
     totalDistance += distance;
     if (distance > 0) distanceFlightCount += 1;
+    distanceByFlightId.set(flight.id, distance);
 
     const depTz =
       (flight.depIata && tzMap.get(flight.depIata)) ||
@@ -297,6 +328,16 @@ export async function computeSummary(
       arrLat: flight.arrLat,
       arrLon: flight.arrLon,
     });
+    durationByFlightId.set(
+      flight.id,
+      resolveFlightDuration({
+        measuredMinutes: flightTime,
+        depLat: flight.depLat,
+        depLon: flight.depLon,
+        arrLat: flight.arrLat,
+        arrLon: flight.arrLon,
+      })?.minutes ?? null
+    );
   });
 
   // Divided by flights that HAVE a distance. A row without coordinates
@@ -333,10 +374,13 @@ export async function computeSummary(
 
   // Booking-aware: a booking's price counts once, not once per segment —
   // and grouped segments (price nulled by the import) still contribute
-  // their booking's total (spec 2026-07-17-cost-booking-price §4).
-  const cost = computeDedupedTotalCost(costFlights, baseCurrency);
+  // their booking's total (spec 2026-07-17-cost-booking-price §4). `cost`'s
+  // per-row arrays are index-aligned with `costFlights` (== `identityRows`),
+  // which is what lets `rows` below attribute the total back to one flight
+  // each without re-running the dedupe logic a second, evidence-only way.
+  const cost = computeDedupedTotalCost(identityRows, baseCurrency);
 
-  return {
+  const stats: SummaryStats = {
     totalFlights,
     plannedFlights,
     totalDistance: Math.round(totalDistance),
@@ -357,4 +401,15 @@ export async function computeSummary(
     totalCostUnconverted: cost.unconvertedByCurrency,
     byCategory,
   };
+
+  const rows: SummaryFlightRow[] = identityRows.map((flight, index) => ({
+    id: flight.id,
+    departureTime: flight.departureTime,
+    distanceKm: distanceByFlightId.get(flight.id) ?? 0,
+    durationMinutes: durationByFlightId.get(flight.id) ?? null,
+    costContributionBase: cost.perFlightBaseContribution[index],
+    priced: cost.perFlightPriced[index],
+  }));
+
+  return { stats, rows };
 }

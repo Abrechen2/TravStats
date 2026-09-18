@@ -49,6 +49,7 @@ export async function fetchFlightDatedRows(
       },
     },
     select: {
+      id: true,
       depIata: true,
       depIcao: true,
       depLat: true,
@@ -99,6 +100,7 @@ export async function fetchFlightDatedRows(
       ),
       distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
       durationMin,
+      id: f.id,
     };
   });
 }

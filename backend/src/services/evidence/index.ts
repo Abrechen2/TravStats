@@ -2,6 +2,7 @@ import type { EvidenceKind, EvidenceScope } from "../../shared/evidence";
 import type { EvidenceResponse } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
 import { resolveRankingEvidence } from "./rankingEvidence";
+import { resolveMetricEvidence } from "./metricEvidence";
 
 /**
  * A resolver answers one `EvidenceKind` for one user. `null` means the key
@@ -22,17 +23,18 @@ export type EvidenceResolver = (
 export type EvidenceResolverMap = Partial<Record<EvidenceKind, EvidenceResolver>>;
 
 /**
- * `ranking` is wired to `resolveRankingEvidence` (Task 5) — currently the
- * `airline` dimension only; `airport`/`country`/`continent`/`aircraftType`
- * are unimplemented inside that resolver and answer `unknownKey` the same
- * way an unregistered kind would, until Task 6 adds them. `metric` has no
- * resolver yet (Task 7), so every `metric` request still answers
- * `unknownKey` through the empty-map path
+ * `ranking` is wired to `resolveRankingEvidence` (Tasks 5/6) — `airline`,
+ * `airport`, `country` and `aircraftType` are implemented; `continent` is a
+ * deliberate abstention (see that module). `metric` is wired to
+ * `resolveMetricEvidence` (Task 7) — only its `servedIn: 1` keys answer;
+ * every other key still falls through to `unknownKey` via that resolver's
+ * own dispatch table, the same 404 an unregistered kind would give
  * (`.superpowers/sdd/2026-09-18-evidence-panel/task-3-brief.md`'s ruling
  * against a fake resolver shipped just to make a test pass).
  */
 export const DEFAULT_RESOLVERS: EvidenceResolverMap = {
   ranking: resolveRankingEvidence,
+  metric: resolveMetricEvidence,
 };
 
 export type EvidenceResolution =

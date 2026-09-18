@@ -29,11 +29,11 @@ function response(
 }
 
 describe("resolveEvidence", () => {
-  it("wires only `ranking` by default — `metric` still answers unknownKey until Task 7", () => {
-    expect(Object.keys(DEFAULT_RESOLVERS)).toEqual(["ranking"]);
+  it("wires `ranking` and `metric` by default (Tasks 5-7) — `record`/`achievement` stay unwired for release 2", () => {
+    expect(Object.keys(DEFAULT_RESOLVERS)).toEqual(["ranking", "metric"]);
   });
 
-  it("answers unknownKey when no resolver is registered for the kind", async () => {
+  it("answers unknownKey for a metric key `resolveMetricEvidence`'s own dispatch table does not serve", async () => {
     const result = await resolveEvidence("user-1", "metric", "flights.total", ALL_TIME, PAGE);
     expect(result).toEqual({ status: "unknownKey" });
   });

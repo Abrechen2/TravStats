@@ -103,13 +103,12 @@ router.get(
       const baseCurrency = await getBaseCurrency(userId);
 
       // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
-      const summarize = async (scopeYear: number | undefined) => ({
-        ...(await computeSummary(
-          await buildWhere(userId, fromDate, toDate, scopeYear),
-          baseCurrency
-        )),
-        daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
-      });
+      const summarize = async (scopeYear: number | undefined) => {
+        const where = await buildWhere(userId, fromDate, toDate, scopeYear);
+        const { stats } = await computeSummary(where, baseCurrency);
+        const daysAway = await loadDaysAway(userId, { year: scopeYear, fromDate, toDate });
+        return { ...stats, daysAway };
+      };
       if (year !== undefined && compareYear !== undefined) {
         const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
         res.json({ current, compare });
@@ -154,7 +153,7 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
     // rows now serve both. The cost is the parallelism between this scan and
     // the passport — the smaller price, since a full per-user scan is not
     // worth running twice concurrently to save the latency of running it once.
-    const [summary, flights] = await Promise.all([
+    const [{ stats: summary }, flights] = await Promise.all([
       buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
       prisma.flight.findMany({
         where: flightsWhere,
