@@ -31,6 +31,27 @@ Asked and answered on 2026-09-18:
 One question — *which entries produced this number?* — answered by the same code
 that produced the number, for every number a user can see on those two pages.
 
+## This generalises something that already works
+
+Two drill-downs of exactly this kind are already shipped, and both are the
+pattern rather than a precedent to argue with:
+
+- **The passport's country provenance.** `GET /stats/countries/:code` →
+  `loadCountryDetail` → `buildCountryDetail` returns a `timeline` whose entries
+  carry `flightId` / `cruiseId` / `placeId` / `lodgingId`, and
+  `frontend/src/components/Passport/CountryProvenance.tsx` renders it as links
+  into the logbook. Its `linkFor` / `labelFor` shape is what the generic entry
+  list becomes.
+- **The aircraft hull profile.** `GET /stats/aircraft/:registration` re-queries
+  `flight.findMany({ where: { userId, ...countableFlightWhere(), registration } })`
+  — a second endpoint whose whole job is "the rows behind this one ranking row",
+  built on the shared counting predicate. That is the contract below, written
+  once for one dimension.
+
+So this work is not an invention. It is the same move for the other numbers,
+with one response shape instead of two bespoke ones, and with the sum test that
+neither of the two existing drill-downs has.
+
 ## Non-goals
 
 - Not an export. The panel links into the logbook; it does not become a second
@@ -168,7 +189,7 @@ are guesses.
 
 ## The four surfaces
 
-### 1. Achievements
+### 1. Achievements — and the one place where the code does not help
 
 Every card opens its evidence.
 
@@ -181,12 +202,61 @@ Every card opens its evidence.
 - **Retired** (`isRetired`): the entries stay visible, with the note that the
   definition was withdrawn and the achievement counts only towards points.
 
+**The risk named in the first draft is real and now measured.**
+`utils/achievementChecks.ts` is ONE function — `checkAchievement(achievement,
+stats, flights)` — with roughly 150 `switch` cases over `requirementType`, and
+it reads a pre-aggregated `UserStats`. `utils/achievementStats.ts` reduces the
+loaded rows to `Set<string>` and `Map<string, number>`: the ids are read for
+coordinates and dates and then dropped. Nothing in that pipeline knows which
+flight made the count go up.
+
+Re-deriving 150 cases is not the answer; it would be 150 second opinions about
+what counts, which is the defect this spec exists to prevent. The answer is that
+the ~150 requirement types collapse to a much smaller set of **row predicates**
+over the four domains already loaded by `runAchievementCheck`:
+
+```ts
+/** shared/achievementEvidence.ts */
+export type EvidencePredicate = (rows: AchievementInputRows, a: Achievement) =>
+  EvidenceEntry[] | null;   // null = this type has no per-entry evidence
+
+export const EVIDENCE_BY_REQUIREMENT: Record<string, EvidencePredicate>;
+```
+
+Each entry in that table is written ONCE against the same input arrays
+`runAchievementCheck` already builds, and a test runs every catalogue
+achievement through both `checkAchievement` and its predicate and asserts the
+sum rule. A requirement type with no predicate returns `notPerEntry` — the card
+still opens, and the panel says the number comes from an aggregate rather than
+from nameable entries. That is a smaller, honest first release, and the table
+can grow one requirement type at a time without touching anything else.
+
+The plan measures the real coverage before the work starts: how many of the
+~275 catalogue achievements the first batch of predicates covers, and which
+requirement types are left saying `notPerEntry`.
+
 ### 2. Headline metrics
 
 The tiles on the statistics overview and the per-domain summary cards:
 countries, flights, nights, port calls, places, distance, active travel days.
 The `year` filter of the page travels with the request unchanged, so the panel
 answers for exactly the period on screen.
+
+Two of these need a change before they can answer at all, and both changes are
+worth making on their own:
+
+- **`computeSummary`'s flight query does not select `id`.** It reduces rows to
+  distance, duration and cost and never needed the identity. Adding `id` to that
+  select (and to the cost query beside it) is what lets the same rows be named.
+- **The statistics page counts countries a second time.** `GET /stats/countries`
+  aggregates flight rows by the resolved airport country in JS, with no tier and
+  no evidence concept, while `buildPassport` / `foldCountryEvidence` answers the
+  same question properly — by evidence, across all four domains, which is what
+  the 2.6.0 release note told users the number now means. Two answers to one
+  question is the exact shape of a defect this codebase has already paid for
+  twice. **The tile is pointed at the passport's engine**, and the panel then
+  reuses `buildCountryDetail` unchanged. If that shifts the number on screen,
+  that is the tile having been wrong, and the change is a changelog entry.
 
 ### 3. Rankings
 
@@ -197,13 +267,28 @@ simply the group's members, so the sum test is exact by construction.
 
 ### 4. Records and superlatives
 
-Longest flight, most countries in a year, longest trip, most expensive trip,
-biggest gap, and the rest of `services/stats/records.ts`.
+**Scope is what is on screen.** `services/stats/records.ts` exists and already
+returns `flightId` for four of its seven records, but `GET /stats/records` has
+no frontend consumer at all — it was ported from the Companion. Building a UI
+for it is a different feature, and it is not this one. The superlatives a user
+can actually see today are:
+
+- the trip superlatives in `components/Trips/TripInsightsBar.tsx` (longest, most
+  expensive, most countries), computed in `lib/stats/tripInsights.ts`;
+- the "unique" and "fun" sections of the statistics page
+  (`StatsUniqueSection`, `StatsFunSection`), computed by
+  `utils/statsCalculator.ts` over rows that already carry `id`.
 
 A record has exactly one winning entry, so `entries` has length 1 and
 `contribution` equals the record's value. What the panel adds here is the
 **measurement**: the unit, the comparison used, and — where relevant — what was
 NOT comparable.
+
+The trip superlatives are the exception to "evidence comes from the backend":
+the winning `Trip` object already holds its `flights`, `cruises` and
+`lodgingStays` in memory, so the panel reads them directly and no round trip is
+made. The backend still changes, but for the currency fix below — the trips list
+does not send base amounts today.
 
 #### The cross-currency defect this surfaces
 
@@ -222,6 +307,12 @@ displayed value stays the money actually spent, in its own currency — the
 conversion decides the ORDER, not the label.
 
 ## The panel
+
+There is no drawer component in this codebase — `components/ui/Dialog.tsx` is
+built for a short question, and `components/Modal.tsx` is the shell with a fixed
+header, a **scrolling body** and a footer. The evidence panel is a list, so it is
+built on `Modal`, widened, and docked to the right on desktop rather than
+centred; below `sm` the existing sheet behaviour is already what is wanted.
 
 - Enters from the right on desktop, full-screen sheet below the `sm` breakpoint.
 - Focus trap, Escape to close, focus returned to the tile — through the existing
@@ -246,17 +337,23 @@ conversion decides the ORDER, not the label.
 
 ## Risks, named
 
-1. **The achievement checks may only count.** If `utils/achievementChecks.ts`
-   computes progress without ever holding the contributing rows, every check
-   needs an "and which rows" variant. That is the difference between one day
-   and three, and it is the first thing the plan settles.
-2. **Rankings computed in JS over a full load** (`/stats/routes`,
-   `routes/achievements.ts` are named in CLAUDE.md as loading everything and
-   slicing in JS) will need the same care as the SQL ones, or the panel becomes
-   the second full load of the same data.
+1. **Achievement coverage is partial by design.** Measured: `checkAchievement`
+   is one ~150-case switch over pre-aggregated statistics, and the ids are gone
+   by then. The first release covers the requirement types whose predicate is a
+   plain filter over one domain's rows; the rest answer `notPerEntry` and say
+   so. The plan states the measured coverage before the work starts — a number,
+   not a hope.
+2. **Two of the rankings are pure SQL `groupBy`** (airlines, aircraft types),
+   so their evidence is a second query, filtered by the same grouping the
+   ranking used — for airlines that means going through `groupAirlines` so a
+   spelling variant lands in the row it was counted in. A hand-written `where`
+   here would be the drift this spec is about.
 3. **The cap hides disagreement.** A truncated list whose sum is checked against
    `total` and not against the rows on screen could still drift. The second test
    case above exists for that.
+4. **Pointing the country tile at the passport engine may move a number** that
+   users have seen. That is the point — one question, one answer — but it is a
+   visible change and belongs in the changelog, not in a silent commit.
 
 ## Success
 
