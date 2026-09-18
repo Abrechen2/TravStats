@@ -36,6 +36,23 @@ import {
   resolveLongHaulFlightCount,
   resolveCo2FootprintKg,
 } from "./metricEvidenceFlightFun";
+import {
+  resolveTimeTravelFlightCount,
+  resolveEquatorCrossingCount,
+  resolveArcticFlightCount,
+  resolveOceanCrossingCount,
+  resolveHemisphereHopCount,
+  resolveDateLineCrossingCount,
+  resolveContinentsTouchedByFlightCount,
+  resolveTropicsFlightCount,
+  resolveEastwardFlightCount,
+  resolveWestwardFlightCount,
+  resolveSameDayFlightCount,
+  resolveMidnightFlightCount,
+  resolveInternationalFlightCount,
+  resolveDomesticFlightCount,
+  resolveRoundTripFlightCount,
+} from "./metricEvidenceFlightUnique";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -47,9 +64,8 @@ import {
  *
  * Only `servedIn: 1` keys are wired: eighteen of
  * `evidenceMeasuresFlightCore.ts`'s own measures (every `sum`/`distinct` key
- * on that surface, Task 7) plus the seven `sum`/`distinct` keys of
- * `evidenceMeasuresFlightFun.ts`'s fun half (Task 7b-1) — twenty-five in
- * all, with that file's fifteen unique keys following. Nothing yet
+ * on that surface, Task 7) plus the twenty-two `sum`/`distinct` keys of
+ * `evidenceMeasuresFlightFun.ts` (Task 7b-1) — forty in all. Nothing yet
  * from `evidenceMeasuresCrossDomain.ts` or `evidenceMeasuresDomains.ts`; see
  * task-7-report.md and task-7b-1-report.md for served vs. outstanding.
  */
@@ -85,6 +101,21 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   shortHaulFlightCount: resolveShortHaulFlightCount,
   longHaulFlightCount: resolveLongHaulFlightCount,
   co2FootprintKg: resolveCo2FootprintKg,
+  timeTravelFlightCount: resolveTimeTravelFlightCount,
+  equatorCrossingCount: resolveEquatorCrossingCount,
+  arcticFlightCount: resolveArcticFlightCount,
+  oceanCrossingCount: resolveOceanCrossingCount,
+  hemisphereHopCount: resolveHemisphereHopCount,
+  dateLineCrossingCount: resolveDateLineCrossingCount,
+  continentsTouchedByFlightCount: resolveContinentsTouchedByFlightCount,
+  tropicsFlightCount: resolveTropicsFlightCount,
+  eastwardFlightCount: resolveEastwardFlightCount,
+  westwardFlightCount: resolveWestwardFlightCount,
+  sameDayFlightCount: resolveSameDayFlightCount,
+  midnightFlightCount: resolveMidnightFlightCount,
+  internationalFlightCount: resolveInternationalFlightCount,
+  domesticFlightCount: resolveDomesticFlightCount,
+  roundTripFlightCount: resolveRoundTripFlightCount,
 };
 
 /**

@@ -264,9 +264,16 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
   },
+  /**
+   * The unit is ROUND TRIPS, not flights: `calculateUniqueStats` counts
+   * `min(there, back)` per unordered airport pair, so two legs make one of
+   * them and a `flights` unit overstated the tile by a factor of two.
+   * Corrected while serving it (task 7b-1); each leg of a pair contributes
+   * 0.5, which is what makes the panel's rows add up to the tile.
+   */
   roundTripFlightCount: {
     aggregation: "sum",
-    unit: "flights",
+    unit: "roundTrips",
     scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
