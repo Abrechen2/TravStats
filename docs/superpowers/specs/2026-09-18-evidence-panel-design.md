@@ -160,7 +160,14 @@ interface EvidenceResponse {
   entries: EvidenceEntry[];
   /** Three buckets, never two. */
   returned: number;
-  /** Known evidence beyond the page — NOT unattributed. */
+  /**
+   * Known evidence NOT in `entries` — on any other page, before this one or
+   * after it. "Beyond the page" was the first wording and it was wrong: the
+   * invariant has to hold on EVERY page, and on page three the rows of pages
+   * one and two are just as known and just as absent. This is evidence the
+   * caller can reach by paging, which is what separates it from
+   * `unattributed` — rows that do not exist to be reached.
+   */
   omitted: { count: number; contribution?: number; credits?: number };
   /** Genuinely without a nameable row. Several reasons may coexist. */
   unattributed: Array<{ count: number; reason: UnattributedReason }>;

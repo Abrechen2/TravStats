@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { AppError } from "../../middleware/errorHandler";
 import { parseRankingKey, rankingKey } from "../../shared/evidence";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
@@ -56,13 +57,23 @@ async function resolveAirlineRankingEvidence(
   // (a key the frontend cannot build is a frontend bug, not an empty page).
   if (!AIRLINE_GROUP_KEY_SHAPE.test(groupKey)) return null;
 
-  // `GET /stats/airlines` takes no `year`/`domains` query param — it
-  // measures ALL TIME, unconditionally (checked in `routes/stats.ts`: the
-  // handler builds its `where` from `countableFlightWhere()` alone, with no
-  // request-scoped filter). Answering a scoped request here would silently
-  // measure a population the tile never shows, so an unsupported scope is
-  // refused exactly like an unknown key — never reinterpreted as allTime.
-  if (scope.period.kind !== "allTime") return null;
+  // `GET /stats/airlines` (`routes/stats.ts`) takes no `year`/`domains`
+  // query param — its handler builds its `where` from
+  // `countableFlightWhere()` alone, with no request-scoped filter, so it
+  // measures ALL TIME, unconditionally. Honouring a year HERE would answer a
+  // population the tile never shows — a future reader could otherwise "fix"
+  // this rejection by teaching the resolver to filter by year alone, which
+  // would make evidence disagree with its own ranking row. This is a 400,
+  // not a 404: the key is real, the row exists — the request asked it for a
+  // population this surface does not measure, which is a bad request, not a
+  // missing one (the same distinction the stray-`year`-with-`allTime` case
+  // in `schemas/evidence.ts` already makes).
+  if (scope.period.kind !== "allTime") {
+    throw new AppError(
+      `Airline ranking evidence only supports period=allTime; got period=${scope.period.kind}.`,
+      400
+    );
+  }
 
   const identityRows: AirlineIdentityRow[] = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
@@ -125,10 +136,13 @@ async function resolveAirlineRankingEvidence(
     return { ...hydrated, date: skeleton.date };
   });
 
-  // `entries` + `omitted` must equal `value` for THIS response regardless of
-  // `offset` — the invariant `assertSumInvariant` checks — not merely the
-  // rows still ahead of the current page. Everything not on this specific
-  // page is "omitted" from it, offset rows included.
+  // `omitted` counts every KNOWN row not in `entries` — on ANY page, not
+  // only the rows still ahead of this one. Rows before `offset` are just as
+  // known and just as absent from this response as rows after it, and
+  // `assertSumInvariant` has to hold on every page, so page three's omitted
+  // count includes pages one and two as well as what comes after. (The
+  // spec's "hasn't paged there yet" phrasing only reads correctly on page
+  // one — corrected there; this is the reading that actually holds.)
   const omittedContribution = matched.length - entries.length;
 
   return {

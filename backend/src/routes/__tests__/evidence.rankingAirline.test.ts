@@ -207,4 +207,19 @@ describe("GET /api/v1/evidence/ranking/airline:... — the airline resolver", ()
     expect(res.body.measure.value).toBe(0);
     expect(res.body.entries).toEqual([]);
   });
+
+  it("answers 400, not 404, for a scope this ranking does not measure", async () => {
+    // `/stats/airlines` measures all-time unconditionally, so `period=year`
+    // asks for a population the tile never shows. The key itself is real
+    // (`iata:LH` exists as a row) — the request is what's wrong, so this
+    // must be 400, the same class of answer the stray-`year` cases already
+    // get. Before this ruling the resolver returned `null` here, which the
+    // dispatcher turns into 404 — this test fails against that behaviour.
+    const res = await request(app)
+      .get("/api/v1/evidence/ranking/airline:iata:LH?period=year&year=2025")
+      .set("Cookie", userACookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/period=allTime/);
+  });
 });
