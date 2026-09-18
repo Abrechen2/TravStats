@@ -135,19 +135,27 @@ function getGenerateTimeoutMs(): number {
  * information about any other stops" precisely because it had been told not
  * to. So when there is no voice, the words "notes" and "journal" do not appear
  * in the prompt at all.
+ *
+ * The voiceless rules avoid the word "Daten"/"data" for the same reason, and
+ * that cost a second round: the first version said "Du erzählst ausschließlich,
+ * was in den Daten steht" and the build answered "Die restlichen Tage unserer
+ * Reise sind leider nicht in den Daten festgehalten, aber wir hoffen, dass wir
+ * bald mehr Details dazu erfahren" — an absence reported as news, about the
+ * DATA rather than the trip, which is the exact pattern the header describes.
+ * The rules name the stops instead, and say where the text ends.
  */
 const VOICE_RULES: Record<SummaryLanguage, Record<"withVoice" | "withoutVoice", string>> = {
   de: {
     withVoice: `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit den Namen aus den Daten — Hotels, Orte, Stopps — und "notes" sowie "journal" frei nacherzählt.
 4. Du erzählst ausschließlich, was in den Daten steht. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.`,
-    withoutVoice: `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit den Namen aus den Daten — Hotels, Orte, Stopps.
-4. Du erzählst ausschließlich, was in den Daten steht: was geschehen ist, wann und wo.`,
+    withoutVoice: `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen — Hotels, Orte, Stopps.
+4. Du erzählst die Stationen selbst: was geschehen ist, wann und wo. Der Text endet mit der letzten Station.`,
   },
   en: {
     withVoice: `3. Paragraph 2: the stops in order of time, with the names from the data — hotels, places, stops — and "notes" and "journal" retold freely.
 4. You retell only what the data holds. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.`,
-    withoutVoice: `3. Paragraph 2: the stops in order of time, with the names from the data — hotels, places, stops.
-4. You retell only what the data holds: what happened, when and where.`,
+    withoutVoice: `3. Paragraph 2: the stops in order of time, with their names — hotels, places, stops.
+4. You retell the stops themselves: what happened, when and where. The text ends with the last stop.`,
   },
 };
 

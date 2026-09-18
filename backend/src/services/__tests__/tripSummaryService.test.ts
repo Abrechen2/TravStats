@@ -91,6 +91,22 @@ describe("tripSummaryService", () => {
       }
     });
 
+    // Second round, same lesson one word further. With "you retell only what
+    // the DATA holds" in the voiceless rules, the build answered "Die
+    // restlichen Tage unserer Reise sind leider nicht in den Daten
+    // festgehalten" — the absence as news, and about the data rather than the
+    // trip. The voiceless rules talk about stops, not about data.
+    // The opening line ("you are given the data of one trip") stays — it is
+    // framing. What goes is the RULE that makes completeness the subject.
+    it("does not make the data itself the subject of a rule when there is little of it", () => {
+      expect(buildSystemPrompt("de", false)).not.toMatch(/in den Daten steht/);
+      expect(buildSystemPrompt("en", false)).not.toMatch(/what the data holds/);
+      // And the rules still say where the text stops, which is what the model
+      // reached for the absence to fill.
+      expect(buildSystemPrompt("de", false)).toMatch(/endet mit der letzten Station/);
+      expect(buildSystemPrompt("en", false)).toMatch(/ends with the last stop/);
+    });
+
     // The user prompt asked for three paragraphs while rules 1 and 9 asked for
     // two. The model settled it differently from run to run.
     it("asks for one shape only — the rules carry the paragraph count, the user prompt does not", () => {
