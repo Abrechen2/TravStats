@@ -17,6 +17,9 @@ import { API_LIMITS } from "../lib/constants";
 import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
 import { buildAirlineBreakdown } from "../components/Stats/airlineBreakdown";
+// `lib/geo.ts` already owns the Haversine rule; this page carried a second,
+// behaviourally identical copy inline. One home per rule.
+import { calculateDistance } from "../lib/geo";
 import { airlineResolvers } from "../lib/airlineUtils";
 import {
   addFlightDuration,
@@ -305,21 +308,6 @@ export default function AdvancedStatsPage(): JSX.Element {
     }
     const d = getFlightDuration(flight);
     return d ? d.minutes / 60 : 0;
-  };
-
-  // Calculate distance between two coordinates using Haversine formula
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
   };
 
   // Airline statistics. Grouped by the CODE (forgejo#81), through the same
