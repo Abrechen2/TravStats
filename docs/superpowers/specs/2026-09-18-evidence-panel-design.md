@@ -106,6 +106,16 @@ GET /api/v1/evidence/:kind/:key
 ```
 
 ```ts
+/**
+ * `achievement` is declared here but served only in release 2. It is in the
+ * union from the start so the panel, the key parser and the OpenAPI schema do
+ * not change shape when it arrives — the endpoint answers 501 for it until then,
+ * which is a different thing from 404 and says so.
+ */
+type EvidenceKind = "metric" | "ranking" | "record" | "achievement";
+
+type EvidenceDomain = "flight" | "cruise" | "lodging" | "place" | "trip";
+
 interface EvidenceScope {
   /** What population the number was measured over. Mirrors the surface. */
   period: { kind: "allTime" } | { kind: "year"; year: number } | { kind: "rolling12m" };
@@ -154,6 +164,25 @@ interface EvidenceResponse {
   unattributed: Array<{ count: number; reason: UnattributedReason }>;
   page: { offset: number; limit: number };
 }
+
+type Aggregation = "sum" | "distinct" | "extremum" | "ratio" | "boolean" | "sequence";
+
+/**
+ * Why a unit of the number has no row to name. A LIST of these is returned, not
+ * one: a country count can be short a row for two different reasons at once.
+ */
+type UnattributedReason =
+  /**
+   * Proved by stored location history (`CountryDay`) rather than by a logbook
+   * entry. NOT called `transitOnly`: `trackEvidence.ts` can classify a tracked
+   * country as `slept` or `visited`, so naming it "transit" would state
+   * something the engine did not decide.
+   */
+  | "locationHistoryOnly"
+  /** The row that proved it is gone; the number is historical. */
+  | "entryRemoved"
+  /** The measure is derived across the set and has no per-row decomposition. */
+  | "notPerEntry";
 ```
 
 Three changes from the first version, each forced by the review: the label is an
@@ -168,8 +197,37 @@ more than one reason at once.
 
 The first version capped at 200 and offered "show it in the logbook with this
 filter". That filter does not exist. Evidence pages instead: `offset`/`limit`,
-default 100, and the panel loads more on scroll. Sorting is stable and stated —
-date descending, then id — so a page boundary cannot drop or repeat a row.
+default 100, and the panel loads more on scroll.
+
+Sorting is stable and stated, because a page boundary that reorders drops or
+repeats rows: **date descending, then id ascending**, with **undated rows last**
+rather than sorted as epoch zero — a stay whose dates are unknown is not a stay
+from 1970, and putting it first would be the same lie `shared/lodgingTiming.ts`
+already refuses elsewhere. The sort is applied before the slice, and a test
+pages through a fixture of 250 rows asserting that the concatenated pages equal
+the unpaged list exactly.
+
+### Four answers that are not the same answer
+
+The endpoint distinguishes cases the first version collapsed:
+
+| Situation | Answer |
+|---|---|
+| The key names nothing this instance serves (`airline:ZZZZ`, an unknown metric) | **404**. A key the frontend cannot build is a bug in the frontend, and an empty 200 would hide it. |
+| The key is valid and the user has nothing — no flights on that airline | **200**, `measure.value: 0`, no entries. Zero is a true answer here. |
+| The measure cannot be derived at all — no data to decide it | **200**, `measure.value: null`, entries empty, `unattributed` naming why. Abstention is a result: a derivable zero and an underivable value are different, and the panel must not print "0" for the second. |
+| The user asks for another user's row | **404**, never 403. A 403 confirms the row exists. |
+
+`measure.value` is therefore `number | null`, and every invariant in the table
+above is asserted only when it is a number.
+
+### The number may have moved since the tile rendered
+
+A tile is drawn from one response and the panel from another, so the data can
+change in between — an import finishing, another tab editing a flight. The panel
+**repeats the value it measured** rather than trusting the tile's, so a
+disagreement is visible instead of silent. When the two differ the panel says the
+figure was recomputed; it never reconciles them behind the reader's back.
 
 ### Identity
 
@@ -185,6 +243,22 @@ keeps apart.
 Every resolver preserves `countableFlightWhere()` and the ranking's own
 denominator rule: airline percentages exclude unattributed flights, aircraft-type
 percentages divide by all countable flights.
+
+**An entry's identity is not always its destination.** A lodging STAY proves a
+night; the page the user wants is the lodging (`/lodging/:lodgingId`), so `id`
+and `href` name different rows and the response says both. A country can be
+proved by a lodging that has no stay at all, which is an entry with a lodging id
+and no date. Two port calls of one cruise are two pieces of evidence that share
+one `href` — so `id` is the port-call id, and a panel that de-duplicated by
+`href` would lose one. Tests cover all three, because each of them is a row the
+naive implementation drops or merges.
+
+### One schema, not two shapes
+
+The response is defined ONCE, as the OpenAPI response schema, and the backend's
+TypeScript types are derived from it — the lesson `backend/src/schemas/statsAircraft.ts`
+already records. A hand-maintained interface beside a hand-maintained schema is
+two descriptions of one payload, and they drift the first time a field is added.
 
 ## Release 1 — rankings and metrics
 
