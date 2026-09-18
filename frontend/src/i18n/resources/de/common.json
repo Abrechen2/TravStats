@@ -219,8 +219,7 @@
   "summary": {
     "flights": "Flüge",
     "airlines": "Airlines",
-    "withoutAirline_one": "+{{count}} ohne Angabe",
-    "withoutAirline_other": "+{{count}} ohne Angabe",
+    "withoutAirline": "+{{count}} ohne Angabe",
     "airports": "Flughäfen",
     "cruises": "Kreuzfahrten",
     "portCalls": "Hafenanläufe",
