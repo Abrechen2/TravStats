@@ -18,15 +18,26 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementUnlockedCount: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "allTime",
+    // `visibleAchievements = filterAchievementsByDomain(achievements, enabled)`
+    // in AchievementsPage.tsx — the same population crossDomain* measures
+    // are scoped over, not the account's whole catalogue.
+    scopes: ["domainFiltered"],
     surface: "AchievementsPage (header meta)",
-    calculator: ACHIEVEMENTS_CALCULATOR,
+    // Same function call, same destructured object as
+    // `achievementRetiredUnlockedCount` below — both come out of ONE
+    // `countAchievements(visibleAchievements)`, so both are attributed
+    // to it rather than one of them pointing at the write path instead.
+    calculator: "lib/achievementCounts.ts countAchievements (client fold over GET /achievements)",
     servedIn: 2,
   },
   achievementTotalPoints: {
     aggregation: "sum",
     unit: "points",
-    scope: "allTime",
+    // Unlike the four `domainFiltered` measures below, this reads
+    // `summary?.totalPoints` from the server's `AchievementSummary`
+    // directly — never filtered by `visibleAchievements` — so it stays
+    // allTime.
+    scopes: ["allTime"],
     surface: "AchievementsPage (header meta)",
     calculator: ACHIEVEMENTS_CALCULATOR,
     servedIn: 2,
@@ -34,7 +45,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementRetiredUnlockedCount: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "allTime",
+    scopes: ["domainFiltered"],
     surface: "AchievementsPage (header meta)",
     calculator: "lib/achievementCounts.ts countAchievements (client fold over GET /achievements)",
     servedIn: 2,
@@ -42,7 +53,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementTierProgress: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "allTime",
+    scopes: ["domainFiltered"],
     surface: "AchievementsPage (tier strip)",
     calculator: "AchievementsPage.tsx countBy (client fold over GET /achievements)",
     servedIn: 2,
@@ -50,7 +61,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementCategoryCount: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "allTime",
+    scopes: ["domainFiltered"],
     surface: "AchievementsPage (category pills)",
     calculator: "AchievementsPage.tsx countBy (client fold over GET /achievements)",
     servedIn: 2,
@@ -58,7 +69,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementProgressRatio: {
     aggregation: "ratio",
     unit: "%",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "AchievementCard",
     calculator:
       "utils/achievementChecks.ts checkAchievement (progress/requirement written at check time)",
@@ -67,7 +78,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   leaderboardAchievementCount: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "AchievementLeaderboard",
     calculator: LEADERBOARD_CALCULATOR,
     servedIn: 2,
@@ -75,7 +86,7 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   leaderboardTotalPoints: {
     aggregation: "sum",
     unit: "points",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "AchievementLeaderboard",
     calculator: LEADERBOARD_CALCULATOR,
     servedIn: 2,

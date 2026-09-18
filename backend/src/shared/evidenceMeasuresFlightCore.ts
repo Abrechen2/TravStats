@@ -12,7 +12,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   flightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsOverviewCards",
     calculator: "AdvancedStatsPage.tsx (client reduce over flightsApi.getAll, isCountableFlight)",
     servedIn: 1,
@@ -20,7 +20,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   flightTimeMinutes: {
     aggregation: "sum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsOverviewCards",
     calculator: "shared/flightDuration.ts addFlightDuration (client fold)",
     servedIn: 1,
@@ -28,7 +28,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   avgFlightDurationMinutes: {
     aggregation: "ratio",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsOverviewCards",
     calculator: "shared/flightDuration.ts averageDurationMinutes",
     servedIn: 2,
@@ -36,7 +36,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   airlineCount: {
     aggregation: "distinct",
     unit: "airlines",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsOverviewCards",
     calculator: "shared/airlineNormalize.ts groupAirlines (client fold)",
     servedIn: 1,
@@ -44,7 +44,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   distanceKmTotal: {
     aggregation: "sum",
     unit: "km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsDistanceSection",
     calculator: "AdvancedStatsPage.tsx (client Haversine reduce)",
     servedIn: 1,
@@ -52,7 +52,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   avgDistanceKm: {
     aggregation: "ratio",
     unit: "km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsDistanceSection",
     calculator: "AdvancedStatsPage.tsx (client Haversine reduce)",
     servedIn: 2,
@@ -60,7 +60,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   distanceMilestoneShare: {
     aggregation: "ratio",
     unit: "%",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsDistanceSection",
     calculator: "AdvancedStatsPage.tsx totalDistance / a fixed constant (earth/moon/mars/voyager)",
     servedIn: 2,
@@ -68,7 +68,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   longestFlightDistanceKm: {
     aggregation: "extremum",
     unit: "km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsDistanceSection",
     calculator: "AdvancedStatsPage.tsx flightDistances.sort()",
     servedIn: 2,
@@ -76,7 +76,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   shortestFlightDistanceKm: {
     aggregation: "extremum",
     unit: "km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsDistanceSection",
     calculator: "AdvancedStatsPage.tsx flightDistances.sort()",
     servedIn: 2,
@@ -84,7 +84,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   longestFlightDurationMinutes: {
     aggregation: "extremum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFlightBreakdown",
     calculator: "AdvancedStatsPage.tsx flightDurations.sort()",
     servedIn: 2,
@@ -92,7 +92,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   shortestFlightDurationMinutes: {
     aggregation: "extremum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFlightBreakdown",
     calculator: "AdvancedStatsPage.tsx flightDurations.sort()",
     servedIn: 2,
@@ -100,7 +100,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   flightsWithoutAirlineCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFlightBreakdown",
     calculator: "GET /stats/airlines (shared/airlineNormalize.ts groupAirlines, withoutAirline)",
     servedIn: 1,
@@ -108,7 +108,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   scorecardFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "rolling12m",
+    scopes: ["rolling12m", "year", "allTime"],
     surface: "scorecard/FlightScorecardBlock",
     calculator: "GET /stats/timeseries (services/stats/timeseriesRows.ts)",
     servedIn: 1,
@@ -116,7 +116,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   scorecardDistanceKm: {
     aggregation: "sum",
     unit: "km",
-    scope: "rolling12m",
+    scopes: ["rolling12m", "year", "allTime"],
     surface: "scorecard/FlightScorecardBlock",
     calculator: "GET /stats/timeseries (services/stats/timeseriesRows.ts)",
     servedIn: 1,
@@ -124,7 +124,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   scorecardFlightTimeMinutes: {
     aggregation: "sum",
     unit: "minutes",
-    scope: "rolling12m",
+    scopes: ["rolling12m", "year", "allTime"],
     surface: "scorecard/FlightScorecardBlock",
     calculator: "GET /stats/timeseries (services/stats/timeseriesRows.ts)",
     servedIn: 1,
@@ -132,7 +132,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   yearFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "year",
+    scopes: ["year"],
     surface: "FlightYearSummaryCards",
     calculator: "GET /stats/summary?year= (services/stats/summary.ts computeSummary)",
     servedIn: 1,
@@ -140,7 +140,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   yearDistanceKm: {
     aggregation: "sum",
     unit: "km",
-    scope: "year",
+    scopes: ["year"],
     surface: "FlightYearSummaryCards",
     calculator: "GET /stats/summary?year= (services/stats/summary.ts computeSummary)",
     servedIn: 1,
@@ -148,7 +148,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   yearFlightTimeMinutes: {
     aggregation: "sum",
     unit: "minutes",
-    scope: "year",
+    scopes: ["year"],
     surface: "FlightYearSummaryCards",
     calculator: "GET /stats/summary?year= (services/stats/summary.ts computeSummary)",
     servedIn: 1,
@@ -156,7 +156,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   yearTotalCost: {
     aggregation: "sum",
     unit: "currency",
-    scope: "year",
+    scopes: ["year"],
     surface: "FlightYearSummaryCards",
     calculator: "GET /stats/summary?year= (services/stats/summary.ts computeSummary)",
     servedIn: 1,
@@ -164,7 +164,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   yearUnpricedFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "year",
+    scopes: ["year"],
     surface: "FlightYearSummaryCards",
     calculator: "GET /stats/summary?year= (services/stats/summary.ts computeSummary)",
     servedIn: 1,
@@ -174,7 +174,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   businessTotalCost: {
     aggregation: "sum",
     unit: "currency",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 1,
@@ -182,7 +182,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   businessCostPerKm: {
     aggregation: "ratio",
     unit: "currency/km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 2,
@@ -190,7 +190,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   businessCostPerHour: {
     aggregation: "ratio",
     unit: "currency/hour",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 2,
@@ -198,7 +198,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   airportsVisitedCount: {
     aggregation: "distinct",
     unit: "airports",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection, StatsAirportsSection",
     calculator:
       "GET /stats/business (calculateBusinessStats.airportDiversity) or GET /stats/airports (calculateAirportStats.airportCount) — same question, two calculators, kept as one key",
@@ -207,7 +207,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   businessAvgFlightDurationMinutes: {
     aggregation: "ratio",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 2,
@@ -215,7 +215,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   busiestMonthFlightCount: {
     aggregation: "extremum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 2,
@@ -223,7 +223,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   mostCommonBookingCategory: {
     aggregation: "extremum",
     unit: "category",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsBusinessSection",
     calculator: "GET /stats/business (utils/stats/businessStats.ts calculateBusinessStats)",
     servedIn: 2,
@@ -233,7 +233,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   flightCountriesVisitedCount: {
     aggregation: "distinct",
     unit: "countries",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsAirportsSection",
     calculator: "GET /stats/airports (utils/stats/airportStats.ts calculateAirportStats)",
     servedIn: 1,
@@ -241,7 +241,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   continentsVisitedCount: {
     aggregation: "distinct",
     unit: "continents",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsAirportsSection",
     calculator: "GET /stats/airports (utils/stats/airportStats.ts calculateAirportStats)",
     servedIn: 1,
@@ -249,7 +249,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   farthestAirportDistanceKm: {
     aggregation: "extremum",
     unit: "km",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsAirportsSection",
     calculator: "GET /stats/airports (utils/stats/airportStats.ts calculateAirportStats)",
     servedIn: 2,
@@ -259,7 +259,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualitySampleSize: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 1,
@@ -267,7 +267,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualityAvgDelayMinutes: {
     aggregation: "ratio",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 2,
@@ -275,7 +275,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualityOnTimeRate: {
     aggregation: "ratio",
     unit: "%",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 2,
@@ -283,7 +283,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualityBestAirlineDelay: {
     aggregation: "extremum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 2,
@@ -291,7 +291,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualityWorstAirlineDelay: {
     aggregation: "extremum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 2,
@@ -299,7 +299,7 @@ export const FLIGHT_CORE_MEASURES: Record<string, MeasureSpec> = {
   punctualityWorstRouteDelay: {
     aggregation: "extremum",
     unit: "minutes",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PunctualitySection",
     calculator: "GET /stats/punctuality (services/punctualityStats.ts)",
     servedIn: 2,

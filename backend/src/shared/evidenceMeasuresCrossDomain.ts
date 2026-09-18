@@ -19,7 +19,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   crossDomainEventCount: {
     aggregation: "sum",
     unit: "events",
-    scope: "domainFiltered",
+    scopes: ["domainFiltered"],
     surface: "OverviewTab, CrossDomainKpis",
     calculator:
       "frontend Overview/aggregate.ts aggregate() over lib/stats/domain-stats/*Adapter.ts",
@@ -28,7 +28,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   crossDomainCountryCount: {
     aggregation: "distinct",
     unit: "countries",
-    scope: "domainFiltered",
+    scopes: ["domainFiltered"],
     surface: "CrossDomainKpis",
     calculator:
       "frontend Overview/aggregate.ts aggregate() over lib/stats/domain-stats/*Adapter.ts",
@@ -37,7 +37,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   crossDomainActiveDayCount: {
     aggregation: "distinct",
     unit: "days",
-    scope: "domainFiltered",
+    scopes: ["domainFiltered"],
     surface: "CrossDomainKpis",
     calculator:
       "frontend Overview/aggregate.ts aggregate() over lib/stats/domain-stats/*Adapter.ts",
@@ -46,7 +46,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   crossDomainUnlockedAchievementCount: {
     aggregation: "sum",
     unit: "achievements",
-    scope: "domainFiltered",
+    scopes: ["domainFiltered"],
     surface: "CrossDomainKpis",
     calculator: "GET /achievements (utils/achievementWrites.ts)",
     // Achievement kind — release 2 regardless of its sum aggregation.
@@ -57,7 +57,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountHotelNights: {
     aggregation: "sum",
     unit: "nights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -65,7 +65,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountSeaNights: {
     aggregation: "sum",
     unit: "nights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -73,7 +73,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountAirNights: {
     aggregation: "sum",
     unit: "nights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -81,7 +81,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountHomeNights: {
     aggregation: "sum",
     unit: "nights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -89,7 +89,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountContestedNights: {
     aggregation: "sum",
     unit: "nights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -97,7 +97,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountFullyCoveredTripCount: {
     aggregation: "sum",
     unit: "trips",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -105,7 +105,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountTripsWithDatesCount: {
     aggregation: "sum",
     unit: "trips",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -113,7 +113,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountUncoveredDayCount: {
     aggregation: "sum",
     unit: "days",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,
@@ -121,7 +121,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountAvgTripDays: {
     aggregation: "ratio",
     unit: "days",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 2,
@@ -129,7 +129,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountLongestTripDays: {
     aggregation: "extremum",
     unit: "days",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 2,
@@ -137,7 +137,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   travelAccountJournalEntryCount: {
     aggregation: "sum",
     unit: "entries",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "TravelAccountSection",
     calculator: TRAVEL_ACCOUNT_CALCULATOR,
     servedIn: 1,

@@ -13,6 +13,15 @@ endpoint, or the frontend computation when there is no backend rollup),
 all), **Registry key** (`—` when the number is ranking-shaped, a chart
 distribution, or otherwise out of registry scope for the reasons noted).
 
+**Scope** shows what the surface renders TODAY. The registry's own field is
+`MeasureSpec.scopes: MeasureScope[]` — every scope the measure can
+legitimately be shown over, not just the one in front of a reader right now
+(fix round 1, 2026-09-18: a single `scope` field had no way to say a tile is
+user-selectable, which is exactly `FlightScorecardBlock`'s case below). A
+fixed-scope measure's `scopes` array has one element and matches this
+column; `scorecardFlightCount`/`scorecardDistanceKm`/
+`scorecardFlightTimeMinutes` are the only three where it does not.
+
 A "distribution" row (seat class, status, boarding group, weekday/season
 chart) is one row per number a user can see, not per bucket — the number IS
 the distribution, and none of these are registered individually. Rationale
@@ -32,7 +41,7 @@ under "Distributions kept out of the registry" at the end.
 | `StatsDistanceSection` `longestDistance`/`shortestDistance` | "Längste/Kürzeste Strecke" | same distance array, `.sort().at(0)` | allTime | extremum (1 witness) | yes | `longestFlightDistanceKm` / `shortestFlightDistanceKm` |
 | `StatsFlightBreakdown` `longestFlight`/`shortestFlight` (duration) | "Längster/Kürzester Flug" | `AdvancedStatsPage.tsx` `flightDurations.sort()` | allTime | extremum | yes | `longestFlightDurationMinutes` / `shortestFlightDurationMinutes` |
 | `StatsFlightBreakdown` `flightsWithoutAirline` note | "ohne Fluggesellschaft" | backend `GET /stats/airlines` — `groupAirlines`'s `withoutAirline` count (forgejo#81) | allTime | sum | yes — flights excluded from every airline group | `flightsWithoutAirlineCount` |
-| `scorecard/FlightScorecardBlock` tiles (flights / distance / flight time) | "Flüge" / "Distanz" / "Flugzeit" | backend `GET /stats/timeseries` (`services/stats/timeseriesRows.ts`) | **selectable** — `rangeWindow`: `rolling12m` \| `year` (reuses page's `selectedYear`) \| `allTime` | sum | yes | `scorecardFlightCount` / `scorecardDistanceKm` / `scorecardFlightTimeMinutes` — **scope recorded as `rolling12m`, the window most distinct from the rest of the page; the resolver must honour whichever window the tile was drawn for** |
+| `scorecard/FlightScorecardBlock` tiles (flights / distance / flight time) | "Flüge" / "Distanz" / "Flugzeit" | backend `GET /stats/timeseries` (`services/stats/timeseriesRows.ts`) | `rolling12m` \| `year` \| `allTime` — user-selectable via `rangeWindow` (`year` reuses the page's `selectedYear`) | sum | yes | `scorecardFlightCount` / `scorecardDistanceKm` / `scorecardFlightTimeMinutes` — `scopes: ["rolling12m", "year", "allTime"]` |
 | `FlightYearSummaryCards` totalFlights/totalDistance/totalFlightTime/totalCost | "Gesamtflüge (Jahr)" etc. | backend `GET /stats/summary?year=` → `services/stats/summary.ts` `computeSummary` | year | sum (totalCost may be `null` — abstention, not zero, forgejo#83) | yes | `yearFlightCount` / `yearDistanceKm` / `yearFlightTimeMinutes` / `yearTotalCost` |
 | `FlightYearSummaryCards` `unpricedFlights` (shown inside the totalCost note) | "keine Preise erfasst" | same `computeSummary` | year | sum | yes | `yearUnpricedFlightCount` |
 
@@ -282,22 +291,32 @@ telling apart:
 Calculator: `GET /achievements` reads pre-computed rows written by
 `utils/achievementChecks.ts` (`checkAchievement`, ~146-case switch) via
 `utils/achievementWrites.ts`; `GET /achievements/leaderboard`
-(`routes/achievements.ts`) aggregates points across users. Scope: allTime
-(achievements carry no year — `unlockedAt` is a write-time timestamp, not a
-measurement date, per the design doc's "Two things release 2 must settle").
+(`routes/achievements.ts`) aggregates points across users. Achievements
+carry no year — `unlockedAt` is a write-time timestamp, not a measurement
+date, per the design doc's "Two things release 2 must settle" — so nothing
+here is `year`-scoped.
 
-| Field | Aggregation | Registry key |
-|---|---|---|
-| Header meta — `counts.unlocked`/`counts.total` | sum/distinct (count of achievement rows) | `achievementUnlockedCount` |
-| Header meta — `summary.totalPoints` | sum | `achievementTotalPoints` |
-| Header meta — `counts.retiredUnlocked` | sum | `achievementRetiredUnlockedCount` |
-| Tier strip — per-tier unlocked/total (5 tiers) | sum, per tier | `achievementTierProgress` (one representative key; five tiers) |
-| Category pills — per-category count (8 categories) | sum, per category | `achievementCategoryCount` (one representative key; eight categories) |
-| `AchievementCard` — `points` | sum | reuses `achievementTotalPoints`'s shape, per-row |
-| `AchievementCard` — `progress`/`requirement`/`progressPercentage` | ratio | `achievementProgressRatio` |
-| `AchievementCard` — `unlockedAt` | not a number (a date) — no registry entry | — |
-| `AchievementLeaderboard` — `achievementCount` per entry | sum | `leaderboardAchievementCount` |
-| `AchievementLeaderboard` — `totalPoints` per entry | sum | `leaderboardTotalPoints` |
+**Fix round 1 (2026-09-18) correction:** the header-meta unlocked/total,
+retired-unlocked, tier-strip and category-pill figures are NOT `allTime` —
+`AchievementsPage.tsx` computes all four from `visibleAchievements =
+filterAchievementsByDomain(achievements, enabled)`, the same
+domain-chip-filtered population the `crossDomain*` measures already use, so
+they are `domainFiltered`. `summary.totalPoints`, the per-card figures, and
+the leaderboard read a different, unfiltered path (the server's
+`AchievementSummary`, or another user's own catalogue) and stay `allTime`.
+
+| Field | Scope | Aggregation | Registry key |
+|---|---|---|---|
+| Header meta — `counts.unlocked`/`counts.total` | domainFiltered | sum/distinct (count of achievement rows) | `achievementUnlockedCount` |
+| Header meta — `summary.totalPoints` | allTime | sum | `achievementTotalPoints` |
+| Header meta — `counts.retiredUnlocked` | domainFiltered | sum | `achievementRetiredUnlockedCount` |
+| Tier strip — per-tier unlocked/total (5 tiers) | domainFiltered | sum, per tier | `achievementTierProgress` (one representative key; five tiers) |
+| Category pills — per-category count (8 categories) | domainFiltered | sum, per category | `achievementCategoryCount` (one representative key; eight categories) |
+| `AchievementCard` — `points` | allTime | sum | reuses `achievementTotalPoints`'s shape, per-row |
+| `AchievementCard` — `progress`/`requirement`/`progressPercentage` | allTime | ratio | `achievementProgressRatio` |
+| `AchievementCard` — `unlockedAt` | — | not a number (a date) — no registry entry | — |
+| `AchievementLeaderboard` — `achievementCount` per entry | allTime | sum | `leaderboardAchievementCount` |
+| `AchievementLeaderboard` — `totalPoints` per entry | allTime | sum | `leaderboardTotalPoints` |
 | `AchievementLeaderboard` — `rank` | not a measured number (a sort position) — no registry entry | — |
 
 ## Summary

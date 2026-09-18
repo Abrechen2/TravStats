@@ -58,4 +58,48 @@ describe("EVIDENCE_MEASURES", () => {
       }
     }
   });
+
+  /**
+   * Pins fix-round-1 finding 2 against a future edit rather than leaving it
+   * to a reader: `CrossDomainKpis`/`OverviewTab` fold over `aggregate()`'s
+   * visible-domain population, and four AchievementsPage measures fold over
+   * `visibleAchievements = filterAchievementsByDomain(achievements, enabled)`
+   * — both are `domainFiltered`, not `allTime`.
+   *
+   * Deliberately NOT a blanket "every measure whose surface contains
+   * `AchievementsPage`" or "every component physically under
+   * `Stats/Overview/`" check — both are too coarse and would force a wrong
+   * answer onto a real sibling:
+   *   - `achievementTotalPoints` shares the `AchievementsPage (header meta)`
+   *     surface label with `achievementUnlockedCount`, but reads
+   *     `summary?.totalPoints` from the server's `AchievementSummary`
+   *     directly, never through `visibleAchievements` — it stays `allTime`.
+   *   - `TravelAccountSection` lives in the same `Stats/Overview/` directory
+   *     as `CrossDomainKpis`/`OverviewTab`, but fetches
+   *     `GET /stats/travel-account` on its own and never consults
+   *     `useEnabledDomains()` or the chip toggles (see its own header
+   *     comment: "Fetches on its own rather than joining useDomainStats") —
+   *     its eleven measures stay `allTime` too.
+   * So this asserts by KEY for the achievement four (naming exactly what
+   * finding 2 named) and by an unambiguous surface substring for the two
+   * Overview components that have no such sibling.
+   */
+  it("scopes every domain-toggle-dependent Overview/Achievements measure as domainFiltered", () => {
+    const domainFilteredKeys = [
+      "achievementUnlockedCount",
+      "achievementRetiredUnlockedCount",
+      "achievementTierProgress",
+      "achievementCategoryCount",
+    ];
+    for (const key of domainFilteredKeys) {
+      expect(EVIDENCE_MEASURES[key].scopes).toContain("domainFiltered");
+    }
+
+    const domainFilteredSurfaces = ["CrossDomainKpis", "OverviewTab"];
+    for (const spec of Object.values(EVIDENCE_MEASURES)) {
+      if (domainFilteredSurfaces.some((surface) => spec.surface.includes(surface))) {
+        expect(spec.scopes).toContain("domainFiltered");
+      }
+    }
+  });
 });

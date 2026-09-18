@@ -18,7 +18,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseCount: {
     aggregation: "sum",
     unit: "cruises",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -26,7 +26,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseDistanceKmTotal: {
     aggregation: "sum",
     unit: "km",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -34,7 +34,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseSeaDaysTotal: {
     aggregation: "sum",
     unit: "days",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -42,7 +42,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruisePortsUniqueCount: {
     aggregation: "distinct",
     unit: "ports",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -50,7 +50,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseShipsUniqueCount: {
     aggregation: "distinct",
     unit: "ships",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -58,7 +58,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseLinesUniqueCount: {
     aggregation: "distinct",
     unit: "lines",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -66,7 +66,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseTotalDays: {
     aggregation: "sum",
     unit: "days",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -74,7 +74,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseCountriesCount: {
     aggregation: "distinct",
     unit: "countries",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 1,
@@ -82,7 +82,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseAvgPortsPerCruise: {
     aggregation: "ratio",
     unit: "ports/cruise",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -90,7 +90,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseLongestLegKm: {
     aggregation: "extremum",
     unit: "km",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -98,7 +98,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruisePortsSingleTripMax: {
     aggregation: "extremum",
     unit: "ports",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -106,7 +106,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseLineLoyaltyMax: {
     aggregation: "extremum",
     unit: "cruises",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -114,7 +114,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseSeaDaysStreak: {
     aggregation: "sequence",
     unit: "days",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -122,7 +122,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseMaxDeck: {
     aggregation: "extremum",
     unit: "deck",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -130,7 +130,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruisePortRevisitRate: {
     aggregation: "ratio",
     unit: "%",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -138,7 +138,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseFlagAchieved: {
     aggregation: "boolean",
     unit: "boolean",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection",
     calculator: CRUISE_CALCULATOR,
     servedIn: 2,
@@ -146,7 +146,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseCompanionCount: {
     aggregation: "sum",
     unit: "companions",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection (CruiseFunSection)",
     calculator: CRUISE_DETAIL_CALCULATOR,
     servedIn: 1,
@@ -154,7 +154,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   cruiseTotalSpend: {
     aggregation: "sum",
     unit: "currency",
-    scope: "year",
+    scopes: ["year"],
     surface: "CruiseStatsSection (CruiseMoneySection)",
     calculator: CRUISE_DETAIL_CALCULATOR,
     servedIn: 1,
@@ -164,7 +164,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingStaysCount: {
     aggregation: "sum",
     unit: "stays",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -172,7 +172,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingNightsTotal: {
     aggregation: "sum",
     unit: "nights",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -180,7 +180,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingsUniqueCount: {
     aggregation: "distinct",
     unit: "lodgings",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -188,7 +188,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingCountriesCount: {
     aggregation: "distinct",
     unit: "countries",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -196,7 +196,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingSpendTotal: {
     aggregation: "sum",
     unit: "currency",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingCurrencyBreakdown)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -204,7 +204,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingAvgCostPerNight: {
     aggregation: "ratio",
     unit: "currency/night",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingMoneySection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 2,
@@ -212,7 +212,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingAwardNightsCount: {
     aggregation: "sum",
     unit: "nights",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingMoneySection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -220,7 +220,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingAvgOverallRating: {
     aggregation: "ratio",
     unit: "stars",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingQualitySection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 2,
@@ -228,7 +228,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingContinentsCount: {
     aggregation: "distinct",
     unit: "continents",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingGeoSection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -236,7 +236,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingNightsAwayTotal: {
     aggregation: "sum",
     unit: "nights",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingRhythmSection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -244,7 +244,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingTopChainShare: {
     aggregation: "ratio",
     unit: "%",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingLoyaltySection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 2,
@@ -252,7 +252,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingLongestStayNights: {
     aggregation: "extremum",
     unit: "nights",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingRecordsSection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 2,
@@ -260,7 +260,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingOneNightStayCount: {
     aggregation: "sum",
     unit: "stays",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingRecordsSection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -268,7 +268,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   lodgingPerfectStayCount: {
     aggregation: "sum",
     unit: "stays",
-    scope: "year",
+    scopes: ["year"],
     surface: "LodgingStatsSection (LodgingRecordsSection)",
     calculator: LODGING_CALCULATOR,
     servedIn: 1,
@@ -278,7 +278,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placesVisitedCount: {
     aggregation: "distinct",
     unit: "places",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection",
     calculator: POI_CALCULATOR,
     servedIn: 1,
@@ -286,7 +286,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeVisitCount: {
     aggregation: "sum",
     unit: "visits",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection",
     calculator: POI_CALCULATOR,
     servedIn: 1,
@@ -294,7 +294,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeCountriesCount: {
     aggregation: "distinct",
     unit: "countries",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection",
     calculator: POI_CALCULATOR,
     servedIn: 1,
@@ -302,7 +302,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeCitiesCount: {
     aggregation: "distinct",
     unit: "cities",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection",
     calculator: POI_CALCULATOR,
     servedIn: 1,
@@ -310,7 +310,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeListCount: {
     aggregation: "sum",
     unit: "lists",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PoiStatsSection",
     calculator: "listPlaceLists/listCuratedChecklists (client fold, no year scope)",
     servedIn: 1,
@@ -318,7 +318,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeWishlistCount: {
     aggregation: "sum",
     unit: "places",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "PoiStatsSection",
     calculator: POI_CALCULATOR,
     servedIn: 1,
@@ -326,7 +326,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeVisitStreakLength: {
     aggregation: "sequence",
     unit: "days",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection (PoiRhythmSection)",
     calculator: POI_CALCULATOR,
     servedIn: 2,
@@ -334,7 +334,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeCategoryCoveragePct: {
     aggregation: "ratio",
     unit: "%",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection (PoiFunSection)",
     calculator: POI_CALCULATOR,
     servedIn: 2,
@@ -342,7 +342,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   placeAvgRating: {
     aggregation: "ratio",
     unit: "stars",
-    scope: "year",
+    scopes: ["year"],
     surface: "PoiStatsSection (PoiQualitySection)",
     calculator: POI_CALCULATOR,
     servedIn: 2,

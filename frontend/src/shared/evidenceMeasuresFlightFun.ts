@@ -15,7 +15,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   timezoneHopperFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -23,7 +23,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   earlyBirdFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -31,7 +31,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   nightOwlFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -39,7 +39,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   weekendFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -47,7 +47,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   weekendFlightSharePct: {
     aggregation: "ratio",
     unit: "%",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -55,7 +55,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   loyaltyScorePct: {
     aggregation: "ratio",
     unit: "%",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -63,7 +63,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   shortHaulFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -71,7 +71,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   longHaulFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -79,7 +79,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   busiestFlightDayCount: {
     aggregation: "extremum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -87,7 +87,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   co2FootprintKg: {
     aggregation: "sum",
     unit: "kg",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 1,
@@ -95,7 +95,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   co2FootprintElephantsRatio: {
     aggregation: "ratio",
     unit: "elephants",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -103,7 +103,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   milestoneYearFlightCount: {
     aggregation: "extremum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -111,7 +111,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   routeMasterFlightCount: {
     aggregation: "extremum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsFunSection",
     calculator: FUN_CALCULATOR,
     servedIn: 2,
@@ -121,7 +121,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   timeTravelFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -129,7 +129,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   equatorCrossingCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -137,7 +137,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   arcticFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -145,7 +145,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   oceanCrossingCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -153,7 +153,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   hemisphereHopCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -161,7 +161,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   dateLineCrossingCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -169,7 +169,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   continentsTouchedByFlightCount: {
     aggregation: "distinct",
     unit: "continents",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -177,7 +177,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   tropicsFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -185,7 +185,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   eastwardFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -193,7 +193,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   westwardFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -201,7 +201,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   eastWestBalanceRatio: {
     aggregation: "ratio",
     unit: "ratio",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -209,7 +209,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   sameDayFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -217,7 +217,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   midnightFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -225,7 +225,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   seasonalExplorerAchieved: {
     aggregation: "boolean",
     unit: "boolean",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -233,7 +233,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   internationalFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -241,7 +241,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   domesticFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -249,7 +249,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   internationalDomesticRatio: {
     aggregation: "ratio",
     unit: "ratio",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -257,7 +257,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   roundTripFlightCount: {
     aggregation: "sum",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 1,
@@ -265,7 +265,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   highestAirportAltitudeM: {
     aggregation: "extremum",
     unit: "m",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -273,7 +273,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   northernmostAirportLat: {
     aggregation: "extremum",
     unit: "degrees",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -281,7 +281,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   southernmostAirportLat: {
     aggregation: "extremum",
     unit: "degrees",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -289,7 +289,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   longestTravelChainLength: {
     aggregation: "sequence",
     unit: "flights",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -297,7 +297,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   fastestRouteSpeedKmh: {
     aggregation: "extremum",
     unit: "km/h",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -305,7 +305,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   mostCountriesInOneDayCount: {
     aggregation: "extremum",
     unit: "countries",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -313,7 +313,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   longestLayoverHours: {
     aggregation: "extremum",
     unit: "hours",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,
@@ -321,7 +321,7 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
   shortestLayoverHours: {
     aggregation: "extremum",
     unit: "hours",
-    scope: "allTime",
+    scopes: ["allTime"],
     surface: "StatsUniqueSection",
     calculator: UNIQUE_CALCULATOR,
     servedIn: 2,

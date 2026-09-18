@@ -54,7 +54,18 @@ export interface MeasureSpec {
   aggregation: Aggregation;
   /** Free-form but stable — "flights", "km", "minutes", "%", "currency", ... */
   unit: string;
-  scope: MeasureScope;
+  /**
+   * The scopes this measure CAN legitimately be shown over — not the one
+   * scope a particular tile happens to render right now. A fixed-scope
+   * measure carries a one-element array. `FlightScorecardBlock` is the
+   * reason this is an array and not `MeasureScope`: its tiles are
+   * user-selectable across `rolling12m`/`year`/`allTime` via `rangeWindow`,
+   * and a single `scope` field had no way to say that — the caller's
+   * request already carries the scope IN EFFECT (`EvidenceScope`), so this
+   * registry only needs to say which ones are legitimate for the resolver
+   * to honour.
+   */
+  scopes: MeasureScope[];
   /** The component that renders the tile. */
   surface: string;
   /** The backend function/endpoint, or the frontend computation when there is no backend rollup. */
