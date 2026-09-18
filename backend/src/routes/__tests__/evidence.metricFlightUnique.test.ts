@@ -139,6 +139,24 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
           status: "historical",
           flightNumber: "UQ600",
         },
+        // A sightseeing flight that lands where it took off, HISTORICAL. It
+        // is countable, so it is a domestic flight and it credits Europe —
+        // and it is NOT a round trip, because it never went anywhere. Before
+        // that was fixed it counted as one AND could only be half evidenced,
+        // since both halves of its "pair" were this same row.
+        {
+          userId: userAId,
+          depIata: "FRA",
+          depLat: 50.030241,
+          depLon: 8.561096,
+          arrIata: "FRA",
+          arrLat: 50.030241,
+          arrLon: 8.561096,
+          departureTime: new Date("2024-07-20T09:00:00Z"),
+          arrivalTime: new Date("2024-07-20T10:00:00Z"),
+          status: "historical",
+          flightNumber: "UQ700",
+        },
         // Excluded by `countableFlightWhere()`: a second FRA → JFK leg that
         // would otherwise turn the one round trip into two.
         {
@@ -295,7 +313,9 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
   it("internationalFlightCount and domesticFlightCount read the catalogue's countries", () => {
     const international = answer("internationalFlightCount");
     const domestic = answer("domesticFlightCount");
-    expect(titles(domestic)).toEqual(["UQ300"]);
+    // The sightseeing leg is a domestic flight too — it departs and lands in
+    // the same country because it departs and lands at the same airport.
+    expect(titles(domestic)).toEqual(["UQ300", "UQ700"]);
     expect(titles(international)).toEqual(["UQ100", "UQ200", "UQ400", "UQ500", "UQ600"]);
     assertSumInvariant(international, Math.round);
     assertSumInvariant(domestic, Math.round);
@@ -313,6 +333,10 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
     expect(res.measure.value).toBe(1);
     expect(titles(res)).toEqual(["UQ100", "UQ200"]);
     expect(res.entries.map((e) => e.contribution)).toEqual([0.5, 0.5]);
+    // The FRA → FRA sightseeing leg is countable and is credited NOTHING: it
+    // is in neither the value nor the list. When it counted, it counted once
+    // in the tile and half in the panel, because its "pair" was itself.
+    expect(titles(res)).not.toContain("UQ700");
     assertSumInvariant(res, (n) => n);
   });
 
@@ -343,10 +367,18 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
   });
 
   /**
-   * The guard against a wrong population, for all fifteen at once: every
-   * literal above could be wrong together and this would still catch it,
-   * because `calculateUniqueStats` is a second implementation of the same
-   * rules and the two are asked in the same run.
+   * What this binds is the POPULATION, and only that. Since the predicates
+   * were given one home (`utils/stats/flightPredicates.ts`), BOTH sides of
+   * this comparison apply the same rule to whatever rows they were handed —
+   * so a wrong predicate would move the tile and the panel together and pass
+   * here. What it does catch is the resolver selecting different FLIGHTS
+   * from the calculator: a missing `countableFlightWhere()`, a `flown` filter
+   * dropped or added, a year that should not be there.
+   *
+   * The per-key literals above carry the predicate correctness, which is why
+   * each of them names a flight rather than a number. Neither half is
+   * redundant; reading this test as "a second implementation agrees" is the
+   * mistake, because it stopped being one on `815410cf`.
    */
   it("all fifteen unique measures equal the numbers /stats/unique renders", () => {
     for (const [key, figure] of Object.entries(rendered)) {

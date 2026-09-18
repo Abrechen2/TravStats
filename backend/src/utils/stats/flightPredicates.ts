@@ -369,6 +369,15 @@ export function countRoundTrips(legs: RoundTripLeg[]): RoundTripCount {
     const dep = departureEndpointCode(leg);
     const arr = arrivalEndpointCode(leg);
     if (!dep || !arr) continue;
+    // A leg that returns to the airport it left — a sightseeing or training
+    // flight — is NOT a round trip: there is no "back", because it never went
+    // anywhere. It used to count as n of them, and wrongly: such a leg's
+    // direction key IS its own reverse key, so `back` was the same bucket as
+    // `direction` and `min(n, n)` was `n`. Worse for the evidence panel,
+    // `pairedLegIds` then received every one of those ids TWICE, and the
+    // resolver de-duplicates — so the tile said n while the panel proved
+    // n/2, over the very rows it was listing.
+    if (dep === arr) continue;
     const key = `${dep} ${arr}`;
     const direction = byDirection.get(key) ?? { dep, arr, legIds: [] };
     direction.legIds.push(leg.id);

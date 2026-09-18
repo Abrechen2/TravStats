@@ -60,6 +60,25 @@ describe("flightPredicates", () => {
       expect(pairedLegIds).toHaveLength(4);
     });
 
+    /**
+     * A sightseeing flight that lands where it took off. Its direction key is
+     * its own reverse, so before the fix `back` was the same bucket as
+     * `direction`: `min(n, n)` counted every such leg as a round trip AND
+     * pushed its id into `pairedLegIds` twice. The resolver de-duplicates the
+     * ids, so the tile claimed one round trip the panel could only half
+     * evidence — which is the disagreement the panel exists to prevent.
+     */
+    it("does not call a flight that lands where it took off a round trip", () => {
+      const { total, pairedLegIds } = countRoundTrips([
+        leg("s1", "FRA", "FRA", "2025-01-01"),
+        leg("a1", "FRA", "LHR", "2025-02-01"),
+        leg("b1", "LHR", "FRA", "2025-02-05"),
+      ]);
+      expect(total).toBe(1);
+      expect(pairedLegIds.sort()).toEqual(["a1", "b1"]);
+      expect(new Set(pairedLegIds).size).toBe(pairedLegIds.length);
+    });
+
     it("ignores a leg whose endpoint has no code at all", () => {
       const noCode: RoundTripLeg = {
         id: "x1",
