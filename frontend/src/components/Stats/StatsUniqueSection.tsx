@@ -9,6 +9,19 @@ interface StatsUniqueSectionProps {
 
 export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
+  /**
+   * All-time, like every measure registered for this surface — the section is
+   * built from the full countable set and carries no year filter of its own.
+   *
+   * Two served tiles are deliberately NOT wired: the east/west balance and
+   * the international/domestic split each render TWO numbers in one card
+   * ("12E / 8W"), and a card opens one panel. Both pairs of keys are served
+   * and addressable; giving one card two triggers means splitting its big
+   * number into two buttons, which is a design decision about this surface
+   * and not a wiring one. Every other unwired tile here is an `extremum`,
+   * `ratio`, `boolean` or `sequence` measure that release 1 does not serve.
+   */
+  const allTime = { period: "allTime" as const };
 
   return (
     <div className="mt-8">
@@ -19,6 +32,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
       {uniqueStats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
+            evidence={{
+              kind: "metric",
+              key: "timeTravelFlightCount",
+              scope: allTime,
+              renderedValue: uniqueStats.timeTravelIndex,
+            }}
             title={t("stats:unique.timeTravelIndex")}
             value={uniqueStats.timeTravelIndex}
             description={t("stats:unique.timeTravelIndexDesc", {
@@ -26,6 +45,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
             })}
           />
           <StatCard
+            evidence={{
+              kind: "metric",
+              key: "equatorCrossingCount",
+              scope: allTime,
+              renderedValue: uniqueStats.equatorCrossings,
+            }}
             title={t("stats:unique.equatorCrossings")}
             value={uniqueStats.equatorCrossings}
             description={t("stats:unique.equatorCrossingsDesc", {
@@ -33,11 +58,23 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
             })}
           />
           <StatCard
+            evidence={{
+              kind: "metric",
+              key: "arcticFlightCount",
+              scope: allTime,
+              renderedValue: uniqueStats.arcticFlights,
+            }}
             title={t("stats:unique.arcticFlights")}
             value={uniqueStats.arcticFlights}
             description={t("stats:unique.arcticFlightsDesc", { count: uniqueStats.arcticFlights })}
           />
           <StatCard
+            evidence={{
+              kind: "metric",
+              key: "oceanCrossingCount",
+              scope: allTime,
+              renderedValue: uniqueStats.oceanCrossings,
+            }}
             title={t("stats:unique.oceanCrossings")}
             value={uniqueStats.oceanCrossings}
             description={t("stats:unique.oceanCrossingsDesc", {
@@ -46,6 +83,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           />
           {uniqueStats.hemisphereHops !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "hemisphereHopCount",
+                scope: allTime,
+                renderedValue: uniqueStats.hemisphereHops,
+              }}
               title={t("stats:unique.hemisphereHops")}
               value={uniqueStats.hemisphereHops}
               description={t("stats:unique.hemisphereHopsDesc", {
@@ -55,6 +98,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.dateLineCrossings !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "dateLineCrossingCount",
+                scope: allTime,
+                renderedValue: uniqueStats.dateLineCrossings,
+              }}
               title={t("stats:unique.dateLineCrossings")}
               value={uniqueStats.dateLineCrossings}
               description={t("stats:unique.dateLineCrossingsDesc", {
@@ -64,6 +113,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.continentalExplorer !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "continentsTouchedByFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.continentalExplorer,
+              }}
               title={t("stats:unique.continentalExplorer")}
               value={uniqueStats.continentalExplorer}
               description={t("stats:unique.continentalExplorerDesc", {
@@ -78,6 +133,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.tropicsTraveler !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "tropicsFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.tropicsTraveler,
+              }}
               title={t("stats:unique.tropicsTraveler")}
               value={uniqueStats.tropicsTraveler}
               description={t("stats:unique.tropicsTravelerDesc", {
@@ -99,6 +160,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.sameDayFlights !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "sameDayFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.sameDayFlights,
+              }}
               title={t("stats:unique.sameDayFlights")}
               value={uniqueStats.sameDayFlights}
               description={t("stats:unique.sameDayFlightsDesc", {
@@ -108,6 +175,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.midnightFlights !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "midnightFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.midnightFlights,
+              }}
               title={t("stats:unique.midnightFlights")}
               value={uniqueStats.midnightFlights}
               description={t("stats:unique.midnightFlightsDesc", {
@@ -138,6 +211,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.roundTripMaster !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "roundTripFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.roundTripMaster,
+              }}
               title={t("stats:unique.roundTripMaster")}
               value={uniqueStats.roundTripMaster}
               description={t("stats:unique.roundTripMasterDesc", {
