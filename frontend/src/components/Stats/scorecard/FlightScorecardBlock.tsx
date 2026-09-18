@@ -16,7 +16,17 @@ import CanonicalTimeSeries from "./CanonicalTimeSeries";
  * translates rather than leaving every caller to remember the mismatch.
  */
 function scorecardScope(window: WindowKind, selectedYear: number | null): EvidenceScopeParams {
-  if (window === "year") return { period: "year", year: selectedYear ?? undefined };
+  // `selectedYear` is legitimately null — the page's year picker sits on "all
+  // years" — but the tile still SHOWS a year, because `resolveWindow`
+  // (`utils/stats/timeseries.ts`) falls back to the current UTC year for
+  // `window === "year"`. Sending `year: undefined` asked the evidence
+  // endpoint for a scope its schema rejects (`period=year` requires a year),
+  // so the tile rendered a number and then answered 400 when clicked. The
+  // default has to be the SAME one the tile measured with, not merely a
+  // valid year.
+  if (window === "year") {
+    return { period: "year", year: selectedYear ?? new Date().getUTCFullYear() };
+  }
   if (window === "all") return { period: "allTime" };
   return { period: "rolling12m" };
 }
