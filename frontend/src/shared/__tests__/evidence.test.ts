@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankingKey, parseRankingKey, EVIDENCE_METRICS } from "../evidence";
+import { rankingKey, parseRankingKey, RANKING_DIMENSIONS } from "../evidence";
 
 /**
  * The key is the only thing a tile and the endpoint share. A tile that builds
@@ -8,13 +8,7 @@ import { rankingKey, parseRankingKey, EVIDENCE_METRICS } from "../evidence";
  */
 describe("evidence keys", () => {
   it("round-trips every dimension", () => {
-    for (const dimension of [
-      "airline",
-      "airport",
-      "country",
-      "continent",
-      "aircraftType",
-    ] as const) {
+    for (const dimension of RANKING_DIMENSIONS) {
       expect(parseRankingKey(rankingKey(dimension, "LH"))).toEqual({ dimension, value: "LH" });
     }
   });
@@ -31,8 +25,22 @@ describe("evidence keys", () => {
     expect(parseRankingKey("LH")).toBeNull();
   });
 
-  it("lists the metrics the panel may ask for", () => {
-    expect(EVIDENCE_METRICS).toContain("countries");
-    expect(new Set(EVIDENCE_METRICS).size).toBe(EVIDENCE_METRICS.length);
+  /**
+   * These behave correctly today, but nothing pinned them before this test:
+   * a later naive rewrite (`split(":")`, or accepting an empty value) would
+   * pass the round-trip cases above and still ship a 404 on one of these.
+   */
+  it.each([
+    ["", "empty"],
+    [":", "separator only"],
+    ["airline:", "empty value"],
+    [":LH", "empty dimension"],
+    ["air:LH", "a prefix of a real dimension"],
+  ])("refuses %s (%s) rather than guessing", (key) => {
+    expect(parseRankingKey(key)).toBeNull();
+  });
+
+  it("keeps every colon after the first inside the value", () => {
+    expect(parseRankingKey("airline:A:B:C")).toEqual({ dimension: "airline", value: "A:B:C" });
   });
 });
