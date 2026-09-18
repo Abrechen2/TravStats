@@ -98,13 +98,20 @@ describe("tripSummaryService", () => {
     // trip. The voiceless rules talk about stops, not about data.
     // The opening line ("you are given the data of one trip") stays — it is
     // framing. What goes is the RULE that makes completeness the subject.
-    it("does not make the data itself the subject of a rule when there is little of it", () => {
-      expect(buildSystemPrompt("de", false)).not.toMatch(/in den Daten steht/);
-      expect(buildSystemPrompt("en", false)).not.toMatch(/what the data holds/);
-      // And the rules still say where the text stops, which is what the model
-      // reached for the absence to fill.
-      expect(buildSystemPrompt("de", false)).toMatch(/endet mit der letzten Station/);
-      expect(buildSystemPrompt("en", false)).toMatch(/ends with the last stop/);
+    //
+    // The "only" must NOT go with it. Dropping the whole clause was measured
+    // and was far worse than the sentence it removed: on a trip holding one
+    // flight, the model wrote ten days of invented itinerary — a hotel in
+    // Greenwich Village, the Statue of Liberty, the Met, Brooklyn Bridge.
+    it("keeps the 'only' that anchors the text, without naming the data", () => {
+      for (const [language, only, noun] of [
+        ["de", /ausschließlich/, /in den Daten steht/],
+        ["en", /only the stops you are given/, /what the data holds/],
+      ] as const) {
+        const prompt = buildSystemPrompt(language, false);
+        expect(prompt).toMatch(only);
+        expect(prompt).not.toMatch(noun);
+      }
     });
 
     // The user prompt asked for three paragraphs while rules 1 and 9 asked for
