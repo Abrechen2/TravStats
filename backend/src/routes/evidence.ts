@@ -13,9 +13,12 @@ import { resolveEvidence } from "../services/evidence";
 /**
  * `GET /evidence/:kind/:key` — "which entries produced this number".
  *
- * Plumbing only: schema, dispatch, paging inputs. No resolver is wired here
- * (`services/evidence/index.ts`'s `DEFAULT_RESOLVERS` is empty), so every
- * `metric`/`ranking` request answers 404 until Task 5 registers one. This
+ * Plumbing: schema, dispatch, paging inputs. Which measures actually answer is
+ * decided by `DEFAULT_RESOLVERS` in `services/evidence/index.ts`, not here — a
+ * key with no resolver registered answers 404, which is why this file states no
+ * list of its own. It said "no resolver is wired here" until the airline
+ * ranking landed, and a comment that names today's contents of another module
+ * is a comment that will be wrong by the next commit. This
  * route never writes — the four answers below are read-only by construction,
  * and none of them may become `checkAndUpdateAchievements` or anything else
  * that persists (`docs/superpowers/specs/2026-09-18-evidence-panel-design.md`,
