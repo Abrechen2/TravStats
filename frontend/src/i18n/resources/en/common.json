@@ -219,6 +219,8 @@
   "summary": {
     "flights": "Flights",
     "airlines": "Airlines",
+    "withoutAirline_one": "+{{count}} not recorded",
+    "withoutAirline_other": "+{{count}} not recorded",
     "airports": "Airports",
     "cruises": "Cruises",
     "portCalls": "Port calls",

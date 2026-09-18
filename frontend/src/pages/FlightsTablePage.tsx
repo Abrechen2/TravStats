@@ -405,10 +405,12 @@ export default function FlightsTablePage(): JSX.Element {
   const summaryFigures = useMemo(() => {
     const airlines = new Set<string>();
     const airports = new Set<string>();
+    let withoutAirline = 0;
     for (const f of displayedFlights) {
       // Same airline = same code (forgejo#81), like every other surface.
       const key = airlineGroupKey(f, airlineResolvers);
       if (key !== null) airlines.add(key);
+      else withoutAirline += 1;
       if (f.depIata) airports.add(f.depIata);
       if (f.arrIata) airports.add(f.arrIata);
     }
@@ -418,7 +420,20 @@ export default function FlightsTablePage(): JSX.Element {
         value: String(displayedFlights.length),
         label: t("common:summary.flights"),
       },
-      { key: "airlines", value: String(airlines.size), label: t("common:summary.airlines") },
+      {
+        key: "airlines",
+        value: String(airlines.size),
+        label: t("common:summary.airlines"),
+        // A row can show an airline tile without being counted here: the cell
+        // derives a carrier from the flight number for the logo, while this
+        // counts the airlines a row actually RECORDS. Both are right; without
+        // this note they read as a contradiction on one screen. `/stats` says
+        // the same thing beside its ranking.
+        note:
+          withoutAirline > 0
+            ? t("common:summary.withoutAirline", { count: withoutAirline })
+            : undefined,
+      },
       { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
     ];
   }, [displayedFlights, t]);

@@ -17,6 +17,32 @@ const figures = [
 ];
 
 describe("ListSummaryStrip", () => {
+  // A figure that leaves rows out must be able to say so. The airline count is
+  // the case: the flights table derives a carrier from the flight number for
+  // the logo, while the count counts the airlines a row records — so a row can
+  // wear a Lufthansa tile and not be in the number beside it. Measured on
+  // 2.7.0-beta.1: two brands in the rows, "1 AIRLINES" in the header.
+  it("carries a figure's note beside its label, and nothing when there is none", () => {
+    const { rerender } = render(
+      <ListSummaryStrip
+        figures={[{ key: "airlines", value: "1", label: "Airlines", note: "+2 ohne Angabe" }]}
+        filtered={false}
+        filteredLabel="gefiltert"
+      />
+    );
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("+2 ohne Angabe")).toBeInTheDocument();
+
+    rerender(
+      <ListSummaryStrip
+        figures={[{ key: "airlines", value: "3", label: "Airlines" }]}
+        filtered={false}
+        filteredLabel="gefiltert"
+      />
+    );
+    expect(screen.queryByText(/ohne Angabe/)).not.toBeInTheDocument();
+  });
+
   it("shows the figures for the rows on screen", () => {
     render(
       <ListSummaryStrip
