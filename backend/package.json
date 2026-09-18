@@ -44,7 +44,6 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.122.0",
     "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
@@ -69,7 +68,6 @@
     "node-cron": "^3.0.3",
     "node-html-parser": "^9.0.1",
     "nodemailer": "^9.1.1",
-    "openai": "^7.8.0",
     "otplib": "^13.5.0",
     "pdf-parse": "^2.4.5",
     "pino": "^10.3.1",
