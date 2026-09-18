@@ -117,6 +117,35 @@ describe("assertSumInvariant", () => {
     });
     expect(() => assertSumInvariant(res, round)).not.toThrow();
   });
+
+  /**
+   * The unattributed term, added in task 7b-2. Without it a `sum` measure
+   * could never name `notPerEntry` for a figure it HAD derived — the reason
+   * the vocabulary carries for exactly that case — and
+   * `travelAccountHomeNights`, a remainder with no row that could ever be
+   * listed, would have had to claim it could not be derived at all.
+   */
+  it("counts units that have no row to name, as the distinct rule already does", () => {
+    const res = response({
+      measure: measure({ aggregation: "sum", value: 310 }),
+      entries: [],
+      returned: 0,
+      omitted: { count: 0, contribution: 0 },
+      unattributed: [{ count: 310, reason: "notPerEntry" }],
+    });
+    expect(() => assertSumInvariant(res, round)).not.toThrow();
+  });
+
+  it("still fails when the unattributed bucket does not close the gap", () => {
+    const res = response({
+      measure: measure({ aggregation: "sum", value: 310 }),
+      entries: [entry({ id: "a", contribution: 100 })],
+      returned: 1,
+      omitted: { count: 0, contribution: 0 },
+      unattributed: [{ count: 9, reason: "notPerEntry" }],
+    });
+    expect(() => assertSumInvariant(res, round)).toThrow(/sum invariant failed/);
+  });
 });
 
 describe("assertDistinctInvariant", () => {

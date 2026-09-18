@@ -44,11 +44,7 @@ import type { SettingsDataJson } from "./settings/types";
 import logger from "../utils/logger";
 import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
 import { normalizeCountrySet } from "../shared/countryEvidence";
-import {
-  airportCalendarDay,
-  buildTzMap,
-  withDepartureClock,
-} from "../services/stats/departureClock";
+import { withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
@@ -71,6 +67,7 @@ import {
 import { readYearQuery, scopeLodgingsToStays, startedIn } from "../utils/stats/domainYear";
 import { lodgingCountryKey } from "../utils/stats/lodgingCountryKey";
 import { buildTravelAccount } from "../services/stats/travelAccount";
+import { loadTravelAccountData } from "../services/stats/travelAccountData";
 import { buildTripAccount } from "../services/stats/tripAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { statsEtag } from "../middleware/statsEtag";
@@ -1724,148 +1721,9 @@ router.get(
         return;
       }
 
-      const [stays, cruises, flights, trips] = await Promise.all([
-        prisma.lodgingStay.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            checkIn: true,
-            checkOut: true,
-            datePrecision: true,
-            nights: true,
-          },
-        }),
-        prisma.cruise.findMany({
-          where: { userId },
-          select: { status: true, startDate: true, endDate: true },
-        }),
-        prisma.flight.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            departureTime: true,
-            arrivalTime: true,
-            // Needed to decide whether a flight took a NIGHT, which is a
-            // question about the clocks at either end rather than about UTC.
-            depIata: true,
-            depIcao: true,
-            arrIata: true,
-            arrIcao: true,
-            depTimeSemantics: true,
-            arrTimeSemantics: true,
-          },
-        }),
-        prisma.trip.findMany({
-          where: { userId },
-          select: {
-            id: true,
-            name: true,
-            startDate: true,
-            endDate: true,
-            status: true,
-            category: true,
-            tags: true,
-            journalEntries: { select: { mood: true, weather: true } },
-            _count: { select: { photos: true } },
-            lodgingStays: {
-              select: {
-                status: true,
-                checkIn: true,
-                checkOut: true,
-                datePrecision: true,
-                nights: true,
-                totalPrice: true,
-                currency: true,
-                totalPriceBase: true,
-                fxBaseCurrency: true,
-              },
-            },
-            cruises: {
-              select: {
-                status: true,
-                startDate: true,
-                endDate: true,
-                price: true,
-                currency: true,
-              },
-            },
-            flights: {
-              select: {
-                status: true,
-                departureTime: true,
-                arrivalTime: true,
-                // The full cost shape `flightCostShare` needs: a flight's own
-                // cost is price PLUS taxes and fees, and a booking shared by
-                // several segments is counted once (AUD-080).
-                price: true,
-                taxes: true,
-                fees: true,
-                currency: true,
-                priceBase: true,
-                fxBaseCurrency: true,
-                bookingId: true,
-                booking: {
-                  select: {
-                    price: true,
-                    currency: true,
-                    priceBase: true,
-                    fxBaseCurrency: true,
-                  },
-                },
-              },
-            },
-          },
-        }),
-      ]);
-
-      const now = new Date();
-
-      // Resolve both ends' calendar days here, at the load, so the account
-      // stays a pure function over rows that carry their own answer (AUD-079).
-      const tzMap = await buildTzMap(flights);
-      const flightsWithLocalDays = flights.map((f) => {
-        const depTz =
-          (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-          (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-          null;
-        const arrTz =
-          (f.arrIata ? tzMap.get(f.arrIata) : undefined) ??
-          (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ??
-          null;
-        return {
-          ...f,
-          depLocalDay:
-            f.departureTime && depTz
-              ? airportCalendarDay(
-                  f.departureTime,
-                  depTz,
-                  f.depTimeSemantics as FlightTimeSemantics
-                )
-              : null,
-          arrLocalDay:
-            f.arrivalTime && arrTz
-              ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
-              : null,
-        };
-      });
-
-      const account = buildTravelAccount({ stays, cruises, flights: flightsWithLocalDays, now });
-      const tripAccount = buildTripAccount(
-        trips.map((t) => ({
-          id: t.id,
-          name: t.name,
-          startDate: t.startDate,
-          endDate: t.endDate,
-          status: t.status,
-          category: t.category,
-          tags: t.tags,
-          journalEntries: t.journalEntries,
-          photoCount: t._count.photos,
-          stays: t.lodgingStays,
-          cruises: t.cruises,
-          flights: t.flights,
-        }))
-      );
+      const data = await loadTravelAccountData(userId);
+      const account = buildTravelAccount(data);
+      const tripAccount = buildTripAccount(data.trips);
 
       res.json({ account, trips: tripAccount });
     } catch (error) {

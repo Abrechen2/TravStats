@@ -53,6 +53,17 @@ import {
   resolveDomesticFlightCount,
   resolveRoundTripFlightCount,
 } from "./metricEvidenceFlightUnique";
+import {
+  resolveTravelAccountHotelNights,
+  resolveTravelAccountSeaNights,
+  resolveTravelAccountAirNights,
+  resolveTravelAccountHomeNights,
+  resolveTravelAccountContestedNights,
+  resolveTravelAccountFullyCoveredTripCount,
+  resolveTravelAccountTripsWithDatesCount,
+  resolveTravelAccountUncoveredDayCount,
+  resolveTravelAccountJournalEntryCount,
+} from "./metricEvidenceTravelAccount";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -64,10 +75,11 @@ import {
  *
  * Only `servedIn: 1` keys are wired: eighteen of
  * `evidenceMeasuresFlightCore.ts`'s own measures (every `sum`/`distinct` key
- * on that surface, Task 7) plus the twenty-two `sum`/`distinct` keys of
- * `evidenceMeasuresFlightFun.ts` (Task 7b-1) — forty in all. Nothing yet
- * from `evidenceMeasuresCrossDomain.ts` or `evidenceMeasuresDomains.ts`; see
- * task-7-report.md and task-7b-1-report.md for served vs. outstanding.
+ * on that surface, Task 7), the twenty-two `sum`/`distinct` keys of
+ * `evidenceMeasuresFlightFun.ts` (Task 7b-1) and the nine travel-account
+ * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2) — forty-nine in
+ * all. Nothing yet from `evidenceMeasuresDomains.ts`; see task-7-report.md,
+ * task-7b-1-report.md and task-7b-2-report.md for served vs. outstanding.
  */
 type MetricResolver = (
   userId: string,
@@ -116,6 +128,15 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   internationalFlightCount: resolveInternationalFlightCount,
   domesticFlightCount: resolveDomesticFlightCount,
   roundTripFlightCount: resolveRoundTripFlightCount,
+  travelAccountHotelNights: resolveTravelAccountHotelNights,
+  travelAccountSeaNights: resolveTravelAccountSeaNights,
+  travelAccountAirNights: resolveTravelAccountAirNights,
+  travelAccountHomeNights: resolveTravelAccountHomeNights,
+  travelAccountContestedNights: resolveTravelAccountContestedNights,
+  travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
+  travelAccountTripsWithDatesCount: resolveTravelAccountTripsWithDatesCount,
+  travelAccountUncoveredDayCount: resolveTravelAccountUncoveredDayCount,
+  travelAccountJournalEntryCount: resolveTravelAccountJournalEntryCount,
 };
 
 /**

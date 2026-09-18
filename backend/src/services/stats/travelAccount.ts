@@ -16,6 +16,12 @@ import { isCountableFlight } from "../../shared/flightCounting";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface AccountStay {
+  /**
+   * Carried through so a night can name the row that claimed it. The account
+   * itself never reads it — `attributeTravelNights` does, and the evidence
+   * panel asks that question of every night the account reports.
+   */
+  id: string;
   status: string;
   checkIn: Date | null;
   checkOut: Date | null;
@@ -24,12 +30,14 @@ export interface AccountStay {
 }
 
 export interface AccountCruise {
+  id: string;
   status: string;
   startDate: Date | null;
   endDate: Date | null;
 }
 
 export interface AccountFlight {
+  id: string;
   status: string;
   departureTime: Date | null;
   arrivalTime: Date | null;
@@ -65,12 +73,22 @@ function dayKey(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-/** Every date from `start` (inclusive) to `end` (exclusive), as UTC-midnight ms. */
-function spanDays(start: Date, end: Date, into: Set<number>): void {
+/**
+ * Every date from `start` (inclusive) to `end` (exclusive), as UTC-midnight
+ * ms, each one credited to `id`.
+ *
+ * A `Map<day, id[]>` rather than the `Set<day>` this used to be: two stays
+ * can cover the same night, and the account's own arithmetic never needed to
+ * know which. The evidence panel does — "which entries produced this number"
+ * is unanswerable from a set of days.
+ */
+function spanDays(start: Date, end: Date, id: string, into: Map<number, string[]>): void {
   let cursor = dayKey(start);
   const last = dayKey(end);
   while (cursor < last) {
-    into.add(cursor);
+    const claimants = into.get(cursor);
+    if (claimants) claimants.push(id);
+    else into.set(cursor, [id]);
     cursor += DAY_MS;
   }
 }
@@ -79,22 +97,52 @@ function daysInYear(year: number): number {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
 }
 
-/**
- * `now` bounds the account: a booking for next year is not a night spent, and
- * a year that has not happened yet has no home nights to report either.
- */
-export function buildTravelAccount(input: {
+export interface TravelAccountInput {
   stays: AccountStay[];
   cruises: AccountCruise[];
   flights: AccountFlight[];
   now: Date;
-}): TravelAccount {
+}
+
+/** Which bucket the precedence rule awarded a night to. */
+export type NightSource = "hotel" | "sea" | "air";
+
+export interface AttributedNight {
+  /** UTC midnight of the night, in milliseconds. */
+  day: number;
+  /** The rows that claimed this night, per bucket; a bucket that did not claim it is absent. */
+  claims: Partial<Record<NightSource, string[]>>;
+  /** The winner of the precedence rule — `claims[awardedTo]` is never empty. */
+  awardedTo: NightSource;
+  /** More than one BUCKET claimed it, which is the only thing `contestedNights` counts. */
+  contested: boolean;
+}
+
+export interface TravelNightAttribution {
+  /** Ascending by day, so a caller may page it without sorting again. */
+  nights: AttributedNight[];
+  undatedStays: number;
+}
+
+/**
+ * The account's core, one step before it is folded into years: every night
+ * that was spent away from home, the rows that claimed it, and which of them
+ * the precedence rule awarded it to.
+ *
+ * Split out of `buildTravelAccount` so the evidence panel answers from the
+ * SAME walk rather than a second one. A resolver that re-derived "which stay
+ * produced this night" would be a second implementation of the precedence
+ * rule, and the first time the two disagreed the panel would name rows the
+ * tile did not count — which is the whole defect the panel exists to make
+ * impossible.
+ */
+export function attributeTravelNights(input: TravelAccountInput): TravelNightAttribution {
   const { stays, cruises, flights, now } = input;
   const today = dayKey(now);
 
-  const hotel = new Set<number>();
-  const sea = new Set<number>();
-  const air = new Set<number>();
+  const hotel = new Map<number, string[]>();
+  const sea = new Map<number, string[]>();
+  const air = new Map<number, string[]>();
   let undatedStays = 0;
 
   for (const stay of stays) {
@@ -114,14 +162,14 @@ export function buildTravelAccount(input: {
       undatedStays += 1;
       continue;
     }
-    spanDays(stay.checkIn, stay.checkOut, hotel);
+    spanDays(stay.checkIn, stay.checkOut, stay.id, hotel);
   }
 
   for (const cruise of cruises) {
     if (cruise.status === "cancelled" || cruise.status === "scheduled") continue;
     if (cruise.startDate === null || cruise.endDate === null) continue;
     if (dayKey(cruise.endDate) > today) continue;
-    spanDays(cruise.startDate, cruise.endDate, sea);
+    spanDays(cruise.startDate, cruise.endDate, cruise.id, sea);
   }
 
   for (const flight of flights) {
@@ -133,12 +181,47 @@ export function buildTravelAccount(input: {
     const dep = dayKey(flight.depLocalDay ?? flight.departureTime);
     const arr = dayKey(flight.arrLocalDay ?? flight.arrivalTime);
     if (arr <= dep || arr > today) continue;
-    for (let cursor = dep; cursor < arr; cursor += DAY_MS) air.add(cursor);
+    for (let cursor = dep; cursor < arr; cursor += DAY_MS) {
+      const claimants = air.get(cursor);
+      if (claimants) claimants.push(flight.id);
+      else air.set(cursor, [flight.id]);
+    }
   }
 
   // Precedence: at sea beats a hotel beats the air. A cabin is where the night
   // was actually slept when both are recorded, and a hotel bed beats a seat.
   // This is a convention — `contestedNights` says how often it had to be used.
+  const claimedDays = [...new Set([...sea.keys(), ...hotel.keys(), ...air.keys()])].sort(
+    (a, b) => a - b
+  );
+  const nights: AttributedNight[] = claimedDays.map((day) => {
+    const inSea = sea.get(day);
+    const inHotel = hotel.get(day);
+    const inAir = air.get(day);
+    const claims: Partial<Record<NightSource, string[]>> = {};
+    if (inSea) claims.sea = inSea;
+    if (inHotel) claims.hotel = inHotel;
+    if (inAir) claims.air = inAir;
+    return {
+      day,
+      claims,
+      awardedTo: inSea ? "sea" : inHotel ? "hotel" : "air",
+      contested: [inSea, inHotel, inAir].filter(Boolean).length > 1,
+    };
+  });
+
+  return { nights, undatedStays };
+}
+
+/**
+ * `now` bounds the account: a booking for next year is not a night spent, and
+ * a year that has not happened yet has no home nights to report either.
+ */
+export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
+  const { now } = input;
+  const today = dayKey(now);
+  const { nights, undatedStays } = attributeTravelNights(input);
+
   let contestedNights = 0;
   const byYear = new Map<string, TravelAccountYear>();
 
@@ -156,15 +239,14 @@ export function buildTravelAccount(input: {
     byYear.set(year, row);
   };
 
-  const claimed = new Set<number>([...sea, ...hotel, ...air]);
-  for (const ms of claimed) {
-    const inSea = sea.has(ms);
-    const inHotel = hotel.has(ms);
-    const inAir = air.has(ms);
-    if ([inSea, inHotel, inAir].filter(Boolean).length > 1) contestedNights += 1;
-    if (inSea) bump(ms, "seaNights");
-    else if (inHotel) bump(ms, "hotelNights");
-    else bump(ms, "airNights");
+  const BUCKET_OF: Record<NightSource, "hotelNights" | "seaNights" | "airNights"> = {
+    hotel: "hotelNights",
+    sea: "seaNights",
+    air: "airNights",
+  };
+  for (const night of nights) {
+    if (night.contested) contestedNights += 1;
+    bump(night.day, BUCKET_OF[night.awardedTo]);
   }
 
   // Home nights are the remainder, which means every year between the first
