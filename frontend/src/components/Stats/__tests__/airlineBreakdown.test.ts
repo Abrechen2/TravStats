@@ -33,7 +33,7 @@ function flight(id: string, airlineIata: string): Flight {
 
 describe("buildAirlineBreakdown", () => {
   it("keeps two carriers that share a display name apart", () => {
-    const rows = buildAirlineBreakdown(
+    const { byGroupKey: rows } = buildAirlineBreakdown(
       [flight("f1", "LH"), flight("f2", "LH"), flight("f3", "CL")],
       resolvers,
       () => 1
@@ -50,7 +50,7 @@ describe("buildAirlineBreakdown", () => {
   });
 
   it("sums the caller's own duration rule per group, and keeps the member rows", () => {
-    const rows = buildAirlineBreakdown(
+    const { byGroupKey: rows } = buildAirlineBreakdown(
       [flight("f1", "LH"), flight("f2", "LH")],
       resolvers,
       () => 1.5
@@ -59,13 +59,30 @@ describe("buildAirlineBreakdown", () => {
     expect(rows["iata:LH"].flights.map((f) => f.id)).toEqual(["f1", "f2"]);
   });
 
-  it("leaves a flight with no airline identity out of every group", () => {
-    const rows = buildAirlineBreakdown(
-      [flight("f1", "LH"), { id: "f2" } as unknown as Flight],
+  /**
+   * The un-grouped count comes back from the SAME fold as the rows. The page
+   * used to call `groupAirlines` a second time for it, which is the one rule
+   * folded twice per render — and two folds of one rule are two chances for
+   * "12 airlines" and "3 flights name no airline" to stop describing the same
+   * pass over the same flights.
+   */
+  it("leaves a flight with no airline identity out of every group, and counts it apart", () => {
+    const { byGroupKey: rows, withoutAirline } = buildAirlineBreakdown(
+      [flight("f1", "LH"), { id: "f2" } as unknown as Flight, { id: "f3" } as unknown as Flight],
       resolvers,
       () => 1
     );
     expect(Object.keys(rows)).toEqual(["iata:LH"]);
     expect(rows["iata:LH"].flights.map((f) => f.id)).toEqual(["f1"]);
+    expect(withoutAirline).toBe(2);
+  });
+
+  it("reports no un-grouped flights when every row names a carrier", () => {
+    const { withoutAirline } = buildAirlineBreakdown(
+      [flight("f1", "LH"), flight("f2", "CL")],
+      resolvers,
+      () => 1
+    );
+    expect(withoutAirline).toBe(0);
   });
 });

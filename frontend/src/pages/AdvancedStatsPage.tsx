@@ -16,7 +16,6 @@ import type {
 import { API_LIMITS } from "../lib/constants";
 import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
-import { groupAirlines } from "../shared/airlineNormalize";
 import { buildAirlineBreakdown } from "../components/Stats/airlineBreakdown";
 import { airlineResolvers } from "../lib/airlineUtils";
 import {
@@ -328,12 +327,14 @@ export default function AdvancedStatsPage(): JSX.Element {
   // a flight with no airline is counted apart instead of becoming a group
   // whose label is the empty string — that was the empty row in the list.
   // The fold itself lives in `components/Stats/airlineBreakdown.ts`, where
-  // its identity (the group KEY, never the label) has a test of its own.
-  const { withoutAirline: flightsWithoutAirline } = groupAirlines(
-    flights.map((f) => ({ ...f, count: 1 })),
-    airlineResolvers
+  // its identity (the group KEY, never the label) has a test of its own. ONE
+  // call: the "no airline named" count comes back from the same fold as the
+  // rows, rather than from a second `groupAirlines` over the same flights.
+  const { byGroupKey: airlineStats, withoutAirline: flightsWithoutAirline } = buildAirlineBreakdown(
+    flights,
+    airlineResolvers,
+    calculateDuration
   );
-  const airlineStats = buildAirlineBreakdown(flights, airlineResolvers, calculateDuration);
 
   const sortedAirlines = Object.entries(airlineStats)
     .sort(([, a], [, b]) => b.count - a.count)

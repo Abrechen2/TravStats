@@ -29,16 +29,28 @@ export interface AirlineBreakdownRow {
   flights: Flight[];
 }
 
+export interface AirlineBreakdown {
+  /** Keyed by the group KEY — see the note above on why never by the label. */
+  byGroupKey: Record<string, AirlineBreakdownRow>;
+  /**
+   * Counted flights naming no airline at all. Returned from here rather than
+   * left to a second `groupAirlines` call at the caller: the page ran the
+   * whole fold twice per render, once for this number and once for the rows,
+   * and two folds of one rule are two chances for them to answer differently.
+   */
+  withoutAirline: number;
+}
+
 export function buildAirlineBreakdown(
   flights: Flight[],
   resolvers: AirlineResolvers,
   durationHours: (flight: Flight) => number
-): Record<string, AirlineBreakdownRow> {
-  const { groups } = groupAirlines(
+): AirlineBreakdown {
+  const { groups, withoutAirline } = groupAirlines(
     flights.map((f) => ({ ...f, count: 1 })),
     resolvers
   );
-  return groups.reduce<Record<string, AirlineBreakdownRow>>((acc, group) => {
+  const byGroupKey = groups.reduce<Record<string, AirlineBreakdownRow>>((acc, group) => {
     const members = flights.filter((f) => airlineGroupKey(f, resolvers) === group.key);
     acc[group.key] = {
       label: group.label,
@@ -48,4 +60,5 @@ export function buildAirlineBreakdown(
     };
     return acc;
   }, {});
+  return { byGroupKey, withoutAirline };
 }
