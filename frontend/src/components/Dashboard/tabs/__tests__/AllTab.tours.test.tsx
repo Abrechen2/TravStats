@@ -134,10 +134,6 @@ function betaOn(): { betaFeaturesEnabled: boolean; isFeatureVisible: (key: strin
   return { betaFeaturesEnabled: true, isFeatureVisible: (key: string) => key === "tourRoutes" };
 }
 
-function betaOff(): { betaFeaturesEnabled: boolean; isFeatureVisible: () => boolean } {
-  return { betaFeaturesEnabled: true, isFeatureVisible: () => false };
-}
-
 beforeEach(() => {
   mapProps.length = 0;
   mockUseDashboardTours.mockReset();
@@ -244,28 +240,6 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
     expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
-  });
-
-  it("never fetches or renders tour UI while the tourRoutes beta gate is off", () => {
-    mockUseBetaFeatures.mockReturnValue(betaOff());
-    mockUseDashboardTours.mockReturnValue({
-      ...READY_NO_TOURS,
-      tours: [TOUR_A],
-      geometries: [GEOMETRY],
-    });
-
-    render(
-      <MemoryRouter>
-        <AllTab />
-      </MemoryRouter>
-    );
-
-    // The hook is still called (rules of hooks), but with enabled=false —
-    // it must refuse to fetch on its own end; here we assert AllTab asked
-    // for it to be off.
-    expect(mockUseDashboardTours).toHaveBeenCalledWith(false);
-    expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
-    expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
   });
 
   it("does not draw tour lines or legend in journey mode", async () => {

@@ -16,8 +16,8 @@ describe("useBetaFeatures", () => {
     const { result } = renderHook(() => useBetaFeatures());
     expect(result.current.betaFeaturesEnabled).toBeNull();
     expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(false);
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(false);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
   });
 
   it("hides everything when the flag is off", () => {
@@ -30,17 +30,17 @@ describe("useBetaFeatures", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     const { result } = renderHook(() => useBetaFeatures());
     expect(result.current.isFeatureVisible("devicePairing")).toBe(true);
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(true);
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(true);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(true);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(true);
   });
 
   it("reacts to the flag arriving from the settings request", () => {
     const { result } = renderHook(() => useBetaFeatures());
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(false);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(false);
     act(() => {
       useSettingsStore.setState({ betaFeaturesEnabled: true });
     });
-    expect(result.current.isFeatureVisible("tripAiSummary")).toBe(true);
+    expect(result.current.isFeatureVisible("devicePairing")).toBe(true);
   });
 
   it("never persists the flag to localStorage", () => {

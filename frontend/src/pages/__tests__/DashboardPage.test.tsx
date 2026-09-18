@@ -106,18 +106,25 @@ beforeEach(() => {
   useSettingsStore.setState({ enabledDomains: ["flight", "cruise", "lodging", "poi"] });
 });
 
-describe("DashboardPage: gated tabs at a cold-load 'don't know yet' beta flag", () => {
-  it("renders no TourTab while betaFeaturesEnabled is null (pending) — but PoiTab, which left the switch on 2026-09-05", () => {
+// Tours and places both left the beta switch — places on 2026-09-05, tours on
+// 2026-09-18 — so what this file guards is no longer "does the gate hold" but
+// the thing that outlived it: a tab must NOT disappear while the instance flag
+// is still unknown. That was the original defect (a cold load bounced
+// /dashboard/tour and /dashboard/poi away before the flag had answered), and
+// it is worth keeping a test for even with nothing gated, because the next
+// gated tab will be written by copying a neighbour.
+describe("DashboardPage: a tab does not wait for the beta flag", () => {
+  it("renders both tabs while betaFeaturesEnabled is null (pending)", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null });
 
     renderAt("tour");
-    expect(screen.queryByTestId("tour-tab")).not.toBeInTheDocument();
+    expect(screen.getByTestId("tour-tab")).toBeInTheDocument();
 
     renderAt("poi");
     expect(screen.getByTestId("poi-tab")).toBeInTheDocument();
   });
 
-  it("renders TourTab once the flag resolves true, matching PoiTab's own resolved case", () => {
+  it("renders both tabs once the flag resolves true", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
 
     renderAt("tour");

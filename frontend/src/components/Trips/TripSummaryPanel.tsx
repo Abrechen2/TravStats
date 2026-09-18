@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 
@@ -37,10 +36,12 @@ export function TripSummaryPanel({
   onChanged: () => void;
 }): JSX.Element | null {
   const addToast = useToastStore((s) => s.addToast);
-  const { isFeatureVisible } = useBetaFeatures();
   const [generating, setGenerating] = useState(false);
 
-  const canGenerate = isFeatureVisible("tripAiSummary");
+  // Released on 2026-09-18. The card checks the SERVER's own answer instead:
+  // `available` says whether a model is reachable at all, which is the real
+  // reason a button here would do nothing.
+  const canGenerate = true;
 
   const generate = async (): Promise<void> => {
     setGenerating(true);

@@ -51,15 +51,17 @@ export interface BetaFeatureMeta {
   readonly issue?: string;
 }
 
+/**
+ * OWNER DECISION 2026-09-18: everything comes out of the registry EXCEPT the
+ * phone app. `tripAiSummary`, `tourRoutes` and `dawarich` are released; the
+ * one entry left is `devicePairing`, and it stays for the reason its own text
+ * gives — the Companion is a TestFlight build, so offering a Devices section
+ * to everybody would mint claim codes for an app they cannot install.
+ *
+ * That makes the 2.7 goal ("nothing left in the registry") a question about
+ * the app, and nothing else.
+ */
 export const BETA_FEATURES = Object.freeze({
-  /** The LLM trip-summary card on the trip detail page. */
-  tripAiSummary: Object.freeze({
-    reason: "beta",
-    why: 'The 2026-09-05 defects are fixed (the admin\'s Ollama, the reader\'s language, stays and places in the brief). What keeps the gate is the prose. Measured 2026-09-17 against gemma3:12b over four trips, after six rounds of prompt work: the facts, the nights, the person and the order are right, the notes and journal are retold well — and the model still adds colour nobody gave it ("escaping the Hamburg winter", "a charming cabin") and once put a journal line in a companion\'s mouth ("which Jonas declared the best day"). A travel diary that invents a sentence about your own trip is worse than none.',
-    returnsWhen:
-      "A summary reads clean over the same four trips (backend/src/services/tripSummaryService.ts documents them): no colour that is not in the data, no sentence attributed to somebody who did not say it. Either a local model that follows the brief that closely, or the owner deciding that light embellishment is acceptable product.",
-  }),
-
   /**
    * The "Devices" section in user settings (QR claim-code pairing flow).
    *
@@ -76,41 +78,6 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen:
       "The Companion is installable outside TestFlight — a public build a reader of the release notes can actually get — and the owner accepts the pairing flow for release.",
     reason: "advanced",
-  }),
-
-  /**
-   * The "Touren" tab on the trip detail page (tour route sections: a named
-   * ordered chain of stops with driven legs — the road-trip counterpart to
-   * cruise itineraries), and its editor at
-   * `/trips/:id/route/:routeId` — gated the same way as the tab, since the
-   * editor is otherwise reachable by URL with the tab hidden.
-   *
-   * The list AND its editor (stop assignment, per-leg mode/source
-   * overrides, the route map) are both feature-complete now. The gate stays
-   * on because the feature as a whole is still awaiting the owner's release
-   * decision, not because anything named here is unfinished.
-   */
-  tourRoutes: Object.freeze({
-    why: "The section list and its editor work end to end, but the feature is unfinished and may change. Released on 2026-09-01 on the owner's earlier acceptance; on 2026-09-05 the owner ruled it beta again, together with the Companion pairing and Dawarich, so the three move as one.",
-    returnsWhen: "The owner accepts tours for release.",
-    reason: "beta",
-  }),
-
-  /**
-   * The Dawarich connection — a self-hosted location-history server TravStats
-   * PULLS recorded tracks from, never writes to.
-   *
-   * It has its own key rather than riding on `tourRoutes`, even though tours
-   * are its only consumer today. Dawarich is an integration, not a feature of
-   * one domain: `dev/cruise-tracks` will take cruise legs from the same
-   * connection, and a gate named after tours would then hide a card the cruise
-   * feature needs. Gating an integration on one of its consumers is only ever
-   * right while there is exactly one.
-   */
-  dawarich: Object.freeze({
-    why: "The connection, the pull and the settings card work, but every consumer of a recorded track (tours) is beta again since 2026-09-05, so the connection that feeds it is too. Its own key on purpose: cruise legs will pull from the same connection.",
-    returnsWhen: "Tours are released, or another consumer of recorded tracks ships.",
-    reason: "beta",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
