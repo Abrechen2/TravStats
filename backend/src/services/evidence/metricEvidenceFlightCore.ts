@@ -21,16 +21,41 @@ import { getBaseCurrency } from "../fx/snapshot";
  * `flightTimeMinutes`, `distanceKmTotal`, `airlineCount`,
  * `flightsWithoutAirlineCount`, `businessTotalCost`, `punctualitySampleSize`
  * (task-7-brief.md, `evidenceMeasuresFlightCore.ts`). All seven answer over
- * the SAME population — every countable flight, all time, no year — so they
- * share ONE identity query rather than one `findMany` per key. Each resolver
- * still reads only the columns its own measure needs, the way the ranking
- * resolvers each project their own subset. Paging and hydration are shared
- * via `entryMappers.ts`, not re-derived per resolver.
+ * the SAME population — every countable flight, all time, no year — under
+ * one shared `where`, and each reads only the columns its own measure needs.
+ * Paging and hydration are shared via `entryMappers.ts`, not re-derived per
+ * resolver.
+ *
+ * The population used to be ONE twenty-column select with a `booking` join,
+ * which every resolver called, while this paragraph claimed each read only
+ * its own columns. `resolveFlightCount` — which needs an id and a date —
+ * was therefore loading prices, coordinates, durations and a joined booking
+ * row for every countable flight on the account, on an endpoint one click
+ * opens. The four projections below are what the comment always said, and
+ * the shared `where` is what made a single select look like the economical
+ * choice in the first place.
  */
 
-interface FlightCoreIdentityRow {
+/** The shared population: one predicate, four projections over it. */
+function countableFlightsOf(userId: string) {
+  return { userId, ...countableFlightWhere() };
+}
+
+/** `flightCount`: what it takes to count a row and sort it by date. */
+interface FlightIdentityRow {
   id: string;
   departureTime: Date | null;
+}
+
+async function loadFlightIdentityRows(userId: string): Promise<FlightIdentityRow[]> {
+  return prisma.flight.findMany({
+    where: countableFlightsOf(userId),
+    select: { id: true, departureTime: true },
+  });
+}
+
+/** `flightTimeMinutes` and `distanceKmTotal`: clocks and coordinates, no money. */
+interface FlightMeasurementRow extends FlightIdentityRow {
   arrivalTime: Date | null;
   depLat: number;
   depLon: number;
@@ -38,9 +63,52 @@ interface FlightCoreIdentityRow {
   arrLon: number;
   durationMinutes: number | null;
   depTimeSemantics: string | null;
+}
+
+async function loadFlightMeasurementRows(userId: string): Promise<FlightMeasurementRow[]> {
+  return prisma.flight.findMany({
+    where: countableFlightsOf(userId),
+    select: {
+      id: true,
+      departureTime: true,
+      arrivalTime: true,
+      depLat: true,
+      depLon: true,
+      arrLat: true,
+      arrLon: true,
+      durationMinutes: true,
+      depTimeSemantics: true,
+    },
+  });
+}
+
+/** `airlineCount` and `flightsWithoutAirlineCount`: the three columns `airlineGroupKey` reads. */
+interface FlightAirlineRow extends FlightIdentityRow {
   airline: string | null;
   airlineIata: string | null;
   airlineIcao: string | null;
+}
+
+async function loadFlightAirlineRows(userId: string): Promise<FlightAirlineRow[]> {
+  return prisma.flight.findMany({
+    where: countableFlightsOf(userId),
+    select: {
+      id: true,
+      departureTime: true,
+      airline: true,
+      airlineIata: true,
+      airlineIcao: true,
+    },
+  });
+}
+
+/**
+ * `businessTotalCost` alone: `CostFlight` (`utils/stats/dedupedCost.ts`) in
+ * full, including the `booking` join a shared booking's amount is read from.
+ * The only projection here that joins another table, and the reason the
+ * split is worth having.
+ */
+interface FlightCostRow extends FlightIdentityRow {
   price: number | null;
   taxes: number | null;
   fees: number | null;
@@ -56,22 +124,12 @@ interface FlightCoreIdentityRow {
   } | null;
 }
 
-async function loadFlightCoreIdentityRows(userId: string): Promise<FlightCoreIdentityRow[]> {
+async function loadFlightCostRows(userId: string): Promise<FlightCostRow[]> {
   return prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
+    where: countableFlightsOf(userId),
     select: {
       id: true,
       departureTime: true,
-      arrivalTime: true,
-      depLat: true,
-      depLon: true,
-      arrLat: true,
-      arrLon: true,
-      durationMinutes: true,
-      depTimeSemantics: true,
-      airline: true,
-      airlineIata: true,
-      airlineIcao: true,
       price: true,
       taxes: true,
       fees: true,
@@ -109,7 +167,7 @@ export async function resolveFlightCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "flightCount");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightIdentityRows(userId);
   const matched = rows.map((r) => ({
     id: r.id,
     date: flightDateOf(r.departureTime),
@@ -154,7 +212,7 @@ export async function resolveFlightTimeMinutes(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "flightTimeMinutes");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightMeasurementRows(userId);
   const matched = rows.map((r) => {
     const stored = r.durationMinutes != null && r.durationMinutes > 0 ? r.durationMinutes : null;
     const measuredMinutes = stored ?? measureFlightMinutes(r);
@@ -198,7 +256,7 @@ export async function resolveDistanceKmTotal(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "distanceKmTotal");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightMeasurementRows(userId);
   const matched = rows.map((r) => ({
     id: r.id,
     date: flightDateOf(r.departureTime),
@@ -236,7 +294,7 @@ export async function resolveDistanceKmTotal(
  * `flightsWithoutAirlineCount` counts.
  */
 function flightAirlineGroupKeys(
-  rows: FlightCoreIdentityRow[]
+  rows: FlightAirlineRow[]
 ): Array<{ id: string; departureTime: Date | null; groupKey: string | null }> {
   return rows.map((r) => ({
     id: r.id,
@@ -251,7 +309,7 @@ export async function resolveAirlineCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "airlineCount");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightAirlineRows(userId);
   const withKeys = flightAirlineGroupKeys(rows);
   const matched = withKeys.map((row) => ({
     id: row.id,
@@ -288,7 +346,7 @@ export async function resolveFlightsWithoutAirlineCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "flightsWithoutAirlineCount");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightAirlineRows(userId);
   const withoutAirline = flightAirlineGroupKeys(rows).filter((row) => row.groupKey === null);
   const matched = withoutAirline.map((row) => ({
     id: row.id,
@@ -339,7 +397,7 @@ export async function resolveBusinessTotalCost(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "businessTotalCost");
-  const rows = await loadFlightCoreIdentityRows(userId);
+  const rows = await loadFlightCostRows(userId);
   const baseCurrency = await getBaseCurrency(userId);
   const cost = computeDedupedTotalCost(rows, baseCurrency);
   const matched = rows.map((r, index) => ({
