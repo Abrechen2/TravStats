@@ -64,6 +64,11 @@ import {
   resolveTravelAccountUncoveredDayCount,
   resolveTravelAccountJournalEntryCount,
 } from "./metricEvidenceTravelAccount";
+import {
+  resolveCrossDomainEventCount,
+  resolveCrossDomainCountryCount,
+  resolveCrossDomainActiveDayCount,
+} from "./metricEvidenceCrossDomain";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -76,8 +81,8 @@ import {
  * Only `servedIn: 1` keys are wired: eighteen of
  * `evidenceMeasuresFlightCore.ts`'s own measures (every `sum`/`distinct` key
  * on that surface, Task 7), the twenty-two `sum`/`distinct` keys of
- * `evidenceMeasuresFlightFun.ts` (Task 7b-1) and the nine travel-account
- * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2) — forty-nine in
+ * `evidenceMeasuresFlightFun.ts` (Task 7b-1) and all twelve `sum`/`distinct`
+ * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2) — fifty-two in
  * all. Nothing yet from `evidenceMeasuresDomains.ts`; see task-7-report.md,
  * task-7b-1-report.md and task-7b-2-report.md for served vs. outstanding.
  */
@@ -137,6 +142,9 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountTripsWithDatesCount: resolveTravelAccountTripsWithDatesCount,
   travelAccountUncoveredDayCount: resolveTravelAccountUncoveredDayCount,
   travelAccountJournalEntryCount: resolveTravelAccountJournalEntryCount,
+  crossDomainEventCount: resolveCrossDomainEventCount,
+  crossDomainCountryCount: resolveCrossDomainCountryCount,
+  crossDomainActiveDayCount: resolveCrossDomainActiveDayCount,
 };
 
 /**

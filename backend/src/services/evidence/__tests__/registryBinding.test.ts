@@ -23,17 +23,29 @@ describe("the evidence registry binds the resolvers that exist", () => {
   let userId: string;
   const page = { offset: 0, limit: 10 };
 
+  /**
+   * `domainFiltered` is a registry vocabulary word on a DIFFERENT axis from
+   * the other three: it says the tile narrows by domain chip, not that it
+   * has no period. The `crossDomainKpis` strip carries it and still offers
+   * lifetime or a single year, which is why it maps to a real period here
+   * and why the scope loop below treats it apart.
+   */
   const scopeFor = (scope: MeasureScope): EvidenceScope | null => {
     if (scope === "allTime") return { period: { kind: "allTime" } };
     if (scope === "rolling12m") return { period: { kind: "rolling12m" } };
     if (scope === "year") return { period: { kind: "year", year: 2025 } };
-    // `domainFiltered` is a registry vocabulary word for a tile that narrows
-    // by domain rather than by period; no served measure carries it yet, and
-    // it is not an `EvidenceScope.period` at all.
-    return null;
+    return { period: { kind: "allTime" }, domains: ["flight", "cruise", "lodging", "place"] };
   };
 
   const ALL_PERIOD_SCOPES: MeasureScope[] = ["allTime", "year", "rolling12m"];
+
+  /** Which periods a `domainFiltered` measure must accept — the strip's own two. */
+  const DOMAIN_FILTERED_PERIODS: MeasureScope[] = ["allTime", "year"];
+
+  const acceptedPeriodsOf = (scopes: MeasureScope[]): MeasureScope[] =>
+    scopes.includes("domainFiltered")
+      ? DOMAIN_FILTERED_PERIODS
+      : scopes.filter((scope) => scope !== "domainFiltered");
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: "evidenceregistrybinding" } });
@@ -110,9 +122,10 @@ describe("the evidence registry binds the resolvers that exist", () => {
   it("each resolver accepts exactly the scopes its registry entry lists, and 400s on the others", async () => {
     for (const key of servedMetricKeys()) {
       const entry = EVIDENCE_MEASURES[key];
+      const accepts = acceptedPeriodsOf(entry.scopes);
       for (const candidate of ALL_PERIOD_SCOPES) {
         const scope = scopeFor(candidate)!;
-        const declared = entry.scopes.includes(candidate);
+        const declared = accepts.includes(candidate);
         let accepted = true;
         try {
           await resolveMetricEvidence(userId, key, scope, page);

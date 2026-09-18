@@ -13,7 +13,7 @@ import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { StatsPeriod } from "../useStatsPeriod";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
-import { aggregate, collectYears } from "./aggregate";
+import { aggregate, collectYears, foldedDomains } from "./aggregate";
 import CrossDomainKpis from "./CrossDomainKpis";
 import CrossDomainActivityChart from "./CrossDomainActivityChart";
 import CrossDomainHeatmap from "./CrossDomainHeatmap";
@@ -65,6 +65,9 @@ export default function OverviewTab({
   const years = useMemo(() => collectYears(stats, visible), [stats, visible]);
 
   const agg = aggregate(stats, visible, selectedYear);
+  // The evidence scope names the population the KPI numbers describe, which
+  // is what the fold READ — not the chip state (see `foldedDomains`).
+  const folded = useMemo(() => foldedDomains(stats, visible), [stats, visible]);
   const prevAgg =
     compareEnabled && selectedYear !== null && compareYear !== null
       ? aggregate(stats, visible, compareYear)
@@ -94,6 +97,7 @@ export default function OverviewTab({
             compareYear={compareYear}
             compareEnabled={compareEnabled}
             achievements={achievements}
+            foldedDomains={folded}
           />
         </section>
       )}
