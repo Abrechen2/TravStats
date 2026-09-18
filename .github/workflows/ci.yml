@@ -524,7 +524,7 @@ jobs:
   # This job used to check only the frontend files a change touched, and
   # said why: ~95 frontend files and nearly the whole backend had never been
   # formatted, so a repo-wide check would have been red on every push
-  # whatever it contained. `9349b975` formatted the tree once (and is listed
+  # whatever it contained. `51348f58` formatted the tree once (and is listed
   # in .git-blame-ignore-revs), which removes the reason. A full check is
   # also the cheaper one to reason about: nothing depends on a diff range.
   #
