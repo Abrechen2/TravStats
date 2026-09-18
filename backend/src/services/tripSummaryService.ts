@@ -151,21 +151,68 @@ function getGenerateTimeoutMs(): number {
  *    Liberty on 13 August, the Met, Brooklyn Bridge, souvenirs — on a trip
  *    holding one flight and nothing else. **"ausschließlich" was
  *    load-bearing**; removing the noun took the anchor with it.
- * 3. What holds: keep the "only", drop the noun. "Du erzählst ausschließlich
- *    die genannten Stationen, jede genau einmal." The constraint stays, and
- *    completeness is no longer a subject the model can remark on.
+ * 3. Keep the "only", drop the noun. "Du erzählst ausschließlich die genannten
+ *    Stationen, jede genau einmal." Better, and the meta-sentence was gone —
+ *    but the model still named three hotels ("The Knickerbocker", "The
+ *    Dominick", "Four Seasons") on a trip with no stay at all.
+ * 4. Because rule 3 still LISTED the kinds: "Hotels, Orte, Stopps". That is
+ *    the same defect one level down — a category named in the prompt but
+ *    absent from the brief is an invitation, exactly as "notes" and "journal"
+ *    were. Rule 3 is built from what the brief actually carries now
+ *    (`briefEntityNouns`), so a flight-only trip is told about flights and
+ *    nothing else.
+ *
+ * The rule the whole block comes down to: **the prompt may name only what the
+ * brief carries** — no field, and no category either.
  */
-const VOICE_RULES: Record<SummaryLanguage, Record<"withVoice" | "withoutVoice", string>> = {
+
+/** The kinds of entry a brief can carry, in the order a summary walks them. */
+const ENTITY_NOUNS: Record<SummaryLanguage, Record<string, string>> = {
   de: {
-    withVoice: `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit den Namen aus den Daten — Hotels, Orte, Stopps — und "notes" sowie "journal" frei nacherzählt.
-4. Du erzählst ausschließlich, was in den Daten steht. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.`,
-    withoutVoice: `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen — Hotels, Orte, Stopps.
+    flights: "Flüge",
+    cruises: "Kreuzfahrten",
+    stays: "Hotels",
+    places: "Orte",
+    stops: "Stopps",
+  },
+  en: { flights: "flights", cruises: "cruises", stays: "hotels", places: "places", stops: "stops" },
+};
+
+/**
+ * The nouns rule 3 may use: one per kind the brief actually holds.
+ * Empty when the trip carries nothing to walk, which the rules then phrase
+ * without a list rather than with an empty one.
+ */
+export function briefEntityNouns(brief: SummaryBrief, language: SummaryLanguage): string[] {
+  const present: string[] = [];
+  if (brief.flights.length > 0) present.push("flights");
+  if (brief.cruises.length > 0) present.push("cruises");
+  if (brief.stays.length > 0) present.push("stays");
+  if (brief.places.length > 0) present.push("places");
+  if (brief.stops.length > 0) present.push("stops");
+  return present.map((k) => ENTITY_NOUNS[language][k]);
+}
+
+const VOICE_RULES: Record<
+  SummaryLanguage,
+  Record<"withVoice" | "withoutVoice", (nouns: string) => string>
+> = {
+  de: {
+    withVoice: (
+      nouns
+    ) => `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen${nouns}, und "notes" sowie "journal" frei nacherzählt.
+4. Du erzählst ausschließlich die genannten Stationen. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.`,
+    withoutVoice: (
+      nouns
+    ) => `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen${nouns}.
 4. Du erzählst ausschließlich die genannten Stationen, jede genau einmal. Der Text endet mit der letzten.`,
   },
   en: {
-    withVoice: `3. Paragraph 2: the stops in order of time, with the names from the data — hotels, places, stops — and "notes" and "journal" retold freely.
-4. You retell only what the data holds. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.`,
-    withoutVoice: `3. Paragraph 2: the stops in order of time, with their names — hotels, places, stops.
+    withVoice: (
+      nouns
+    ) => `3. Paragraph 2: the stops in order of time, with their names${nouns}, and "notes" and "journal" retold freely.
+4. You retell only the stops you are given. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.`,
+    withoutVoice: (nouns) => `3. Paragraph 2: the stops in order of time, with their names${nouns}.
 4. You retell only the stops you are given, each exactly once. The text ends with the last one.`,
   },
 };
@@ -224,8 +271,15 @@ export function briefHasVoice(brief: SummaryBrief): boolean {
   return brief.places.some((p) => p.notes);
 }
 
-export function buildSystemPrompt(language: SummaryLanguage, hasVoice = true): string {
-  const rules = VOICE_RULES[language][hasVoice ? "withVoice" : "withoutVoice"];
+export function buildSystemPrompt(
+  language: SummaryLanguage,
+  hasVoice = true,
+  nouns: string[] = Object.values(ENTITY_NOUNS[language])
+): string {
+  // An em dash and the list, or nothing at all — never " — ." with an empty
+  // list, and never a category this trip does not have.
+  const suffix = nouns.length > 0 ? ` — ${nouns.join(", ")}` : "";
+  const rules = VOICE_RULES[language][hasVoice ? "withVoice" : "withoutVoice"](suffix);
   return SYSTEM_PROMPTS[language](rules);
 }
 
@@ -603,7 +657,7 @@ export async function summariseTrip(
   );
 
   const raw = await generate(target, {
-    system: buildSystemPrompt(language, briefHasVoice(brief)),
+    system: buildSystemPrompt(language, briefHasVoice(brief), briefEntityNouns(brief, language)),
     prompt: buildUserPrompt(language, briefJson),
   });
   const narrated = cleanSummary(raw);

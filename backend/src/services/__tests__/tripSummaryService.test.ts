@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import {
+  briefEntityNouns,
   briefFromTrip,
   briefHasVoice,
   buildSystemPrompt,
@@ -91,18 +92,41 @@ describe("tripSummaryService", () => {
       }
     });
 
-    // Second round, same lesson one word further. With "you retell only what
-    // the DATA holds" in the voiceless rules, the build answered "Die
+    // The same defect one level down: with rule 3 listing "Hotels, Orte,
+    // Stopps", a trip holding one flight and nothing else was given three
+    // invented hotels ("The Knickerbocker", "The Dominick", "Four Seasons").
+    // A category named in the prompt but absent from the brief is an
+    // invitation, exactly as the two field names were.
+    it("names only the kinds of entry the trip actually holds", () => {
+      const flightOnly = buildSystemPrompt("de", false, ["Flüge"]);
+      expect(flightOnly).toMatch(/— Flüge\./);
+      expect(flightOnly).not.toMatch(/Hotels/);
+      expect(flightOnly).not.toMatch(/Stopps/);
+
+      const withStays = buildSystemPrompt("en", false, ["flights", "hotels"]);
+      expect(withStays).toMatch(/— flights, hotels\./);
+      expect(withStays).not.toMatch(/places/);
+    });
+
+    it("writes no dangling dash when the trip holds nothing to walk", () => {
+      for (const language of ["de", "en"] as const) {
+        const prompt = buildSystemPrompt(language, false, []);
+        expect(prompt).not.toMatch(/—\s*\./);
+        expect(prompt).toMatch(/(mit ihren Namen\.|with their names\.)/);
+      }
+    });
+
+    // Second round, same lesson one word further. With "Du erzählst
+    // ausschließlich, was in den Daten steht" the build answered "Die
     // restlichen Tage unserer Reise sind leider nicht in den Daten
-    // festgehalten" — the absence as news, and about the data rather than the
-    // trip. The voiceless rules talk about stops, not about data.
-    // The opening line ("you are given the data of one trip") stays — it is
-    // framing. What goes is the RULE that makes completeness the subject.
+    // festgehalten" — an absence as news, about the data rather than the trip.
+    // The opening line ("you are given the data of one trip") stays; it is
+    // framing, and nothing reached for it there.
     //
-    // The "only" must NOT go with it. Dropping the whole clause was measured
-    // and was far worse than the sentence it removed: on a trip holding one
-    // flight, the model wrote ten days of invented itinerary — a hotel in
-    // Greenwich Village, the Statue of Liberty, the Met, Brooklyn Bridge.
+    // The "only" must NOT go with the noun. Dropping the whole clause was
+    // measured and was far worse than the sentence it removed: on the same
+    // one-flight trip the model wrote ten days of invented itinerary — a hotel
+    // in Greenwich Village, the Statue of Liberty, the Met, Brooklyn Bridge.
     it("keeps the 'only' that anchors the text, without naming the data", () => {
       for (const [language, only, noun] of [
         ["de", /ausschließlich/, /in den Daten steht/],
@@ -274,6 +298,32 @@ describe("tripSummaryService", () => {
           ],
         })
       ).toBe(true);
+    });
+
+    it("lists exactly the kinds the brief carries, in walking order", () => {
+      expect(briefEntityNouns(silent(), "de")).toEqual([]);
+      expect(
+        briefEntityNouns({ ...silent(), flights: [{ from: "FRA", to: "JFK", date: null }] }, "de")
+      ).toEqual(["Flüge"]);
+      expect(
+        briefEntityNouns(
+          {
+            ...silent(),
+            flights: [{ from: "FRA", to: "JFK", date: null }],
+            places: [
+              {
+                name: "Met",
+                category: "museum",
+                city: null,
+                country: null,
+                date: null,
+                notes: null,
+              },
+            ],
+          },
+          "en"
+        )
+      ).toEqual(["flights", "places"]);
     });
 
     it("stays false when the only entries carry no words of their own", () => {
