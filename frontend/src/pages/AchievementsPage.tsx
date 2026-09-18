@@ -551,15 +551,8 @@ export default function AchievementsPage(): JSX.Element {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.04, duration: 0.2 }}
-                            // A pointer cursor and a hover zoom on a card with no
-                            // click handler is a promise the page cannot keep: a
-                            // tester reported both, clicked, and nothing happened
-                            // (#330). Removed rather than made clickable — the
-                            // detail view that would justify them ("which flights
-                            // earned this") is a feature, and the card is being
-                            // rebuilt on the design branch. The card announces
-                            // nothing now, which is what it does.
-                            className="relative rounded-xl overflow-hidden"
+                            whileHover={achievement.isUnlocked ? { scale: 1.04 } : {}}
+                            className="relative rounded-xl overflow-hidden cursor-pointer"
                             style={{
                               background: "var(--bg-surface)",
                               border: "1px solid var(--color-border)",
