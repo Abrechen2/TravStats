@@ -59,8 +59,27 @@ describe("TripInsightsBar (#3)", () => {
     );
     expect(screen.getByText("Grand Tour")).toBeInTheDocument();
     expect(screen.getByText("Luxe")).toBeInTheDocument();
+    // No exclusion note at count 0 — see the next test for count > 0.
+    expect(screen.queryByText("trips:insights.mostExpensiveExcluded")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Grand Tour"));
     expect(navigate).toHaveBeenCalledWith("/trips/wide");
+  });
+
+  it("shows the exclusion note when some trips could not be compared (fix round 1, finding 2)", () => {
+    render_(
+      [trip({ id: "rich", name: "Luxe", bookings: [{ price: 9000, currency: "EUR" }] as never })],
+      {
+        tripId: "rich",
+        name: "Luxe",
+        amount: 9000,
+        currency: "EUR",
+        excluded: { count: 2, reason: "unconvertible" },
+      }
+    );
+    // The mocked `useTranslation` returns the bare key, ignoring
+    // interpolation — this asserts the LINE is rendered, not its final copy
+    // (covered by the DE/EN JSON resources + the locale-parity test).
+    expect(screen.getByText("trips:insights.mostExpensiveExcluded")).toBeInTheDocument();
   });
 });

@@ -304,7 +304,9 @@
   "insights": {
     "longest": "Longest trip",
     "mostExpensive": "Most expensive trip",
-    "mostCountries": "Most countries"
+    "mostCountries": "Most countries",
+    "mostExpensiveExcluded_one": "{{count}} trip left out: no conversion",
+    "mostExpensiveExcluded_other": "{{count}} trips left out: no conversion"
   },
   "deleteTripConfirmTitle": "Delete trip?",
   "tours": {

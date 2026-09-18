@@ -304,7 +304,9 @@
   "insights": {
     "longest": "Längste Reise",
     "mostExpensive": "Teuerste Reise",
-    "mostCountries": "Meiste Länder"
+    "mostCountries": "Meiste Länder",
+    "mostExpensiveExcluded_one": "{{count}} Reise ohne Umrechnung nicht verglichen",
+    "mostExpensiveExcluded_other": "{{count}} Reisen ohne Umrechnung nicht verglichen"
   },
   "deleteTripConfirmTitle": "Reise löschen?",
   "tours": {

@@ -28,9 +28,20 @@ export function TripInsightsBar({
   const navigate = useNavigate();
   const insights = computeTripInsights(trips, i18n.language ?? "de", mostExpensiveTrip);
 
-  const tiles: Array<{ key: string; label: string; win: TripInsightWinner | null }> = [
+  const tiles: Array<{
+    key: string;
+    label: string;
+    win: TripInsightWinner | null;
+    /** Only the `mostExpensive` tile carries this — see `mostExpensiveExcludedCount`. */
+    excludedCount?: number;
+  }> = [
     { key: "longest", label: t("trips:insights.longest"), win: insights.longest },
-    { key: "mostExpensive", label: t("trips:insights.mostExpensive"), win: insights.mostExpensive },
+    {
+      key: "mostExpensive",
+      label: t("trips:insights.mostExpensive"),
+      win: insights.mostExpensive,
+      excludedCount: insights.mostExpensiveExcludedCount,
+    },
     { key: "mostCountries", label: t("trips:insights.mostCountries"), win: insights.mostCountries },
   ];
 
@@ -49,7 +60,7 @@ export function TripInsightsBar({
     // page on a phone.
     <div>
       <div className={`ts-insight-strip max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-4 sm:mb-6`}>
-        {tiles.map(({ key, label, win }) =>
+        {tiles.map(({ key, label, win, excludedCount }) =>
           win ? (
             <button
               key={key}
@@ -70,6 +81,14 @@ export function TripInsightsBar({
               <div className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
                 {win.name}
               </div>
+              {/* Fix round 1, finding 2: the winner may not be the true
+                  maximum — some trips could not be converted to the current
+                  base currency and were left out of the comparison entirely. */}
+              {(excludedCount ?? 0) > 0 && (
+                <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  {t("trips:insights.mostExpensiveExcluded", { count: excludedCount })}
+                </div>
+              )}
             </button>
           ) : (
             <div

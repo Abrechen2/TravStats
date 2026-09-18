@@ -216,6 +216,54 @@ describe("spreadsheet import", () => {
     const after = await prisma.cruise.findUnique({ where: { id: own.id } });
     expect(Number(after?.price)).toBeCloseTo(1899.5);
   });
+
+  it("recomputes the FX snapshot on a price edit instead of leaving it stale (fix round 1, finding 3)", async () => {
+    // Snapshotted at the OLD price (100 EUR, rate 1) — a price-only edit
+    // through the importer used to leave these three columns untouched,
+    // so priceBase kept pointing at 100 while `price` moved to 200.
+    const own = await prisma.cruise.create({
+      data: {
+        userId,
+        cruiseLine: "AIDA",
+        status: "flown",
+        startDate: new Date("2026-01-01"),
+        price: 100,
+        currency: "EUR",
+        priceBase: 100,
+        fxRate: 1,
+        fxBaseCurrency: "EUR",
+      },
+    });
+
+    await run([{ id: own.id, price: "200" }], false, "cruises");
+
+    const after = await prisma.cruise.findUnique({ where: { id: own.id } });
+    expect(after?.price).toBe(200);
+    expect(after?.priceBase).toBe(200);
+    expect(after?.fxRate).toBe(1);
+  });
+
+  it("leaves the FX snapshot untouched when the row never mentions price/currency/startDate", async () => {
+    const own = await prisma.cruise.create({
+      data: {
+        userId,
+        cruiseLine: "AIDA",
+        status: "flown",
+        startDate: new Date("2026-01-01"),
+        price: 100,
+        currency: "EUR",
+        priceBase: 100,
+        fxRate: 1,
+        fxBaseCurrency: "EUR",
+      },
+    });
+
+    await run([{ id: own.id, notes: "unrelated edit" }], false, "cruises");
+
+    const after = await prisma.cruise.findUnique({ where: { id: own.id } });
+    expect(after?.notes).toBe("unrelated edit");
+    expect(after?.priceBase).toBe(100);
+  });
 });
 
 /**
@@ -647,6 +695,54 @@ describe("flights", () => {
     const after = await prisma.flight.findUnique({ where: { id } });
     expect(after?.arrIata).toBe("ARN");
     expect(after?.depIata).toBe("MUC");
+  });
+
+  it("snapshots the FX rate for a flight created through the importer (fix round 1, finding 3)", async () => {
+    const [r] = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH2460",
+        depIata: "MUC",
+        arrIata: "HEL",
+        departureTime: "2021-09-24T06:00:00Z",
+        status: "flown",
+        price: "100",
+        currency: "EUR",
+      },
+    ]);
+    expect(r.errors).toBe(0);
+
+    const flight = await prisma.flight.findFirst({ where: { userId: flightUserId } });
+    expect(flight?.priceBase).toBe(100);
+    expect(flight?.fxRate).toBe(1);
+    expect(flight?.fxBaseCurrency).toBe("EUR");
+  });
+
+  it("recomputes the FX snapshot on a price edit instead of leaving it stale (fix round 1, finding 3)", async () => {
+    const created = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH2460",
+        depIata: "MUC",
+        arrIata: "HEL",
+        departureTime: "2021-09-24T06:00:00Z",
+        status: "flown",
+        price: "100",
+        currency: "EUR",
+      },
+    ]);
+    const id = created[0].rows[0].id as string;
+    const before = await prisma.flight.findUnique({ where: { id } });
+    expect(before?.priceBase).toBe(100);
+
+    // Price-only edit — before the fix, priceBase stayed 100 (stale).
+    await runFlights([{ id, price: "200" }]);
+
+    const after = await prisma.flight.findUnique({ where: { id } });
+    expect(after?.price).toBe(200);
+    expect(after?.priceBase).toBe(200);
   });
 
   it("leaves the route alone when the sheet carries no codes", async () => {

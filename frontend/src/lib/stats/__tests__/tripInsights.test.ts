@@ -70,6 +70,7 @@ describe("tripInsights", () => {
     expect(r.mostExpensive?.value).toBe("€5,000");
     expect(r.mostCountries?.tripId).toBe("wide");
     expect(r.mostCountries?.value).toBe("5");
+    expect(r.mostExpensiveExcludedCount).toBe(0);
   });
 
   it("returns null winners when nothing qualifies", () => {
@@ -77,6 +78,23 @@ describe("tripInsights", () => {
     expect(r.longest).toBeNull();
     expect(r.mostExpensive).toBeNull();
     expect(r.mostCountries).toBeNull();
+    expect(r.mostExpensiveExcludedCount).toBe(0);
+  });
+
+  it("carries the exclusion count through from the backend (fix round 1, finding 2)", () => {
+    // Backend `TripCostSuperlative.excluded.count` used to be computed and
+    // then dropped on the floor here — the panel had no way to say "some
+    // trips could not be compared".
+    const trips = [trip({ id: "winner", name: "Winner" })];
+    const mostExpensiveTrip: TripCostSuperlative = {
+      tripId: "winner",
+      name: "Winner",
+      amount: 1000,
+      currency: "EUR",
+      excluded: { count: 3, reason: "unconvertible" },
+    };
+    const r = computeTripInsights(trips, "en", mostExpensiveTrip);
+    expect(r.mostExpensiveExcludedCount).toBe(3);
   });
 
   it("ignores planned trips for the frontend-computed superlatives", () => {

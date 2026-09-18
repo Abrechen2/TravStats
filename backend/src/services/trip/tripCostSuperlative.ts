@@ -27,9 +27,19 @@
  * lookup) leaves the comparison entirely rather than being ranked on a partial
  * sum. `excluded.count` says how many trips that happened to, so a caller
  * can say why the "winner" might not be the true maximum.
+ *
+ * A snapshot in a STALE base currency is treated the same as no snapshot at
+ * all — a user who moved their base currency from EUR to USD has older items
+ * with `fxBaseCurrency: "EUR"` and newer ones with `"USD"`; summing their
+ * `priceBase` columns would add euros to dollars, which is the exact defect
+ * this module exists to fix, one level down. `backend/src/utils/lodgingStats/
+ * money.ts` (`perNightPrice`) already carries this rule for stays
+ * (`stay.fxBaseCurrency !== currentBaseCurrency` → treat as unpriced); this
+ * mirrors it for the trip-wide sum.
  */
 
 import { prisma } from "../../db";
+import { getBaseCurrency } from "../fx/snapshot";
 
 export interface TripCostSuperlative {
   tripId: string;
@@ -48,21 +58,31 @@ interface CostItem {
   /** Raw amount, in `currency` — never converted. */
   price: number;
   currency: string;
-  /** The same amount converted to the user's base currency, or null when no
-   *  honest conversion exists. */
+  /** The same amount converted to the user's CURRENT base currency, or null
+   *  when no honest conversion exists — including a snapshot that exists but
+   *  was taken under a base currency the user has since moved away from. */
   priceBase: number | null;
 }
 
-/** A null or zero price counts as "no price" — mirrors `bookingCost.sumByCurrency`. */
+/**
+ * A null or zero price counts as "no price" — mirrors `bookingCost.sumByCurrency`.
+ * A snapshot whose `fxBaseCurrency` disagrees with the user's CURRENT base
+ * currency is downgraded to unconvertible here (not later): the stored
+ * `priceBase` number is real, but it is real in a currency the sum below is
+ * no longer being computed in.
+ */
 function pushIfPriced(
   items: CostItem[],
   price: number | null,
   currency: string | null,
-  priceBase: number | null
+  priceBase: number | null,
+  fxBaseCurrency: string | null,
+  currentBaseCurrency: string
 ): void {
   if (price == null || price <= 0) return;
+  const convertible = priceBase != null && fxBaseCurrency === currentBaseCurrency;
   // No currency on the schema's default column is EUR; matches sumByCurrency.
-  items.push({ price, currency: currency ?? "EUR", priceBase });
+  items.push({ price, currency: currency ?? "EUR", priceBase: convertible ? priceBase : null });
 }
 
 /**
@@ -95,37 +115,63 @@ function dominantCurrencyBucket(items: CostItem[]): { amount: number; currency: 
  * (no `bookingId` — an item linked to a booking has had its price moved
  * there on import, so counting both would double it).
  */
-function costItemsForTrip(trip: {
-  bookings: { price: number | null; currency: string | null; priceBase: number | null }[];
-  flights: {
-    price: number | null;
-    currency: string | null;
-    priceBase: number | null;
-    bookingId: string | null;
-  }[];
-  cruises: {
-    price: number | null;
-    currency: string | null;
-    priceBase: number | null;
-    bookingId: string | null;
-  }[];
-  lodgingStays: {
-    totalPrice: number | null;
-    currency: string | null;
-    totalPriceBase: number | null;
-    bookingId: string | null;
-  }[];
-}): CostItem[] {
+function costItemsForTrip(
+  trip: {
+    bookings: {
+      price: number | null;
+      currency: string | null;
+      priceBase: number | null;
+      fxBaseCurrency: string | null;
+    }[];
+    flights: {
+      price: number | null;
+      currency: string | null;
+      priceBase: number | null;
+      fxBaseCurrency: string | null;
+      bookingId: string | null;
+    }[];
+    cruises: {
+      price: number | null;
+      currency: string | null;
+      priceBase: number | null;
+      fxBaseCurrency: string | null;
+      bookingId: string | null;
+    }[];
+    lodgingStays: {
+      totalPrice: number | null;
+      currency: string | null;
+      totalPriceBase: number | null;
+      fxBaseCurrency: string | null;
+      bookingId: string | null;
+    }[];
+  },
+  currentBaseCurrency: string
+): CostItem[] {
   const items: CostItem[] = [];
-  for (const b of trip.bookings) pushIfPriced(items, b.price, b.currency, b.priceBase);
+  for (const b of trip.bookings) {
+    pushIfPriced(items, b.price, b.currency, b.priceBase, b.fxBaseCurrency, currentBaseCurrency);
+  }
   for (const f of trip.flights) {
-    if (!f.bookingId) pushIfPriced(items, f.price, f.currency, f.priceBase);
+    if (!f.bookingId) {
+      pushIfPriced(items, f.price, f.currency, f.priceBase, f.fxBaseCurrency, currentBaseCurrency);
+    }
   }
   for (const c of trip.cruises) {
-    if (!c.bookingId) pushIfPriced(items, c.price, c.currency, c.priceBase);
+    if (!c.bookingId) {
+      pushIfPriced(items, c.price, c.currency, c.priceBase, c.fxBaseCurrency, currentBaseCurrency);
+    }
   }
   for (const s of trip.lodgingStays) {
-    if (!s.bookingId) pushIfPriced(items, s.totalPrice, s.currency, s.totalPriceBase);
+    if (!s.bookingId) {
+      pushIfPriced(
+        items,
+        s.totalPrice,
+        s.currency,
+        s.totalPriceBase,
+        s.fxBaseCurrency,
+        currentBaseCurrency
+      );
+    }
   }
   return items;
 }
@@ -136,16 +182,46 @@ export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperla
   // A trip still on the drawing board hasn't spent anything yet — mirrors
   // `computeTripInsights`'s `t.status !== "planned"` filter so the two never
   // disagree about which trips are even eligible.
+  // The base currency can change (Settings → Instance). Read it ONCE, up
+  // front, and compare every snapshot's `fxBaseCurrency` against this same
+  // value — never against each other — so a switch mid-history downgrades
+  // the OLD snapshots to unconvertible instead of silently mixing them in.
+  const currentBaseCurrency = await getBaseCurrency(userId);
+
   const trips = await prisma.trip.findMany({
     where: { userId, status: { not: "planned" } },
     select: {
       id: true,
       name: true,
-      bookings: { select: { price: true, currency: true, priceBase: true } },
-      flights: { select: { price: true, currency: true, priceBase: true, bookingId: true } },
-      cruises: { select: { price: true, currency: true, priceBase: true, bookingId: true } },
+      bookings: {
+        select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
+      },
+      flights: {
+        select: {
+          price: true,
+          currency: true,
+          priceBase: true,
+          fxBaseCurrency: true,
+          bookingId: true,
+        },
+      },
+      cruises: {
+        select: {
+          price: true,
+          currency: true,
+          priceBase: true,
+          fxBaseCurrency: true,
+          bookingId: true,
+        },
+      },
       lodgingStays: {
-        select: { totalPrice: true, currency: true, totalPriceBase: true, bookingId: true },
+        select: {
+          totalPrice: true,
+          currency: true,
+          totalPriceBase: true,
+          fxBaseCurrency: true,
+          bookingId: true,
+        },
       },
     },
   });
@@ -160,7 +236,7 @@ export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperla
   let excludedCount = 0;
 
   for (const trip of trips) {
-    const items = costItemsForTrip(trip);
+    const items = costItemsForTrip(trip, currentBaseCurrency);
     if (items.length === 0) continue; // no cost on this trip — not a candidate
 
     const unconvertible = items.some((i) => i.priceBase == null);

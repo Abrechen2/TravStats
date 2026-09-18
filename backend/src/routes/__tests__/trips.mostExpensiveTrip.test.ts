@@ -136,3 +136,89 @@ describe("GET /trips?includeInsights=true — the most expensive trip", () => {
     expect(res.body.mostExpensiveTrip.tripId).not.toBe(planned.id);
   });
 });
+
+/**
+ * Fix round 1, finding 1 (High): `costItemsForTrip` summed `priceBase` across
+ * a trip's items without checking `fxBaseCurrency` — a user who moved their
+ * base currency from EUR to USD has OLDER snapshots stamped `fxBaseCurrency:
+ * "EUR"` and newer ones stamped `"USD"`, and the old code added them, which
+ * is the exact defect this whole file exists to fix, one level down.
+ *
+ * A dedicated user + describe block: the base currency is account-wide
+ * (`UserSettings.baseCurrency`), so this cannot share a fixture user with the
+ * tests above without changing what "the current base currency" means for
+ * them too.
+ */
+describe("GET /trips?includeInsights=true — a stale base-currency snapshot", () => {
+  let authCookie: string;
+  let userId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: "staleBaseCurrencyTest" } });
+    const user = await prisma.user.create({
+      data: { username: "staleBaseCurrencyTest", passwordHash: await hashPassword("password123") },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
+    // The account's CURRENT base currency is USD.
+    await prisma.userSettings.create({ data: { userId, data: {}, baseCurrency: "USD" } });
+  });
+
+  afterAll(async () => {
+    await prisma.trip.deleteMany({ where: { userId } });
+    await prisma.userSettings.deleteMany({ where: { userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.$disconnect();
+  });
+
+  it("excludes a trip snapshotted under a base currency the account has since moved away from", async () => {
+    // Snapshotted back when the account's base currency was still EUR — a
+    // real, non-null priceBase, just in the WRONG base currency now.
+    const staleTrip = await prisma.trip.create({
+      data: { userId, name: "Snapshotted under the old base", status: "completed" },
+    });
+    await prisma.booking.create({
+      data: {
+        userId,
+        tripId: staleTrip.id,
+        price: 1000,
+        currency: "GBP",
+        priceBase: 1150, // GBP -> EUR, back when EUR was the base
+        fxRate: 1.15,
+        fxRateDate: new Date("2025-01-01"),
+        fxBaseCurrency: "EUR",
+      },
+    });
+
+    // A smaller RAW number, but snapshotted in the CURRENT base currency
+    // (USD) — this must win, because it is the only convertible trip.
+    const currentTrip = await prisma.trip.create({
+      data: { userId, name: "Snapshotted under the current base", status: "completed" },
+    });
+    await prisma.booking.create({
+      data: {
+        userId,
+        tripId: currentTrip.id,
+        price: 500,
+        currency: "USD",
+        priceBase: 500,
+        fxRate: 1,
+        fxRateDate: new Date("2026-01-01"),
+        fxBaseCurrency: "USD",
+      },
+    });
+
+    const res = await request(app)
+      .get("/api/v1/trips?includeInsights=true")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.mostExpensiveTrip).toMatchObject({
+      tripId: currentTrip.id,
+      name: "Snapshotted under the current base",
+    });
+    expect(res.body.mostExpensiveTrip.excluded).toEqual({
+      count: 1,
+      reason: "unconvertible",
+    });
+  });
+});

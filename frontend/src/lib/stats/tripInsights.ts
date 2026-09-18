@@ -35,6 +35,15 @@ export interface TripInsights {
   longest: TripInsightWinner | null;
   mostExpensive: TripInsightWinner | null;
   mostCountries: TripInsightWinner | null;
+  /**
+   * How many started trips were left out of the `mostExpensive` comparison
+   * for lack of an honest conversion (fix round 1, finding 2) — carried
+   * through from the backend's `TripCostSuperlative.excluded.count` rather
+   * than dropped, so the card can say "N trips not compared" instead of
+   * presenting a winner that might not be the true maximum as if it were.
+   * 0 when `mostExpensive` is null (nothing to caveat) or nothing was excluded.
+   */
+  mostExpensiveExcludedCount: number;
 }
 
 /** Great-circle km of a trip's flights plus its cruise legs. */
@@ -122,5 +131,6 @@ export function computeTripInsights(
       (t) => t.countries?.length ?? 0,
       (_t, n) => String(n)
     ),
+    mostExpensiveExcludedCount: mostExpensiveTrip?.excluded.count ?? 0,
   };
 }
