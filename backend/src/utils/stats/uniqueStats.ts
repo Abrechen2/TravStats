@@ -1,9 +1,28 @@
 import { calculateDistance } from "../geo";
 import { getCachedAirports } from "../../services/airportCache";
-import { tzAwareDurationMinutes, toLocalDateString, type FlightTimeSemantics } from "../timezone";
+import { tzAwareDurationMinutes, type FlightTimeSemantics } from "../timezone";
 import logger from "../logger";
 import { getContinent } from "../continents";
 import { departureClockOf } from "./departureClock";
+import {
+  arrivalEndpointCode,
+  continentsTouchedBy,
+  countRoundTrips,
+  crossesDateLine,
+  crossesHemisphere,
+  crossesLocalMidnight,
+  departureEndpointCode,
+  departureTimezoneOf,
+  arrivalTimezoneOf,
+  flightAirportCodes,
+  flightCountryReach,
+  isArcticFlight,
+  isOceanCrossing,
+  isSameLocalDayFlight,
+  isTimeTravelFlight,
+  longitudeDirectionOf,
+  touchesTropics,
+} from "./flightPredicates";
 import type { AirportData } from "../../services/airportLookup";
 import type { FlightData, UniqueStats } from "./types";
 import { HomeAirportEntry, getHomeAirportAt } from "../homeAirport";
@@ -52,24 +71,18 @@ export async function calculateUniqueStats(
   // Time travel index - flights where local arrival time (at destination) appears to be before
   // local departure time (at origin), e.g. departing NYC at 23:00 EST and arriving London at
   // 11:00 GMT — the clock "went back" by 5 hours so the local arrival hour is earlier.
-  let timeTravelFlights = 0;
+  // Counted after the timezone map below exists, since it is read on it.
 
   // Collect all airport codes needed for timezone lookups; reused later for
   // altitude etc. Use the wider `countableFlights` set so altitude /
   // continent / country lookups also see historical airports.
-  const airportCodes = new Set<string>();
-  for (const f of countableFlights) {
-    if (f.depIata) airportCodes.add(f.depIata);
-    if (f.depIcao) airportCodes.add(f.depIcao);
-    if (f.arrIata) airportCodes.add(f.arrIata);
-    if (f.arrIcao) airportCodes.add(f.arrIcao);
-  }
+  const airportCodes = flightAirportCodes(countableFlights);
 
   // Build a timezone map from the cached airport data (code → IANA timezone string)
   const timezoneMap = new Map<string, string>();
   let airportsForTimezone: Map<string, AirportData> = new Map();
   try {
-    airportsForTimezone = await getCachedAirports(Array.from(airportCodes));
+    airportsForTimezone = await getCachedAirports(airportCodes);
     for (const [code, airport] of airportsForTimezone.entries()) {
       if (airport?.timezone) {
         timezoneMap.set(code, airport.timezone);
@@ -83,53 +96,19 @@ export async function calculateUniqueStats(
     });
   }
 
-  for (const f of flownFlights) {
-    const depTz =
-      (f.depIata && timezoneMap.get(f.depIata)) ||
-      (f.depIcao && timezoneMap.get(f.depIcao)) ||
-      null;
-    const arrTz =
-      (f.arrIata && timezoneMap.get(f.arrIata)) ||
-      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
-      null;
+  const timeTravelFlights = flownFlights.filter((f) => isTimeTravelFlight(f, timezoneMap)).length;
 
-    if (!depTz || !arrTz) {
-      // No timezone data available — skip rather than guess
-      continue;
-    }
-
-    if (toLocalMinutes(f.arrivalTime, arrTz) < toLocalMinutes(f.departureTime, depTz)) {
-      timeTravelFlights++;
-    }
-  }
-
-  // Equator crossings — geographic, time-insensitive.
-  let equatorCrossings = 0;
-  countableFlights.forEach((f) => {
-    if (f.depLat != null && f.arrLat != null) {
-      // Check if flight crosses equator (one hemisphere to another)
-      if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
-        equatorCrossings++;
-      }
-    }
-  });
+  // Equator crossings — geographic, time-insensitive. Note that this is the
+  // same rule as the hemisphere hop below, and always has been; see
+  // `flightPredicates.ts` on why one predicate now serves both tiles.
+  const equatorCrossings = countableFlights.filter(crossesHemisphere).length;
 
   // Arctic circle flights (north of 66.5°) — geographic, time-insensitive.
-  const arcticCircle = 66.5;
-  const arcticFlights = countableFlights.filter((f) => {
-    return (
-      (f.depLat != null && f.depLat >= arcticCircle) ||
-      (f.arrLat != null && f.arrLat >= arcticCircle)
-    );
-  }).length;
+  const arcticFlights = countableFlights.filter(isArcticFlight).length;
 
   // Ocean crossings - simplified heuristic: flights over 5000km likely cross
   // an ocean. Distance-based, time-insensitive.
-  const oceanCrossings = countableFlights.filter((f) => {
-    if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) return false;
-    const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-    return dist > 5000;
-  }).length;
+  const oceanCrossings = countableFlights.filter(isOceanCrossing).length;
 
   // Highest airport (altitude) — reuse the airport data already fetched for timezone lookups
   let highestAirport: { code: string; name: string; altitude: number } | null = null;
@@ -137,9 +116,7 @@ export async function calculateUniqueStats(
   try {
     // If the timezone fetch above failed, do a fresh fetch; otherwise reuse cached data
     const airportsForAltitude =
-      airportsForTimezone.size > 0
-        ? airportsForTimezone
-        : await getCachedAirports(Array.from(airportCodes));
+      airportsForTimezone.size > 0 ? airportsForTimezone : await getCachedAirports(airportCodes);
     for (const [code, airport] of airportsForAltitude.entries()) {
       if (airport && airport.altitude != null) {
         if (!highestAirport || airport.altitude > highestAirport.altitude) {
@@ -287,9 +264,7 @@ export async function calculateUniqueStats(
 
   try {
     const airports =
-      airportsForTimezone.size > 0
-        ? airportsForTimezone
-        : await getCachedAirports(Array.from(airportCodes));
+      airportsForTimezone.size > 0 ? airportsForTimezone : await getCachedAirports(airportCodes);
 
     Object.entries(flightsByDate).forEach(([date, dayFlights]) => {
       const countries = new Set<string>();
@@ -321,56 +296,22 @@ export async function calculateUniqueStats(
   }
 
   // Hemisphere hopper — flights crossing between northern and southern
-  // hemisphere. Geographic, time-insensitive.
-  let hemisphereHops = 0;
-  countableFlights.forEach((f) => {
-    if (f.depLat != null && f.arrLat != null) {
-      // Check if flight crosses from one hemisphere to another
-      if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
-        hemisphereHops++;
-      }
-    }
-  });
+  // hemisphere. Geographic, time-insensitive. The SAME predicate as the
+  // equator crossing above: two tiles, one rule, and therefore always the
+  // same number.
+  const hemisphereHops = countableFlights.filter(crossesHemisphere).length;
 
   // Date line crosser — flights crossing the International Date Line (180°
   // longitude). Geographic, time-insensitive.
-  let dateLineCrossings = 0;
-  countableFlights.forEach((f) => {
-    if (f.depLon != null && f.arrLon != null) {
-      // Check if flight crosses the date line (180° or -180°)
-      const lonDiff = Math.abs(f.arrLon - f.depLon);
-      // If the difference is greater than 180°, the flight likely crossed the date line
-      if (lonDiff > 180) {
-        dateLineCrossings++;
-      }
-    }
-  });
+  const dateLineCrossings = countableFlights.filter(crossesDateLine).length;
 
   // Continental explorer — count unique continents. Time-insensitive.
   const continents = new Set<string>();
   try {
     const airports =
-      airportsForTimezone.size > 0
-        ? airportsForTimezone
-        : await getCachedAirports(Array.from(airportCodes));
+      airportsForTimezone.size > 0 ? airportsForTimezone : await getCachedAirports(airportCodes);
     countableFlights.forEach((f) => {
-      const depCode = f.depIata || f.depIcao;
-      const arrCode = f.arrIata || f.arrIcao;
-
-      if (depCode) {
-        const airport = airports.get(depCode);
-        if (airport) {
-          const continent = getContinent(airport.lat, airport.lon, airport.country);
-          if (continent) continents.add(continent);
-        }
-      }
-      if (arrCode) {
-        const airport = airports.get(arrCode);
-        if (airport) {
-          const continent = getContinent(airport.lat, airport.lon, airport.country);
-          if (continent) continents.add(continent);
-        }
-      }
+      for (const continent of continentsTouchedBy(f, airports)) continents.add(continent);
     });
   } catch (error) {
     logger.error({
@@ -382,61 +323,19 @@ export async function calculateUniqueStats(
 
   // Tropics traveler — flights within the tropics (between 23.5°N and
   // 23.5°S). Geographic, time-insensitive.
-  const tropicOfCancer = 23.5;
-  const tropicOfCapricorn = -23.5;
-  const tropicsFlights = countableFlights.filter((f) => {
-    if (f.depLat == null || f.arrLat == null) return false;
-    // Check if both departure and arrival are within tropics
-    const depInTropics = f.depLat >= tropicOfCapricorn && f.depLat <= tropicOfCancer;
-    const arrInTropics = f.arrLat >= tropicOfCapricorn && f.arrLat <= tropicOfCancer;
-    return depInTropics || arrInTropics;
-  }).length;
+  const tropicsFlights = countableFlights.filter(touchesTropics).length;
 
   // East-West balance — ratio of eastward vs westward flights. Geographic,
   // time-insensitive.
-  let eastwardFlights = 0;
-  let westwardFlights = 0;
-  countableFlights.forEach((f) => {
-    if (f.depLon != null && f.arrLon != null) {
-      let lonDiff = f.arrLon - f.depLon;
-      // Handle date line crossing
-      if (lonDiff > 180) lonDiff -= 360;
-      if (lonDiff < -180) lonDiff += 360;
-
-      if (lonDiff > 0) eastwardFlights++;
-      else if (lonDiff < 0) westwardFlights++;
-    }
-  });
+  const directions = countableFlights.map(longitudeDirectionOf);
+  const eastwardFlights = directions.filter((d) => d === "east").length;
+  const westwardFlights = directions.filter((d) => d === "west").length;
 
   // Same-day flights - flights that depart and arrive on the same local calendar day
-  const sameDayFlights = flownFlights.filter((f) => {
-    const depTz =
-      (f.depIata && timezoneMap.get(f.depIata)) ||
-      (f.depIcao && timezoneMap.get(f.depIcao)) ||
-      null;
-    const arrTz =
-      (f.arrIata && timezoneMap.get(f.arrIata)) ||
-      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
-      null;
-    const depDate = toLocalDateString(f.departureTime, depTz);
-    const arrDate = toLocalDateString(f.arrivalTime, arrTz);
-    return depDate === arrDate;
-  }).length;
+  const sameDayFlights = flownFlights.filter((f) => isSameLocalDayFlight(f, timezoneMap)).length;
 
   // Midnight flyer - flights that cross midnight (local time)
-  const midnightFlights = flownFlights.filter((f) => {
-    const depTz =
-      (f.depIata && timezoneMap.get(f.depIata)) ||
-      (f.depIcao && timezoneMap.get(f.depIcao)) ||
-      null;
-    const arrTz =
-      (f.arrIata && timezoneMap.get(f.arrIata)) ||
-      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
-      null;
-    const depDate = toLocalDateString(f.departureTime, depTz);
-    const arrDate = toLocalDateString(f.arrivalTime, arrTz);
-    return depDate !== arrDate;
-  }).length;
+  const midnightFlights = flownFlights.filter((f) => crossesLocalMidnight(f, timezoneMap)).length;
 
   // Seasonal explorer — flights in all 4 seasons. Month is reliable for
   // historical flights when the user knows it; UNKNOWN-year-only entries
@@ -458,25 +357,11 @@ export async function calculateUniqueStats(
   let domesticFlights = 0;
   try {
     const airports =
-      airportsForTimezone.size > 0
-        ? airportsForTimezone
-        : await getCachedAirports(Array.from(airportCodes));
+      airportsForTimezone.size > 0 ? airportsForTimezone : await getCachedAirports(airportCodes);
     countableFlights.forEach((f) => {
-      const depCode = f.depIata || f.depIcao;
-      const arrCode = f.arrIata || f.arrIcao;
-
-      if (depCode && arrCode) {
-        const depAirport = airports.get(depCode);
-        const arrAirport = airports.get(arrCode);
-
-        if (depAirport?.country && arrAirport?.country) {
-          if (depAirport.country === arrAirport.country) {
-            domesticFlights++;
-          } else {
-            internationalFlights++;
-          }
-        }
-      }
+      const reach = flightCountryReach(f, airports);
+      if (reach === "domestic") domesticFlights++;
+      else if (reach === "international") internationalFlights++;
     });
   } catch (error) {
     logger.error({
@@ -537,29 +422,7 @@ export async function calculateUniqueStats(
   // the sum: three A->B against one B->A gave (3+1)/2 = 2 round trips where
   // only one exists. Legs cannot be paired more often than the scarcer
   // direction allows.
-  const legsByDirection = new Map<string, number>();
-  countableFlights.forEach((f) => {
-    const depCode = f.depIata || f.depIcao;
-    const arrCode = f.arrIata || f.arrIcao;
-    if (!depCode || !arrCode) return;
-    const key = `${depCode}-${arrCode}`;
-    legsByDirection.set(key, (legsByDirection.get(key) || 0) + 1);
-  });
-
-  const countedPairs = new Set<string>();
-  let roundTripCount = 0;
-  for (const [key, thereCount] of legsByDirection.entries()) {
-    const [dep, arr] = key.split("-");
-    const reverseKey = `${arr}-${dep}`;
-    const backCount = legsByDirection.get(reverseKey);
-    if (backCount === undefined) continue;
-    // Each unordered pair once — otherwise A-B and B-A both add the same
-    // round trips.
-    const pairKey = [key, reverseKey].sort().join("|");
-    if (countedPairs.has(pairKey)) continue;
-    countedPairs.add(pairKey);
-    roundTripCount += Math.min(thereCount, backCount);
-  }
+  const roundTripCount = countRoundTrips(countableFlights).total;
 
   return {
     timeTravelIndex: timeTravelFlights,
@@ -602,28 +465,6 @@ export async function calculateUniqueStats(
     shortestLayover,
     roundTripMaster: roundTripCount,
   };
-}
-
-/**
- * Convert a UTC Date to minutes-since-midnight in the given IANA timezone.
- * Used for the time-travel index: if local arrival < local departure the
- * clock appeared to go backwards.
- */
-function toLocalMinutes(date: Date, timezone: string): number {
-  try {
-    const parts = new Intl.DateTimeFormat("en", {
-      timeZone: timezone,
-      hour: "numeric",
-      minute: "numeric",
-      hour12: false,
-    }).formatToParts(date);
-    const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
-    const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-    return h * 60 + m;
-  } catch {
-    // Fallback to UTC if the timezone string is invalid/unrecognised
-    return date.getUTCHours() * 60 + date.getUTCMinutes();
-  }
 }
 
 // toLocalDateString now lives in utils/timezone alongside localWallClockOf —
