@@ -245,18 +245,16 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not render the Dawarich card on externalServices when the flag is OFF", async () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings?section=externalServices");
-    await screen.findByTestId("immich-connection-card");
-
-    expect(screen.queryByTestId("dawarich-connection-card")).toBeNull();
-    // The control: Immich has no such gate and must still render.
-    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
-  });
-
-  it("renders the Dawarich card on externalServices when the flag is ON", async () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
+  // Released on 2026-09-18 with tours (owner). The card is an ordinary card
+  // now, and the assertion that matters is that it appears at all — including
+  // while the instance flag is still unknown, which is where the gated version
+  // used to hide it for one request.
+  it.each([
+    ["OFF", false],
+    ["unknown", null],
+    ["ON", true],
+  ])("renders the Dawarich card on externalServices when the flag is %s", async (_label, flag) => {
+    useSettingsStore.setState({ betaFeaturesEnabled: flag });
     renderSettings("/settings?section=externalServices");
     await screen.findByTestId("immich-connection-card");
 
@@ -274,22 +272,20 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
  * survived a whole phase — hence this one.
  * `ImmichConnectionCard` is again the control: no gate, always rendered.
  */
-describe("SettingsPage — beta gate: the routing provider card", () => {
+describe("SettingsPage — the routing provider card", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not render the routing provider card when the flag is OFF", async () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings?section=externalServices");
-    await screen.findByTestId("immich-connection-card");
-
-    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
-    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
-  });
-
-  it("renders the routing provider card when the flag is ON", async () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
+  // Released on 2026-09-18 with tours, which were its only consumer and the
+  // reason it was gated: on an instance with the switch off it offered to set
+  // up routing for a feature invisible everywhere else.
+  it.each([
+    ["OFF", false],
+    ["unknown", null],
+    ["ON", true],
+  ])("renders when the flag is %s", async (_label, flag) => {
+    useSettingsStore.setState({ betaFeaturesEnabled: flag });
     renderSettings("/settings?section=externalServices");
     await screen.findByTestId("immich-connection-card");
 

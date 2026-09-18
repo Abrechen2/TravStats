@@ -7,6 +7,7 @@ import PageHeader from "../components/ui/PageHeader";
 import { Icon } from "../components/ui/Icon";
 import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import AchievementCard, { TIER_COLOR } from "../components/achievements/AchievementCard";
+import AchievementDetailModal from "../components/achievements/AchievementDetailModal";
 import AchievementLeaderboard from "../components/achievements/AchievementLeaderboard";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
@@ -105,6 +106,8 @@ export default function AchievementsPage(): JSX.Element {
   const { addToast } = useToastStore();
   const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  /** The card whose detail dialog is open, or null (#330). */
+  const [selected, setSelected] = useState<Achievement | null>(null);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,7 +350,11 @@ export default function AchievementsPage(): JSX.Element {
       {sorted.length > 0 ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {sorted.map((achievement) => (
-            <AchievementCard key={achievement.id} achievement={achievement} />
+            <AchievementCard
+              key={achievement.id}
+              achievement={achievement}
+              onOpen={() => setSelected(achievement)}
+            />
           ))}
         </div>
       ) : (
@@ -358,6 +365,7 @@ export default function AchievementsPage(): JSX.Element {
           <p className="t-caption mt-1">{t("achievements:empty.message")}</p>
         </div>
       )}
+      <AchievementDetailModal achievement={selected} onClose={() => setSelected(null)} />
     </AppShell>
   );
 }

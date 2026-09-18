@@ -33,13 +33,30 @@ const AIRLINE_NAME_TO_IATA_MAP: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * Derive airline name from an IATA flight number prefix (first 2 characters).
- * Returns null if unknown.
+ * A flight designator: a two-character airline code carrying at least one
+ * letter, then one to four digits, then an optional operational suffix
+ * ("LH400", "4U8521", "U21234", "BA117A").
+ *
+ * The shape is checked because the first two characters alone are not a
+ * carrier. Measured on the 2.7.0-beta.1 build, 2026-09-18: a row whose flight
+ * number read "UAT2" was shown as "United Airlines", because "UA" is United
+ * and nothing asked what followed it. That is worse than a wrong label —
+ * `FlightReviewModal` writes the derived name into the record when the airline
+ * field is empty, so the guess becomes stored data.
+ */
+const FLIGHT_DESIGNATOR_RE = /^(?:[A-Z][A-Z0-9]|[0-9][A-Z])\d{1,4}[A-Z]?$/;
+
+/**
+ * Derive airline name from the IATA prefix of a flight number.
+ * Returns null when the string is not a flight number, or the prefix is
+ * unknown to the catalogue.
  */
 export function getAirlineFromFlightNumber(flightNumber: string): string | null {
-  if (!flightNumber || flightNumber.length < 2) return null;
-  const prefix = flightNumber.slice(0, 2).toUpperCase();
-  return AIRLINE_IATA_MAP[prefix] ?? null;
+  if (!flightNumber) return null;
+  // "LH 400" is a common spelling and is the same flight; the space is noise.
+  const normalized = flightNumber.replace(/\s+/g, "").toUpperCase();
+  if (!FLIGHT_DESIGNATOR_RE.test(normalized)) return null;
+  return AIRLINE_IATA_MAP[normalized.slice(0, 2)] ?? null;
 }
 
 /**

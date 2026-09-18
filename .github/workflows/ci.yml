@@ -369,7 +369,7 @@ jobs:
       # the ratchet then reports the number, as it did before sharding.
       - name: Keep this shard's coverage
         if: success() || failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage-${{ matrix.shard }}
           path: backend/coverage/coverage-final.json
@@ -397,7 +397,7 @@ jobs:
         run: cd backend && npm ci
 
       - name: Collect the shards' coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: backend-coverage-*
           path: backend/coverage-shards
@@ -509,7 +509,7 @@ jobs:
 
       - name: Upload report and backend log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-report
           path: |
@@ -524,7 +524,7 @@ jobs:
   # This job used to check only the frontend files a change touched, and
   # said why: ~95 frontend files and nearly the whole backend had never been
   # formatted, so a repo-wide check would have been red on every push
-  # whatever it contained. `9349b975` formatted the tree once (and is listed
+  # whatever it contained. `51348f58` formatted the tree once (and is listed
   # in .git-blame-ignore-revs), which removes the reason. A full check is
   # also the cheaper one to reason about: nothing depends on a diff range.
   #

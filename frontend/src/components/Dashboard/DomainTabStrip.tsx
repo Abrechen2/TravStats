@@ -1,6 +1,5 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
@@ -60,7 +59,6 @@ export function DomainTabStrip({
   nowMs = Date.now(),
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
-  const { isFeatureVisible } = useBetaFeatures();
 
   // The instance beta flag ALONE, deliberately not the enabled state. This
   // strip already receives `enabled` as a prop, and its contract is that a
@@ -68,14 +66,10 @@ export function DomainTabStrip({
   // them click through to the "coming soon" screen and turn it back on. Mixing
   // the enabled state in here would hide the tab instead and break that.
   //
-  // "Touren" is the one tab still gated: the feature is complete, the gate is
-  // only withholding it until the owner's release decision
-  // (config/betaFeatures.ts). Places sat behind a gate of the same shape
-  // (`poiDomain`) until 2026-09-05, when its own condition — the CSV import
-  // getting a surface — was met.
-  const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => tab !== "tour" || isFeatureVisible("tourRoutes")
-  );
+  // Every tab is offered now. "Touren" was the last one behind a gate, and
+  // the owner released it on 2026-09-18 — as places were released on
+  // 2026-09-05 when the CSV import gave them a surface.
+  const visibleTabs = DASHBOARD_TABS;
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives

@@ -2,7 +2,7 @@ import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
@@ -198,12 +198,13 @@ export default function TripOverview({
   const nothingLinked = flights.length + cruises.length + stays.length === 0;
   // The side column only when it has something to hold: an empty 1fr beside
   // the entries pushed them into two thirds of the page for nothing.
-  const { isFeatureVisible } = useBetaFeatures();
+  // Mirrors TripSummaryPanel's own condition: the beta gate went with the
+  // key (main, 2026-09-18), and what decides whether that card appears is
+  // now the demo refusal alone. Asking the same question here keeps the
+  // column from reserving space for a card that will not render.
+  const isSharedDemo = useIsDemoAccount();
   const hasSide =
-    trip.companions.length > 0 ||
-    trip.tags.length > 0 ||
-    Boolean(trip.summary) ||
-    isFeatureVisible("tripAiSummary");
+    trip.companions.length > 0 || trip.tags.length > 0 || Boolean(trip.summary) || !isSharedDemo;
 
   return (
     <div className="flex flex-col gap-6">

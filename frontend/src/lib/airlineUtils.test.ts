@@ -97,4 +97,26 @@ describe("getAirlineFromFlightNumber", () => {
   it("returns null for an unknown prefix", () => {
     expect(getAirlineFromFlightNumber("Q0123")).toBeNull();
   });
+
+  // Seen on the 2.7.0-beta.1 build: a row with the flight number "UAT2" was
+  // labelled "United Airlines", because the first two characters were read as
+  // a carrier without asking what followed. `FlightReviewModal` writes this
+  // derived name into the record, so the guess does not stay on the screen.
+  it("refuses a string that is not a flight number, however it begins", () => {
+    expect(getAirlineFromFlightNumber("UAT2")).toBeNull();
+    expect(getAirlineFromFlightNumber("LHR")).toBeNull();
+    expect(getAirlineFromFlightNumber("LH")).toBeNull();
+    expect(getAirlineFromFlightNumber("LH12345")).toBeNull();
+    expect(getAirlineFromFlightNumber("Lufthansa")).toBeNull();
+    expect(getAirlineFromFlightNumber("")).toBeNull();
+  });
+
+  it("accepts the shapes a designator really takes", () => {
+    // A digit may lead the code (4U = Eurowings), a letter may trail the
+    // number, and a written space is the same flight.
+    expect(getAirlineFromFlightNumber("LH 400")).toBe("Lufthansa");
+    expect(getAirlineFromFlightNumber("lh400")).toBe("Lufthansa");
+    expect(getAirlineFromFlightNumber("LH400A")).toBe("Lufthansa");
+    expect(getAirlineFromFlightNumber("LH1")).toBe("Lufthansa");
+  });
 });

@@ -29,24 +29,33 @@ export const TIER_COLOR: Record<string, string> = {
  */
 export default function AchievementCard({
   achievement,
+  onOpen,
 }: {
   achievement: Achievement;
+  /**
+   * Opens this achievement's detail dialog. Optional so the card still renders
+   * where nothing listens — but where it IS passed the card becomes a real
+   * button rather than a div with a click handler. GitHub #330 exists because
+   * a card drew a pointer cursor while nothing was clickable and a tester
+   * clicked into nothing; a control that a keyboard cannot reach is the same
+   * failure for half the readers.
+   */
+  onOpen?: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["achievements"]);
   const isMystery = Boolean(achievement.isHidden) && !achievement.isUnlocked;
   const tier = TIER_COLOR[achievement.tier] ?? "var(--ts-muted)";
   const color = achievement.isUnlocked ? tier : "var(--ts-muted)";
 
-  return (
-    <article
-      className="flex h-full flex-col gap-3"
-      style={{
-        padding: "var(--ts-space-lg)",
-        background: "var(--ts-surface)",
-        border: "1px solid var(--ts-border)",
-        borderRadius: "var(--ts-radius-card)",
-      }}
-    >
+  const surface = {
+    padding: "var(--ts-space-lg)",
+    background: "var(--ts-surface)",
+    border: "1px solid var(--ts-border)",
+    borderRadius: "var(--ts-radius-card)",
+  } as const;
+
+  const body = (
+    <>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -118,6 +127,26 @@ export default function AchievementCard({
           </div>
         )}
       </div>
-    </article>
+    </>
+  );
+
+  if (!onOpen) {
+    return (
+      <article className="flex h-full flex-col gap-3" style={surface}>
+        {body}
+      </article>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+      className="flex h-full cursor-pointer flex-col gap-3 text-left"
+      style={{ ...surface, width: "100%", font: "inherit", color: "inherit" }}
+    >
+      {body}
+    </button>
   );
 }

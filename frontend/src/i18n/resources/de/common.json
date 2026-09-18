@@ -237,6 +237,7 @@
   "summary": {
     "flights": "Flüge",
     "airlines": "Airlines",
+    "withoutAirline": "+{{count}} ohne Angabe",
     "airports": "Flughäfen",
     "cruises": "Kreuzfahrten",
     "portCalls": "Hafenanläufe",

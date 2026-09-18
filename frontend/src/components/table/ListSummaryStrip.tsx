@@ -26,6 +26,19 @@ export interface SummaryFigure {
   key: string;
   value: string;
   label: string;
+  /**
+   * What this figure is silent about, when it is silent about something.
+   *
+   * The airline count is the case that asked for it: the list derives a
+   * carrier from the flight number for the logo, so a row can show a
+   * Lufthansa tile while the count — which counts RECORDED airlines, the one
+   * rule in `shared/airlineNormalize.ts` — does not include it. Both are
+   * right, and side by side without a word they read as a contradiction.
+   * `/stats` already answers this by reporting `withoutAirline` next to the
+   * ranking "so the ranking can say what it is silent about"; this is the
+   * same sentence one surface further.
+   */
+  note?: string;
 }
 
 interface Props {
@@ -71,6 +84,11 @@ export default function ListSummaryStrip({
             {f.value}
           </span>{" "}
           {f.label}
+          {/* The qualifier rides WITH the figure, not beside the strip: an
+              airline count that quietly omits the flights whose carrier was
+              never recorded is a different number than it looks, and the
+              reader has to see that where they read the number. */}
+          {f.note && <span style={{ opacity: 0.8 }}> {f.note}</span>}
         </span>
       ))}
       {filtered && (

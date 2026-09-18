@@ -1,4 +1,3 @@
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -45,7 +44,6 @@ export default function SettingsSectionSwitch({
   section,
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
-  const { isFeatureVisible } = useBetaFeatures();
   const isAdmin = page.user?.isAdmin ?? false;
 
   switch (section) {
@@ -115,16 +113,17 @@ export default function SettingsSectionSwitch({
             onSetApiKeys={page.setApiKeys}
             onSave={page.saveApiKeys}
           />
-          {/* Admin-only AND behind the tours gate. The card configures a road
-              router for tour legs and has no other consumer, so on a production
-              instance with beta off it would offer to set up routing for a
-              feature invisible everywhere else. */}
-          {isFeatureVisible("tourRoutes") && <RoutingProviderSection isAdmin={isAdmin} />}
+          {/* Admin-only. It was also behind the tours gate until 2026-09-18,
+              because tours were its only consumer and an instance with beta
+              off would have offered routing for a feature hidden everywhere
+              else. Tours shipped, so the gate went with them. */}
+          <RoutingProviderSection isAdmin={isAdmin} />
           <ImmichConnectionCard />
-          {/* Behind its OWN key, not `tourRoutes`: tours stopped being the only
-              consumer the moment cruise legs were scoped onto the same
-              connection. */}
-          {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
+          {/* It had a key of its OWN rather than riding on `tourRoutes`, because
+              tours stopped being the only consumer the moment cruise legs were
+              scoped onto the same connection. Both keys left the registry on
+              2026-09-18. */}
+          <DawarichConnectionCard />
         </div>
       );
     case "homeAirport":

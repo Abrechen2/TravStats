@@ -144,21 +144,9 @@
           "advanced": "für Fortgeschrittene"
         },
         "features": {
-          "tripAiSummary": {
-            "name": "KI-Zusammenfassung einer Reise",
-            "what": "Ein Knopf auf der Reise-Detailseite, der den Verlauf in Prosa zusammenfasst."
-          },
           "devicePairing": {
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
-          },
-          "tourRoutes": {
-            "name": "Touren",
-            "what": "Routenabschnitte innerhalb einer Reise — Abschnittsliste, Editor, ein eigener Dashboard-Reiter und die Linien auf der Karte."
-          },
-          "dawarich": {
-            "name": "Dawarich-Anbindung",
-            "what": "Eine Verbindung zu einer Dawarich-Instanz, aus der aufgezeichnete Wegstrecken übernommen werden."
           }
         }
       },

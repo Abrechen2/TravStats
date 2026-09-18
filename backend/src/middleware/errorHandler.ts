@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import logger from "../utils/logger";
@@ -50,6 +51,25 @@ export const errorHandler = async (
   // Handle invalid JSON body — return generic 400 without internal parser details
   if (err instanceof SyntaxError && "body" in err) {
     return res.status(400).json({ error: "Invalid JSON in request body" });
+  }
+
+  // A multer rejection is a statement about the REQUEST — an unexpected file
+  // field, too many files, a part that is too large — and multer attaches no
+  // `statusCode`, so it fell through to 500 below. Measured 2026-09-18 on the
+  // 2.7.0-beta.1 build: `POST /parse-email-file` with the wrong multipart
+  // field answered `500 {"error":"Unexpected file field"}`. The message was
+  // right and the status was not, which matters twice over — a client that
+  // retries on 5xx retries a request that can never succeed, and the instance
+  // logs a server fault it did not have (the same confusion #245 removed from
+  // the log levels).
+  //
+  // Handled here rather than per route: three routes already wrap multer to
+  // catch `LIMIT_FILE_SIZE` themselves (documents, profile picture, tour
+  // tracks), and a fourth wrapper would be a fourth place to forget.
+  // `LIMIT_FILE_SIZE` keeps its 413; every other multer code is a 400.
+  if (err instanceof MulterError) {
+    const status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    return res.status(status).json({ error: err.message });
   }
 
   const debugEnabled = await isDebugEnabled().catch(() => false);

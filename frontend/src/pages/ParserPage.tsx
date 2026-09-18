@@ -4,7 +4,6 @@ import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
-import Pill from "../components/ui/Pill";
 import EmailAnnotation from "../components/Training/EmailAnnotation";
 import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotation";
 import ParseLogStats from "../components/Training/ParseLogStats";
@@ -53,29 +52,8 @@ export default function ParserPage(): JSX.Element {
 
   return (
     <AppShell width="list">
-      <PageHeader
-        title={t("parser:title")}
-        meta={t("parser:description")}
-        actions={
-          <Pill color="var(--ts-warn)" title={t("parser:betaNotice")}>
-            {t("parser:beta")}
-          </Pill>
-        }
-      />
+      <PageHeader title={t("parser:title")} meta={t("parser:description")} />
       <div>
-        {/* Beta notice */}
-        <div
-          className="mb-4 rounded-[var(--ts-radius-card)] px-4 py-3"
-          style={{
-            border: "1px solid color-mix(in srgb, var(--ts-warn) 35%, transparent)",
-            background: "color-mix(in srgb, var(--ts-warn) 8%, transparent)",
-          }}
-        >
-          <p className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {t("parser:betaNotice")}
-          </p>
-        </div>
-
         {/* Tabs */}
         <div
           role="tablist"

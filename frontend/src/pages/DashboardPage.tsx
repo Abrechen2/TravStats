@@ -3,7 +3,6 @@ import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
@@ -63,8 +62,6 @@ export default function DashboardPage(): JSX.Element {
   // a cold load; treating that as "denied" would redirect a direct
   // `/dashboard/tour` load away before the flag has even answered, the exact
   // /dashboard/poi bug below.
-  const { betaFeaturesEnabled, isFeatureVisible } = useBetaFeatures();
-  const tourAllowed = isFeatureVisible("tourRoutes");
   // Counts live in a module-level Zustand store, not `useState` here --
   // `App.tsx` keys its animated `Routes` on `location.pathname`, so
   // `/dashboard/flight` -> `/dashboard/cruise` remounts this component on
@@ -143,24 +140,6 @@ export default function DashboardPage(): JSX.Element {
   if (tab === "poi" && placesAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
-
-  // Same fix, same reason, for the "Touren" tab: a direct `/dashboard/tour`
-  // load must not render the shell with the tab hidden from the strip while
-  // its own "+ Tour hinzufügen" button still floats over an empty page. There
-  // is no domain to intersect here (tours are gated on `tourRoutes` alone),
-  // so the three-state dance is just "wait for the flag, then decide" rather
-  // than `usePlacesAccess`'s two-condition version.
-  //
-  // The redirect alone is not the whole fix -- POI's own comment two blocks
-  // up says so in as many words ("suppressing the tab body alone was not
-  // enough"), and the review that found this proved it the other direction:
-  // the dispatch below ALSO needs its own `tourAllowed` conjunct, or a
-  // gated instance briefly renders the full shell (map, sidebar, loading,
-  // "no tours") before the redirect above ever fires.
-  if (tab === "tour" && betaFeaturesEnabled !== null && !tourAllowed) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return (
     <DashboardLayout
       counts={counts}
@@ -173,7 +152,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
-      {tab === "tour" && tourAllowed && <TourTab key={refreshToken} />}
+      {tab === "tour" && <TourTab key={refreshToken} />}
     </DashboardLayout>
   );
 }

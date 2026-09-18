@@ -142,13 +142,18 @@ describe("DomainTabStrip", () => {
       );
     };
 
+    // Tours left the beta registry on 2026-09-18 (owner). The strip must now
+    // offer the tab whatever the instance flag says — including while it is
+    // still unknown, which is the state a cold load spends one request in and
+    // the reason the gated version needed three states instead of a boolean.
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-    ])("hides the Touren tab when the beta flag is %s", (_label, flag) => {
+      ["on", true],
+    ])("offers the Touren tab when the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
-      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
+      expect(screen.getByRole("tab", { name: /tours/i })).toBeTruthy();
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
     });
 

@@ -5,7 +5,7 @@
  */
 
 import AppShell from "../components/ui/AppShell";
-import { airlineGroupKey } from "../shared/airlineNormalize";
+import { flightSummaryFigures } from "../lib/flights/flightSummaryFigures";
 import { airlineResolvers } from "../lib/airlineUtils";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -431,29 +431,17 @@ export default function FlightsTablePage(): JSX.Element {
   // Paginates the filtered+sorted set; the summary strip stays on the full list.
   const pagination = usePagination(displayedFlights, "flights-list");
 
-  /** Read straight off the visible rows — nothing estimated. Flight time and
-   *  distance are both derived and marked as estimates wherever they show, so
-   *  they have no business being silently summed into a headline. */
-  const summaryFigures = useMemo(() => {
-    const airlines = new Set<string>();
-    const airports = new Set<string>();
-    for (const f of displayedFlights) {
-      // Same airline = same code (forgejo#81), like every other surface.
-      const key = airlineGroupKey(f, airlineResolvers);
-      if (key !== null) airlines.add(key);
-      if (f.depIata) airports.add(f.depIata);
-      if (f.arrIata) airports.add(f.arrIata);
-    }
-    return [
-      {
-        key: "flights",
-        value: String(displayedFlights.length),
-        label: t("common:summary.flights"),
-      },
-      { key: "airlines", value: String(airlines.size), label: t("common:summary.airlines") },
-      { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
-    ];
-  }, [displayedFlights, t]);
+  /** The rule, the note and the reasons live in `lib/flights/flightSummaryFigures`. */
+  const summaryFigures = useMemo(
+    () =>
+      flightSummaryFigures(displayedFlights, airlineResolvers, {
+        flights: t("common:summary.flights"),
+        airlines: t("common:summary.airlines"),
+        airports: t("common:summary.airports"),
+        withoutAirline: (count) => t("common:summary.withoutAirline", { count }),
+      }),
+    [displayedFlights, t]
+  );
 
   const resetFilters = (): void => {
     setSearch("");

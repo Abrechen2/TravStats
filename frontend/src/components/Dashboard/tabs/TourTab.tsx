@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Layer } from "@deck.gl/core";
-import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -45,15 +44,16 @@ export function TourTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
   const { t } = useTranslation(["dashboard", "trips", "common"]);
-  const { isFeatureVisible } = useBetaFeatures();
-  const toursAllowed = isFeatureVisible("tourRoutes");
-  const dashboardTours = useDashboardTours(toursAllowed);
+  // No gate since 2026-09-18 (owner: everything out of the registry but the
+  // phone app). The hook keeps its `enabled` argument for a future caller
+  // that has a reason to say no.
+  const dashboardTours = useDashboardTours(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const visMode = mode === "globe" ? "globe" : "routes";
 
   const tourPathData = useMemo<TourPathDatum[]>(
-    () => (toursAllowed ? buildTourPaths(dashboardTours.geometries) : []),
-    [toursAllowed, dashboardTours.geometries]
+    () => buildTourPaths(dashboardTours.geometries),
+    [dashboardTours.geometries]
   );
   // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
   // doc comment (tourMapOverlay.tsx) for why an unlifted path is invisible
@@ -68,7 +68,7 @@ export function TourTab(): JSX.Element {
   // shared in `./allTabLegendRows.tsx` since the fix-round review
   // (2026-08-30) found this tab had grown its own byte-identical copy.
   // Called with the default "line" shape (its only use here).
-  const tourLegend = buildTourLegendRows(toursAllowed, dashboardTours, t, legendRow);
+  const tourLegend = buildTourLegendRows(true, dashboardTours, t, legendRow);
 
   // Settled + genuinely nothing to show — distinct from `toursLoading` and
   // `toursLoadError`, which TourStatusOverlay renders instead. Never derive
@@ -76,7 +76,6 @@ export function TourTab(): JSX.Element {
   // after a failed request, and a tour count of zero next to a failed
   // request is exactly the lie this feature's own briefs warn about.
   const isEmpty =
-    toursAllowed &&
     !dashboardTours.toursLoading &&
     !dashboardTours.toursLoadError &&
     dashboardTours.tours.length === 0;
@@ -84,43 +83,6 @@ export function TourTab(): JSX.Element {
   const handleRowClick = (tour: TourSummary): void => {
     navigate(`/trips/${tour.tripId}/route/${tour.id}`);
   };
-
-  // Defensive belt-and-braces guard (see the doc comment above) actually
-  // firing: the beta flag flipped off after this tab was already mounted.
-  // Render "this feature is unavailable", never the ordinary empty-list
-  // state -- `dashboardTours.tours` is `[]` here too (useDashboardTours
-  // clears it the instant `enabled` goes false), and reusing the empty
-  // copy would tell the user "you have no tours" when the true answer is
-  // "you cannot see this at all right now". Found in the fix-round review
-  // (2026-08-30): a stale mount hit exactly this branch and rendered the
-  // ordinary empty-state text instead.
-  if (!toursAllowed) {
-    return (
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 420,
-            padding: 32,
-            textAlign: "center",
-            background: "rgba(15, 23, 42, 0.85)",
-            border: "1px solid var(--color-border)",
-            borderRadius: 16,
-            color: "var(--text-muted)",
-          }}
-        >
-          {t("dashboard:tourTab.unavailable")}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>

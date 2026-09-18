@@ -14,7 +14,6 @@ import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStop } from "../types";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -256,10 +255,9 @@ interface TabBarProps {
 }
 
 function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
-  // "tours" is the only tab gated by the instance-level beta flag today —
-  // see `config/betaFeatures.ts` (`tourRoutes`) for why.
-  const { isFeatureVisible } = useBetaFeatures();
-  const visibleTabs = TABS.filter((key) => key !== "tours" || isFeatureVisible("tourRoutes"));
+  // Every tab is offered. "tours" was the last one behind the instance beta
+  // flag, and the owner released it on 2026-09-18.
+  const visibleTabs = TABS;
 
   // Round 4: text tabs with the accent underline, like the logbook's. The
   // emoji in front of each label were the last ones in a tab bar.

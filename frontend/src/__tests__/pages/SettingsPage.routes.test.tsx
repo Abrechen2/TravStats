@@ -87,6 +87,19 @@ vi.mock("@/lib/api/settings", async (importOriginal) => {
 
 vi.unmock("../../store/settingsStore");
 
+// Released from the beta registry on 2026-09-18, so these three now mount
+// unconditionally and fetch on mount. They were never the subject of these
+// cases — the gate used to keep them out of the tree, and the network guard in
+// `src/__tests__/setup.ts` failed the suite the moment it stopped.
+vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
+  default: () => <div data-testid="dawarich-connection-card" />,
+}));
+vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
+  default: () => <div data-testid="immich-connection-card" />,
+}));
+vi.mock("../../components/Settings/RoutingProviderSection", () => ({
+  default: () => <div data-testid="routing-provider-section" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));

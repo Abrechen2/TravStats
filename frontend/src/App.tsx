@@ -32,7 +32,6 @@ const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
-import { TripRouteGuard } from "./components/Trips/TripRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -446,21 +445,13 @@ function AppContent() {
               <Route
                 path="/trips/:id/route/:routeId"
                 element={
-                  // Gated the same way the Touren tab is gated
-                  // (`isFeatureVisible("tourRoutes")` in TripDetailPage) —
-                  // otherwise the editor stays reachable by URL with the tab,
-                  // and thus the flag, hidden. NOT a boolean guard: the beta
-                  // flag is unknown for one request on a cold load, and
-                  // redirecting on "unknown" bounced every refresh and
-                  // bookmark of this URL to /trips. See TripRouteGuard and
-                  // PlacesRouteGuard (same fix, same reason).
-                  isAuthenticated ? (
-                    <TripRouteGuard>
-                      <TripRouteEditorPage />
-                    </TripRouteGuard>
-                  ) : (
-                    <Navigate to="/login" />
-                  )
+                  // Tours came out of the beta registry on 2026-09-18, and
+                  // `TripRouteGuard` went with them: it existed ONLY to hold
+                  // this URL shut while the flag was off, and to render a
+                  // loading state instead of a redirect for the one request
+                  // where the flag is still unknown. With no flag to wait for,
+                  // a guard here would delay the page for nothing.
+                  isAuthenticated ? <TripRouteEditorPage /> : <Navigate to="/login" />
                 }
               />
               <Route

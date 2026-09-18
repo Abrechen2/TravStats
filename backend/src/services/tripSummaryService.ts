@@ -111,26 +111,134 @@ function getGenerateTimeoutMs(): number {
  *   summary, one timeout at 180 s, and it emitted its reasoning. Not a
  *   candidate for a screen someone is waiting in front of.
  */
-const SYSTEM_PROMPTS: Record<SummaryLanguage, string> = {
-  de: `Du schreibst ein Reisetagebuch. Du erhältst die Daten einer Reise und erzählst sie nach.
+/**
+ * Rules 3 and 4 in two versions, because a trip without a single note or
+ * journal entry must not be told that impressions live in "notes" and
+ * "journal".
+ *
+ * Measured 2026-09-18 on the 2.7.0-beta.1 build against gemma3:12b, on a trip
+ * whose only free text was a flight note reading "UAT beta.3 test flight" — no
+ * trip notes, no journal, no stays. Twice in a row the model manufactured the
+ * fields it had been told to retell, and labelled them so they read as quotes:
+ * `*notes: Der Flug war überraschend ruhig, Nora hat fast die ganze Zeit
+ * geschlafen.*`, `"Journal: New York hat uns sofort in seinen Bann gezogen"`,
+ * and a hotel on a trip with no stay. Given a REAL journal entry the same
+ * build wrote a clean summary, so the trigger is the absence, not the model.
+ *
+ * `compactBrief` already drops the empty keys from the DATA — that is the same
+ * lesson one level down. What stayed was the prompt still naming them, which
+ * is an instruction to write something the brief cannot support.
+ *
+ * The fix is a removal, not a prohibition, and deliberately so: the file
+ * header records that a 12B model picks up the words a prohibition uses, and
+ * that the fourth version of these rules answered "the data does not contain
+ * information about any other stops" precisely because it had been told not
+ * to. So when there is no voice, the words "notes" and "journal" do not appear
+ * in the prompt at all.
+ *
+ * The voiceless rules avoid the word "Daten"/"data", and getting there cost
+ * two rounds and one bad one. Measured against gemma3:12b on the same
+ * one-flight trip each time:
+ *
+ * 1. "Du erzählst ausschließlich, was in den Daten steht" — no more invented
+ *    quotes, but: "Die restlichen Tage unserer Reise sind leider nicht in den
+ *    Daten festgehalten, aber wir hoffen, dass wir bald mehr Details dazu
+ *    erfahren." An absence reported as news, about the DATA rather than the
+ *    trip — the pattern the header above describes twice.
+ * 2. Dropping the whole clause to "Du erzählst die Stationen selbst" was far
+ *    WORSE, and is the reason this paragraph exists: the model wrote ten days
+ *    of fiction — "The Jane Hotel in Greenwich Village", the Statue of
+ *    Liberty on 13 August, the Met, Brooklyn Bridge, souvenirs — on a trip
+ *    holding one flight and nothing else. **"ausschließlich" was
+ *    load-bearing**; removing the noun took the anchor with it.
+ * 3. Keep the "only", drop the noun. "Du erzählst ausschließlich die genannten
+ *    Stationen, jede genau einmal." Better, and the meta-sentence was gone —
+ *    but the model still named three hotels ("The Knickerbocker", "The
+ *    Dominick", "Four Seasons") on a trip with no stay at all.
+ * 4. Because rule 3 still LISTED the kinds: "Hotels, Orte, Stopps". That is
+ *    the same defect one level down — a category named in the prompt but
+ *    absent from the brief is an invitation, exactly as "notes" and "journal"
+ *    were. Rule 3 is built from what the brief actually carries now
+ *    (`briefEntityNouns`), so a flight-only trip is told about flights and
+ *    nothing else.
+ *
+ * The rule the whole block comes down to: **the prompt may name only what the
+ * brief carries** — no field, and no category either.
+ */
+
+/** The kinds of entry a brief can carry, in the order a summary walks them. */
+const ENTITY_NOUNS: Record<SummaryLanguage, Record<string, string>> = {
+  de: {
+    flights: "Flüge",
+    cruises: "Kreuzfahrten",
+    stays: "Hotels",
+    places: "Orte",
+    stops: "Stopps",
+  },
+  en: { flights: "flights", cruises: "cruises", stays: "hotels", places: "places", stops: "stops" },
+};
+
+/**
+ * The nouns rule 3 may use: one per kind the brief actually holds.
+ * Empty when the trip carries nothing to walk, which the rules then phrase
+ * without a list rather than with an empty one.
+ */
+export function briefEntityNouns(brief: SummaryBrief, language: SummaryLanguage): string[] {
+  const present: string[] = [];
+  if (brief.flights.length > 0) present.push("flights");
+  if (brief.cruises.length > 0) present.push("cruises");
+  if (brief.stays.length > 0) present.push("stays");
+  if (brief.places.length > 0) present.push("places");
+  if (brief.stops.length > 0) present.push("stops");
+  return present.map((k) => ENTITY_NOUNS[language][k]);
+}
+
+const VOICE_RULES: Record<
+  SummaryLanguage,
+  Record<"withVoice" | "withoutVoice", (nouns: string) => string>
+> = {
+  de: {
+    withVoice: (
+      nouns
+    ) => `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen${nouns}, und "notes" sowie "journal" frei nacherzählt.
+4. Du erzählst ausschließlich die genannten Stationen. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.`,
+    withoutVoice: (
+      nouns
+    ) => `3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit ihren Namen${nouns}.
+4. Du erzählst ausschließlich die genannten Stationen, jede genau einmal. Der Text endet mit der letzten.`,
+  },
+  en: {
+    withVoice: (
+      nouns
+    ) => `3. Paragraph 2: the stops in order of time, with their names${nouns}, and "notes" and "journal" retold freely.
+4. You retell only the stops you are given. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.`,
+    withoutVoice: (nouns) => `3. Paragraph 2: the stops in order of time, with their names${nouns}.
+4. You retell only the stops you are given, each exactly once. The text ends with the last one.`,
+  },
+};
+
+const SYSTEM_PROMPTS: Record<SummaryLanguage, (voiceRules: string) => string> = {
+  de: (
+    voiceRules
+  ) => `Du schreibst ein Reisetagebuch. Du erhältst die Daten einer Reise und erzählst sie nach.
 
 SO SCHREIBST DU:
 1. Zwei Absätze Fließtext, je 2-4 Sätze, ohne Markdown und ohne Listen.
 2. Absatz 1: Zeitraum und Ziel der Reise, und wer mitgereist ist.
-3. Absatz 2: die Stationen in zeitlicher Reihenfolge, mit den Namen aus den Daten — Hotels, Orte, Stopps — und "notes" sowie "journal" frei nacherzählt.
-4. Du erzählst ausschließlich, was in den Daten steht. Eindrücke und Urteile stehen in "notes" und "journal"; sonst bleibt der Text bei dem, was geschehen ist.
+${voiceRules}
 5. "perspective" bestimmt die Person: "we" → „wir", "I" → „ich", durchgehend.
 6. Städtenamen statt Flughafencodes.
 7. "status": "completed" → Vergangenheit, "in_progress" → Gegenwart, "planned" → Zukunft.
 8. Sprache: Deutsch, lockerer Reisetagebuch-Ton.
 9. Antworte nur mit den zwei Absätzen, ohne Überschrift und ohne Anführungszeichen.`,
-  en: `You write a travel diary. You are given the data of one trip and you retell it.
+  en: (
+    voiceRules
+  ) => `You write a travel diary. You are given the data of one trip and you retell it.
 
 HOW YOU WRITE:
 1. Two paragraphs of prose, 2-4 sentences each, without markdown and without lists.
 2. Paragraph 1: when the trip was and where to, and who came along.
-3. Paragraph 2: the stops in order of time, with the names from the data — hotels, places, stops — and "notes" and "journal" retold freely.
-4. You retell only what the data holds. Impressions and verdicts live in "notes" and "journal"; otherwise the text stays with what happened.
+${voiceRules}
 5. "perspective" sets the person: "we" → "we", "I" → "I", throughout.
 6. City names instead of airport codes.
 7. "status": "completed" → past tense, "in_progress" → present, "planned" → future.
@@ -138,15 +246,41 @@ HOW YOU WRITE:
 9. Answer with the two paragraphs only, no heading and no quotation marks.`,
 };
 
+// The count is not repeated here. It used to say "3-Absatz"/"3-paragraph"
+// while rules 1 and 9 asked for two, and the model was left to settle the
+// contradiction — measured on 2026-09-18, it answered with three paragraphs
+// twice and two once. One statement of the shape, in the rules.
 const USER_PROMPTS: Record<SummaryLanguage, (briefJson: string) => string> = {
   de: (briefJson) =>
-    `Reisedaten:\n${briefJson}\n\nSchreibe die 3-Absatz-Zusammenfassung dieser Reise nach den Regeln im System-Prompt.`,
+    `Reisedaten:\n${briefJson}\n\nSchreibe die Zusammenfassung dieser Reise nach den Regeln im System-Prompt.`,
   en: (briefJson) =>
-    `Trip data:\n${briefJson}\n\nWrite the 3-paragraph summary of this trip following the rules in the system prompt.`,
+    `Trip data:\n${briefJson}\n\nWrite the summary of this trip following the rules in the system prompt.`,
 };
 
-export function buildSystemPrompt(language: SummaryLanguage): string {
-  return SYSTEM_PROMPTS[language];
+/**
+ * Does this trip say anything in its own words?
+ *
+ * True when the traveller wrote something anywhere the brief carries: the trip
+ * notes, a stay's notes, a place visit's notes, or a journal entry. It is the
+ * one question the prompt needs, so it is asked once and here.
+ */
+export function briefHasVoice(brief: SummaryBrief): boolean {
+  if (brief.notes) return true;
+  if (brief.journal.length > 0) return true;
+  if (brief.stays.some((s) => s.notes)) return true;
+  return brief.places.some((p) => p.notes);
+}
+
+export function buildSystemPrompt(
+  language: SummaryLanguage,
+  hasVoice = true,
+  nouns: string[] = Object.values(ENTITY_NOUNS[language])
+): string {
+  // An em dash and the list, or nothing at all — never " — ." with an empty
+  // list, and never a category this trip does not have.
+  const suffix = nouns.length > 0 ? ` — ${nouns.join(", ")}` : "";
+  const rules = VOICE_RULES[language][hasVoice ? "withVoice" : "withoutVoice"](suffix);
+  return SYSTEM_PROMPTS[language](rules);
 }
 
 export function buildUserPrompt(language: SummaryLanguage, briefJson: string): string {
@@ -523,7 +657,7 @@ export async function summariseTrip(
   );
 
   const raw = await generate(target, {
-    system: buildSystemPrompt(language),
+    system: buildSystemPrompt(language, briefHasVoice(brief), briefEntityNouns(brief, language)),
     prompt: buildUserPrompt(language, briefJson),
   });
   const narrated = cleanSummary(raw);
