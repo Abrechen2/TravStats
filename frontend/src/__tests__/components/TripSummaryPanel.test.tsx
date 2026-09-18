@@ -21,29 +21,28 @@ const t = ((key: string) => key) as unknown as Parameters<typeof TripSummaryPane
 const makeTrip = (summary: string | null): Trip =>
   ({ id: "trip-1", name: "Test trip", summary }) as unknown as Trip;
 
-describe("TripSummaryPanel (beta gate: tripAiSummary)", () => {
+// The AI summary left the beta registry on 2026-09-18 (owner: everything out
+// but the phone app), so the card no longer asks the instance flag anything.
+// What survives is the part that was never about the gate: an existing summary
+// is shown, and the buttons are offered.
+describe("TripSummaryPanel", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null });
   });
 
-  it("renders nothing when the flag is OFF and no summary exists", () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: false });
-    const { container } = render(
-      <TripSummaryPanel trip={makeTrip(null)} t={t} language="de" onChanged={() => {}} />
-    );
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByText("trips:summary.generateButton")).toBeNull();
+  it("offers the generate CTA whatever the instance beta flag says", () => {
+    for (const flag of [null, false, true]) {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
+      const { unmount } = render(
+        <TripSummaryPanel trip={makeTrip(null)} t={t} language="de" onChanged={() => {}} />
+      );
+      expect(screen.getByText("trips:summary.title")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "trips:summary.generateButton" })).toBeTruthy();
+      unmount();
+    }
   });
 
-  it("renders the generate CTA when the flag is ON", () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
-    render(<TripSummaryPanel trip={makeTrip(null)} t={t} language="de" onChanged={() => {}} />);
-    expect(screen.getByText("trips:summary.title")).toBeTruthy();
-    expect(screen.getByText("trips:summary.cta")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "trips:summary.generateButton" })).toBeTruthy();
-  });
-
-  it("still shows an already-generated summary when the flag is OFF, but not the regenerate button", () => {
+  it("shows an already-generated summary, and its regenerate button", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     render(
       <TripSummaryPanel
@@ -54,7 +53,7 @@ describe("TripSummaryPanel (beta gate: tripAiSummary)", () => {
       />
     );
     expect(screen.getByText("A lovely trip.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "trips:summary.regenerate" })).toBeNull();
+    expect(screen.getByRole("button", { name: "trips:summary.regenerate" })).toBeTruthy();
   });
 
   it("offers regenerate on an existing summary when the flag is ON", () => {

@@ -599,22 +599,15 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
-                {/* Admin-only AND behind the tours gate. The card configures a
-                    road router for tour legs and has no other consumer, so on a
-                    production instance with beta off it would offer to set up
-                    routing for a feature invisible everywhere else — the same
-                    defect the Dawarich card below was fixed for, which this,
-                    its sibling, kept until the merge review. */}
-                {isFeatureVisible("tourRoutes") && (
-                  <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
-                )}
+                {/* Admin-only. It configures a road router for tour legs, and
+                    tours came out of the beta registry on 2026-09-18. */}
+                <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
-                {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
-                    still meaningless where nothing consumes a recorded track,
-                    but tours stopped being the only consumer the moment cruise
-                    legs were scoped onto the same connection — a gate named
-                    after tours would then hide a card the cruise feature needs. */}
-                {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
+                {/* Released with tours on 2026-09-18. It had its own key rather
+                    than riding on `tourRoutes`, because cruise legs will pull
+                    from the same connection — that reasoning outlived the gate
+                    and belongs to whoever adds the second consumer. */}
+                <DawarichConnectionCard />
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the

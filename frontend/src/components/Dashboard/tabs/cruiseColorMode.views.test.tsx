@@ -11,6 +11,20 @@ import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../../lib/crui
 // hardcoded the cruise colour mode and the user had no say.
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
+vi.mock("../../../hooks/useDashboardTours", () => ({
+  // Tours are no longer gated (owner, 2026-09-18), so AllTab asks for them on
+  // every render. This file is about cruise COLOURS — an empty, settled answer
+  // keeps the network guard in setup.ts from failing it for a fetch nobody
+  // here cares about.
+  useDashboardTours: () => ({
+    tours: [],
+    toursLoading: false,
+    toursLoadError: null,
+    geometries: [],
+    reload: () => {},
+  }),
+}));
+
 vi.mock("../../MapContainer3D", () => ({
   default: (props: Record<string, unknown>) => {
     mapProps.push(props);

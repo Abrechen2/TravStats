@@ -144,21 +144,9 @@
           "advanced": "advanced"
         },
         "features": {
-          "tripAiSummary": {
-            "name": "AI trip summary",
-            "what": "A button on the trip detail page that summarises the journey in prose."
-          },
           "devicePairing": {
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
-          },
-          "tourRoutes": {
-            "name": "Tours",
-            "what": "Route sections inside a trip — the section list, its editor, a dashboard tab of its own, and the lines on the map."
-          },
-          "dawarich": {
-            "name": "Dawarich connection",
-            "what": "A connection to a Dawarich instance that recorded tracks are pulled from."
           }
         }
       },

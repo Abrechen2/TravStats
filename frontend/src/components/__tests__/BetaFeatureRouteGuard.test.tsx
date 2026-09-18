@@ -21,7 +21,7 @@ function renderGuard() {
         <Route
           path="/parser"
           element={
-            <BetaFeatureRouteGuard feature="tourRoutes" redirectTo="/">
+            <BetaFeatureRouteGuard feature="devicePairing" redirectTo="/">
               <div>parser-page</div>
             </BetaFeatureRouteGuard>
           }

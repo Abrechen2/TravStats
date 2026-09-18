@@ -23,6 +23,20 @@ import { usePlaceColorStore } from "../../../../store/placeColorStore";
  */
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
+vi.mock("../../../../hooks/useDashboardTours", () => ({
+  // Tours are no longer gated (owner, 2026-09-18), so AllTab asks for them on
+  // every render. This file is about the lodging/places legend, not tours —
+  // an empty, settled answer keeps it that way and keeps the network guard
+  // in setup.ts from failing the test for a fetch nobody here cares about.
+  useDashboardTours: () => ({
+    tours: [],
+    toursLoading: false,
+    toursLoadError: null,
+    geometries: [],
+    reload: () => {},
+  }),
+}));
+
 vi.mock("../../../MapContainer3D", () => ({
   default: (props: Record<string, unknown>) => {
     mapProps.push(props);
