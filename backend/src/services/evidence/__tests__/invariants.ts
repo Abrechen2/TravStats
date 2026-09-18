@@ -24,22 +24,37 @@ import type { EvidenceEntry, EvidenceResponse } from "../../../schemas/evidence"
  * CONSTRUCTION, for any population whatsoever. A resolver that selected
  * entirely the wrong flights passes it. What the sum and distinct assertions
  * actually prove is INTERNAL CONSISTENCY — that the response's own buckets
- * add up, that rounding happened once at the end, that a distinct count is a
- * union and not a row count — and they bite on the population only where
- * `value` comes from a different source than the entries do (the `year*`
- * measures read `computeSummary`'s own stats, `businessTotalCost` reads
- * `computeDedupedTotalCost`).
+ * add up, and that a distinct count is a union and not a row count — and
+ * they bite on the population only where `value` comes from a different
+ * source than the entries do (the `year*` measures read `computeSummary`'s
+ * own stats, `businessTotalCost` reads `computeDedupedTotalCost`).
  *
  * The guard against the wrong POPULATION is a different test entirely: fetch
  * the surface's own endpoint in the same test and assert `measure.value`
- * equals the number that endpoint renders. The four ranking suites have done
- * this from the start; the metric suites gained it for
- * `businessTotalCost` (`/stats/business`), the five `year*` measures
- * (`/stats/summary?year=`) and the three geo counts (`/stats/airports`).
- * Where no endpoint exists to compare against — the scorecard family is
- * computed from `/stats/timeseries` buckets, not a single figure — the
- * `.toBe(<literal>)` assertions carry that weight alone, and that is a known
- * limit, not an oversight.
+ * equals the number that endpoint renders. It is only a population guard
+ * where the endpoint computes its number INDEPENDENTLY of the resolver:
+ *
+ *   - `businessTotalCost` vs `/stats/business` — genuine. `dedupedCost.ts`
+ *     and `businessStats.ts` are two hand-kept copies of one rule, and the
+ *     cross-check is what makes them drift loudly.
+ *   - the three geo counts vs `/stats/airports` — genuine.
+ *     `calculateAirportStats` is a second implementation of the same credit
+ *     rules.
+ *   - the four ranking dimensions vs their own endpoints — genuine, and the
+ *     suites that have done this from the start.
+ *   - the five `year*` measures vs `/stats/summary?year=` — NOT a population
+ *     guard. The route (`routes/stats.ts`) and `metricEvidenceFlightYear.ts`
+ *     make the identical `buildWhere(...)` + `computeSummary(...)` calls, so
+ *     the two numbers are one number read twice and the comparison cannot
+ *     fail on a wrong population — only on ARGUMENT drift, if one side ever
+ *     starts passing a different year or base currency. Worth keeping for
+ *     that, and named here for what it is: the population of the `year*`
+ *     family rests on its `.toBe(<literal>)` assertions.
+ *
+ * Where no endpoint exists to compare against at all — the scorecard family
+ * is computed from `/stats/timeseries` buckets, not a single figure — the
+ * literals carry that weight alone, the same way. Both are known limits, not
+ * oversights.
  */
 
 /**

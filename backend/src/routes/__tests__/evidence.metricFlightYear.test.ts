@@ -131,14 +131,20 @@ describe("GET /api/v1/evidence/metric/... — the FlightYearSummaryCards family"
   });
 
   /**
-   * All five literals above were written from the same fixture set the
-   * resolvers read, and the sum invariant cannot separate "the right rows"
-   * from "consistent arithmetic over the wrong rows" (`invariants.ts` says
-   * why). `FlightYearSummaryCards` renders `GET /stats/summary?year=`, so
-   * that response is the independent witness: each measure must equal the
-   * field the card actually shows, fetched in this same test.
+   * This is NOT a population guard, and saying so is the point of the
+   * comment. `/stats/summary` (`routes/stats.ts`) and this family's
+   * `loadYearRows` (`metricEvidenceFlightYear.ts`) make the identical
+   * `buildWhere(...)` + `computeSummary(...)` calls, so the two numbers are
+   * one number read twice: no wrong population can make them disagree.
+   * What it does catch is ARGUMENT drift — if either side ever starts
+   * passing a different year, a date range, or another base currency, the
+   * card and its evidence would answer over different sets while each
+   * remained internally consistent. That is worth a test, and it is all this
+   * test is. The population of the five `year*` measures rests on the
+   * `.toBe(<literal>)` assertions above; `invariants.ts` carries the same
+   * note beside the families whose cross-check IS independent.
    */
-  it("every year measure equals the field /stats/summary?year= renders for it", async () => {
+  it("every year measure is computed with the same arguments /stats/summary?year= uses", async () => {
     const summary = await request(app)
       .get("/api/v1/stats/summary?year=2025")
       .set("Cookie", userACookie);
