@@ -75,10 +75,44 @@ export interface MicroTripCandidate {
   endDate: string | null;
 }
 
+/**
+ * The most expensive trip across the WHOLE logbook (evidence spec "The most
+ * expensive trip"), ranked backend-side on the FX base-currency amount —
+ * never derivable from the (capped) `Trip[]` this module otherwise returns,
+ * so it travels separately. `amount`/`currency` are the money actually spent
+ * in the trip's own dominant currency; only the ORDER trips were compared in
+ * used the conversion.
+ */
+export interface TripCostSuperlative {
+  tripId: string;
+  name: string;
+  amount: number;
+  currency: string;
+  excluded: { count: number; reason: "unconvertible" };
+}
+
 export const tripsApi = {
   getAll: async (): Promise<Trip[]> => {
     const { data } = await api.get<{ trips: Trip[] }>("/trips");
     return data.trips;
+  },
+
+  /**
+   * Same list, plus the uncapped cross-trip cost superlative
+   * (`mostExpensiveTrip`). A SEPARATE call from `getAll` on purpose: every
+   * other caller of `/trips` (StayEditor, PlaceDetailPage, FlightsTablePage,
+   * the Cruise modal, …) has no use for it, and `includeInsights=true` is
+   * what keeps the extra uncapped query from running on their behalf.
+   */
+  getAllWithInsights: async (): Promise<{
+    trips: Trip[];
+    mostExpensiveTrip: TripCostSuperlative | null;
+  }> => {
+    const { data } = await api.get<{
+      trips: Trip[];
+      mostExpensiveTrip: TripCostSuperlative | null;
+    }>("/trips", { params: { includeInsights: true } });
+    return data;
   },
 
   getById: async (id: string): Promise<Trip> => {

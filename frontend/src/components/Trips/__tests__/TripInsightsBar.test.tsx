@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Trip } from "../../../types";
+import type { TripCostSuperlative } from "../../../lib/api/trips";
 
 const navigate = vi.hoisted(() => vi.fn());
 vi.mock("react-router-dom", async () => {
@@ -26,10 +27,13 @@ const trip = (over: Partial<Trip>): Trip =>
     ...over,
   }) as Trip;
 
-const render_ = (trips: Trip[]): ReturnType<typeof render> =>
+const render_ = (
+  trips: Trip[],
+  mostExpensiveTrip: TripCostSuperlative | null = null
+): ReturnType<typeof render> =>
   render(
     <MemoryRouter>
-      <TripInsightsBar trips={trips} />
+      <TripInsightsBar trips={trips} mostExpensiveTrip={mostExpensiveTrip} />
     </MemoryRouter>
   );
 
@@ -40,10 +44,19 @@ describe("TripInsightsBar (#3)", () => {
   });
 
   it("shows the winning trip names and navigates on click", () => {
-    render_([
-      trip({ id: "wide", name: "Grand Tour", countries: ["DE", "US", "JP"] }),
-      trip({ id: "rich", name: "Luxe", bookings: [{ price: 9000, currency: "EUR" }] as never }),
-    ]);
+    render_(
+      [
+        trip({ id: "wide", name: "Grand Tour", countries: ["DE", "US", "JP"] }),
+        trip({ id: "rich", name: "Luxe", bookings: [{ price: 9000, currency: "EUR" }] as never }),
+      ],
+      {
+        tripId: "rich",
+        name: "Luxe",
+        amount: 9000,
+        currency: "EUR",
+        excluded: { count: 0, reason: "unconvertible" },
+      }
+    );
     expect(screen.getByText("Grand Tour")).toBeInTheDocument();
     expect(screen.getByText("Luxe")).toBeInTheDocument();
 

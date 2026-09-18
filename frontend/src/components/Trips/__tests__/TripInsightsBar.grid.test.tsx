@@ -38,6 +38,7 @@ describe("TripInsightsBar — the grid the trip cards use (#271)", () => {
           trip({ id: "a", countries: ["DE", "FR", "IT"] }),
           trip({ id: "b", countries: ["DE"] }),
         ]}
+        mostExpensiveTrip={null}
       />
     );
     const grid = container.querySelector(`.${TRIP_GRID_CLASS.split(" ")[0]}`);

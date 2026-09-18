@@ -61,6 +61,36 @@ const bookingUpdateInput = registry.register(
   updateBookingSchema.openapi("BookingUpdateInput")
 );
 
+const tripCostSuperlative = registry.register(
+  "TripCostSuperlative",
+  z
+    .object({
+      tripId: z.string().uuid(),
+      name: z.string(),
+      amount: z
+        .number()
+        .describe(
+          "The money actually spent, in the trip's own dominant currency — " +
+            "never a converted figure. Only the ORDER the trips are compared " +
+            "in uses the base-currency amount; the label never does."
+        ),
+      currency: z.string(),
+      excluded: z.object({
+        count: z.number().int(),
+        reason: z.literal("unconvertible"),
+      }),
+    })
+    .describe(
+      "Ranked on each trip's total FX base-currency amount across ALL its " +
+        "cost sources, computed over every trip the user has — never the " +
+        "500-trip / 200-row caps `GET /trips` applies to the list itself. A " +
+        "trip carrying any cost item with no FX snapshot (no currency, no " +
+        "date, or a failed rate lookup) leaves the comparison rather than " +
+        "being ranked on a partial sum; `excluded.count` says how many."
+    )
+    .openapi("TripCostSuperlative")
+);
+
 const tripId = z.object({ id: z.string().uuid() });
 const deleted = { description: "Deleted" };
 const notFound = { description: "Not found", content: errorContent };
@@ -93,12 +123,35 @@ registry.registerPath({
   description:
     "Newest first, capped at 500. Each trip carries its bookings, up to 200 " +
     "flights, cruises and stays each, and `_count` with the size of every " +
-    "linked collection including tour sections (`routes`) and photos (`photos`).",
+    "linked collection including tour sections (`routes`) and photos (`photos`). " +
+    "`includeInsights=true` additionally runs an UNCAPPED cost comparison over " +
+    "every trip the user has and returns `mostExpensiveTrip` — not derivable " +
+    "from the (capped) `trips` array above, so callers that need the true " +
+    "cross-trip superlative ask for it explicitly rather than every caller of " +
+    "this endpoint paying for it.",
   tags: ["Trips"],
+  request: {
+    query: z.object({
+      includeInsights: z
+        .enum(["true", "false"])
+        .optional()
+        .describe("Adds `mostExpensiveTrip` to the response. Default false."),
+    }),
+  },
   responses: {
     200: {
       description: "Trips",
-      content: { "application/json": { schema: z.object({ trips: z.array(tripListItem) }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            trips: z.array(tripListItem),
+            mostExpensiveTrip: tripCostSuperlative
+              .nullable()
+              .optional()
+              .describe("Present only when `includeInsights=true` was passed."),
+          }),
+        },
+      },
     },
   },
 });

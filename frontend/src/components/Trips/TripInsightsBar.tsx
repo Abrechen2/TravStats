@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trip } from "../../types";
+import type { TripCostSuperlative } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { computeTripInsights, type TripInsightWinner } from "../../lib/stats/tripInsights";
 import { TRIP_GRID_CLASS } from "./tripGrid";
@@ -14,10 +15,18 @@ import { TRIP_GRID_CLASS } from "./tripGrid";
  * Renders nothing until at least one metric has a winner, so a fresh or
  * single-trivial-trip account never shows an empty strip.
  */
-export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | null {
+export function TripInsightsBar({
+  trips,
+  mostExpensiveTrip,
+}: {
+  trips: Trip[];
+  /** From `tripsApi.getAllWithInsights()` — the uncapped, FX-ranked winner.
+   *  `null` means no started trip has a convertible cost yet. */
+  mostExpensiveTrip: TripCostSuperlative | null;
+}): JSX.Element | null {
   const { t, i18n } = useTranslation(["trips"]);
   const navigate = useNavigate();
-  const insights = computeTripInsights(trips, i18n.language ?? "de");
+  const insights = computeTripInsights(trips, i18n.language ?? "de", mostExpensiveTrip);
 
   const tiles: Array<{ key: string; label: string; win: TripInsightWinner | null }> = [
     { key: "longest", label: t("trips:insights.longest"), win: insights.longest },

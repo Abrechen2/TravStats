@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { tripsApi } from "../lib/api";
+import { tripsApi, type TripCostSuperlative } from "../lib/api";
 import { logger } from "../lib/logger";
 import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
@@ -18,11 +18,17 @@ import AppShell from "../components/ui/AppShell";
 export default function TripsPage(): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [mostExpensiveTrip, setMostExpensiveTrip] = useState<TripCostSuperlative | null>(null);
 
+  // `getAllWithInsights`, not `getAll` — this is the ONE screen that shows
+  // the cross-trip cost superlative, and it must come from the backend's
+  // uncapped ranking (evidence spec "The most expensive trip"), never
+  // recomputed from this page's own (capped) `trips` array.
   const loadTrips = async (): Promise<void> => {
     try {
-      const data = await tripsApi.getAll();
-      setTrips(data);
+      const data = await tripsApi.getAllWithInsights();
+      setTrips(data.trips);
+      setMostExpensiveTrip(data.mostExpensiveTrip);
     } catch (err) {
       logger.warn("Failed to load trips", err);
     }
@@ -38,7 +44,7 @@ export default function TripsPage(): JSX.Element {
         trips={trips}
         onTripsChange={() => void loadTrips()}
         header={{ title: t("trips:tab"), meta: t("trips:count", { count: trips.length }) }}
-        insights={<TripInsightsBar trips={trips} />}
+        insights={<TripInsightsBar trips={trips} mostExpensiveTrip={mostExpensiveTrip} />}
       />
     </AppShell>
   );
