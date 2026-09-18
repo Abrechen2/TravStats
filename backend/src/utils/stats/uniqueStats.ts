@@ -2,7 +2,6 @@ import { calculateDistance } from "../geo";
 import { getCachedAirports } from "../../services/airportCache";
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from "../timezone";
 import logger from "../logger";
-import { getContinent } from "../continents";
 import { departureClockOf } from "./departureClock";
 import {
   arrivalEndpointCode,
@@ -201,14 +200,8 @@ export async function calculateUniqueStats(
     if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
       const distance = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
 
-      const depTz =
-        (f.depIata && timezoneMap.get(f.depIata)) ||
-        (f.depIcao && timezoneMap.get(f.depIcao)) ||
-        null;
-      const arrTz =
-        (f.arrIata && timezoneMap.get(f.arrIata)) ||
-        (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
-        null;
+      const depTz = departureTimezoneOf(f, timezoneMap);
+      const arrTz = arrivalTimezoneOf(f, timezoneMap);
 
       // Deliberately NOT the stored `duration_minutes` column (forgejo#45).
       // `/unique` never selects `arrTimeSemantics`, so the call below defaults
@@ -269,8 +262,8 @@ export async function calculateUniqueStats(
     Object.entries(flightsByDate).forEach(([date, dayFlights]) => {
       const countries = new Set<string>();
       dayFlights.forEach((f) => {
-        const depCode = f.depIata || f.depIcao;
-        const arrCode = f.arrIata || f.arrIcao;
+        const depCode = departureEndpointCode(f);
+        const arrCode = arrivalEndpointCode(f);
 
         if (depCode) {
           const airport = airports.get(depCode);
