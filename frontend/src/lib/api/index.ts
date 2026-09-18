@@ -27,6 +27,7 @@ export * from "./usageStats";
 export * from "./companions";
 export * from "./twoFactor";
 export * from "./passkeys";
+export * from "./evidence";
 // Named export (not `export *`) to avoid re-exporting Trip/Booking,
 // which are already exported from ../../types/index.ts
 export { tripsApi } from "./trips";

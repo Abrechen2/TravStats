@@ -1,0 +1,72 @@
+{
+  "panel": {
+    "close": "Schließen",
+    "loading": "Beleg wird geladen …",
+    "loadError": "Die Belege konnten nicht geladen werden.",
+    "abstention": "Diese Zahl lässt sich derzeit nicht ermitteln.",
+    "empty": "Keine Einträge.",
+    "loadMore": "Weitere laden",
+    "scope": {
+      "allTime": "Gesamter Zeitraum",
+      "year": "Jahr {{year}}",
+      "rolling12m": "Letzte 12 Monate",
+      "domain": {
+        "flight": "Flüge",
+        "cruise": "Kreuzfahrten",
+        "lodging": "Unterkünfte",
+        "place": "Orte",
+        "trip": "Reisen"
+      }
+    },
+    "bucket": {
+      "returned": "{{count}} angezeigt",
+      "omitted": "{{count}} weitere bekannt, noch nicht geladen",
+      "unattributedLocationHistoryOnly": "{{count}} nur durch den Standortverlauf belegt",
+      "unattributedEntryRemoved": "{{count}} deren Eintrag inzwischen gelöscht wurde",
+      "unattributedNotPerEntry": "{{count}} lassen sich nicht auf einzelne Einträge aufteilen"
+    }
+  },
+  "entry": {
+    "contribution": "trägt {{value}} bei",
+    "credits": "belegt: {{list}}",
+    "undated": "Ohne Datum",
+    "role": {
+      "departure": "Abflug",
+      "arrival": "Ankunft",
+      "both": "Abflug und Ankunft"
+    }
+  },
+  "unit": {
+    "flights": "Flüge",
+    "minutes": "Minuten",
+    "km": "km",
+    "visits": "Besuche",
+    "airlines": "Airlines",
+    "airports": "Flughäfen",
+    "countries": "Länder",
+    "continents": "Kontinente"
+  },
+  "evidence.metric.flightCount": "Anzahl Flüge",
+  "evidence.metric.flightTimeMinutes": "Flugzeit gesamt",
+  "evidence.metric.distanceKmTotal": "Flugdistanz gesamt",
+  "evidence.metric.airlineCount": "Anzahl Airlines",
+  "evidence.metric.flightsWithoutAirlineCount": "Flüge ohne Airline",
+  "evidence.metric.businessTotalCost": "Geschäftskosten gesamt",
+  "evidence.metric.punctualitySampleSize": "Stichprobengröße Pünktlichkeit",
+  "evidence.metric.airportsVisitedCount": "Besuchte Flughäfen",
+  "evidence.metric.flightCountriesVisitedCount": "Besuchte Länder (Flüge)",
+  "evidence.metric.continentsVisitedCount": "Besuchte Kontinente",
+  "evidence.metric.yearFlightCount": "Flüge im Jahr {{year}}",
+  "evidence.metric.yearDistanceKm": "Distanz im Jahr {{year}}",
+  "evidence.metric.yearFlightTimeMinutes": "Flugzeit im Jahr {{year}}",
+  "evidence.metric.yearTotalCost": "Kosten im Jahr {{year}}",
+  "evidence.metric.yearUnpricedFlightCount": "Flüge ohne Preis im Jahr {{year}}",
+  "evidence.metric.scorecardFlightCount": "Flüge (rollierend, letzte 12 Monate)",
+  "evidence.metric.scorecardDistanceKm": "Distanz (rollierend, letzte 12 Monate)",
+  "evidence.metric.scorecardFlightTimeMinutes": "Flugzeit (rollierend, letzte 12 Monate)",
+  "evidence.ranking.airline": "Airline {{airline}}",
+  "evidence.ranking.airport": "Flughafen {{airport}}",
+  "evidence.ranking.airport.subtitle": "{{dep}} → {{arr}} · {{role}}",
+  "evidence.ranking.country": "Land {{country}}",
+  "evidence.ranking.aircraftType": "Flugzeugtyp {{aircraft}}"
+}
