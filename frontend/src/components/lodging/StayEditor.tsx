@@ -8,6 +8,7 @@ import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import ReceiptUpload from "../ReceiptUpload";
+import DocumentsSection from "../documents/DocumentsSection";
 import { AmenityChipsInput } from "./AmenityChipsInput";
 import { Field } from "../ui/Field";
 import { StayEditorSection } from "./StayEditorSection";
@@ -730,6 +731,11 @@ export function StayEditor({
               onDelete={(): void => setReceiptUrl(null)}
             />
           </StayEditorSection>
+
+          {/* Beside the receipt, never in its place: a stay may carry a bill,
+              a booking confirmation and a parking ticket. A stay being CREATED
+              has no id yet, so there is nothing to file documents against. */}
+          {stay ? <DocumentsSection entry={{ type: "lodgingStay", id: stay.id }} /> : null}
 
           <StayEditorNotesSection
             guests={stay?.guests ?? null}
