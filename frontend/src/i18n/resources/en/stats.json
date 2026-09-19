@@ -656,7 +656,62 @@
     "cruiseDepth": "Depth & loyalty",
     "cruiseTags": "Lines, regions, countries",
     "cruiseFlags": "Highlights",
-    "rankings": "Rankings"
+    "rankings": "Rankings",
+    "records": "Records"
+  },
+  "records": {
+    "title": "Records",
+    "intro": "The best figures in your logbook. Anything that cannot be derived is missing here rather than shown as a zero.",
+    "empty": "No flight yet that a record could be derived from.",
+    "noDetail": "No further details on file.",
+    "openFlight": "Open flight",
+    "range": "{{start}} to {{end}}",
+    "names": {
+      "longest-flight": "Longest flight",
+      "shortest-flight": "Shortest flight",
+      "busiest-day": "Busiest day",
+      "longest-aloft": "Longest time aloft",
+      "biggest-delay": "Biggest delay",
+      "northernmost": "Northernmost point",
+      "longest-streak": "Longest streak"
+    },
+    "units": {
+      "flights_one": "flight",
+      "flights_other": "flights",
+      "days_one": "day",
+      "days_other": "days",
+      "north": "north"
+    }
+  },
+  "wrapped": {
+    "title": "Your year",
+    "intro": "A look back at {{year}} — from your logbook, nothing estimated.",
+    "yearLabel": "Year",
+    "loadError": "Your year could not be loaded.",
+    "loadErrorYear": "{{year}} could not be loaded.",
+    "nothingYet": "Nothing to look back on yet. Once a flight or a cruise is recorded, a review appears here.",
+    "emptyYear": "No flight recorded in {{year}}.",
+    "needsFlights": "This review is built from flights. Switch the flights area on to see it.",
+    "rankTop": "Your biggest flying year so far.",
+    "rankSecond": "Only {{year}} had more flights.",
+    "flights": "Flights",
+    "flightsDesc": "counted in {{year}}",
+    "distance": "Distance",
+    "distanceDesc": "{{factor}}× around the Earth",
+    "distanceDescShort": "The year's flight distances, added up",
+    "newCountries": "New countries",
+    "newCountriesDesc": "first evidenced this year",
+    "cruises": "Cruises",
+    "cruisesDesc": "started this year",
+    "topAirline": "Most-flown airline",
+    "topAirlineDesc_one": "{{count}} flight",
+    "topAirlineDesc_other": "{{count}} flights",
+    "noAirline": "No flight this year names an airline.",
+    "topRoute": "Most-flown route",
+    "topRouteDesc_one": "{{count}} flight, both directions together",
+    "topRouteDesc_other": "{{count}} flights, both directions together",
+    "noRoute": "No route derivable.",
+    "none": "—"
   },
   "period": {
     "emptyYear": "Nothing recorded here for {{year}}."

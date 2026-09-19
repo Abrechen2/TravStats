@@ -39,6 +39,7 @@ import StatsChartsSection from "../components/Stats/StatsChartsSection";
 import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
+import RecordsSection from "../components/Stats/RecordsSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
@@ -706,6 +707,13 @@ export default function AdvancedStatsPage(): JSX.Element {
                   totalFlights={flights.length}
                 />
               )}
+
+              {/* Rekorde (forgejo#53) — its own component with its own request:
+                  `/stats/records` is not one of the nine sections `/stats/page`
+                  composes, and this page is large enough already. The flights
+                  are handed over for NAMES and DATES only; every number in
+                  there is the server's. */}
+              {sections.isVisible("records") && <RecordsSection flights={flights} />}
 
               {/* The ONE composed request failed (forgejo#49) — said once, here,
                   rather than nine times or not at all. The sections below then
