@@ -15,6 +15,13 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({
   useIsDemoAccount: () => isDemoMock.current,
 }));
 
+// Who is asking. The remembered refusal belongs to ONE account.
+const currentUser = vi.hoisted(() => ({ id: "user-a" as string | undefined }));
+vi.mock("../../../store/authStore", () => ({
+  useAuthStore: (selector: (s: { user: { id: string | undefined } | null }) => unknown) =>
+    selector({ user: currentUser.id === undefined ? null : { id: currentUser.id } }),
+}));
+
 import BulkRefreshCard from "../BulkRefreshCard";
 
 /**
@@ -33,6 +40,7 @@ describe("BulkRefreshCard on the shared demo account", () => {
     });
     flightsApiMock.bulkRefreshRun.mockReset();
     window.sessionStorage.clear();
+    currentUser.id = "user-a";
   });
 
   it("asks for no preview it already knows will be refused", async () => {
@@ -73,5 +81,31 @@ describe("BulkRefreshCard on the shared demo account", () => {
     render(<BulkRefreshCard />);
     expect(await screen.findByText("settings:apiKeys.bulkRefresh.demoBlocked")).toBeInTheDocument();
     expect(flightsApiMock.bulkRefreshPreview).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Review, 2026-09-19: the flag was one tab-global key. Logout and login are
+   * SPA navigations -- no page reload -- so a demo-flagged account signing out
+   * and a real one signing in inside the same tab inherited the refusal and
+   * was never offered the bulk refresh at all. `authStore.clearSession`
+   * already carries a paragraph about exactly this failure mode for the
+   * counts store.
+   */
+  it("does not hand one account's refusal to the next one in the tab", async () => {
+    isDemoMock.current = false;
+    flightsApiMock.bulkRefreshPreview.mockRejectedValueOnce({
+      response: { status: 403, data: { error: "DEMO_ACCOUNT_FORBIDDEN", message: "no" } },
+    });
+
+    const asDemo = render(<BulkRefreshCard />);
+    expect(await screen.findByText("settings:apiKeys.bulkRefresh.demoBlocked")).toBeInTheDocument();
+    asDemo.unmount();
+
+    // The next account in the same tab, with the same sessionStorage.
+    currentUser.id = "user-b";
+    render(<BulkRefreshCard />);
+
+    await waitFor(() => expect(flightsApiMock.bulkRefreshPreview).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("settings:apiKeys.bulkRefresh.demoBlocked")).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import type { User } from "../types";
 import { authApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useDashboardCountsStore } from "./dashboardCountsStore";
+import { forgetQuotaRefusals } from "../lib/bulkRefreshRefusal";
 
 interface AuthState {
   user: User | null;
@@ -50,6 +51,10 @@ export const useAuthStore = create<AuthState>()(
         // of the 2026-09-17 alex-design-feedback task 2 fix).
         clearSession: () => {
           useDashboardCountsStore.getState().reset();
+          // Same reason as the counts store above, and the same SPA
+          // navigation: a 403 the server gave THIS account must not follow
+          // the next one into the same tab (review, 2026-09-19).
+          forgetQuotaRefusals();
           set({ user: null });
         },
         logout: async () => {
@@ -61,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
           } finally {
             // Clear local user state regardless of API result
             useDashboardCountsStore.getState().reset();
+            forgetQuotaRefusals();
             set({ user: null });
           }
         },
