@@ -1,4 +1,6 @@
+import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
+import { EVIDENCE_MEASURES } from "../../shared/evidenceMeasures";
 import type { EvidenceResponse } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
 import {
@@ -221,6 +223,31 @@ export function servedMetricKeys(): string[] {
   return Object.keys(METRIC_RESOLVERS);
 }
 
+/**
+ * `?domains=` is honoured by exactly three measures — the `crossDomainKpis`
+ * strip, the only numbers on the site that move when a domain chip is
+ * toggled — and the registry says which by carrying `domainFiltered` in
+ * `scopes`. Every other resolver ignores the field, while
+ * `evidenceScopeFromQuery` still copies it into `measure.scope.domains` and
+ * the response echoes it back.
+ *
+ * A scope echoed but not honoured is a LIE in the response: the payload
+ * states the population it was measured over, and
+ * `?domains=cruise&evidence=metric:lodgingStaysCount` answered every stay
+ * under a scope claiming it had counted only cruises. The panel's whole
+ * premise is that `measure.scope` describes `measure.value`.
+ *
+ * So it is refused, with the same 400 a resolver throws for a period it
+ * cannot show — not silently dropped, which is what
+ * `evidenceQuerySchema`'s own `?period=allTime&year=2026` refinement already
+ * ruled against for the neighbouring field.
+ */
+function rejectUnhonouredDomains(key: string, scope: EvidenceScope): void {
+  if (!scope.domains) return;
+  if (EVIDENCE_MEASURES[key]?.scopes.includes("domainFiltered")) return;
+  throw new AppError(`${key} evidence is not domain-filtered; remove the domains parameter.`, 400);
+}
+
 export async function resolveMetricEvidence(
   userId: string,
   key: string,
@@ -228,6 +255,9 @@ export async function resolveMetricEvidence(
   page: PagingParams
 ): Promise<EvidenceResponse | null> {
   const resolve = METRIC_RESOLVERS[key];
+  // An unknown key is a 404 and must stay one, so the lookup comes FIRST: a
+  // 400 here would tell a caller that an unserved key exists.
   if (!resolve) return null;
+  rejectUnhonouredDomains(key, scope);
   return resolve(userId, scope, page);
 }

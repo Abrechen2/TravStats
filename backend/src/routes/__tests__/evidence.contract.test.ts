@@ -95,6 +95,45 @@ describe("GET /api/v1/evidence/:kind/:key — contract", () => {
     expect(res.status).toBe(400);
   });
 
+  /**
+   * `?domains=` is honoured by exactly three measures — the cross-domain KPI
+   * strip — and the registry says which by carrying `domainFiltered`. Every
+   * other resolver ignores the field, while `evidenceScopeFromQuery` still
+   * copies it into `measure.scope.domains` and the response echoes it back.
+   *
+   * A scope echoed but not honoured is a LIE in the response:
+   * `lodgingStaysCount?domains=cruise` answered every stay under a scope
+   * claiming it had counted only cruises, and the panel's whole premise is
+   * that `measure.scope` describes `measure.value`. Refused, exactly as the
+   * stray `year` above is refused rather than silently dropped.
+   */
+  it("answers 400 when domains are sent to a measure that does not narrow by them", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/lodgingStaysCount?domains=cruise")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(400);
+  });
+
+  it("answers 200 when domains are sent to a measure that DOES narrow by them", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/crossDomainEventCount?domains=cruise")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.measure.scope.domains).toEqual(["cruise"]);
+  });
+
+  /**
+   * The order inside the dispatcher matters: an unknown key must stay a 404
+   * even when the request is also malformed, or a 400 would tell a caller
+   * that the key exists and something else was wrong with the request.
+   */
+  it("still answers 404, not 400, for an unknown key sent with domains", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/flights.total?domains=cruise")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(404);
+  });
+
   it("answers no-store on the 404 path like every other /api response", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/flights.total")
