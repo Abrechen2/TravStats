@@ -75,7 +75,13 @@ function Figure({
       >
         {figure.display}
       </EvidenceTrigger>
-      <span className="text-xs sm:hidden" style={{ color: "var(--text-muted)" }}>
+      {/*
+        `aria-hidden`, because the button already carries this exact string as
+        its `aria-label` at every width. Without it a screen reader announces
+        each figure's name twice below `sm` — the caption exists for the EYE,
+        which loses the pairing when the slash disappears.
+      */}
+      <span aria-hidden="true" className="text-xs sm:hidden" style={{ color: "var(--text-muted)" }}>
         {figure.label}
       </span>
     </span>

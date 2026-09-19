@@ -100,8 +100,14 @@ describe("DualFigureCard", () => {
     expect(row.className).toContain("sm:flex-row");
     // Stacked, "12" over "8" is a fraction unless each says what it is, so the
     // captions appear exactly where the slash disappears.
-    expect(screen.getByText("Eastward flights").className).toContain("sm:hidden");
+    const caption = screen.getByText("Eastward flights");
+    expect(caption.className).toContain("sm:hidden");
     expect(screen.getByText("/").className).toContain("hidden");
     expect(screen.getByText("/").className).toContain("sm:inline");
+    // The caption is for the eye alone: the button carries the same string as
+    // its accessible name at every width, so announcing both reads the figure
+    // out twice.
+    expect(caption).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByRole("button", { name: "Eastward flights" })).toHaveLength(1);
   });
 });
