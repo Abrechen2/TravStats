@@ -227,16 +227,17 @@ describe("the demo reset (ensureUser -> wipeDemoUser)", () => {
     expect((await countsFor(demoId)).flights).toBe(0);
   });
 
-  it("does NOT clear the reset account's PasswordResetRequest (a gap, low harm)", async () => {
+  it("clears the reset account's PasswordResetRequest", async () => {
     // `PasswordResetRequest` arrived on 2026-09-19 (migration
-    // 20260919140631_password_reset_requests) and is in neither of the three
-    // lists in `wipeDemoUser`'s enumeration — the same omission `Document` had.
-    // It carries no token (the row is an ADMIN INBOX item: "this user asked"),
-    // so the consequence is an open admin task about an account that no longer
-    // holds the data it was raised for, not a credential leak.
+    // 20260919140631_password_reset_requests) and was in none of the three
+    // lists in `wipeDemoUser`'s enumeration — the same omission `Document`
+    // had two days earlier. It carries no token (the row is an ADMIN INBOX
+    // item: "this user asked"), so what survived a reset was an open admin
+    // task about an account that no longer held the data it was raised for,
+    // not a credential.
     await prisma.passwordResetRequest.create({ data: { userId: demoId } });
     await ensureUser();
     const left = await prisma.passwordResetRequest.count({ where: { userId: demoId } });
-    expect(left).toBe(1);
+    expect(left).toBe(0);
   });
 });

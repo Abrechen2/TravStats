@@ -838,14 +838,15 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  * next model with a `userId` will be noticed only if this list is read — a
  * cascade you cannot see is indistinguishable from a table nobody thought of.
  *
- * Deleted by this function (30). Rows, not files — an uploaded receipt or
+ * Deleted by this function (31). Rows, not files — an uploaded receipt or
  * training sample leaves its bytes on disk, as `demoGuard.uploads.test.ts`
  * notes, which is why the upload routes refuse the account outright:
  *   AnalyticsEvent · Booking · Companion · CountryDay · Cruise ·
  *   CruiseStop · DataQualityFlag · DawarichSweepState · Document · Flight ·
  *   ImportBatch ·
  *   Lodging · LodgingMembership · LodgingStay · PairingCode ·
- *   ParseTrainingLog · ParserTemplate · PendingFlightUpdate ·
+ *   ParseTrainingLog · ParserTemplate · PasswordResetRequest ·
+ *   PendingFlightUpdate ·
  *   PendingUpdateStatistics · PhotoJourney · Place · PlaceList · PlaceVisit ·
  *   ReceiptUpload · TrainingData · Trip · TripJournalEntry · TripRoute ·
  *   TripStop · UserAchievement
@@ -951,6 +952,16 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.pairingCode.deleteMany({ where: { userId } });
   await prisma.parseTrainingLog.deleteMany({ where: { userId } });
   await prisma.parserTemplate.deleteMany({ where: { userId } });
+  // An ADMIN INBOX item — "this account asked to have its password reset" —
+  // carrying no token, which is why the omission cost nothing that could be
+  // spent. What it did cost was an administrator's attention: the row outlived
+  // every reset (data-integrity audit 2026-09-19, finding 7), so a public
+  // instance left an open task about an account that no longer holds the data
+  // the request was raised for, and the account is one whose password is
+  // printed on the login page. The table arrived on 2026-09-19 (migration
+  // `20260919140631_password_reset_requests`) and was in none of the three
+  // lists above, exactly as `Document` had been two days earlier.
+  await prisma.passwordResetRequest.deleteMany({ where: { userId } });
   await prisma.pendingUpdateStatistics.deleteMany({ where: { userId } });
   await prisma.photoJourney.deleteMany({ where: { userId } });
   await prisma.receiptUpload.deleteMany({ where: { userId } });
