@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DemoLockedNotice from "./DemoLockedNotice";
+import { SECTION_LABEL_KEY } from "../../pages/Settings/sectionLabels";
 import { SettingRows } from "../ui/SettingRow";
 import ApiKeyCard from "./ApiKeyCard";
 import BulkRefreshCard from "./BulkRefreshCard";
@@ -63,8 +64,14 @@ export default function ApiKeysSection({
 
   return (
     <SectionCard>
+      {/* The heading is the index entry's own key, not a second string.
+          `sectionLabels.ts` states the rule -- "a section's heading and its
+          index entry are the same words on purpose: an index that renames what
+          it points at is an index you have to read twice" -- and this section
+          was the one breaking it: the nav said "Meine externen Dienste" and the
+          heading said "API-SCHLUESSEL" (beta audit 2026-09-19, unlisted 3). */}
       <SectionTitle
-        title={t("settings:apiKeys.title")}
+        title={t(SECTION_LABEL_KEY.externalServices)}
         description={t("settings:apiKeys.description")}
       />
       <SettingRows>
