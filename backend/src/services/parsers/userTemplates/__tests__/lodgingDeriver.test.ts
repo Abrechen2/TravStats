@@ -175,6 +175,82 @@ describe("a user-derived lodging template", () => {
     expect(derived.template.match.anchors[0]).toContain("Beispiel");
   });
 
+  describe("a subject that is only the booking engine's grammar", () => {
+    /**
+     * Review of `fix/workshop-lodging-derivation`, finding 2.
+     *
+     * "Ihre Reservierung wurde bestätigt" is the subject a booking engine
+     * sends for EVERY property on it. It survived `GENERIC_SUBJECT_WORDS`
+     * because the list held the nouns and not the grammar around them, so the
+     * first property to derive a template claimed every other property's mail
+     * — and proposed ITS fields for them, which is the plausible wrong value
+     * that costs most.
+     */
+    const engineMail = (): string =>
+      [
+        "Unterkunft: Hotel Beispiel Nürnberg",
+        "Anreise: 10. März 2026",
+        "Abreise: 12. März 2026",
+      ].join("\n");
+
+    const derive = (subject: string) => {
+      const text = engineMail();
+      return deriveLodgingTemplate({
+        ...input,
+        senderDomain: undefined,
+        subject,
+        fullText: text,
+        selections: [
+          select(text, "Hotel Beispiel Nürnberg", "hotelName"),
+          select(text, "10. März 2026", "checkIn"),
+          select(text, "12. März 2026", "checkOut"),
+        ],
+      });
+    };
+
+    it("is not a name, so nothing is derived from it", () => {
+      expect(derive("Ihre Reservierung wurde bestätigt")).toEqual({
+        ok: false,
+        refusal: "noDistinguishingMarker",
+      });
+    });
+
+    it("is not a name even when the sender's own labels supply the only odd word", () => {
+      // "Anreise" is this sender's label for a field. A subject built out of
+      // the words the body already prints beside its values describes the
+      // FORM, not the author.
+      expect(derive("Ihre Unterkunft und Anreise")).toEqual({
+        ok: false,
+        refusal: "noDistinguishingMarker",
+      });
+    });
+
+    it("still takes a real brand out of the same shape of subject", () => {
+      const derived = derive("Ihre Reservierung im Seehotel wurde bestätigt");
+      expect(derived.ok).toBe(true);
+      if (!derived.ok) return;
+      expect(derived.template.match.anchors[0]).toContain("Seehotel");
+    });
+
+    it("lets a known sender domain carry a template a generic subject cannot", () => {
+      const text = engineMail();
+      const withDomain = deriveLodgingTemplate({
+        ...input,
+        subject: "Ihre Reservierung wurde bestätigt",
+        senderDomain: "hotel-beispiel.test",
+        fullText: [text, "Hotel Beispiel, hotel-beispiel.test"].join("\n"),
+        selections: [
+          select(text, "Hotel Beispiel Nürnberg", "hotelName"),
+          select(text, "10. März 2026", "checkIn"),
+          select(text, "12. März 2026", "checkOut"),
+        ],
+      });
+      expect(withDomain.ok).toBe(true);
+      if (!withDomain.ok) return;
+      expect(withDomain.template.match.anchors).toEqual(["hotel-beispiel.test"]);
+    });
+  });
+
   it("ignores a mark carrying another domain's label", () => {
     const derived = deriveLodgingTemplate({
       ...input,

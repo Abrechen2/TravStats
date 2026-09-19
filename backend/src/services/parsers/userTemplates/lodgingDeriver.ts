@@ -147,6 +147,23 @@ const GENERIC_SUBJECT_WORDS = new Set([
   "nr",
   "number",
   "nummer",
+  // The grammar a booking engine wraps the nouns in. Without these,
+  // "Ihre Reservierung wurde bestätigt" kept "wurde" and "bestätigt" and read
+  // as a NAME — so every property on the same engine derived a template
+  // anchored on the same sentence, and the first one to arrive claimed the
+  // others' mail. The noun forms were already here; leaving the participle
+  // out blocked "Bestätigung" and admitted "bestätigt", which is the same
+  // word.
+  "wurde",
+  "wird",
+  "ist",
+  "war",
+  "hier",
+  "mail",
+  "email",
+  "bestaetigt",
+  "bestätigt",
+  "reserviert",
 ]);
 
 const normaliseToken = (token: string): string =>
@@ -162,7 +179,17 @@ const normaliseToken = (token: string): string =>
  * one this returns null and the caller abstains with `noDistinguishingMarker`
  * rather than shipping a template that claims other senders' mail.
  */
-export function senderAnchorFromSubject(subject: string): string | null {
+export function senderAnchorFromSubject(
+  subject: string,
+  /**
+   * This sender's own label lines. A word that appears among them is this
+   * document's VOCABULARY, not its author: "Ihre Anreise steht bevor" is a
+   * subject built out of the same words the body prints beside every value,
+   * and an anchor made of one would claim any sender that labels its fields
+   * the same way — which is most of them.
+   */
+  labelLines: readonly string[] = []
+): string | null {
   const cleaned = subject
     .replace(/\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}/g, " ")
     .replace(/\b\d{1,2}\s+\p{L}+\s+\d{4}\b/gu, " ")
@@ -172,10 +199,15 @@ export function senderAnchorFromSubject(subject: string): string | null {
     .trim();
   if (cleaned.length < 5) return null;
 
+  const labelWords = new Set(
+    labelLines.flatMap((line) => line.split(/[^\p{L}\p{N}]+/u).map(normaliseToken))
+  );
   const distinctive = cleaned
     .split(" ")
     .map(normaliseToken)
-    .some((token) => token.length >= 3 && !GENERIC_SUBJECT_WORDS.has(token));
+    .some(
+      (token) => token.length >= 3 && !GENERIC_SUBJECT_WORDS.has(token) && !labelWords.has(token)
+    );
   return distinctive ? cleaned : null;
 }
 
@@ -291,7 +323,7 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
   }
 
   const anchors: string[] = [];
-  const subjectAnchor = senderAnchorFromSubject(input.subject);
+  const subjectAnchor = senderAnchorFromSubject(input.subject, labelLines);
   if (subjectAnchor) anchors.push(subjectAnchor);
   // An anchor is only an anchor where the reader will look for it, and
   // `applyLodgingTemplate` searches the subject and the body joined by a
