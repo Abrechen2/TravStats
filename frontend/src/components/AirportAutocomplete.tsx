@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { airportsApi, Airport, setupApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
+import { RequiredMark } from "./FlightForm/requiredFields";
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -186,7 +187,7 @@ export default function AirportAutocomplete({
           is decorative and safe to omit entirely. */}
       {label !== "" && (
         <label className="label">
-          {label} {required && <span className="text-red-500">*</span>}
+          {label} {required && <RequiredMark />}
         </label>
       )}
       <input
