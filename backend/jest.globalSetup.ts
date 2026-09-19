@@ -1,5 +1,5 @@
-import { PrismaClient } from "./src/prisma";
 import { createPrismaClient } from "./src/prismaClient";
+
 /**
  * One reachable database, or one clear sentence — never a thousand assertions.
  *

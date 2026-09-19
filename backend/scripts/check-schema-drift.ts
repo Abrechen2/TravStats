@@ -1,7 +1,7 @@
 /**
  * Schema-drift regression check.
  *
- * Runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code`,
+ * Runs `prisma migrate diff --from-migrations --to-schema --exit-code`,
  * replaying the migration folder into a scratch shadow database. If the live DB state (after `prisma
  * migrate deploy`) and `schema.prisma` disagree, exits with code 2 — the
  * same convention used by `--exit-code`.
@@ -49,8 +49,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { PrismaClient } from "../src/prisma";
 import { createPrismaClient } from "../src/prismaClient";
+
 const SCHEMA_PATH = resolve(__dirname, "..", "prisma", "schema.prisma");
 const MIGRATIONS_PATH = join(__dirname, "..", "prisma", "migrations");
 
