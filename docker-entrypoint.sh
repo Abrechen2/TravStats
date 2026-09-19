@@ -230,14 +230,11 @@ if [ ! -d "/app/backend/dist/scripts" ]; then
     mkdir -p /app/backend/dist/scripts 2>/dev/null || echo "[entrypoint] Warning: Could not create scripts directory"
 fi
 
-# Ensure Prisma Client is generated before running migrations
-echo "[entrypoint] Generating Prisma Client..."
-if npx prisma generate >/dev/null 2>&1; then
-    echo "[entrypoint] ✅ Prisma Client generated successfully"
-else
-    echo "[entrypoint] ⚠️  Prisma Client generation failed"
-    echo "[entrypoint] This may cause migration issues"
-fi
+# Prisma 7 needs no `prisma generate` here. Its `prisma-client` generator emits
+# plain TypeScript, which `npm run build` compiles into dist/generated/prisma
+# alongside the rest of the app — so the client is baked into the image and a
+# runtime generate would only write a second copy under a src/ tree this image
+# does not carry.
 
 # Run migrations with proper error handling
 MIGRATION_SUCCESS=false
@@ -254,7 +251,7 @@ else
 
     # Test database connection before running migrations
     echo "[entrypoint] Testing database connection..."
-    if node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$connect().then(()=>{console.log('ok');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null | grep -q "ok"; then
+    if node dist/scripts/dbProbe.js 2>/dev/null | grep -q "ok"; then
         echo "[entrypoint] ✅ Database connection test successful"
     else
         echo "[entrypoint] ⚠️  Database connection test failed"
@@ -388,7 +385,7 @@ else
     if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
         echo "[entrypoint] Migration command completed, verifying database tables..."
         sleep 1  # Give database a moment to commit
-        TABLE_CHECK=$(node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$queryRaw\`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='_prisma_migrations'\`.then(r=>{console.log(r.length>0?'ok':'fail');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null || echo "fail")
+        TABLE_CHECK=$(node dist/scripts/dbProbe.js migrations-table 2>/dev/null || echo "fail")
 
         if [ "$TABLE_CHECK" = "ok" ]; then
             echo "[entrypoint] ✅ Migrations applied successfully"
@@ -440,7 +437,7 @@ fi
 # Only run seeds if migrations were successful
 if [ "$MIGRATION_SUCCESS" = "true" ]; then
     # Verify that at least one table exists (check for _prisma_migrations table which is always created)
-    TABLE_CHECK=$(node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$queryRaw\`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='_prisma_migrations'\`.then(r=>{console.log(r.length>0?'ok':'fail');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null || echo "fail")
+    TABLE_CHECK=$(node dist/scripts/dbProbe.js migrations-table 2>/dev/null || echo "fail")
 
     if [ "$TABLE_CHECK" = "ok" ]; then
         echo "[entrypoint] ✅ Database tables verified, proceeding with seeds"
