@@ -118,6 +118,36 @@ describe("HTML never reaches the evidence gate as markup", () => {
     expect(result.flights).toEqual([]);
   });
 
+  it("refuses a marketing mail whose phrase sits inside a stylesheet", async () => {
+    // Re-review: the generic tag pass strips MARKERS, so `<style>` content
+    // survived it and `.e-ticket-banner{` matched the phrase — the hyphen is
+    // a non-word character, so the closing \b was satisfied inside a CSS
+    // selector. A class name is not a statement about anyone's booking.
+    const html = [
+      "<style>.e-ticket-banner{display:none}.boarding-pass-hero{margin:0}</style>",
+      "<script>var bookingReference = 'ABC123';</script>",
+      "<p>Unsere Facebook-Aktion FB23 läuft noch bis Freitag, 30. Oktober 2026.</p>",
+    ].join("\n");
+
+    const result = await parseEmail("Newsletter Oktober", "", html, config);
+
+    expect(result.flights).toEqual([]);
+  });
+
+  it("refuses a marketing mail whose phrase sits inside an HTML comment", async () => {
+    // The comment carries a `>` of its own, which ends the generic pass's
+    // first "tag" early and spills the rest into the body as text. That is
+    // why comments are removed explicitly rather than left to that pass.
+    const html = [
+      "<!-- Preis > 100 EUR. Ihre Buchungsnummer: ABC123 -->",
+      "<p>Unsere Facebook-Aktion FB23 läuft noch bis Freitag, 30. Oktober 2026.</p>",
+    ].join("\n");
+
+    const result = await parseEmail("Newsletter Oktober", "", html, config);
+
+    expect(result.flights).toEqual([]);
+  });
+
   it("still accepts a confirmation phrase written in the HTML text", async () => {
     // Control probe. Without it, a "fix" that dropped the HTML entirely would
     // look correct here and silently break every HTML-only confirmation.

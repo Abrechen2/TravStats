@@ -204,6 +204,30 @@ describe("hasSecondWitness — a lone flight number needs corroboration (#291)",
     }
   });
 
+  it("accepts the plural a family booking prints", () => {
+    // Two travellers get "Ihre Bordkarten", not "Ihre Bordkarte". The closing
+    // \b refused every one of these, which loses a real booking rather than
+    // catching a fake one — the opposite of what this rule is for.
+    for (const phrase of [
+      "Ihre Bordkarten",
+      "Ihre E-Tickets",
+      "Ticketnummern 220-1 und 220-2",
+      "Buchungsnummern ABC123 und ABC124",
+      "Buchungscodes ABC123 und ABC124",
+      "Ihre Buchungsbestätigungen",
+      "Reservierungsnummern 4711 und 4712",
+      "Reservierungscodes 4711 und 4712",
+      "PNRs JLNBLW and GZFK7B",
+      "Booking references ABC123 and ABC124",
+      "Booking confirmations for your trip",
+      "Confirmation numbers ABC123 and ABC124",
+      "Record locators ABC123 and ABC124",
+      "Your boarding passes",
+    ]) {
+      expect(hasSecondWitness("EK051", `${phrase}\nEK051`)).toBe(true);
+    }
+  });
+
   it("refuses the marketing words a bare vocabulary let through", () => {
     // Both measured in review against the first cut of this rule, which
     // matched single words document-wide: each of these flipped a marketing

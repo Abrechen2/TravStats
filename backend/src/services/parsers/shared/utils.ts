@@ -720,6 +720,23 @@ JSON ARRAY OUTPUT:`;
  */
 export function cleanEmailBody(text: string): string {
   let out = text;
+  // Elements whose CONTENT is machinery rather than reading, removed whole
+  // before the generic pass below — which strips tag MARKERS only and would
+  // leave a stylesheet's text sitting in the body. Measured while reviewing
+  // GitHub #291: `<style>.e-ticket-banner{display:none}</style>` cleaned down
+  // to `.e-ticket-banner{display:none}`, and "e-ticket" is a confirmation
+  // phrase the evidence gate reads, so CSS corroborated a marketing token.
+  // Comments go for the same reason and are not covered by the generic pass
+  // either: `<!-- Preis > 100 EUR. Ihre Buchungsnummer: X -->` ends its first
+  // "tag" at the `>` inside it and leaks the rest as body text.
+  //
+  // Nothing loses a field. Both other callers (`email.ts` for the flight body,
+  // `lodgingBookingParser.ts` before the LLM) pass the PLAIN-TEXT part, where
+  // such a block is leaked markup and never the booking; and a check-in time
+  // or PNR printed only inside a stylesheet or a comment is one the recipient
+  // cannot see either.
+  out = out.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
+  out = out.replace(/<!--[\s\S]*?-->/g, "");
   // Remove angle-bracket fragments: <https://...>, <img.png>, etc.
   // Loop until convergence so that adversarial inputs like
   // `<<script>foo<</script>>` cannot smuggle a tag through a single pass.

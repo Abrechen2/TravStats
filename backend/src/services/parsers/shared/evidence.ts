@@ -82,9 +82,22 @@ const TIME_OF_DAY = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
  * German and English side by side because the corpus is both. Matching is
  * case-insensitive and word-boundaried at each end, so "Buchungsnummer:"
  * counts and "Buchungsnummerngenerator" would not.
+ *
+ * Each entry carries its own PLURAL and nothing else. A family booking prints
+ * "Ihre Bordkarten" and "E-Tickets", and the closing `\b` refused both, which
+ * is a missed real booking rather than a caught fake one. The inflection is
+ * the only widening allowed here: `bordkarten?` is still the same phrase,
+ * while dropping the boundary or shortening the stem would walk straight back
+ * into the marketing words this list replaced.
+ *
+ * `buchungsbestätigung(?:en)?` is grouped rather than written `…ungen?`
+ * because a German `-ung` noun pluralises in `-en`, not `-n`: the optional-`n`
+ * form spells the stem "buchungsbestätigunge" and matched ONLY the plural.
+ * The test below caught it, which is the argument for listing every singular
+ * and every plural separately instead of trusting the pattern to read right.
  */
 const CONFIRMATION_PHRASES =
-  /\b(?:ihre buchung|deine buchung|buchungsnummer|buchungscode|buchungsbestätigung|reservierungsnummer|reservierungscode|ticketnummer|e-ticket|pnr|your booking|booking reference|booking confirmation|confirmation number|record locator|boarding pass|bordkarte)\b/i;
+  /\b(?:ihre buchung|deine buchung|buchungsnummern?|buchungscodes?|buchungsbestätigung(?:en)?|reservierungsnummern?|reservierungscodes?|ticketnummern?|e-tickets?|pnrs?|your booking|booking references?|booking confirmations?|confirmation numbers?|record locators?|boarding pass(?:es)?|bordkarten?)\b/i;
 
 /**
  * How far either side of the number a clock time still counts as "near it".
