@@ -363,6 +363,12 @@
       "uploading": "Uploading …",
       "uploadError": "The track could not be uploaded",
       "deleteLabel": "Delete",
+      "deleteConfirm": {
+        "title": "Delete this track?",
+        "message_one": "The track from {{window}} with {{count}} recorded point will be deleted permanently. If it was uploaded as a GPX file, this is the only copy — it cannot be restored. The tour, its stops and its legs are kept.",
+        "message_other": "The track from {{window}} with {{count}} recorded points will be deleted permanently. If it was uploaded as a GPX file, this is the only copy — it cannot be restored. The tour, its stops and its legs are kept.",
+        "confirm": "Delete track"
+      },
       "deleteError": "The track could not be deleted",
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
