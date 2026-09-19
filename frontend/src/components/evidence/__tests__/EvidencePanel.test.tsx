@@ -217,6 +217,10 @@ describe("EvidencePanel", () => {
     await screen.findByText("LH200");
     // The first page's row is still there — "load more" appends, it does not replace.
     expect(screen.getByText("LH100")).toBeInTheDocument();
+    // …and the footer counts the LIST, not the last page. Rendering
+    // `response.returned` here printed "1 angezeigt" under two visible rows —
+    // on the demo account, "33 angezeigt" under 133 (browser pass, 2026-09-19).
+    expect(screen.getByText('evidence:panel.bucket.returned({"count":2})')).toBeInTheDocument();
     // Both rows are in hand, so nothing is left to fetch.
     expect(
       screen.queryByRole("button", { name: "evidence:panel.loadMore" })
@@ -281,6 +285,8 @@ describe("EvidencePanel", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "evidence:panel.loadMore" }));
     await screen.findByText("LH20");
+    // All 25 rows are on screen; the last page returned 5. The footer says 25.
+    expect(screen.getByText('evidence:panel.bucket.returned({"count":25})')).toBeInTheDocument();
     expect(screen.queryByText(/panel\.bucket\.omitted/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "evidence:panel.loadMore" })

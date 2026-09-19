@@ -104,7 +104,12 @@ export default function EvidencePanel({
             className="flex w-full flex-col gap-1 text-xs"
             style={{ color: "var(--text-muted)" }}
           >
-            <span>{t("evidence:panel.bucket.returned", { count: response.returned })}</span>
+            {/* `entries.length`, never `response.returned` — the latter is the
+                LAST page's row count, so a 133-row measure read "33 angezeigt"
+                under 133 visible rows after one "Weitere laden" (browser pass,
+                2026-09-19). The footer counts the list, and the list is what
+                every page appended. */}
+            <span>{t("evidence:panel.bucket.returned", { count: entries.length })}</span>
             {stillToLoad > 0 && (
               <span>{t("evidence:panel.bucket.omitted", { count: stillToLoad })}</span>
             )}
