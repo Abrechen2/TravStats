@@ -59,7 +59,10 @@ test.describe("Pending updates page", () => {
     // old file asserted "Ausstehende Updates", a string from a namespace this
     // page does not use — it never had to be right, because it was reached
     // through a login redirect where nothing matched anyway.
-    await expect(page.getByRole("heading", { name: /Flug-Updates|Flight updates/i })).toBeVisible({
+    // Since the round-4 inbox (2db14145) the section is a TAB, not a heading:
+    // the first CI run on the merged main (2026-09-19, f1e1085c) failed here
+    // three times over with "element(s) not found" while the tab was on screen.
+    await expect(page.getByRole("tab", { name: /Flug-Updates|Flight updates/i })).toBeVisible({
       timeout: 15_000,
     });
   });

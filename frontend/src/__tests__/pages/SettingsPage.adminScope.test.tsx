@@ -4,6 +4,13 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 
+// Measured 2026-09-19: these renders take ~1 s each on a developer machine
+// and 6–8 s on the CI runner under coverage instrumentation, past Vitest's
+// 5 s default — the first CI run on the merged main (f1e1085c) failed on
+// exactly that. A hang would still be caught at 20 s; a slow render is not a
+// wrong render.
+vi.setConfig({ testTimeout: 20_000 });
+
 // A settings route renders its whole group at once on this branch (one route
 // per group), so every section in the group loads its data on mount. Each of
 // these escaped to the network once main's guard started counting (forgejo#110).

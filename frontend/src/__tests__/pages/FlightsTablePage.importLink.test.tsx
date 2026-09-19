@@ -9,6 +9,13 @@ import {
   paginationControlsRendered,
 } from "../../pages/__tests__/tablePaginationTestSupport";
 
+// Measured 2026-09-19: these renders take ~1 s each on a developer machine
+// and 6–8 s on the CI runner under coverage instrumentation, past Vitest's
+// 5 s default — the first CI run on the merged main (f1e1085c) failed on
+// exactly that. A hang would still be caught at 20 s; a slow render is not a
+// wrong render.
+vi.setConfig({ testTimeout: 20_000 });
+
 /**
  * FlightsTablePage pulls in many heavy siblings (filters, modals, table
  * cells). None of them matter for this test — only the header's link to
