@@ -10,7 +10,7 @@ import {
 } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
-import { markFromSelection, type TextMark } from "./marks";
+import { markFromSelection, marksAlign, type TextMark } from "./marks";
 import type { TemplateDerivation } from "../../lib/api/types";
 import AnnotationLabelSelect from "./AnnotationLabelSelect";
 import FlightGroundTruth from "./FlightGroundTruth";
@@ -57,6 +57,12 @@ export default function EmailAnnotation({
   const [flightHistory, setFlightHistory] = useState<Flight[][]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  /**
+   * The stored marks were thrown away because they no longer fitted the
+   * stored text — see the load effect.
+   */
+  const [marksDropped, setMarksDropped] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -78,7 +84,21 @@ export default function EmailAnnotation({
           }
           if (Array.isArray(annotationsData.textSelections)) {
             const stored = annotationsData.textSelections as TextMark[];
-            setAnnotations(stored);
+            const text =
+              typeof annotationsData.fullText === "string" ? annotationsData.fullText : "";
+            // A sample annotated before the offsets and the saved text were
+            // made to agree can carry marks that point into a DIFFERENT
+            // document — the raw mail, while `fullText` is the filtered one.
+            // Rendering those paints highlights over the wrong words, and the
+            // annotate route now refuses the save with a 400 the reader has no
+            // way to clear: there is no per-mark delete, and Undo is empty on
+            // load. So they are dropped here, once, and the reader is told.
+            if (stored.length > 0 && !marksAlign(text, stored)) {
+              setAnnotations([]);
+              setMarksDropped(true);
+            } else {
+              setAnnotations(stored);
+            }
             // Marks already exist, and they point into the text as it was
             // SAVED. Filtering that text again for display would move every
             // highlight off its value — and the second save would then store
@@ -361,7 +381,22 @@ export default function EmailAnnotation({
       onComplete(response.derivation);
     } catch (error) {
       logger.error("Failed to save annotation:", error);
-      alert(t("training:errors.saveFailed"));
+      // The route refuses a payload whose offsets do not cut their own value
+      // out of the text with its own code. "Fehler beim Speichern" would read
+      // as a bug in the page; the reader needs to know the marks are the
+      // thing that is wrong, and that re-marking clears it. The code itself is
+      // never shown — the same rule `MyTemplates` follows for
+      // `PREVIEW_REQUIRED`.
+      const code =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { data?: { code?: string } } }).response?.data?.code
+          : undefined;
+      const message =
+        code === "ANNOTATION_TEXT_MISMATCH"
+          ? t("training:errors.marksOutOfSync")
+          : t("training:errors.saveFailed");
+      setSaveError(message);
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -546,6 +581,17 @@ export default function EmailAnnotation({
               )}
             </div>
           </div>
+        )}
+
+        {marksDropped && (
+          <p role="status" className="text-sm" style={{ color: "var(--warning)" }}>
+            {t("training:annotation.marksDropped")}
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+            {saveError}
+          </p>
         )}
 
         {/* Email Text Display */}

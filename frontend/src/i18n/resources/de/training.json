@@ -142,6 +142,7 @@
   "errors": {
     "loadFailed": "Fehler beim Laden der Training-Daten",
     "saveFailed": "Fehler beim Speichern",
+    "marksOutOfSync": "Die Markierungen passen nicht zum gespeicherten Text. Markiere die Werte bitte erneut und speichere dann.",
     "loadImageFailed": "Fehler beim Laden des Bildes",
     "startTrainingFailed": "Fehler beim Starten des Trainings",
     "deleteFailed": "Fehler beim Löschen",
@@ -161,6 +162,7 @@
     "selectLabel": "Label wählen...",
     "showFiltered": "Gefiltert anzeigen",
     "filterLocked": "Text bleibt wie markiert — die Markierungen zeigen auf genau diese Fassung",
+    "marksDropped": "Die gespeicherten Markierungen passten nicht mehr zum Text und wurden verworfen — bitte neu markieren.",
     "imageLoading": "Bild wird geladen...",
     "emailTextLoading": "Email Text wird geladen...",
     "changeLabelForSelected": "Label für ausgewählte Box ändern",

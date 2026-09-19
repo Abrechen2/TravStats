@@ -142,6 +142,7 @@
   "errors": {
     "loadFailed": "Failed to load training data",
     "saveFailed": "Failed to save",
+    "marksOutOfSync": "The marks do not fit the text being saved. Please mark the values again and save after that.",
     "loadImageFailed": "Failed to load image",
     "startTrainingFailed": "Failed to start training",
     "deleteFailed": "Failed to delete",
@@ -161,6 +162,7 @@
     "selectLabel": "Select label...",
     "showFiltered": "Show filtered",
     "filterLocked": "The text stays as marked — the marks point into exactly this version",
+    "marksDropped": "The stored marks no longer fitted the text and were discarded — please mark again.",
     "imageLoading": "Loading image...",
     "emailTextLoading": "Loading email text...",
     "changeLabelForSelected": "Change label for selected box",
