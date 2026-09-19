@@ -150,6 +150,97 @@ describe("buildLodgingPreviewRows", () => {
     expect(summary.alreadyPresent).toBe(1);
   });
 
+  /**
+   * WHICH stay is already there (owner, 2026-09-19).
+   *
+   * The row carried `matchedStayId` and nothing else, so the preview could
+   * only say "Aufenthalt bereits vorhanden" — the reader was told a stay
+   * exists without being told which one, and could not judge the match. Same
+   * defect `matchedLodgingName` fixed one level up (AUD-056).
+   */
+  describe("the stay a match points at", () => {
+    it("names its dates, its nights and where to see it", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "NH Ludwigsburg", city: "Ludwigsburg" },
+          lodgingName: "NH Ludwigsburg",
+          stay: {
+            checkIn: "2026-03-30",
+            checkOut: "2026-03-31",
+            externalRef: "booking:5087376273",
+          },
+        },
+      ]);
+      expect(rows[0].matchedStayId).not.toBeNull();
+      expect(rows[0].matchedStay).toEqual({
+        checkIn: "2026-03-30",
+        checkOut: "2026-03-31",
+        datePrecision: "DAY",
+        nights: 1,
+        // A stay has no page of its own — the link targets its house, the
+        // same contract `stayEvidenceEntry` states.
+        href: `/lodging/${existingId}`,
+      });
+    });
+
+    it("is null for a row that matched nothing", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Hotel Nowhere In Particular", city: "Aalen" },
+          stay: { checkIn: "2026-05-01", checkOut: "2026-05-03" },
+        },
+      ]);
+      expect(rows[0].action).toBe("create");
+      expect(rows[0].matchedStayId).toBeNull();
+      expect(rows[0].matchedStay).toBeNull();
+    });
+
+    // `nights: 0` and "nobody knows" are both 0 in the column. A hint the
+    // user is asked to judge must not print a measurement nobody took.
+    it("abstains on the nights of a stay whose length nothing states", async () => {
+      const house = await prisma.lodging.create({
+        data: { userId, name: "Pension Erinnerung", city: "Goslar" },
+      });
+      const undated = await prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: house.id,
+          checkIn: null,
+          checkOut: null,
+          datePrecision: "NONE",
+          nights: null,
+          externalRef: "booking:undated-1",
+        },
+      });
+      try {
+        const { rows } = await buildLodgingPreviewRows(userId, [
+          {
+            sourceRowIndex: 0,
+            lodging: { name: "Pension Erinnerung", city: "Goslar" },
+            stay: {
+              checkIn: "2011-07-01",
+              checkOut: "2011-07-02",
+              externalRef: "booking:undated-1",
+            },
+          },
+        ]);
+        expect(rows[0].matchedStayId).toBe(undated.id);
+        expect(rows[0].matchedStay).toEqual({
+          checkIn: null,
+          checkOut: null,
+          datePrecision: "NONE",
+          nights: null,
+          href: `/lodging/${house.id}`,
+        });
+      } finally {
+        await prisma.lodgingStay.delete({ where: { id: undated.id } });
+        await prisma.lodging.delete({ where: { id: house.id } });
+      }
+    });
+  });
+
   // forgejo#122 — a CHANGED booking carries the same reference and different
   // dates. Until 2026-09-17 the proven-identity rule made that a silent skip,
   // so the stay kept the dates the first mail had and nothing said so.

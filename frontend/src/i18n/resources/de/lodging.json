@@ -279,6 +279,10 @@
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "matchedAs": "Zugeordnet zu:",
+    "matchedStayAt": "Vorhandener Aufenthalt:",
+    "openMatchedStay": "Vorhandenen Aufenthalt in einem neuen Tab öffnen",
+    "createAnyway": "Trotzdem anlegen",
+    "createAnywayHint": "Legt einen zweiten Aufenthalt an. Die Buchungsreferenz bleibt beim vorhandenen.",
     "rejectMatch": "Nicht dasselbe Hotel — neu anlegen",
     "fields": {
       "name": "Name",

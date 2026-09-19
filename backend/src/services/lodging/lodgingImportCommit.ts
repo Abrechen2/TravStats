@@ -369,6 +369,38 @@ async function createStay(
 }
 
 /**
+ * "Anlegen trotzdem" over a stay that already exists: the deliberate second
+ * stay keeps everything the document says EXCEPT the external reference.
+ *
+ * `externalRef` is an identity, and `@@unique([userId, externalRef])` cannot
+ * hold it twice. Until 2026-09-19 the create ran with the reference, hit that
+ * index, and the row was folded into `skipped` by the catch below — so a user
+ * who saw "Aufenthalt bereits vorhanden (gleiche Referenz)" and chose
+ * "Anlegen" got nothing, reported as a skip (owner, 2026-09-19). The reference
+ * stays with the stay that already owns it; the new row is the user's own
+ * second stay, not a second claim to the same booking.
+ *
+ * Only ever on a row whose `matchedStayId` names a stay of THIS user that
+ * really holds the incoming reference — the id comes back from a preview the
+ * client controls, so it is read, never trusted: anything else falls through
+ * unchanged and the unique index decides as before (an in-file duplicate is
+ * still a skip, which is right).
+ */
+async function stayFieldsForCreate(
+  userId: string,
+  row: CommitRowInput,
+  fields: StayCandidateFields
+): Promise<StayCandidateFields> {
+  if (!row.matchedStayId || !fields.externalRef) return fields;
+  const matched = await prisma.lodgingStay.findFirst({
+    where: { id: row.matchedStayId, userId },
+    select: { externalRef: true },
+  });
+  if (matched?.externalRef !== fields.externalRef) return fields;
+  return { ...fields, externalRef: null };
+}
+
+/**
  * Move a stored stay onto the values a CHANGED booking carries.
  *
  * Two rules, both of which the preview already states and neither of which
@@ -688,7 +720,8 @@ export async function commitLodgingImport(
       if (row.stay) {
         try {
           const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes, baseCurrency);
-          await createStay(userId, batch.id, lodgingId, row.stay, fxOutcome, row.sourceRowIndex);
+          const stayFields = await stayFieldsForCreate(userId, row, row.stay);
+          await createStay(userId, batch.id, lodgingId, stayFields, fxOutcome, row.sourceRowIndex);
           createdStays++;
         } catch (err) {
           if (!isUniqueViolation(err)) throw err;

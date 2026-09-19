@@ -222,6 +222,30 @@ export interface LodgingStayChange {
   to: string | number | null;
 }
 
+/**
+ * The stored stay a row was matched against, so the preview can name WHICH
+ * one is already there.
+ *
+ * `matchedStayId` alone let the UI say "Aufenthalt bereits vorhanden" and
+ * nothing more — the reader was told a stay exists without being told which,
+ * and could not judge whether the match was right (owner, 2026-09-19). Same
+ * defect `matchedLodgingName` fixed one level up (AUD-056).
+ *
+ * `datePrecision` travels with the dates because the frontend writes them
+ * through `formatStayPeriod`, which must not print "01.07.2011 – 01.07.2011"
+ * for a stay recorded as "July 2011". `nights` is null when nothing in the
+ * record says — never 0, which reads as a same-day stay somebody measured.
+ * `href` targets the LODGING: a stay has no page of its own, the same contract
+ * `stayEvidenceEntry` states.
+ */
+export interface LodgingImportMatchedStay {
+  checkIn: string | null;
+  checkOut: string | null;
+  datePrecision: string;
+  nights: number | null;
+  href: string;
+}
+
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
@@ -233,6 +257,8 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
    */
   matchedLodgingName: string | null;
   matchedStayId: string | null;
+  /** The stay behind `matchedStayId`, named rather than merely counted. */
+  matchedStay: LodgingImportMatchedStay | null;
   action: LodgingImportAction;
   /**
    * Non-empty only on `action: "update"`: what a changed booking would move.

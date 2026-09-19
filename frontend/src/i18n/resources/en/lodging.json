@@ -279,6 +279,10 @@
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "matchedAs": "Matched to:",
+    "matchedStayAt": "Existing stay:",
+    "openMatchedStay": "Open the existing stay in a new tab",
+    "createAnyway": "Create anyway",
+    "createAnywayHint": "Creates a second stay. The booking reference stays with the existing one.",
     "rejectMatch": "Not the same hotel — create new",
     "fields": {
       "name": "Name",

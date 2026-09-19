@@ -750,6 +750,127 @@ describe("commitLodgingImport", () => {
 
   // forgejo#122 — a CHANGED booking. Same reference, moved dates: the import
   // used to skip it in silence and the stay kept the first mail's dates.
+  /**
+   * "Anlegen trotzdem" over a stay that is already on file (owner, 2026-09-19).
+   *
+   * The preview offers `create` on a matched row, and the commit ran it with
+   * the document's external reference — which the matched stay already owns.
+   * `@@unique([userId, externalRef])` refused it, the catch folded the row into
+   * `skipped`, and the user who deliberately chose "Anlegen" got nothing, with
+   * the report calling it a skip. The reference stays where it is; the second
+   * stay is stored without one.
+   */
+  describe("creating a second stay anyway", () => {
+    async function onFile(ref: string): Promise<{ lodgingId: string; stayId: string }> {
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: `Hotel Anyway ${ref}`, city: "Porto" },
+      });
+      const stay = await prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: lodging.id,
+          checkIn: new Date("2026-09-20T00:00:00.000Z"),
+          checkOut: new Date("2026-09-21T00:00:00.000Z"),
+          externalRef: `booking:${ref}`,
+        },
+      });
+      return { lodgingId: lodging.id, stayId: stay.id };
+    }
+
+    it("stores the second stay, without the reference the first one owns", async () => {
+      const { lodgingId, stayId } = await onFile("anyway-1");
+      try {
+        const result = await commitLodgingImport(userId, "email", null, [
+          {
+            sourceRowIndex: 0,
+            action: "create",
+            matchedLodgingId: lodgingId,
+            // What the preview hands back for a `stay_exact_ref` row the user
+            // flipped to "Anlegen".
+            matchedStayId: stayId,
+            lodging: null,
+            stay: {
+              checkIn: "2026-09-20",
+              checkOut: "2026-09-21",
+              externalRef: "booking:anyway-1",
+            },
+          },
+        ]);
+        expect(result.createdStays).toBe(1);
+        expect(result.skipped).toBe(0);
+        expect(result.failed).toEqual([]);
+
+        const stays = await prisma.lodgingStay.findMany({
+          where: { userId, lodgingId },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, externalRef: true },
+        });
+        expect(stays).toHaveLength(2);
+        // The reference identifies ONE booking and did not move.
+        expect(stays.find((s) => s.id === stayId)?.externalRef).toBe("booking:anyway-1");
+        expect(stays.find((s) => s.id !== stayId)?.externalRef).toBeNull();
+      } finally {
+        await prisma.lodgingStay.deleteMany({ where: { lodgingId } });
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+      }
+    });
+
+    it("leaves a row alone whose matchedStayId is not the caller's", async () => {
+      const stranger = await prisma.user.create({
+        data: { username: `lodging-anyway-stranger-${Date.now()}`, passwordHash: "x" },
+      });
+      const theirLodging = await prisma.lodging.create({
+        data: { userId: stranger.id, name: "Hotel Fremd", city: "Porto" },
+      });
+      const theirStay = await prisma.lodgingStay.create({
+        data: {
+          userId: stranger.id,
+          lodgingId: theirLodging.id,
+          checkIn: new Date("2026-09-20T00:00:00.000Z"),
+          checkOut: new Date("2026-09-21T00:00:00.000Z"),
+          externalRef: "booking:anyway-stranger",
+        },
+      });
+      const { lodgingId } = await onFile("anyway-2");
+      try {
+        // Pointing at somebody else's stay buys nothing: the reference is
+        // read, never trusted, and this row commits exactly as it would
+        // without the id.
+        const result = await commitLodgingImport(userId, "email", null, [
+          {
+            sourceRowIndex: 0,
+            action: "create",
+            matchedLodgingId: lodgingId,
+            matchedStayId: theirStay.id,
+            lodging: null,
+            stay: {
+              checkIn: "2026-10-01",
+              checkOut: "2026-10-02",
+              externalRef: "booking:anyway-stranger",
+            },
+          },
+        ]);
+        expect(result.createdStays).toBe(1);
+        const mine = await prisma.lodgingStay.findMany({
+          where: { userId, lodgingId },
+          select: { externalRef: true },
+        });
+        // Their reference is theirs; the unique index is per user, so this
+        // row keeps the one the document carried.
+        expect(mine.map((s) => s.externalRef).sort()).toEqual([
+          "booking:anyway-2",
+          "booking:anyway-stranger",
+        ]);
+        const untouched = await prisma.lodgingStay.findUnique({ where: { id: theirStay.id } });
+        expect(untouched?.checkIn?.toISOString()).toBe("2026-09-20T00:00:00.000Z");
+      } finally {
+        await prisma.lodgingStay.deleteMany({ where: { lodgingId } });
+        await prisma.lodging.delete({ where: { id: lodgingId } });
+        await prisma.user.delete({ where: { id: stranger.id } });
+      }
+    });
+  });
+
   describe("a changed booking moves the stored stay", () => {
     async function storedStay(ref: string): Promise<{ lodgingId: string; stayId: string }> {
       const lodging = await prisma.lodging.create({
