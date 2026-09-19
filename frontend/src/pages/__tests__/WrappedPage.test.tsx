@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import type { Wrapped } from "../../types/wrapped";
@@ -133,6 +133,33 @@ describe("WrappedPage", () => {
     expect(screen.queryByText("stats:wrapped.cruises")).toBeNull();
   });
 
+  it("calls a cruise-only year empty for a reader who cannot see cruises", async () => {
+    // The defect: the empty test counted cruises while the cruise CARD did
+    // not, so a year with three cruises and no flights drew a grid reading
+    // "Flüge 0 / Strecke 0 km / Neue Länder 0" — every figure on screen a
+    // zero, and the one number that was not zero hidden by the domain switch.
+    domains.cruise = false;
+    getWrappedMock.mockResolvedValue(
+      wrapped({ year: 2021, flights: 0, cruises: 3, distanceKm: 0, earthFactor: 0 })
+    );
+    renderAtRoute();
+
+    await waitFor(() => expect(screen.getByText("stats:wrapped.emptyYear")).toBeTruthy());
+    expect(screen.queryByText("stats:wrapped.flights")).toBeNull();
+  });
+
+  it("still tells the cruise-only year for a reader who CAN see cruises", async () => {
+    // The other direction, so the fix above cannot quietly become "a year
+    // without flights is empty".
+    getWrappedMock.mockResolvedValue(
+      wrapped({ year: 2021, flights: 0, cruises: 3, distanceKm: 0, earthFactor: 0 })
+    );
+    renderAtRoute();
+
+    await waitFor(() => expect(screen.getByText("stats:wrapped.cruises")).toBeTruthy());
+    expect(screen.queryByText("stats:wrapped.emptyYear")).toBeNull();
+  });
+
   it("says an empty year is empty instead of drawing a grid of zeros", async () => {
     getWrappedMock.mockResolvedValue(
       wrapped({ year: 2019, flights: 0, cruises: 0, distanceKm: 0, earthFactor: 0, rank: "other" })
@@ -141,6 +168,57 @@ describe("WrappedPage", () => {
 
     await waitFor(() => expect(screen.getByText("stats:wrapped.emptyYear")).toBeTruthy());
     expect(screen.queryByText("stats:wrapped.flights")).toBeNull();
+  });
+
+  it("keeps the reader's year when the switch fails, and names the year that failed", async () => {
+    getWrappedMock.mockResolvedValue(wrapped());
+    renderAtRoute();
+    await waitFor(() => expect(screen.getByLabelText("stats:wrapped.yearLabel")).toBeTruthy());
+
+    getWrappedMock.mockRejectedValueOnce(new Error("network"));
+    fireEvent.change(screen.getByLabelText("stats:wrapped.yearLabel"), {
+      target: { value: "2022" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    // The picker used to be driven by the last PAYLOAD's year, so a failed
+    // switch snapped it back to 2024 — the reader watched their own choice
+    // undone by an error, with nothing left to retry from.
+    expect(screen.getByLabelText("stats:wrapped.yearLabel")).toHaveValue("2022");
+    // And the message says which year that was; "could not be loaded" beside a
+    // year picker leaves the reader guessing.
+    expect(screen.getByText("stats:wrapped.loadErrorYear")).toBeTruthy();
+  });
+
+  it("ignores a slow answer that lands after a faster one", async () => {
+    getWrappedMock.mockResolvedValue(wrapped());
+    renderAtRoute();
+    await waitFor(() => expect(screen.getByText("42")).toBeTruthy());
+    const picker = screen.getByLabelText("stats:wrapped.yearLabel");
+
+    // 2022 is asked for first and will answer LAST.
+    let settleSlow: (value: Wrapped) => void = () => undefined;
+    getWrappedMock.mockReturnValueOnce(
+      new Promise<Wrapped>((resolve) => {
+        settleSlow = resolve;
+      })
+    );
+    fireEvent.change(picker, { target: { value: "2022" } });
+
+    getWrappedMock.mockResolvedValueOnce(wrapped({ year: 2023, flights: 7 }));
+    fireEvent.change(picker, { target: { value: "2023" } });
+    await waitFor(() => expect(screen.getByText("7")).toBeTruthy());
+
+    await act(async () => {
+      settleSlow(wrapped({ year: 2022, flights: 99 }));
+    });
+
+    // Without the request ticket, 2022's answer would overwrite 2023's under
+    // a picker still reading 2023 — a page whose numbers and whose control
+    // disagree, and no way for the reader to tell.
+    expect(screen.queryByText("99")).toBeNull();
+    expect(screen.getByText("7")).toBeTruthy();
+    expect(picker).toHaveValue("2023");
   });
 
   it("tells 'no story yet' apart from 'could not load'", async () => {

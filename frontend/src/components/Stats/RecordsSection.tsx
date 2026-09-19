@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import StatCard from "./StatCard";
 import StatsSectionsLoadError from "./StatsSectionsLoadError";
 import { airportLabel, formatRecordValue, routeLabel } from "./recordFormat";
+import { formatDuration } from "../../lib/formatters";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { statsApi } from "../../lib/api";
@@ -101,9 +102,11 @@ export default function RecordsSection({ flights }: RecordsSectionProps): JSX.El
   const calendarDay = (iso: string | undefined): string | null =>
     iso ? display.date(`${iso}T00:00:00Z`, { timeZone: "UTC" }) : null;
 
-  const detailOf = (record: TravelRecord): string | null => {
+  const detailOf = (record: TravelRecord): JSX.Element | string | null => {
     switch (record.id) {
       case "busiest-day":
+        // The airport CHAIN, left as codes: five written-out names do not fit
+        // a tile, and the chain is read as a route rather than as places.
         return (record.legs ?? []).filter(Boolean).join(" → ") || null;
       case "northernmost":
         return airportLabel(record.airportIata, airportNames);
@@ -114,8 +117,26 @@ export default function RecordsSection({ flights }: RecordsSectionProps): JSX.El
               end: calendarDay(record.endDate),
             })
           : null;
-      default:
-        return routeLabel(record);
+      default: {
+        const route = routeLabel(record, airportNames);
+        if (route === null) return null;
+        // `durationMinutes` is served on the longest flight and was read by
+        // nobody. It belongs beside the distance: "how far" and "how long" are
+        // the two halves of what makes a leg the longest one.
+        const aloft =
+          typeof record.durationMinutes === "number" && record.durationMinutes > 0
+            ? formatDuration(record.durationMinutes)
+            : null;
+        return (
+          // The tooltip only where it says something the line does not: with
+          // no name resolved, `text` IS the codes and a title repeating them
+          // is noise.
+          <span title={route.text === route.codes ? undefined : route.codes}>
+            {route.text}
+            {aloft !== null && ` · ${aloft}`}
+          </span>
+        );
+      }
     }
   };
 

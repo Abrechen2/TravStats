@@ -688,6 +688,7 @@
     "intro": "Ein Rückblick auf {{year}} — aus deinem Logbuch, nichts geschätzt.",
     "yearLabel": "Jahr",
     "loadError": "Dein Jahr konnte nicht geladen werden.",
+    "loadErrorYear": "{{year}} konnte nicht geladen werden.",
     "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug oder eine Kreuzfahrt erfasst ist, entsteht hier ein Rückblick.",
     "emptyYear": "In {{year}} ist kein Flug erfasst.",
     "needsFlights": "Dieser Rückblick wird aus Flügen gebaut. Schalte den Bereich Flüge ein, um ihn zu sehen.",

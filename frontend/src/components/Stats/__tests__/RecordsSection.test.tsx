@@ -84,7 +84,24 @@ const ALL_SEVEN: TravelRecord[] = [
   { id: "longest-streak", value: 4, unit: "days", startDate: "2024-03-05", endDate: "2024-03-08" },
 ];
 
-const renderSection = (flights: Flight[] = [flight({})]): ReturnType<typeof render> =>
+/**
+ * Two flights, so the naming can be measured in both directions: MUC and SIN
+ * are named, HAM is named, and BRE is a code this account has never seen a
+ * name for (`arrName` deliberately absent).
+ */
+const KNOWN_FLIGHTS: Flight[] = [
+  flight({}),
+  flight({
+    id: "f2",
+    flightNumber: "LH 999",
+    depIata: "HAM",
+    depName: "Hamburg",
+    arrIata: "BRE",
+    arrName: undefined,
+  }),
+];
+
+const renderSection = (flights: Flight[] = KNOWN_FLIGHTS): ReturnType<typeof render> =>
   render(
     <MemoryRouter>
       <RecordsSection flights={flights} />
@@ -125,16 +142,63 @@ describe("RecordsSection", () => {
     getRecordsMock.mockResolvedValue(ALL_SEVEN);
     renderSection();
 
-    await waitFor(() => expect(screen.getAllByText("MUC → SIN").length).toBeGreaterThan(0));
-    // The busiest day is a CHAIN of airports, assembled by the server.
+    await waitFor(() =>
+      expect(screen.getAllByText(/Munich → Singapore Changi/).length).toBeGreaterThan(0)
+    );
+    // The busiest day is a CHAIN of airports, assembled by the server, and
+    // stays in codes: five written-out names do not fit a tile.
     expect(screen.getByText("MUC → FRA → LHR → DUB")).toBeTruthy();
-    // The northernmost point is an airport, not a leg — and it is named from
-    // the loaded flights rather than from the payload, which carries codes.
+    // The northernmost point is an airport, not a leg.
     expect(screen.getByText("TOS")).toBeTruthy();
 
     const links = screen.getAllByRole("link", { name: "stats:records.openFlight" });
     expect(links.length).toBe(4);
     expect(links[0].getAttribute("href")).toBe("/flights/f1");
+  });
+
+  it("writes an airport's NAME on a route where it knows one, code where it does not", async () => {
+    getRecordsMock.mockResolvedValue(ALL_SEVEN);
+    renderSection();
+
+    // Both ends known — and the codes stay reachable in the tooltip, because
+    // the names are what a reader recognises and the codes are what they
+    // search for.
+    const named = await screen.findByText("Munich → Singapore Changi · 12h");
+    expect(named.getAttribute("title")).toBe("MUC → SIN");
+
+    // One end known, one not: the unknown end falls back to its code by
+    // ITSELF. Falling back per route would have cost Hamburg its name for
+    // Bremen's sake.
+    // Two records name that leg — the shortest flight and the biggest delay.
+    const mixed = screen.getAllByText("Hamburg → BRE");
+    expect(mixed.length).toBe(2);
+    for (const node of mixed) expect(node.getAttribute("title")).toBe("HAM → BRE");
+  });
+
+  it("hangs no tooltip when it could name nothing — a repeat of the line is noise", async () => {
+    getRecordsMock.mockResolvedValue([ALL_SEVEN[1]]);
+    renderSection([]);
+
+    const bare = await screen.findByText("HAM → BRE");
+    expect(bare.getAttribute("title")).toBeNull();
+  });
+
+  it("shows how long the longest flight took, not only how far it went", async () => {
+    getRecordsMock.mockResolvedValue([ALL_SEVEN[0]]);
+    renderSection();
+
+    // `durationMinutes` is served on this record and was read by nobody: "how
+    // far" and "how long" are the two halves of what makes a leg the longest.
+    await waitFor(() => expect(screen.getByText(/· 12h$/)).toBeTruthy());
+  });
+
+  it("leaves the duration off a record the server sent none for", async () => {
+    getRecordsMock.mockResolvedValue([ALL_SEVEN[1]]);
+    renderSection();
+
+    const detail = await screen.findByText("Hamburg → BRE");
+    // No " · " tail invented out of a missing field.
+    expect(detail.textContent).toBe("Hamburg → BRE");
   });
 
   it("dates a flight record from the loaded flight, since the payload carries none", async () => {

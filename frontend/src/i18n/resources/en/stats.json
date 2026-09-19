@@ -688,6 +688,7 @@
     "intro": "A look back at {{year}} — from your logbook, nothing estimated.",
     "yearLabel": "Year",
     "loadError": "Your year could not be loaded.",
+    "loadErrorYear": "{{year}} could not be loaded.",
     "nothingYet": "Nothing to look back on yet. Once a flight or a cruise is recorded, a review appears here.",
     "emptyYear": "No flight recorded in {{year}}.",
     "needsFlights": "This review is built from flights. Switch the flights area on to see it.",

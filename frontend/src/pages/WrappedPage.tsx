@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { Select } from "../components/ui/Field";
 import StatCard from "../components/Stats/StatCard";
+import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { statsApi } from "../lib/api";
@@ -56,21 +57,41 @@ export default function WrappedPage(): JSX.Element {
   const locale = localeForLanguage(i18n.language);
   const count = (value: number): string => value.toLocaleString(locale);
 
+  /**
+   * Which request the page is still interested in.
+   *
+   * Switching years quickly starts a second request before the first has
+   * answered, and nothing makes the server answer in the order it was asked:
+   * a slow 2019 followed by a fast 2024 would paint 2024 and then overwrite it
+   * with 2019, under a picker reading 2024. A ticket per request, and only the
+   * newest one may touch state.
+   */
+  const latestRequest = useRef(0);
+
   const load = useCallback(
     (requested: number | null): void => {
       if (!flightsOn) return;
+      const ticket = latestRequest.current + 1;
+      latestRequest.current = ticket;
       setLoading(true);
       setFailure(null);
       statsApi
         .getWrapped(requested ?? undefined)
-        .then(setWrapped)
+        .then((next) => {
+          if (ticket !== latestRequest.current) return;
+          setWrapped(next);
+        })
         .catch((err) => {
+          if (ticket !== latestRequest.current) return;
           // A 404 is the server saying there is no story at all, which is a
           // different sentence from "I could not ask".
           setFailure(classifyLoadFailure(err));
           logger.error("Failed to load the year in review:", err);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (ticket !== latestRequest.current) return;
+          setLoading(false);
+        });
     },
     [flightsOn]
   );
@@ -90,12 +111,22 @@ export default function WrappedPage(): JSX.Element {
     );
   }
 
+  /**
+   * The year the page is TALKING about, which is the reader's choice as soon
+   * as they have made one — not the year of the last payload.
+   *
+   * Driving the picker off `wrapped.year` snapped it back to the old year the
+   * moment a switch failed, so the reader watched their own choice undone by
+   * an error and had nothing to retry from.
+   */
+  const shownYear = year ?? wrapped?.year ?? null;
+
   const yearPicker =
     wrapped !== null && wrapped.availableYears.length > 1 ? (
       <label className="flex items-center gap-2 text-sm">
         <span style={{ color: "var(--text-muted)" }}>{t("stats:wrapped.yearLabel")}</span>
         <Select
-          value={String(wrapped.year)}
+          value={String(shownYear ?? wrapped.year)}
           aria-label={t("stats:wrapped.yearLabel")}
           onChange={(event): void => setYear(Number(event.target.value))}
         >
@@ -123,7 +154,7 @@ export default function WrappedPage(): JSX.Element {
     <AppShell width="list">
       <PageHeader
         title={t("stats:wrapped.title")}
-        meta={wrapped ? t("stats:wrapped.intro", { year: wrapped.year }) : undefined}
+        meta={shownYear !== null ? t("stats:wrapped.intro", { year: shownYear }) : undefined}
         actions={yearPicker}
       />
 
@@ -141,34 +172,20 @@ export default function WrappedPage(): JSX.Element {
         </p>
       )}
 
+      {/* The statistics page's own failure box, not a second one that only
+          looks like it. It names the YEAR that failed where there is one —
+          "could not be loaded" beside a year picker leaves the reader
+          guessing which year that was, and the retry re-asks for exactly the
+          year the picker still shows. */}
       {!loading && failure === "loadError" && (
-        <div
-          className="rounded-lg p-4"
-          role="alert"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--danger)",
-            color: "var(--danger)",
-          }}
-        >
-          <p className="text-sm">
-            {t("stats:wrapped.loadError")}{" "}
-            <button
-              type="button"
-              onClick={(): void => load(year)}
-              style={{
-                marginLeft: 8,
-                background: "transparent",
-                border: "none",
-                color: "var(--accent)",
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-            >
-              {t("stats:page.retry")}
-            </button>
-          </p>
-        </div>
+        <StatsSectionsLoadError
+          onRetry={(): void => load(year)}
+          message={
+            year === null
+              ? t("stats:wrapped.loadError")
+              : t("stats:wrapped.loadErrorYear", { year })
+          }
+        />
       )}
 
       {!loading && failure === null && wrapped !== null && (
@@ -181,8 +198,15 @@ export default function WrappedPage(): JSX.Element {
 
           {/* A year the reader asked for that holds nothing is answered, not
               redirected: "you flew nothing in 2019" is true, and picking a
-              different year would not be. */}
-          {wrapped.flights === 0 && wrapped.cruises === 0 ? (
+              different year would not be.
+
+              "Holds nothing" has to mean "holds nothing THIS READER CAN SEE",
+              which is why the cruise count only counts when the cruise card is
+              drawn. With cruises switched off, a year with three cruises and
+              no flights used to fail this test and draw a grid reading
+              "Flüge 0 / Strecke 0 km" — every figure on screen a zero, and the
+              one number that was not zero hidden. */}
+          {(cruisesOn ? wrapped.flights === 0 && wrapped.cruises === 0 : wrapped.flights === 0) ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:wrapped.emptyYear", { year: wrapped.year })}
             </p>

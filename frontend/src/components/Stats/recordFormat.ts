@@ -64,8 +64,34 @@ export function airportLabel(
   return name ? `${code.toUpperCase()} · ${name}` : code.toUpperCase();
 }
 
-/** `MUC → SIN`, or null when the record names no pair. */
-export function routeLabel(record: Pick<TravelRecord, "depIata" | "arrIata">): string | null {
+/**
+ * A route, named where the account can name it — and always resolvable back to
+ * the codes.
+ *
+ * The section used to print `MUC → SIN` while the card beside it wrote out
+ * "Tromsø" for the northernmost point: the names were loaded, and three of the
+ * four route cards ignored them. So `text` reads "München → Singapore Changi"
+ * where both ends are known and falls back to the bare code per END, not per
+ * route — one unknown airport must not cost the other its name.
+ *
+ * `codes` is the unabbreviated pair and is what the tile hangs in its `title`.
+ * It is equal to `text` when nothing could be named, and a caller should then
+ * skip the tooltip rather than repeat the line it is attached to.
+ */
+export interface RouteLabel {
+  text: string;
+  codes: string;
+}
+
+export function routeLabel(
+  record: Pick<TravelRecord, "depIata" | "arrIata">,
+  names: ReadonlyMap<string, string>
+): RouteLabel | null {
   if (!record.depIata || !record.arrIata) return null;
-  return `${record.depIata.toUpperCase()} → ${record.arrIata.toUpperCase()}`;
+  const from = record.depIata.toUpperCase();
+  const to = record.arrIata.toUpperCase();
+  return {
+    text: `${names.get(from) ?? from} → ${names.get(to) ?? to}`,
+    codes: `${from} → ${to}`,
+  };
 }
