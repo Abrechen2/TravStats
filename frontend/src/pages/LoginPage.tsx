@@ -8,6 +8,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
 import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
+import { loginFailure } from "../lib/loginFailure";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -118,19 +119,15 @@ export default function LoginPage(): JSX.Element {
         navigate("/");
       }
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { status?: number; data?: { error?: string; code?: string } };
-        message?: string;
-      };
-      const serverError = errorObj.response?.data?.error;
-      const status = errorObj.response?.status;
-      if (!errorObj.response) {
-        setError(t("login.serverUnreachable"));
-      } else if (status === 503 || errorObj.response?.data?.code === "DB_UNAVAILABLE") {
-        setError(t("login.dbUnavailable"));
-      } else {
-        setError(serverError || t("login.failed"));
-      }
+      // Never the server's own `error` string: it is English prose meant for a
+      // log, and printing it put "Invalid credentials" into a German page
+      // (forgejo#88 finding 3). `loginFailure` names the key instead.
+      const failure = loginFailure(err);
+      setError(
+        failure.retryAfterMinutes !== undefined
+          ? t(failure.key, { count: failure.retryAfterMinutes })
+          : t(failure.key)
+      );
     } finally {
       setLoading(false);
     }

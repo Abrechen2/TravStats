@@ -179,16 +179,37 @@ export const errorHandler = async (
 
   res.status(statusCode).json({
     error: message,
+    // A machine-readable cause, present only where the thrower named one.
+    // `message` is English prose written for a log; a client that shows it to
+    // a reader is showing them the wrong language (forgejo#88 finding 3 — the
+    // login form printed "Invalid credentials" into a German page). The code
+    // is what a client is meant to branch on.
+    ...(isAppError(err) && err.code ? { code: err.code } : {}),
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
 
+function isAppError(err: unknown): err is AppError {
+  return err instanceof AppError;
+}
+
 export class AppError extends Error {
   statusCode: number;
 
-  constructor(message: string, statusCode: number = 500) {
+  /**
+   * Stable, machine-readable cause — `INVALID_CREDENTIALS`, `RATE_LIMITED`.
+   *
+   * Optional, and deliberately so: adding one to every throw site at once
+   * would be a rename of the whole error surface. A route that has a client
+   * needing to tell its failures apart names a code; the rest keep the prose
+   * they already had.
+   */
+  code?: string;
+
+  constructor(message: string, statusCode: number = 500, code?: string) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
     this.name = "AppError";
   }
 }

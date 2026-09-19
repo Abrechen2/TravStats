@@ -92,9 +92,29 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: /login\.submit/i })).toBeInTheDocument();
   });
 
-  it("should show error on failed login", async () => {
+  /** Types a login in and waits for whatever the form decides to say. */
+  const submitLogin = (): void => {
+    fireEvent.change(screen.getByLabelText(/login\.username/i), {
+      target: { value: "testuser" },
+    });
+    fireEvent.change(screen.getByLabelText(/login\.password/i), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /login\.submit/i }));
+  };
+
+  /**
+   * forgejo#88 finding 3. This case used to assert the OPPOSITE — that the
+   * page renders "Invalid credentials" — which is the backend's English log
+   * prose shown to a German reader. The server's words must not reach the
+   * form at all; it says this in the reader's language now.
+   */
+  it("says a wrong password in its own words, never the server's English prose", async () => {
     vi.mocked(authApi.login).mockRejectedValue({
-      response: { data: { error: "Invalid credentials" } },
+      response: {
+        status: 401,
+        data: { error: "Invalid credentials", code: "INVALID_CREDENTIALS" },
+      },
     });
 
     render(
@@ -102,18 +122,43 @@ describe("LoginPage", () => {
         <LoginPage />
       </BrowserRouter>
     );
-
-    const usernameInput = screen.getByLabelText(/login\.username/i);
-    const passwordInput = screen.getByLabelText(/login\.password/i);
-    const submitButton = screen.getByRole("button", { name: /login\.submit/i });
-
-    fireEvent.change(usernameInput, { target: { value: "testuser" } });
-    fireEvent.change(passwordInput, { target: { value: "wrongpassword" } });
-    fireEvent.click(submitButton);
+    submitLogin();
 
     await waitFor(() => {
-      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("login.errors.invalidCredentials");
     });
+    expect(screen.queryByText(/invalid credentials/i)).toBeNull();
+  });
+
+  /**
+   * forgejo#88 finding 4. The limiter's 429 used to arrive as a bare English
+   * string body, so `data.error` was undefined and the form blamed the
+   * password — "Anmeldung fehlgeschlagen" — for a request it never checked.
+   */
+  it("names the rate limit as the cause and carries the wait the server sent", async () => {
+    vi.mocked(authApi.login).mockRejectedValue({
+      response: {
+        status: 429,
+        data: {
+          error: "Too many authentication attempts, please try again later",
+          code: "RATE_LIMITED",
+          retryAfterSeconds: 540,
+        },
+      },
+    });
+
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+    submitLogin();
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("login.errors.rateLimitedMinutes");
+    });
+    expect(screen.queryByText(/too many authentication attempts/i)).toBeNull();
+    expect(screen.queryByText(/login\.failed/)).toBeNull();
   });
 
   it("should navigate to register page", () => {
