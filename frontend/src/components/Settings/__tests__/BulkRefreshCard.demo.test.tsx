@@ -32,6 +32,7 @@ describe("BulkRefreshCard on the shared demo account", () => {
       aerodataboxQuota: null,
     });
     flightsApiMock.bulkRefreshRun.mockReset();
+    window.sessionStorage.clear();
   });
 
   it("asks for no preview it already knows will be refused", async () => {
@@ -48,5 +49,29 @@ describe("BulkRefreshCard on the shared demo account", () => {
 
     await waitFor(() => expect(flightsApiMock.bulkRefreshPreview).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("settings:apiKeys.bulkRefresh.demoBlocked")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The server refuses every `isDemo` account, not only the shared one -- the
+   * preview instances' own admin and the local dev admin too (`rejectDemoQuota`,
+   * backend middleware/demoGuard.ts). The frontend cannot see that flag, so the
+   * first 403 is the only way to learn it. Remembering it for the tab turns
+   * "a 403 on every visit to /settings/account" into one per session.
+   */
+  it("stops asking after the server has refused once", async () => {
+    isDemoMock.current = false;
+    const refusal = {
+      response: { status: 403, data: { error: "DEMO_ACCOUNT_FORBIDDEN", message: "no" } },
+    };
+    flightsApiMock.bulkRefreshPreview.mockRejectedValue(refusal);
+
+    const first = render(<BulkRefreshCard />);
+    expect(await screen.findByText("settings:apiKeys.bulkRefresh.demoBlocked")).toBeInTheDocument();
+    expect(flightsApiMock.bulkRefreshPreview).toHaveBeenCalledTimes(1);
+    first.unmount();
+
+    render(<BulkRefreshCard />);
+    expect(await screen.findByText("settings:apiKeys.bulkRefresh.demoBlocked")).toBeInTheDocument();
+    expect(flightsApiMock.bulkRefreshPreview).toHaveBeenCalledTimes(1);
   });
 });

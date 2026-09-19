@@ -27,6 +27,33 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 
 const MAX_PER_BATCH = 25;
 
+/**
+ * Remembers, for this tab, that the server has already refused this account's
+ * quota. `rejectDemoQuota` refuses EVERY `isDemo` account -- the preview
+ * instances' own admin and the local dev admin included -- and only
+ * `isSharedDemo` is visible from the frontend, so the first 403 is the only
+ * way to learn about the others. Remembering it turns "a 403 in the console on
+ * every visit to /settings/account" into one per tab. `sessionStorage`, not
+ * `localStorage`: the flag belongs to whoever is logged in right now.
+ */
+const QUOTA_REFUSED_KEY = "travstats:bulkRefresh:quotaRefused";
+
+function readQuotaRefused(): boolean {
+  try {
+    return window.sessionStorage.getItem(QUOTA_REFUSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberQuotaRefused(): void {
+  try {
+    window.sessionStorage.setItem(QUOTA_REFUSED_KEY, "1");
+  } catch {
+    // Private window / storage disabled — the request simply goes again.
+  }
+}
+
 export default function BulkRefreshCard(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -59,6 +86,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
         errObj.response?.status === 403 &&
         errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN"
       ) {
+        rememberQuotaRefused();
         setDemoBlocked(true);
         setRemaining(null);
         setPreviewError(null);
@@ -90,7 +118,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
   const isSharedDemo = useIsDemoAccount();
 
   useEffect(() => {
-    if (isSharedDemo) {
+    if (isSharedDemo || readQuotaRefused()) {
       setDemoBlocked(true);
       return;
     }
