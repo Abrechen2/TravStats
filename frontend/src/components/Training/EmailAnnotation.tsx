@@ -105,6 +105,16 @@ export default function EmailAnnotation({
             // a third version. Show exactly what was stored.
             if (stored.length > 0) setShowFiltered(false);
           }
+          // `filtered` says which version the stored text IS — it is written
+          // on every save, and until now nothing read it back. A saved sample
+          // is therefore shown as it was saved, whether or not anything is
+          // marked: running the filter over an already-filtered document is a
+          // SECOND pass, and this one is not idempotent (its greeting rules
+          // are anchored at the start of a line, so a pass can expose a line
+          // the next pass then removes). A sample saved deliberately
+          // unfiltered keeps its headers on screen for the same reason: that
+          // was the reader's choice, and re-filtering would quietly undo it.
+          if (typeof annotationsData.filtered === "boolean") setShowFiltered(false);
         }
 
         if (
@@ -329,8 +339,9 @@ export default function EmailAnnotation({
       // screen, so with the filter switched off every offset was measured in
       // one document and stored against another — and nothing said so, because
       // a shifted offset still yields a template, just one built on the wrong
-      // label. `filtered` records which fassung it is; the annotate route
-      // refuses the payload outright if the two ever disagree again.
+      // label. `filtered` records which version it is — the load effect above
+      // reads it back — and the annotate route refuses the payload outright if
+      // the two ever disagree again.
       const annotationData = {
         type: "email",
         fullText: displayText,
