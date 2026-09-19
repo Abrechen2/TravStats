@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { Request, Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { RATE_LIMITS } from "../config/constants";
 
@@ -265,6 +265,32 @@ export function skipOutsideProduction(): boolean {
 }
 
 /**
+ * The 429 body for a limiter a HUMAN meets, rather than a script.
+ *
+ * express-rate-limit's `message` option sends a bare string, so the response
+ * is not JSON at all and a client reading `data.error` finds nothing. The
+ * login form therefore fell back to "Anmeldung fehlgeschlagen", which names
+ * the wrong cause: the password may well have been right (forgejo#88 finding
+ * 4). This answers with a code to branch on and the wait in seconds, so the
+ * form can say how long — `retryAfterSeconds` rather than the `Retry-After`
+ * header because a header needs `Access-Control-Expose-Headers` to survive a
+ * cross-origin read, and the body never does.
+ */
+function humanRateLimitHandler(message: string) {
+  return (req: Request, res: Response): void => {
+    const resetAt = (req as { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
+    const retryAfterSeconds = resetAt
+      ? Math.max(1, Math.ceil((resetAt.getTime() - Date.now()) / 1000))
+      : undefined;
+    res.status(429).json({
+      error: message,
+      code: "RATE_LIMITED",
+      ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
+    });
+  };
+}
+
+/**
  * Rate limiter for authentication endpoints (login, register)
  * Protects against brute-force attacks and mass registration
  * Allows 10 attempts per 15 minutes per IP
@@ -272,7 +298,7 @@ export function skipOutsideProduction(): boolean {
 export const authLimiter = rateLimit({
   windowMs: RATE_LIMITS.AUTH_WINDOW_MS,
   max: RATE_LIMITS.AUTH_MAX_ATTEMPTS,
-  message: "Too many authentication attempts, please try again later",
+  handler: humanRateLimitHandler("Too many authentication attempts, please try again later"),
   standardHeaders: true,
   legacyHeaders: false,
   // Bypass in dev/test envs so Playwright e2e suites that loop through
