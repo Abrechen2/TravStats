@@ -167,7 +167,7 @@ moving tags. Pick the one your platform defaults to.
 |---|---|---|
 | `:latest`, `:stable` | Newest promoted stable release | Normal production. Auto-updates to the next promoted release. |
 | `:X.Y.Z` | Pinned immutable release | Reproducible installs, audit, regulated environments. |
-| `:rc-latest` | Newest Release Candidate | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+| `:rc-latest` | Newest Release Candidate | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes; an in-place backup is taken automatically on the first start of ANY new version (see [Upgrades](#upgrades)). |
 
 <!-- These rows deliberately name no version numbers. They used to read
      "currently 2.2.0" / "currently 2.2.1-rc.1" and were still saying that
@@ -202,6 +202,7 @@ schedule and WebDAV sync.
 | `CORS_ORIGIN` | Frontend lives on a different hostname than the API | *(same-origin only)* |
 | `TRUST_PROXY` | Another reverse proxy (NPM, Traefik, Caddy …) sits in front — name its address, e.g. `loopback, 192.168.1.10`, or every visitor shares one login rate limit | `loopback` |
 | `TZ` | Non-UTC container clock (not recommended) | `UTC` |
+| `SKIP_PRE_MIGRATION_BACKUP` | Upgrade even though the automatic pre-upgrade backup cannot be taken — see [Upgrades](#upgrades) | *(unset; only the literal `true` counts)* |
 
 See [`.env.prod.example`](.env.prod.example) for the annotated list.
 
@@ -224,6 +225,46 @@ third-party integrations (flight-data APIs, Ollama, SMTP) under
 [External services](https://travstats.de/docs/external-services/), and the
 backup schedule, retention and WebDAV sync under
 [Backups](https://travstats.de/docs/operations/backups/).
+
+---
+
+## Upgrades
+
+Starting a version you have not run on this data before takes a database
+snapshot BEFORE any migration runs, into `/app/data/backups/` as
+`pre-v<version>-upgrade-<timestamp>.sql`. It happens on every version change,
+not only a major one: the 2.4.0 → 2.5.0 upgrade applied seven migrations, and
+"major bumps only" would have skipped exactly the release that most needed a
+snapshot.
+
+**If that snapshot cannot be taken, the container refuses to start.** It
+logs a `[pre-migration-backup] FATAL` block naming the cause and stops before
+`prisma migrate deploy`. Nothing has been migrated at that point: the database
+is untouched, and the previous image still runs against it. That refusal is
+deliberate — it is recoverable, and a schema change taken without a snapshot
+may not be.
+
+The usual causes, in order of how often they happen:
+
+- **`pg_dump` is older than the server.** `pg_dump` refuses to dump a server
+  newer than itself, so the client must be at least the server's MAJOR version
+  (a newer client against an older server is fine). This is the normal outcome
+  of pointing TravStats at a Postgres you already run and later upgrading it.
+  The fatal message names the two versions when it can read them.
+- **The database container was renamed**, so the backup cannot reach it
+  (`DOCKER_DB_CONTAINER`).
+- **No free space** under the data volume.
+
+To upgrade anyway, without a snapshot:
+
+```yaml
+environment:
+  SKIP_PRE_MIGRATION_BACKUP: "true"
+```
+
+It boots with a warning instead of the refusal. Only the literal string `true`
+counts — `1` and `yes` do not, because this is consent to migrate with no way
+back. Take your own backup first, and unset it again afterwards.
 
 ---
 

@@ -147,6 +147,7 @@ async function init() {
       shouldBackup: upgradeCtx.shouldBackup,
       backupCreated: upgradeCtx.backupCreated,
       backupError: upgradeCtx.backupError,
+      versionSkew: upgradeCtx.versionSkew,
       skipRequested: skipPreMigrationBackupRequested(),
     });
     if (upgradeCtx.backupCreated) {

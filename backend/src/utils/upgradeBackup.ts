@@ -3,6 +3,7 @@ import * as path from "path";
 import { createPrismaClient } from "../prismaClient";
 import logger from "./logger";
 import { createDatabaseDump } from "../services/backup/backupDatabase";
+import { detectPgDumpSkew } from "./pgDumpSkew";
 
 const VERSION_FILE = path.join(__dirname, "..", "..", "VERSION");
 const BACKUP_PATH = process.env.BACKUP_PATH || "/app/data/backups";
@@ -18,6 +19,9 @@ export interface UpgradeBackupContext {
   /** The reason the backup did not happen, when one was wanted. Null when the
    *  backup succeeded or was never attempted. */
   backupError: string | null;
+  /** A pg_dump/server version skew found BEFORE the attempt, as a sentence.
+   *  Null when the versions agree or either could not be read. */
+  versionSkew: string | null;
   /** Why the decision went the way it did, in words the console can print. */
   reason: string;
 }
@@ -60,8 +64,12 @@ export function preMigrationOutcome(input: {
   backupCreated: string | null;
   backupError: string | null;
   skipRequested: boolean;
+  /** From `detectPgDumpSkew`, measured before the attempt. Optional so a
+   *  caller that cannot probe simply says nothing about it. */
+  versionSkew?: string | null;
 }): PreMigrationOutcome {
   const { shouldBackup, backupCreated, backupError, skipRequested } = input;
+  const versionSkew = input.versionSkew ?? null;
 
   if (!shouldBackup || backupError === null) {
     return {
@@ -70,6 +78,11 @@ export function preMigrationOutcome(input: {
     };
   }
 
+  // Named on its own line when it is known, because "Failed to start pg_dump"
+  // and "your pg_dump is older than your server" have completely different
+  // fixes and the first cannot be told from the second.
+  const skewLine = versionSkew ? [`[pre-migration-backup] Likely cause: ${versionSkew}`] : [];
+
   if (skipRequested) {
     return {
       fatal: false,
@@ -77,6 +90,7 @@ export function preMigrationOutcome(input: {
         "[pre-migration-backup] WARNING: the pre-migration backup failed and " +
           `${SKIP_PRE_MIGRATION_BACKUP_ENV} is set — booting anyway.`,
         `[pre-migration-backup] Cause: ${backupError}`,
+        ...skewLine,
         "[pre-migration-backup] Migrations are about to run against a database " +
           "with no snapshot from before them.",
       ],
@@ -89,10 +103,11 @@ export function preMigrationOutcome(input: {
       "[pre-migration-backup] FATAL: this is a version change and the " +
         "pre-migration backup could NOT be created.",
       `[pre-migration-backup] Cause: ${backupError}`,
+      ...skewLine,
       "[pre-migration-backup] Migrations have NOT been run. Your database is " +
         "untouched and the previous image still works.",
-      "[pre-migration-backup] Fix the cause (usually: pg_dump missing or a " +
-        "version skew against the server, the database container renamed, or " +
+      "[pre-migration-backup] Fix the cause (usually: pg_dump missing or older " +
+        "than the server's major version, the database container renamed, or " +
         "no free space under the backups directory), then start again.",
       `[pre-migration-backup] To upgrade WITHOUT a backup, set ${SKIP_PRE_MIGRATION_BACKUP_ENV}=true.`,
     ],
@@ -273,6 +288,7 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     firstUpgradeFromPreMarker,
     backupCreated: null,
     backupError: null,
+    versionSkew: null,
     reason: decision.reason,
   };
 
@@ -295,6 +311,18 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     currentVersion,
     firstUpgradeFromPreMarker,
   });
+
+  // BEFORE the attempt, so the failure message can name the reason rather than
+  // only the symptom. It never throws and abstains when either version cannot
+  // be read — see `pgDumpSkew.ts`.
+  ctx.versionSkew = await detectPgDumpSkew();
+  if (ctx.versionSkew) {
+    logger.warn({
+      operation: "upgrade_backup_pg_version_skew",
+      message: "pg_dump and the server disagree on major version",
+      detail: ctx.versionSkew,
+    });
+  }
 
   fs.mkdirSync(BACKUP_PATH, { recursive: true });
 

@@ -37,6 +37,8 @@ import * as path from "path";
 const BACKUP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "travstats-premigration-"));
 process.env.BACKUP_PATH = BACKUP_DIR;
 
+import { pgDumpSkew, majorVersionOf } from "../pgDumpSkew";
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const upgradeBackup = require("../upgradeBackup") as typeof import("../upgradeBackup");
 const {
@@ -47,6 +49,9 @@ const {
 } = upgradeBackup;
 
 const PG_DUMP_FAILURE = "Failed to start pg_dump";
+
+/** What `detectPgDumpSkew` produces for a client older than its server. */
+const SKEW = pgDumpSkew("pg_dump (PostgreSQL) 15.7", "PostgreSQL 16.3 on x86_64-pc-linux-gnu")!;
 
 describe("maybeRunPreMigrationBackup — an injected failing dump", () => {
   let originalSkip: string | undefined;
@@ -130,6 +135,80 @@ describe("maybeRunPreMigrationBackup — an injected failing dump", () => {
     expect(ctx.backupError).toBeNull();
     expect(outcome.fatal).toBe(false);
     expect(outcome.lines.join("\n")).toContain("Backup written");
+  });
+});
+
+describe("preMigrationOutcome — naming a version skew", () => {
+  it("puts the skew in the fatal message, beside the symptom", () => {
+    // "Failed to start pg_dump" and "your pg_dump is older than your server"
+    // read the same to an operator and have completely different fixes.
+    const outcome = preMigrationOutcome({
+      shouldBackup: true,
+      backupCreated: null,
+      backupError: PG_DUMP_FAILURE,
+      skipRequested: false,
+      versionSkew: SKEW,
+    });
+
+    expect(outcome.fatal).toBe(true);
+    const message = outcome.lines.join("\n");
+    expect(message).toContain(PG_DUMP_FAILURE);
+    expect(message).toContain("pg_dump is version 15 and the server is version 16");
+    expect(message).toContain("SKIP_PRE_MIGRATION_BACKUP=true");
+  });
+
+  it("carries the skew into the override warning too", () => {
+    const outcome = preMigrationOutcome({
+      shouldBackup: true,
+      backupCreated: null,
+      backupError: PG_DUMP_FAILURE,
+      skipRequested: true,
+      versionSkew: SKEW,
+    });
+
+    expect(outcome.fatal).toBe(false);
+    expect(outcome.lines.join("\n")).toContain("pg_dump is version 15");
+  });
+
+  it("says nothing about versions when none was measured", () => {
+    const outcome = preMigrationOutcome({
+      shouldBackup: true,
+      backupCreated: null,
+      backupError: PG_DUMP_FAILURE,
+      skipRequested: false,
+      versionSkew: null,
+    });
+
+    expect(outcome.lines.join("\n")).not.toContain("Likely cause");
+  });
+});
+
+describe("pgDumpSkew — the rule", () => {
+  it("names a client older than its server, which pg_dump refuses outright", () => {
+    expect(pgDumpSkew("pg_dump (PostgreSQL) 15.7", "PostgreSQL 16.3 on x86_64")).toContain(
+      "version 15"
+    );
+  });
+
+  it("says nothing about a NEWER client, which is supported and normal", () => {
+    // The image ships 16 and plenty of people run 15. A warning nobody can act
+    // on does not belong in the one message that has to be worth reading.
+    expect(pgDumpSkew("pg_dump (PostgreSQL) 16.3", "PostgreSQL 15.7 on x86_64")).toBeNull();
+    expect(pgDumpSkew("pg_dump (PostgreSQL) 16.3", "PostgreSQL 16.1 on x86_64")).toBeNull();
+  });
+
+  it("abstains when either side could not be read", () => {
+    // An unread version is not evidence of a skew. Guessing would send someone
+    // upgrading a Postgres that was never the problem.
+    expect(pgDumpSkew(null, "PostgreSQL 16.3 on x86_64")).toBeNull();
+    expect(pgDumpSkew("pg_dump (PostgreSQL) 15.7", null)).toBeNull();
+    expect(pgDumpSkew("command not found", "PostgreSQL 16.3")).toBeNull();
+  });
+
+  it("reads the major out of what each side actually prints", () => {
+    expect(majorVersionOf("pg_dump (PostgreSQL) 16.3")).toBe(16);
+    expect(majorVersionOf("PostgreSQL 15.7 on x86_64-pc-linux-gnu, compiled by gcc")).toBe(15);
+    expect(majorVersionOf("")).toBeNull();
   });
 });
 

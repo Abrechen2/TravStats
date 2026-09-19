@@ -47,6 +47,7 @@ async function main(): Promise<void> {
     shouldBackup: ctx.shouldBackup,
     backupCreated: ctx.backupCreated,
     backupError: ctx.backupError,
+    versionSkew: ctx.versionSkew,
     skipRequested: skipPreMigrationBackupRequested(),
   });
 
