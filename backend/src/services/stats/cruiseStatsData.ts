@@ -41,21 +41,43 @@ export interface CruiseStatsData {
 }
 
 /**
- * The sailed cruises of `year` (or of all time when it is undefined).
+ * Which cruises a caller is asking about.
  *
- * The predicate is `countableCruiseWhere()` — this router spelled the same
- * two statuses with the FLIGHT helper, which is the drift
+ * `sailed` is `GET /stats/cruise`'s own population and the default: a
+ * merely-booked voyage must not inflate "gefahren" figures. `every` is
+ * `GET /cruises`, which applies no status filter at all — the cruise LIST is
+ * what the tab's row-level blocks (the calendar, the money, the companions)
+ * are folded from, and they show a booked cruise because the list does.
+ *
+ * The two populations really do differ, and the difference is visible on the
+ * tab: the hero grid counts sailed cruises while the companion bars below it
+ * include next year's booking. Naming both here is what keeps a resolver from
+ * silently picking the wrong one.
+ */
+export type CruiseStatusScope = "sailed" | "every";
+
+/**
+ * The cruises of `year` (or of all time when it is undefined), under the
+ * requested status scope.
+ *
+ * `sailed` spells the predicate with `countableCruiseWhere()` — this router
+ * spelled the same two statuses with the FLIGHT helper, which is the drift
  * `shared/cruiseCounting.ts` exists to end. Both lists are
- * `["flown", "historical"]`, so the extraction changes no row.
+ * `["flown", "historical"]`, so the extraction changed no row.
  */
 export async function loadCruiseStatsData(
   userId: string,
-  year: number | undefined
+  year: number | undefined,
+  statuses: CruiseStatusScope = "sailed"
 ): Promise<CruiseStatsData> {
   const [user, cruises] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
     prisma.cruise.findMany({
-      where: { userId, ...countableCruiseWhere(), ...startedIn("startDate", year) },
+      where: {
+        userId,
+        ...(statuses === "sailed" ? countableCruiseWhere() : {}),
+        ...startedIn("startDate", year),
+      },
       include: {
         stops: { include: { port: true } },
         legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },

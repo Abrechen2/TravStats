@@ -79,9 +79,24 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
   const entry = (key: (typeof KEYS)[number], id: string): EvidenceBody["entries"][number] =>
     answer(key).entries.find((e) => e.id === id)!;
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  let tabStats: any;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  /**
+   * The figures `/stats/lodging` renders, for the cross-check. Only the ten
+   * this suite compares against are declared — a wider shape would be a second
+   * copy of that response's contract kept in a test.
+   */
+  interface LodgingTabStats {
+    staysCount: number;
+    totalNights: number;
+    spendBaseTotal: number;
+    awardNights: number;
+    oneNightStays: number;
+    perfectStays: number;
+    lodgingsCount: number;
+    countriesCount: number;
+    rhythm: { nightsAway: number };
+    geo: { continentsCount: number };
+  }
+  let tabStats: LodgingTabStats;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: "evidencelodging" } });
@@ -251,7 +266,7 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
 
     const tab = await request(app).get("/api/v1/stats/lodging").set("Cookie", cookie);
     expect(tab.status).toBe(200);
-    tabStats = tab.body.data;
+    tabStats = tab.body.data as LodgingTabStats;
   });
 
   afterAll(async () => {
@@ -394,6 +409,10 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
    */
   it("lodgingCountriesCount: one country per house, counted once each", () => {
     const res = answer("lodgingCountriesCount");
+    // Stated as a literal as well as against the endpoint: the two sides share
+    // a loader and a calculator, so a comparison alone would hold however many
+    // countries both had counted.
+    expect(res.measure.value).toBe(4);
     expect(res.measure.value).toBe(tabStats.countriesCount);
     const credited = new Set(res.entries.flatMap((e) => e.credits ?? []));
     expect([...credited].sort()).toEqual(["AT", "DE", "ES", "JP"]);

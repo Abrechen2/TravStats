@@ -178,6 +178,12 @@ export async function resolveLodgingNightsTotal(
  * question the tile asks through `lodgingSpendNothingConverted` before drawing
  * "—". A 0 that somebody really paid — an award stay — is a figure, not an
  * absence, and stays a 0.
+ *
+ * The one case the tile cannot answer for is an account with no stay at all:
+ * `LodgingStatsSection` returns its empty state before the strip is drawn, so
+ * there is no "—" to mirror. 0 is then the truer answer — nothing was recorded,
+ * so nothing was spent — and it also keeps a `{count: 0}` bucket off the wire,
+ * which would satisfy `requireReasonForNull` while explaining nothing.
  */
 export async function resolveLodgingSpendTotal(
   userId: string,
@@ -208,21 +214,27 @@ export async function resolveLodgingSpendTotal(
     });
   });
 
-  const nothingConverted = lodgingSpendNothingConverted(stats);
+  // Every stay that counted and gave the total nothing — unconvertible, or
+  // never priced at all. It is what the abstention has to EXPLAIN, and it is
+  // deliberately wider than `spendUnconvertedStays`, which counts only stays
+  // that HAVE a price: an account whose stays carry no prices at all has an
+  // unconverted count of 0, and a `{count: 0}` bucket explains nothing while
+  // still satisfying `requireReasonForNull`.
+  const contributing = priced.filter((stay) => baseOf(stay) !== null);
+  const explained = visited(stays).length - contributing.length;
+  const abstains = lodgingSpendNothingConverted(stats) && explained > 0;
   return domainSumEvidence({
     key,
     unit: "currency",
     scope,
     page,
     entries,
-    value: nothingConverted ? null : stats.spendBaseTotal,
+    value: abstains ? null : stats.spendBaseTotal,
     round: (n) => Math.round(n * 100) / 100,
     // As `businessTotalCost` does for the same case: none of the three closed
     // reasons names "priced, but nothing reached the base currency" exactly,
     // and `notPerEntry` is the nearest fit rather than a silent pick.
-    unattributed: nothingConverted
-      ? [{ count: stats.spendUnconvertedStays, reason: "notPerEntry" }]
-      : [],
+    unattributed: abstains ? [{ count: explained, reason: "notPerEntry" }] : [],
   });
 }
 

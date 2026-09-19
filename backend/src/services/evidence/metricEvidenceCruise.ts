@@ -233,12 +233,25 @@ export function resolveCruiseCountriesCount(
 /**
  * Companions, summed across the cruises they came on.
  *
- * The fold (`deriveCruiseStats`) folds the same names into a
- * `Map<name, cruises>` and `CruiseFunSection` draws it as a ranked list, so
- * there is no single companion figure on that surface — this total is the sum
- * of that list's values, one row per cruise. A name that came along twice is
- * two companion slots here and one bar with a "2" there; both are the same
- * arithmetic read at different grain.
+ * THE ONE MEASURE HERE THAT IGNORES `countableCruiseWhere()`, and it has to.
+ * Its calculator is not the rollup: `CruiseStatsSection` folds
+ * `deriveCruiseStats` over `cruiseApi.list()`, and `GET /cruises` applies no
+ * status filter at all (`routes/cruises.ts`'s `buildWhere` narrows only on an
+ * explicit query param). So the ranked companion list on that tab shows the
+ * people on a cruise that is merely BOOKED, beside a hero grid that counts
+ * only the ones that sailed. Filtering here would have made the panel name
+ * fewer companions than the bars it explains — which is exactly the
+ * disagreement the panel exists to make impossible.
+ *
+ * The YEAR window still applies: the tab cuts its rows with
+ * `cruisesStartedIn` before folding, so a cruise belongs to the year it began
+ * in here too.
+ *
+ * `deriveCruiseStats` folds the names into a `Map<name, cruises>` and there is
+ * no single companion figure on that surface — this total is the sum of that
+ * list's values, one row per cruise. A name that came along twice is two
+ * companion slots here and one bar reading "2" there; both are the same
+ * arithmetic at different grain.
  */
 export async function resolveCruiseCompanionCount(
   userId: string,
@@ -247,7 +260,7 @@ export async function resolveCruiseCompanionCount(
 ): Promise<EvidenceResponse> {
   const key = "cruiseCompanionCount";
   const year = readYearScope(scope, key);
-  const { rows } = await loadCruiseStatsData(userId, year);
+  const { rows } = await loadCruiseStatsData(userId, year, "every");
   const entries = rows.map((row) => entryOf(row, { contribution: row.companions.length }));
   const total = rows.reduce((sum, row) => sum + row.companions.length, 0);
   return domainSumEvidence({ key, unit: "companions", scope, page, entries, value: total });
@@ -311,19 +324,29 @@ export async function resolveCruiseTotalSpend(
 
   const contributing = priced.filter((row) => baseOf(row) !== null);
   const total = contributing.reduce((sum, row) => sum + baseOf(row)!, 0);
+  // Every scoped cruise that gave the total nothing — unconvertible or never
+  // priced. It is what the abstention would have to EXPLAIN, and a bucket that
+  // explains nothing must never ship: `{count: 0}` reads as "0 units have no
+  // row to name", which is the same sentence as saying nothing at all while
+  // still satisfying `requireReasonForNull`.
+  const explained = rows.length - contributing.length;
+  // The surface abstains outright here: `CruiseMoneySection` renders NOTHING
+  // when no cruise carries a price, rather than drawing a zero. So does this.
+  // With no cruise in scope at all there is nothing to abstain about — 0 is
+  // then the honest figure and the bucket stays empty.
+  const abstains = contributing.length === 0 && explained > 0;
   return domainSumEvidence({
     key,
     unit: "currency",
     scope,
     page,
     entries,
-    value: contributing.length === 0 ? null : total,
+    value: abstains ? null : total,
     round: (n) => Math.round(n * 100) / 100,
     // None of the three closed `UnattributedReason`s names "every price is
     // unconvertible" exactly; `notPerEntry` is the nearest fit and is used
     // here with the same note `businessTotalCost` carries, rather than
     // silently picking one. A real gap for release 2 to close.
-    unattributed:
-      contributing.length === 0 ? [{ count: priced.length, reason: "notPerEntry" }] : [],
+    unattributed: abstains ? [{ count: explained, reason: "notPerEntry" }] : [],
   });
 }

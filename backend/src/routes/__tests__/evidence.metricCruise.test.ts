@@ -40,13 +40,16 @@ import {
  *   - NORDLICHT (ship 2, line TUI), 10–12 January 2025: Kiel, Oslo. Priced
  *     500 USD with NO snapshot — real money nothing can convert. One
  *     companion, who also came on the first.
- *   - A third cruise still `scheduled`, which must appear in nothing.
+ *   - COSTA FORTUNA, booked for June 2027 and still `scheduled`, with one
+ *     companion. It appears in nothing EXCEPT `cruiseCompanionCount`, whose
+ *     calculator is the cruise LIST rather than the rollup — see that test.
  */
 describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   let userId: string;
   let cookie: string;
   let cruise2024: string;
   let cruise2025: string;
+  let cruiseBooked: string;
   let hamburgId: number;
   let osloId: number;
   let kielId: number;
@@ -84,9 +87,22 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
   const answer = (key: (typeof KEYS)[number]): EvidenceBody => lifetime.get(key)!;
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  let cruiseStats: any;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  /**
+   * The figures `/stats/cruise` renders, for the cross-check. Only the eight
+   * this suite compares against are declared — a wider shape would be a second
+   * copy of that response's contract kept in a test.
+   */
+  interface CruiseTabStats {
+    cruisesCount: number;
+    totalDistanceKm: number;
+    seaDays: number;
+    totalCruiseDays: number;
+    cruisePortsUnique: number;
+    cruiseShipsUnique: number;
+    cruiseLinesUnique: number;
+    countriesIso: string[];
+  }
+  let cruiseStats: CruiseTabStats;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: "evidencecruise" } });
@@ -205,11 +221,11 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     });
     cruise2025 = second.id;
 
-    await prisma.cruise.create({
+    const booked = await prisma.cruise.create({
       data: {
         userId,
         status: "scheduled",
-        routeName: "Noch nicht gefahren",
+        routeName: "Costa Fortuna",
         cruiseLine: "Costa",
         companions: ["Chris"],
         price: 9000,
@@ -221,6 +237,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
         stops: { create: [{ dayNumber: 1, portId: hamburgId, isAtSea: false }] },
       },
     });
+    cruiseBooked = booked.id;
 
     for (const key of KEYS) {
       const res = await request(app).get(`/api/v1/evidence/metric/${key}`).set("Cookie", cookie);
@@ -230,7 +247,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
 
     const tab = await request(app).get("/api/v1/stats/cruise").set("Cookie", cookie);
     expect(tab.status).toBe(200);
-    cruiseStats = tab.body;
+    cruiseStats = tab.body as CruiseTabStats;
   });
 
   afterAll(async () => {
@@ -317,15 +334,26 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   });
 
   /**
-   * Three companion slots over two cruises. Anna came on both and is two of
-   * them — which is the same arithmetic `CruiseFunSection` draws as one bar
-   * reading "2", not a distinct count of people.
+   * Four companion slots over THREE cruises — including the one that has not
+   * sailed. This is the only measure in the family that ignores the countable
+   * filter, and it has to: its calculator is `deriveCruiseStats` over
+   * `cruiseApi.list()`, and `GET /cruises` applies no status filter, so the
+   * ranked companion bars on that tab already include a booked cruise's
+   * companions. A panel that named fewer people than the bar it explains would
+   * be the disagreement the panel exists to prevent.
+   *
+   * Anna came on two and is two of the four slots — the same arithmetic
+   * `CruiseFunSection` draws as one bar reading "2", not a distinct count of
+   * people.
    */
-  it("cruiseCompanionCount: Anna twice, Ben once, Chris never", () => {
+  it("cruiseCompanionCount: Anna twice, Ben once, and Chris on a cruise that has not sailed", () => {
     const res = answer("cruiseCompanionCount");
-    expect(res.measure.value).toBe(3);
+    expect(res.measure.value).toBe(4);
     expect(res.entries.find((e) => e.id === cruise2024)!.contribution).toBe(2);
     expect(res.entries.find((e) => e.id === cruise2025)!.contribution).toBe(1);
+    expect(res.entries.find((e) => e.id === cruiseBooked)!.contribution).toBe(1);
+    // The same fixture is invisible to every OTHER measure in this suite.
+    expect(answer("cruiseCount").entries.map((e) => e.id)).not.toContain(cruiseBooked);
     assertSumInvariant(res, Math.round);
   });
 
@@ -399,13 +427,25 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     }
   });
 
-  /** Distance is real kilometres, so it gets its own check rather than a literal. */
-  it("cruiseDistanceKmTotal: the legs between catalogue ports, and no others", () => {
+  /**
+   * The fixture's own legs, to the kilometre. Hamburg→Oslo is 709.01 km and the
+   * first cruise sails it TWICE (out via Oslo, back to Hamburg); Kiel→Oslo is
+   * 622.80 km. 2 × 709.01 + 622.80 = 2040.82, which the surface rounds to 2041.
+   *
+   * The figures are what the great-circle distance between those catalogue
+   * coordinates IS, measured once and written down — not recomputed here,
+   * which would be the rule copied into its own test.
+   *
+   * What the literals pin is which legs exist: the unresolved port call has no
+   * coordinates and moves the ship nowhere, and the sea day sits INSIDE the
+   * leg between the ports either side of it rather than adding one. A resolver
+   * that counted either would come out higher.
+   */
+  it("cruiseDistanceKmTotal: two Hamburg-Oslo legs and one Kiel-Oslo, and nothing else", () => {
     const res = answer("cruiseDistanceKmTotal");
-    expect(res.measure.value).toBeGreaterThan(0);
-    // The unresolved call has no coordinates, so it moves the ship nowhere;
-    // the sea day sits inside a leg rather than adding one.
-    expect(res.entries.find((e) => e.id === cruise2024)!.contribution).toBeGreaterThan(0);
+    expect(res.measure.value).toBe(2041);
+    expect(res.entries.find((e) => e.id === cruise2024)!.contribution).toBeCloseTo(1418.02, 1);
+    expect(res.entries.find((e) => e.id === cruise2025)!.contribution).toBeCloseTo(622.8, 1);
     assertSumInvariant(res, Math.round);
   });
 });
