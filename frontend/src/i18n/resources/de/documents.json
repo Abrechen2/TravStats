@@ -1,0 +1,31 @@
+{
+  "title": "Dokumente",
+  "empty": "Noch keine Dokumente an diesem Eintrag.",
+  "loadFailed": "Die Dokumente konnten nicht geladen werden.",
+  "add": "Dokument hinzufügen",
+  "uploading": "Wird hochgeladen …",
+  "limitHint": "Höchstgröße je Datei: Bild {{image}}, PDF {{pdf}}, E-Mail {{eml}}, E-Mail-Text {{emailText}}, Wallet-Pass {{pkpass}}.",
+  "tooLarge": "Die Datei ist größer als die erlaubten {{limit}}.",
+  "uploadFailed": "Die Datei konnte nicht hochgeladen werden.",
+  "deleteFailed": "Das Dokument konnte nicht entfernt werden.",
+  "open": "Öffnen",
+  "openLabel": "{{name}} öffnen",
+  "remove": "Entfernen",
+  "removeLabel": "{{name}} entfernen",
+  "deleteTitle": "Dokument entfernen?",
+  "deleteMessage": "„{{name}}“ wird dauerhaft gelöscht. Der Eintrag selbst bleibt bestehen.",
+  "format": {
+    "image": "Bild",
+    "pdf": "PDF",
+    "eml": "E-Mail",
+    "emailText": "E-Mail-Text",
+    "pkpass": "Wallet-Pass"
+  },
+  "kind": {
+    "invoice": "Rechnung",
+    "booking": "Buchungsbestätigung",
+    "boardingPass": "Bordkarte",
+    "ticket": "Ticket",
+    "other": "Sonstiges"
+  }
+}

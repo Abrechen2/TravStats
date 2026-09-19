@@ -1,0 +1,31 @@
+{
+  "title": "Documents",
+  "empty": "No documents on this entry yet.",
+  "loadFailed": "The documents could not be loaded.",
+  "add": "Add document",
+  "uploading": "Uploading …",
+  "limitHint": "Maximum size per file: image {{image}}, PDF {{pdf}}, email {{eml}}, email text {{emailText}}, wallet pass {{pkpass}}.",
+  "tooLarge": "The file is larger than the permitted {{limit}}.",
+  "uploadFailed": "The file could not be uploaded.",
+  "deleteFailed": "The document could not be removed.",
+  "open": "Open",
+  "openLabel": "Open {{name}}",
+  "remove": "Remove",
+  "removeLabel": "Remove {{name}}",
+  "deleteTitle": "Remove document?",
+  "deleteMessage": "“{{name}}” will be deleted permanently. The entry itself stays.",
+  "format": {
+    "image": "Image",
+    "pdf": "PDF",
+    "eml": "Email",
+    "emailText": "Email text",
+    "pkpass": "Wallet pass"
+  },
+  "kind": {
+    "invoice": "Invoice",
+    "booking": "Booking confirmation",
+    "boardingPass": "Boarding pass",
+    "ticket": "Ticket",
+    "other": "Other"
+  }
+}
