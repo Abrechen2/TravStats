@@ -132,7 +132,13 @@ export function DomainTabStrip({
             key={tab}
             role="tab"
             aria-selected={isActive}
-            aria-disabled={isDisabled}
+            // No `aria-disabled`: the tab IS operable, and says where it
+            // goes. It carried one while the click did nothing, which was at
+            // least honest then; keeping it once the click reaches the notice
+            // would tell assistive tech to skip the only route back to the
+            // switch (review, 2026-09-19). `data-disabled` stays -- it is
+            // what dims the tab, and dimming is a fact about the AREA, not a
+            // claim about this control.
             data-disabled={isDisabled ? "true" : "false"}
             title={disabledHint}
             aria-label={disabledHint === undefined ? undefined : `${label} — ${disabledHint}`}

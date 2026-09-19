@@ -110,6 +110,18 @@ describe("DomainTabStrip", () => {
       expect(screen.getByRole("tab", { name: /poi/i }).getAttribute("data-disabled")).toBe("true");
     });
 
+    /**
+     * It carried `aria-disabled` while the click did nothing, which was at
+     * least honest. Once the click reaches the notice, the attribute tells
+     * assistive tech to skip the ONLY route back to the switch that turns the
+     * area on (review, 2026-09-19). Dimming is a fact about the area and
+     * stays; "not operable" was never true of this control again.
+     */
+    it("does not tell assistive tech to skip the one way back", () => {
+      renderWithPoiOff();
+      expect(screen.getByRole("tab", { name: /poi/i })).not.toHaveAttribute("aria-disabled");
+    });
+
     it("says why, in the title and the accessible name", () => {
       renderWithPoiOff();
       const poi = screen.getByRole("tab", { name: /poi/i });
