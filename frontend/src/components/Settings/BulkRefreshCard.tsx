@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 /**
  * Bulk refresh card — sits below the AeroDataBox API-Key card and
  * lets the user retroactively backfill `aircraftRegistration`,
@@ -108,16 +109,12 @@ export default function BulkRefreshCard(): JSX.Element | null {
     demoBlocked || running || !hasProvider || remaining === null || remaining === 0;
 
   return (
-    <div className="border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-(--text-primary)">
-            {t("settings:apiKeys.bulkRefresh.title")}
-          </h3>
-          <p className="text-sm text-(--text-muted) mt-1">
-            {t("settings:apiKeys.bulkRefresh.description")}
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-col" style={{ gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
+          {t("settings:apiKeys.bulkRefresh.title")}
+        </span>
+        <span className="t-caption">{t("settings:apiKeys.bulkRefresh.description")}</span>
       </div>
 
       {demoBlocked && (
@@ -127,13 +124,27 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {!demoBlocked && !hasProvider && (
-        <div className="text-sm p-2 rounded-md bg-yellow-100 text-yellow-800">
+        <div
+          className="rounded-md p-2 text-sm"
+          style={{
+            background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
+            color: "var(--ts-warn)",
+          }}
+        >
           {t("settings:apiKeys.bulkRefresh.noHistoricalProvider")}
         </div>
       )}
 
       {previewError && !demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-red-100 text-red-700">{previewError}</div>
+        <div
+          className="text-sm p-2 rounded-md"
+          style={{
+            background: "color-mix(in srgb, var(--ts-bad) 12%, transparent)",
+            color: "var(--ts-bad)",
+          }}
+        >
+          {previewError}
+        </div>
       )}
 
       {remaining !== null && remaining > 0 && (
@@ -156,7 +167,13 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {remaining === 0 && !demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-green-100 text-green-700">
+        <div
+          className="text-sm p-2 rounded-md"
+          style={{
+            background: "color-mix(in srgb, var(--ts-good) 12%, transparent)",
+            color: "var(--ts-good)",
+          }}
+        >
           {t("settings:apiKeys.bulkRefresh.allUpToDate")}
         </div>
       )}
@@ -184,7 +201,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
             <li>
               {t("settings:apiKeys.bulkRefresh.summaryScanned", { count: lastSummary.scanned })}
             </li>
-            <li className="text-green-700">
+            <li style={{ color: "var(--ts-good)" }}>
               {t("settings:apiKeys.bulkRefresh.summaryUpdated", { count: lastSummary.updated })}
             </li>
             <li>
@@ -202,7 +219,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
               </li>
             )}
             {lastSummary.failed > 0 && (
-              <li className="text-red-700">
+              <li style={{ color: "var(--ts-bad)" }}>
                 {t("settings:apiKeys.bulkRefresh.summaryFailed", { count: lastSummary.failed })}
               </li>
             )}
@@ -217,62 +234,51 @@ export default function BulkRefreshCard(): JSX.Element | null {
         </div>
       )}
 
-      {confirmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setConfirmOpen(false)}
-        >
-          <div
-            className="max-w-md w-full mx-4 rounded-lg p-6 shadow-xl"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg font-semibold text-(--text-primary) mb-2">
-              {t("settings:apiKeys.bulkRefresh.confirmTitle")}
-            </h2>
-            <p className="text-sm text-(--text-muted) mb-3">
-              {t("settings:apiKeys.bulkRefresh.confirmBody", {
-                count: estimatedCalls,
-              })}
-            </p>
-            {quota && quota.remaining !== null && (
-              <p className="text-sm text-(--text-primary) mb-3">
-                {t("settings:apiKeys.bulkRefresh.confirmQuotaCurrent", {
-                  remaining: quota.remaining,
-                  limit: quota.limit ?? "?",
-                })}
-                {quota.remaining < estimatedCalls && (
-                  <span className="block mt-1 text-yellow-700">
-                    ⚠ {t("settings:apiKeys.bulkRefresh.confirmQuotaWarn")}
-                  </span>
-                )}
-              </p>
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={t("settings:apiKeys.bulkRefresh.confirmTitle")}
+        maxWidth={448}
+        closeLabel={t("common:buttons.close")}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(false)}
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-(--text-primary) hover:bg-(--bg-base)"
+            >
+              {t("common:buttons.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleRun}
+              className="btn-primary px-3 py-1.5 text-sm font-medium"
+            >
+              {t("settings:apiKeys.bulkRefresh.confirmRun")}
+            </button>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm text-(--text-muted)">
+          {t("settings:apiKeys.bulkRefresh.confirmBody", { count: estimatedCalls })}
+        </p>
+        {quota && quota.remaining !== null && (
+          <p className="mb-3 text-sm text-(--text-primary)">
+            {t("settings:apiKeys.bulkRefresh.confirmQuotaCurrent", {
+              remaining: quota.remaining,
+              limit: quota.limit ?? "?",
+            })}
+            {quota.remaining < estimatedCalls && (
+              <span className="mt-1 block" style={{ color: "var(--ts-warn)" }}>
+                ⚠ {t("settings:apiKeys.bulkRefresh.confirmQuotaWarn")}
+              </span>
             )}
-            <p className="text-xs text-(--text-muted) mb-4">
-              {t("settings:apiKeys.bulkRefresh.confirmHistoricalNote")}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(false)}
-                className="px-3 py-1.5 text-sm rounded-md border border-border text-(--text-primary) hover:bg-(--bg-base)"
-              >
-                {t("common:buttons.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleRun}
-                className="btn-primary px-3 py-1.5 text-sm font-medium"
-              >
-                {t("settings:apiKeys.bulkRefresh.confirmRun")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </p>
+        )}
+        <p className="text-xs text-(--text-muted)">
+          {t("settings:apiKeys.bulkRefresh.confirmHistoricalNote")}
+        </p>
+      </Modal>
     </div>
   );
 }

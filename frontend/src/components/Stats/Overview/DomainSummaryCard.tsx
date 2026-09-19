@@ -4,12 +4,18 @@
 //   - hasData=true: header (icon + label + count + delta) over the
 //     domain summary's headline KPIs / top-items / badges.
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
+import { withYear } from "../../../lib/stats/periodUrl";
+import { STATS_TAB_ARRIVAL } from "../../../lib/stats/statsTabArrival";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainKpi, DomainStats } from "../../../lib/stats/domain-stats";
+import { eventsInWindow, type ComparisonWindow } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import { delta, isWithData } from "./aggregate";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { Icon } from "../../ui/Icon";
+import { DOMAIN_ICON } from "../../ui/domainIcons";
 
 interface Props {
   domain: DomainKey;
@@ -17,6 +23,13 @@ interface Props {
   selectedYear: number | null;
   compareYear: number | null;
   compareEnabled: boolean;
+  /**
+   * The comparison window from the tab. This card's delta and the KPI strip's
+   * are the same events read two ways; if only one of them were windowed, the
+   * card would contradict the strip above it for every reader whose year is
+   * still running.
+   */
+  comparison: ComparisonWindow | null;
 }
 
 export default function DomainSummaryCard({
@@ -25,8 +38,9 @@ export default function DomainSummaryCard({
   selectedYear,
   compareYear,
   compareEnabled,
+  comparison,
 }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common", "places"]);
   // The reader's language decides the thousands separator, not the machine's:
   // the adapters used to format with a hardcoded "de-DE", so an English page
   // showed "12.345 km" (#319).
@@ -34,7 +48,8 @@ export default function DomainSummaryCard({
   const formatKpi = (kpi: DomainKpi): string => {
     const value =
       typeof kpi.value === "number"
-        ? kpi.value.toLocaleString(locale, { maximumFractionDigits: 0 })
+        ? // A duration keeps its half hour; counts and distances stay whole (R09).
+          kpi.value.toLocaleString(locale, { maximumFractionDigits: kpi.unit === "h" ? 1 : 0 })
         : kpi.value;
     return kpi.unit ? `${value} ${t(`stats:overviewCard.unit.${kpi.unit}`)}` : value;
   };
@@ -59,11 +74,12 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              color: domainHex,
               opacity: 0.6,
             }}
             aria-hidden
           >
-            {d.icon}
+            <Icon name={DOMAIN_ICON[domain]} size={18} />
           </div>
           <div>
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -78,11 +94,26 @@ export default function DomainSummaryCard({
     );
   }
 
+  // The COUNT on the card names the whole selected year, uncut: "2025 · 4 of
+  // 12" has to describe 2025. Only the DELTA is windowed, and on both sides —
+  // the same split the KPI strip makes above it.
   const yearScopedCount = selectedYear !== null ? (stats.yearlyEvents[selectedYear] ?? 0) : null;
-  const compareCount =
-    compareEnabled && compareYear !== null ? (stats.yearlyEvents[compareYear] ?? 0) : null;
   const cardDelta =
-    yearScopedCount !== null && compareCount !== null ? delta(yearScopedCount, compareCount) : null;
+    compareEnabled && selectedYear !== null && compareYear !== null
+      ? delta(
+          eventsInWindow(stats, selectedYear, comparison),
+          eventsInWindow(stats, compareYear, comparison)
+        )
+      : null;
+
+  // Under a year heading, only that year's figures (CT106 audit B03). The
+  // lifetime KPIs used to stand here whatever year was chosen. A year without
+  // events has no summary, and the card says so instead of printing zeros
+  // that would read as measurements.
+  const yearSummary = selectedYear !== null ? stats.summaryByYear[selectedYear] : undefined;
+  const headlineKpis =
+    selectedYear === null ? stats.summary.headlineKpis : (yearSummary?.headlineKpis ?? []);
+  const topItems = selectedYear === null ? stats.summary.topItems : yearSummary?.topItems;
 
   return (
     <div
@@ -98,10 +129,11 @@ export default function DomainSummaryCard({
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
               background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
+              color: domainHex,
             }}
             aria-hidden
           >
-            {d.icon}
+            <Icon name={DOMAIN_ICON[domain]} size={18} />
           </div>
           <div>
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -116,47 +148,60 @@ export default function DomainSummaryCard({
                   })
                 : t("stats:overviewCard.lifetimeCount", { count: stats.totalEvents })}
             </div>
-            {cardDelta && <DeltaBadge d={cardDelta} compareYear={compareYear} />}
+            {cardDelta && (
+              <DeltaBadge
+                d={cardDelta}
+                compareYear={compareYear}
+                kind={comparison?.kind ?? "fullYear"}
+              />
+            )}
           </div>
         </div>
-        <a
-          href={stats.summary.detailRoute}
+        {/* A router link carrying the year: a plain href reloaded the page and
+            the tab it opened showed the newest year, not this one (B04). */}
+        <Link
+          to={withYear(stats.summary.detailRoute, selectedYear)}
+          state={STATS_TAB_ARRIVAL}
           className="text-xs font-medium hover:underline whitespace-nowrap"
           style={{ color: domainHex }}
         >
           {t("stats:overviewCard.detailLink")}
-        </a>
+        </Link>
       </div>
 
-      <div
-        className="grid grid-cols-3 gap-3 pt-3"
-        style={{ borderTop: "1px solid var(--color-border)" }}
-      >
-        {stats.summary.headlineKpis.map((kpi) => (
-          <div key={kpi.labelKey}>
-            <div
-              className="text-[10px] uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t(`stats:${kpi.labelKey}`)}
+      {selectedYear !== null && !yearSummary ? (
+        <p className="t-caption pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          {t("stats:overviewCard.noEventsInYear", { year: selectedYear })}
+        </p>
+      ) : (
+        <div
+          className="grid grid-cols-3 gap-3 pt-3"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
+          {headlineKpis.map((kpi) => (
+            <div key={kpi.labelKey}>
+              <div
+                className="text-[10px] uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t(`stats:${kpi.labelKey}`)}
+              </div>
+              <div
+                className="text-base font-bold font-mono mt-0.5"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {formatKpi(kpi)}
+              </div>
             </div>
-            <div
-              className="text-base font-bold font-mono mt-0.5"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {formatKpi(kpi)}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {stats.summary.topItems && stats.summary.topItems.items.length > 0 && (
+      {topItems && topItems.items.length > 0 && (
         <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-          <div style={{ color: "var(--text-muted)" }}>
-            {t(`stats:${stats.summary.topItems.titleKey}`)}
-          </div>
+          <div style={{ color: "var(--text-muted)" }}>{t(`stats:${topItems.titleKey}`)}</div>
           <div className="flex gap-1.5 flex-wrap mt-1">
-            {stats.summary.topItems.items.slice(0, 5).map((item) => (
+            {topItems.items.slice(0, 5).map((item) => (
               <span
                 key={item.label}
                 className="px-2 py-0.5 rounded-full text-xs"
@@ -166,7 +211,9 @@ export default function DomainSummaryCard({
                   color: "var(--text-primary)",
                 }}
               >
-                {item.label}
+                {topItems.labelKeyPrefix
+                  ? t(`${topItems.labelKeyPrefix}.${item.label}`, { defaultValue: item.label })
+                  : item.label}
               </span>
             ))}
           </div>
@@ -174,7 +221,13 @@ export default function DomainSummaryCard({
       )}
 
       {stats.summary.badges && stats.summary.badges.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {/* Badges are facts about all years ("crossed the dateline"). Under a
+              year heading they are labelled as such rather than implied to
+              belong to that year. */}
+          {selectedYear !== null && (
+            <span className="t-caption">{t("stats:overviewCard.allYearsOnly")}:</span>
+          )}
           {stats.summary.badges.map((b) => (
             <span
               key={b.labelKey}

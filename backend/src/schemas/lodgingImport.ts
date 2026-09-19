@@ -1,5 +1,5 @@
 import { z } from "./zod";
-import { BOARD_TYPES, currencyField, LODGING_TYPES } from "./lodging";
+import { BOARD_TYPES, currencyField, LODGING_TYPES, MAX_STAY_SPAN_NIGHTS } from "./lodging";
 
 /**
  * Shared import-candidate contract for the lodging import pipeline (see
@@ -122,10 +122,24 @@ export type StayCandidateFields = z.infer<typeof stayCandidateFieldsSchema>;
  * to the COMMIT row only — the preview must still accept the row so it can
  * flag it, rather than reject the whole request over one line.
  */
-const stayCommitFieldsSchema = stayCandidateFieldsSchema.refine((s) => s.checkOut >= s.checkIn, {
-  message: "checkOut must not precede checkIn",
-  path: ["checkOut"],
-});
+const stayCommitFieldsSchema = stayCandidateFieldsSchema
+  .refine((s) => s.checkOut >= s.checkIn, {
+    message: "checkOut must not precede checkIn",
+    path: ["checkOut"],
+  })
+  // Same MAX_STAY_SPAN_NIGHTS cap as a hand-entered stay
+  // (schemas/lodging.ts) — an import commit is just as able to write a
+  // multi-millennium span as the manual editor, and `walkNights`
+  // (utils/lodgingStats/nights.ts) pays for it on every later stats
+  // request. checkIn/checkOut here are plain "YYYY-MM-DD" strings
+  // (`isoDay`), so `Date.parse` is enough — no time-of-day component to lose.
+  .refine(
+    (s) => (Date.parse(s.checkOut) - Date.parse(s.checkIn)) / 86_400_000 <= MAX_STAY_SPAN_NIGHTS,
+    {
+      message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
+      path: ["checkOut"],
+    }
+  );
 
 export const lodgingImportCandidateSchema = z
   .object({

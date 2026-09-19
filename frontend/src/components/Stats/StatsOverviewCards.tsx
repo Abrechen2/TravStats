@@ -1,4 +1,6 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatHours, formatHoursValue } from "../../lib/units";
+import EvidenceTrigger from "./EvidenceTrigger";
 
 interface StatsOverviewCardsProps {
   totalFlights: number;
@@ -24,13 +26,24 @@ export default function StatsOverviewCards({
   estimatedHours = 0,
   estimatedFlightCount = 0,
 }: StatsOverviewCardsProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
+  const cardClass = "rounded-lg shadow-sm p-6";
+  const cardStyle = { background: "var(--bg-surface)", border: "1px solid var(--color-border)" };
+  // The tiles are always all-time (`AdvancedStatsPage.tsx` builds them from
+  // the FULL countable-flight set, never the page's year filter) — matching
+  // `evidenceMeasuresFlightCore.ts`'s `scopes: ["allTime"]` for all three.
+  const allTime = { period: "allTime" as const };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div
-        className="rounded-lg shadow-sm p-6"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      <EvidenceTrigger
+        kind="metric"
+        evidenceKey="flightCount"
+        scope={allTime}
+        renderedValue={totalFlights}
+        label={t("stats:overview.totalFlights")}
+        className={cardClass}
+        style={cardStyle}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {t("stats:overview.totalFlights")}
@@ -38,40 +51,47 @@ export default function StatsOverviewCards({
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
           {totalFlights}
         </p>
-      </div>
-      <div
-        className="rounded-lg shadow-sm p-6"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      </EvidenceTrigger>
+      <EvidenceTrigger
+        kind="metric"
+        evidenceKey="flightTimeMinutes"
+        scope={allTime}
+        renderedValue={Math.round(totalFlightTime * 60)}
+        label={t("stats:overview.totalFlightTime")}
+        className={cardClass}
+        style={cardStyle}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {t("stats:overview.totalFlightTime")}
         </h3>
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
-          {totalFlightTime.toFixed(1)}h
+          {formatHours(totalFlightTime, i18n.language)}
         </p>
         {estimatedFlightCount > 0 && (
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.flightTimeEstimatedNote", {
-              hours: estimatedHours.toFixed(1),
+              hours: formatHoursValue(estimatedHours, i18n.language),
               count: estimatedFlightCount,
             })}
           </p>
         )}
-      </div>
-      <div
-        className="rounded-lg shadow-sm p-6"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
+      </EvidenceTrigger>
+      <div className={cardClass} style={cardStyle}>
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {t("stats:overview.avgFlightDuration")}
         </h3>
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
-          {avgFlightDuration.toFixed(1)}h
+          {formatHours(avgFlightDuration, i18n.language)}
         </p>
       </div>
-      <div
-        className="rounded-lg shadow-sm p-6"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      <EvidenceTrigger
+        kind="metric"
+        evidenceKey="airlineCount"
+        scope={allTime}
+        renderedValue={airlineCount}
+        label={t("stats:overview.airlines")}
+        className={cardClass}
+        style={cardStyle}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {t("stats:overview.airlines")}
@@ -79,7 +99,7 @@ export default function StatsOverviewCards({
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
           {airlineCount}
         </p>
-      </div>
+      </EvidenceTrigger>
     </div>
   );
 }

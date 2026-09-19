@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { tripsApi } from "../lib/api";
+import { tripsApi, type TripCostSuperlative } from "../lib/api";
 import { logger } from "../lib/logger";
 import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
 import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
-import PageTransition from "../components/PageTransition";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
 
 /**
  * Top-level Trips page (Phase-1 redesign). Was previously embedded as a
  * sub-tab in `FlightsTablePage`; now it owns its own URL (`/trips`) so a
  * trip is a first-class destination, not a flight-side label.
  *
- * The actual list rendering still lives in `TripsTab` so the migration
- * stays small. A later iteration will replace it with the redesign mockup
- * (richer cards, status filter, multi-domain stats).
+ * The list, its header actions and filters live in `TripsTab`; the page
+ * loads the trips and hands over the title and the insights strip.
  */
 export default function TripsPage(): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [mostExpensiveTrip, setMostExpensiveTrip] = useState<TripCostSuperlative | null>(null);
 
+  // `getAllWithInsights`, not `getAll` — this is the ONE screen that shows
+  // the cross-trip cost superlative, and it must come from the backend's
+  // uncapped ranking (evidence spec "The most expensive trip"), never
+  // recomputed from this page's own (capped) `trips` array.
   const loadTrips = async (): Promise<void> => {
     try {
-      const data = await tripsApi.getAll();
-      setTrips(data);
+      const data = await tripsApi.getAllWithInsights();
+      setTrips(data.trips);
+      setMostExpensiveTrip(data.mostExpensiveTrip);
     } catch (err) {
       logger.warn("Failed to load trips", err);
     }
@@ -35,27 +39,13 @@ export default function TripsPage(): JSX.Element {
   }, []);
 
   return (
-    <PageTransition>
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        {/* px-4 OUTSIDE the max-width, the same order the insights bar and the
-            trip list use. With the padding inside, the heading sat 16 px
-            further in than everything below it — visible the moment the tiles
-            below stopped running to the browser edge (#271). */}
-        <div className="px-4 py-6">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-display font-bold mb-1">{t("trips:tab")}</h1>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("trips:count", { count: trips.length })}
-            </p>
-          </div>
-        </div>
-        <TripInsightsBar trips={trips} />
-        <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
-      </div>
-    </PageTransition>
+    <AppShell width="list">
+      <TripsTab
+        trips={trips}
+        onTripsChange={() => void loadTrips()}
+        header={{ title: t("trips:tab"), meta: t("trips:count", { count: trips.length }) }}
+        insights={<TripInsightsBar trips={trips} mostExpensiveTrip={mostExpensiveTrip} />}
+      />
+    </AppShell>
   );
 }

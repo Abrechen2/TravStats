@@ -20,6 +20,13 @@ import { findOrCreateAirport } from "../airportLookup";
 import logger from "../../utils/logger";
 import { createPlaceSchema } from "../../schemas/place";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import {
+  cruiseFxColumnsIfChanged,
+  flightFxColumnsIfChanged,
+  flightFxColumnsForCreate,
+  findCruiseForFxMerge,
+  findFlightForFxMerge,
+} from "./fxSnapshot";
 import * as cell from "./cells";
 import {
   summarise,
@@ -247,10 +254,7 @@ async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       continue;
     }
 
-    const existing = await prisma.cruise.findFirst({
-      where: { id, userId: ctx.userId },
-      select: { id: true },
-    });
+    const existing = await findCruiseForFxMerge(id, ctx.userId);
     if (!existing) {
       out.push(errorRow(rowNo, label, UNKNOWN_ID));
       continue;
@@ -271,20 +275,33 @@ async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       continue;
     }
 
+    const currency = cell.text(raw.currency);
+    const startDateValue = startDate ? new Date(startDate) : undefined;
+
     const fields: Record<string, unknown> = {
       cruiseLine: cell.text(raw.cruiseLine),
       routeName: cell.text(raw.routeName),
-      startDate: startDate ? new Date(startDate) : undefined,
+      startDate: startDateValue,
       endDate: endDate ? new Date(endDate) : undefined,
       cabinNumber: cell.text(raw.cabinNumber),
       deck: cell.int(raw.deck),
       bookingReference: cell.text(raw.bookingReference),
       price,
-      currency: cell.text(raw.currency),
+      currency,
       notes: cell.text(raw.notes),
       tags: cell.list(raw.tags),
       companions: cell.list(raw.companions),
     };
+
+    // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
+    Object.assign(
+      fields,
+      await cruiseFxColumnsIfChanged(
+        ctx.userId,
+        { price, currency, startDate: startDateValue },
+        existing
+      )
+    );
 
     // A trip reference resolves through the same ownership rule as the row
     // itself: pointing a cruise at a stranger's trip must not be possible.
@@ -568,6 +585,8 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       out.push(errorRow(rowNo, label, "invalid_number"));
       continue;
     }
+    const currency = cell.text(raw.currency);
+    const departureTimeValue = departureTime ? new Date(departureTime) : undefined;
 
     // Airports are only touched when the sheet actually carries a code, so an
     // untouched column can never move a flight.
@@ -596,7 +615,7 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       airline,
       flightNumber,
       status,
-      departureTime: departureTime ? new Date(departureTime) : undefined,
+      departureTime: departureTimeValue,
       arrivalTime: arrivalTime ? new Date(arrivalTime) : undefined,
       aircraft: cell.text(raw.aircraft),
       aircraftRegistration: cell.text(raw.aircraftRegistration),
@@ -604,7 +623,7 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       seatClass: cell.text(raw.seatClass),
       bookingReference: cell.text(raw.bookingReference),
       price,
-      currency: cell.text(raw.currency),
+      currency,
       category: cell.text(raw.category),
       notes: cell.text(raw.notes),
       ...(dep
@@ -642,10 +661,7 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
     }
 
     if (id) {
-      const existing = await prisma.flight.findFirst({
-        where: { id, userId: ctx.userId },
-        select: { id: true },
-      });
+      const existing = await findFlightForFxMerge(id, ctx.userId);
       if (!existing) {
         out.push(errorRow(rowNo, label, UNKNOWN_ID));
         continue;
@@ -655,6 +671,16 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
         out.push({ row: rowNo, action: "skip", id, label, message: "exists" });
         continue;
       }
+
+      // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
+      Object.assign(
+        fields,
+        await flightFxColumnsIfChanged(
+          ctx.userId,
+          { price, currency, departureTime: departureTimeValue },
+          existing
+        )
+      );
 
       const data = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
       if (Object.keys(data).length === 0) {
@@ -672,6 +698,13 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       out.push(errorRow(rowNo, label, "flight_needs_route"));
       continue;
     }
+
+    // FX snapshot on create too — see `flightFxColumnsForCreate`.
+    const newFxColumns = await flightFxColumnsForCreate(ctx.userId, {
+      price,
+      currency,
+      departureTime: departureTimeValue,
+    });
 
     let newId: string | null = null;
     if (!ctx.dryRun) {
@@ -697,9 +730,10 @@ async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
           seatNumber: cell.text(raw.seatNumber) ?? null,
           bookingReference: cell.text(raw.bookingReference) ?? null,
           price: price ?? null,
-          currency: cell.text(raw.currency) ?? null,
+          currency: currency ?? null,
           notes: cell.text(raw.notes) ?? null,
           dataSource: "xlsx",
+          ...newFxColumns,
           ...(fields.tripId ? { tripId: fields.tripId as string } : {}),
         },
         select: { id: true },

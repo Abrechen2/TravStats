@@ -54,6 +54,11 @@ interface MembershipManagerProps {
    * through a call this component doesn't itself make.
    */
   reloadSignal?: number;
+  /**
+   * Leave out the component's own "Bonusprogramme" heading. Settings draws
+   * the section title above the card already; the chain page does not.
+   */
+  hideTitle?: boolean;
 }
 
 type EditingId = string | "new" | null;
@@ -86,6 +91,7 @@ export function MembershipManager({
   chainCatalog,
   renderRowExtra,
   reloadSignal,
+  hideTitle = false,
 }: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
@@ -279,63 +285,72 @@ export function MembershipManager({
     }
   };
 
+  const addButton =
+    editingId === null && !hasFilteredMembership ? (
+      <button
+        type="button"
+        data-testid="membership-add"
+        onClick={startCreate}
+        className="btn-secondary"
+      >
+        {t("lodging:membership.add")}
+      </button>
+    ) : null;
+
   return (
     <div className="space-y-3" data-testid="membership-manager">
-      <div className="flex items-center justify-between">
+      <div
+        className="flex items-center justify-between gap-3"
+        hidden={hideTitle && !sharedWithLabel}
+      >
         <div>
           {/* Always the section title. It used to print the scoped programme
               name, which now belongs to the membership row (and to the chain
               page's own header) — printing it here as well said the same
               thing twice and, once the name became editable, twice with two
               different values while editing. */}
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            {t("lodging:membership.title")}
-          </h3>
-          {sharedWithLabel && <p className="text-xs text-[var(--text-muted)]">{sharedWithLabel}</p>}
+          {!hideTitle && (
+            <h3 className="text-sm font-semibold" style={{ color: "var(--ts-text-bright)" }}>
+              {t("lodging:membership.title")}
+            </h3>
+          )}
+          {sharedWithLabel && <p className="t-caption">{sharedWithLabel}</p>}
         </div>
-        {editingId === null && !hasFilteredMembership && (
-          <button
-            type="button"
-            data-testid="membership-add"
-            onClick={startCreate}
-            className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--accent)] hover:bg-[var(--bg-surface)]"
-          >
-            {t("lodging:membership.add")}
-          </button>
-        )}
+        {!hideTitle && addButton}
       </div>
 
-      {loadError !== null && <p className="text-xs text-[var(--danger)]">{loadError}</p>}
+      {loadError !== null && (
+        <p className="t-caption" style={{ color: "var(--ts-bad)" }}>
+          {loadError}
+        </p>
+      )}
 
       {loading ? (
-        <p className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</p>
+        <p className="t-caption">{t("common:buttons.loading")}</p>
       ) : visibleMemberships.length === 0 && editingId === null ? (
-        <p className="text-xs text-[var(--text-muted)]">{t("lodging:membership.empty")}</p>
+        <p className="t-caption">{t("lodging:membership.empty")}</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="ts-setting-rows">
           {visibleMemberships.map((m) => (
-            <li
-              key={m.id}
-              data-testid={`membership-row-${m.id}`}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm"
-            >
-              <div className="flex items-center justify-between">
+            <li key={m.id} data-testid={`membership-row-${m.id}`} className="text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="font-medium text-[var(--text-primary)]">{m.programName}</span>
-                  {m.tier && (
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>
-                  )}
+                  <span style={{ fontWeight: 600, color: "var(--ts-text-bright)" }}>
+                    {m.programName}
+                  </span>
+                  {m.tier && <span className="t-caption ml-2">{m.tier}</span>}
                   {m.membershipNumber && (
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                    <span className="t-caption ml-2" style={{ fontFamily: "var(--ts-font-mono)" }}>
                       #{m.membershipNumber}
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => startEdit(m)}
-                    className="text-xs text-[var(--accent)] hover:underline"
+                    className="text-xs hover:underline"
+                    style={{ color: "var(--ts-accent)", fontWeight: 600 }}
                   >
                     {t("common:buttons.edit")}
                   </button>
@@ -343,7 +358,8 @@ export function MembershipManager({
                     type="button"
                     data-testid={`membership-delete-${m.id}`}
                     onClick={() => void remove(m.id)}
-                    className="text-xs text-[var(--danger)] hover:underline"
+                    className="text-xs hover:underline"
+                    style={{ color: "var(--ts-bad)", fontWeight: 600 }}
                   >
                     {t("common:buttons.delete")}
                   </button>
@@ -355,15 +371,20 @@ export function MembershipManager({
         </ul>
       )}
 
+      {hideTitle && addButton && <div>{addButton}</div>}
+
       {editingId !== null && (
-        <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
+        <div
+          className="space-y-2"
+          style={{ borderTop: "1px solid var(--ts-border)", paddingTop: "var(--ts-space-lg)" }}
+        >
           <input
             aria-label={t("lodging:field.programName")}
             placeholder={t("lodging:field.programName")}
             data-testid="membership-name-input"
             value={programName}
             onChange={(e) => setProgramName(e.target.value)}
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            className="input"
           />
           <div className="grid grid-cols-2 gap-2">
             <input
@@ -371,27 +392,22 @@ export function MembershipManager({
               placeholder={t("lodging:field.membershipNumber")}
               value={membershipNumber}
               onChange={(e) => setMembershipNumber(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              className="input"
             />
             <input
               aria-label={t("lodging:field.tier")}
               placeholder={t("lodging:field.tier")}
               value={tier}
               onChange={(e) => setTier(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              className="input"
             />
           </div>
           {chainChoices.length > 0 && (
             <fieldset data-testid="membership-chain-choices" className="mt-1">
-              <legend className="mb-1 text-xs text-[var(--text-muted)]">
-                {t("lodging:membership.coversChains")}
-              </legend>
+              <legend className="label">{t("lodging:membership.coversChains")}</legend>
               <div className="flex flex-col gap-1">
                 {chainChoices.map((c) => (
-                  <label
-                    key={c.id}
-                    className="flex items-center gap-2 text-xs text-[var(--text-primary)]"
-                  >
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
                       checked={chainIds.includes(c.id)}
@@ -406,12 +422,16 @@ export function MembershipManager({
           )}
 
           {leavesScopeChain && (
-            <p data-testid="membership-leaves-chain" className="text-xs text-[var(--text-muted)]">
+            <p data-testid="membership-leaves-chain" className="t-caption">
               {t("lodging:membership.leavesThisChain")}
             </p>
           )}
           {formError !== null && (
-            <p data-testid="membership-form-error" className="text-xs text-[var(--danger)]">
+            <p
+              data-testid="membership-form-error"
+              className="t-caption"
+              style={{ color: "var(--ts-bad)" }}
+            >
               {formError}
             </p>
           )}
@@ -420,18 +440,14 @@ export function MembershipManager({
               type="button"
               data-testid="membership-extend-existing"
               onClick={() => void extendClash()}
-              className="text-xs text-[var(--accent)] hover:underline"
+              className="text-xs hover:underline"
+              style={{ color: "var(--ts-accent)", fontWeight: 600 }}
             >
               {t("lodging:membership.extendExisting", { name: clash.programName })}
             </button>
           )}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={cancelEdit}
-              disabled={saving}
-              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
+            <button type="button" onClick={cancelEdit} disabled={saving} className="btn-secondary">
               {t("common:buttons.cancel")}
             </button>
             <button
@@ -439,7 +455,7 @@ export function MembershipManager({
               data-testid="membership-save"
               disabled={saving || programName.trim().length === 0}
               onClick={() => void submit()}
-              className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              className="btn-primary"
             >
               {saving ? t("common:buttons.saving") : t("common:buttons.save")}
             </button>

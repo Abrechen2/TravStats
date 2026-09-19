@@ -1,10 +1,10 @@
+import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
 import type { PlaceLabelMode } from "../lib/placeLabel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
+import AppShell from "../components/ui/AppShell";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -22,19 +22,15 @@ import {
 } from "../lib/api/placeLists";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
-import { DOMAINS } from "../shared/domains";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
 
-const LIST_COLOR_PRESETS = [
-  DOMAINS.poi.color,
-  "#e3b341",
-  "#db6d5a",
-  "#8957e5",
-  "#3fb950",
-  "#58a6ff",
-] as const;
+// The shared ten from `listColor.palette`. The six that used to stand here
+// included the green and blue the system reserves for `good` and `info`, and a
+// map reads colour as meaning — a list painted in "planned blue" breaks the
+// legend for whoever picked it.
+const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
 
 /**
  * One list: what is in it, and the two things a user does to it.
@@ -234,32 +230,27 @@ export default function PlaceListDetailPage(): JSX.Element {
 
   if (access === "pending" || loading) {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
-          {t("common:loading.default")}
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
+      </AppShell>
     );
   }
 
   if (access === "denied") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
-        </div>
-      </PageTransition>
+        </p>
+      </AppShell>
     );
   }
 
   if (failure !== null || !list) {
     const isLoadError = failure === "loadError";
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+      <AppShell width="reading">
+        <div className="py-16 text-center">
           <p role="alert" style={{ color: "var(--danger)" }}>
             {isLoadError ? t("places:lists.loadError") : t("places:lists.notFound")}
           </p>
@@ -271,14 +262,13 @@ export default function PlaceListDetailPage(): JSX.Element {
             {t("places:lists.backToLists")}
           </Link>
         </div>
-      </PageTransition>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <NavigationBar />
-      <div className="mx-auto max-w-[1000px] px-4 py-6 sm:px-6">
+    <AppShell width="list">
+      <div>
         <Link to="/places/lists" className="text-sm" style={{ color: "var(--text-muted)" }}>
           ← {t("places:lists.backToLists")}
         </Link>
@@ -312,7 +302,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                 </button>
               </div>
             ) : (
-              <h1 className="font-display flex items-center gap-3 text-2xl font-semibold tracking-tight">
+              <h1 className="t-screen-title flex items-center gap-3">
                 <span
                   aria-hidden
                   style={{
@@ -536,6 +526,6 @@ export default function PlaceListDetailPage(): JSX.Element {
           onClose={() => setConfirmDelete(false)}
         />
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

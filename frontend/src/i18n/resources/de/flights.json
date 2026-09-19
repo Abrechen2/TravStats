@@ -439,7 +439,15 @@
     "registration": "Kennzeichen",
     "distance": "Distanz",
     "overflownCountries": "Überflogene Länder",
-    "openTrip": "Reise öffnen"
+    "openTrip": "Reise öffnen",
+    "backToLogbook": "Logbuch · Flüge",
+    "departurePlanned": "Abflug (plan)",
+    "departureActual": "Tatsächl. Abflug",
+    "arrivalPlanned": "Ankunft (plan)",
+    "arrivalActual": "Tatsächl. Landung",
+    "timezones": "Zeitzonen",
+    "planned": "plan",
+    "flightTime": "Flugzeit"
   },
   "price": {
     "package": "Pauschal",

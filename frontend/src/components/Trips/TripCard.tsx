@@ -1,59 +1,75 @@
 import { formatCurrency } from "../../lib/units";
 import { differenceInCalendarDays } from "date-fns";
-import type { Trip, TripCategory, TripStatus } from "../../types";
+import type { Trip } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDateInTimezone } from "../../lib/dateUtils";
+import { statusPillStyle } from "../table/statusPillStyle";
+import { Icon, type IconName } from "../ui/Icon";
 
 interface TripCardProps {
   trip: Trip;
   onOpen: (trip: Trip) => void;
-  onEdit: (trip: Trip) => void;
-  onDelete: (trip: Trip) => void;
 }
 
-const STATUS_PILL: Record<TripStatus, { bg: string; color: string }> = {
-  planned: { bg: "rgba(96,165,250,0.22)", color: "#93c5fd" },
-  in_progress: { bg: "rgba(240,169,71,0.22)", color: "#f0a947" },
-  completed: { bg: "rgba(74,222,128,0.16)", color: "#86efac" },
-};
-
-const CATEGORY_ICON: Record<TripCategory, string> = {
-  vacation: "🏖",
-  business: "💼",
-  weekend: "🎒",
-  family: "👨‍👩‍👧",
-  other: "🗺",
+/** Trip status → the shared status palette (planned reads as scheduled). */
+const STATUS_TONE: Record<Trip["status"], string> = {
+  planned: "scheduled",
+  in_progress: "in_progress",
+  completed: "completed",
 };
 
 /**
- * Trip-list card (Phase-1 iteration 2). Driven by the trip's own
- * metadata fields (`startDate`, `endDate`, `status`, `category`, `tags`,
- * `companions`, `coverImageUrl`, `color`) instead of the legacy
- * "derive everything from linked flights" logic. Fields that are still
- * empty fall back gracefully — the card never breaks for a half-filled
- * trip. Whole card is clickable; the footer buttons stop propagation
- * to remain individually addressable.
+ * When a trip starts and ends: its own dates, else its first departure and
+ * last arrival. The list groups by the start year, so this is shared.
  */
-export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardProps): JSX.Element {
+export function tripSpan(trip: Trip): { start: Date | null; end: Date | null } {
+  return {
+    start: trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip),
+    end: trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip),
+  };
+}
+
+/** Calendar days including both ends, or null when a date is missing. */
+export function tripDays(trip: Trip): number | null {
+  const { start, end } = tripSpan(trip);
+  return start && end ? Math.max(0, differenceInCalendarDays(end, start)) + 1 : null;
+}
+
+/**
+ * Trip-list card, round 4 ("Reisen"): a quiet cover in the trip's colour with
+ * the areas the trip touches and its status, then the name, the dates and one
+ * mono line of figures. The whole card opens the trip.
+ *
+ * It replaces a saturated gradient cover, a four-tile statistics grid and a
+ * footer of three buttons (open, edit, delete) on every card. Edit and delete
+ * live on the trip page, where the head carries them for every detail page;
+ * a destructive button repeated down a grid of cards was the easiest thing on
+ * the page to hit by accident. Kilometres and cost stay, as figures — both
+ * were fixed to count every area (forgejo#86 and the cruise totals).
+ */
+export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
 
-  const start = trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip);
-  const end = trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip);
-  const dateRange = formatDateRange(start, end, i18n.language);
-  const nights = start && end ? Math.max(0, differenceInCalendarDays(end, start)) : null;
+  const { start, end } = tripSpan(trip);
+  const days = tripDays(trip);
+  const dateRange = [start, end]
+    .filter((d): d is Date => d !== null)
+    .map((d) => formatDateInTimezone(d, "UTC"))
+    .filter((d, i, all) => all.indexOf(d) === i)
+    .join(" – ");
 
   // Domain-gating: with the cruise domain disabled the card must not
-  // advertise cruise segments — count them as absent.
+  // advertise cruise segments — not as an icon, not inside the km or cost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = cruiseEnabled ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
-
-  // With the cruise domain switched off the card must not advertise cruises in
-  // any tile — not as a count, and not hidden inside the km or cost totals.
+  const stayCount = lodgingEnabled
+    ? (trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0)
+    : 0;
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
   const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
 
@@ -61,25 +77,22 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   // stay carrying its own price and no booking. Summing bookings alone made a
   // hand-entered flight price vanish from the card while the detail page
   // counted it, and left a cruise- or hotel-only trip at "—" on both.
+  // NOT gated on features.enableCostTracking: since #192 that toggle gates the
+  // taxes/fees breakdown, not whether a price is visible at all.
   const costTotals = sumByCurrency(
     tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises, stays)
   );
-
   const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
+  const entries = flightCount + cruiseCount + stayCount;
 
-  const routeChain = buildRouteChain(trip);
+  const areas: IconName[] = [
+    ...(flightCount > 0 ? (["plane"] as const) : []),
+    ...(cruiseCount > 0 ? (["ship"] as const) : []),
+    ...(stayCount > 0 ? (["bed"] as const) : []),
+  ];
 
-  const status = trip.status;
-  const statusStyle = STATUS_PILL[status];
-  const categoryIcon = trip.category ? CATEGORY_ICON[trip.category] : null;
-
-  const cover = trip.coverImageUrl
-    ? {
-        backgroundImage: `url(${trip.coverImageUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }
-    : { background: `linear-gradient(135deg, ${trip.color}, ${trip.color}33 70%, var(--bg-base))` };
+  const mono = { fontFamily: "var(--ts-font-mono)" } as const;
+  const figure = { color: "var(--ts-text-bright)" } as const;
 
   return (
     <div
@@ -92,198 +105,98 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
           onOpen(trip);
         }
       }}
-      className="rounded-xl overflow-hidden flex flex-col cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-xl"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      className="flex h-full cursor-pointer flex-col overflow-hidden transition-colors hover:border-[var(--ts-muted)]"
+      style={{
+        background: "var(--ts-surface)",
+        border: "1px solid var(--ts-border)",
+        borderRadius: "var(--ts-radius-card)",
+      }}
     >
-      {/* Cover */}
-      <div className="relative h-32" style={cover}>
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(to bottom, transparent 35%, rgba(13,17,23,0.85) 100%)",
-          }}
-        />
-        <span
-          className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide"
-          style={{
-            background: statusStyle.bg,
-            color: statusStyle.color,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          {t(`trips:status.${status}`)}
-        </span>
-        {categoryIcon && (
-          <span
-            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+      <div
+        className="relative h-[110px]"
+        style={{
+          background: `linear-gradient(135deg, color-mix(in srgb, ${trip.color} 22%, var(--ts-surface2)), var(--ts-surface2))`,
+        }}
+      >
+        {trip.coverImageUrl && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
             style={{
-              background: "rgba(13,17,23,0.6)",
-              backdropFilter: "blur(8px)",
+              backgroundImage: `url(${trip.coverImageUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: 0.35,
             }}
-          >
-            {categoryIcon}
+          />
+        )}
+        <span className="absolute right-3 top-3">
+          <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>
+            {t(`trips:status.${trip.status}`)}
+          </span>
+        </span>
+        {areas.length > 0 && (
+          <span className="absolute bottom-3 left-3 flex gap-1.5" aria-hidden="true">
+            {areas.map((name) => (
+              <span
+                key={name}
+                className="flex h-7 w-7 items-center justify-center rounded-full"
+                style={{ background: "var(--ts-bg)", color: "var(--ts-accent)" }}
+              >
+                <Icon name={name} size={14} />
+              </span>
+            ))}
           </span>
         )}
       </div>
 
-      {/* Body */}
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col gap-1 px-4 py-3.5">
         <h3
-          className="font-display font-semibold text-base leading-tight truncate"
-          style={{ color: "var(--text-primary)" }}
+          className="truncate"
+          style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}
         >
+          {trip.icon && (
+            <span aria-hidden="true" className="mr-1.5">
+              {trip.icon}
+            </span>
+          )}
           {trip.name}
         </h3>
-        {(dateRange || nights !== null) && (
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-            {dateRange}
-            {nights !== null && nights > 0 && (
-              <>
-                {dateRange && " · "}
-                {t("trips:nights", { count: nights })}
-              </>
-            )}
+        {(dateRange || trip.destinationLabel) && (
+          <p className="t-caption truncate">
+            {[dateRange, trip.destinationLabel].filter(Boolean).join(" · ")}
           </p>
         )}
-
-        {trip.destinationLabel && (
-          <p
-            className="text-xs mt-1.5 truncate"
-            style={{ color: "var(--text-primary)", opacity: 0.85 }}
-          >
-            📍 {trip.destinationLabel}
-          </p>
-        )}
-
-        {routeChain.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap mt-2">
-            {routeChain.slice(0, 6).map((iata, i) => (
-              <span key={`${iata}-${i}`} className="flex items-center gap-1">
-                {i > 0 && (
-                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    →
-                  </span>
-                )}
-                <span className="font-mono text-xs font-semibold">{iata}</span>
-              </span>
-            ))}
-            {routeChain.length > 6 && (
-              <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                +{routeChain.length - 6}
-              </span>
-            )}
-          </div>
-        )}
-
-        {trip.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {trip.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 rounded-full text-[10px]"
-                style={{ background: "var(--bg-muted)", color: "var(--text-muted)" }}
-              >
-                {tag}
-              </span>
-            ))}
-            {trip.tags.length > 4 && (
-              <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                +{trip.tags.length - 4}
-              </span>
-            )}
-          </div>
-        )}
-
-        <div
-          className="grid grid-cols-4 gap-1 mt-auto pt-3"
-          style={{ borderTop: "1px solid var(--color-border)" }}
-        >
-          <Stat
-            value={cruiseCount > 0 ? `${flightCount} · ${cruiseCount}` : `${flightCount}`}
-            label={
-              cruiseCount > 0
-                ? "Fl · Kr"
-                : t("trips:flightCount", { count: flightCount }).split(" ").slice(-1)[0]
-            }
-          />
-          <Stat value={distanceKm > 0 ? formatDistance(distanceKm) : "—"} label="km" />
-          <Stat
-            value={
-              trip.countries.length > 0
-                ? trip.countries.length
-                : flightCount > 0 || cruiseCount > 0
-                  ? "?"
-                  : "—"
-            }
-            label={t("trips:detail.stats.countries")}
-          />
-          {/* NOT gated on features.enableCostTracking. Since #192 that toggle
-              gates the taxes/fees breakdown and the business statistics, not
-              whether a price is visible at all — and the trip DETAIL page has
-              always rendered this total ungated. With the gate here, the same
-              trip read "EUR 2832" on its detail page and "—" on its card. */}
-          <Stat
-            value={
-              costTotals.length > 0
-                ? costTotals
-                    .map((c) =>
-                      formatCurrency(c.total, c.currency, {
-                        compact: true,
-                        language: i18n.language,
-                      })
-                    )
-                    .join(" + ")
-                : "—"
-            }
-            label={t("trips:totalCost")}
-          />
-        </div>
-      </div>
-
-      {/* Action footer */}
-      <div
-        className="flex gap-2 px-4 py-2.5"
-        style={{ borderTop: "1px solid var(--color-border)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={() => onOpen(trip)}
-          className="px-2.5 py-1 rounded-sm text-xs font-medium"
-          style={{ background: "var(--bg-muted)", color: "var(--accent)" }}
-        >
-          → {t("trips:openTrip")}
-        </button>
-        <button
-          onClick={() => onEdit(trip)}
-          className="px-2.5 py-1 rounded-sm text-xs font-medium"
-          style={{ background: "var(--bg-muted)", color: "var(--color-success, #4ade80)" }}
-          aria-label={t("trips:editTrip")}
-          title={t("trips:editTrip")}
-        >
-          ✏
-        </button>
-        <button
-          onClick={() => onDelete(trip)}
-          className="px-2.5 py-1 rounded-sm text-xs font-medium ml-auto"
-          style={{ background: "var(--bg-muted)", color: "var(--color-error, #f87171)" }}
-          aria-label={t("trips:deleteTrip")}
-          title={t("trips:deleteTrip")}
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ value, label }: { value: string | number; label: string }): JSX.Element {
-  return (
-    <div className="text-center">
-      <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-        {value}
-      </div>
-      <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-        {label}
+        <p className="t-caption mt-auto flex flex-wrap gap-x-3 pt-2" style={mono}>
+          {days !== null && (
+            <span>
+              <span style={figure}>{days}</span> {t("trips:card.days", { count: days })}
+            </span>
+          )}
+          <span>
+            <span style={figure}>
+              {trip.countries.length > 0 ? trip.countries.length : entries > 0 ? "?" : "—"}
+            </span>{" "}
+            {t("trips:card.countries", { count: trip.countries.length })}
+          </span>
+          <span>
+            <span style={figure}>{entries}</span> {t("trips:card.entries", { count: entries })}
+          </span>
+        </p>
+        <p className="t-caption flex flex-wrap gap-x-3" style={mono}>
+          <span>
+            <span style={figure}>{distanceKm > 0 ? formatDistance(distanceKm) : "—"}</span> km
+          </span>
+          <span style={figure}>
+            {costTotals.length > 0
+              ? costTotals
+                  .map((c) =>
+                    formatCurrency(c.total, c.currency, { compact: true, language: i18n.language })
+                  )
+                  .join(" + ")
+              : "—"}
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -307,21 +220,6 @@ function lastFlightDate(trip: Trip): Date | null {
   );
   const last = [...sorted].reverse().find((f) => f.arrivalTime);
   return last?.arrivalTime ? new Date(last.arrivalTime) : null;
-}
-
-function buildRouteChain(trip: Trip): string[] {
-  const sorted = [...(trip.flights ?? [])].sort(
-    (a, b) =>
-      (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
-      (b.departureTime ? new Date(b.departureTime).getTime() : 0)
-  );
-  const chain: string[] = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const f = sorted[i];
-    if (i === 0 && f.depIata) chain.push(f.depIata);
-    if (f.arrIata && f.arrIata !== chain[chain.length - 1]) chain.push(f.arrIata);
-  }
-  return chain;
 }
 
 /**
@@ -364,17 +262,4 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 function formatDistance(km: number): string {
   if (km >= 1000) return `${(km / 1000).toFixed(1)}k`;
   return String(km);
-}
-
-function formatDateRange(start: Date | null, end: Date | null, _locale: string): string | null {
-  if (!start && !end) return null;
-  // The user's date format (Settings → Display); the locale no longer decides.
-  const fmtShort = (d: Date): string => formatDate(d, { omitYear: true });
-  const fmtLong = (d: Date): string => formatDate(d);
-  if (start && end) {
-    return start.getFullYear() === end.getFullYear()
-      ? `${fmtShort(start)} – ${fmtLong(end)}`
-      : `${fmtLong(start)} – ${fmtLong(end)}`;
-  }
-  return fmtLong((start ?? end) as Date);
 }

@@ -18,20 +18,23 @@ import { resolve } from "node:path";
  * this file would pass forever the day the array is renamed or moved.
  */
 
-const SOURCE = resolve(__dirname, "../../pages/SettingsPage.tsx");
+// The section list left SettingsPage.tsx on the design-system branch: one
+// route per group, and every label a key in `SECTION_LABEL_KEY`.
+const SOURCE = resolve(__dirname, "../../pages/Settings/sectionLabels.ts");
 
 describe("settings navigation labels", () => {
   const source = readFileSync(SOURCE, "utf8");
-  const labels = [...source.matchAll(/\{\s*id:\s*"[a-zA-Z]+",\s*label:\s*([^\n]+?),?\s*\}/g)].map(
-    (m) => m[1].trim()
-  );
+  const block = source.slice(source.indexOf("SECTION_LABEL_KEY"));
+  const labels = [...block.matchAll(/^\s+[a-zA-Z]+:\s*([^\n]+?),\s*$/gm)].map((m) => m[1].trim());
 
   it("still finds the section list — the scan has not aged out", () => {
     expect(labels.length).toBeGreaterThan(5);
   });
 
   it("takes every label from a translation key, never a bare literal", () => {
-    const literals = labels.filter((l) => /^"[^"]*"$/.test(l));
+    // A key names its namespace: "settings:about.title". Anything else is
+    // copy that never went through translation.
+    const literals = labels.filter((l) => !/^"[a-z]+:[A-Za-z0-9_.]+"$/.test(l));
     expect(literals).toEqual([]);
   });
 });

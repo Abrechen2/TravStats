@@ -34,6 +34,37 @@ describe("computeDedupedTotalCost", () => {
     expect(out.unconvertedByCurrency).toEqual({});
   });
 
+  describe("perFlightBaseContribution / perFlightPriced (task-7-brief.md)", () => {
+    it("attributes a booking's amount to its FIRST segment only, index-aligned with the input", () => {
+      const shared = { bookingId: "b1", booking: booking(500) };
+      const out = computeDedupedTotalCost([f({ ...shared }), f({ ...shared })], BASE);
+      expect(out.perFlightBaseContribution).toEqual([500, 0]);
+      // Both segments of a priced booking are priced, even though only the
+      // first carries the amount — this used to be exactly the distinction
+      // `pricedFlights`/`unpricedFlights` already drew in aggregate.
+      expect(out.perFlightPriced).toEqual([true, true]);
+    });
+
+    it("gives 0, not the raw amount, to a row whose currency could not convert", () => {
+      const out = computeDedupedTotalCost(
+        [f({ price: 300, currency: "USD", priceBase: null, fxBaseCurrency: null })],
+        BASE
+      );
+      expect(out.base).toBeNull();
+      expect(out.perFlightBaseContribution).toEqual([0]);
+      // Still priced — the amount exists, it simply never reached `base`.
+      expect(out.perFlightPriced).toEqual([true]);
+    });
+
+    it("sums per-row to the same total the aggregate reports", () => {
+      const rows = [f({ price: 100, taxes: 20 }), f({ price: 50 }), f({ price: null })];
+      const out = computeDedupedTotalCost(rows, BASE);
+      const total = out.perFlightBaseContribution.reduce((sum, n) => sum + n, 0);
+      expect(total).toBe(out.base);
+      expect(out.perFlightPriced).toEqual([true, true, false]);
+    });
+  });
+
   it("falls back to price + taxes + fees without a priced booking", () => {
     expect(computeDedupedTotalCost([f({ price: 100, taxes: 20, fees: 5 })], BASE).base).toBe(125);
   });

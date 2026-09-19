@@ -1,3 +1,4 @@
+import Modal from "./Modal";
 import { useEffect, useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { diagnosticExportApi, type DiagnosticBundle } from "../lib/api/diagnosticExport";
@@ -113,68 +114,14 @@ export default function DiagnosticExportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-100 bg-black/60 flex items-center justify-center p-4">
-      <div
-        className="rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div
-          className="px-6 py-4 border-b flex items-center justify-between"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-            {t("common:diagnostic.title")}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-xl leading-none"
-            style={{ color: "var(--text-muted)" }}
-            aria-label={t("common:buttons.close")}
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="px-6 py-4 overflow-y-auto flex-1">
-          <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
-            {t("common:diagnostic.description")}
-          </p>
-          <ul
-            className="text-xs list-disc list-inside mb-4 space-y-1"
-            style={{ color: "var(--text-muted)" }}
-          >
-            <li>{t("common:diagnostic.scrubList.ip")}</li>
-            <li>{t("common:diagnostic.scrubList.email")}</li>
-            <li>{t("common:diagnostic.scrubList.tokens")}</li>
-            <li>{t("common:diagnostic.scrubList.uuids")}</li>
-          </ul>
-
-          {loading && (
-            <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("common:diagnostic.generating")}
-            </div>
-          )}
-
-          {bundle && (
-            <textarea
-              readOnly
-              value={bundleText}
-              className="w-full font-mono text-xs p-3 rounded-sm resize-none"
-              style={{
-                background: "var(--bg-elevated)",
-                color: "var(--text-primary)",
-                border: "1px solid var(--color-border)",
-                minHeight: 300,
-                maxHeight: 400,
-              }}
-            />
-          )}
-        </div>
-
-        <div
-          className="px-6 py-4 border-t flex flex-wrap items-center gap-2 justify-end"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+    <Modal
+      open
+      onClose={onClose}
+      title={t("common:diagnostic.title")}
+      maxWidth={768}
+      closeLabel={t("common:buttons.close")}
+      footer={
+        <>
           <button
             onClick={onClose}
             className="btn-secondary px-3 py-1.5 text-sm"
@@ -216,8 +163,44 @@ export default function DiagnosticExportModal({
           >
             {t("common:diagnostic.reportBug")}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div>
+        <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
+          {t("common:diagnostic.description")}
+        </p>
+        <ul
+          className="text-xs list-disc list-inside mb-4 space-y-1"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <li>{t("common:diagnostic.scrubList.ip")}</li>
+          <li>{t("common:diagnostic.scrubList.email")}</li>
+          <li>{t("common:diagnostic.scrubList.tokens")}</li>
+          <li>{t("common:diagnostic.scrubList.uuids")}</li>
+        </ul>
+
+        {loading && (
+          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("common:diagnostic.generating")}
+          </div>
+        )}
+
+        {bundle && (
+          <textarea
+            readOnly
+            value={bundleText}
+            className="w-full font-mono text-xs p-3 rounded-sm resize-none"
+            style={{
+              background: "var(--bg-elevated)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--color-border)",
+              minHeight: 300,
+              maxHeight: 400,
+            }}
+          />
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

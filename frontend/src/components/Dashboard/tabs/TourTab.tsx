@@ -17,6 +17,7 @@ import {
 import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
+import { SidebarToggle } from "../SidebarToggle";
 
 function isLegMode(value: string): value is LegMode {
   return (LEG_MODES as readonly string[]).includes(value);
@@ -99,25 +100,11 @@ export function TourTab(): JSX.Element {
         hideInfoPill
       />
 
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          position: "absolute",
-          top: 12,
-          left: sidebarOpen ? 340 : 12,
-          zIndex: 30,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          border: "1px solid var(--color-border)",
-          color: "var(--text-primary)",
-          cursor: "pointer",
-          fontSize: 13,
-        }}
-      >
-        ☰ {t("dashboard:tourTab.listTitle")}
-      </button>
+      <SidebarToggle
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        label={t("dashboard:tourTab.listTitle")}
+      />
 
       {sidebarOpen && (
         <div

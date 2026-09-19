@@ -19,6 +19,7 @@ import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { LodgingChainsView } from "./lodging/LodgingChainsView";
 import { LodgingNightsChart } from "./lodging/LodgingNightsChart";
+import { SidebarToggle } from "../SidebarToggle";
 
 export function LodgingTab(): JSX.Element {
   const setLodgingSelection = useLodgingSelectionStore((st) => st.setSelection);
@@ -132,24 +133,11 @@ export function LodgingTab(): JSX.Element {
         showInternalCruises={false}
       />
 
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          position: "absolute",
-          top: 12,
-          left: sidebarOpen ? 340 : 12,
-          zIndex: 30,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
-          cursor: "pointer",
-        }}
-      >
-        ☰ {t("dashboard:lodgingTab.listTitle")}
-      </button>
+      <SidebarToggle
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        label={t("dashboard:lodgingTab.listTitle")}
+      />
       {/* Same sidebar as every other tab, pinned to this domain. The bespoke
           LodgingListPanel is gone: it did not sort at all (so the API's
           `createdAt desc` decided the order — the sequence hotels were TYPED

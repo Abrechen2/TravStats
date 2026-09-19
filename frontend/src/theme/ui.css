@@ -1,0 +1,413 @@
+/*
+ * The states an inline style cannot reach: hover, active, the table's narrow
+ * layout, and the keyframes the motion tokens drive.
+ *
+ * Hand-written, unlike tokens.css — but it introduces no value of its own:
+ * every colour, duration and measure here is a `--ts-*` token. If a rule below
+ * needs a number that is not one, the number belongs in the token file.
+ */
+
+/* ─── Motion ────────────────────────────────────────────────────────────── */
+/* Named after MOTION.md so a component asking for `ts-enter` gets what the
+   specification calls `ts-enter`. Reduced motion is nulled globally in
+   index.css, so no keyframe here needs its own guard. */
+@keyframes ts-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ts-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ts-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes ts-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ts-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ─── Button ────────────────────────────────────────────────────────────── */
+/* Never a shadow on hover (DESIGN_SYSTEM.md §5) — the old btn-primary grew a
+   16px amber glow, which read as focus and competed with the real focus ring. */
+.ts-button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--ts-accent-hover);
+}
+.ts-button[data-variant="primary"]:active:not(:disabled) {
+  background: var(--ts-accent-pressed);
+}
+.ts-button[data-variant="secondary"]:hover:not(:disabled) {
+  background: var(--ts-row-hover);
+  color: var(--ts-text-bright);
+}
+.ts-button[data-variant="danger"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ts-bad) 20%, transparent);
+}
+
+.ts-icon-button:hover:not(:disabled) {
+  background: var(--ts-surface);
+  color: var(--ts-text-bright);
+}
+
+.ts-chip:hover {
+  background: var(--ts-row-hover);
+}
+.ts-chip[aria-pressed="true"]:hover {
+  background: var(--ts-accent-hover);
+}
+
+.ts-control::placeholder {
+  color: var(--ts-faint);
+}
+
+.ts-stat-tile:hover {
+  background: var(--ts-surface);
+}
+
+/*
+ * `.ts-paper` (the passport's light surface, a redefinition of the app's own
+ * eight variables inside that subtree) lived here until T3 (2026-09-17
+ * tester feedback): the owner decided the passport should be dark like the
+ * rest of the app rather than keep a second palette alive for one page. It
+ * was the only consumer (grepped before deleting) — the flight certificate's
+ * paper is unrelated and still reads its own values from `lib/paperPalette.ts`,
+ * which resolves to literal strings for html2canvas and never touched this
+ * class.
+ */
+
+/*
+ * The passport's country table, below 640px: every row becomes a card. The
+ * country and its evidence span the card, the figures sit in two columns
+ * under their own labels. The table was ~756px wide in a 292px scroll area,
+ * with entries, days, period and airports off the right edge (CT106 audit
+ * B08). One DOM for both layouts, so nothing is read twice.
+ */
+@media (max-width: 639px) {
+  .ts-passport-table,
+  .ts-passport-table tbody {
+    display: block;
+  }
+  .ts-passport-table thead {
+    display: none;
+  }
+  .ts-passport-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px var(--ts-space-lg);
+    padding: var(--ts-space-md) var(--ts-space-lg);
+  }
+  .ts-passport-table td {
+    display: block;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .ts-passport-table td[data-wide] {
+    grid-column: 1 / -1;
+  }
+  .ts-passport-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+}
+
+/*
+ * Summary tiles above a list, on a phone: one row that scrolls sideways
+ * instead of three stacked cards that pushed the first trip below the fold
+ * (CT106 audit B10). Above 640px the grid classes on the same element apply.
+ */
+@media (max-width: 639px) {
+  .ts-insight-strip {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: var(--ts-space-sm);
+  }
+  .ts-insight-strip > * {
+    flex: 0 0 68%;
+    padding: var(--ts-space-md);
+  }
+}
+
+/* ─── Status pill ───────────────────────────────────────────────────────── */
+/*
+ * The geometry half of the recipe, for the four call sites that take a style
+ * object rather than the `StatusPill` component. The colours come from
+ * `statusPillStyle()`; everything that is the same for every status is here.
+ */
+.ts-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--ts-radius-pill);
+  padding: 4px 10px;
+  font-family: var(--ts-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ─── Detail header ────────────────────────────────────────────────────── */
+.ts-back-link:hover {
+  color: var(--ts-text);
+  text-decoration: underline;
+}
+
+/* ─── Rows ──────────────────────────────────────────────────────────────── */
+.ts-row:hover,
+.ts-table-row[data-clickable="yes"]:hover {
+  background: var(--ts-row-hover);
+}
+.ts-table-row[data-clickable="yes"] {
+  cursor: pointer;
+}
+
+/* ─── Dashboard map overlays ────────────────────────────────────────────── */
+.ts-activity-panel {
+  width: 320px;
+}
+.ts-map-panel-dock {
+  bottom: 16px;
+}
+@media (max-width: 639px) {
+  .ts-activity-panel {
+    width: 100%;
+  }
+  /* = ATTRIBUTION_CLEARANCE (components/map/attributionClearance.ts); a test
+     holds the two together. */
+  .ts-map-panel-dock {
+    bottom: 52px;
+  }
+}
+
+/* ─── Settings rows ─────────────────────────────────────────────────────── */
+/* A card of settings: rows divided by hairlines, the card padding outside. */
+.ts-setting-rows > * {
+  padding: var(--ts-space-lg) 0;
+}
+.ts-setting-rows > *:first-child {
+  padding-top: 0;
+}
+.ts-setting-rows > *:last-child {
+  padding-bottom: 0;
+}
+.ts-setting-rows > * + * {
+  border-top: 1px solid var(--ts-border);
+}
+
+/* ─── Table ─────────────────────────────────────────────────────────────── */
+.ts-table {
+  /*
+   * Visible sideways scroll, never clipping. `overflow: hidden` on the table
+   * is what let the flights table cut off its actions column while the page
+   * itself reported no overflow at all (CT106 audit, B01).
+   */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.ts-table-head,
+.ts-table-row {
+  display: grid;
+  grid-template-columns: var(--ts-table-template);
+  gap: var(--ts-space-lg);
+  align-items: center;
+  padding: 0 var(--ts-space-xl);
+  /*
+   * The row is never narrower than its columns' minimums, so a table that does
+   * not fit scrolls as one piece — head and rows together — instead of each
+   * row squeezing its cells over each other.
+   */
+  min-width: calc(
+    var(--ts-table-columns-min) + (var(--ts-table-column-count) - 1) * var(--ts-space-lg) + 2 *
+      var(--ts-space-xl)
+  );
+}
+
+/* Columns that stepped aside for lack of width — see `pickHidden`. */
+@media (min-width: 640px) {
+  .ts-table [data-stepped-aside="yes"] {
+    display: none;
+  }
+}
+
+.ts-table-hint {
+  margin: 0;
+  padding: var(--ts-space-sm) var(--ts-space-xl);
+  border-top: 1px solid var(--ts-border);
+}
+
+.ts-table-head {
+  min-height: 40px;
+  background: var(--ts-surface2);
+}
+
+/*
+ * A cell that exists only once the table is a row. Hidden here, shown in the
+ * narrow block below — never both, so a screen reader is read the columns or
+ * the summary line, not the same facts twice.
+ */
+.ts-table-row > [data-narrow-only="yes"] {
+  display: none;
+}
+
+/*
+ * Below 640px the table IS the list row.
+ *
+ * Same markup, different grid: the mark on the left, title over subtitle in
+ * the middle, one trailing element on the right, everything else dropped. A
+ * phone that keeps the columns gets a horizontal scrollbar, and a horizontal
+ * scrollbar in a list is how a row's right-hand half becomes invisible.
+ */
+@media (max-width: 639px) {
+  .ts-table-head {
+    display: none;
+  }
+
+  .ts-table-row {
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "mark title trailing" "mark subtitle trailing";
+    gap: 2px var(--ts-space-lg);
+    padding: var(--ts-space-md) var(--ts-space-lg);
+    align-items: center;
+  }
+
+  .ts-table-row > [data-narrow="mark"] {
+    grid-area: mark;
+  }
+  .ts-table-row > [data-narrow="title"] {
+    grid-area: title;
+    font-weight: 700;
+    color: var(--ts-text-bright);
+  }
+  .ts-table-row > [data-narrow="subtitle"] {
+    grid-area: subtitle;
+    font-size: 12px;
+    color: var(--ts-muted);
+  }
+  .ts-table-row > [data-narrow="trailing"] {
+    grid-area: trailing;
+    justify-self: end;
+  }
+  .ts-table-row > [data-narrow="hide"] {
+    display: none;
+  }
+
+  .ts-table-row > [data-narrow-only="yes"] {
+    display: block;
+  }
+}
+
+/* ─── Dialog ────────────────────────────────────────────────────────────── */
+/*
+ * The whole shell lives here rather than in the component, and the reason is a
+ * defect: written as inline styles it looked right on a desktop and was wrong
+ * on a phone, because an inline `align-items: center` outranks any media query.
+ * The dialog stayed centred where it should have docked. Only the caller's
+ * width crosses the boundary, as `--ts-dialog-max`.
+ */
+.ts-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--ts-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ts-space-xxl);
+  animation: ts-fade var(--ts-motion-base) var(--ts-ease-enter);
+}
+
+.ts-dialog-panel {
+  width: 100%;
+  max-width: var(--ts-dialog-max, 440px);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--ts-surface2);
+  border: 1px solid var(--ts-border);
+  border-radius: var(--ts-radius-sheet);
+  box-shadow: var(--ts-shadow-dialog);
+  padding: var(--ts-space-xxl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ts-space-xl);
+  outline: none;
+  animation: ts-enter var(--ts-motion-enter) var(--ts-ease-enter);
+}
+
+/*
+ * The frame cut: same scrim, radius, shadow, animation and bottom docking,
+ * but the panel owns no padding and no gap because its own header, body and
+ * footer do — the header and footer stay put while only the body scrolls. A
+ * tall form (the lodging one grows the moment its map picker opens) used to
+ * push its own save button off the screen with nothing to scroll.
+ */
+.ts-dialog-panel[data-layout="frame"] {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+/*
+ * The one placement difference between the web's dialog and the Companion's
+ * sheet. Below 640px it docks to the bottom edge and animates in from below —
+ * the shell, radius, scrim, shadow and one-action rule are unchanged.
+ */
+@media (max-width: 639px) {
+  .ts-dialog-scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .ts-dialog-panel {
+    max-width: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    box-shadow: var(--ts-shadow-sheet);
+    animation: ts-sheet var(--ts-motion-enter) var(--ts-ease-enter);
+    max-height: 90vh;
+  }
+}

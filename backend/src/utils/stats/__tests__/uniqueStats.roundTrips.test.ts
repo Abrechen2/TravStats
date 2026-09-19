@@ -56,6 +56,25 @@ describe("round trips are limited by the thinner direction", () => {
     expect(stats.roundTripMaster).toBe(0);
   });
 
+  /**
+   * A sightseeing flight that lands where it took off. Its direction key is
+   * its own reverse, so `min(there, back)` used to count every such leg as a
+   * round trip — and the evidence panel could only ever evidence half of
+   * them, because the two halves of each "pair" were the SAME row. The tile
+   * shows the smaller, true number now: a flight from A to A never went
+   * anywhere, so there is no "back".
+   */
+  it("counts no round trip for a flight that lands where it took off", async () => {
+    const stats = await calculateUniqueStats([
+      leg("FRA", "FRA", 1),
+      leg("FRA", "FRA", 2),
+      leg("MUC", "CDG", 3),
+      leg("CDG", "MUC", 4),
+    ]);
+
+    expect(stats.roundTripMaster).toBe(1);
+  });
+
   it("adds up independent pairs without letting one pay for the other", async () => {
     const stats = await calculateUniqueStats([
       leg("FRA", "LHR", 1),

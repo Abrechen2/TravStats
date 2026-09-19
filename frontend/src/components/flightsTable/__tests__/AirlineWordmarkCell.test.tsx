@@ -79,3 +79,14 @@ it("falls back to the name immediately when nothing resolves", () => {
   );
   expect(screen.getByText("Some Unknown Carrier")).toBeInTheDocument();
 });
+
+// CT106 audit B01: the name as text ran out of a 64px column into the flight
+// number beside it. The fallback is a logo-sized tile with the code; the name
+// stays for a screen reader.
+it("falls back to a code tile that fits the column, keeping the name for readers", () => {
+  render(<AirlineWordmarkCell flight={flight} />);
+  fireEvent.error(document.querySelector("img")!);
+  const code = screen.getByText("LH");
+  expect(code.getAttribute("aria-hidden")).toBe("true");
+  expect(screen.getByText("Lufthansa").className).toContain("sr-only");
+});

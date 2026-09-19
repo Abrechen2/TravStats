@@ -6,6 +6,8 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 
+export type AutoSaveState = "idle" | "pending" | "saving" | "saved" | "failed";
+
 interface AutoUpdateSettings {
   enabled: boolean;
   requireApproval: boolean;
@@ -56,11 +58,15 @@ export function useSettingsPage() {
 
   const addToast = useToastStore((state) => state.addToast);
 
-  /** What the auto-save banner is allowed to claim right now. */
-  const [autoSaveState, setAutoSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  /**
+   * What the status line is allowed to claim right now — the four states of
+   * round 4 (E10): an edit waiting for its debounce, the write in flight, the
+   * write landed, the write failed. "failed" stays until the next edit, so a
+   * change that did not stick cannot scroll out of view as a vanished toast.
+   */
+  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>("idle");
 
   // Profile
-  const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
   const [removingProfilePicture, setRemovingProfilePicture] = useState(false);
 
@@ -183,6 +189,7 @@ export function useSettingsPage() {
       return;
     }
     if (!hasPendingChanges()) return;
+    setAutoSaveState("pending");
     const saveSettings = async () => {
       // Re-check at FIRE time, not just schedule time. Hydration
       // (`loadRemoteSettings`) mutates the settings slices and updates the
@@ -202,7 +209,7 @@ export function useSettingsPage() {
         setAutoSaveState("saved");
       } catch (error) {
         logger.error("Failed to save settings:", error);
-        setAutoSaveState("idle");
+        setAutoSaveState("failed");
         addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
       }
     };
@@ -328,49 +335,39 @@ export function useSettingsPage() {
     }
   };
 
-  const saveProfileSettings = async () => {
-    try {
-      setSavingProfile(true);
-      await saveRemoteSettings();
-      addToast("success", t("settings:profile.saved") || "Profil gespeichert");
-    } catch (error) {
-      logger.error("Failed to save profile settings:", error);
-      addToast("error", t("settings:profile.saveFailed") || "Fehler beim Speichern des Profils");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const saveAutoUpdateSettings = async () => {
+  // Saved as they change (round 4, E10): the section passes the value it just
+  // set, because the state update has not landed when the save runs. A success
+  // says nothing — the switch already shows it; a failure says so and puts the
+  // server's value back, so the screen never shows a state that is not stored.
+  const saveAutoUpdateSettings = async (next: AutoUpdateSettings = autoUpdateSettings) => {
     try {
       setLoadingAutoUpdateSettings(true);
-      await settingsApi.update({ autoUpdate: autoUpdateSettings });
-      const reloaded = await settingsApi.get();
-      if (reloaded.autoUpdate) setAutoUpdateSettings(reloaded.autoUpdate);
-      addToast(
-        "success",
-        t("settings:autoUpdate.saved") || "Auto-Update-Einstellungen gespeichert"
-      );
+      setAutoUpdateSettings(next);
+      await settingsApi.update({ autoUpdate: next });
     } catch (error) {
       logger.error("Failed to save auto-update settings:", error);
       addToast("error", t("settings:autoUpdate.saveFailed") || "Fehler beim Speichern");
+      const reloaded = await settingsApi.get().catch(() => null);
+      if (reloaded?.autoUpdate) setAutoUpdateSettings(reloaded.autoUpdate);
     } finally {
       setLoadingAutoUpdateSettings(false);
     }
   };
 
-  const saveHistoricalEnrichmentSettings = async () => {
+  const saveHistoricalEnrichmentSettings = async (
+    next: HistoricalEnrichmentSettings = historicalEnrichmentSettings
+  ) => {
     try {
       setLoadingHistoricalEnrichmentSettings(true);
-      await settingsApi.update({ historicalEnrichment: historicalEnrichmentSettings });
-      const reloaded = await settingsApi.get();
-      if (reloaded.historicalEnrichment) {
-        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
-      }
-      addToast("success", t("settings:historicalEnrichment.saved") || "Einstellungen gespeichert");
+      setHistoricalEnrichmentSettings(next);
+      await settingsApi.update({ historicalEnrichment: next });
     } catch (error) {
       logger.error("Failed to save historical enrichment settings:", error);
       addToast("error", t("settings:historicalEnrichment.saveFailed") || "Fehler beim Speichern");
+      const reloaded = await settingsApi.get().catch(() => null);
+      if (reloaded?.historicalEnrichment) {
+        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
+      }
     } finally {
       setLoadingHistoricalEnrichmentSettings(false);
     }
@@ -429,10 +426,8 @@ export function useSettingsPage() {
     // Derived
     hasParserAccess,
     // Profile
-    savingProfile,
     uploadingProfilePicture,
     removingProfilePicture,
-    saveProfileSettings,
     handleAvatarUpload,
     handleAvatarDelete,
     // Password modal

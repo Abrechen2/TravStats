@@ -91,4 +91,44 @@ describe("UnifiedActivityPanel", () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  // CT106 audit B02: Escape did not close the panel, and its "×" was a
+  // 10×26px glyph under the floating add button.
+  it("closes on Escape and offers a full-size close button", async () => {
+    const onClose = vi.fn();
+    render(
+      <UnifiedActivityPanel
+        lodgings={[lodging()]}
+        lockedKind="lodging"
+        isOpen
+        onClose={onClose}
+        onSelect={vi.fn()}
+        onDetails={vi.fn()}
+      />
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+    const close = screen.getByRole("button", { name: /close/i });
+    expect(close.style.width).toBe("44px");
+    expect(close.style.height).toBe("44px");
+  });
+
+  it("leaves Escape to a dialog opened on top of it", async () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <UnifiedActivityPanel
+          lodgings={[lodging()]}
+          lockedKind="lodging"
+          isOpen
+          onClose={onClose}
+          onSelect={vi.fn()}
+          onDetails={vi.fn()}
+        />
+        <div className="ts-dialog-scrim" />
+      </>
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

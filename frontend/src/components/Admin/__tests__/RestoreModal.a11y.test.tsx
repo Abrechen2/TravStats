@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render, fireEvent, screen } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -22,6 +22,12 @@ import { RestoreModal } from "../BackupManagement";
  * and this dialog simply did not use it. The assertions are on that contract:
  * a browser measured the clipping, a unit test can only hold what the frame
  * guarantees.
+ *
+ * The frame is the shared dialog shell since the design-system branch: it
+ * renders into `document.body` through a portal, listens on `document`, and
+ * takes its height limit from `.ts-dialog-panel[data-layout="frame"]` in
+ * theme/ui.css (90vh) rather than a Tailwind class. Same contract, read where
+ * the shell keeps it.
  */
 const backup = {
   id: "b1",
@@ -47,44 +53,46 @@ const renderDialog = (onClose = vi.fn()) => ({
 
 describe("the restore dialog", () => {
   it("announces itself as a modal dialog with a name", () => {
-    const { container } = renderDialog();
-    const dialog = container.querySelector('[role="dialog"]');
+    renderDialog();
+    const dialog = screen.getByRole("dialog");
 
     expect(dialog).not.toBeNull();
     expect(dialog?.getAttribute("aria-modal")).toBe("true");
     const titleId = dialog?.getAttribute("aria-labelledby");
     expect(titleId).toBeTruthy();
     // The name points at an element that exists and carries the title.
-    expect(container.querySelector(`#${titleId}`)?.textContent).toContain(
+    expect(document.getElementById(titleId ?? "")?.textContent).toContain(
       "admin:backup.restore.title"
     );
   });
 
   it("puts focus inside itself rather than leaving it on the page", () => {
-    const { container } = renderDialog();
-    expect(document.activeElement).toBe(container.querySelector('[role="dialog"]'));
+    renderDialog();
+    expect(document.activeElement).toBe(screen.getByRole("dialog"));
   });
 
   it("closes on Escape", () => {
     const { onClose } = renderDialog();
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 
   it("gives the panel a height limit and its own scroll region", () => {
-    const { container } = renderDialog();
-    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    renderDialog();
+    const dialog = screen.getByRole("dialog");
 
     // The two properties the 320x568 measurement was about: the panel cannot
-    // grow past the viewport, and its body scrolls instead of overflowing it.
-    expect(dialog.className).toContain("max-h-[90vh]");
+    // grow past the viewport (the framed shell caps it at 90vh), and its body
+    // scrolls instead of overflowing it.
+    expect(dialog.classList.contains("ts-dialog-panel")).toBe(true);
+    expect(dialog.getAttribute("data-layout")).toBe("frame");
     expect(dialog.querySelector(".overflow-y-auto")).not.toBeNull();
   });
 
   it("still labels its own fields", () => {
     // The port must not lose what the dialog already did right.
-    const { container } = renderDialog();
-    expect(container.querySelector("#restore-scope")).not.toBeNull();
-    expect(container.querySelector('label[for="restore-scope"]')).not.toBeNull();
+    renderDialog();
+    expect(document.getElementById("restore-scope")).not.toBeNull();
+    expect(document.querySelector('label[for="restore-scope"]')).not.toBeNull();
   });
 });

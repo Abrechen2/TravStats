@@ -1,15 +1,35 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import DomainSummaryCard from "../DomainSummaryCard";
 import type { DomainStats } from "../../../../lib/stats/domain-stats";
+
+// The card's "Details" is a router link now (B04), so it needs a router.
+const render = (ui: ReactElement): ReturnType<typeof rtlRender> =>
+  rtlRender(ui, { wrapper: MemoryRouter });
 
 const cruiseStats: DomainStats = {
   domain: "cruise",
   hasData: true,
+  summaryByYear: {
+    2023: {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.cruiseNights", value: 21 },
+        { labelKey: "overviewCard.kpi.seaDays", value: 9 },
+        { labelKey: "overviewCard.kpi.ports", value: 11 },
+      ],
+      topItems: {
+        titleKey: "overviewCard.topItems.cruiseLines",
+        items: [{ label: "TUI", value: 4 }],
+      },
+    },
+  },
   totalEvents: 12,
   totalDistanceKm: 28_400,
   countries: ["IT", "ES", "FR"],
   yearlyEvents: { 2023: 4, 2024: 8 },
+  dailyEvents: { "2023-05-02": 4, "2024-05-02": 8 },
   yearlyActiveDays: { 2023: 28, 2024: 56 },
   monthlyActiveDays: {},
   dailyActiveDays: {},
@@ -44,6 +64,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText(/comingSoon|noDataYet/i)).toBeInTheDocument();
@@ -58,6 +79,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText(/comingSoon|noDataYet/i)).toBeInTheDocument();
@@ -71,6 +93,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     // The suite's language is English (src/__tests__/setup.ts), so the
@@ -81,7 +104,50 @@ describe("DomainSummaryCard", () => {
     expect(screen.getByText("84")).toBeInTheDocument();
     expect(screen.getByText("47")).toBeInTheDocument();
     const detailsLink = screen.getByRole("link");
-    expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise");
+    // No year chosen is "all years", said out loud so the tab it opens agrees.
+    expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise&year=all");
+  });
+
+  // CT106 design-6 R09: one 1.5 h flight read "2 h" here and "1.5 h" on the
+  // detail tab. A duration keeps one decimal; a distance stays whole.
+  it("keeps one decimal on a duration but none on a distance", () => {
+    render(
+      <DomainSummaryCard
+        domain="flight"
+        stats={{
+          ...cruiseStats,
+          domain: "flight",
+          summary: {
+            ...cruiseStats.summary,
+            headlineKpis: [
+              { labelKey: "overviewCard.kpi.distance", value: 486.4, unit: "km" },
+              { labelKey: "overviewCard.kpi.flightTime", value: 1.5, unit: "h" },
+            ],
+          },
+        }}
+        selectedYear={null}
+        compareYear={null}
+        compareEnabled={false}
+        comparison={null}
+      />
+    );
+    expect(screen.getByText("486 stats:overviewCard.unit.km")).toBeInTheDocument();
+    expect(screen.getByText("1.5 stats:overviewCard.unit.h")).toBeInTheDocument();
+  });
+
+  // CT106 audit, B04: year 2005 → "Details" opened the tab on 2026.
+  it("carries the selected year into the tab it opens", () => {
+    render(
+      <DomainSummaryCard
+        domain="cruise"
+        stats={cruiseStats}
+        selectedYear={2005}
+        compareYear={null}
+        compareEnabled={false}
+        comparison={null}
+      />
+    );
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/stats?tab=cruise&year=2005");
   });
 
   it("renders top-items chips", () => {
@@ -92,6 +158,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("AIDA")).toBeInTheDocument();
@@ -106,6 +173,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     // The fake `t` returns the key, so seeing the KEY is the proof the badge
@@ -126,6 +194,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={2024}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("stats:overviewCard.yearScopedCount")).toBeInTheDocument();
@@ -140,6 +209,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("stats:overviewCard.lifetimeCount")).toBeInTheDocument();
@@ -154,8 +224,73 @@ describe("DomainSummaryCard", () => {
         selectedYear={2024}
         compareYear={2023}
         compareEnabled={true}
+        comparison={null}
       />
     );
     expect(screen.getByText(/yearFilter\.vs/)).toBeInTheDocument();
+  });
+
+  // CT106 audit B03: "Scope: 2005 · 1 flight" over the lifetime distance.
+  describe("under a selected year", () => {
+    const renderYear = (year: number): void => {
+      render(
+        <DomainSummaryCard
+          domain="cruise"
+          stats={cruiseStats}
+          selectedYear={year}
+          compareYear={null}
+          compareEnabled={false}
+          comparison={null}
+        />
+      );
+    };
+
+    it("shows that year's figures and top items, not the lifetime ones", () => {
+      renderYear(2023);
+      expect(screen.getByText("21")).toBeInTheDocument();
+      expect(screen.getByText("9")).toBeInTheDocument();
+      expect(screen.getByText("TUI")).toBeInTheDocument();
+      expect(screen.queryByText("28,400 stats:overviewCard.unit.km")).toBeNull();
+      expect(screen.queryByText("AIDA")).toBeNull();
+    });
+
+    it("says there is nothing in a year without events instead of printing zeros", () => {
+      renderYear(2024);
+      expect(screen.getByText("stats:overviewCard.noEventsInYear")).toBeInTheDocument();
+      expect(screen.queryByText("84")).toBeNull();
+    });
+
+    it("labels all-years badges as all-years", () => {
+      renderYear(2023);
+      expect(screen.getByText(/stats:overviewCard\.allYearsOnly/)).toBeInTheDocument();
+    });
+  });
+
+  // CT106 audit B11: the places card printed "viewpoint".
+  it("translates top items that are codes, not names", () => {
+    const poiStats: DomainStats = {
+      ...cruiseStats,
+      domain: "poi",
+      summary: {
+        headlineKpis: [],
+        topItems: {
+          titleKey: "overviewCard.topItems.categories",
+          items: [{ label: "viewpoint", value: 2 }],
+          labelKeyPrefix: "places:categories",
+        },
+        detailRoute: "/stats?tab=poi",
+      },
+    } as DomainStats;
+    render(
+      <DomainSummaryCard
+        domain="poi"
+        stats={poiStats}
+        selectedYear={null}
+        compareYear={null}
+        compareEnabled={false}
+        comparison={null}
+      />
+    );
+    expect(screen.getByText("places:categories.viewpoint")).toBeInTheDocument();
   });
 });

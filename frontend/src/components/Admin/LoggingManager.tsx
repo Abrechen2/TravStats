@@ -342,7 +342,7 @@ export default function LoggingManager({
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button
                         onClick={() => onDownload(file.filename)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-(--accent) hover:text-(--accent)"
                       >
                         {t("admin:logging.files.download")}
                       </button>

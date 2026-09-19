@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { PAPER } from "../lib/paperPalette";
 import { useTranslation } from "../hooks/useTranslation";
 
 export interface FlightCertificateStats {
@@ -18,13 +19,12 @@ interface FlightCertificateProps {
   onClose: () => void;
 }
 
-// ─── Design tokens ─────────────────────────────────────────────────────────
-const PARCHMENT = "#f1e7cd";
-const INK = "#1c2a3d";
-const INK_SOFT = "#3b4d66";
-const BRONZE = "#a17236";
-const STAMP_RED = "#bd3a3a";
-const PAPER_SHADOW = "rgba(28,42,61,0.08)";
+const PARCHMENT = PAPER.sheet; // one paper colour — see lib/paperPalette.ts
+const INK = PAPER.ink;
+const INK_SOFT = PAPER.inkSoft;
+const BRONZE = PAPER.accent;
+const STAMP_RED = PAPER.stamp;
+const PAPER_SHADOW = PAPER.shadow;
 
 // Earth's equatorial circumference (km), used for the "around the Earth"
 // shareable comparison.
@@ -192,7 +192,7 @@ export function FlightCertificate({
             transition: "transform 0.15s ease, background 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            if (!downloading) e.currentTarget.style.background = "#b97f3c";
+            if (!downloading) e.currentTarget.style.background = PAPER.accentHover;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = BRONZE;

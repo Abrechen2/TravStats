@@ -59,4 +59,13 @@ export default [
       "@typescript-eslint/no-empty-object-type": "off",
     },
   },
+  {
+    // Build scripts run in Node, not in a browser: they read design/tokens.json
+    // and write into src/theme. Without this they are linted against the
+    // browser globals and every `process` and `Buffer` reads as undefined.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
 ];

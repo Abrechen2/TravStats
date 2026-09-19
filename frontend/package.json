@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "tokens": "node scripts/generate-theme.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",

@@ -1,6 +1,7 @@
 {
   "title": "Settings",
   "subtitle": "Profile, preferences and security in one place.",
+  "demoLocked": "Locked in the demo account — every visitor shares it.",
   "roadmap": "Roadmap · Point 9",
   "backToDashboard": "← Back to Dashboard",
   "tabs": {
@@ -54,13 +55,24 @@
     "noIndependentHotels": "No independent, chain-less hotels available."
   },
   "about": {
-    "title": "About",
     "buildLabel": "Build",
     "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
     "dataSources": {
       "title": "Data sources & attribution",
-      "fullList": "Full list with licenses"
-    }
+      "fullList": "Full list with licenses",
+      "osm": "map tiles (ODbL 1.0)",
+      "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)"
+    },
+    "title": "About TravStats",
+    "tagline": "Self-hosted travel logbook",
+    "licenseTitle": "License",
+    "licenseSub": "GNU Affero General Public License v3.0 (AGPL-3.0) · © 2025 Dennis Wittke",
+    "licenseBody": "Free software: you may redistribute and modify it under the terms of the AGPL. If you run it as a web service, you must make the complete source code available under AGPL-3.0.",
+    "sourceCode": "Source code",
+    "supportTitle": "Support",
+    "supportSub": "A star on GitHub or a donation helps keep it going.",
+    "star": "Star on GitHub",
+    "donate": "Donate via PayPal"
   },
   "profile": {
     "title": "User Profile",
@@ -92,7 +104,8 @@
     "help": {
       "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service."
     },
-    "editProfile": "Edit profile"
+    "editProfile": "Edit profile",
+    "changePicture": "Change picture"
   },
   "homeAirport": {
     "title": "Home airport",
@@ -132,7 +145,20 @@
     },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
-    "timeFormat": "Time Format"
+    "timeFormat": "Time Format",
+    "languageSub": "Interface and date formats",
+    "timezoneSub": "For showing local times",
+    "dateFormatSub": "In prose and forms; tables show ISO",
+    "timeFormatSub": "Departure, arrival and check-in times",
+    "dateFormats": {
+      "dmy": "DD.MM.YYYY",
+      "iso": "YYYY-MM-DD",
+      "mdy": "MM/DD/YYYY"
+    },
+    "timeFormats": {
+      "24h": "24 h",
+      "12h": "12 h"
+    }
   },
   "domainColors": {
     "title": "Domain colours",
@@ -162,7 +188,14 @@
       "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
       "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
     },
-    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were."
+    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were.",
+    "distanceSub": "For distances and statistics",
+    "currencySub": "For spending totals; exchange rates from the ECB",
+    "short": {
+      "kilometers": "km",
+      "miles": "mi",
+      "nautical_miles": "nmi"
+    }
   },
   "defaults": {
     "title": "Default Values",
@@ -180,7 +213,8 @@
       "business": "Business",
       "first": "First",
       "private": "Private",
-      "vacation": "Vacation"
+      "vacation": "Vacation",
+      "noneShort": "None"
     },
     "help": {
       "status": "\"Scheduled\" makes sense for upcoming flights; \"Flown\" is convenient when quickly entering past flights.",
@@ -229,7 +263,11 @@
       "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
-    }
+    },
+    "emailSub": "Where reminders go; empty = none",
+    "before24hSub": "A reminder one day before departure",
+    "before2hSub": "A reminder shortly before departure",
+    "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {
     "title": "Privacy & Security",
@@ -258,7 +296,9 @@
       "lastBackup": "Last backup: {{date}}",
       "size": "Size: {{size}} MB",
       "noBackup": "No backup created yet",
-      "path": "Backup path: {{path}}"
+      "path": "Backup path: {{path}}",
+      "runningShort": "Running",
+      "noneShort": "None"
     },
     "intervals": {
       "daily": "Daily",
@@ -269,7 +309,8 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
-    }
+    },
+    "lastInstanceBackup": "Last instance backup"
   },
   "password": {
     "title": "Change Password",
@@ -337,7 +378,9 @@
   "autoSave": {
     "idle": "Changes are saved automatically",
     "saving": "Saving …",
-    "saved": "Saved"
+    "saved": "Saved",
+    "pending": "Unsaved changes",
+    "failed": "Saving failed"
   },
   "scrollToTop": "Scroll to top",
   "sectionPicker": "Section",
@@ -714,6 +757,11 @@
       "create": "Failed to create token",
       "revoke": "Failed to revoke token",
       "labelRequired": "Label is required"
+    },
+    "scopesShort": {
+      "read": "Read",
+      "write": "Write",
+      "admin": "Admin"
     }
   },
   "security": {
@@ -734,7 +782,13 @@
     "disable": "Disable two-factor",
     "confirmDisable": "Disable",
     "passwordLabel": "Password to confirm",
-    "wrongPassword": "That password is not right."
+    "wrongPassword": "That password is not right.",
+    "sectionDescription": "How your sign-in is protected.",
+    "passwordTitle": "Password",
+    "passwordSub": "For signing in with your username",
+    "passwordChange": "Change",
+    "twoFactorTitle": "Two-factor authentication",
+    "active": "Active"
   },
   "scopeHint": "Applies to your account only.",
   "passkeys": {
@@ -759,6 +813,13 @@
     "description": "Which kind of evidence makes a country count towards your total.",
     "label": "A country counts from …",
     "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
-    "useInstanceDefault": "Use this instance's default ({{tier}})"
+    "useInstanceDefault": "Use this instance's default ({{tier}})",
+    "instanceShort": "Instance ({{tier}})"
+  },
+  "groups": {
+    "account": "Account",
+    "display": "Appearance",
+    "data": "Data",
+    "services": "Services"
   }
 }

@@ -13,6 +13,7 @@ import { placesApi } from "../lib/api/places";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
+import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { AllTab } from "../components/Dashboard/tabs/AllTab";
 import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
 import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
@@ -61,17 +62,16 @@ export default function DashboardPage(): JSX.Element {
   // a cold load; treating that as "denied" would redirect a direct
   // `/dashboard/tour` load away before the flag has even answered, the exact
   // /dashboard/poi bug below.
-
-  const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
-  // How many of the counted entries are merely planned (B6): shown as a
-  // "(n geplant)" hint so the tab count and the flown-only statistics stop
-  // looking contradictory. Cruises derive it from the list already loaded;
-  // flights need their own count query.
-  const [scheduledCounts, setScheduledCounts] = useState<{ flight: number; cruise: number }>({
-    flight: 0,
-    cruise: 0,
-  });
-  const [countsLoaded, setCountsLoaded] = useState(false);
+  // Counts live in a module-level Zustand store, not `useState` here --
+  // `App.tsx` keys its animated `Routes` on `location.pathname`, so
+  // `/dashboard/flight` -> `/dashboard/cruise` remounts this component on
+  // every tab change. A local `useState` would reset to zero and refetch on
+  // each switch; `DomainTabStrip` shows the badge for any non-null count, so
+  // the strip flashed "0" on every tab change (tester report, task 2 of the
+  // 2026-09-17 alex-design-feedback plan). The store survives the remount:
+  // the effect below still refetches for freshness, but the badge keeps
+  // showing the last loaded number while that refetch is in flight.
+  const { counts, scheduledCounts, countsLoaded, setCounts } = useDashboardCountsStore();
   // Only nag about the moved import once the account is known to have flights.
   useImportMigrationToast(countsLoaded && counts.flight > 0);
   // Bumping this token re-runs the counts effect AND remounts the
@@ -107,17 +107,18 @@ export default function DashboardPage(): JSX.Element {
           placesPromise,
         ]);
         if (cancelled) return;
-        setCounts({
-          flight: flights.total,
-          cruise: cruises.length,
-          poi: placeCount,
-          lodging: lodgingStats?.lodgingsCount ?? 0,
-        });
-        setScheduledCounts({
-          flight: scheduledFlights.total,
-          cruise: cruises.filter((c) => c.status === "scheduled").length,
-        });
-        setCountsLoaded(true);
+        setCounts(
+          {
+            flight: flights.total,
+            cruise: cruises.length,
+            poi: placeCount,
+            lodging: lodgingStats?.lodgingsCount ?? 0,
+          },
+          {
+            flight: scheduledFlights.total,
+            cruise: cruises.filter((c) => c.status === "scheduled").length,
+          }
+        );
       } catch (err) {
         logger.error("Failed to load dashboard counts:", err);
       }

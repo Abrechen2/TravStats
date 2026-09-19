@@ -11,8 +11,11 @@ import { useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { SettingRow } from "../ui/SettingRow";
+import DemoLockedNotice from "./DemoLockedNotice";
 import { formatDate } from "../../lib/displayFormat";
 
 /** Cancelling the OS or password-manager dialog rejects with this. It is a
@@ -25,6 +28,7 @@ function isUserCancellation(error: unknown): boolean {
 
 export default function PasskeySection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [reason, setReason] = useState<PasskeyUnavailableReason | null>(null);
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
@@ -101,110 +105,113 @@ export default function PasskeySection(): JSX.Element {
   if (available === null) return <div />;
 
   return (
-    <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--color-border)" }}>
-      <h3 className="text-base font-semibold mb-1">{t("settings:passkeys.title")}</h3>
-      <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-        {t("settings:passkeys.description")}
-      </p>
-
-      {!available && (
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {reason === "insecureOrigin"
-            ? t("settings:passkeys.insecureOrigin")
-            : t("settings:passkeys.notConfigured")}
-        </p>
-      )}
-
-      {available && (
-        <div className="space-y-4">
-          {passkeys.length === 0 && (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("settings:passkeys.none")}
-            </p>
-          )}
-
-          {passkeys.length > 0 && (
-            <ul className="space-y-2">
-              {passkeys.map((key) => (
-                <li
-                  key={key.id}
-                  className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
-                  style={{ background: "var(--bg-elevated)" }}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{key.name}</p>
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:passkeys.rpIdLabel")}: {key.rpId}
-                      {key.lastUsedAt
-                        ? ` · ${t("settings:passkeys.lastUsed")} ${formatDate(key.lastUsedAt)}`
-                        : ` · ${t("settings:passkeys.neverUsed")}`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-secondary shrink-0"
-                    onClick={() => void remove(key.id)}
-                  >
-                    {t("settings:passkeys.remove")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {!adding && (
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      <SettingRow
+        title={t("settings:passkeys.title")}
+        sub={t("settings:passkeys.description")}
+        control={
+          available && !adding && !isDemo ? (
             <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
               {t("settings:passkeys.add")}
             </button>
+          ) : null
+        }
+      />
+
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : (
+        <>
+          {!available && (
+            <p className="t-caption">
+              {reason === "insecureOrigin"
+                ? t("settings:passkeys.insecureOrigin")
+                : t("settings:passkeys.notConfigured")}
+            </p>
           )}
 
-          {adding && (
-            <div className="space-y-2">
-              <label
-                htmlFor="passkey-name"
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {t("settings:passkeys.nameLabel")}
-              </label>
-              <input
-                id="passkey-name"
-                type="text"
-                className="input w-full"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("settings:passkeys.namePlaceholder")}
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={busy || name.trim().length === 0}
-                  onClick={() => void add()}
-                >
-                  {t("settings:passkeys.confirmAdd")}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setAdding(false);
-                    setName("");
-                    setError(null);
-                  }}
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-              </div>
-            </div>
-          )}
+          {available && (
+            <div className="space-y-4">
+              {passkeys.length === 0 && <p className="t-caption">{t("settings:passkeys.none")}</p>}
 
-          {error && (
-            <div role="alert" className="text-sm text-red-400">
-              {error}
+              {passkeys.length > 0 && (
+                <ul className="space-y-2">
+                  {passkeys.map((key) => (
+                    <li
+                      key={key.id}
+                      className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                      style={{ background: "var(--bg-elevated)" }}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{key.name}</p>
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {t("settings:passkeys.rpIdLabel")}: {key.rpId}
+                          {key.lastUsedAt
+                            ? ` · ${t("settings:passkeys.lastUsed")} ${formatDate(key.lastUsedAt)}`
+                            : ` · ${t("settings:passkeys.neverUsed")}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary shrink-0"
+                        onClick={() => void remove(key.id)}
+                      >
+                        {t("settings:passkeys.remove")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {adding && (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="passkey-name"
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {t("settings:passkeys.nameLabel")}
+                  </label>
+                  <input
+                    id="passkey-name"
+                    type="text"
+                    className="input w-full"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("settings:passkeys.namePlaceholder")}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={busy || name.trim().length === 0}
+                      onClick={() => void add()}
+                    >
+                      {t("settings:passkeys.confirmAdd")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setAdding(false);
+                        setName("");
+                        setError(null);
+                      }}
+                    >
+                      {t("common:buttons.cancel")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div role="alert" className="text-sm text-red-400">
+                  {error}
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

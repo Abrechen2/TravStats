@@ -1,10 +1,16 @@
-import { buildTravelAccount } from "../travelAccount";
+import { attributeTravelNights, buildTravelAccount } from "../travelAccount";
 import { buildTripAccount, type TripAccountInput } from "../tripAccount";
 
 const NOW = new Date("2026-08-15T12:00:00Z");
 const d = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
 
+let fixtureSeq = 0;
+const nextId = (prefix: string): string => `${prefix}${(fixtureSeq += 1)}`;
+
 const stay = (checkIn: string, checkOut: string, status = "completed") => ({
+  id: nextId("stay-"),
+  datePrecision: "DAY",
+  nights: null,
   status,
   checkIn: d(checkIn),
   checkOut: d(checkOut),
@@ -13,6 +19,13 @@ const stay = (checkIn: string, checkOut: string, status = "completed") => ({
 /** UTC midnight of the calendar day an ISO instant falls on, in UTC. */
 const utcDay = (at: Date): Date =>
   new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+
+const cruise = (startDate: string, endDate: string, status = "flown") => ({
+  id: nextId("cruise-"),
+  status,
+  startDate: d(startDate),
+  endDate: d(endDate),
+});
 
 /**
  * A flight whose local days are simply its UTC days — an airport sitting in
@@ -23,6 +36,7 @@ const utcFlight = (departure: string, arrival: string, status = "flown") => {
   const departureTime = new Date(departure);
   const arrivalTime = new Date(arrival);
   return {
+    id: nextId("flight-"),
     status,
     departureTime,
     arrivalTime,
@@ -35,7 +49,7 @@ describe("buildTravelAccount", () => {
   it("closes out the year: every night is in exactly one bucket", () => {
     const account = buildTravelAccount({
       stays: [stay("2025-03-01", "2025-03-04")],
-      cruises: [{ status: "flown", startDate: d("2025-06-01"), endDate: d("2025-06-08") }],
+      cruises: [cruise("2025-06-01", "2025-06-08")],
       flights: [utcFlight("2025-09-01T22:00:00Z", "2025-09-02T08:00:00Z")],
       now: NOW,
     });
@@ -61,7 +75,7 @@ describe("buildTravelAccount", () => {
     // precedence is a convention; the count is what makes it visible.
     const account = buildTravelAccount({
       stays: [stay("2025-06-02", "2025-06-04")],
-      cruises: [{ status: "flown", startDate: d("2025-06-01"), endDate: d("2025-06-08") }],
+      cruises: [cruise("2025-06-01", "2025-06-08")],
       now: NOW,
       flights: [],
     });
@@ -124,6 +138,7 @@ describe("buildTravelAccount", () => {
     // LAX -> SFO, 16:30 to 17:30 local on 1 June. In UTC that is
     // 23:30 to 00:30, i.e. across a UTC date boundary.
     const eveningHop = {
+      id: nextId("flight-"),
       status: "flown",
       departureTime: new Date("2025-06-01T23:30:00Z"),
       arrivalTime: new Date("2025-06-02T00:30:00Z"),
@@ -134,6 +149,7 @@ describe("buildTravelAccount", () => {
     // The mirror: 23:30 to 00:30 LOCAL, which is 06:30 to 07:30 UTC on one
     // and the same UTC day — a genuine night, invisible to a UTC comparison.
     const redEye = {
+      id: nextId("flight-"),
       status: "flown",
       departureTime: new Date("2025-06-02T06:30:00Z"),
       arrivalTime: new Date("2025-06-02T07:30:00Z"),
@@ -163,6 +179,73 @@ describe("buildTravelAccount", () => {
       const y = account.years.find((r) => r.year === "2025");
       expect(y?.airNights).toBe(1);
     });
+  });
+});
+
+/**
+ * The attribution core the evidence panel reads. Everything asserted here is
+ * a fact `buildTravelAccount` already relies on but throws away — which is
+ * precisely why it was unobservable until the panel needed it.
+ */
+describe("attributeTravelNights", () => {
+  it("names the row behind every night, and awards a contested one to the cabin", () => {
+    const hotel = stay("2025-06-02", "2025-06-04");
+    const atSea = cruise("2025-06-01", "2025-06-08");
+    const { nights } = attributeTravelNights({
+      stays: [hotel],
+      cruises: [atSea],
+      flights: [],
+      now: NOW,
+    });
+
+    expect(nights).toHaveLength(7);
+    // Ascending by day, so a pager never has to sort them again.
+    expect(nights.map((n) => n.day)).toEqual([...nights.map((n) => n.day)].sort((a, b) => a - b));
+
+    const contested = nights.filter((n) => n.contested);
+    expect(contested).toHaveLength(2);
+    for (const night of contested) {
+      expect(night.claims.hotel).toEqual([hotel.id]);
+      expect(night.claims.sea).toEqual([atSea.id]);
+      // Sea beats a hotel — the same precedence the year rows report.
+      expect(night.awardedTo).toBe("sea");
+    }
+    // The uncontested five carry the cruise alone.
+    for (const night of nights.filter((n) => !n.contested)) {
+      expect(night.claims.hotel).toBeUndefined();
+      expect(night.claims.sea).toEqual([atSea.id]);
+    }
+  });
+
+  it("lists BOTH stays when two of them cover the same night", () => {
+    // The account's own arithmetic cannot see this case at all — one night is
+    // one hotel night however many rows claim it — so a resolver splitting a
+    // night's credit needs the list, not the count.
+    const first = stay("2025-03-01", "2025-03-03");
+    const second = stay("2025-03-02", "2025-03-04");
+    const { nights } = attributeTravelNights({
+      stays: [first, second],
+      cruises: [],
+      flights: [],
+      now: NOW,
+    });
+
+    expect(nights).toHaveLength(3);
+    expect(nights[1].claims.hotel).toEqual([first.id, second.id]);
+    // Two ROWS on one night is not a contest: `contestedNights` counts nights
+    // where two BUCKETS disagreed about where they were slept.
+    expect(nights[1].contested).toBe(false);
+  });
+
+  it("counts an undated stay as undated rather than placing it on a day", () => {
+    const { nights, undatedStays } = attributeTravelNights({
+      stays: [{ ...stay("2025-03-01", "2025-03-03"), checkIn: null, checkOut: null }],
+      cruises: [],
+      flights: [],
+      now: NOW,
+    });
+    expect(nights).toEqual([]);
+    expect(undatedStays).toBe(1);
   });
 });
 

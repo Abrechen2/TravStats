@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Icon } from "../ui/Icon";
+import { SettingRow } from "../ui/SettingRow";
 
 interface ImportTileShellProps {
   title: string;
@@ -14,9 +16,13 @@ interface ImportTileShellProps {
 }
 
 /**
- * Visual shell shared by every Settings → Import tile. Matches the rest of
- * the Settings UI: rounded card on the elevated background, border, padded,
- * column-flex so descriptions push the picker to the bottom.
+ * One import route in Settings → Listen importieren, drawn as a settings row:
+ * what it imports on the left, the file picker on the right, and whatever the
+ * route needs to say after a run (error, status, preview) underneath.
+ *
+ * Round 4 lists the routes as rows. They were a grid of tiles, where the
+ * descriptions pushed each picker to a different height and a two-route area
+ * left an empty third of the card.
  */
 export function ImportTileShell({
   title,
@@ -27,20 +33,8 @@ export function ImportTileShell({
   children,
 }: ImportTileShellProps): JSX.Element {
   return (
-    <div
-      className="flex h-full flex-col gap-3 rounded-lg p-4"
-      style={{
-        background: "var(--bg-elevated)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-        {title}
-      </h3>
-      <p className="grow text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-        {description}
-      </p>
-      <div className="flex flex-wrap items-center gap-2">{picker}</div>
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+      <SettingRow title={title} sub={description} control={picker} />
       {errorBlock}
       {statusBlock}
       {children}
@@ -61,7 +55,7 @@ interface ImportFilePickerProps {
 }
 
 /**
- * Styled file picker — hidden native input, btn-primary label. Reusable
+ * Styled file picker — hidden native input, btn-secondary label. Reusable
  * across all import tiles so file-pickers look identical.
  */
 export function ImportFilePicker({
@@ -73,11 +67,11 @@ export function ImportFilePicker({
 }: ImportFilePickerProps): JSX.Element {
   return (
     <label
-      className={`btn-primary inline-flex cursor-pointer items-center gap-2 ${
+      className={`btn-secondary inline-flex cursor-pointer items-center gap-2 ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
     >
-      <span aria-hidden="true">📁</span>
+      <Icon name="upload" size={14} />
       <span>{label}</span>
       <input
         type="file"
@@ -105,9 +99,9 @@ export function ImportErrorBlock({ message }: ImportErrorBlockProps): JSX.Elemen
     <pre
       className="overflow-auto whitespace-pre-wrap rounded-md p-3 text-xs"
       style={{
-        background: "rgba(239, 68, 68, 0.1)",
-        border: "1px solid rgba(239, 68, 68, 0.4)",
-        color: "rgb(252, 165, 165)",
+        background: "color-mix(in srgb, var(--ts-bad) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--ts-bad) 40%, transparent)",
+        color: "var(--ts-bad)",
       }}
     >
       {message}

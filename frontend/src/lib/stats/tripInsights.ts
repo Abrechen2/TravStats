@@ -1,4 +1,5 @@
 import type { Trip } from "../../types";
+import type { TripCostSuperlative } from "../api/trips";
 import { calculateDistance } from "../geo";
 import { sumByCurrency, tripCostSources } from "../bookingCost";
 import { formatCurrency } from "../units";
@@ -7,8 +8,19 @@ import { formatCurrency } from "../units";
  * Trip-level insights (#3): the standout trips across the whole logbook. The
  * trip is the cross-domain bracket, but until now it was only ever shown as a
  * single sum — never "which trip was the longest / most expensive / reached the
- * most countries". Computed from the trips list, reusing the SAME cost model as
- * the cards so a trip's cost can never disagree between screens.
+ * most countries". `longest` and `mostCountries` are still computed from the
+ * (capped) trips list the caller already has, reusing the SAME cost model as
+ * the cards.
+ *
+ * `mostExpensive` is NOT: it used to compare `tripDominantCost` — each trip's
+ * largest PER-CURRENCY bucket — as a raw number across trips, so 334.000 ¥
+ * beat 1.650 € and a 200.000 KRW trip (≈130 €) beat every euro trip. Fixed by
+ * moving the ranking to the backend (`services/trip/tripCostSuperlative.ts`),
+ * which compares the FX base-currency amount instead; the caller fetches it
+ * via `tripsApi.getAllWithInsights()` and passes it in here. `tripDominantCost`
+ * stays exported below — it is still correct for what it does (a trip's OWN
+ * display total, never a converted figure) — but it no longer decides a
+ * cross-trip ranking.
  */
 export interface TripInsightWinner {
   tripId: string;
@@ -23,6 +35,15 @@ export interface TripInsights {
   longest: TripInsightWinner | null;
   mostExpensive: TripInsightWinner | null;
   mostCountries: TripInsightWinner | null;
+  /**
+   * How many started trips were left out of the `mostExpensive` comparison
+   * for lack of an honest conversion (fix round 1, finding 2) — carried
+   * through from the backend's `TripCostSuperlative.excluded.count` rather
+   * than dropped, so the card can say "N trips not compared" instead of
+   * presenting a winner that might not be the true maximum as if it were.
+   * 0 when `mostExpensive` is null (nothing to caveat) or nothing was excluded.
+   */
+  mostExpensiveExcludedCount: number;
 }
 
 /** Great-circle km of a trip's flights plus its cruise legs. */
@@ -76,7 +97,11 @@ function winner(
   return best;
 }
 
-export function computeTripInsights(trips: Trip[], language: string): TripInsights {
+export function computeTripInsights(
+  trips: Trip[],
+  language: string,
+  mostExpensiveTrip: TripCostSuperlative | null
+): TripInsights {
   // A trip still on the drawing board hasn't flown, spent, or visited
   // anything yet — it must not win a superlative over a trip that has.
   const started = trips.filter((t) => t.status !== "planned");
@@ -87,18 +112,25 @@ export function computeTripInsights(trips: Trip[], language: string): TripInsigh
       (t) => tripDistanceKm(t),
       (_t, km) => `${nf.format(Math.round(km))} km`
     ),
-    mostExpensive: winner(
-      started,
-      (t) => tripDominantCost(t)?.amount ?? 0,
-      (t) => {
-        const c = tripDominantCost(t)!;
-        return formatCurrency(c.amount, c.currency, { compact: true, language });
-      }
-    ),
+    mostExpensive: mostExpensiveTrip
+      ? {
+          tripId: mostExpensiveTrip.tripId,
+          name: mostExpensiveTrip.name,
+          amount: mostExpensiveTrip.amount,
+          // Through `formatCurrency` like every other money figure (forgejo#86).
+          // The amount here is the trip's OWN dominant-currency total — the
+          // backend's base-currency conversion only decided WHICH trip this is.
+          value: formatCurrency(mostExpensiveTrip.amount, mostExpensiveTrip.currency, {
+            compact: true,
+            language,
+          }),
+        }
+      : null,
     mostCountries: winner(
       started,
       (t) => t.countries?.length ?? 0,
       (_t, n) => String(n)
     ),
+    mostExpensiveExcludedCount: mostExpensiveTrip?.excluded.count ?? 0,
   };
 }

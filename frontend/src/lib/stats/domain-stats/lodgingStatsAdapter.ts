@@ -8,7 +8,9 @@
 // response doesn't carry day-level granularity).
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import { classifyLodging, classifyStay } from "../../../shared/lodgingCounting";
-import type { DomainStats } from "./types";
+import { crossDomainDayKey } from "../../../shared/crossDomainCounting";
+import type { DomainStats, YearSummary } from "./types";
+import { bucket, topFive } from "./yearSummary";
 import { toYearKeyed } from "./yearKeyed";
 
 export interface LodgingAdapterInput {
@@ -26,9 +28,14 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   const chainCounts = new Map<string, number>();
+  const perYear = new Map<
+    number,
+    { nights: number; lodgings: Set<string>; chains: Map<string, number> }
+  >();
 
   for (const lodging of lodgings) {
     // Mirrors calculateLodgingStats: a house the user only bookmarked
@@ -58,14 +65,52 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
 
       const startYear = checkIn.getUTCFullYear();
       yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
+      // Keyed on the check-in day — the same day the year tally counts it in.
+      const checkInKey = crossDomainDayKey(
+        startYear,
+        checkIn.getUTCMonth() + 1,
+        checkIn.getUTCDate()
+      );
+      dailyEvents[checkInKey] = (dailyEvents[checkInKey] ?? 0) + 1;
       weekdayEvents[checkIn.getUTCDay()] = (weekdayEvents[checkIn.getUTCDay()] ?? 0) + 1;
 
       if (lodging.chain?.name) {
         chainCounts.set(lodging.chain.name, (chainCounts.get(lodging.chain.name) ?? 0) + 1);
       }
 
+      // The year of the check-in, as for `yearlyEvents`. Nights are whole UTC
+      // days between check-in and check-out; a same-day stay has none.
+      const y = bucket(perYear, startYear, () => ({
+        nights: 0,
+        lodgings: new Set<string>(),
+        chains: new Map<string, number>(),
+      }));
+      const inDay = Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate());
+      const outDay = Date.UTC(
+        checkOut.getUTCFullYear(),
+        checkOut.getUTCMonth(),
+        checkOut.getUTCDate()
+      );
+      y.nights += Math.max(0, Math.round((outDay - inDay) / 86_400_000));
+      y.lodgings.add(lodging.id);
+      if (lodging.chain?.name) {
+        y.chains.set(lodging.chain.name, (y.chains.get(lodging.chain.name) ?? 0) + 1);
+      }
+
       markActiveDays(checkIn, checkOut, dailyActiveDays, monthlyActiveDays, yearlyActiveDays);
     }
+  }
+
+  const summaryByYear: Record<number, YearSummary> = {};
+  for (const [year, y] of perYear) {
+    summaryByYear[year] = {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.nights", value: y.nights },
+        { labelKey: "overviewCard.kpi.lodgings", value: y.lodgings.size },
+        { labelKey: "overviewCard.kpi.chains", value: y.chains.size },
+      ],
+      topItems: { titleKey: "overviewCard.topItems.chains", items: topFive(y.chains) },
+    };
   }
 
   const topChains = [...chainCounts.entries()]
@@ -81,7 +126,9 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
     // Without this index the overview's single-year tile fell back to the
     // lifetime set — "35 countries" under a "Year 2024" header (forgejo#80).
     countriesByYear: toYearKeyed(stats.countriesByYear),
+    summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

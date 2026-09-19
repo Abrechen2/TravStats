@@ -30,14 +30,11 @@ function renderSection(overrides: Record<string, unknown> = {}) {
       lastName: "Wittke",
       birthdate: "1980-01-01",
     },
-    savingProfile: false,
     uploadingProfilePicture: false,
     removingProfilePicture: false,
-    onSaveProfile: vi.fn(),
     onAvatarUpload: vi.fn(),
     onAvatarDelete: vi.fn(),
     onSetProfile: vi.fn(),
-    onShowPasswordModal: vi.fn(),
     ...overrides,
   };
   const rendered = render(
@@ -70,5 +67,12 @@ describe("ProfileSection labels", () => {
     expect(props.onSetProfile).not.toHaveBeenCalled();
     // And it says why, rather than leaving a dead field to be puzzled over.
     expect(screen.getByText("settings:profile.usernameHint")).toBeTruthy();
+  });
+
+  // Round 4 (E10): the profile saves as it changes, like every other section;
+  // a button that only repeated the auto-save suggested edits were not kept.
+  it("draws no save button of its own", () => {
+    renderSection();
+    expect(screen.queryByRole("button", { name: /settings:profile\.save/ })).toBeNull();
   });
 });

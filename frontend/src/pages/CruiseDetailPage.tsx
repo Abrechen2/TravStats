@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
@@ -11,9 +11,15 @@ import {
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
-import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
+import CruiseItinerary from "../components/Cruise/CruiseItinerary";
 import TripPill from "../components/Trips/TripPill";
-import NavigationBar from "../components/NavigationBar";
+import AppShell from "../components/ui/AppShell";
+import DetailHeader from "../components/ui/DetailHeader";
+import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
+import DetailSection from "../components/ui/DetailSection";
+import PeopleList from "../components/ui/PeopleList";
+import { Icon } from "../components/ui/Icon";
+import Button from "../components/ui/Button";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatAmount } from "../lib/units";
@@ -83,10 +89,9 @@ export default function CruiseDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="p-6 text-(--text-muted)">{t("detail.loading")}</div>
-      </div>
+      <AppShell width="list">
+        <p className="text-(--text-muted)">{t("detail.loading")}</p>
+      </AppShell>
     );
   }
   if (failure !== null || !cruise) {
@@ -94,15 +99,11 @@ export default function CruiseDetailPage(): JSX.Element {
     // "not found" must not pretend to have.
     const isLoadError = failure === "loadError";
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl p-6">
-          <button
-            onClick={() => navigate("/cruises")}
-            className="text-sm text-(--accent) hover:underline"
-          >
+      <AppShell width="reading">
+        <div>
+          <Link to="/cruises" className="ts-back-link text-sm text-(--text-muted)">
             ← {t("list.title")}
-          </button>
+          </Link>
           <div
             role="alert"
             className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
@@ -110,249 +111,216 @@ export default function CruiseDetailPage(): JSX.Element {
             {isLoadError ? t("detail.loadError") : t("detail.notFound")}
           </div>
           {isLoadError && (
-            <button
-              type="button"
-              onClick={() => setReloadKey((k) => k + 1)}
-              className="mt-3 rounded-md border border-(--color-border) px-3 py-2 text-sm text-(--text-secondary) hover:text-(--text-primary)"
-            >
-              {t("common:buttons.retry")}
-            </button>
+            <div className="mt-3">
+              <Button onClick={() => setReloadKey((k) => k + 1)}>
+                {t("common:buttons.retry")}
+              </Button>
+            </div>
           )}
         </div>
-      </div>
+      </AppShell>
     );
   }
-
-  // Effective itinerary includes departure/arrival ports so the route list
-  // never reads emptier than the list page's port count for the same cruise.
-  const events: TimelineEvent[] = buildEffectiveTimeline(cruise).map((entry) => ({
-    id: entry.key,
-    domain: "cruise",
-    date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
-    title: entry.isAtSea
-      ? t("stops.at_sea")
-      : (entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—")),
-    subtitle: entry.isAtSea
-      ? undefined
-      : entry.port
-        ? [entry.port.city, entry.port.country].filter(Boolean).join(", ") || undefined
-        : entry.unresolvedPortName
-          ? t("stops.unresolved")
-          : undefined,
-    meta: entry.excursionNote ?? undefined,
-  }));
 
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
-  return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <button
-          onClick={() => navigate("/cruises")}
-          className="mb-3 text-sm text-(--accent) hover:underline"
-        >
-          ← {t("list.title")}
-        </button>
+  const shipName = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
+  const nights =
+    cruise.startDate && cruise.endDate
+      ? Math.round(
+          (Date.parse(cruise.endDate.slice(0, 10)) - Date.parse(cruise.startDate.slice(0, 10))) /
+            86_400_000
+        )
+      : null;
+  const countries = new Set(
+    buildEffectiveTimeline(cruise)
+      .map((entry) => entry.port?.country)
+      .filter((c): c is string => Boolean(c))
+  ).size;
+  const price =
+    cruise.price !== null
+      ? formatAmount(cruise.price, cruise.currency, { language: i18n.language })
+      : null;
 
-        {/* Ship-header strip */}
-        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-border bg-(--bg-surface) p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              aria-hidden
-              className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-              style={{
-                backgroundColor: "var(--domain-cruise-soft)",
-                color: "var(--domain-cruise)",
-              }}
-            >
-              🚢
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-(--text-primary)">
-                {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
-              </h1>
-              <p className="text-sm text-(--text-muted)">
-                {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
-              </p>
-              {cruise.routeName && (
-                <p className="text-sm font-medium text-(--text-primary)">{cruise.routeName}</p>
-              )}
-              {cruise.trip && (
-                <p className="mt-1 text-sm" data-testid="cruise-detail-trip">
-                  <TripPill trip={cruise.trip} />
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-(--text-muted)">
-            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
-              {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
-            </span>
-            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
-              {portsCount} {t("field.ports", { count: portsCount })}
-              {unresolvedCount > 0 && (
-                <span
-                  className="ml-1 text-xs"
-                  title={t("list.unresolvedPorts", { count: unresolvedCount })}
-                  aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
-                >
-                  (+{unresolvedCount})
-                </span>
-              )}
-            </span>
-            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
-              {seaDays} {t("field.sea_days", { count: seaDays })}
-            </span>
+  const kpis: DetailKpi[] = [
+    ...(nights !== null && nights >= 0
+      ? [{ key: "nights", value: nights, label: t("detail.nights", { count: nights }) }]
+      : []),
+    {
+      key: "ports",
+      value: (
+        <>
+          {portsCount}
+          {unresolvedCount > 0 && (
             <span
-              className="rounded-full px-2 py-1 font-semibold"
-              style={cruiseStatusPillStyle(cruise.status)}
+              className="t-caption"
+              style={{ marginLeft: 4 }}
+              title={t("list.unresolvedPorts", { count: unresolvedCount })}
+              aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
             >
-              {t(`status.${cruise.status}`)}
+              +{unresolvedCount}
             </span>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-md bg-(--accent) px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-(--accent-dim)"
-            >
-              {t("detail.edit")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              className="rounded-md border border-(--danger)/50 px-3 py-1 text-sm font-medium text-(--danger) hover:bg-(--danger)/10"
-            >
+          )}
+        </>
+      ),
+      label: `${t("field.ports", { count: portsCount })} · ${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+    },
+    ...(countries > 0
+      ? [{ key: "countries", value: countries, label: t("detail.countries", { count: countries }) }]
+      : []),
+    ...(price ? [{ key: "price", value: price, label: t("detail.priceKpi") }] : []),
+  ];
+
+  return (
+    <AppShell width="list">
+      <DetailHeader
+        backTo="/cruises"
+        backLabel={t("detail.backToLogbook")}
+        domain="cruise"
+        icon={<Icon name="ship" size={24} />}
+        title={[shipName, cruise.routeName].filter(Boolean).join(" · ")}
+        meta={[
+          cruise.cruiseLine ?? cruise.ship?.cruiseLine,
+          cruise.startDate && cruise.endDate
+            ? `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`
+            : null,
+          cruise.departurePort && cruise.arrivalPort
+            ? `${cruise.departurePort.name} → ${cruise.arrivalPort.name}`
+            : null,
+          cruise.ship?.imo ? `IMO ${cruise.ship.imo}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}
+        status={
+          <span className="ts-status-pill" style={cruiseStatusPillStyle(cruise.status)}>
+            {t(`status.${cruise.status}`)}
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
+            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
               {t("detail.delete")}
-            </button>
-          </div>
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="flex flex-col gap-6 md:col-span-3">
+          <DetailSection title={t("detail.itinerary")}>
+            {cruise.stops.length > 0 || cruise.departurePort ? (
+              <CruiseItinerary cruise={cruise} />
+            ) : (
+              <p className="t-caption">{t("detail.stopsEmpty")}</p>
+            )}
+          </DetailSection>
+
+          <DetailSection
+            title={t("detail.cabin")}
+            facts={[
+              { label: t("field.cabinNumber"), value: cruise.cabinNumber, mono: true },
+              {
+                label: t("field.cabinType"),
+                value: cruise.cabinType
+                  ? t(`cabinType.${cruise.cabinType}`, { defaultValue: cruise.cabinType })
+                  : null,
+              },
+              { label: t("field.deck"), value: cruise.deck, mono: true },
+            ]}
+          />
+
+          <DetailSection
+            title={t("detail.costs")}
+            facts={[
+              { label: t("field.price"), value: price, mono: true },
+              { label: t("field.bookingReference"), value: cruise.bookingReference, mono: true },
+            ]}
+          />
         </div>
 
-        {/* Two-column body */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div className="md:col-span-3">
-            <h2 className="mb-2 text-sm font-semibold text-(--text-muted)">{t("detail.route")}</h2>
-            {events.length > 0 ? (
-              <TripTimeline events={events} />
-            ) : (
-              <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-6 text-center text-sm text-(--text-muted)">
-                {t("detail.stopsEmpty")}
-              </div>
-            )}
-          </div>
+        <aside className="flex flex-col gap-6 md:col-span-2">
+          {cruise.trip && (
+            <DetailSection title={t("trips:tab")}>
+              <span data-testid="cruise-detail-trip">
+                <TripPill trip={cruise.trip} />
+              </span>
+            </DetailSection>
+          )}
 
-          <aside className="space-y-3 md:col-span-2">
-            <div className="rounded-md border border-border bg-(--bg-surface) p-3">
-              <p className="mb-2 text-xs uppercase text-(--text-muted)">{t("detail.route")}</p>
-              <CruiseRouteMap cruise={cruise} />
-            </div>
+          <DetailSection title={t("detail.route")}>
+            <CruiseRouteMap cruise={cruise} />
+          </DetailSection>
 
-            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.cabin")}</h3>
-              <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
-                <div className="flex justify-between">
-                  <dt>{t("field.cabin")}</dt>
-                  <dd>{cruise.cabinNumber ?? "—"}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t("field.cabinType")}</dt>
-                  <dd>
-                    {cruise.cabinType
-                      ? t(`cabinType.${cruise.cabinType}`, { defaultValue: cruise.cabinType })
-                      : "—"}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t("field.deck")}</dt>
-                  <dd>{cruise.deck ?? "—"}</dd>
-                </div>
-              </dl>
-            </div>
+          {cruise.companions.length > 0 && (
+            <DetailSection title={t("field.companions")}>
+              <PeopleList names={cruise.companions} />
+            </DetailSection>
+          )}
 
-            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.costs")}</h3>
-              <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
-                <div className="flex justify-between">
-                  <dt>{t("field.bookingReference")}</dt>
-                  <dd>{cruise.bookingReference ?? "—"}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t("field.price")}</dt>
-                  <dd>
-                    {cruise.price !== null
-                      ? formatAmount(cruise.price, cruise.currency, { language: i18n.language })
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
-              <h3 className="text-sm font-semibold text-(--text-primary)">{t("detail.meta")}</h3>
+          {(cruise.tags.length > 0 || (cruise.notes !== null && cruise.notes.length > 0)) && (
+            <DetailSection title={t("detail.meta")}>
+              {cruise.notes !== null && cruise.notes.length > 0 && (
+                <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--ts-text)" }}>
+                  {cruise.notes}
+                </p>
+              )}
               {cruise.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {cruise.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-md border border-border px-2 py-0.5 text-xs text-(--text-muted)"
+                      className="rounded-full border px-2.5 py-0.5 text-xs"
+                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
                     >
-                      {tag}
+                      #{tag}
                     </span>
                   ))}
                 </div>
               )}
-              {cruise.companions.length > 0 && (
-                <p className="mt-2 text-xs text-(--text-muted)">
-                  <span className="text-(--text-muted)">{t("field.companions")}:</span>{" "}
-                  {cruise.companions.join(", ")}
-                </p>
-              )}
-              {cruise.notes !== null && cruise.notes.length > 0 && (
-                <p className="mt-2 whitespace-pre-wrap text-xs text-(--text-muted)">
-                  {cruise.notes}
-                </p>
-              )}
-            </div>
-          </aside>
-        </div>
+            </DetailSection>
+          )}
+        </aside>
+      </div>
 
-        {editing && (
-          <CruiseEditModal
-            mode="edit"
-            cruise={cruise}
-            onClose={() => setEditing(false)}
-            onSaved={(updated) => {
-              setCruise(updated);
-              setEditing(false);
-            }}
-          />
-        )}
+      {editing && (
+        <CruiseEditModal
+          mode="edit"
+          cruise={cruise}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setCruise(updated);
+            setEditing(false);
+          }}
+        />
+      )}
 
-        {/* Same component, same keys and same sentence as the cruise LIST.
+      {/* Same component, same keys and same sentence as the cruise LIST.
             The two used to disagree: the list named the ship without warning
             that it was permanent, this one warned without naming the ship,
             and neither mentioned the port calls that go with it. */}
-        <ConfirmModal
-          isOpen={confirmingDelete}
-          onClose={() => setConfirmingDelete(false)}
-          onConfirm={() => void handleDelete()}
-          isLoading={deleting}
-          title={t("detail.deleteConfirmTitle")}
-          message={countedDeleteMessage(
-            t,
-            {
-              counted: "cruise:detail.deleteConfirmMessage",
-              empty: "cruise:detail.deleteConfirmMessageNoStops",
-            },
-            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
-            countPortCalls(cruise)
-          )}
-          confirmText={t("detail.deleteConfirm")}
-          cancelText={t("detail.deleteCancel")}
-          confirmButtonClass={DELETE_BUTTON_CLASS}
-        />
-      </div>
-    </div>
+      <ConfirmModal
+        isOpen={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => void handleDelete()}
+        isLoading={deleting}
+        title={t("detail.deleteConfirmTitle")}
+        message={countedDeleteMessage(
+          t,
+          {
+            counted: "cruise:detail.deleteConfirmMessage",
+            empty: "cruise:detail.deleteConfirmMessageNoStops",
+          },
+          cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
+          countPortCalls(cruise)
+        )}
+        confirmText={t("detail.deleteConfirm")}
+        cancelText={t("detail.deleteCancel")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
+    </AppShell>
   );
 }

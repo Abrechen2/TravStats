@@ -11,12 +11,13 @@
   },
   "overviewKpis": {
     "experiences": "Erlebnisse gesamt",
-    "noEnabledDomains": "Keine Domain aktiviert",
+    "noEnabledDomains": "Kein Bereich aktiviert",
     "countries": "Länder besucht",
     "activeDays": "Aktive Reisetage",
     "activeDaysHint": "Tage mit mind. einer Aktivität",
-    "achievements": "Errungenschaften",
-    "achievementsHint": "{{points}} Punkte"
+    "achievements": "Erfolge",
+    "achievementsHint": "{{points}} Punkte",
+    "countriesNoComparison": "Länder: kein Vergleich für den laufenden Zeitraum"
   },
   "overviewToggle": {
     "noData": "keine Daten"
@@ -41,7 +42,7 @@
   },
   "overviewChart": {
     "title": "Aktivität pro Jahr",
-    "subtitleStacked": "gestapelt nach Domain",
+    "subtitleStacked": "gestapelt nach Bereich",
     "subtitleHighlight": "{{year}} hervorgehoben",
     "subtitleCompare": "{{year}} vs. {{compare}} hervorgehoben",
     "measureLabel": "Was gezählt wird",
@@ -73,7 +74,7 @@
   "overviewCard": {
     "noDataYet": "Noch keine Daten",
     "comingSoon": "Kommt mit V2.X",
-    "yearScopedCount": "{{count}} {{year}} · {{lifetime}} lifetime",
+    "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} insgesamt",
     "lifetimeCount": "{{count}} Erlebnisse",
     "detailLink": "Details →",
     "unit": {
@@ -92,7 +93,8 @@
       "placesVisited": "Orte besucht",
       "countries": "Länder",
       "lists": "Listen",
-      "bestChecklist": "Beste Checkliste"
+      "bestChecklist": "Beste Checkliste",
+      "cruiseNights": "Nächte an Bord"
     },
     "topItems": {
       "airlines": "Top-Airlines",
@@ -109,17 +111,19 @@
       "dateline": "Datumsgrenze überquert",
       "birthdayAtSea": "Geburtstag auf See",
       "newYearAtSea": "Silvester auf See"
-    }
+    },
+    "noEventsInYear": "Keine Einträge in {{year}}.",
+    "allYearsOnly": "Gesamt, alle Jahre"
   },
   "overview2": {
     "sectionLabel": "Gesamt-Übersicht",
-    "sectionHint": "Alle Domains zusammengefasst",
+    "sectionHint": "Alle Bereiche zusammengefasst",
     "loadError": "Gesamt-Übersicht konnte nicht geladen werden — bitte erneut einloggen oder Seite neu laden.",
     "experiences": "Erlebnisse gesamt",
     "experiencesHint": "{{flights}} Flüge, {{cruises}} Kreuzfahrten",
     "countries": "Länder gesamt",
     "points": "Punkte",
-    "pointsHint": "{{count}} freigeschaltete Errungenschaften",
+    "pointsHint": "{{count}} freigeschaltete Erfolge",
     "cruiseSeaDays": "Seetage"
   },
   "cruiseSection": {
@@ -223,18 +227,16 @@
     "linkText": "Zurück zum Dashboard"
   },
   "overview": {
-    "loading": "Lade Multi-Domain-Statistiken …",
-    "rangeLabel": "Zeitraum",
-    "rangeHint": "Cross-Domain — wirkt auf KPIs, Chart, Heatmap und Domain-Karten",
+    "loading": "Statistiken werden geladen …",
     "kpisLabel": "Gesamt-Übersicht",
-    "scopeLifetime": "Lifetime · alle Jahre",
+    "scopeLifetime": "Alle Jahre",
     "scopeYear": "Jahr {{year}}",
     "scopeCompare": "Jahr {{year}} vs. {{compare}}",
     "activityLabel": "Aktivität & Verteilung",
-    "activityHint": "Toggle: welche Domains sollen einfließen?",
-    "perDomainLabel": "Pro Domain",
-    "perDomainHint": "Kompakt-Zusammenfassung — voller Drill-Down im Domain-Tab",
-    "perDomainHintScoped": "Scope: {{year}} · voller Drill-Down im Domain-Tab",
+    "activityHint": "Welche Bereiche einfließen, wählst du hier.",
+    "perDomainLabel": "Pro Bereich",
+    "perDomainHint": "Kurzüberblick — alle Details im Reiter des Bereichs",
+    "perDomainHintScoped": "{{year}} · alle Details im Reiter des Bereichs",
     "totalFlights": "Gesamt Flüge",
     "totalDistance": "Gesamt-Distanz",
     "avgDistance": "Durchschn. Distanz",
@@ -247,15 +249,16 @@
     "scopeHint": "unabhängig vom Jahres-Filter oben",
     "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten",
     "noPricesRecorded_one": "Kein Preis erfasst — {{count}} Flug ohne Preis",
-    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis"
+    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis",
+    "scopeCompareSamePeriod": "Jahr {{year}} vs. gleicher Zeitraum {{compare}}"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {
-    "allTime": "Alle Jahre",
-    "selectYear": "Nach Jahr filtern",
-    "compareWith": "Vergleich mit",
     "vs": "ggü. {{year}}",
-    "scopeLabel": "── Jahr {{year}} ──"
+    "scopeLabel": "── Jahr {{year}} ──",
+    "vsSamePeriod": "ggü. gleichem Zeitraum {{year}}",
+    "vsFullYear": "ggü. ganzem Jahr {{year}}",
+    "partialYearNote": "{{year}} läuft noch — hier steht ein angefangenes Jahr gegen ein ganzes"
   },
   "byStatus": {
     "title": "Nach Status"
@@ -307,7 +310,7 @@
   },
   "airlines": {
     "title": "Top Fluggesellschaften",
-    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt",
+    "flightsTotal": "{{count}} Flüge • {{hours}} h gesamt",
     "withoutAirline_one": "{{count}} Flug ohne Fluggesellschaft — nicht in der Liste",
     "withoutAirline_other": "{{count}} Flüge ohne Fluggesellschaft — nicht in der Liste"
   },
@@ -643,6 +646,15 @@
     "seats": "Sitzplätze",
     "airlines": "Airlines",
     "aircraft": "Flugzeuge",
-    "countries": "Länder"
+    "countries": "Länder",
+    "heatmap": "Aktive Tage",
+    "keyFigures": "Kennzahlen",
+    "cruiseDepth": "Tiefe & Treue",
+    "cruiseTags": "Reedereien, Regionen, Länder",
+    "cruiseFlags": "Besonderheiten",
+    "rankings": "Ranglisten"
+  },
+  "period": {
+    "emptyYear": "Für {{year}} ist hier nichts erfasst."
   }
 }

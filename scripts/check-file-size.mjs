@@ -60,7 +60,13 @@ const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "build", "generated
  */
 function isExcluded(repoRelativePath) {
   if (/\.test\.tsx?$/.test(repoRelativePath)) return true;
+  // `seed*.ts` at the top of backend/src, AND the seedDemo/ directory beside
+  // it. The pattern was written when every seeder was a single file; the demo
+  // seed has since become a folder, and `seedDemo/stories.ts` is 1121 lines of
+  // narrated sample journeys — the flat list of records this exclusion names,
+  // in a directory the old `[^/]*` could not reach.
   if (/^backend\/src\/seed[^/]*\.ts$/.test(repoRelativePath)) return true;
+  if (/^backend\/src\/seedDemo\//.test(repoRelativePath)) return true;
   return false;
 }
 

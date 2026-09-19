@@ -9,6 +9,7 @@ import { PrismaClient, Flight, Prisma } from "@prisma/client";
 import { lookupFlightDetails, FlightLookupResult } from "./flightLookup";
 import { prisma } from "../db";
 import logger from "../utils/logger";
+import { DEMO_USERNAME } from "../utils/sharedDemo";
 import { recalculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { applyPendingUpdate } from "./pendingUpdateService";
 import type { FlightDataSnapshot } from "./pendingUpdateService";
@@ -698,6 +699,30 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 }
 
 /**
+ * Every account the auto-update sweep may run for.
+ *
+ * Its own function so the exclusion below has one home and a test can read it
+ * without running the sweep. The SHARED demo account is left out (independent
+ * review, 2026-09-17, finding A4): this job spends the instance's provider
+ * quota, unattended, and the demo login is published on a public instance, so
+ * one visitor switching the setting on would bill the operator for lookups
+ * over 160 seeded sample flights. `isDemo` alone is the wrong question — the
+ * preview's `admin`/`alex`/`claude` and the local dev admin carry the flag and
+ * own their accounts, so only `isDemo AND username = 'demo'` drops out, the
+ * same predicate as `isSharedDemoAccount`.
+ */
+export async function findAutoUpdateEligibleUserIds(): Promise<string[]> {
+  const rows = await prismaClient.userSettings.findMany({
+    where: {
+      autoUpdateEnabled: true,
+      user: { NOT: { isDemo: true, username: DEMO_USERNAME } },
+    },
+    select: { userId: true },
+  });
+  return rows.map((row) => row.userId);
+}
+
+/**
  * Check and update flights for all users with auto-update enabled
  */
 export async function checkAndUpdateAllFlights(): Promise<number> {
@@ -741,20 +766,12 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
       );
     }
 
-    // Get all users with auto-update enabled
-    const users = await prismaClient.userSettings.findMany({
-      where: {
-        autoUpdateEnabled: true,
-      },
-      select: {
-        userId: true,
-      },
-    });
+    const users = await findAutoUpdateEligibleUserIds();
 
     let totalUpdates = 0;
 
-    for (const user of users) {
-      const updates = await checkAndUpdateFlightsForUser(user.userId);
+    for (const userId of users) {
+      const updates = await checkAndUpdateFlightsForUser(userId);
       totalUpdates += updates;
     }
 

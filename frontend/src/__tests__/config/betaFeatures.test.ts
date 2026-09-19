@@ -35,10 +35,14 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
  * this, six months from now there are a dozen anonymous `if (betaEnabled)`
  * checks and nothing ever gets un-gated.
  *
- * Both spellings, because a source-scanning guard ages: the three-state
+ * Three spellings, because a source-scanning guard ages: the three-state
  * `useBetaFeatureAccess` form arrived after this scan was written, and until
  * 2026-09-05 a route gated only that way (the passport, `poiDomain` via
- * usePlacesAccess) was invisible to the "nothing gates it" check below.
+ * usePlacesAccess) was invisible to the "nothing gates it" check below. The
+ * `gatedSections` table arrived with the settings routes in 2.7.0 and is the
+ * same story: the settings page now resolves its gate from a variable, so a
+ * scan that only knows call sites would have declared `devicePairing`
+ * ungated on the day it moved into a table.
  */
 function gateKeysInSource(): { key: string; file: string }[] {
   const found: { key: string; file: string }[] = [];
@@ -50,6 +54,12 @@ function gateKeysInSource(): { key: string; file: string }[] {
     );
     for (const match of matches) {
       found.push({ key: match[1], file });
+    }
+    // A gate declared as data: `gatedSections: { devices: "devicePairing" }`.
+    for (const table of contents.matchAll(/gatedSections:\s*\{([^}]*)\}/g)) {
+      for (const entry of table[1].matchAll(/["'`]([^"'`]+)["'`]/g)) {
+        found.push({ key: entry[1], file });
+      }
     }
   }
   return found;

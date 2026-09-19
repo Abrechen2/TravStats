@@ -128,7 +128,13 @@
   "nav": {
     "logbook": "Logbook",
     "support": "Support",
-    "system": "System"
+    "system": "System",
+    "more": "More",
+    "collections": "Collections",
+    "tools": "Tools",
+    "destinations": "Destinations",
+    "placeLists": "Place lists",
+    "main": "Main navigation"
   },
   "welcome": "Welcome, {{username}}!",
   "pendingUpdates": "Pending Updates",
@@ -178,14 +184,14 @@
   "planned": "planned",
   "flightsOnRoute": "Flights on this route",
   "tabStrip": {
-    "label": "Domain switcher",
-    "scheduledHint": "({{count}} planned)",
+    "label": "Area switcher",
+    "scheduledHint": "· {{count}} planned",
     "tabs": {
       "all": "All",
       "flight": "Flights",
       "cruise": "Cruises",
       "lodging": "Lodging",
-      "poi": "POIs",
+      "poi": "Places",
       "tour": "Tours"
     }
   },
@@ -193,7 +199,7 @@
     "button": "Add",
     "flight": "Flight",
     "cruise": "Cruise",
-    "poi": "POI",
+    "poi": "Place",
     "lodging": "Stay"
   },
   "controls": {
@@ -202,15 +208,15 @@
     "addPerTab": {
       "flight": "Add flight",
       "cruise": "Add cruise",
-      "lodging": "Add hotel",
-      "poi": "Add POI"
+      "lodging": "Add stay",
+      "poi": "Add place"
     }
   },
   "filter": {
     "title": "Filter",
     "year": "Year",
     "allYears": "All years",
-    "domains": "Domains",
+    "domains": "Areas",
     "reset": "Reset filters",
     "activeDomainCount": "{{count}} of {{total}} domains shown",
     "timeFrom": "From",
@@ -252,14 +258,14 @@
       "wishlist": "Wishlist",
       "unlisted": "In no list"
     },
-    "disabled": "The POI domain is not yet enabled. Activate it under Settings → Domains.",
+    "disabled": "The Places area is not enabled yet. Turn it on under Settings → Areas.",
     "goToSettings": "Open settings",
     "listFilter": "Filter by list",
     "allLists": "All places"
   },
   "tabDisabled": {
-    "title": "Domain disabled",
-    "body": "The “{{domain}}” domain is disabled. Activate it under Settings → Domains to see its content.",
+    "title": "Area disabled",
+    "body": "The “{{domain}}” area is disabled. Turn it on under Settings → Areas to see its content.",
     "goToSettings": "Open settings"
   },
   "sidebar": {

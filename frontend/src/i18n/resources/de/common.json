@@ -33,7 +33,8 @@
     "details": "Details",
     "dismiss": "Verwerfen",
     "retry": "Erneut versuchen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "moreActions": "Weitere Aktionen"
   },
   "dismiss": "Verwerfen",
   "app": {
@@ -153,14 +154,20 @@
     "cruise_desc": "Schiffe, Häfen, Seetage, Reederei-Achievements.",
     "lodging": "Unterkünfte",
     "lodging_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
-    "poi": "POI / Besuche",
+    "poi": "Orte",
     "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte."
   },
   "settings": {
     "modules": {
       "title": "Bereiche",
       "desc": "Aktivierte Bereiche erscheinen in Navigation, Dashboard, Karte, Achievements und Statistiken. Deaktivierte Bereiche verstecken sich komplett — deine Daten bleiben erhalten.",
-      "comingSoon": "bald"
+      "comingSoon": "bald",
+      "sub": {
+        "flight": "Navigation, Statistik, Karte",
+        "cruise": "Navigation, Statistik, Karte",
+        "lodging": "Navigation, Statistik, Reisetage",
+        "poi": "Orte, Besuche und Ortslisten"
+      }
     }
   },
   "setup": {
@@ -201,7 +208,18 @@
     "all": "Alle Währungen"
   },
   "table": {
-    "columns": "Spalten"
+    "columns": "Spalten",
+    "scrollHint": "Die Tabelle ist breiter als die Ansicht — zur Seite scrollen für weitere Spalten.",
+    "hiddenColumns": "Aus Platzgründen ausgeblendete Spalten: {{count}}. Ein breiteres Fenster zeigt alle; unter „Spalten“ lässt sich die Auswahl ändern.",
+    "pagination": {
+      "range": "{{from}}–{{to}} von {{total}}",
+      "first": "Erste Seite",
+      "previous": "Vorherige Seite",
+      "next": "Nächste Seite",
+      "last": "Letzte Seite",
+      "pageSize": "Zeilen pro Seite",
+      "all": "Alle"
+    }
   },
   "support": {
     "donate": "Spenden",

@@ -1,6 +1,7 @@
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { dayShift } from "../../lib/dayShift";
+
 import { useDisplayFormat } from "../../lib/displayFormat";
 
 type DelayState = "late" | "early" | "onTime";
@@ -24,7 +25,11 @@ const DELAY_COLOR: Record<DelayState, string> = {
 /** One ab/an row pair: weekday + compact date + airport-local time, +N overnight marker. */
 export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
   const { t } = useTranslation(["flights"]);
-  // The user's date and clock format (Settings → Display), in the airport's zone.
+  // Both the date and the clock follow Settings → Display, in the airport's own
+  // zone. The round-4 decision was that the four logbooks must not each invent
+  // their own format (audit B11); the setting answers that better than a
+  // hardcoded one, because `YYYY-MM-DD` is one of the three it offers — and a
+  // tester reported on 2026-09-17 that this table ignored their choice.
   // Weekday and two-digit year stay: the column is dense.
   const format = useDisplayFormat();
   const dateFmt = (iso: string, tz: string): string =>
@@ -52,15 +57,18 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
     // Monospace, not just tabular-nums: the digits already lined up, but the
     // weekday abbreviations ("Mi" vs "Fr") differ in width in a proportional
     // face, which shifted the whole row and broke the column.
+    // The values wrap as a group beside the label: planned + actual time plus
+    // the UTC and +1 markers are wider than any sane column minimum, and one
+    // nowrap line ran 16px into the status column (CT106 design-6 R03).
     <div
-      className="flex items-baseline gap-2 whitespace-nowrap font-mono text-[12.5px]"
+      className="flex items-baseline gap-2 font-mono text-[12.5px]"
       style={{ fontVariantNumeric: "tabular-nums" }}
     >
-      <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>
+      <span className="w-4 shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>
       {iso ? (
-        <>
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 whitespace-nowrap">
           <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz)}</span>
           {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
           {/* The recorded time, beside the planned one rather than replacing
@@ -94,7 +102,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
               +{marker}
             </span>
           )}
-        </>
+        </span>
       ) : (
         <span style={{ color: "var(--text-muted)" }}>—</span>
       )}

@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { documentUploadLimiter } from "../middleware/rateLimit";
 import { documentUploadFieldsSchema, updateDocumentSchema } from "../schemas/document";
@@ -90,6 +91,16 @@ router.get("/documents/limits", authenticate, (_req: AuthRequest, res: Response)
 router.post(
   "/documents",
   authenticate,
+  // ABOVE the limiter and multer, so a refused request writes no bytes at all.
+  // Without it the shared demo account — whose password is printed on the login
+  // page of a public preview — could upload real boarding passes and invoices,
+  // and those survive the nightly reseed: an UNFILED document is kept for
+  // `UNLINKED_TTL_DAYS` (7) days, its bytes sit under `uploads/documents/`, and
+  // `GET /documents/:id/file` hands them to whoever logs in next. This router
+  // arrived from main AFTER the upload guard sweep of 2026-09-17, which is why
+  // it was the only upload surface still open (security audit of 2026-09-19,
+  // finding 1).
+  rejectDemo,
   requireWriteScope,
   documentUploadLimiter,
   handleUpload,

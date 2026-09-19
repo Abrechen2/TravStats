@@ -1,0 +1,184 @@
+import type { JSX } from "react";
+import Modal from "../Modal";
+import { useTranslation } from "../../hooks/useTranslation";
+import { useSettingsStore } from "../../store/settingsStore";
+import type { EvidenceScope, UnattributedReason } from "../../shared/evidence";
+import { useEvidence, type EvidenceScopeParams } from "./useEvidence";
+import EvidenceEntryRow from "./EvidenceEntryRow";
+import { composeI18nText, formatMeasureValue } from "./evidenceText";
+
+/** Docked right at `sm` and above, sheet below — `Modal`'s own breakpoint (design, "The panel"). */
+const PANEL_MAX_WIDTH = 640;
+
+const UNATTRIBUTED_KEYS: Record<UnattributedReason, string> = {
+  locationHistoryOnly: "evidence:panel.bucket.unattributedLocationHistoryOnly",
+  entryRemoved: "evidence:panel.bucket.unattributedEntryRemoved",
+  notPerEntry: "evidence:panel.bucket.unattributedNotPerEntry",
+};
+
+function scopeText(
+  scope: EvidenceScope,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const period =
+    scope.period.kind === "year"
+      ? t("evidence:panel.scope.year", { year: scope.period.year })
+      : scope.period.kind === "rolling12m"
+        ? t("evidence:panel.scope.rolling12m")
+        : t("evidence:panel.scope.allTime");
+  const domains = scope.domains ?? [];
+  if (domains.length === 0) return period;
+  const domainNames = domains.map((d) => t(`evidence:panel.scope.domain.${d}`)).join(", ");
+  return `${period} · ${domainNames}`;
+}
+
+/**
+ * "Which entries produced this number?" — a docked panel built on `Modal`,
+ * the frame with the scrolling body a list needs (`components/ui/Dialog` is
+ * for a short question and is the wrong base, per the task brief).
+ *
+ * Self-contained: it reads its own open state from the URL
+ * (`?evidence=<kind>:<key>`) via `useEvidence`, so no page has to mount it
+ * conditionally or pass it a value — Task 9 opens it by calling `open()` from
+ * a tile, not by rendering this component differently.
+ */
+export default function EvidencePanel({
+  scope,
+}: {
+  scope?: EvidenceScopeParams;
+}): JSX.Element | null {
+  const { t, i18n } = useTranslation(["evidence", "common"]);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const { isOpen, close, response, entries, loading, error, hasMore, loadMore, renderedValue } =
+    useEvidence(scope);
+
+  if (!isOpen) return null;
+
+  const measure = response?.measure ?? null;
+  // The title follows the STATE, in the same three-way split the body below
+  // uses. It used to be "measure's label, else loading", which left "Beleg
+  // wird geladen …" standing over "Die Belege konnten nicht geladen werden."
+  // — a header that contradicted the only line under it, on every 404, 501 and
+  // 400 the panel can reach (browser pass, 2026-09-19). A measure whose label
+  // is already known (a load-more that failed) keeps it; nothing else can be
+  // said, so the generic noun is said instead.
+  const failed = !loading && error !== null;
+  const title = measure
+    ? composeI18nText(measure.label, t)
+    : failed
+      ? t("evidence:panel.errorTitle")
+      : t("evidence:panel.loading");
+  const valueText = measure ? formatMeasureValue(measure, t, i18n.language, baseCurrency) : null;
+  const showAbstention = measure !== null && measure.value === null;
+  const showEmpty =
+    !loading && !error && measure !== null && measure.value !== null && entries.length === 0;
+
+  // "The number may have moved since the tile rendered" (design). Both sides
+  // have to be real numbers — an abstention on either end is a different
+  // fact, not a disagreement — and are rounded to whole units before the
+  // comparison: two independently computed sums (a client fold, a fresh
+  // server aggregate) can differ in float dust with nothing having actually
+  // changed, and the sentence below must mean "the data moved", not "floats
+  // are floats".
+  const recomputed =
+    renderedValue !== null &&
+    measure !== null &&
+    measure.value !== null &&
+    Math.round(renderedValue) !== Math.round(measure.value);
+  const recomputedFromText =
+    recomputed && measure
+      ? formatMeasureValue({ ...measure, value: renderedValue }, t, i18n.language, baseCurrency)
+      : null;
+
+  // "N more known, not loaded yet" has to mean exactly that. `omitted.count`
+  // is every known row absent from THIS page — including the rows already on
+  // screen from earlier pages — so printing it raw double-counted what the
+  // reader was looking at: page two of a 250-row measure claimed 150 further
+  // rows while 200 were already listed. What is genuinely still to come is
+  // `omitted.count` minus the rows earlier pages contributed
+  // (`entries.length - returned`). Clamped at zero because a resolver is free
+  // to recount between two pages, and a negative "more known" is nonsense.
+  const stillToLoad = response
+    ? Math.max(0, response.omitted.count - (entries.length - response.returned))
+    : 0;
+
+  return (
+    <Modal
+      open={isOpen}
+      onClose={close}
+      title={title}
+      maxWidth={PANEL_MAX_WIDTH}
+      closeLabel={t("evidence:panel.close")}
+      testId="evidence-panel"
+      footer={
+        response && (
+          <div
+            className="flex w-full flex-col gap-1 text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {/* `entries.length`, never `response.returned` — the latter is the
+                LAST page's row count, so a 133-row measure read "33 angezeigt"
+                under 133 visible rows after one "Weitere laden" (browser pass,
+                2026-09-19). The footer counts the list, and the list is what
+                every page appended. */}
+            <span>{t("evidence:panel.bucket.returned", { count: entries.length })}</span>
+            {stillToLoad > 0 && (
+              <span>{t("evidence:panel.bucket.omitted", { count: stillToLoad })}</span>
+            )}
+            {response.unattributed.map((u, index) => (
+              <span key={`${u.reason}-${index}`}>
+                {t(UNATTRIBUTED_KEYS[u.reason], { count: u.count })}
+              </span>
+            ))}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loading}
+                className="mt-1 self-start rounded-sm px-2 py-1 text-xs font-medium disabled:opacity-50"
+                style={{ color: "var(--accent)" }}
+              >
+                {t("evidence:panel.loadMore")}
+              </button>
+            )}
+          </div>
+        )
+      }
+    >
+      <div className="mb-3">
+        {measure && (
+          <>
+            <p className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>
+              {showAbstention ? t("evidence:panel.abstention") : valueText}
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {scopeText(measure.scope, t)}
+            </p>
+            {recomputed && recomputedFromText && (
+              <p className="mt-1 text-xs" style={{ color: "var(--warning)" }}>
+                {t("evidence:panel.recomputed", {
+                  previous: recomputedFromText,
+                  current: valueText,
+                })}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {loading && entries.length === 0 && (
+        <p style={{ color: "var(--text-muted)" }}>{t("common:loading.default")}</p>
+      )}
+      {failed && <p style={{ color: "var(--text-muted)" }}>{t("evidence:panel.loadError")}</p>}
+      {showEmpty && <p style={{ color: "var(--text-muted)" }}>{t("evidence:panel.empty")}</p>}
+
+      {entries.length > 0 && measure && (
+        <ul>
+          {entries.map((entry) => (
+            <EvidenceEntryRow key={entry.id} entry={entry} aggregation={measure.aggregation} />
+          ))}
+        </ul>
+      )}
+    </Modal>
+  );
+}

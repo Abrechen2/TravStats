@@ -40,6 +40,10 @@ const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const DesignPage = lazy(() => import("./pages/DesignPage"));
+const SettingsLegacyRedirect = lazy(() =>
+  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsLegacyRedirect }))
+);
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
@@ -212,12 +216,7 @@ function AppContent() {
             >
               <div className="text-center">
                 <div className="text-6xl mb-4">💥</div>
-                <h1
-                  className="text-2xl font-display font-bold mb-2"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {t("errorBoundary.title")}
-                </h1>
+                <h1 className="t-screen-title mb-2">{t("errorBoundary.title")}</h1>
                 <p className="mb-6" style={{ color: "var(--text-muted)" }}>
                   {t("errorBoundary.message")}
                 </p>
@@ -463,10 +462,23 @@ function AppContent() {
                 path="/stats"
                 element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
               />
+              {/* One route per settings group since 2.7.0 (owner decision 11).
+                  `/settings` itself is the legacy entry: every `?section=` and
+                  `?tab=` link ever written still resolves through it. */}
               <Route
                 path="/settings"
+                element={isAuthenticated ? <SettingsLegacyRedirect /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/settings/:group"
                 element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
               />
+              {/* The design system's acceptance surface: every primitive in
+                  every state. Mounted only in a dev build — not hidden behind a
+                  flag but genuinely absent from a production bundle, because a
+                  page whose copy is untranslated on purpose has no business
+                  being reachable on someone's instance. */}
+              {import.meta.env.DEV && <Route path="/design" element={<DesignPage />} />}
               <Route
                 path="/admin"
                 element={

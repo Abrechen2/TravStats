@@ -1,6 +1,7 @@
 {
   "title": "Einstellungen",
   "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
+  "demoLocked": "Im Demo-Zugang gesperrt — alle Besucher teilen sich dieses Konto.",
   "roadmap": "Roadmap · Punkt 9",
   "backToDashboard": "← Zurück zum Dashboard",
   "tabs": {
@@ -54,13 +55,24 @@
     "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
   },
   "about": {
-    "title": "Über",
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
     "dataSources": {
       "title": "Datenquellen & Attribution",
-      "fullList": "Vollständige Liste mit Lizenzen"
-    }
+      "fullList": "Vollständige Liste mit Lizenzen",
+      "osm": "Kartenkacheln (ODbL 1.0)",
+      "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)"
+    },
+    "title": "Über TravStats",
+    "tagline": "Selbst gehostetes Reise-Logbuch",
+    "licenseTitle": "Lizenz",
+    "licenseSub": "GNU Affero General Public License v3.0 (AGPL-3.0) · © 2025 Dennis Wittke",
+    "licenseBody": "Freie Software: Du darfst sie unter den Bedingungen der AGPL weitergeben und verändern. Wer sie als Webdienst betreibt, muss den vollständigen Quellcode unter AGPL-3.0 bereitstellen.",
+    "sourceCode": "Quellcode",
+    "supportTitle": "Unterstützen",
+    "supportSub": "Ein Stern auf GitHub oder eine Spende hilft beim Weiterbauen.",
+    "star": "Stern auf GitHub",
+    "donate": "Spenden via PayPal"
   },
   "profile": {
     "title": "Benutzer-Profil",
@@ -92,7 +104,8 @@
     "help": {
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet."
     },
-    "editProfile": "Profil bearbeiten"
+    "editProfile": "Profil bearbeiten",
+    "changePicture": "Bild ändern"
   },
   "homeAirport": {
     "title": "Heimatflughafen",
@@ -132,7 +145,20 @@
     },
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
-    "timeFormat": "Zeitformat"
+    "timeFormat": "Zeitformat",
+    "languageSub": "Oberfläche und Datumsformate",
+    "timezoneSub": "Für die Anzeige lokaler Zeiten",
+    "dateFormatSub": "In Fließtext und Formularen; Tabellen zeigen ISO",
+    "timeFormatSub": "Uhrzeiten von Abflug, Ankunft und Check-in",
+    "dateFormats": {
+      "dmy": "TT.MM.JJJJ",
+      "iso": "JJJJ-MM-TT",
+      "mdy": "MM/TT/JJJJ"
+    },
+    "timeFormats": {
+      "24h": "24 h",
+      "12h": "12 h"
+    }
   },
   "domainColors": {
     "title": "Bereichsfarben",
@@ -162,7 +188,14 @@
       "distance": "Kilometer (Standard in DE/EU), Meilen (US) oder Nautische Meilen (wie bei Airlines üblich). Die zugrunde liegende Berechnung bleibt gleich — nur die Anzeige ändert sich.",
       "currency": "Wird für Ticketpreise und Kostenstatistiken verwendet. Keine automatische Umrechnung bestehender Flüge — alte Werte bleiben in der ursprünglichen Währung gespeichert."
     },
-    "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden."
+    "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden.",
+    "distanceSub": "Für Strecken und Statistiken",
+    "currencySub": "Für Ausgabensummen; Wechselkurse von der EZB",
+    "short": {
+      "kilometers": "km",
+      "miles": "mi",
+      "nautical_miles": "sm"
+    }
   },
   "defaults": {
     "title": "Standard-Werte",
@@ -180,7 +213,8 @@
       "business": "Business",
       "first": "First",
       "private": "Privat",
-      "vacation": "Urlaub"
+      "vacation": "Urlaub",
+      "noneShort": "Keine"
     },
     "help": {
       "status": "\"Geplant\" ist sinnvoll für zukünftige Flüge; \"Geflogen\" für den Schnelleintrag vergangener Flüge.",
@@ -229,7 +263,11 @@
       "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
-    }
+    },
+    "emailSub": "Wohin Erinnerungen gehen; leer = keine",
+    "before24hSub": "Erinnerung einen Tag vor dem Abflug",
+    "before2hSub": "Erinnerung kurz vor dem Abflug",
+    "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
     "title": "Datenschutz & Sicherheit",
@@ -258,7 +296,9 @@
       "lastBackup": "Letztes Backup: {{date}}",
       "size": "Größe: {{size}} MB",
       "noBackup": "Noch kein Backup erstellt",
-      "path": "Backup-Pfad: {{path}}"
+      "path": "Backup-Pfad: {{path}}",
+      "runningShort": "Läuft",
+      "noneShort": "Keins"
     },
     "intervals": {
       "daily": "Täglich",
@@ -269,7 +309,8 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
-    }
+    },
+    "lastInstanceBackup": "Letztes Instanz-Backup"
   },
   "password": {
     "title": "Passwort ändern",
@@ -337,7 +378,9 @@
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
     "saving": "Wird gespeichert …",
-    "saved": "Gespeichert"
+    "saved": "Gespeichert",
+    "pending": "Änderungen vorhanden",
+    "failed": "Speichern fehlgeschlagen"
   },
   "scrollToTop": "Nach oben",
   "sectionPicker": "Bereich",
@@ -714,6 +757,11 @@
       "create": "Token konnte nicht erstellt werden",
       "revoke": "Token konnte nicht widerrufen werden",
       "labelRequired": "Beschreibung ist erforderlich"
+    },
+    "scopesShort": {
+      "read": "Lesen",
+      "write": "Schreiben",
+      "admin": "Admin"
     }
   },
   "security": {
@@ -734,7 +782,13 @@
     "disable": "Zwei-Faktor deaktivieren",
     "confirmDisable": "Deaktivieren",
     "passwordLabel": "Passwort zur Bestätigung",
-    "wrongPassword": "Das Passwort stimmt nicht."
+    "wrongPassword": "Das Passwort stimmt nicht.",
+    "sectionDescription": "Wie deine Anmeldung geschützt ist.",
+    "passwordTitle": "Passwort",
+    "passwordSub": "Für die Anmeldung mit deinem Benutzernamen",
+    "passwordChange": "Ändern",
+    "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
+    "active": "Aktiv"
   },
   "scopeHint": "Gilt nur für dein Konto.",
   "passkeys": {
@@ -759,6 +813,13 @@
     "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
     "label": "Ein Land zählt ab …",
     "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
-    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})"
+    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})",
+    "instanceShort": "Instanz ({{tier}})"
+  },
+  "groups": {
+    "account": "Konto",
+    "display": "Darstellung",
+    "data": "Daten",
+    "services": "Dienste"
   }
 }

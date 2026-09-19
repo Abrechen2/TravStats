@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "@prisma/client";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { isSharedDemoUser, rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import {
@@ -32,6 +33,8 @@ import {
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
+import { TRIPS_LIST_INCLUDE } from "../services/trip/tripsListInclude";
 import {
   airportFactsFor,
   tripCountries,
@@ -39,12 +42,26 @@ import {
   lodgingCountriesByTrip,
 } from "./trips/tripCountries";
 import { resolveTrip } from "./trips/resolveTrip";
+import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
 
 const router = Router();
+
+/**
+ * `GET /trips?includeInsights=true` — see the comment at its only reader.
+ * NOT `z.coerce.boolean()`: that coerces via `Boolean(str)`, under which the
+ * literal string "false" is truthy — `?includeInsights=false` would turn the
+ * flag ON.
+ */
+const tripsListQuerySchema = z.object({
+  includeInsights: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+});
 
 const reviewProposalSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(2),
@@ -101,88 +118,17 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
+      // Opt-in: the cost superlative below runs an UNCAPPED query over every
+      // trip the user has, specifically so it is not limited by the `take`s
+      // in the main query below — computing it on every caller of this very
+      // popular endpoint (StayEditor, PlaceDetailPage, FlightsTablePage, …)
+      // would tax pages that never show it. Only the trips page asks.
+      const { includeInsights } = tripsListQuerySchema.parse(req.query);
       const trips = await prisma.trip.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 500, // safety cap — users are unlikely to have more than 500 trips
-        include: {
-          _count: {
-            select: {
-              flights: true,
-              cruises: true,
-              lodgingStays: true,
-              routes: true,
-              photos: true,
-            },
-          },
-          bookings: {
-            select: { id: true, pnr: true, price: true, currency: true },
-          },
-          flights: {
-            select: {
-              id: true,
-              depIata: true,
-              arrIata: true,
-              departureTime: true,
-              arrivalTime: true,
-              depLat: true,
-              depLon: true,
-              arrLat: true,
-              arrLon: true,
-              // Each end must render in ITS airport's zone; without these the
-              // trip timeline fell back to the viewer's clock and disagreed
-              // with the flights table by the whole UTC offset.
-              depTimeSemantics: true,
-              arrTimeSemantics: true,
-              // A flight that carries its own price (no booking) belongs in the
-              // trip total — a hand-entered price used to vanish from it.
-              price: true,
-              currency: true,
-              bookingId: true,
-            },
-            orderBy: { departureTime: "asc" },
-            take: 200, // cap nested flights per trip — use GET /trips/:id for full flight list
-          },
-          cruises: {
-            select: {
-              id: true,
-              cruiseLine: true,
-              startDate: true,
-              endDate: true,
-              status: true,
-              shipId: true,
-              // A cruise carrying its own price belongs in the trip total, on
-              // the same rule that applies to flights — without these a
-              // cruise-only trip read "— Gesamtkosten" while its cruises had
-              // prices on file.
-              price: true,
-              currency: true,
-              bookingId: true,
-            },
-            orderBy: { startDate: "asc" },
-            take: 200,
-          },
-          // Same rule, third domain: a stay carrying its own price belongs in
-          // the trip total. Without this the CARD excluded lodging from the
-          // sum while the detail page (full include below) counted it — the
-          // exact split the cruise select above was added to close.
-          lodgingStays: {
-            select: {
-              id: true,
-              checkIn: true,
-              checkOut: true,
-              status: true,
-              totalPrice: true,
-              // Fallback for the total when no totalPrice was typed:
-              // per-night × nights, derived on the card.
-              pricePerNight: true,
-              currency: true,
-              bookingId: true,
-            },
-            orderBy: { checkIn: "asc" },
-            take: 200,
-          },
-        },
+        include: TRIPS_LIST_INCLUDE,
       });
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
@@ -206,6 +152,10 @@ router.get(
       const distanceByCruise = new Map(
         legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0])
       );
+      // Uncapped by design (see the comment above `includeInsights`) — it
+      // runs its OWN query over every trip the user has, never the 500/200
+      // caps this handler applies above.
+      const mostExpensive = includeInsights ? await mostExpensiveTrip(userId) : undefined;
       res.json({
         trips: trips.map((t) => ({
           ...t,
@@ -221,6 +171,7 @@ router.get(
             lodgingCountries.get(t.id) ?? []
           ),
         })),
+        ...(includeInsights && { mostExpensiveTrip: mostExpensive }),
       });
     } catch (error) {
       next(error);
@@ -477,6 +428,7 @@ router.post(
     try {
       const userId = req.userId!;
       const body = createTripSchema.parse(req.body);
+      if (await refusesCoverImage(userId, body.coverImageUrl, res)) return;
       const documentIds = await takeDocumentIds(userId, req.body);
 
       let color = body.color;
@@ -570,6 +522,7 @@ router.patch(
       if (!existing) throw new AppError("Trip not found", 404);
 
       const body = updateTripSchema.parse(req.body);
+      if (await refusesCoverImage(userId, body.coverImageUrl, res)) return;
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
@@ -728,10 +681,21 @@ const summarizeBodySchema = z.object({
   language: z.enum(["de", "en"]).optional(),
 });
 
-/** POST /trips/:id/summarize — generate + persist a 3-paragraph summary */
+/**
+ * POST /trips/:id/summarize — generate + persist a 3-paragraph summary
+ *
+ * Refused for the SHARED demo account, for the same reason the Immich and
+ * Dawarich resolvers hand it nothing (independent review 2026-09-17, A2): the
+ * target below is the OPERATOR's Ollama, lent to every account on the
+ * instance. That is a fair loan to the people they invited, and an open
+ * compute endpoint for the `demo` login whose password is printed on a public
+ * login page. The frontend stops offering the card for that account, so this
+ * is the door behind the hidden button, not the user-facing refusal.
+ */
 router.post(
   "/trips/:id/summarize",
   authenticate,
+  rejectDemo,
   requireWriteScope,
   emailParseLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

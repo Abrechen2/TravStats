@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useDomainColorStore } from "../../store/domainColorStore";
@@ -29,7 +29,7 @@ export default function DomainColorSection(): JSX.Element | null {
   const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
 
   return (
-    <div className="mt-8">
+    <SectionCard>
       <SectionTitle
         title={t("settings:domainColors.title")}
         description={t("settings:domainColors.description")}
@@ -88,6 +88,6 @@ export default function DomainColorSection(): JSX.Element | null {
           {t("settings:domainColors.reset")}
         </button>
       )}
-    </div>
+    </SectionCard>
   );
 }

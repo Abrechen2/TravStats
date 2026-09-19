@@ -83,7 +83,7 @@ export default function ParseLogStats(): JSX.Element {
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b dark:border-gray-700">
+            <tr className="border-b border-(--color-border)">
               <th className="text-left py-1 pr-4">{t("training:parseLogs.airline")}</th>
               <th className="text-right py-1 pr-4">{t("training:parseLogs.total")}</th>
               <th className="text-right py-1 pr-4">{t("training:parseLogs.hitRate")}</th>
@@ -92,17 +92,17 @@ export default function ParseLogStats(): JSX.Element {
           </thead>
           <tbody>
             {stats.byAirline.map((row) => (
-              <tr key={row.airline} className="border-b dark:border-gray-700/50">
+              <tr key={row.airline} className="border-b border-(--color-border)">
                 <td className="py-1 pr-4 font-medium">{row.airline}</td>
                 <td className="text-right py-1 pr-4">{row.total}</td>
                 <td className="text-right py-1 pr-4">
                   <span
                     className={
                       row.hitRate >= 80
-                        ? "text-green-600 dark:text-green-400"
+                        ? "text-(--success)"
                         : row.hitRate >= 50
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-red-600 dark:text-red-400"
+                          ? "text-(--warning)"
+                          : "text-(--danger)"
                     }
                   >
                     {row.hitRate}%

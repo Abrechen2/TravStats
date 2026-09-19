@@ -94,6 +94,20 @@ export default function TravelAccountSection(): JSX.Element | null {
         ))}
       </div>
 
+      {/*
+        Two of these four open the evidence panel (task 7b-2). The other two
+        do not, and both abstentions are deliberate:
+        `tripsCovered` renders TWO numbers in one card ("3 / 5") and a card
+        opens ONE panel — splitting its figure into two inline buttons is a
+        decision about this surface, not a wiring one, so
+        `travelAccountFullyCoveredTripCount` and
+        `travelAccountTripsWithDatesCount` stay served but unwired, exactly as
+        the east/west pair on the unique tab does. `avgTripDays` is a `ratio`,
+        which release 1 does not serve at all.
+        The five NIGHT measures are served too and have no tile here to open
+        them: this section draws its nights as per-year bars, and there is no
+        all-time night figure on screen to attach a trigger to.
+      */}
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           valueSize="md"
@@ -106,6 +120,11 @@ export default function TravelAccountSection(): JSX.Element | null {
           title={t("stats:travelAccount.uncoveredDays")}
           value={trips.totalUncoveredDays}
           description={t("stats:travelAccount.uncoveredDaysDesc")}
+          evidence={{
+            kind: "metric",
+            key: "travelAccountUncoveredDayCount",
+            renderedValue: trips.totalUncoveredDays,
+          }}
         />
         <StatCard
           valueSize="md"
@@ -127,6 +146,11 @@ export default function TravelAccountSection(): JSX.Element | null {
                   .join(" · ")
               : t("stats:travelAccount.noMoods")
           }
+          evidence={{
+            kind: "metric",
+            key: "travelAccountJournalEntryCount",
+            renderedValue: trips.journalEntries,
+          }}
         />
       </div>
     </section>

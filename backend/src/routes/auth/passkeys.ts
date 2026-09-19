@@ -8,6 +8,8 @@ import {
 } from "@simplewebauthn/server";
 import { prisma } from "../../db";
 import { authenticate, requireBrowserSession, AuthRequest } from "../../middleware/auth";
+import { rejectDemo } from "../../middleware/demoGuard";
+import { isSharedDemoAccount } from "../../utils/sharedDemo";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { issueAuthCookie } from "../../utils/session";
@@ -67,6 +69,7 @@ async function requireRp(): Promise<NonNullable<Awaited<ReturnType<typeof resolv
 router.post(
   "/register/options",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res, next) => {
@@ -115,6 +118,7 @@ router.post(
 router.post(
   "/register/verify",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res, next) => {
@@ -271,6 +275,9 @@ router.post("/login/verify", authLimiter, async (req: AuthRequest, res, next) =>
         id: stored.user.id,
         username: stored.user.username,
         isAdmin: stored.user.isAdmin,
+        // Same shape as the password and two-factor login responses: the
+        // client decides from this which controls it may offer.
+        isSharedDemo: isSharedDemoAccount(stored.user),
         firstName: stored.user.firstName,
         lastName: stored.user.lastName,
       },
@@ -296,6 +303,7 @@ router.get("/", authenticate, async (req: AuthRequest, res, next) => {
 router.patch(
   "/:id",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res, next) => {
@@ -317,6 +325,7 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
+  rejectDemo,
   requireBrowserSession,
   authLimiter,
   async (req: AuthRequest, res, next) => {

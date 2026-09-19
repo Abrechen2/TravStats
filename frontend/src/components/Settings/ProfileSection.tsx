@@ -1,6 +1,10 @@
 import React from "react";
-import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
+import HelpIcon from "../Help/HelpIcon";
+import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 
 interface ProfileSectionProps {
   profile: {
@@ -13,10 +17,8 @@ interface ProfileSectionProps {
     firstName?: string | null;
     lastName?: string | null;
   };
-  savingProfile: boolean;
   uploadingProfilePicture: boolean;
   removingProfilePicture: boolean;
-  onSaveProfile: () => void;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
   onSetProfile: (partial: {
@@ -26,124 +28,109 @@ interface ProfileSectionProps {
     firstName?: string | null;
     lastName?: string | null;
   }) => void;
-  onShowPasswordModal: () => void;
 }
 
 export default function ProfileSection({
   profile,
-  savingProfile,
   uploadingProfilePicture,
   removingProfilePicture,
-  onSaveProfile,
   onAvatarUpload,
   onAvatarDelete,
   onSetProfile,
-  onShowPasswordModal,
 }: ProfileSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const isDemo = useIsDemoAccount();
+  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
 
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          title={t("settings:profile.title")}
-          description={t("settings:profile.description")}
-        />
-        <button onClick={onShowPasswordModal} className="btn-secondary">
-          {t("settings:profile.changePassword")}
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4">
+      <SectionTitle
+        title={t("settings:profile.title")}
+        description={t("settings:profile.description")}
+      />
+      {/* The head of the card: who this is. Round 4 draws a square tile with
+          the initial (or the picture), the name, one meta line and the one
+          action on the picture; "change password" moved to Sicherheit. */}
+      <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-lg)" }}>
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-          style={{ background: "linear-gradient(135deg, var(--accent), #c27a1a)" }}
+          className="flex items-center justify-center overflow-hidden shrink-0"
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "var(--ts-radius-card)",
+            background: "var(--ts-tile)",
+            border: "1px solid var(--ts-border)",
+            color: "var(--ts-accent)",
+            fontSize: 24,
+            fontWeight: 700,
+          }}
         >
           {profile.profilePicture ? (
             <img
               src={profile.profilePicture}
               alt={t("settings:profile.title")}
-              className="w-full h-full object-cover rounded-full"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
-            profile.username.charAt(0).toUpperCase()
+            (profile.firstName || profile.username).charAt(0).toUpperCase()
           )}
         </div>
-        <div>
-          <FieldLabel help={t("settings:profile.help.avatar")}>
-            {t("settings:profile.uploadAvatar")}
-          </FieldLabel>
-          {/* Native <input type=file> shows the browser-locale "Choose File"
-              label which conflicts with the app i18n. Hide it visually and
-              drive it from a labelled button so the copy stays under our
-              translation control. */}
-          <label
-            className="btn-secondary inline-flex items-center gap-2 cursor-pointer text-sm"
-            style={{
-              opacity: uploadingProfilePicture ? 0.6 : 1,
-              pointerEvents: uploadingProfilePicture ? "none" : "auto",
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            {uploadingProfilePicture
-              ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
-              : t("settings:profile.chooseFile", { defaultValue: "Choose file" })}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onAvatarUpload}
-              disabled={uploadingProfilePicture}
-              className="sr-only"
-            />
-          </label>
-          {profile.profilePicture && (
-            <button
-              type="button"
-              onClick={onAvatarDelete}
-              disabled={removingProfilePicture || uploadingProfilePicture}
-              className="btn-secondary inline-flex items-center gap-2 text-sm ml-2"
+        <div className="flex min-w-0 flex-col" style={{ gap: 2, flex: "1 1 200px" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}>
+            {fullName || profile.username}
+          </span>
+          <span className="t-caption inline-flex items-center gap-1.5">
+            @{profile.username}
+            {profile.email ? ` · ${profile.email}` : ""}
+            <HelpIcon content={t("settings:profile.help.avatar")} position="top" />
+          </span>
+        </div>
+        {isDemo ? (
+          <DemoLockedNotice />
+        ) : (
+          <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+            {/* Native <input type=file> shows the browser-locale "Choose File"
+                label which conflicts with the app i18n. Hide it visually and
+                drive it from a labelled button so the copy stays under our
+                translation control. */}
+            <label
+              className="btn-secondary inline-flex items-center gap-2 cursor-pointer"
               style={{
-                color: "var(--color-danger, #ef4444)",
-                opacity: removingProfilePicture ? 0.6 : 1,
+                opacity: uploadingProfilePicture ? 0.6 : 1,
+                pointerEvents: uploadingProfilePicture ? "none" : "auto",
               }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <Icon name="upload" size={14} />
+              {uploadingProfilePicture
+                ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
+                : t("settings:profile.changePicture")}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onAvatarUpload}
+                disabled={uploadingProfilePicture}
+                className="sr-only"
+              />
+            </label>
+            {profile.profilePicture && (
+              <button
+                type="button"
+                onClick={onAvatarDelete}
+                disabled={removingProfilePicture || uploadingProfilePicture}
+                className="btn-secondary inline-flex items-center gap-2"
+                style={{ color: "var(--ts-bad)", opacity: removingProfilePicture ? 0.6 : 1 }}
               >
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              {removingProfilePicture
-                ? t("common:buttons.removing", { defaultValue: "Removing..." })
-                : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
-            </button>
-          )}
-        </div>
+                <Icon name="trash-2" size={14} />
+                {removingProfilePicture
+                  ? t("common:buttons.removing", { defaultValue: "Removing..." })
+                  : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           {/*
            * The username is shown, not edited. It used to be a plain input whose
@@ -174,78 +161,77 @@ export default function ProfileSection({
             {t("settings:profile.usernameHint")}
           </p>
         </div>
-        <div>
-          <label className="label" htmlFor="profile-first-name">
-            {t("settings:profile.firstName")}
-          </label>
-          <input
-            id="profile-first-name"
-            type="text"
-            value={profile.firstName ?? ""}
-            onChange={(e) => onSetProfile({ firstName: e.target.value })}
-            className="input"
-            autoComplete="given-name"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-last-name">
-            {t("settings:profile.lastName")}
-          </label>
-          <input
-            id="profile-last-name"
-            type="text"
-            value={profile.lastName ?? ""}
-            onChange={(e) => onSetProfile({ lastName: e.target.value })}
-            className="input"
-            autoComplete="family-name"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-email">
-            {t("settings:profile.email")}
-          </label>
-          <input
-            id="profile-email"
-            type="email"
-            value={profile.email}
-            onChange={(e) => onSetProfile({ email: e.target.value })}
-            className="input"
-            autoComplete="email"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="profile-birthdate">
-            {t("settings:profile.birthdate")}
-          </label>
-          <input
-            id="profile-birthdate"
-            type="date"
-            value={profile.birthdate ?? ""}
-            onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
-            className="input"
-            aria-describedby="profile-birthdate-hint"
-          />
-          <p
-            id="profile-birthdate-hint"
-            className="text-xs mt-1"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {t("settings:profile.birthdateHint")}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-end pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <button
-          onClick={onSaveProfile}
-          disabled={savingProfile}
-          className="btn-primary"
-          style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
-        >
-          {savingProfile
-            ? t("common:buttons.saving") || "Speichern..."
-            : t("settings:profile.save") || "Profil speichern"}
-        </button>
+        {/* The name greets every visitor from the header, the e-mail address
+            is a password-reset vector, and the birthdate drives an
+            achievement — all three are shown to or used by whoever logs in
+            next, so the server refuses them for the shared demo account. The
+            notice above the fold says so once; repeating it per field would
+            say it four times. The username stays: a visitor still needs to
+            see which account they are looking at, and it is read-only for
+            everybody anyway. */}
+        {!isDemo && (
+          <>
+            <div>
+              <label className="label" htmlFor="profile-first-name">
+                {t("settings:profile.firstName")}
+              </label>
+              <input
+                id="profile-first-name"
+                type="text"
+                value={profile.firstName ?? ""}
+                onChange={(e) => onSetProfile({ firstName: e.target.value })}
+                className="input"
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-last-name">
+                {t("settings:profile.lastName")}
+              </label>
+              <input
+                id="profile-last-name"
+                type="text"
+                value={profile.lastName ?? ""}
+                onChange={(e) => onSetProfile({ lastName: e.target.value })}
+                className="input"
+                autoComplete="family-name"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-email">
+                {t("settings:profile.email")}
+              </label>
+              <input
+                id="profile-email"
+                type="email"
+                value={profile.email}
+                onChange={(e) => onSetProfile({ email: e.target.value })}
+                className="input"
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="profile-birthdate">
+                {t("settings:profile.birthdate")}
+              </label>
+              <input
+                id="profile-birthdate"
+                type="date"
+                value={profile.birthdate ?? ""}
+                onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
+                className="input"
+                aria-describedby="profile-birthdate-hint"
+              />
+              <p
+                id="profile-birthdate-hint"
+                className="text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("settings:profile.birthdateHint")}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </SectionCard>
   );

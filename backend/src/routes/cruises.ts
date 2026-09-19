@@ -17,6 +17,7 @@ import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import logger from "../utils/logger";
 
 interface GeometryFeature {
@@ -442,11 +443,23 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const companionNames = companions ?? [];
     const resolvedCompanions = await resolveCompanions(userId, companionNames);
 
+    // FX snapshot (#267), same rule as `Flight`/`Booking` — the ONLY priced
+    // model that lacked one, which is what let a large-face-value-but-small
+    // currency (e.g. KRW) beat a euro trip on the trips page (compared by raw
+    // number, never converted). Rated on the START day; a cruise with no
+    // price, no currency or no start date gets the all-null columns instead
+    // of a guessed rate.
+    const fxColumns = await fxColumnsFor(
+      { amount: rest.price, currency: rest.currency, date: startDateUtc },
+      await getBaseCurrency(userId)
+    );
+
     const cruise = await prisma.$transaction(async (tx) => {
       const created = await tx.cruise.create({
         data: {
           userId,
           ...rest,
+          ...fxColumns,
           importBatchId: batchId,
           externalRef,
           status: effectiveStatus,
@@ -611,6 +624,25 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       resolvedCompanionsForUpdate = await resolveCompanions(userId, companions);
     }
 
+    // FX snapshot (#267) — recompute only when an input it depends on
+    // actually moved (price, currency or the start day), mirroring the same
+    // guard in `routes/flights.ts`. A stale snapshot from before this edit
+    // would misrepresent the NEW price/currency/date, so it is recomputed
+    // from the MERGED (existing + incoming) state rather than the payload
+    // alone — a currency-only PATCH must still convert the unchanged price.
+    const fxInputsChanged =
+      rest.price !== undefined || rest.currency !== undefined || nextStartDate !== undefined;
+    const fxColumns = fxInputsChanged
+      ? await fxColumnsFor(
+          {
+            amount: rest.price !== undefined ? rest.price : existing.price,
+            currency: rest.currency !== undefined ? rest.currency : existing.currency,
+            date: nextStartDate !== undefined ? nextStartDate : existing.startDate,
+          },
+          await getBaseCurrency(userId)
+        )
+      : undefined;
+
     const updated = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
         await tx.cruiseCompanion.deleteMany({ where: { cruiseId: existing.id } });
@@ -629,6 +661,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         where: { id: existing.id },
         data: {
           ...rest,
+          ...fxColumns,
           status: effectiveStatus,
           startDate: nextStartDate,
           endDate: nextEndDate,

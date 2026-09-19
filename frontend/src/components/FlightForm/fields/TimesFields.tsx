@@ -272,7 +272,7 @@ export default function TimesFields({
             onChange={(e) => onChange({ ...value, arrDate: e.target.value })}
           />
           {arrivalDayOffset > 0 && (
-            <p className="text-xs mt-1 text-blue-700 dark:text-blue-300">
+            <p className="text-xs mt-1 text-(--accent)">
               {arrivalDayOffset === 1
                 ? t("flights:form.arrivalNextDay")
                 : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}

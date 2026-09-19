@@ -255,6 +255,26 @@ describe("LodgingDetailPage", () => {
     expect(spendRow?.textContent).not.toMatch(/\$883/);
   });
 
+  it("writes no base-currency total when no stay could be converted", async () => {
+    // One stay in USD with no exchange rate: the server's base sum is 0, but
+    // that 0 is the absence of a conversion, not a free stay.
+    useSettingsStore.setState({ baseCurrency: "EUR", units: { distanceUnit: "kilometers" } });
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ totalSpendBase: 0 }, [
+        { ...baseStay, currency: "USD", totalPrice: 780, totalPriceBase: null },
+      ])
+    );
+
+    renderDetailPage();
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+
+    const row = screen.getByText("lodging:detail.spendBase").closest("div");
+    expect(row?.textContent).toContain("—");
+    expect(row?.textContent).not.toMatch(/0[,.]?\d*\s?€/);
+  });
+
   it("shows a not-found state when the lodging can't be loaded", async () => {
     getLodgingMock.mockRejectedValue(new Error("404"));
 
@@ -484,8 +504,15 @@ describe("LodgingDetailPage", () => {
       </MemoryRouter>
     );
 
+    // By destination and name, not by the rendered string: the arrow is its
+    // own aria-hidden element in the shared detail header, so a screen reader
+    // is not read "left arrow" — and a test that matched "← Kempinski" as one
+    // text node was really asserting that it is NOT.
     await waitFor(() => {
-      expect(screen.getByText("← Kempinski")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Kempinski" })).toHaveAttribute(
+        "href",
+        "/lodging/chains/7"
+      );
     });
   });
 
@@ -494,7 +521,10 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await waitFor(() => {
-      expect(screen.getByText("← lodging:list.title")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "lodging:detail.backToLogbook" })).toHaveAttribute(
+        "href",
+        "/lodging"
+      );
     });
   });
 

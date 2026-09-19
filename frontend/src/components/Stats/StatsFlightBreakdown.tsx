@@ -1,5 +1,12 @@
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatHours, formatHoursValue } from "../../lib/units";
+import EvidenceTrigger from "./EvidenceTrigger";
+import { rankingKey } from "../../shared/evidence";
+import type { AirlineBreakdownRow } from "./airlineBreakdown";
+
+/** Every ranking dimension wired below is `allTime`-only — see `rankingEvidence.ts` on the backend. */
+const ALL_TIME = { period: "allTime" as const };
 
 interface FlightWithDuration {
   flight: Flight;
@@ -7,7 +14,12 @@ interface FlightWithDuration {
 }
 
 interface StatsFlightBreakdownProps {
-  sortedAirlines: [string, { count: number; totalDuration: number; flights: Flight[] }][];
+  /**
+   * `[groupKey, row]`, never `[label, row]` — two carriers can share a
+   * display name, and keying the list by the label merged them on screen
+   * while the server's own `airlineCount` kept them apart.
+   */
+  sortedAirlines: [string, AirlineBreakdownRow][];
   /** Counted flights that name no airline — said, never ranked (forgejo#81). */
   flightsWithoutAirline?: number;
   sortedAirports: [string, number][];
@@ -32,7 +44,7 @@ export default function StatsFlightBreakdown({
   shortestFlight,
   totalFlights,
 }: StatsFlightBreakdownProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
 
   const seatClassLabel = (key: string): string => {
     const labels: Record<string, string> = {
@@ -58,21 +70,34 @@ export default function StatsFlightBreakdown({
             {t("stats:airlines.title")}
           </h2>
           {flightsWithoutAirline > 0 && (
-            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey="flightsWithoutAirlineCount"
+              scope={ALL_TIME}
+              renderedValue={flightsWithoutAirline}
+              label={t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
+              // `block`: this trigger replaced a `<p>`, and `EvidenceTrigger`
+              // deliberately leaves `display` to the caller (a ranking row
+              // needs `flex`). A `<button>` without one is inline-block, which
+              // reserves descender space under a line of text the `<p>` did
+              // not — a few px of drift where nothing changed but the tag.
+              className="mb-3 block text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
               {t("stats:airlines.withoutAirline", { count: flightsWithoutAirline })}
-            </p>
+            </EvidenceTrigger>
           )}
           <div className="space-y-3">
-            {sortedAirlines.map(([airline, data]) => (
-              <div key={airline} className="flex items-center justify-between">
+            {sortedAirlines.map(([groupKey, data]) => (
+              <div key={groupKey} className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium" style={{ color: "var(--text-primary)" }}>
-                    {airline}
+                    {data.label}
                   </div>
                   <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {t("stats:airlines.flightsTotal", {
                       count: data.count,
-                      hours: data.totalDuration.toFixed(1),
+                      hours: formatHoursValue(data.totalDuration, i18n.language),
                     })}
                   </div>
                 </div>
@@ -94,14 +119,22 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {sortedAirports.map(([airport, count]) => (
-              <div key={airport} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={airport}
+                kind="ranking"
+                evidenceKey={rankingKey("airport", airport)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={airport}
+                className="flex items-center justify-between"
+              >
                 <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                   {airport}
                 </div>
                 <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
                   {count}
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -143,14 +176,22 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {sortedAircraft.map(([aircraft, count]) => (
-              <div key={aircraft} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={aircraft}
+                kind="ranking"
+                evidenceKey={rankingKey("aircraftType", aircraft)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={aircraft}
+                className="flex items-center justify-between"
+              >
                 <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                   {aircraft}
                 </div>
                 <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>
                   {count}
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -244,7 +285,7 @@ export default function StatsFlightBreakdown({
                 {longestFlight.flight.arrIata || longestFlight.flight.arrIcao || "N/A"}
               </p>
               <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
-                {longestFlight.duration?.toFixed(1) || "0.0"}h
+                {formatHours(longestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
           </div>

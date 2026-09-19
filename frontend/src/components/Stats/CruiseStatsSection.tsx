@@ -13,6 +13,12 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { convertDistance, getDistanceLabel } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
+import { cruisesStartedIn } from "../../lib/stats/periodScope";
+import PeriodComparisonStrip from "./PeriodComparisonStrip";
+import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
+import EvidenceTrigger from "./EvidenceTrigger";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
+import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
@@ -26,12 +32,25 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
  *   3. Depth + loyalty row
  *   4. Discovery tag clouds (lines, regions, countries)
  *   5. Achievement-style boolean flag pills
+ *
+ * Scoped to the page's period twice over, and both ways say the same thing: the
+ * rollup by the server (`?year=`), the rows behind the rhythm, money and fun
+ * blocks by `cruisesStartedIn` — the year a cruise sailed from.
  */
-export default function CruiseStatsSection(): JSX.Element {
+export default function CruiseStatsSection({
+  scope,
+  visibility,
+}: {
+  scope: PeriodScope;
+  visibility: SectionVisibility;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "cruise", "common"]);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const distanceLabel = getDistanceLabel(distanceUnit, t);
+  const { year, compareYear } = scope;
   const [stats, setStats] = useState<CruiseStatsResponse | null>(null);
+  const [previous, setPrevious] = useState<CruiseStatsResponse | null>(null);
+  const [loadedFor, setLoadedFor] = useState<PeriodScope | null>(null);
   // The rollup answers the collection questions and carries no calendar, no
   // money and no firsts — those live on the rows.
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -43,10 +62,20 @@ export default function CruiseStatsSection(): JSX.Element {
     let cancelled = false;
     void (async () => {
       try {
-        const [data, rows] = await Promise.all([statsApi.getCruiseStats(), cruiseApi.list()]);
+        // Earlier figures stay on screen while the next year loads.
+        const [data, before, rows] = await Promise.all([
+          statsApi.getCruiseStats(year === null ? undefined : { year }),
+          compareYear === null
+            ? Promise.resolve(null)
+            : statsApi.getCruiseStats({ year: compareYear }),
+          cruiseApi.list(),
+        ]);
         if (cancelled) return;
         setStats(data);
+        setPrevious(before);
         setCruises(rows);
+        setLoadedFor({ year, compareYear });
+        setError(null);
       } catch (err) {
         logger.error("Failed to load cruise stats:", err);
         if (!cancelled) setError(t("stats:cruiseSection.loadError"));
@@ -57,7 +86,7 @@ export default function CruiseStatsSection(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, year, compareYear]);
 
   if (loading) {
     return (
@@ -83,6 +112,59 @@ export default function CruiseStatsSection(): JSX.Element {
         }}
       >
         <p className="text-sm">{error ?? t("stats:cruiseSection.loadError")}</p>
+      </div>
+    );
+  }
+
+  // What is on screen was loaded for `shown`, which lags `scope` while the next
+  // year is on its way. Every label below reads `shown`; see `sameScope`.
+  const shown = loadedFor ?? scope;
+  const refreshing = !sameScope(loadedFor, scope);
+
+  const comparison =
+    previous && shown.year !== null && shown.compareYear !== null ? (
+      <PeriodComparisonStrip
+        year={shown.year}
+        compareYear={shown.compareYear}
+        rows={[
+          {
+            key: "cruises",
+            label: t("stats:cruiseSection.count"),
+            current: stats.cruisesCount,
+            previous: previous.cruisesCount,
+          },
+          {
+            key: "seaDays",
+            label: t("stats:cruiseSection.seaDays"),
+            current: stats.seaDays,
+            previous: previous.seaDays,
+          },
+          {
+            key: "ports",
+            label: t("stats:cruiseSection.ports"),
+            current: stats.cruisePortsUnique,
+            previous: previous.cruisePortsUnique,
+          },
+          {
+            key: "distance",
+            label: t("stats:cruiseSection.totalDistance"),
+            current: convertDistance(stats.totalDistanceKm, distanceUnit),
+            previous: convertDistance(previous.totalDistanceKm, distanceUnit),
+            format: (n) => `${formatNumber(n)} ${distanceLabel}`,
+          },
+        ]}
+      />
+    ) : null;
+
+  // A year with no cruise names the year. The lifetime empty state invites the
+  // first cruise, which is the wrong thing to say to someone with twenty.
+  if (stats.cruisesCount === 0 && shown.year !== null) {
+    return (
+      <div className="space-y-6" aria-busy={refreshing} style={dimWhile(refreshing)}>
+        {comparison}
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("stats:period.emptyYear", { year: shown.year })}
+        </p>
       </div>
     );
   }
@@ -128,19 +210,49 @@ export default function CruiseStatsSection(): JSX.Element {
       ? Math.round(((identifiableCalls - stats.cruisePortsUnique) / identifiableCalls) * 100)
       : 0;
 
-  const heroKpis: Array<{ label: string; value: string | number }> = [
-    { label: t("stats:cruiseSection.count"), value: stats.cruisesCount },
+  // The population these tiles show: the period strip's own state. `allTime`
+  // is the tab's DEFAULT, not an edge case — which is why the registry lists
+  // it beside `year` (corrected in task 7b-3).
+  const evidenceScope: EvidenceScopeParams =
+    shown.year === null ? { period: "allTime" } : { period: "year", year: shown.year };
+
+  const heroKpis: Kpi[] = [
+    {
+      label: t("stats:cruiseSection.count"),
+      value: stats.cruisesCount,
+      evidence: { key: "cruiseCount", renderedValue: stats.cruisesCount },
+    },
     {
       label: t("stats:cruiseSection.totalDistance"),
       // Was a hardcoded "km". The flight sections have always honoured
       // Einheiten & Formate, so a user on miles got miles for flights and
       // kilometres for cruises on the same page.
       value: `${formatNumber(convertDistance(stats.totalDistanceKm, distanceUnit))} ${distanceLabel}`,
+      // The measure's unit is KILOMETRES, so the panel is handed the figure
+      // before the display conversion — a reader on miles would otherwise be
+      // told the number had moved on every open.
+      evidence: { key: "cruiseDistanceKmTotal", renderedValue: stats.totalDistanceKm },
     },
-    { label: t("stats:cruiseSection.seaDays"), value: stats.seaDays },
-    { label: t("stats:cruiseSection.ports"), value: stats.cruisePortsUnique },
-    { label: t("stats:cruiseSection.ships"), value: stats.cruiseShipsUnique },
-    { label: t("stats:cruiseSection.lines"), value: stats.cruiseLinesUnique },
+    {
+      label: t("stats:cruiseSection.seaDays"),
+      value: stats.seaDays,
+      evidence: { key: "cruiseSeaDaysTotal", renderedValue: stats.seaDays },
+    },
+    {
+      label: t("stats:cruiseSection.ports"),
+      value: stats.cruisePortsUnique,
+      evidence: { key: "cruisePortsUniqueCount", renderedValue: stats.cruisePortsUnique },
+    },
+    {
+      label: t("stats:cruiseSection.ships"),
+      value: stats.cruiseShipsUnique,
+      evidence: { key: "cruiseShipsUniqueCount", renderedValue: stats.cruiseShipsUnique },
+    },
+    {
+      label: t("stats:cruiseSection.lines"),
+      value: stats.cruiseLinesUnique,
+      evidence: { key: "cruiseLinesUniqueCount", renderedValue: stats.cruiseLinesUnique },
+    },
     { label: t("stats:cruiseSection.avgPortsPerCruise"), value: avgPortsPerCruise.toFixed(1) },
     {
       label: t("stats:cruiseSection.longestLeg"),
@@ -151,12 +263,16 @@ export default function CruiseStatsSection(): JSX.Element {
     },
   ];
 
-  const depthKpis: Array<{ label: string; value: string | number }> = [
+  const depthKpis: Kpi[] = [
     { label: t("stats:cruiseSection.maxPortsSingle"), value: stats.cruisePortsSingleMax },
     { label: t("stats:cruiseSection.lineLoyaltyMax"), value: stats.cruiseLineLoyaltyMax },
     { label: t("stats:cruiseSection.seaDaysStreak"), value: stats.seaDaysStreak },
     { label: t("stats:cruiseSection.maxDeck"), value: stats.maxDeck > 0 ? stats.maxDeck : "—" },
-    { label: t("stats:cruiseSection.totalDays"), value: stats.totalCruiseDays },
+    {
+      label: t("stats:cruiseSection.totalDays"),
+      value: stats.totalCruiseDays,
+      evidence: { key: "cruiseTotalDays", renderedValue: stats.totalCruiseDays },
+    },
     { label: t("stats:cruiseSection.revisitRate"), value: `${revisitRatePct}%` },
     // Count the ISO-folded set, not the raw names: the port catalogue carries
     // both "United States" and "United States of America", so counting names
@@ -165,106 +281,170 @@ export default function CruiseStatsSection(): JSX.Element {
     {
       label: t("stats:cruiseSection.countries"),
       value: (stats.countriesIso ?? stats.countries).length,
+      evidence: {
+        key: "cruiseCountriesCount",
+        renderedValue: (stats.countriesIso ?? stats.countries).length,
+      },
     },
   ];
 
-  const detail = deriveCruiseStats(cruises);
+  const detail = deriveCruiseStats(
+    shown.year === null ? cruises : cruisesStartedIn(cruises, shown.year)
+  );
   const accent = colorOf("cruise");
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const show = visibility.isVisible;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={refreshing} style={dimWhile(refreshing)}>
+      {comparison}
+
       {/* 1) Hero KPI grid */}
-      <KpiGrid kpis={heroKpis} />
+      {show("kpis") && <KpiGrid kpis={heroKpis} scope={evidenceScope} />}
 
       {/* 2) Region bar chart + sea/port donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <RegionBars
-            regionVisitCounts={stats.regionVisitCounts}
-            title={t("stats:cruiseSection.regionsHeading")}
-            emptyHint={t("stats:cruiseSection.noRegions")}
-            t={t}
+      {show("regions") && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <RegionBars
+              regionVisitCounts={stats.regionVisitCounts}
+              title={t("stats:cruiseSection.regionsHeading")}
+              emptyHint={t("stats:cruiseSection.noRegions")}
+              t={t}
+            />
+          </div>
+          <SeaDayDonut
+            seaDays={stats.seaDays}
+            totalDays={stats.totalCruiseDays}
+            pct={seaDayRatioPct}
+            label={t("stats:cruiseSection.seaDayShare")}
           />
         </div>
-        <SeaDayDonut
-          seaDays={stats.seaDays}
-          totalDays={stats.totalCruiseDays}
-          pct={seaDayRatioPct}
-          label={t("stats:cruiseSection.seaDayShare")}
-        />
-      </div>
+      )}
 
       {/* 3) Depth & loyalty */}
-      <KpiGrid kpis={depthKpis} compact />
+      {show("depth") && <KpiGrid kpis={depthKpis} scope={evidenceScope} compact />}
 
       {/* 4) Tag clouds */}
-      {stats.cruiseLines.length > 0 && (
+      {show("tags") && stats.cruiseLines.length > 0 && (
         <TagCloud title={t("stats:cruiseSection.linesLabel")} items={stats.cruiseLines} />
       )}
-      {stats.regions.length > 0 && (
+      {show("tags") && stats.regions.length > 0 && (
         <TagCloud
           title={t("stats:cruiseSection.regionsLabel")}
           items={stats.regions.map((r) => prettyRegion(r, t))}
         />
       )}
-      {stats.countries.length > 0 && (
+      {show("tags") && stats.countries.length > 0 && (
         <TagCloud title={t("stats:cruiseSection.countriesLabel")} items={stats.countries} />
       )}
 
       {/* 5) Achievement-style flag strip */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {stats.hasBalconyCabin && (
-          <Flag label={t("stats:cruiseSection.flags.balcony")} emoji="🏝️" />
-        )}
-        {stats.hasSuiteCabin && <Flag label={t("stats:cruiseSection.flags.suite")} emoji="👑" />}
-        {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} emoji="🧊" />}
-        {stats.hasColdWater && <Flag label={t("stats:cruiseSection.flags.coldWater")} emoji="❄️" />}
-        {stats.hasCanalTransit && <Flag label={t("stats:cruiseSection.flags.canal")} emoji="⛴️" />}
-        {stats.hasDatelineCrossing && (
-          <Flag label={t("stats:cruiseSection.flags.dateline")} emoji="🌐" />
-        )}
-        {stats.hasBirthdayAtSea && (
-          <Flag label={t("stats:cruiseSection.flags.birthday")} emoji="🎂" />
-        )}
-        {stats.hasNewYearsAtSea && (
-          <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
-        )}
-      </div>
+      {show("flags") && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {stats.hasBalconyCabin && (
+            <Flag label={t("stats:cruiseSection.flags.balcony")} emoji="🏝️" />
+          )}
+          {stats.hasSuiteCabin && <Flag label={t("stats:cruiseSection.flags.suite")} emoji="👑" />}
+          {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} emoji="🧊" />}
+          {stats.hasColdWater && (
+            <Flag label={t("stats:cruiseSection.flags.coldWater")} emoji="❄️" />
+          )}
+          {stats.hasCanalTransit && (
+            <Flag label={t("stats:cruiseSection.flags.canal")} emoji="⛴️" />
+          )}
+          {stats.hasDatelineCrossing && (
+            <Flag label={t("stats:cruiseSection.flags.dateline")} emoji="🌐" />
+          )}
+          {stats.hasBirthdayAtSea && (
+            <Flag label={t("stats:cruiseSection.flags.birthday")} emoji="🎂" />
+          )}
+          {stats.hasNewYearsAtSea && (
+            <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
+          )}
+        </div>
+      )}
 
-      <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />
-      <CruiseMoneySection detail={detail} accent={accent} locale={locale} />
-      <CruiseFunSection detail={detail} accent={accent} locale={locale} />
+      {show("rhythm") && <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />}
+      {show("money") && <CruiseMoneySection detail={detail} accent={accent} locale={locale} />}
+      {show("fun") && <CruiseFunSection detail={detail} accent={accent} locale={locale} />}
     </div>
   );
 }
 
+/**
+ * One tile. `evidence` is present only where a RESOLVER answers for the
+ * figure, never on the strength of the registry alone — that field records
+ * what release 1 INTENDS to serve, and a tile wired to an unserved key ships
+ * a pointer cursor over a 404.
+ *
+ * Seven tiles here carry none on purpose: the average ports per cruise, the
+ * longest leg, the most ports on one trip, the line-loyalty maximum, the
+ * sea-day streak, the deepest deck and the revisit rate are `ratio`,
+ * `extremum` or `sequence` measures, and release 1 serves no kind but `sum`
+ * and `distinct`.
+ */
+interface Kpi {
+  label: string;
+  value: string | number;
+  evidence?: { key: string; renderedValue: number | null };
+}
+
 function KpiGrid({
   kpis,
+  scope,
   compact = false,
 }: {
-  kpis: Array<{ label: string; value: string | number }>;
+  kpis: Kpi[];
+  scope: EvidenceScopeParams;
   compact?: boolean;
 }): JSX.Element {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-      {kpis.map((kpi) => (
-        <div
-          key={kpi.label}
-          className="rounded-lg shadow-sm p-4"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-            {kpi.label}
-          </h3>
-          <p
-            className={`${compact ? "text-xl" : "text-2xl"} font-bold mt-1 font-mono`}
-            style={{ color: "var(--text-primary)" }}
+      {kpis.map((kpi) => {
+        // Tailwind's preflight zeroes a button's border and background, so the
+        // same className renders identically as a `<button>`: the card keeps
+        // its layout and gains a keyboard-operable trigger.
+        const className = "rounded-lg shadow-sm p-4";
+        const style = {
+          background: "var(--bg-surface)",
+          border: "1px solid var(--color-border)",
+        };
+        const body = (
+          <>
+            <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+              {kpi.label}
+            </h3>
+            <p
+              className={`${compact ? "text-xl" : "text-2xl"} font-bold mt-1 font-mono`}
+              style={{ color: "var(--text-primary)" }}
+            >
+              {kpi.value}
+            </p>
+          </>
+        );
+        if (!kpi.evidence) {
+          return (
+            <div key={kpi.label} className={className} style={style}>
+              {body}
+            </div>
+          );
+        }
+        return (
+          <EvidenceTrigger
+            key={kpi.label}
+            kind="metric"
+            evidenceKey={kpi.evidence.key}
+            scope={scope}
+            renderedValue={kpi.evidence.renderedValue}
+            label={kpi.label}
+            className={className}
+            style={style}
           >
-            {kpi.value}
-          </p>
-        </div>
-      ))}
+            {body}
+          </EvidenceTrigger>
+        );
+      })}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { Icon } from "../../ui/Icon";
+import { DOMAIN_ICON } from "../../ui/domainIcons";
 
 interface Props {
   /** Domains to offer chips for — the caller passes the user's enabledDomains. */
@@ -54,7 +56,7 @@ export default function DomainToggleChips({
               className="inline-block rounded-full"
               style={{ width: 8, height: 8, background: d.color }}
             />
-            <span aria-hidden>{d.icon}</span>
+            <Icon name={DOMAIN_ICON[key]} size={14} />
             <span>{t(`common:${d.i18nKey}`)}</span>
             {!hasData && (
               <span style={{ color: "var(--text-muted)", fontSize: 10 }}>

@@ -57,7 +57,13 @@
     "loadError": "The cruise could not be loaded.",
     "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call. Trips it belongs to are kept.",
     "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
-    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted. Trips it belongs to are kept."
+    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted. Trips it belongs to are kept.",
+    "backToLogbook": "Logbook · Cruises",
+    "itinerary": "Itinerary",
+    "nights": "Nights",
+    "countries": "Countries",
+    "priceKpi": "Price",
+    "day": "Day"
   },
   "field": {
     "ship": "Ship",

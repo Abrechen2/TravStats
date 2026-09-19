@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trip } from "../../types";
+import type { TripCostSuperlative } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { computeTripInsights, type TripInsightWinner } from "../../lib/stats/tripInsights";
 import { TRIP_GRID_CLASS } from "./tripGrid";
@@ -14,14 +15,33 @@ import { TRIP_GRID_CLASS } from "./tripGrid";
  * Renders nothing until at least one metric has a winner, so a fresh or
  * single-trivial-trip account never shows an empty strip.
  */
-export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | null {
+export function TripInsightsBar({
+  trips,
+  mostExpensiveTrip,
+}: {
+  trips: Trip[];
+  /** From `tripsApi.getAllWithInsights()` — the uncapped, FX-ranked winner.
+   *  `null` means no started trip has a convertible cost yet. */
+  mostExpensiveTrip: TripCostSuperlative | null;
+}): JSX.Element | null {
   const { t, i18n } = useTranslation(["trips"]);
   const navigate = useNavigate();
-  const insights = computeTripInsights(trips, i18n.language ?? "de");
+  const insights = computeTripInsights(trips, i18n.language ?? "de", mostExpensiveTrip);
 
-  const tiles: Array<{ key: string; label: string; win: TripInsightWinner | null }> = [
+  const tiles: Array<{
+    key: string;
+    label: string;
+    win: TripInsightWinner | null;
+    /** Only the `mostExpensive` tile carries this — see `mostExpensiveExcludedCount`. */
+    excludedCount?: number;
+  }> = [
     { key: "longest", label: t("trips:insights.longest"), win: insights.longest },
-    { key: "mostExpensive", label: t("trips:insights.mostExpensive"), win: insights.mostExpensive },
+    {
+      key: "mostExpensive",
+      label: t("trips:insights.mostExpensive"),
+      win: insights.mostExpensive,
+      excludedCount: insights.mostExpensiveExcludedCount,
+    },
     { key: "mostCountries", label: t("trips:insights.mostCountries"), win: insights.mostCountries },
   ];
 
@@ -36,9 +56,11 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
   // The width budget itself is the other half of #271: without it these tiles
   // were the only thing on the page running to the browser edge.
   return (
-    <div className="px-4">
-      <div className={`max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-6`}>
-        {tiles.map(({ key, label, win }) =>
+    // No gutter of its own: AppShell draws it, and a second one narrowed the
+    // page on a phone.
+    <div>
+      <div className={`ts-insight-strip max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-4 sm:mb-6`}>
+        {tiles.map(({ key, label, win, excludedCount }) =>
           win ? (
             <button
               key={key}
@@ -59,6 +81,14 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
               <div className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
                 {win.name}
               </div>
+              {/* Fix round 1, finding 2: the winner may not be the true
+                  maximum — some trips could not be converted to the current
+                  base currency and were left out of the comparison entirely. */}
+              {(excludedCount ?? 0) > 0 && (
+                <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  {t("trips:insights.mostExpensiveExcluded", { count: excludedCount })}
+                </div>
+              )}
             </button>
           ) : (
             <div

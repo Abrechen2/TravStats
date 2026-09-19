@@ -3,7 +3,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
-import { AmberToggle, SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import { Switch } from "../ui/Field";
+import { SettingRows } from "../ui/SettingRow";
 import { useSettingsStore } from "../../store/settingsStore";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
@@ -79,52 +81,35 @@ export default function ImportSection(): JSX.Element {
       {/* Import behaviour, not an import route: whether flights sharing a
           booking reference silently become a trip + booking. Persists
           immediately via the store's setter (like the base currency). */}
-      <div
-        className="flex items-start justify-between gap-4 rounded-lg p-4"
-        style={{ background: "var(--bg-inset)", border: "1px solid var(--color-border)" }}
-      >
-        <div>
-          <label
-            htmlFor="import-auto-create-trips"
-            className="block text-sm font-medium"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {t("settings:import.autoCreateTrips.label")}
-          </label>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-            {t("settings:import.autoCreateTrips.description")}
-          </p>
-        </div>
-        <AmberToggle
+      <SettingRows>
+        <Switch
           id="import-auto-create-trips"
           checked={autoCreateTrips}
-          onChange={(e) => setAutoCreateTrips(e.target.checked)}
+          onChange={setAutoCreateTrips}
+          label={t("settings:import.autoCreateTrips.label")}
+          sub={t("settings:import.autoCreateTrips.description")}
         />
-      </div>
-      <div className="flex flex-col gap-6">
         {groups.map((key) => {
           const tiles = listImporters[key] ?? [];
           return (
-            <div key={key}>
-              <div className="mb-3 flex items-center gap-2">
+            <div key={key} className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+              <span className="t-label-mono inline-flex items-center gap-2">
                 <span
                   aria-hidden="true"
                   className="h-2 w-2 rounded-full"
                   style={{ background: colorOf(key) }}
                 />
-                <span className="text-xs font-semibold uppercase tracking-wider text-(--text-muted)">
-                  {t(`common:${DOMAINS[key].i18nKey}`)}
-                </span>
-              </div>
+                {t(`common:${DOMAINS[key].i18nKey}`)}
+              </span>
               {tiles.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{tiles}</div>
+                <SettingRows>{tiles}</SettingRows>
               ) : (
-                <p className="text-sm text-(--text-muted)">{t("settings:import.noRoutes")}</p>
+                <p className="t-caption">{t("settings:import.noRoutes")}</p>
               )}
             </div>
           );
         })}
-      </div>
+      </SettingRows>
       {/*
         One log for every list import — behind a button, not unrolled beneath
         the tiles. It grows with every run, and an always-open log pushed the
@@ -135,14 +120,14 @@ export default function ImportSection(): JSX.Element {
         itself an overlay — and an overlay over an overlay is how a dialog
         became unclickable once already.
       */}
-      <div className="mt-6">
+      <div>
         <button
           type="button"
           data-testid="import-log-toggle"
           aria-expanded={logOpen}
           aria-controls="import-log-panel"
           onClick={() => setLogOpen((open) => !open)}
-          className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-(--text-primary) hover:bg-(--bg-inset)"
+          className="btn-secondary"
         >
           <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span> {t("settings:import.log.title")}
         </button>

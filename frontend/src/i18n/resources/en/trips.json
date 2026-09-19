@@ -257,7 +257,13 @@
     "linkAll": "Link all",
     "review": "Review",
     "success": "Created {{trips}} journeys, linked {{flights}} flights, removed {{orphans}} orphans",
-    "error": "Journey detection failed"
+    "error": "Journey detection failed",
+    "sources": {
+      "pnr": "same booking reference",
+      "homeLoop": "from home and back",
+      "continuity": "consecutive travel days",
+      "other": "other signals"
+    }
   },
   "detectReview": {
     "title": "Review journeys",
@@ -298,7 +304,9 @@
   "insights": {
     "longest": "Longest trip",
     "mostExpensive": "Most expensive trip",
-    "mostCountries": "Most countries"
+    "mostCountries": "Most countries",
+    "mostExpensiveExcluded_one": "{{count}} trip left out: no conversion",
+    "mostExpensiveExcluded_other": "{{count}} trips left out: no conversion"
   },
   "deleteTripConfirmTitle": "Delete trip?",
   "tours": {
@@ -399,5 +407,25 @@
       "loadError": "Settings could not be loaded",
       "saveError": "Save failed"
     }
+  },
+  "head": {
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "countries_one": "{{count}} country",
+    "countries_other": "{{count}} countries"
+  },
+  "overview": {
+    "daysAway": "Days away"
+  },
+  "card": {
+    "days_one": "day",
+    "days_other": "days",
+    "countries_one": "country",
+    "countries_other": "countries",
+    "entries_one": "entry",
+    "entries_other": "entries"
+  },
+  "list": {
+    "undated": "Undated"
   }
 }

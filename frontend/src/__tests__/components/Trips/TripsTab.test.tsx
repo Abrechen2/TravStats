@@ -62,7 +62,7 @@ describe("TripsTab — status filter (#status-from-dates)", () => {
     // The filter bar only renders once trips.length >= 4 (showFilters). The
     // filter button and the "Ongoing trip" card's own status pill share the
     // same i18n key text, so disambiguate by role.
-    fireEvent.click(screen.getByRole("button", { name: "trips:status.in_progress" }));
+    fireEvent.click(screen.getByRole("button", { name: /trips:status.in_progress/ }));
 
     expect(screen.getByText("Ongoing trip")).toBeInTheDocument();
     expect(screen.queryByText("Planned trip")).not.toBeInTheDocument();

@@ -68,3 +68,31 @@ export function formatTimeInTimezone(
   if (!date) return FALLBACK;
   return inZone(timezone, (timeZone) => formatTime(date, { timeZone }));
 }
+
+/**
+ * The date as a table shows it: `YYYY-MM-DD`, in the given zone.
+ *
+ * Round-4 decision E7 — ISO in tables, `DD.MM.YYYY` in prose. The four
+ * logbooks printed four forms side by side ("Do 14.01.27", "2023-06-01",
+ * "14.01.2027", "14.1.2027"; CT106 audit B11), and a localised date neither
+ * sorts by eye nor stays put when the language changes.
+ */
+export function formatIsoDate(input: Date | string, timezone = "UTC"): string {
+  const date = toDate(input);
+  if (!date) return FALLBACK;
+  const parts = (tz: string): Intl.DateTimeFormatPart[] =>
+    new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: tz,
+    }).formatToParts(date);
+  let fields: Intl.DateTimeFormatPart[];
+  try {
+    fields = parts(timezone);
+  } catch {
+    fields = parts("UTC");
+  }
+  const get = (type: string): string => fields.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}

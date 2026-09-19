@@ -124,7 +124,7 @@ export default function PendingUpdateEditor({
       open
       onClose={onCancel}
       title={t("pendingUpdates:editor.title")}
-      widthClass="max-w-4xl"
+      maxWidth={896}
       closeLabel={t("common:buttons.close")}
       footer={
         <>

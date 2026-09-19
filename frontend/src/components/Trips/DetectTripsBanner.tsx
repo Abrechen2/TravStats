@@ -53,20 +53,20 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
     {} as Record<string, number>
   );
   const sourceLabels = Object.entries(sourceCounts)
-    .map(([src, n]) => `${formatSourceName(src)} (${n})`)
+    .map(([src, n]) => `${t(`trips:detectBanner.sources.${formatSourceName(src)}`)} (${n})`)
     .join(" · ");
 
   return (
     <>
       <div
-        className="rounded-xl border p-3.5 flex items-center gap-3 mb-5"
+        className="rounded-xl border p-3 sm:p-3.5 flex items-center gap-3 mb-4 sm:mb-5"
         style={{
           borderColor: "var(--accent)",
           background: "linear-gradient(90deg, rgba(240,169,71,0.08), rgba(240,169,71,0.02))",
         }}
       >
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+          className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-base shrink-0"
           style={{ background: "var(--accent-soft, rgba(240,169,71,0.1))", color: "var(--accent)" }}
         >
           ✨
@@ -75,17 +75,25 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
           <p className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>
             {t("trips:detectBanner.title", { count: result.proposed.length })}
           </p>
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+          {/* How they were found — a detail a phone can leave to the review. */}
+          <p
+            className="hidden sm:block text-xs mt-0.5 truncate"
+            style={{ color: "var(--text-muted)" }}
+          >
             {sourceLabels}
           </p>
         </div>
         <button
           type="button"
           onClick={handleDismiss}
-          className="px-3 py-1.5 rounded-md text-xs"
-          style={{ color: "var(--text-muted)" }}
+          aria-label={t("common:buttons.close")}
+          className="flex items-center justify-center rounded-md text-xs sm:px-3 sm:py-1.5"
+          style={{ color: "var(--text-muted)", minWidth: 32, minHeight: 32 }}
         >
-          {t("common:buttons.close")}
+          <span className="hidden sm:inline">{t("common:buttons.close")}</span>
+          <span className="sm:hidden" aria-hidden="true">
+            ✕
+          </span>
         </button>
         <button
           type="button"
@@ -107,15 +115,20 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
   );
 }
 
+/**
+ * The i18n key of a detection source. The banner used to print the
+ * implementation names — "PNR-Cluster · Home-Loop · Continuity" — on a
+ * German page (CT106 audit B11).
+ */
 function formatSourceName(src: string): string {
   switch (src) {
     case "pnr":
-      return "PNR-Cluster";
+      return "pnr";
     case "home_loop":
-      return "Home-Loop";
+      return "homeLoop";
     case "continuity":
-      return "Continuity";
+      return "continuity";
     default:
-      return src;
+      return "other";
   }
 }

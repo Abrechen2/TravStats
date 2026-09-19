@@ -20,12 +20,16 @@
  * bookmark.
  */
 
-import { useState, useEffect } from "react";
+import AppShell from "../components/ui/AppShell";
+import EmptyState from "../components/ui/EmptyState";
+import { Card } from "../components/ui/Card";
+import { useCallback, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import PageHeader from "../components/ui/PageHeader";
 import { useTranslation } from "../hooks/useTranslation";
 import { pendingUpdatesApi, type StatisticsImpact } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
-import NavigationBar from "../components/NavigationBar";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
@@ -101,6 +105,11 @@ export default function PendingUpdatesPage(): JSX.Element {
   const [sortBy, setSortBy] = useState<"createdAt" | "expiresAt">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedUpdate, setSelectedUpdate] = useState<string | null>(null);
+  // Which half is open lives in the URL, so a link can land on the updates.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "updates" ? "updates" : "review";
+  const [openQuestions, setOpenQuestions] = useState<number | null>(null);
+  const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
 
   useEffect(() => {
     loadUpdates();
@@ -189,184 +198,202 @@ export default function PendingUpdatesPage(): JSX.Element {
   });
 
   const pendingCount = updates.filter((u) => u.status === "pending").length;
-  const editedCount = updates.filter((u) => u.status === "edited").length;
+
+  const tabs: { key: "review" | "updates"; label: string; count: number | null }[] = [
+    { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
+    {
+      key: "updates",
+      label: t("dataQuality:inbox.flightUpdates.title"),
+      count: statusFilter === "pending" ? pendingCount : null,
+    },
+  ];
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
+    <AppShell width="list">
+      <div className="w-full">
+        <PageHeader
+          title={t("dataQuality:inbox.title")}
+          meta={t("dataQuality:inbox.description")}
+        />
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-            {t("dataQuality:inbox.title")}
-          </h1>
-          <p style={{ color: "var(--text-muted)" }}>{t("dataQuality:inbox.description")}</p>
-        </div>
-
-        {/* Questions about the user's own records. First, because they are the
-            ones nobody else will answer — a flight update expires on its own. */}
-        <DataQualityFlagsSection />
-
-        {/* Flight updates — behaviour unchanged from before the Posteingang
-            rename; only the heading above it is new, because the page title is
-            no longer this section's title. */}
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-            {t("dataQuality:inbox.flightUpdates.title")}
-          </h2>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("dataQuality:inbox.flightUpdates.description")}
-          </p>
-        </div>
-
-        {/* Statistics Dashboard */}
-        {statistics && (
-          <div
-            className="rounded-lg shadow-xs p-6 mb-6"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-              {t("pendingUpdates:statistics.title")}
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div>
-                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("pendingUpdates:statistics.total")}
-                </div>
-                <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {statistics.totalUpdates}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("pendingUpdates:statistics.applied")}
-                </div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {statistics.appliedUpdates}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("pendingUpdates:statistics.rejected")}
-                </div>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {statistics.rejectedUpdates}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("pendingUpdates:statistics.edited")}
-                </div>
-                <div className="text-2xl font-bold" style={{ color: "var(--color-amber)" }}>
-                  {statistics.editedUpdates}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("pendingUpdates:statistics.expired")}
-                </div>
-                <div className="text-2xl font-bold" style={{ color: "var(--text-muted)" }}>
-                  {statistics.expiredUpdates}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Filters and Sort */}
+        {/* Round 4: the two halves as tabs rather than two stacked sections —
+            the flight updates sat a long scroll below the questions. */}
         <div
-          className="rounded-lg shadow-xs p-4 mb-6"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          role="tablist"
+          className="mb-6 flex overflow-x-auto scrollbar-none"
+          style={{ borderBottom: "1px solid var(--ts-border)" }}
         >
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <label className="label mb-2">{t("pendingUpdates:filters.status")}</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input w-full"
+          {tabs.map((item) => {
+            const active = tab === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() =>
+                  setSearchParams(item.key === "updates" ? { tab: "updates" } : {}, {
+                    replace: true,
+                  })
+                }
+                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
+                style={{
+                  fontWeight: active ? 700 : 500,
+                  color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
+                  boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
+                }}
               >
-                <option value="all">{t("pendingUpdates:filters.all")}</option>
-                <option value="pending">
-                  {t("pendingUpdates:filters.pending")} ({pendingCount})
-                </option>
-                <option value="edited">
-                  {t("pendingUpdates:filters.edited")} ({editedCount})
-                </option>
-                <option value="applied">{t("pendingUpdates:filters.applied")}</option>
-                <option value="rejected">{t("pendingUpdates:filters.rejected")}</option>
-                <option value="expired">{t("pendingUpdates:filters.expired")}</option>
-              </select>
+                {item.label}
+                {item.count !== null && (
+                  <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Questions about the records first: nobody else will answer them,
+            while a flight update expires on its own. The section stays mounted
+            so its open count keeps the tab label current. */}
+        <div hidden={tab !== "review"}>
+          <DataQualityFlagsSection onOpenCount={reportOpen} />
+        </div>
+
+        <div hidden={tab !== "updates"}>
+          <p className="t-caption mb-4">{t("dataQuality:inbox.flightUpdates.description")}</p>
+
+          {/* The totals only once there are any: five zeros in colour read as
+            a result, not as "nothing has happened yet". */}
+          {statistics && statistics.totalUpdates > 0 && (
+            <p
+              className="t-caption mb-4 flex flex-wrap gap-x-4 gap-y-1"
+              style={{ fontFamily: "var(--ts-font-mono)" }}
+            >
+              {(
+                [
+                  ["total", statistics.totalUpdates],
+                  ["applied", statistics.appliedUpdates],
+                  ["rejected", statistics.rejectedUpdates],
+                  ["edited", statistics.editedUpdates],
+                  ["expired", statistics.expiredUpdates],
+                ] as const
+              ).map(([key, value]) => (
+                <span key={key}>
+                  <span style={{ color: "var(--ts-text-bright)" }}>{value}</span>{" "}
+                  {t(`pendingUpdates:statistics.${key}`)}
+                </span>
+              ))}
+            </p>
+          )}
+
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <div
+              role="group"
+              aria-label={t("pendingUpdates:filters.status")}
+              className="flex flex-wrap gap-2"
+            >
+              {(["pending", "edited", "applied", "rejected", "expired", "all"] as const).map(
+                (option) => {
+                  const active = statusFilter === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setStatusFilter(option)}
+                      className="rounded-full px-3.5 py-1.5 text-sm font-semibold"
+                      style={{
+                        background: active ? "var(--ts-accent)" : "transparent",
+                        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
+                        border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
+                      }}
+                    >
+                      {t(`pendingUpdates:filters.${option}`)}
+                    </button>
+                  );
+                }
+              )}
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="label mb-2">{t("pendingUpdates:filters.sortBy")}</label>
+            <label className="ml-auto flex items-center gap-2 text-sm">
+              <span className="t-caption">{t("pendingUpdates:filters.sortBy")}</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "createdAt" | "expiresAt")}
-                className="input w-full"
+                className="rounded-full border px-3 py-1.5 text-sm"
+                style={{
+                  background: "var(--ts-surface)",
+                  borderColor: "var(--ts-border)",
+                  color: "var(--ts-text-bright)",
+                }}
               >
                 <option value="createdAt">{t("pendingUpdates:filters.createdAt")}</option>
                 <option value="expiresAt">{t("pendingUpdates:filters.expiresAt")}</option>
               </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                className="btn-secondary p-2"
-              >
-                {sortOrder === "asc" ? "↑" : "↓"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Updates List */}
-        {showLoader ? (
-          <div className="flex justify-center py-12">
-            <GlobeLoader size={160} label={t("common:loading.default")} />
-          </div>
-        ) : sortedUpdates.length === 0 ? (
-          <div
-            className="rounded-lg shadow-xs p-12 text-center"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <svg
-              className="mx-auto h-12 w-12"
-              style={{ color: "var(--text-muted)" }}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            </label>
+            <button
+              type="button"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              aria-label={t("pendingUpdates:filters.sortOrder")}
+              className="rounded-full border px-3 py-1.5 text-sm"
+              style={{ borderColor: "var(--ts-border)", color: "var(--ts-text-bright)" }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium" style={{ color: "var(--text-primary)" }}>
-              {t("pendingUpdates:empty.title")}
-            </h3>
-            <p className="mt-2" style={{ color: "var(--text-muted)" }}>
-              {t("pendingUpdates:empty.description")}
-            </p>
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sortedUpdates.map((update) => (
-              <PendingUpdateCard
-                key={update.id}
-                update={update}
-                onApply={() => handleApply(update.id)}
-                onReject={() => handleReject(update.id)}
-                onEdit={(editedData) => handleEdit(update.id, editedData)}
-                onSelect={() => setSelectedUpdate(update.id)}
-                isSelected={selectedUpdate === update.id}
+
+          {/* Updates List */}
+          {showLoader ? (
+            <div className="flex justify-center py-12">
+              <GlobeLoader size={160} label={t("common:loading.default")} />
+            </div>
+          ) : sortedUpdates.length === 0 ? (
+            /* `pending`, not `nothing`. The copy is already in the future tense
+             — "Updates erscheinen hier, wenn …" — so this is not "there is
+             nothing", it is "it has not happened yet", which is the kind the
+             design system paints in `info` and never in red. `nothing` would
+             have owed the reader a call to action; a waiting state does not,
+             because the nightly run is what fills this. */
+            <Card flush>
+              <EmptyState
+                kind="pending"
+                icon={
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                  </svg>
+                }
+                title={t("pendingUpdates:empty.title")}
+                description={t("pendingUpdates:empty.description")}
               />
-            ))}
-          </div>
-        )}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {sortedUpdates.map((update) => (
+                <PendingUpdateCard
+                  key={update.id}
+                  update={update}
+                  onApply={() => handleApply(update.id)}
+                  onReject={() => handleReject(update.id)}
+                  onEdit={(editedData) => handleEdit(update.id, editedData)}
+                  onSelect={() => setSelectedUpdate(update.id)}
+                  isSelected={selectedUpdate === update.id}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Statistics Impact Preview Modal */}
         {selectedUpdate && (
@@ -405,6 +432,6 @@ export default function PendingUpdatesPage(): JSX.Element {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

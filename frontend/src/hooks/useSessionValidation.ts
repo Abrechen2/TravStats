@@ -47,7 +47,11 @@ export function useSessionValidation(): { sessionChecked: boolean } {
 
     const validate = async () => {
       try {
-        await authApi.me();
+        // The persisted user predates fields the server has since started
+        // returning (e.g. `isSharedDemo`) — refresh it from /auth/me rather than
+        // trusting the copy localStorage rehydrated with.
+        const { user } = await authApi.me();
+        useAuthStore.getState().setAuth(user);
       } catch (error) {
         if (httpStatusOf(error) === 401) {
           clearSession();

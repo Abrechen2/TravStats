@@ -1,7 +1,7 @@
 {
-  "title": "Errungenschaften",
-  "loading": "Lade Errungenschaften...",
-  "checkNew": "Auf neue Errungenschaften prüfen",
+  "title": "Erfolge",
+  "loading": "Lade Erfolge …",
+  "checkNew": "Auf neue Erfolge prüfen",
   "categories": {
     "explorer": "Entdecker",
     "distance": "Distanz",
@@ -13,8 +13,8 @@
     "kurios": "Kurios"
   },
   "hiddenBadge": "Geheim",
-  "hiddenDescription": "Geheime Errungenschaft — erreiche sie, um die Details zu enthüllen.",
-  "hiddenHint": "{{count}} geheime Errungenschaft(en) wartet(n) in dieser Kategorie — ungewöhnliche Zeiten, seltene Routen oder bestimmte Sitzplatzwahlen könnten sie entsperren.",
+  "hiddenDescription": "Geheimer Erfolg — erreiche ihn, um die Details zu sehen.",
+  "hiddenHint": "Geheime Erfolge in dieser Kategorie: {{count}} — ungewöhnliche Zeiten, seltene Routen oder bestimmte Sitzplatzwahlen könnten sie freischalten.",
   "tiers": {
     "bronze": "Bronze",
     "silver": "Silber",
@@ -41,41 +41,47 @@
     "domainLodging": "Unterkunft",
     "domainPoi": "Orte",
     "domainShared": "Übergreifend",
-    "showUnlockedOnly": "Nur freigeschaltete anzeigen"
+    "showUnlockedOnly": "Nur freigeschaltete anzeigen",
+    "state": "Status",
+    "states": {
+      "all": "Alle",
+      "unlocked": "Erreicht",
+      "open": "Offen"
+    }
   },
   "progress": {
     "label": "Fortschritt",
     "unlocked": "Freigeschaltet am {{date}}"
   },
   "alerts": {
-    "unlocked": "Du hast {{count}} neue Errungenschaft(en) freigeschaltet!",
-    "none": "Keine neuen Errungenschaften freigeschaltet."
+    "unlocked": "Neu freigeschaltete Erfolge: {{count}}",
+    "none": "Keine neuen Erfolge freigeschaltet."
   },
   "hint": {
-    "title": "Willkommen bei den Errungenschaften!",
-    "message": "Trag Flüge ein und erreiche Meilensteine, um Errungenschaften freizuschalten. Jede Errungenschaft gibt dir Punkte und zeigt deinen Fortschritt.",
+    "title": "Willkommen bei den Erfolgen!",
+    "message": "Trag Flüge ein und erreiche Meilensteine, um Erfolge freizuschalten. Jeder Erfolg gibt dir Punkte und zeigt deinen Fortschritt.",
     "linkText": "Zurück zum Dashboard"
   },
   "leaderboard": {
     "title": "Bestenliste",
-    "backToAchievements": "← Zurück zu Errungenschaften",
+    "backToAchievements": "← Zurück zu den Erfolgen",
     "backToDashboard": "Zurück zum Dashboard",
     "emptyTitle": "Noch keine Bestenliste",
-    "emptyMessage": "Sei der Erste, der Errungenschaften freischaltet und in der Bestenliste erscheint!",
-    "achievementCount": "{{count}} Errungenschaften",
+    "emptyMessage": "Sei der Erste, der Erfolge freischaltet und in der Bestenliste erscheint!",
+    "achievementCount": "{{count}} Erfolge",
     "points": "Punkte"
   },
   "empty": {
-    "title": "Keine Errungenschaften gefunden",
-    "message": "Passe deine Filter an, um mehr Errungenschaften zu sehen."
+    "title": "Keine Erfolge gefunden",
+    "message": "Passe deine Filter an, um mehr Erfolge zu sehen."
   },
   "popup": {
-    "unlocked": "Errungenschaft freigeschaltet!",
+    "unlocked": "Erfolg freigeschaltet!",
     "tier": "Stufe",
     "points": "Punkte",
-    "progress": "{{current}} von {{total}} neuen Errungenschaften",
+    "progress": "{{current}} von {{total}} neuen Erfolgen",
     "closeAll": "Alle schließen",
-    "next": "Nächste Errungenschaft",
+    "next": "Nächster Erfolg",
     "awesome": "Großartig!"
   },
   "codes": {
@@ -1179,5 +1185,10 @@
       "name": "Ende der Welt",
       "description": "Einen Ort südlich des 54. Breitengrads besucht — Feuerland und weiter"
     }
+  },
+  "header": {
+    "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte",
+    "retired_one": "{{count}} eingestellter Erfolg zählt nur zu den Punkten",
+    "retired_other": "{{count}} eingestellte Erfolge zählen nur zu den Punkten"
   }
 }

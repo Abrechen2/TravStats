@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
+import type { JSX, ReactNode } from "react";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
+import AppShell from "../components/ui/AppShell";
+import DetailHeader from "../components/ui/DetailHeader";
+import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
+import DetailSection from "../components/ui/DetailSection";
+import Button from "../components/ui/Button";
+import { StayStatusPill } from "../components/lodging/StayStatusPill";
+import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
@@ -148,25 +154,20 @@ export default function LodgingDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="p-6 text-[var(--text-muted)]">{t("lodging:detail.loading")}</div>
-      </div>
+      <AppShell width="list">
+        <p className="text-[var(--text-muted)]">{t("lodging:detail.loading")}</p>
+      </AppShell>
     );
   }
 
   if (failure !== null || !lodging) {
     const isLoadError = failure === "loadError";
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl p-6">
-          <button
-            onClick={() => navigate(backTo)}
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
+      <AppShell width="reading">
+        <div>
+          <Link to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {backLabel}
-          </button>
+          </Link>
           <div
             role="alert"
             className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
@@ -174,20 +175,22 @@ export default function LodgingDetailPage(): JSX.Element {
             {isLoadError ? t("lodging:detail.loadError") : t("lodging:detail.notFound")}
           </div>
           {isLoadError && (
-            <button
-              type="button"
-              onClick={() => setReloadKey((k) => k + 1)}
-              className="mt-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            >
-              {t("common:buttons.retry")}
-            </button>
+            <div className="mt-3">
+              <Button onClick={() => setReloadKey((k) => k + 1)}>
+                {t("common:buttons.retry")}
+              </Button>
+            </div>
           )}
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   const typeIcon = lodgingTypeIcon(lodging.type);
+  // The list has shown this pill since block A; the detail page had no status
+  // at all, which is one of the four differences D-08 names. Same helper, so
+  // the two cannot say different things about the same house.
+  const lifecycle = lodgingLifecycleStatus(lodging.stays);
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
   // The stays `totalSpendBase` is summed over — never all of them, or a
   // priced stay still ahead makes the card print the empty sum as "0 €"
@@ -195,117 +198,108 @@ export default function LodgingDetailPage(): JSX.Element {
   const counted = countedStays(lodging.stays);
   const priced = hasAnyPrice(counted);
   const unconvertedCount = countUnconvertedStays(counted);
+  // Every priced stay unconverted means the base-currency sum is empty, not
+  // zero: "0 €" beside a stay that cost 780 $ is the B12 defect again.
+  const baseKnown =
+    priced && unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
 
-  return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <NavigationBar />
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <button
-          onClick={() => navigate(backTo)}
-          className="mb-3 text-sm text-[var(--accent)] hover:underline"
-        >
-          ← {backLabel}
-        </button>
+  const metaParts: ReactNode[] = [
+    addressLine || null,
+    lodging.chain ? (
+      <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
+    ) : (
+      t("lodging:field.independent")
+    ),
+  ].filter(Boolean);
+  const kpis: DetailKpi[] = [
+    { key: "stays", value: lodging.stayCount, label: t("lodging:detail.stays") },
+    { key: "nights", value: lodging.nights, label: t("lodging:detail.nights") },
+    ...(lodging.overallRating !== null
+      ? [
+          {
+            key: "rating",
+            value: formatRatingText(lodging.overallRating),
+            label: t("lodging:detail.avgRating"),
+          },
+        ]
+      : []),
+    ...(baseKnown
+      ? [
+          {
+            key: "spend",
+            value: formatCurrency(lodging.totalSpendBase, baseCurrency),
+            label: t("lodging:detail.spend"),
+          },
+        ]
+      : []),
+    ...(baseKnown && avgPerNight !== null
+      ? [
+          {
+            key: "perNight",
+            value: formatCurrency(avgPerNight, baseCurrency),
+            label: t("lodging:detail.spendPerNight"),
+          },
+        ]
+      : []),
+  ];
 
-        {/* Hotel-header strip */}
-        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex items-start gap-3">
-            <div
-              aria-hidden
-              className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-              style={{
-                backgroundColor: "var(--domain-lodging-soft, rgba(212,119,143,.12))",
-                color: "var(--domain-lodging, #d4778f)",
-              }}
-            >
-              {typeIcon}
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-[var(--text-primary)]">{lodging.name}</h1>
-              <p className="text-sm text-[var(--text-muted)]">
-                {lodging.chain ? (
-                  <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
-                ) : (
-                  t("lodging:field.independent")
-                )}
-                {lodging.stars !== null ? ` · ${"★".repeat(lodging.stars)} ${lodging.stars}` : ""}
-              </p>
-              {addressLine.length > 0 && (
-                <p className="text-sm font-medium text-[var(--text-primary)]">{addressLine}</p>
-              )}
-              <p className="text-xs text-[var(--text-muted)]">
-                {t("lodging:detail.avgRating")} <b>{formatRatingText(lodging.overallRating)}</b> ·{" "}
-                {t("lodging:field.staysCount", { count: lodging.stayCount })}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-            >
-              {t("common:buttons.edit")}
-            </button>
-            <button
-              type="button"
+  return (
+    <AppShell width="list">
+      <DetailHeader
+        backTo={backTo}
+        backLabel={fromChain ? backLabel : t("lodging:detail.backToLogbook")}
+        domain="lodging"
+        icon={typeIcon}
+        title={lodging.name}
+        meta={metaParts.map((part, index) => (
+          <span key={index}>
+            {index > 0 && " · "}
+            {part}
+          </span>
+        ))}
+        hero={<DetailKpis items={kpis} />}
+        status={
+          <>
+            {lifecycle ? (
+              <StayStatusPill status={lifecycle} testId="lodging-detail-lifecycle" />
+            ) : null}
+            {lodging.stars !== null && (
+              <span
+                aria-label={`${lodging.stars} ★`}
+                style={{ color: "var(--ts-accent)", fontSize: 13, letterSpacing: 1 }}
+              >
+                {"★".repeat(lodging.stars)}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
+            <Button
+              variant="danger"
               data-testid="lodging-delete-button"
               onClick={() => setConfirmingDelete(true)}
-              className="rounded-md border border-[var(--danger)]/50 px-3 py-1 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
             >
               {t("common:buttons.delete")}
-            </button>
-          </div>
-        </div>
+            </Button>
+          </>
+        }
+      />
 
-        {lodging.amenities.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-1">
-            {lodging.amenities.map((a) => (
-              <span
-                key={a}
-                className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
-              >
-                {a}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {id && <LodgingPhotoSection lodgingId={id} />}
-
-        {/* The notes, under the same name the form gives them.
-            They were stored and never shown, so anything typed there
-            disappeared on save. Rendered only when there are some: an empty
-            heading over blank space is its own small untruth. */}
-        {lodging.notes !== null && lodging.notes.trim().length > 0 && (
-          <section className="mb-4">
-            <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
-              {t("lodging:field.notes")}
-            </h2>
-            <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">
-              {lodging.notes}
-            </p>
-          </section>
-        )}
-
-        {/* Two-column body */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div className="md:col-span-3">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--text-muted)]">
-                {t("lodging:detail.stays")}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="flex flex-col gap-6 md:col-span-3">
+          <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="t-label-mono">
+                {t("lodging:detail.stays")} · {lodging.stays.length}
               </h2>
-              <button
-                type="button"
-                data-testid="lodging-add-stay-button"
-                onClick={() => setEditingStay("new")}
-                className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-              >
+              <Button data-testid="lodging-add-stay-button" onClick={() => setEditingStay("new")}>
                 {t("lodging:stayEditor.addStay")}
-              </button>
+              </Button>
             </div>
             {lodging.stays.length > 0 ? (
               // A scroll box of its own rather than the page: a house with
@@ -352,153 +346,169 @@ export default function LodgingDetailPage(): JSX.Element {
                 })}
               </div>
             ) : (
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-                {t("lodging:detail.staysEmpty")}
-              </div>
+              <p className="t-caption">{t("lodging:detail.staysEmpty")}</p>
             )}
-          </div>
+          </section>
 
-          <aside className="space-y-3 md:col-span-2">
-            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
-
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.spend")}
-              </h3>
-              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
-                {originalSpend && (
-                  <div className="flex justify-between">
-                    <dt>{t("lodging:detail.spendOriginal")}</dt>
-                    <dd className="text-[var(--text-primary)]">
-                      {formatCurrency(originalSpend.amount, originalSpend.currency)}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt>{t("lodging:detail.spendBase")}</dt>
-                  <dd style={originalSpend ? { color: "var(--fx, #6ab7d8)" } : undefined}>
-                    {priced ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—"}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t("lodging:detail.spendPerNight")}</dt>
-                  <dd>
-                    {priced && avgPerNight !== null
-                      ? formatCurrency(avgPerNight, baseCurrency)
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
-              <PlannedSpendNote stays={lodging.stays} />
-              {/* A total that left rows out must say so. Silence here reads as
-                  "this is everything", which is exactly the lie the marker on
-                  each stay exists to prevent. */}
-              {unconvertedCount > 0 && (
-                <p
-                  data-testid="lodging-omitted-from-total"
-                  className="mt-1 text-xs text-[var(--text-muted)]"
-                >
-                  {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.avgRating")}
-              </h3>
-              <dl className="mt-2 space-y-1.5 text-xs text-[var(--text-muted)]">
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingRoom")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.room} />
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingBreakfast")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.breakfast} />
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt>{t("lodging:field.ratingService")}</dt>
-                  <dd>
-                    <StarRating value={categoryRatings.service} />
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </aside>
+          <DetailSection
+            title={t("lodging:detail.spend")}
+            facts={[
+              {
+                label: t("lodging:detail.spendOriginal"),
+                value: originalSpend
+                  ? formatCurrency(originalSpend.amount, originalSpend.currency)
+                  : null,
+                mono: true,
+              },
+              {
+                label: t("lodging:detail.spendBase"),
+                value: baseKnown ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—",
+                mono: true,
+              },
+              {
+                label: t("lodging:detail.spendPerNight"),
+                value:
+                  baseKnown && avgPerNight !== null
+                    ? formatCurrency(avgPerNight, baseCurrency)
+                    : "—",
+                mono: true,
+              },
+            ]}
+          >
+            <PlannedSpendNote stays={lodging.stays} />
+            {/* A total that left rows out must say so. Silence here reads as
+                "this is everything", which is exactly the lie the marker on
+                each stay exists to prevent. */}
+            {unconvertedCount > 0 && (
+              <p data-testid="lodging-omitted-from-total" className="t-caption">
+                {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
+              </p>
+            )}
+          </DetailSection>
         </div>
 
-        {editing && (
-          <LodgingFormModal
-            mode="edit"
-            lodging={lodging}
-            onClose={() => setEditing(false)}
-            onSaved={(updated) => {
-              setLodging(updated);
-              setEditing(false);
-            }}
-          />
-        )}
+        <aside className="flex flex-col gap-6 md:col-span-2">
+          <DetailSection title={t("lodging:detail.location")}>
+            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+          </DetailSection>
 
-        {editingStay !== null && (
-          <StayEditor
-            mode={editingStay === "new" ? "create" : "edit"}
-            lodgingId={lodging.id}
-            lodgingChainId={lodging.chainId}
-            lodgingCountryCode={lodging.isoCountryCode}
-            stay={editingStay === "new" ? null : editingStay}
-            onClose={() => setEditingStay(null)}
-            onSaved={async (savedStay) => {
-              setEditingStay(null);
-              // A stay write doesn't return the parent lodging's recomputed
-              // aggregates (nights/stayCount/overallRating/totalSpendBase) —
-              // those are only ever attached server-side via
-              // `computeAggregates` on a lodging fetch, so a full reload is
-              // the only way to keep this page's header stats correct.
-              try {
-                const fresh = await getLodging(lodging.id);
-                setLodging(fresh);
-              } catch (err: unknown) {
-                logger.error("LodgingDetailPage: reload after stay save failed", err);
-                // Fall back to a client-side merge so the new/edited stay is
-                // still visible even if the reload itself failed.
-                setLodging((prev) => {
-                  if (!prev) return prev;
-                  const stays = prev.stays.some((s) => s.id === savedStay.id)
-                    ? prev.stays.map((s) => (s.id === savedStay.id ? savedStay : s))
-                    : [...prev.stays, savedStay];
-                  return { ...prev, stays };
-                });
-              }
-            }}
-          />
-        )}
+          <DetailSection title={t("lodging:detail.avgRating")}>
+            <dl className="flex flex-col gap-2 text-sm">
+              {(
+                [
+                  ["ratingRoom", categoryRatings.room],
+                  ["ratingBreakfast", categoryRatings.breakfast],
+                  ["ratingService", categoryRatings.service],
+                ] as const
+              ).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <dt className="t-caption">{t(`lodging:field.${key}`)}</dt>
+                  <dd>
+                    <StarRating value={value} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </DetailSection>
 
-        {/* Same component and same keys as the lodging LIST — this was the
+          {lodging.amenities.length > 0 && (
+            <DetailSection title={t("lodging:field.amenities")}>
+              <div className="flex flex-wrap gap-1.5">
+                {lodging.amenities.map((a) => (
+                  <span
+                    key={a}
+                    className="rounded-full border px-2.5 py-0.5 text-xs"
+                    style={{ borderColor: "var(--ts-border)", color: "var(--ts-text)" }}
+                  >
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+
+          {id && <LodgingPhotoSection lodgingId={id} />}
+
+          {/* The notes, under the same name the form gives them. They were
+              stored and never shown, so anything typed there disappeared on
+              save. Rendered only when there are some. */}
+          {lodging.notes !== null && lodging.notes.trim().length > 0 && (
+            <DetailSection title={t("lodging:field.notes")}>
+              <p className="whitespace-pre-line text-sm" style={{ color: "var(--ts-text)" }}>
+                {lodging.notes}
+              </p>
+            </DetailSection>
+          )}
+        </aside>
+      </div>
+
+      {editing && (
+        <LodgingFormModal
+          mode="edit"
+          lodging={lodging}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setLodging(updated);
+            setEditing(false);
+          }}
+        />
+      )}
+
+      {editingStay !== null && (
+        <StayEditor
+          mode={editingStay === "new" ? "create" : "edit"}
+          lodgingId={lodging.id}
+          lodgingChainId={lodging.chainId}
+          lodgingCountryCode={lodging.isoCountryCode}
+          stay={editingStay === "new" ? null : editingStay}
+          onClose={() => setEditingStay(null)}
+          onSaved={async (savedStay) => {
+            setEditingStay(null);
+            // A stay write doesn't return the parent lodging's recomputed
+            // aggregates (nights/stayCount/overallRating/totalSpendBase) —
+            // those are only ever attached server-side via
+            // `computeAggregates` on a lodging fetch, so a full reload is
+            // the only way to keep this page's header stats correct.
+            try {
+              const fresh = await getLodging(lodging.id);
+              setLodging(fresh);
+            } catch (err: unknown) {
+              logger.error("LodgingDetailPage: reload after stay save failed", err);
+              // Fall back to a client-side merge so the new/edited stay is
+              // still visible even if the reload itself failed.
+              setLodging((prev) => {
+                if (!prev) return prev;
+                const stays = prev.stays.some((s) => s.id === savedStay.id)
+                  ? prev.stays.map((s) => (s.id === savedStay.id ? savedStay : s))
+                  : [...prev.stays, savedStay];
+                return { ...prev, stays };
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Same component and same keys as the lodging LIST — this was the
             clearest case of the six: deleting a house looked different
             depending on whether you did it from the list or from here. */}
-        <ConfirmModal
-          isOpen={confirmingDelete}
-          onClose={() => setConfirmingDelete(false)}
-          onConfirm={() => void handleDelete()}
-          isLoading={deleting}
-          title={t("lodging:detail.deleteConfirmTitle")}
-          message={countedDeleteMessage(
-            t,
-            {
-              counted: "lodging:detail.deleteConfirmMessage",
-              empty: "lodging:detail.deleteConfirmMessageNoStays",
-            },
-            lodging.name,
-            lodging.stayCount
-          )}
-          confirmText={t("common:buttons.delete")}
-          confirmButtonClass={DELETE_BUTTON_CLASS}
-        />
-      </div>
-    </div>
+      <ConfirmModal
+        isOpen={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => void handleDelete()}
+        isLoading={deleting}
+        title={t("lodging:detail.deleteConfirmTitle")}
+        message={countedDeleteMessage(
+          t,
+          {
+            counted: "lodging:detail.deleteConfirmMessage",
+            empty: "lodging:detail.deleteConfirmMessageNoStays",
+          },
+          lodging.name,
+          lodging.stayCount
+        )}
+        confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
+    </AppShell>
   );
 }

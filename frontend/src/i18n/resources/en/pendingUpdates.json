@@ -54,7 +54,8 @@
     "rejected": "Rejected",
     "expired": "Expired",
     "createdAt": "Created Date",
-    "expiresAt": "Expiry Date"
+    "expiresAt": "Expiry Date",
+    "sortOrder": "Reverse order"
   },
   "statistics": {
     "title": "Update Statistics",

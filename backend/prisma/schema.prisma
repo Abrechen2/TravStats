@@ -1597,6 +1597,18 @@ model Cruise {
   bookingReference String?   @map("booking_reference")
   price            Float?
   currency         String?   @default("EUR")
+  /// FX snapshot (#267), same contract as `Flight`/`Booking` — `Cruise` was
+  /// the only priced model without one, which is what let a 200.000 KRW
+  /// cruise beat a 1.650 EUR trip on the trips page (compared by raw face
+  /// value across currencies). Rate for the START day; no backfill for
+  /// historical rows — an invented rate is worse than an absent one, so a
+  /// pre-migration cruise simply reports null here and is left out of any
+  /// base-currency comparison rather than guessed at.
+  priceBase        Float?    @map("price_base")
+  fxRate           Float?    @map("fx_rate")
+  fxRateDate       DateTime? @map("fx_rate_date")
+  fxBaseCurrency   String?   @map("fx_base_currency")
+  fxSource         String?   @map("fx_source")
   notes            String?
   tags             String[]  @default([])
   companions       String[]  @default([])

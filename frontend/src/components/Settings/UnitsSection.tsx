@@ -1,8 +1,11 @@
-import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
 import CurrencySelect from "../common/CurrencySelect";
+import HelpIcon from "../Help/HelpIcon";
 import { ECB_CURRENCIES } from "../../shared/currencies";
+import { Segmented } from "../ui/Segmented";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
 
 interface UnitsSectionProps {
   units: UnitsSettings;
@@ -24,6 +27,8 @@ interface UnitsSectionProps {
   onSetBaseCurrency: (currency: string) => void;
 }
 
+const DISTANCE_UNITS = ["kilometers", "miles", "nautical_miles"] as const;
+
 export default function UnitsSection({
   units,
   onSetUnits,
@@ -38,43 +43,47 @@ export default function UnitsSection({
         title={t("settings:units.title")}
         description={t("settings:units.description")}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <FieldLabel help={t("settings:units.help.distance")}>
-            {t("settings:units.distance")}
-          </FieldLabel>
-          <select
-            value={units.distanceUnit}
-            onChange={(e) =>
-              onSetUnits({ distanceUnit: e.target.value as typeof units.distanceUnit })
-            }
-            className="input"
-          >
-            <option value="kilometers">{t("settings:units.options.kilometers")}</option>
-            <option value="miles">{t("settings:units.options.miles")}</option>
-            <option value="nautical_miles">{t("settings:units.options.nautical_miles")}</option>
-          </select>
-        </div>
-        <div>
-          <FieldLabel htmlFor="units-base-currency" help={t("settings:units.help.currency")}>
-            {t("settings:units.currency")}
-          </FieldLabel>
-          <CurrencySelect
-            id="units-base-currency"
-            value={baseCurrency}
-            onChange={onSetBaseCurrency}
-            restrictTo={ECB_CURRENCIES}
-          />
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            {t("settings:units.currencyHint")}
-          </p>
-          {/* Why the choice is narrower than what you may RECORD in — the one
-              question this field reliably raises. */}
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            {t("lodging:fx.baseCurrencyExplainer")}
-          </p>
-        </div>
-      </div>
+      <SettingRows>
+        <SettingRow
+          title={t("settings:units.distance")}
+          sub={t("settings:units.distanceSub")}
+          control={
+            <Segmented
+              label={t("settings:units.distance")}
+              value={units.distanceUnit}
+              options={DISTANCE_UNITS.map((value) => ({
+                value,
+                label: t(`settings:units.short.${value}`),
+                name: t(`settings:units.options.${value}`),
+              }))}
+              onChange={(distanceUnit) => onSetUnits({ distanceUnit })}
+            />
+          }
+        />
+        <SettingRow
+          title={t("settings:units.currency")}
+          htmlFor="units-base-currency"
+          sub={
+            <span className="inline-flex items-center gap-1.5">
+              {t("settings:units.currencySub")}
+              {/* Why the choice is narrower than what you may RECORD in — the
+                  one question this field reliably raises. */}
+              <HelpIcon
+                content={`${t("settings:units.currencyHint")} ${t("lodging:fx.baseCurrencyExplainer")}`}
+                position="top"
+              />
+            </span>
+          }
+          control={
+            <CurrencySelect
+              id="units-base-currency"
+              value={baseCurrency}
+              onChange={onSetBaseCurrency}
+              restrictTo={ECB_CURRENCIES}
+            />
+          }
+        />
+      </SettingRows>
     </SectionCard>
   );
 }

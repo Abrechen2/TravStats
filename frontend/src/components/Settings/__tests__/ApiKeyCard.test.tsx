@@ -98,3 +98,27 @@ describe("ApiKeyCard — googlePlaces", () => {
     expect(settingsTestApiKey).not.toHaveBeenCalled();
   });
 });
+
+describe("ApiKeyCard — row layout", () => {
+  it("shows name and status on one row and folds the key field behind edit", async () => {
+    render(
+      <ApiKeyCard
+        layout="row"
+        provider="airlabs"
+        label="AirLabs"
+        description="flight data"
+        getKeyUrl="https://airlabs.co/account"
+        isShared={false}
+        hasAccess={false}
+        hasOwnKey={false}
+      />
+    );
+
+    expect(screen.getByText("settings:apiKeys.notConfigured")).toBeInTheDocument();
+    expect(screen.queryByLabelText("AirLabs")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.edit" }));
+    expect(screen.getByLabelText("AirLabs")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "settings:apiKeys.test" })).toBeInTheDocument();
+  });
+});

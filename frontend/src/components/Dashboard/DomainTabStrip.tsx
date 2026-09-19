@@ -3,6 +3,9 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
+import { Icon, type IconName } from "../ui/Icon";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { isValidDomain, type DomainKey } from "../../shared/domains";
 
@@ -36,13 +39,14 @@ interface DomainTabStripProps {
   nowMs?: number;
 }
 
-const TAB_ICON: Record<DashboardTab, string> = {
-  all: "◎",
-  flight: "✈",
-  cruise: "⚓",
-  poi: "📍",
-  lodging: "🏨",
-  tour: "🧭",
+/** Line icons, as the logbook tabs; "Alle" carries none, as in round 4. */
+const TAB_ICON: Record<DashboardTab, IconName | null> = {
+  all: null,
+  flight: "plane",
+  cruise: "ship",
+  poi: "map-pin",
+  lodging: "bed",
+  tour: "route",
 };
 
 export function DomainTabStrip({
@@ -93,16 +97,13 @@ export function DomainTabStrip({
     <div
       role="tablist"
       aria-label={t("dashboard:tabStrip.label")}
+      className="flex items-center overflow-x-auto whitespace-nowrap scrollbar-none"
       style={{
-        background: "#0b1017",
-        padding: "6px 16px",
-        borderBottom: "1px solid var(--color-border)",
-        display: "flex",
-        gap: "4px",
-        alignItems: "center",
-        fontSize: "13px",
-        overflowX: "auto",
-        whiteSpace: "nowrap",
+        background: "var(--ts-bg)",
+        padding: "0 16px",
+        borderBottom: "1px solid var(--ts-border)",
+        gap: 4,
+        fontSize: 14,
       }}
     >
       {visibleTabs.map((tab) => {
@@ -116,6 +117,7 @@ export function DomainTabStrip({
         const count = domain === null ? null : counts[domain];
         const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
         const label = t(`dashboard:tabStrip.tabs.${tab}`);
+        const icon = TAB_ICON[tab];
 
         return (
           <button
@@ -125,36 +127,36 @@ export function DomainTabStrip({
             aria-disabled={isDisabled}
             data-disabled={isDisabled ? "true" : "false"}
             onClick={() => onSelect(tab)}
+            className="flex shrink-0 items-center"
             style={{
-              padding: "8px 18px",
+              gap: 8,
+              padding: "14px 14px",
               background: "transparent",
-              color: isActive ? "var(--accent)" : "var(--text-primary)",
-              borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+              color: isActive ? "var(--ts-text-bright)" : "var(--ts-muted)",
+              boxShadow: `inset 0 -2px 0 ${isActive ? "var(--ts-accent)" : "transparent"}`,
               opacity: isDisabled ? 0.55 : 1,
-              fontWeight: isActive ? 600 : 400,
+              fontWeight: isActive ? 700 : 500,
               cursor: "pointer",
               border: "none",
               borderRadius: 0,
             }}
           >
-            <span style={{ marginRight: "6px" }}>{TAB_ICON[tab]}</span>
+            {icon && <Icon name={icon} size={16} />}
             {label}
             {count !== null && (
               <span
-                style={{
-                  marginLeft: "8px",
-                  opacity: 0.65,
-                  fontFamily: "var(--font-mono)",
-                }}
+                className="t-caption"
+                style={{ fontFamily: "var(--ts-font-mono)", fontWeight: 400 }}
               >
                 {count}
                 {scheduled > 0 && (
-                  <span style={{ marginLeft: 4, fontFamily: "inherit" }}>
+                  <span style={{ marginLeft: 4 }}>
                     {t("dashboard:tabStrip.scheduledHint", { count: scheduled })}
                   </span>
                 )}
               </span>
             )}
+            {tab === "tour" && <Pill color={token("accent")}>Beta</Pill>}
           </button>
         );
       })}

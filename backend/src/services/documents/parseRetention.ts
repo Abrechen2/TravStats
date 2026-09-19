@@ -5,6 +5,7 @@ import type { Response } from "express";
 
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { z } from "../../schemas/zod";
 import { parseRetentionFields } from "../../schemas/document";
 import type { DetectedFormat, DocumentFormat } from "./documentFormats";
@@ -95,10 +96,36 @@ export async function recordParse(args: RecordParseInput): Promise<string | unde
     parsedPayload: args.parsedPayload as Prisma.InputJsonValue,
   };
   if (args.documentId) {
+    // Untouched for the shared demo account below: this branch writes the
+    // parse's own reading onto a document that already exists and that the
+    // route has already proved the caller owns (`readDocumentForParse` →
+    // `getOwnDocument`). It persists no new bytes and no new row, so it is not
+    // the door.
     await prisma.document.update({ where: { id: args.documentId }, data: parsed });
     return args.documentId;
   }
   if (!args.retain || !args.input) return undefined;
+
+  /**
+   * The SHARED demo account keeps nothing. `retain` is IGNORED for it, not
+   * refused.
+   *
+   * `POST /documents` refuses the account outright, but this is the same
+   * destination reached through a different door: `createDocument` below writes
+   * a `Document` row AND its bytes under `uploads/documents/`, and an UNFILED
+   * one — which a parse retention always is — outlives the 04:00 reseed until
+   * the wipe catches it, readable in the meantime by the next visitor through
+   * `GET /documents/:id/file`. On a public preview whose demo password is
+   * printed on the login page, that is a stranger's boarding pass or invoice
+   * held on the operator's disk and shown to whoever logs in next.
+   *
+   * Ignored rather than refused, because the routes themselves must stay open:
+   * the template parser is what a visitor came to try, and it costs nothing.
+   * `undefined` is the answer this function already gives when retention was
+   * not asked for, so the route simply omits `documentId` from its reply — no
+   * new error, no new shape, and the parse result is unaffected.
+   */
+  if (await isSharedDemoUser(args.userId)) return undefined;
 
   const { document, created } = await createDocument({
     userId: args.userId,

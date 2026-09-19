@@ -1,32 +1,31 @@
-import type { LegMode, TourGeometry } from "../../types/tour";
+import type { TourGeometry } from "../../types/tour";
+import { TOUR_COLOR } from "../../shared/domains";
 
 /**
  * Turns the geometry endpoint's output into `PathLayer` data.
  *
- * Colour comes from the LEG's mode, never the section's: a road tour with
- * one ferry crossing has to show that crossing as a ferry, or the map
- * claims the van drove across the Skagerrak.
+ * Every leg is the tour colour. This file used to hold five — one per means of
+ * transport — with a comment arguing that "a colour is a claim about how a leg
+ * was travelled", which is why an unrecognised mode got a neutral grey rather
+ * than borrowing road's green. The owner settled it differently on 2026-09-05:
+ * tours are ONE domain with ONE colour, and the means of transport is carried
+ * by the ICON. The concern the five colours answered dissolves with them — a
+ * hue that says nothing about the mode cannot make a false claim about it.
  *
- * Hex values mirror the mode palette in `tokens`. `isPlaceholder` marks a
- * `straight` (unrouted) leg — a chord is a stand-in, not a measurement, and
- * TripMap.tsx renders it as a lighter, thinner line rather than "dashed":
- * deck.gl's `PathLayer` has no dash support without an extension.
+ * `isPlaceholder` stays, and it is a different kind of statement: a `straight`
+ * (unrouted) leg is a chord standing in for a measurement, so `TripMap.tsx`
+ * draws it lighter and thinner. That is a claim about the DATA, not about the
+ * vehicle, and it survives.
  */
-export const TOUR_MODE_RGB: Record<LegMode, [number, number, number]> = {
-  road: [141, 191, 106],
-  ferry: [111, 160, 214],
-  rail: [168, 148, 214],
-  foot: [217, 180, 92],
-  bike: [176, 209, 107],
-};
+const hex = TOUR_COLOR.slice(1);
+const value = parseInt(hex, 16);
 
-/**
- * A colour is a claim about how a leg was travelled. An unrecognised mode
- * (malformed or from a future server) must never silently borrow `road`'s
- * colour — that would tell the user a car made a trip that might have been
- * a ferry. Neutral grey instead, which reads as "unknown", not as a claim.
- */
-export const UNKNOWN_MODE_RGB: [number, number, number] = [140, 140, 140];
+/** The one tour colour, as deck.gl wants it. Derived, so no second literal. */
+export const TOUR_RGB: [number, number, number] = [
+  (value >> 16) & 255,
+  (value >> 8) & 255,
+  value & 255,
+];
 
 export interface TourPathDatum {
   legId: string;
@@ -47,7 +46,7 @@ export function buildTourPaths(
       out.push({
         legId: f.properties.legId,
         path,
-        color: TOUR_MODE_RGB[f.properties.mode] ?? UNKNOWN_MODE_RGB,
+        color: TOUR_RGB,
         isPlaceholder: f.properties.source === "straight",
         label: `${g.name} · ${Math.round(f.properties.distanceKm)} km`,
       });

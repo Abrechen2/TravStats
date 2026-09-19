@@ -69,36 +69,41 @@ export default function ListSummaryStrip({
 }: Props): JSX.Element | null {
   if (unknown || figures.length === 0) return null;
 
+  // One mono line under the title — "123 Flüge · 5 Airlines · 30 Flughäfen" —
+  // as round 4 draws it. The figures used to stand as 24px numbers between
+  // the title and the table, pushing the first row down.
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-x-8 gap-y-3">
-      {figures.map((f) => (
-        <div key={f.key} className="flex flex-col">
-          <span
-            className="text-2xl font-semibold leading-none"
-            style={{ color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}
-          >
+    <p
+      className="t-caption -mt-2 mb-4 flex flex-wrap items-center"
+      style={{ fontFamily: "var(--ts-font-mono)", gap: "4px 8px" }}
+    >
+      {figures.map((f, index) => (
+        <span key={f.key} className="whitespace-nowrap">
+          {index > 0 && <span aria-hidden="true">· </span>}
+          <span style={{ color: "var(--ts-text)", fontVariantNumeric: "tabular-nums" }}>
             {f.value}
-          </span>
-          <span
-            className="mt-1 text-[11px] uppercase tracking-wider"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {f.label}
-            {f.note && (
-              <span className="ml-1 normal-case tracking-normal opacity-80">{f.note}</span>
-            )}
-          </span>
-        </div>
+          </span>{" "}
+          {f.label}
+          {/* The qualifier rides WITH the figure, not beside the strip: an
+              airline count that quietly omits the flights whose carrier was
+              never recorded is a different number than it looks, and the
+              reader has to see that where they read the number. */}
+          {f.note && <span style={{ opacity: 0.8 }}> {f.note}</span>}
+        </span>
       ))}
       {filtered && (
         <span
           data-testid="list-summary-filtered"
-          className="mb-1 rounded-full border px-2 py-0.5 text-[11px]"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+          className="rounded-full border px-2 py-0.5 text-[11px]"
+          style={{
+            borderColor: "var(--ts-border)",
+            color: "var(--ts-muted)",
+            fontFamily: "var(--ts-font-ui)",
+          }}
         >
           {filteredLabel}
         </span>
       )}
-    </div>
+    </p>
   );
 }

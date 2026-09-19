@@ -15,6 +15,7 @@ import { errorContent } from "./shared";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
+const unauthorized = { description: "Not authenticated", content: errorContent };
 const deleted = { description: "Deleted" };
 const uuid = z.string().uuid();
 
@@ -462,7 +463,9 @@ registry.registerPath({
     "AND whether it is closed.",
   tags: airportsTag,
   request: { params: z.object({ code: z.string() }) },
-  responses: { 200: { description: "Airport" }, 404: notFound },
+  // Authenticated since 2026-09-19, unlike `/airports/search`: a miss here
+  // fetches from a provider and INSERTS into the global catalogue.
+  responses: { 200: { description: "Airport" }, 401: unauthorized, 404: notFound },
 });
 
 registry.registerPath({

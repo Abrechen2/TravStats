@@ -8,6 +8,7 @@
 import cron from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
+import { DEMO_USERNAME } from "../utils/sharedDemo";
 import {
   getUserEnrichmentSettings,
   findEnrichmentCandidates,
@@ -174,6 +175,32 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 }
 
 /**
+ * Every account the nightly enrichment sweep may run for.
+ *
+ * Its own function so the exclusion has one home and a test can read it
+ * without running the sweep. The SHARED demo account is left out (independent
+ * review, 2026-09-17, finding A4): the job spends the instance's flight-API
+ * quota, unattended, and the demo login is published on a public instance, so
+ * a single visitor switching the setting on would have the operator paying for
+ * lookups over 160 seeded sample flights.
+ *
+ * `isDemo` alone is the wrong question — `seedDemoUser` flags the preview's
+ * `admin`, `alex` and `claude` and the local dev admin, which are ordinary
+ * accounts. Only `isDemo AND username = 'demo'` drops out, the same predicate
+ * as `isSharedDemoAccount`.
+ */
+export async function findHistoricalEnrichmentEligibleUserIds(): Promise<string[]> {
+  const rows = await prisma.userSettings.findMany({
+    where: {
+      historicalEnrichmentEnabled: true,
+      user: { NOT: { isDemo: true, username: DEMO_USERNAME } },
+    },
+    select: { userId: true },
+  });
+  return rows.map((row) => row.userId);
+}
+
+/**
  * Process historical enrichment for all eligible users
  */
 export async function processAllUsersHistoricalEnrichment(): Promise<{
@@ -183,22 +210,14 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
   totalSkipped: number;
 }> {
   try {
-    // Find all users with enrichment enabled
-    const users = await prisma.userSettings.findMany({
-      where: {
-        historicalEnrichmentEnabled: true,
-      },
-      select: {
-        userId: true,
-      },
-    });
+    const users = await findHistoricalEnrichmentEligibleUserIds();
 
     let totalProcessed = 0;
     let totalCreated = 0;
     let totalSkipped = 0;
 
-    for (const userSettings of users) {
-      const result = await processUserHistoricalEnrichment(userSettings.userId);
+    for (const userId of users) {
+      const result = await processUserHistoricalEnrichment(userId);
       totalProcessed += result.processed;
       totalCreated += result.created;
       totalSkipped += result.skipped;

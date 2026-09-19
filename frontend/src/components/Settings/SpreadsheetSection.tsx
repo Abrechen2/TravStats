@@ -26,6 +26,8 @@ import {
   type ImportOutcome,
 } from "../../lib/xlsx/importClient";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { Icon } from "../ui/Icon";
+import { SettingRow } from "../ui/SettingRow";
 
 type Status = "idle" | "running" | "empty" | "failed";
 type ImportStatus =
@@ -150,49 +152,65 @@ export default function SpreadsheetSection(): JSX.Element {
 
   return (
     <>
-      <section className="rounded-lg border border-[var(--border)] p-4">
-        <h3 className="mb-1 text-sm font-semibold">{t("xlsx:export.button")}</h3>
-        <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("xlsx:export.description")}
-        </p>
-
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={status === "running"}
-          className="rounded-md px-3 py-2 text-sm font-medium disabled:opacity-60"
-          style={{ background: "var(--accent)", color: "#0b0f14" }}
-        >
-          {status === "running" ? t("xlsx:export.running") : t("xlsx:export.button")}
-        </button>
-
-        {status === "empty" && (
-          <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("xlsx:export.empty")}
-          </p>
-        )}
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+        <SettingRow
+          title={t("xlsx:export.button")}
+          sub={t("xlsx:export.description")}
+          control={
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={status === "running"}
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              <Icon name="download" size={14} />
+              {status === "running" ? t("xlsx:export.running") : t("xlsx:export.button")}
+            </button>
+          }
+        />
+        {status === "empty" && <p className="t-caption">{t("xlsx:export.empty")}</p>}
         {status === "failed" && (
-          <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
+          <p className="t-caption" style={{ color: "var(--ts-bad)" }}>
             {t("xlsx:export.failed")}
           </p>
         )}
-      </section>
+      </div>
 
-      <section className="rounded-lg border border-[var(--border)] p-4">
-        <h3 className="mb-1 text-sm font-semibold">{t("xlsx:import.title")}</h3>
-        <p className="mb-1 text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("xlsx:import.description")}
-        </p>
-        {/* Named rather than left to be discovered: editing a sheet and watching
-          nothing happen is worse than knowing beforehand that it is read-only. */}
-        <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("xlsx:import.readOnlySheets")}
-        </p>
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+        <SettingRow
+          title={t("xlsx:import.title")}
+          sub={
+            <>
+              {t("xlsx:import.description")}{" "}
+              {/* Named rather than left to be discovered: editing a sheet and
+                  watching nothing happen is worse than knowing beforehand that
+                  it is read-only. */}
+              {t("xlsx:import.readOnlySheets")}
+            </>
+          }
+          control={
+            <label className="btn-secondary inline-flex cursor-pointer items-center gap-2">
+              <Icon name="upload" size={14} />
+              {importStatus === "checking" ? t("xlsx:import.checking") : t("xlsx:import.choose")}
+              <input
+                type="file"
+                accept=".xlsx"
+                className="sr-only"
+                disabled={importStatus === "checking" || importStatus === "applying"}
+                onChange={(e) => {
+                  void handleFile(e.target.files?.[0]);
+                  // Clear it, so choosing the SAME file again after a fix still fires.
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          }
+        />
 
-        <fieldset className="mb-3 border-0 p-0">
-          <legend className="mb-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("xlsx:import.modeLabel")}
-          </legend>
+        {/* Radios with their hints kept visible, not pills: one of the three
+            deletes, and that sentence must be read before choosing. */}
+        <fieldset className="border-0 p-0">
+          <legend className="label">{t("xlsx:import.modeLabel")}</legend>
           <div className="flex flex-col gap-1.5">
             {(["add", "merge", "replace"] as const).map((m) => (
               <label key={m} className="flex cursor-pointer items-start gap-2 text-sm">
@@ -211,32 +229,15 @@ export default function SpreadsheetSection(): JSX.Element {
                 />
                 <span>
                   <span className="font-medium">{t(`xlsx:import.modes.${m}.label`)}</span>
-                  <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
-                    {t(`xlsx:import.modes.${m}.hint`)}
-                  </span>
+                  <span className="t-caption block">{t(`xlsx:import.modes.${m}.hint`)}</span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
 
-        <label className="inline-block cursor-pointer rounded-md border border-[var(--border)] px-3 py-2 text-sm">
-          {importStatus === "checking" ? t("xlsx:import.checking") : t("xlsx:import.choose")}
-          <input
-            type="file"
-            accept=".xlsx"
-            className="hidden"
-            disabled={importStatus === "checking" || importStatus === "applying"}
-            onChange={(e) => {
-              void handleFile(e.target.files?.[0]);
-              // Clear it, so choosing the SAME file again after a fix still fires.
-              e.target.value = "";
-            }}
-          />
-        </label>
-
         {outcome && (
-          <div className="mt-3 space-y-2 text-xs">
+          <div className="space-y-2 text-xs">
             <p style={{ color: "var(--text-muted)" }}>
               {importStatus === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
             </p>
@@ -344,7 +345,7 @@ export default function SpreadsheetSection(): JSX.Element {
             {t("xlsx:import.backupFailed")}
           </p>
         )}
-      </section>
+      </div>
     </>
   );
 }

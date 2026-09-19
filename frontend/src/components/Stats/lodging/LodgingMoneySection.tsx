@@ -46,6 +46,25 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
 
   const noPrices = price.pricedStays === 0;
 
+  // Without a single price the four tiles and four rankings were eight empty
+  // states in a row — most of an 8,000px phone page for one stay (CT106 audit
+  // B12). One sentence says it; award nights, which carry a value of their own,
+  // still show.
+  if (noPrices && stats.awardNights === 0) {
+    return (
+      <section className="mt-8">
+        <h2 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+          {t("lodging:stats.money.title")}
+        </h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("lodging:stats.money.noPrices")}
+          {price.unpricedStays > 0 &&
+            ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-8">
       <h2 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>

@@ -3,10 +3,16 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 const findUniqueUserSettings = jest.fn();
 const findFirstAdminSettings = jest.fn();
 
+const findUniqueUser = jest.fn();
+
 jest.mock("../../../db", () => ({
   prisma: {
     userSettings: { findUnique: findUniqueUserSettings },
     adminSettings: { findFirst: findFirstAdminSettings },
+    // The resolver asks who the caller is since the 2026-09-17 review
+    // (finding A2): the SHARED demo account resolves no connection at
+    // all. Every case here is an ordinary account, so the row says so.
+    user: { findUnique: findUniqueUser },
   },
 }));
 
@@ -23,6 +29,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   delete process.env.DAWARICH_BASE_URL;
   delete process.env.DAWARICH_API_KEY;
+  findUniqueUser.mockResolvedValue({ isDemo: false, username: "someone" });
   findUniqueUserSettings.mockResolvedValue(null);
   findFirstAdminSettings.mockResolvedValue(null);
 });

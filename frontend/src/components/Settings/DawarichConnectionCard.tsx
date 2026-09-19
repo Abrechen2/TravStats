@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { dawarichApi, dawarichFailureKey, dawarichFailureKind } from "../../lib/api/dawarich";
 import type { DawarichConnectionStatus, DawarichTestResult } from "../../types/dawarich";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
+import Pill from "../ui/Pill";
+import { token } from "../ui/tokens";
 
 /**
  * User-facing Dawarich connection settings (phase 3b, task 8). Mirrors
@@ -21,6 +26,7 @@ import type { DawarichConnectionStatus, DawarichTestResult } from "../../types/d
  */
 export default function DawarichConnectionCard(): JSX.Element {
   const { t } = useTranslation("trips");
+  const isDemo = useIsDemoAccount();
 
   const [status, setStatus] = useState<DawarichConnectionStatus | null>(null);
   const [baseUrl, setBaseUrl] = useState("");
@@ -118,80 +124,96 @@ export default function DawarichConnectionCard(): JSX.Element {
   };
 
   return (
-    <section className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-      <header className="mb-3">
-        <h3 className="text-lg font-semibold">{t("trips:tours.dawarichSettings.title")}</h3>
-        <p className="text-sm text-slate-400">{t("trips:tours.dawarichSettings.subtitle")}</p>
-        {status?.isShared && (
-          <span className="text-xs text-amber-400">{t("trips:tours.dawarichSettings.shared")}</span>
-        )}
-      </header>
-
-      <label className="block text-sm" htmlFor="dawarich-base-url">
-        {t("trips:tours.dawarichSettings.baseUrl")}
-      </label>
-      <input
-        id="dawarich-base-url"
-        className="mb-3 w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
-        placeholder={t("trips:tours.dawarichSettings.baseUrlPlaceholder")}
-        value={baseUrl}
-        onChange={(e) => setBaseUrl(e.target.value)}
+    <SectionCard>
+      <SectionTitle
+        title={t("trips:tours.dawarichSettings.title")}
+        description={t("trips:tours.dawarichSettings.subtitle")}
+        badge={
+          status?.isShared ? (
+            <Pill color={token("accent")}>{t("trips:tours.dawarichSettings.shared")}</Pill>
+          ) : undefined
+        }
       />
 
-      <label className="block text-sm" htmlFor="dawarich-api-key">
-        {t("trips:tours.dawarichSettings.apiKey")}
-      </label>
-      <input
-        id="dawarich-api-key"
-        type="password"
-        autoComplete="off"
-        className="w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
-        placeholder={t("trips:tours.dawarichSettings.apiKeyPlaceholder")}
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-      />
-      {status?.hasKey && (
-        <div className="mb-3 mt-1 flex items-center gap-2 text-xs text-slate-400">
-          <span>{t("trips:tours.dawarichSettings.apiKeyStored")}</span>
-          <button type="button" className="underline" onClick={() => void handleClearKey()}>
-            {t("trips:tours.dawarichSettings.clearKey")}
-          </button>
-        </div>
-      )}
+      {isDemo ? (
+        <DemoLockedNotice />
+      ) : (
+        <>
+          <label className="label" htmlFor="dawarich-base-url">
+            {t("trips:tours.dawarichSettings.baseUrl")}
+          </label>
+          <input
+            id="dawarich-base-url"
+            className="input"
+            placeholder={t("trips:tours.dawarichSettings.baseUrlPlaceholder")}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={saving}
-          className="btn-primary px-3 py-1.5 text-sm"
-          onClick={() => void handleSave()}
-        >
-          {saving
-            ? t("trips:tours.dawarichSettings.saving")
-            : t("trips:tours.dawarichSettings.save")}
-        </button>
-        <button
-          type="button"
-          disabled={testing}
-          className="btn-secondary px-3 py-1.5 text-sm"
-          onClick={() => void handleTest()}
-        >
-          {testing
-            ? t("trips:tours.dawarichSettings.testing")
-            : t("trips:tours.dawarichSettings.test")}
-        </button>
-      </div>
+          <label className="label" htmlFor="dawarich-api-key">
+            {t("trips:tours.dawarichSettings.apiKey")}
+          </label>
+          <input
+            id="dawarich-api-key"
+            type="password"
+            autoComplete="off"
+            className="input"
+            placeholder={t("trips:tours.dawarichSettings.apiKeyPlaceholder")}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          {status?.hasKey && (
+            <div className="t-caption flex items-center gap-2">
+              <span>{t("trips:tours.dawarichSettings.apiKeyStored")}</span>
+              <button type="button" className="underline" onClick={() => void handleClearKey()}>
+                {t("trips:tours.dawarichSettings.clearKey")}
+              </button>
+            </div>
+          )}
 
-      {testResult && (
-        <p className={`mt-2 text-sm ${testResult.success ? "text-emerald-400" : "text-rose-400"}`}>
-          {testResult.success
-            ? t("trips:tours.dawarichSettings.connected", {
-                version: testResult.details?.version ?? "?",
-              })
-            : t(dawarichFailureKey(testResult.kind))}
-        </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              className="btn-primary"
+              onClick={() => void handleSave()}
+            >
+              {saving
+                ? t("trips:tours.dawarichSettings.saving")
+                : t("trips:tours.dawarichSettings.save")}
+            </button>
+            <button
+              type="button"
+              disabled={testing}
+              className="btn-secondary"
+              onClick={() => void handleTest()}
+            >
+              {testing
+                ? t("trips:tours.dawarichSettings.testing")
+                : t("trips:tours.dawarichSettings.test")}
+            </button>
+          </div>
+
+          {testResult && (
+            <p
+              className="text-sm"
+              role="status"
+              style={{ color: token(testResult.success ? "good" : "bad") }}
+            >
+              {testResult.success
+                ? t("trips:tours.dawarichSettings.connected", {
+                    version: testResult.details?.version ?? "?",
+                  })
+                : t(dawarichFailureKey(testResult.kind))}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+              {error}
+            </p>
+          )}
+        </>
       )}
-      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
-    </section>
+    </SectionCard>
   );
 }

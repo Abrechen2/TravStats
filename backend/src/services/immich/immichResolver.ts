@@ -8,6 +8,7 @@
  */
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
+import { isSharedDemoUser } from "../../utils/sharedDemo";
 import logger from "../../utils/logger";
 import {
   ImmichConnection,
@@ -48,6 +49,23 @@ function buildConnection(
 export async function getImmichConnection(userId?: string): Promise<ImmichConnection | null> {
   try {
     if (userId) {
+      /**
+       * The SHARED demo account resolves nothing (independent review,
+       * 2026-09-17, finding A2). The admin-global and ENV tiers below are the
+       * operator lending their own server to every account on the instance —
+       * fine for the people they invited, a stranger's photo library for the
+       * `demo` login whose password is printed on a public login page. `null`
+       * rather than a new error on purpose: it is the same answer an account
+       * that configured nothing gets, so the album picker, the asset proxy and
+       * the importer take their existing `notConfigured` path and the frontend
+       * already has words for it.
+       *
+       * It costs the preview its demo-Immich showcase. The demo also cannot
+       * configure a connection of its own — `/settings/immich` refuses it — so
+       * this is the whole integration, deliberately.
+       */
+      if (await isSharedDemoUser(userId)) return null;
+
       const settings = await prisma.userSettings.findUnique({
         where: { userId },
         select: { immichBaseUrl: true, immichApiKey: true },

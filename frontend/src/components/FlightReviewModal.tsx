@@ -1,4 +1,6 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useDialogChrome } from "./ui/useDialogChrome";
 import type { FlightInput, ParsedBooking } from "../types";
 import { type Airport, airportsApi } from "../lib/api";
 import { useSettingsStore } from "../store/settingsStore";
@@ -8,6 +10,7 @@ import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
 import CurrencyInput from "./CurrencyInput";
+import { getConfidenceColor, isInferred } from "../lib/flightReviewFields";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -19,16 +22,6 @@ function getFieldBorderClass(
   if (source === "llm") return "border-l-4 border-yellow-400";
   if (source === "empty") return "border-l-4 border-red-500";
   return "";
-}
-
-function isInferred(
-  fieldName: string,
-  inferredFields?: string[],
-  aliases: readonly string[] = []
-): boolean {
-  if (!inferredFields || inferredFields.length === 0) return false;
-  if (inferredFields.includes(fieldName)) return true;
-  return aliases.some((alias) => inferredFields.includes(alias));
 }
 
 interface InferredBadgeProps {
@@ -47,13 +40,6 @@ function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
       !
     </span>
   );
-}
-
-function getConfidenceColor(confidence: number): string {
-  if (confidence >= 70) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  if (confidence >= 40)
-    return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-  return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
 }
 
 interface FlightReviewModalProps {
@@ -327,6 +313,9 @@ export default function FlightReviewModal({
     }
   };
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogChrome({ open: isOpen, onClose, panelRef, busy: loading });
+
   if (!isOpen) return null;
 
   const title = t("flights:review.title");
@@ -342,9 +331,20 @@ export default function FlightReviewModal({
    */
   const isFinalStep = showProgress && flightIndex! + 1 === totalFlights;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+  // Portalled and wired to the shared chrome (CT106 design-6 recheck R01):
+  // opened from the flight form, it is the dialog ON TOP, and only a scrim
+  // later in the document than the form's answers Escape — so this closes the
+  // review and leaves the form underneath open.
+  return createPortal(
+    <div className="ts-dialog-scrim">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto outline-none"
+      >
         {/* Header */}
         <div className="sticky top-0 bg-(--bg-surface) border-b px-6 py-4 flex items-center justify-between">
           <div>
@@ -783,6 +783,7 @@ export default function FlightReviewModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

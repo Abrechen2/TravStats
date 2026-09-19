@@ -21,6 +21,22 @@ export const currencyField = z
   .string()
   .refine(isCurrencyCode, { message: "must be a valid ISO 4217 currency code" });
 
+/**
+ * The longest a checkIn..checkOut span (or an explicit `nights` count) may
+ * claim to be, in nights (~10 years).
+ *
+ * Found by an independent Codex review (2026-09-17): the explicit `nights`
+ * field was capped at 3650, but the checkIn/checkOut SPAN carried no bound
+ * beyond `checkOut >= checkIn`. A stay saved with checkIn="0001-01-01" /
+ * checkOut="9999-12-31" made `utils/lodgingStats/nights.ts`'s `walkNights`
+ * loop ~3.6 million times on every later lodging-statistics request, building
+ * ~3.6M-entry `nightsByYear`/`nightsByMonth` maps that were then serialised
+ * into the response — a self-inflicted denial of service any account (or, on
+ * the public preview instance, the shared demo account) could trigger against
+ * itself with one write.
+ */
+export const MAX_STAY_SPAN_NIGHTS = 3650;
+
 // Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
 const isoDateTimeRequired = z.preprocess((v) => {
   if (typeof v !== "string" || v === "") return v;
@@ -95,7 +111,11 @@ const baseStaySchema = z.object({
   // Explicit night count, for when the dates cannot supply one. "Three nights,
   // no idea when" and "July 2011, no idea how long" are different gaps and one
   // field cannot express both.
-  nights: z.number().int().min(0).max(3650).nullable().optional(),
+  //
+  // 3650 (~10 years) is also the cap the checkIn/checkOut SPAN is held to
+  // below (`MAX_STAY_SPAN_NIGHTS`) — the two caps guard the same fact
+  // ("a stay is not a decade") from two different inputs and must agree.
+  nights: z.number().int().min(0).max(MAX_STAY_SPAN_NIGHTS).nullable().optional(),
   status: z.enum(STAY_STATUSES).default("completed"),
   tripId: z.string().uuid().nullable().optional(),
   bookingId: z.string().uuid().nullable().optional(),
@@ -150,6 +170,19 @@ export const createStaySchema = baseStaySchema
       new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
     { message: "checkOut must not precede checkIn", path: ["checkOut"] }
   )
+  // Same cap as the explicit `nights` field above, applied to the SPAN —
+  // see MAX_STAY_SPAN_NIGHTS for why this exists.
+  .refine(
+    (d) =>
+      d.checkIn == null ||
+      d.checkOut == null ||
+      (new Date(d.checkOut).getTime() - new Date(d.checkIn).getTime()) / 86_400_000 <=
+        MAX_STAY_SPAN_NIGHTS,
+    {
+      message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
+      path: ["checkOut"],
+    }
+  )
   // A precision is a claim about dates that are there. Saying "DAY" with no
   // date, or "NONE" while sending one, are both a record disagreeing with
   // itself — and `resolveStayTiming` would quietly override either, which is
@@ -200,6 +233,22 @@ export const updateStaySchema = partialForUpdate(baseStaySchema)
       return new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime();
     },
     { message: "checkOut must not precede checkIn", path: ["checkOut"] }
+  )
+  // Same cap as createStaySchema — see MAX_STAY_SPAN_NIGHTS. A PATCH that
+  // sends both dates is just as able to widen a stay to a millennium as a
+  // create is.
+  .refine(
+    (d) => {
+      if (!d.checkIn || !d.checkOut) return true;
+      return (
+        (new Date(d.checkOut).getTime() - new Date(d.checkIn).getTime()) / 86_400_000 <=
+        MAX_STAY_SPAN_NIGHTS
+      );
+    },
+    {
+      message: `checkOut must not be more than ${MAX_STAY_SPAN_NIGHTS} nights after checkIn`,
+      path: ["checkOut"],
+    }
   );
 
 /**

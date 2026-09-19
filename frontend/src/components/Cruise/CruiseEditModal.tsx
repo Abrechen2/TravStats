@@ -216,7 +216,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       busy={saving}
       closeLabel={t("common:buttons.close")}
       title={headerTitle}
-      widthClass="max-w-2xl"
+      maxWidth={672}
       footer={
         <>
           <button

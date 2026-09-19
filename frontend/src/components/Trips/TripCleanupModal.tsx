@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { tripsApi, type MicroTripCandidate } from "../../lib/api/trips";
@@ -21,7 +22,7 @@ export default function TripCleanupModal({
   onClose,
   onChanged,
 }: TripCleanupModalProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [candidates, setCandidates] = useState<MicroTripCandidate[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -80,90 +81,18 @@ export default function TripCleanupModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-lg rounded-xl shadow-2xl flex flex-col max-h-[80vh]"
-        role="dialog"
-        aria-modal="true"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="p-5 pb-3">
-          <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-            {t("trips:cleanup.title")}
-          </h2>
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("trips:cleanup.intro")}
-          </p>
-        </div>
-
-        {candidates === null ? (
-          <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-muted)" }}>
-            …
-          </div>
-        ) : candidates.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-muted)" }}>
-            {t("trips:cleanup.empty")}
-          </div>
-        ) : (
-          <>
-            <div className="px-5 pb-2 flex gap-3 text-xs">
-              <button
-                onClick={() => setSelected(new Set(candidates.map((c) => c.id)))}
-                style={{ color: "var(--accent)" }}
-              >
-                {t("trips:cleanup.selectAll")}
-              </button>
-              <button onClick={() => setSelected(new Set())} style={{ color: "var(--text-muted)" }}>
-                {t("trips:cleanup.selectNone")}
-              </button>
-            </div>
-            <div
-              className="overflow-y-auto px-5 py-2 space-y-1"
-              style={{ borderTop: "1px solid var(--color-border)" }}
-            >
-              {candidates.map((c) => (
-                <label
-                  key={c.id}
-                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-(--bg-muted)"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(c.id)}
-                    onChange={() => toggle(c.id)}
-                  />
-                  <span
-                    aria-hidden
-                    className="inline-block rounded-full shrink-0"
-                    style={{ width: 8, height: 8, background: c.color }}
-                  />
-                  <span className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
-                    {c.name}
-                  </span>
-                  <span
-                    className="ml-auto text-xs whitespace-nowrap"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {t("trips:cleanup.flightCount", { count: c.flightCount })} · {formatRange(c)}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div
-          className="flex justify-end gap-2 p-4"
-          style={{ borderTop: "1px solid var(--color-border)" }}
-        >
+    <Modal
+      open
+      onClose={onClose}
+      busy={busy}
+      title={t("trips:cleanup.title")}
+      maxWidth={512}
+      closeLabel={t("common:buttons.close")}
+      footer={
+        <>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm"
+            className="rounded-lg px-4 py-2 text-sm"
             style={{ color: "var(--text-muted)" }}
           >
             {t("trips:modal.cancel")}
@@ -171,13 +100,67 @@ export default function TripCleanupModal({
           <button
             onClick={() => void handleDissolve()}
             disabled={busy || selected.size === 0}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-            style={{ background: "var(--danger, #f87171)" }}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            style={{ background: "var(--danger)" }}
           >
             {t("trips:cleanup.confirm", { count: selected.size })}
           </button>
+        </>
+      }
+    >
+      <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+        {t("trips:cleanup.intro")}
+      </p>
+      {candidates === null ? (
+        <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-muted)" }}>
+          …
         </div>
-      </div>
-    </div>
+      ) : candidates.length === 0 ? (
+        <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-muted)" }}>
+          {t("trips:cleanup.empty")}
+        </div>
+      ) : (
+        <>
+          <div className="px-5 pb-2 flex gap-3 text-xs">
+            <button
+              onClick={() => setSelected(new Set(candidates.map((c) => c.id)))}
+              style={{ color: "var(--accent)" }}
+            >
+              {t("trips:cleanup.selectAll")}
+            </button>
+            <button onClick={() => setSelected(new Set())} style={{ color: "var(--text-muted)" }}>
+              {t("trips:cleanup.selectNone")}
+            </button>
+          </div>
+          <div
+            className="overflow-y-auto px-5 py-2 space-y-1"
+            style={{ borderTop: "1px solid var(--color-border)" }}
+          >
+            {candidates.map((c) => (
+              <label
+                key={c.id}
+                className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-(--bg-muted)"
+              >
+                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
+                <span
+                  aria-hidden
+                  className="inline-block rounded-full shrink-0"
+                  style={{ width: 8, height: 8, background: c.color }}
+                />
+                <span className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                  {c.name}
+                </span>
+                <span
+                  className="ml-auto text-xs whitespace-nowrap"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {t("trips:cleanup.flightCount", { count: c.flightCount })} · {formatRange(c)}
+                </span>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }

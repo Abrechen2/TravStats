@@ -33,7 +33,8 @@
     "details": "Details",
     "dismiss": "Dismiss",
     "retry": "Try again",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "moreActions": "More actions"
   },
   "dismiss": "Dismiss",
   "app": {
@@ -160,7 +161,13 @@
     "modules": {
       "title": "Modules",
       "desc": "Enabled modules show up in navigation, dashboards, map, achievements and stats. Disabled modules are hidden — your data is preserved.",
-      "comingSoon": "soon"
+      "comingSoon": "soon",
+      "sub": {
+        "flight": "Navigation, statistics, map",
+        "cruise": "Navigation, statistics, map",
+        "lodging": "Navigation, statistics, days away",
+        "poi": "Places, visits and place lists"
+      }
     }
   },
   "setup": {
@@ -201,7 +208,18 @@
     "all": "All currencies"
   },
   "table": {
-    "columns": "Columns"
+    "columns": "Columns",
+    "scrollHint": "The table is wider than the view — scroll sideways for more columns.",
+    "hiddenColumns": "Columns hidden for lack of width: {{count}}. A wider window shows them all; “Columns” changes the selection.",
+    "pagination": {
+      "range": "{{from}}–{{to}} of {{total}}",
+      "first": "First page",
+      "previous": "Previous page",
+      "next": "Next page",
+      "last": "Last page",
+      "pageSize": "Rows per page",
+      "all": "All"
+    }
   },
   "support": {
     "donate": "Donate",

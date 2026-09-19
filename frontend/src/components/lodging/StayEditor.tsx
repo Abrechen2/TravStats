@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LODGING_DATE_PRECISIONS, type LodgingDatePrecision } from "../../shared/lodgingTiming";
@@ -9,6 +9,8 @@ import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import ReceiptUpload from "../ReceiptUpload";
 import { AmenityChipsInput } from "./AmenityChipsInput";
+import { Field } from "../ui/Field";
+import { StayEditorSection } from "./StayEditorSection";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { derivePricePerNight } from "../../lib/lodgingFormat";
@@ -79,7 +81,7 @@ const splitCsv = (v: string): string[] =>
  * membership, a trip link, and a receipt upload.
  *
  * Loosely modeled on `CruiseEditModal` (segmented status control, collapsible
- * `<Section>` blocks). Star pickers and the price/FX block are extracted
+ * `<StayEditorSection>` blocks). Star pickers and the price/FX block are extracted
  * into their own files to keep this one under the project's file-size limit.
  */
 /** "2011-07" -> "2011-07-01", "2011" -> "2011-01-01"; a day passes through. */
@@ -100,6 +102,7 @@ export function StayEditor({
   onSaved,
 }: StayEditorProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
+  const fid = useId();
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   const [checkIn, setCheckIn] = useState<string>(toDateInput(stay?.checkIn));
@@ -381,15 +384,18 @@ export function StayEditor({
         </div>
 
         <div className="p-6">
-          <Section title={t("lodging:stayEditor.datesSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.datesSection")}>
             {/* The precision picker comes FIRST because it decides which of the
                 fields below make sense. Offering two date inputs and then
                 refusing the save is the behaviour this replaces. */}
-            <label className="mb-1 block text-xs text-[var(--text-muted)]">
+            <label
+              htmlFor={`${fid}-precision`}
+              className="mb-1 block text-xs text-[var(--text-muted)]"
+            >
               {t("lodging:period.precision.label")}
             </label>
             <select
-              aria-label={t("lodging:period.precision.label")}
+              id={`${fid}-precision`}
               data-testid="stay-date-precision"
               className={INPUT_CLASS}
               value={datePrecision}
@@ -406,32 +412,38 @@ export function StayEditor({
             </p>
 
             {datePrecision !== "NONE" && (
+              // Named on screen, not by aria-label: two bare native pickers side
+              // by side did not say which end was which (CT106 design-6 R06).
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type={
-                    datePrecision === "MONTH"
-                      ? "month"
-                      : datePrecision === "YEAR"
-                        ? "number"
-                        : "date"
-                  }
-                  aria-label={t("lodging:field.checkIn")}
-                  className={INPUT_CLASS}
-                  style={DARK_PICKER_STYLE}
-                  value={precisionInputValue}
-                  onChange={(e): void =>
-                    setCheckIn(precisionToIsoDay(e.target.value, datePrecision))
-                  }
-                />
-                {datePrecision === "DAY" && (
+                <Field label={t("lodging:field.checkIn")} htmlFor={`${fid}-checkIn`}>
                   <input
-                    type="date"
-                    aria-label={t("lodging:field.checkOut")}
+                    id={`${fid}-checkIn`}
+                    type={
+                      datePrecision === "MONTH"
+                        ? "month"
+                        : datePrecision === "YEAR"
+                          ? "number"
+                          : "date"
+                    }
                     className={INPUT_CLASS}
                     style={DARK_PICKER_STYLE}
-                    value={checkOut}
-                    onChange={(e): void => setCheckOut(e.target.value)}
+                    value={precisionInputValue}
+                    onChange={(e): void =>
+                      setCheckIn(precisionToIsoDay(e.target.value, datePrecision))
+                    }
                   />
+                </Field>
+                {datePrecision === "DAY" && (
+                  <Field label={t("lodging:field.checkOut")} htmlFor={`${fid}-checkOut`}>
+                    <input
+                      id={`${fid}-checkOut`}
+                      type="date"
+                      className={INPUT_CLASS}
+                      style={DARK_PICKER_STYLE}
+                      value={checkOut}
+                      onChange={(e): void => setCheckOut(e.target.value)}
+                    />
+                  </Field>
                 )}
               </div>
             )}
@@ -441,32 +453,34 @@ export function StayEditor({
                 midnight. */}
             {datePrecision === "DAY" && (
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
+                <Field
+                  label={t("lodging:field.checkInTime")}
+                  htmlFor={`${fid}-checkInTime`}
+                  hint={t("lodging:field.checkInTimeHint")}
+                >
                   <input
+                    id={`${fid}-checkInTime`}
                     type="time"
-                    aria-label={t("lodging:field.checkInTime")}
                     className={INPUT_CLASS}
                     style={DARK_PICKER_STYLE}
                     value={checkInTime}
                     onChange={(e): void => setCheckInTime(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {t("lodging:field.checkInTimeHint")}
-                  </p>
-                </div>
-                <div>
+                </Field>
+                <Field
+                  label={t("lodging:field.checkOutTime")}
+                  htmlFor={`${fid}-checkOutTime`}
+                  hint={t("lodging:field.checkOutTimeHint")}
+                >
                   <input
+                    id={`${fid}-checkOutTime`}
                     type="time"
-                    aria-label={t("lodging:field.checkOutTime")}
                     className={INPUT_CLASS}
                     style={DARK_PICKER_STYLE}
                     value={checkOutTime}
                     onChange={(e): void => setCheckOutTime(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {t("lodging:field.checkOutTimeHint")}
-                  </p>
-                </div>
+                </Field>
               </div>
             )}
 
@@ -475,13 +489,16 @@ export function StayEditor({
                 would be a second answer to a settled question. */}
             {datePrecision !== "DAY" && (
               <div className="mt-3">
-                <label className="mb-1 block text-xs text-[var(--text-muted)]">
+                <label
+                  htmlFor={`${fid}-nights`}
+                  className="mb-1 block text-xs text-[var(--text-muted)]"
+                >
                   {t("lodging:period.nightsField")}
                 </label>
                 <input
+                  id={`${fid}-nights`}
                   type="number"
                   min={0}
-                  aria-label={t("lodging:period.nightsField")}
                   data-testid="stay-nights-input"
                   className={INPUT_CLASS}
                   value={nightsText}
@@ -519,24 +536,26 @@ export function StayEditor({
               )}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <input
-                aria-label={t("lodging:field.room")}
-                className={INPUT_CLASS}
-                value={roomNumber}
-                onChange={(e): void => setRoomNumber(e.target.value)}
-                placeholder={t("lodging:field.room")}
-              />
-              <input
-                aria-label={t("lodging:field.roomCategory")}
-                className={INPUT_CLASS}
-                value={roomCategory}
-                onChange={(e): void => setRoomCategory(e.target.value)}
-                placeholder={t("lodging:field.roomCategory")}
-              />
+              <Field label={t("lodging:field.room")} htmlFor={`${fid}-room`}>
+                <input
+                  id={`${fid}-room`}
+                  className={INPUT_CLASS}
+                  value={roomNumber}
+                  onChange={(e): void => setRoomNumber(e.target.value)}
+                />
+              </Field>
+              <Field label={t("lodging:field.roomCategory")} htmlFor={`${fid}-roomCategory`}>
+                <input
+                  id={`${fid}-roomCategory`}
+                  className={INPUT_CLASS}
+                  value={roomCategory}
+                  onChange={(e): void => setRoomCategory(e.target.value)}
+                />
+              </Field>
             </div>
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:field.board")}>
+          <StayEditorSection title={t("lodging:field.board")}>
             <div
               className="inline-flex flex-wrap rounded-lg p-0.5"
               style={{ background: "var(--bg-muted)", border: "1px solid var(--color-border)" }}
@@ -562,9 +581,9 @@ export function StayEditor({
                 );
               })}
             </div>
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.ratingsSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.ratingsSection")}>
             <StayEditorRatingsSection
               ratings={{
                 ratingRoom,
@@ -585,9 +604,9 @@ export function StayEditor({
               }}
               derivedHint={t("lodging:field.ratingOverallDerived")}
             />
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.priceSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.priceSection")}>
             <StayEditorPriceSection
               totalPrice={totalPrice}
               onTotalPriceChange={setTotalPrice}
@@ -605,25 +624,28 @@ export function StayEditor({
               t={t}
               inputClassName={INPUT_CLASS}
             />
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.amenitiesSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.amenitiesSection")}>
             <AmenityChipsInput
               label={t("lodging:field.roomAmenities")}
               values={roomAmenities}
               onChange={setRoomAmenities}
               placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
             />
-            <input
-              aria-label={t("lodging:field.bookingReference")}
-              className={`mt-3 ${INPUT_CLASS}`}
-              value={bookingReference}
-              onChange={(e): void => setBookingReference(e.target.value)}
-              placeholder={t("lodging:field.bookingReference")}
-            />
-          </Section>
+            <div className="mt-3">
+              <Field label={t("lodging:field.bookingReference")} htmlFor={`${fid}-reference`}>
+                <input
+                  id={`${fid}-reference`}
+                  className={INPUT_CLASS}
+                  value={bookingReference}
+                  onChange={(e): void => setBookingReference(e.target.value)}
+                />
+              </Field>
+            </div>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.loyaltySection")}>
+          <StayEditorSection title={t("lodging:stayEditor.loyaltySection")}>
             <div data-testid="stay-editor-membership" className="text-sm">
               <span className="text-[var(--text-primary)]">
                 {resolvedMembershipName ?? t("lodging:field.noMembership")}
@@ -661,7 +683,7 @@ export function StayEditor({
                 ))}
               </select>
             )}
-          </Section>
+          </StayEditorSection>
 
           {/* Its own section. This select used to sit unlabelled at the bottom
            * of "Loyalty programme", between membership numbers — the word
@@ -669,7 +691,7 @@ export function StayEditor({
            * was the option text "Not linked to a trip". Nobody looking for
            * how to attach a stay to a trip searches under loyalty, and they
            * would be right not to. */}
-          <Section title={t("lodging:stayEditor.tripSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.tripSection")}>
             <label
               htmlFor="stay-editor-trip"
               className="mb-1 block text-xs text-[var(--text-muted)]"
@@ -690,17 +712,17 @@ export function StayEditor({
                 </option>
               ))}
             </select>
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.receiptSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.receiptSection")}>
             <ReceiptUpload
               currentReceiptUrl={receiptUrl}
               onUploadSuccess={(url): void => setReceiptUrl(url)}
               onDelete={(): void => setReceiptUrl(null)}
             />
-          </Section>
+          </StayEditorSection>
 
-          <Section title={t("lodging:stayEditor.notesSection")}>
+          <StayEditorSection title={t("lodging:stayEditor.notesSection")}>
             {/* The confirmation says HOW MANY people it covered; it names the
                 booker, never the companion. So point at the field rather than
                 filling it. Threshold is more than ONE person — the booking that
@@ -712,22 +734,26 @@ export function StayEditor({
                 {t("lodging:stayEditor.companionsHint", { count: stay.guests })}
               </p>
             )}
-            <input
-              aria-label={t("lodging:field.companions")}
-              className={INPUT_CLASS}
-              value={companionsInput}
-              onChange={(e): void => setCompanionsInput(e.target.value)}
-              placeholder={t("lodging:field.companions")}
-            />
-            <textarea
-              aria-label={t("lodging:field.notes")}
-              rows={3}
-              className={`mt-3 ${INPUT_CLASS}`}
-              value={notes}
-              onChange={(e): void => setNotes(e.target.value)}
-              placeholder={t("lodging:field.notes")}
-            />
-          </Section>
+            <Field label={t("lodging:field.companions")} htmlFor={`${fid}-companions`}>
+              <input
+                id={`${fid}-companions`}
+                className={INPUT_CLASS}
+                value={companionsInput}
+                onChange={(e): void => setCompanionsInput(e.target.value)}
+              />
+            </Field>
+            <div className="mt-3">
+              <Field label={t("lodging:field.notes")} htmlFor={`${fid}-notes`}>
+                <textarea
+                  id={`${fid}-notes`}
+                  rows={3}
+                  className={INPUT_CLASS}
+                  value={notes}
+                  onChange={(e): void => setNotes(e.target.value)}
+                />
+              </Field>
+            </div>
+          </StayEditorSection>
 
           {error !== null && (
             <div
@@ -762,19 +788,5 @@ export function StayEditor({
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
-  return (
-    <details
-      open
-      className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)]/50 p-3"
-    >
-      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
-        {title}
-      </summary>
-      <div className="mt-3">{children}</div>
-    </details>
   );
 }

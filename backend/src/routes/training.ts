@@ -11,6 +11,7 @@ import crypto from "crypto";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { uploadReceiptLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { prisma } from "../db";
@@ -30,6 +31,18 @@ router.use(requireWriteScope);
 const TRAINING_UPLOAD_DIR = path.join(__dirname, "../../uploads/training");
 if (!fs.existsSync(TRAINING_UPLOAD_DIR)) {
   fs.mkdirSync(TRAINING_UPLOAD_DIR, { recursive: true });
+}
+
+/**
+ * Test-only accessor, mirroring the `getXxxUploadDir()` getters
+ * `middleware/upload.ts` exports for its own disk directories — kept here
+ * instead of moved there because this router owns its storage config rather
+ * than sharing that module. Used by `demoGuard.uploads.test.ts` (Wave C
+ * finding C2, Codex review 2026-09-17) to prove the guard refuses a request
+ * before a single byte reaches this directory.
+ */
+export function getTrainingUploadDir(): string {
+  return TRAINING_UPLOAD_DIR;
 }
 
 const trainingStorage = multer.diskStorage({
@@ -82,6 +95,10 @@ const annotateSchema = z.object({
 // refused request never writes its bytes.
 router.post(
   "/upload",
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   trainingUpload.single("file"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {

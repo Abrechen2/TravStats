@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { authApi, passkeyApi } from "../lib/api";
+import { authApi, passkeyApi, setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
 import { PasswordInput } from "../components/Auth/PasswordInput";
+import { Icon } from "../components/ui/Icon";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -68,6 +69,16 @@ export default function LoginPage(): JSX.Element {
       .availability()
       .then((r) => setPasskeysAvailable(r.available && window.isSecureContext !== false))
       .catch(() => setPasskeysAvailable(false));
+  }, []);
+
+  // A public demo instance prints its shared login (PUBLIC_DEMO_LOGIN). Any
+  // other install never does, although it seeds the same demo account.
+  const [publicDemoLogin, setPublicDemoLogin] = useState(false);
+  useEffect(() => {
+    setupApi
+      .getStatus()
+      .then((s) => setPublicDemoLogin(s.publicDemoLogin === true))
+      .catch(() => setPublicDemoLogin(false));
   }, []);
 
   const handlePasskeyLogin = async (): Promise<void> => {
@@ -146,137 +157,182 @@ export default function LoginPage(): JSX.Element {
     setForgotError("");
   };
 
+  // Round 4 ("Anmelden"): the brand and what TravStats is on the left, the
+  // form on the right. The public counts the export draws there (entries,
+  // countries, uptime) are left out — nothing about an instance is readable
+  // before sign-in, and an invented figure would be worse than none.
   return (
-    <div className="min-h-screen flex items-center justify-center relative">
-      <div className="auth-bg" />
+    <div
+      className="relative grid min-h-screen lg:grid-cols-2"
+      style={{ background: "var(--ts-bg)" }}
+    >
+      <aside
+        className="hidden flex-col justify-between p-10 lg:flex"
+        style={{
+          borderRight: "1px solid var(--ts-border)",
+          background:
+            "radial-gradient(ellipse at 20% 20%, color-mix(in srgb, var(--ts-surface2) 70%, transparent), transparent 60%)",
+        }}
+      >
+        <div className="self-start">
+          <LogoLockup size={22} markSize={36} layout="horizontal" />
+        </div>
+        <div className="flex max-w-md flex-col gap-4">
+          <h2
+            style={{
+              fontSize: 34,
+              fontWeight: 700,
+              lineHeight: 1.15,
+              color: "var(--ts-text-bright)",
+            }}
+          >
+            {t("login.brand.heading")}
+          </h2>
+          <p style={{ color: "var(--ts-text)", lineHeight: 1.6 }}>{t("login.brand.body")}</p>
+        </div>
+        <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+          {t("login.brand.footer")}
+        </span>
+      </aside>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
+      <motion.main
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          duration: 0.35,
+          duration: 0.3,
           ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
         }}
-        className="relative z-10 w-full max-w-sm px-4 sm:px-4"
+        className="flex items-center justify-center px-4 py-10"
       >
-        {/* Brand lockup */}
-        <div className="flex flex-col items-center text-center mb-8 gap-3">
-          <LogoLockup size={26} markSize={72} layout="stacked" />
-          <h1
-            className="mt-2 text-2xl font-display font-semibold tracking-tight"
-            style={{ color: "var(--text-primary)" }}
+        <div className="w-full max-w-sm">
+          <div className="mb-8 lg:hidden">
+            <LogoLockup size={22} markSize={36} layout="horizontal" />
+          </div>
+          <h1 className="t-screen-title">{t("login.heading")}</h1>
+          <p className="t-caption mb-6 mt-1">{t("login.subheading")}</p>
+
+          <div
+            className="px-6 py-6"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+            }}
           >
-            {t("login.heading")}
-          </h1>
-        </div>
-
-        {/* Card */}
-        <div
-          className="rounded-2xl px-6 py-8 sm:px-8"
-          style={{
-            background: "rgba(28, 33, 40, 0.85)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid var(--color-border)",
-            borderTop: "2px solid var(--accent)",
-          }}
-        >
-          {successMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-500/30">
-              <p className="text-sm text-green-400 text-center">{successMessage}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "var(--text-secondary)" }}
+            {successMessage && (
+              <p
+                className="mb-4 rounded-[var(--ts-radius-button)] px-3 py-2 text-center text-sm"
+                style={{
+                  color: "var(--ts-good)",
+                  background: "color-mix(in srgb, var(--ts-good) 10%, transparent)",
+                }}
               >
-                {t("login.username")}
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="input w-full"
-                autoComplete="username"
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {t("login.password")}
-              </label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-400 text-center" role="alert">
-                {error}
+                {successMessage}
               </p>
             )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-              {loading ? t("login.submitting") : t("login.submit")}
-            </button>
-          </form>
-
-          {passkeysAvailable && (
-            <div className="mt-4">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="h-px flex-1" style={{ background: "var(--color-border)" }} />
-                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {t("login.or")}
-                </span>
-                <span className="h-px flex-1" style={{ background: "var(--color-border)" }} />
-              </div>
-              <button
-                type="button"
-                disabled={passkeyLoading}
-                onClick={() => void handlePasskeyLogin()}
-                className="btn-secondary w-full py-2.5"
+            {publicDemoLogin && (
+              <div
+                className="mb-4 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm"
+                style={{ background: "var(--ts-surface2)", border: "1px solid var(--ts-border)" }}
               >
-                {passkeyLoading ? t("login.passkeySubmitting") : t("login.passkeySubmit")}
-              </button>
-            </div>
-          )}
-
-          <div className="mt-5 flex flex-col items-center gap-2 text-sm">
-            {registrationEnabled !== false && (
-              <span style={{ color: "var(--text-muted)" }}>
-                {t("login.noAccount")}{" "}
-                <Link
-                  to="/register"
-                  className="font-medium hover:underline"
-                  style={{ color: "var(--accent)" }}
+                <span>{t("login.demoHint", { username: "demo", password: "demo123" })}</span>
+                <button
+                  type="button"
+                  className="btn-secondary whitespace-nowrap"
+                  onClick={() => {
+                    setUsername("demo");
+                    setPassword("demo123");
+                  }}
                 >
-                  {t("login.register")}
-                </Link>
-              </span>
+                  {t("login.demoFill")}
+                </button>
+              </div>
             )}
-            <button
-              type="button"
-              onClick={() => setShowForgotModal(true)}
-              className="font-medium hover:underline"
-              style={{ color: "var(--accent)" }}
-            >
-              {t("login.forgotPassword")}
-            </button>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="username" className="t-caption mb-1.5 block">
+                  {t("login.username")}
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="input w-full"
+                  autoComplete="username"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                  <label htmlFor="password" className="t-caption">
+                    {t("login.password")}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-xs font-semibold hover:underline"
+                    style={{ color: "var(--ts-accent)" }}
+                  >
+                    {t("login.forgotPassword")}
+                  </button>
+                </div>
+                <PasswordInput
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {error && (
+                <p className="text-center text-sm" style={{ color: "var(--ts-bad)" }} role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
+                {loading ? t("login.submitting") : t("login.submit")}
+              </button>
+            </form>
+
+            {passkeysAvailable && (
+              <div className="mt-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="h-px flex-1" style={{ background: "var(--ts-border)" }} />
+                  <span className="t-caption">{t("login.or")}</span>
+                  <span className="h-px flex-1" style={{ background: "var(--ts-border)" }} />
+                </div>
+                <button
+                  type="button"
+                  disabled={passkeyLoading}
+                  onClick={() => void handlePasskeyLogin()}
+                  className="btn-secondary flex w-full items-center justify-center gap-2 py-2.5"
+                >
+                  <Icon name="key-round" size={16} />
+                  {passkeyLoading ? t("login.passkeySubmitting") : t("login.passkeySubmit")}
+                </button>
+              </div>
+            )}
           </div>
+
+          {registrationEnabled !== false && (
+            <p className="t-caption mt-5 text-center text-sm">
+              {t("login.noAccount")}{" "}
+              <Link
+                to="/register"
+                className="font-semibold hover:underline"
+                style={{ color: "var(--ts-accent)" }}
+              >
+                {t("login.register")}
+              </Link>
+            </p>
+          )}
         </div>
-      </motion.div>
+      </motion.main>
 
       {/* Forgot Password Modal */}
       <AnimatePresence>

@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CruisesPage from "../../pages/CruisesPage";
 import { cruiseApi } from "../../lib/api";
 import type { Cruise } from "../../types";
+import {
+  countRenderedRows,
+  paginationControlsRendered,
+} from "../../pages/__tests__/tablePaginationTestSupport";
 
 // Heavy sibling component with its own auth/domain/pending-updates
 // dependencies — irrelevant to sort/delete behaviour, stub it out.
@@ -149,5 +153,28 @@ describe("CruisesPage", () => {
     const message = within(dialog).getByText(/deleteConfirmMessageNoStops/);
     // …and it names the ship, which this dialog never did before.
     expect(message.textContent).toContain("Solo Ship");
+  });
+
+  // Review finding (Alex T7, round 1): nothing tested that the wiring
+  // actually pages the rows — reverting `sorted.map` -> `pagination.paged.map`
+  // or dropping `<TablePagination>` would have left the suite green.
+  it("shows only one page of rows while the summary strip keeps the full count", async () => {
+    const cruises = Array.from({ length: 63 }, (_, i) =>
+      makeCruise({ id: `c-${i}`, shipNameOverride: `Ship ${i}`, startDate: "2026-01-10" })
+    );
+    vi.mocked(cruiseApi.list).mockResolvedValue(cruises);
+
+    const { container } = render(
+      <MemoryRouter>
+        <CruisesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(countRenderedRows(container)).toBe(50); // default page size
+    });
+    expect(paginationControlsRendered()).toBe(true);
+    // The FULL filtered count (63), not the 50 rows the page renders.
+    expect(screen.getByText("63")).toBeInTheDocument();
   });
 });

@@ -1,8 +1,8 @@
+import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
+import AppShell from "../components/ui/AppShell";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { curatedText } from "../lib/curatedCopy";
@@ -21,14 +21,11 @@ import type { CuratedListSummary, PlaceList } from "../types/placeList";
 
 /** Quick-pick list colours. Deliberately far apart — two lists in near-identical
  *  hues make `list` colour mode say nothing on a map. */
-const LIST_COLOR_PRESETS = [
-  DOMAINS.poi.color,
-  "#e3b341",
-  "#db6d5a",
-  "#8957e5",
-  "#3fb950",
-  "#58a6ff",
-] as const;
+// The shared ten from `listColor.palette`. The six that used to stand here
+// included the green and blue the system reserves for `good` and `info`, and a
+// map reads colour as meaning — a list painted in "planned blue" breaks the
+// legend for whoever picked it.
+const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
 
 /**
  * Lists and checklists, one screen.
@@ -124,39 +121,32 @@ export default function PlaceListsPage(): JSX.Element {
 
   if (access === "pending") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
-          {t("common:loading.default")}
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
+      </AppShell>
     );
   }
 
   if (access === "denied") {
     return (
-      <PageTransition>
-        <NavigationBar />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]">
+      <AppShell width="reading">
+        <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
-        </div>
-      </PageTransition>
+        </p>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <NavigationBar />
-      <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+    <AppShell width="list">
+      <div>
         <Link to="/places" className="text-sm" style={{ color: "var(--text-muted)" }}>
           ← {t("places:detail.backToList")}
         </Link>
 
         <div className="mt-3 mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight">
-              {t("places:lists.title")}
-            </h1>
+            <h1 className="t-screen-title">{t("places:lists.title")}</h1>
             <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
               {t("places:lists.subtitle")}
             </p>
@@ -412,6 +402,6 @@ export default function PlaceListsPage(): JSX.Element {
           </>
         )}
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

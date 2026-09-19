@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
@@ -30,12 +31,18 @@ export default function InviteSuccessModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
-        <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-          {t("admin:invitations.success.title")}
-        </h2>
-
+    <Modal
+      open
+      onClose={onClose}
+      title={t("admin:invitations.success.title")}
+      maxWidth={560}
+      footer={
+        <button type="button" onClick={onClose} className="btn-primary">
+          {t("admin:invitations.success.done")}
+        </button>
+      }
+    >
+      <>
         {emailSent === true && recipientEmail && (
           <p className="mb-4 text-sm" style={{ color: "#16a34a" }}>
             ✉ {t("admin:invitations.success.emailSent")}{" "}
@@ -76,13 +83,7 @@ export default function InviteSuccessModal({
             📋 {t("admin:invitations.success.copyLink")}
           </button>
         </div>
-
-        <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="btn-primary">
-            {t("admin:invitations.success.done")}
-          </button>
-        </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

@@ -59,6 +59,8 @@ import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import type { Layer } from "@deck.gl/core";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
+import { SidebarToggle } from "../SidebarToggle";
+import { Icon } from "../../ui/Icon";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -452,29 +454,13 @@ export function AllTab(): JSX.Element {
     [tourPathData, visMode]
   );
 
-  // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
-  // Shifts right when the sidebar is open so it clears the panel.
+  // The activity toggle stays top-left (it opens the activity sidebar).
   const activityToggle = (
-    <button
-      type="button"
-      onClick={() => setSidebarOpen((prev) => !prev)}
-      style={{
-        position: "absolute",
-        top: 12,
-        left: sidebarOpen ? 340 : 12,
-        zIndex: 30,
-        padding: "6px 12px",
-        borderRadius: 10,
-        background: "rgba(22,27,34,0.85)",
-        color: "var(--text-primary)",
-        border: "1px solid var(--color-border)",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        transition: "left 0.2s ease",
-      }}
-    >
-      ☰ {t("dashboard:sidebar.activity")}
-    </button>
+    <SidebarToggle
+      open={sidebarOpen}
+      onToggle={() => setSidebarOpen((prev) => !prev)}
+      label={t("dashboard:sidebar.activity")}
+    />
   );
 
   // `legendRow` (the swatch-JSX builder) now lives in `./allTabLegendRows.tsx`
@@ -547,13 +533,13 @@ export function AllTab(): JSX.Element {
         zIndex: 30,
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        padding: "8px 12px",
-        borderRadius: 10,
-        background: "rgba(22,27,34,0.85)",
-        color: "var(--text-muted)",
-        border: "1px solid var(--color-border)",
-        fontSize: 12,
+        gap: 8,
+        padding: "12px 16px",
+        borderRadius: "var(--ts-radius-card)",
+        background: "color-mix(in srgb, var(--ts-surface) 94%, transparent)",
+        color: "var(--ts-text-bright)",
+        border: "1px solid var(--ts-border)",
+        fontSize: 13,
         whiteSpace: "nowrap",
         maxHeight: legendOpen ? "min(60vh, 420px)" : undefined,
         overflowY: legendOpen ? "auto" : undefined,
@@ -573,16 +559,17 @@ export function AllTab(): JSX.Element {
           padding: 0,
           margin: 0,
           font: "inherit",
-          color: "var(--text-muted)",
+          color: "var(--ts-muted)",
           cursor: "pointer",
         }}
       >
-        <span>{t("dashboard:legend.title")}</span>
+        {/* Round 4: a mono section label over the rows, like every panel title. */}
+        <span className="t-label-mono">{t("dashboard:legend.title")}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {!legendOpen && (
             <span style={{ fontVariantNumeric: "tabular-nums" }}>{legendRows.length}</span>
           )}
-          <span aria-hidden>{legendOpen ? "▾" : "▸"}</span>
+          <Icon name={legendOpen ? "chevron-down" : "chevron-up"} size={14} />
         </span>
       </button>
       {legendOpen && legendRows}

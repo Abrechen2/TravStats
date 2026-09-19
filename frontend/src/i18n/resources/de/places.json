@@ -109,7 +109,9 @@
     "loadError": "Der Ort konnte nicht geladen werden.",
     "visitedWithoutVisit": "Als besucht markiert, aber ohne datierten Besuch. Trage einen ein, wenn du Datum, Notiz oder ein Beleg-Foto hinterlegen willst.",
     "visitTrip": "Reise",
-    "visitNoTrip": "Keiner Reise zugeordnet"
+    "visitNoTrip": "Keiner Reise zugeordnet",
+    "coordinates": "Koordinaten",
+    "backToLogbook": "Logbuch · Orte"
   },
   "lists": {
     "title": "Listen",

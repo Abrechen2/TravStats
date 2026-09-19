@@ -165,8 +165,13 @@ export const getFxPreview = async (
 
 // ---- Stats ----
 
-export const getLodgingStats = async (): Promise<LodgingStats> => {
-  const { data } = await api.get<Envelope<LodgingStats>>("/stats/lodging");
+/** `year` scopes to stays that CHECKED IN in it; omitted, the lifetime view. */
+export const getLodgingStats = async (params?: { year?: number }): Promise<LodgingStats> => {
+  const year = params?.year;
+  const { data } =
+    year === undefined
+      ? await api.get<Envelope<LodgingStats>>("/stats/lodging")
+      : await api.get<Envelope<LodgingStats>>("/stats/lodging", { params: { year } });
   return data.data;
 };
 

@@ -14,6 +14,12 @@
  * the backdrop's background class is a real one. The invisible backdrop is what
  * hid the bug for months — the class `bg-[var(--bg-base)]0` was a typo that
  * produced no colour at all.
+ *
+ * Since 2026-09-15 this dialog is `components/Modal`, so the structure it
+ * pins is the shared frame's, and the backdrop carries the shared
+ * `modal-backdrop` testid. The colour comes from `--ts-scrim` on the scrim
+ * element now — a token, which is the other half of how the typo is
+ * prevented from recurring.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -83,8 +89,8 @@ describe("ConfirmModal", () => {
   it("the backdrop has a background class that actually exists", () => {
     // `bg-[var(--bg-base)]0` produced no colour — an invisible backdrop that
     // still swallowed every click.
-    const { container } = render(<ConfirmModal {...base} />);
-    const backdrop = container.querySelector('[data-testid="confirm-modal-backdrop"]');
+    render(<ConfirmModal {...base} />);
+    const backdrop = document.body.querySelector('[data-testid="modal-backdrop"]');
     expect(backdrop).not.toBeNull();
     expect(backdrop!.className).not.toMatch(/\]\d/);
   });
@@ -92,10 +98,8 @@ describe("ConfirmModal", () => {
   it("clicking the backdrop closes without confirming", async () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
-    const { container } = render(
-      <ConfirmModal {...base} onClose={onClose} onConfirm={onConfirm} />
-    );
-    await userEvent.click(container.querySelector('[data-testid="confirm-modal-backdrop"]')!);
+    render(<ConfirmModal {...base} onClose={onClose} onConfirm={onConfirm} />);
+    await userEvent.click(document.body.querySelector('[data-testid="modal-backdrop"]')!);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
   });

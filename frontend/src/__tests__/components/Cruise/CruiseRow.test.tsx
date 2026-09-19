@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { CruiseRow, type CruiseColumnId } from "../../../components/Cruise/CruiseRow";
+import {
+  CruiseRow,
+  CRUISE_COLUMN_LAYOUT,
+  type CruiseColumnId,
+} from "../../../components/Cruise/CruiseRow";
+import type { TableColumn } from "../../../components/ui/Table";
 import type { Cruise, CruiseStop, Port } from "../../../types";
 
 // Same mock pattern as CruiseEditModal.test.tsx: t(key) => key, so assertions
@@ -81,17 +86,26 @@ const baseCruise = (overrides: Partial<Cruise>): Cruise =>
 const HAMBURG = port(1, "Hamburg");
 const SOUTHAMPTON = port(2, "Southampton");
 
-// CruiseRow renders a <tr> — it must be wrapped in <table><tbody> or React
-// warns about invalid DOM nesting, and a warning in test output is itself a
-// finding per this dispatch.
+// The row is a grid with ARIA roles now, not a <tr> — it needs no table
+// wrapper. The columns are rendering scaffolding: the row draws one cell per
+// column it is given, so a test that wants a cell must ask for its column.
+const columnsFor = (ids: readonly CruiseColumnId[]): TableColumn[] =>
+  ids.map((id) => ({ key: id, label: id, ...CRUISE_COLUMN_LAYOUT[id] }));
+
+const ALL_COLUMNS = columnsFor([
+  "ship",
+  "line",
+  "dates",
+  "ports",
+  "status",
+  "cabin",
+  "price",
+  "trip",
+  "actions",
+]);
+
 const renderRow = (cruise: Cruise) =>
-  render(
-    <table>
-      <tbody>
-        <CruiseRow cruise={cruise} onOpen={() => {}} />
-      </tbody>
-    </table>
-  );
+  render(<CruiseRow cruise={cruise} onOpen={() => {}} columns={ALL_COLUMNS} />);
 
 describe("CruiseRow", () => {
   it("shows the identifiable port count plus a (+1) badge for two unresolved stops sharing a name", () => {
@@ -141,14 +155,10 @@ describe("CruiseRow", () => {
   // saying so. The trip rides along on the cruise payload (CRUISE_INCLUDE),
   // so the cell needs no second request and no page-level trip map.
   describe("trip column", () => {
-    const renderRowInRouter = (cruise: Cruise, isColumnVisible?: (id: CruiseColumnId) => boolean) =>
+    const renderRowInRouter = (cruise: Cruise, columns: TableColumn[] = ALL_COLUMNS) =>
       render(
         <MemoryRouter>
-          <table>
-            <tbody>
-              <CruiseRow cruise={cruise} onOpen={() => {}} isColumnVisible={isColumnVisible} />
-            </tbody>
-          </table>
+          <CruiseRow cruise={cruise} onOpen={() => {}} columns={columns} />
         </MemoryRouter>
       );
 
@@ -185,11 +195,7 @@ describe("CruiseRow", () => {
       });
       render(
         <MemoryRouter>
-          <table>
-            <tbody>
-              <CruiseRow cruise={cruise} onOpen={onOpen} />
-            </tbody>
-          </table>
+          <CruiseRow cruise={cruise} onOpen={onOpen} columns={ALL_COLUMNS} />
         </MemoryRouter>
       );
 
@@ -203,7 +209,10 @@ describe("CruiseRow", () => {
         tripId: "trip-9",
         trip: { id: "trip-9", name: "Mittelmeer 2026", color: "#e88374" },
       });
-      renderRowInRouter(cruise, (id) => id !== "trip");
+      renderRowInRouter(
+        cruise,
+        columnsFor(["ship", "line", "dates", "ports", "status", "cabin", "price", "actions"])
+      );
 
       expect(screen.queryByTestId("cruise-trip-cell-c1")).toBeNull();
       expect(screen.queryByRole("link", { name: /Mittelmeer 2026/ })).toBeNull();

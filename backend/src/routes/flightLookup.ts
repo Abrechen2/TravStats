@@ -12,6 +12,7 @@ import {
 } from "../services/flightLookup";
 import { flightLookupLimiter } from "../middleware/rateLimit";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { rejectDemoQuota } from "../middleware/demoGuard";
 
 const router = Router();
 
@@ -22,6 +23,14 @@ const router = Router();
 router.get(
   "/:flightNumber",
   authenticate,
+  // Every lookup here is a billed RapidAPI call on the operator's key
+  // (`apiKeyResolver` has no per-user branch for this provider), so the same
+  // guard the bulk historical refresh carries applies: `rejectDemoQuota`, keyed
+  // on `isDemo` alone rather than on the shared account, because a seeded
+  // account's sample flights cost real quota whichever of them asks. The bulk
+  // refresh was guarded and this was not, which was an inconsistency rather
+  // than a policy (security audit of 2026-09-19, finding 2).
+  rejectDemoQuota,
   flightLookupLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -124,6 +133,8 @@ router.get(
 router.post(
   "/bulk",
   authenticate,
+  // Ten lookups per call — see the comment on the single lookup above.
+  rejectDemoQuota,
   flightLookupLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

@@ -164,3 +164,35 @@ describe("adaptPoi", () => {
     expect(new Set(result.countries)).toEqual(new Set(["IT", "JP"]));
   });
 });
+
+// Same invariant as in `adapters.test.ts`: `eventsInWindow` adds `dailyEvents`
+// for a running year and reads `yearlyEvents` for a completed one, so a
+// disagreement would make the same account report two different totals either
+// side of New Year.
+describe("adaptPoi — dailyEvents agrees with yearlyEvents", () => {
+  it("counts each dated visit once on its own day, undated ones nowhere", () => {
+    const result = adaptPoi({
+      places: [
+        place({
+          id: "p1",
+          visits: [
+            visit({ id: "v1", visitedAt: "2024-06-12T10:00:00.000Z" }),
+            visit({ id: "v2", visitedAt: "2024-06-12T18:00:00.000Z" }),
+            visit({ id: "v3", visitedAt: "2025-02-01T10:00:00.000Z" }),
+            visit({ id: "v4", visitedAt: null }),
+          ],
+        }),
+      ],
+      lists: emptyLists,
+      curated: [],
+    });
+    if (!result.hasData) throw new Error("expected data");
+    const perYear: Record<number, number> = {};
+    for (const [dayKey, count] of Object.entries(result.dailyEvents)) {
+      const year = Number(dayKey.slice(0, 4));
+      perYear[year] = (perYear[year] ?? 0) + count;
+    }
+    expect(perYear).toEqual(result.yearlyEvents);
+    expect(result.dailyEvents["2024-06-12"]).toBe(2);
+  });
+});

@@ -257,7 +257,13 @@
     "linkAll": "Alle verknüpfen",
     "review": "Prüfen",
     "success": "{{trips}} Reisen erstellt, {{flights}} Flüge zugeordnet, {{orphans}} verwaiste Reisen entfernt",
-    "error": "Reise-Erkennung fehlgeschlagen"
+    "error": "Reise-Erkennung fehlgeschlagen",
+    "sources": {
+      "pnr": "gleiche Buchungsnummer",
+      "homeLoop": "von zu Hause und zurück",
+      "continuity": "zusammenhängende Reisetage",
+      "other": "sonstige Hinweise"
+    }
   },
   "detectReview": {
     "title": "Reisen erkennen",
@@ -298,7 +304,9 @@
   "insights": {
     "longest": "Längste Reise",
     "mostExpensive": "Teuerste Reise",
-    "mostCountries": "Meiste Länder"
+    "mostCountries": "Meiste Länder",
+    "mostExpensiveExcluded_one": "{{count}} Reise ohne Umrechnung nicht verglichen",
+    "mostExpensiveExcluded_other": "{{count}} Reisen ohne Umrechnung nicht verglichen"
   },
   "deleteTripConfirmTitle": "Reise löschen?",
   "tours": {
@@ -399,5 +407,25 @@
       "loadError": "Einstellungen konnten nicht geladen werden",
       "saveError": "Speichern fehlgeschlagen"
     }
+  },
+  "head": {
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "countries_one": "{{count}} Land",
+    "countries_other": "{{count}} Länder"
+  },
+  "overview": {
+    "daysAway": "Tage unterwegs"
+  },
+  "card": {
+    "days_one": "Tag",
+    "days_other": "Tage",
+    "countries_one": "Land",
+    "countries_other": "Länder",
+    "entries_one": "Eintrag",
+    "entries_other": "Einträge"
+  },
+  "list": {
+    "undated": "Ohne Datum"
   }
 }

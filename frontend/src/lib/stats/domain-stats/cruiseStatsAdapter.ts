@@ -1,9 +1,11 @@
 // Adapter: CruiseStatsResponse + Cruise[] -> DomainStats. Pure, sync.
 import type { CruiseStatsResponse } from "../../api/stats";
 import type { Cruise } from "../../../types/cruise";
-import type { DomainStats } from "./types";
+import type { DomainStats, YearSummary } from "./types";
+import { bucket, topFive } from "./yearSummary";
 import { toYearKeyed } from "./yearKeyed";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
+import { crossDomainDayKey } from "../../../shared/crossDomainCounting";
 
 export interface CruiseAdapterInput {
   stats: CruiseStatsResponse;
@@ -46,8 +48,15 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
+  // Distance comes only from the lifetime rollup, so a year shows what the
+  // cruise rows themselves can prove: nights aboard, sea days, ports called.
+  const perYear = new Map<
+    number,
+    { nights: number; seaDays: number; ports: Set<string>; lines: Map<string, number> }
+  >();
 
   for (const c of flownOrHistorical) {
     if (!c.startDate) continue;
@@ -56,6 +65,22 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
 
     const startYear = start.getFullYear();
     yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
+    // Keyed on the START day, exactly as the year tally is: a cruise is one
+    // event in the year it began, so it is one event on the day it began.
+    const startKey = crossDomainDayKey(startYear, start.getMonth() + 1, start.getDate());
+    dailyEvents[startKey] = (dailyEvents[startKey] ?? 0) + 1;
+    const y = bucket(perYear, startYear, () => ({
+      nights: 0,
+      seaDays: 0,
+      ports: new Set<string>(),
+      lines: new Map<string, number>(),
+    }));
+    for (const stop of c.stops ?? []) {
+      if (stop.isAtSea) y.seaDays += 1;
+      else if (stop.portId !== null) y.ports.add(`id:${stop.portId}`);
+      else if (stop.unresolvedPortName) y.ports.add(`name:${stop.unresolvedPortName}`);
+    }
+    if (c.cruiseLine) y.lines.set(c.cruiseLine, (y.lines.get(c.cruiseLine) ?? 0) + 1);
     weekdayEvents[start.getDay()] = (weekdayEvents[start.getDay()] ?? 0) + 1;
 
     // Active-day expansion: inclusive day-span between start and end. When
@@ -66,6 +91,7 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     const endValid = !Number.isNaN(end.getTime()) ? end : start;
     const dayCursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     const lastDay = new Date(endValid.getFullYear(), endValid.getMonth(), endValid.getDate());
+    y.nights += Math.max(0, Math.round((lastDay.getTime() - dayCursor.getTime()) / 86_400_000));
     while (dayCursor.getTime() <= lastDay.getTime()) {
       const y = dayCursor.getFullYear();
       const m = String(dayCursor.getMonth() + 1).padStart(2, "0");
@@ -78,6 +104,18 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
       }
       dayCursor.setDate(dayCursor.getDate() + 1);
     }
+  }
+
+  const summaryByYear: Record<number, YearSummary> = {};
+  for (const [year, y] of perYear) {
+    summaryByYear[year] = {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.cruiseNights", value: y.nights },
+        { labelKey: "overviewCard.kpi.seaDays", value: y.seaDays },
+        { labelKey: "overviewCard.kpi.ports", value: y.ports.size },
+      ],
+      topItems: { titleKey: "overviewCard.topItems.cruiseLines", items: topFive(y.lines) },
+    };
   }
 
   // Top-Reedereien — the response only carries the line names list, not
@@ -104,7 +142,9 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     // cloud keeps reading CruiseStatsResponse.countries (the names) directly.
     countries: stats.countriesIso ?? stats.countries,
     countriesByYear: toYearKeyed(stats.countriesByYear),
+    summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

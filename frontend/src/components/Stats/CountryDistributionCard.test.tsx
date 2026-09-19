@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import CountryDistributionCard from "./CountryDistributionCard";
 
 vi.mock("../../lib/api", () => ({
@@ -20,7 +21,12 @@ vi.mock("../../hooks/useTranslation", () => ({
 
 describe("CountryDistributionCard", () => {
   it("renders country names and counts", async () => {
-    render(<CountryDistributionCard />);
+    // A row is a real `<button>` since Task 9, which needs `useSearchParams`.
+    render(
+      <MemoryRouter>
+        <CountryDistributionCard />
+      </MemoryRouter>
+    );
     await waitFor(() => {
       expect(screen.getByText("Germany")).toBeInTheDocument();
     });

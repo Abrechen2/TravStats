@@ -4,7 +4,8 @@ import { airlineResolvers } from "../../airlineUtils";
 import type { Flight } from "../../../types";
 import { getFlightDuration } from "../../flightDuration";
 import { localWallClockOf } from "../../../shared/localWallClock";
-import type { DomainStats } from "./types";
+import type { DomainStats, YearSummary } from "./types";
+import { bucket } from "./yearSummary";
 
 export interface FlightAdapterInput {
   /** Already filtered to status === "flown" || "historical" by the caller. */
@@ -26,6 +27,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   // Same airline = same code (forgejo#81) — the rule the server's ranking uses.
@@ -36,8 +38,10 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
 
   let totalDistanceKm = 0;
   let totalDurationHours = 0;
+  const perYear = new Map<number, { flights: Flight[]; distanceKm: number; hours: number }>();
 
   for (const f of flights) {
+    let flightYear: number | null = null;
     if (f.departureTime !== null) {
       const d = new Date(f.departureTime);
       if (!Number.isNaN(d.getTime())) {
@@ -46,9 +50,12 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
         // and disagrees with the year index the backend sends (#266).
         const clock = localWallClockOf(d, f.depTimezone, f.depTimeSemantics);
         const year = clock.year;
+        flightYear = year;
         const ymKey = clock.date.slice(0, 7);
         const ymdKey = clock.date;
         yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
+        // The same tally, keyed by the day, so a comparison can end on one.
+        dailyEvents[ymdKey] = (dailyEvents[ymdKey] ?? 0) + 1;
         weekdayEvents[clock.weekday] = (weekdayEvents[clock.weekday] ?? 0) + 1;
         // Active-day buckets are boolean per (domain, day); multiple
         // flights on the same day still equal 1 active day.
@@ -60,14 +67,44 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
       }
     }
 
-    totalDistanceKm += haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    const distanceKm = haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    totalDistanceKm += distanceKm;
 
+    let hours = 0;
     if (f.durationMinutes != null && f.durationMinutes > 0) {
-      totalDurationHours += f.durationMinutes / 60;
+      hours = f.durationMinutes / 60;
     } else {
       const dur = getFlightDuration(f);
-      if (dur && dur.minutes > 0) totalDurationHours += dur.minutes / 60;
+      if (dur && dur.minutes > 0) hours = dur.minutes / 60;
     }
+    totalDurationHours += hours;
+
+    // An undated flight counts for all years and for no single one.
+    if (flightYear !== null) {
+      const y = bucket(perYear, flightYear, () => ({ flights: [], distanceKm: 0, hours: 0 }));
+      y.flights.push(f);
+      y.distanceKm += distanceKm;
+      y.hours += hours;
+    }
+  }
+
+  const summaryByYear: Record<number, YearSummary> = {};
+  for (const [year, y] of perYear) {
+    const { groups } = groupAirlines(
+      y.flights.map((f) => ({ ...f, count: 1 })),
+      airlineResolvers
+    );
+    summaryByYear[year] = {
+      headlineKpis: [
+        { labelKey: "overviewCard.kpi.distance", value: Math.round(y.distanceKm), unit: "km" },
+        { labelKey: "overviewCard.kpi.flightTime", value: roundHours(y.hours), unit: "h" },
+        { labelKey: "overviewCard.kpi.airlines", value: groups.length },
+      ],
+      topItems: {
+        titleKey: "overviewCard.topItems.airlines",
+        items: groups.slice(0, 5).map((g) => ({ label: g.label, value: g.count })),
+      },
+    };
   }
 
   const topAirlines = airlineGroups.slice(0, 5).map((g) => ({ label: g.label, value: g.count }));
@@ -80,7 +117,9 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     totalDurationHours,
     countries,
     countriesByYear,
+    summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,
@@ -90,7 +129,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
         { labelKey: "overviewCard.kpi.distance", value: Math.round(totalDistanceKm), unit: "km" },
         {
           labelKey: "overviewCard.kpi.flightTime",
-          value: Math.round(totalDurationHours),
+          value: roundHours(totalDurationHours),
           unit: "h",
         },
         { labelKey: "overviewCard.kpi.airlines", value: airlineGroups.length },
@@ -99,6 +138,14 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
       detailRoute: "/stats?tab=flight",
     },
   };
+}
+
+/**
+ * One decimal, not whole hours: a single 90-minute flight rounded to "2 h" on
+ * the overview while the flight tab said 1.5 (CT106 design-6 R09).
+ */
+function roundHours(hours: number): number {
+  return Math.round(hours * 10) / 10;
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

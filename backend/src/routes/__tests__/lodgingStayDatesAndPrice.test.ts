@@ -57,8 +57,11 @@ describe("stay dates and price", () => {
   describe("when both dates are cleared", () => {
     it("clears the times, re-derives the status and moves the FX day with them", async () => {
       const created = await createStay({
+        // A short span — the span itself is not under test here, and a wider
+        // one would collide with the checkIn/checkOut span cap in
+        // schemas/lodging.ts (MAX_STAY_SPAN_NIGHTS).
         checkIn: "2020-01-01T00:00:00.000Z",
-        checkOut: "2030-01-01T00:00:00.000Z",
+        checkOut: "2020-01-08T00:00:00.000Z",
         checkInTime: "15:00",
         checkOutTime: "11:00",
         totalPrice: 100,

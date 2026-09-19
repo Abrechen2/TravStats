@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { AuthRequest } from "../../middleware/auth";
+import { isSharedDemoUser } from "../../middleware/demoGuard";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import {
@@ -360,6 +361,35 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
+
+    // The shared demo account cannot write the profile block. It is not a
+    // preference: `profilePicture` accepts any http(s) URL and the avatar is
+    // drawn in the navigation bar for every other visitor, so this PUT was a
+    // second door to the picture that `/settings/profile-picture` already
+    // refuses (finding C2); the name beside it greets everyone from the header.
+    // The rest of the block — display, units, map colours — stays open, which
+    // is why the refusal is here and not on the whole route.
+    //
+    // `autoUpdate` and `historicalEnrichment` are refused for the same account
+    // and on the same terms (independent review, 2026-09-17, finding A4).
+    // Neither is a preference: each one arms a BACKGROUND WORKER that spends
+    // the instance's flight-provider quota, unattended, on an account nobody
+    // owns — a visitor of a public instance could switch both on and leave the
+    // operator paying for lookups over 160 seeded sample flights. The nightly
+    // reseed puts them back to false (`ensureUserSettings`) and the two
+    // workers skip the account outright; this is the door itself.
+    const refusedForDemo =
+      payload.profile !== undefined ||
+      payload.autoUpdate !== undefined ||
+      payload.historicalEnrichment !== undefined;
+    if (refusedForDemo && (await isSharedDemoUser(userId))) {
+      res.status(403).json({
+        error: "DEMO_ACCOUNT_FORBIDDEN",
+        message: "The demo account cannot change this. Use your own account on your own instance.",
+      });
+      return;
+    }
+
     const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
     const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
       await getInstanceSettings();

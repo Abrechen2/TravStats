@@ -116,8 +116,13 @@ export const statsApi = {
     return data;
   },
 
-  getCruiseStats: async (): Promise<CruiseStatsResponse> => {
-    const { data } = await api.get<CruiseStatsResponse>("/stats/cruise");
+  /** `year` scopes to cruises that STARTED in it; omitted, the lifetime view. */
+  getCruiseStats: async (params?: { year?: number }): Promise<CruiseStatsResponse> => {
+    const year = params?.year;
+    const { data } =
+      year === undefined
+        ? await api.get<CruiseStatsResponse>("/stats/cruise")
+        : await api.get<CruiseStatsResponse>("/stats/cruise", { params: { year } });
     return data;
   },
 

@@ -54,6 +54,25 @@ describe("calculateLodgingStats", () => {
     expect(s.spendBaseTotal).toBe(614);
   });
 
+  it("opens no currency bucket for a stay that carries a currency but no price (CT106 design-6 R04)", () => {
+    // The stay editor stores the currency with an empty price. Counting that
+    // as 0 turned "no prices yet" into a "0 €" spend and an empty currency card.
+    const s = calculateLodgingStats([
+      stay({ currency: "EUR", totalPrice: null, totalPriceBase: null }),
+    ]);
+    expect(s.spendByCurrency).toEqual({});
+    expect(s.spendUnconvertedStays).toBe(0);
+  });
+
+  it("keeps a real zero price as a spend of zero (R04)", () => {
+    const s = calculateLodgingStats([
+      stay({ currency: "EUR", totalPrice: 0, totalPriceBase: 0, isAwardStay: true }),
+      stay({ lodgingId: "l2", currency: "CHF", totalPrice: null, totalPriceBase: null }),
+    ]);
+    expect(s.spendByCurrency).toEqual({ EUR: 0 });
+    expect(s.spendBaseTotal).toBe(0);
+  });
+
   it("allocates nights across a year boundary to each year", () => {
     const s = calculateLodgingStats([
       stay({

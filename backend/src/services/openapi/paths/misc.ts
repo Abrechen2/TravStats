@@ -11,6 +11,9 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { prismaColumns } from "../prismaColumns";
+import { errorContent } from "./shared";
+import { evidenceResponseSchema } from "../../../schemas/evidence";
+import { EVIDENCE_PAGE_SIZE } from "../../../shared/evidence";
 
 const achievement = registry.register(
   "Achievement",
@@ -18,6 +21,12 @@ const achievement = registry.register(
     .object({
       ...prismaColumns("Achievement"),
       isUnlocked: z.boolean().describe("Progress has reached the requirement"),
+      isRetired: z
+        .boolean()
+        .describe(
+          "The definition was removed; listed only because this user earned it. " +
+            "Its points count, but it is outside totalAchievements/unlockedAchievements."
+        ),
       unlockedAt: z.string().datetime().nullable(),
       progress: z
         .number()
@@ -188,6 +197,66 @@ registry.registerPath({
           }),
         },
       },
+    },
+  },
+});
+
+/**
+ * "Which entries produced this number" — see
+ * `docs/superpowers/specs/2026-09-18-evidence-panel-design.md`. Plumbing
+ * only as of this endpoint's introduction: `metric`/`ranking` answer 404 for
+ * every key until a resolver is wired (release 1, Task 5); `record`/
+ * `achievement` answer 501 until release 2.
+ */
+const evidenceResponse = registry.register(
+  "EvidenceResponse",
+  evidenceResponseSchema.openapi("EvidenceResponse")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/evidence/{kind}/{key}",
+  summary: "Which entries produced this number",
+  description:
+    "Four answers, not one collapsed into the others: an unknown key is 404 " +
+    "(never an empty 200 — that would hide a frontend bug); a key the user " +
+    "simply has no data for is 200 with `value: 0`; a measure that cannot be " +
+    "derived at all is 200 with `value: null` plus `unattributed`, never 0; " +
+    "another user's row is 404, never 403. `record` and `achievement` answer " +
+    "501 — release 2, not missing.",
+  tags: ["Achievements"],
+  request: {
+    params: z.object({
+      kind: z.enum(["metric", "ranking", "record", "achievement"]),
+      key: z.string().min(1),
+    }),
+    query: z.object({
+      period: z.enum(["allTime", "year", "rolling12m"]).optional(),
+      year: z.coerce.number().int().optional().describe("Required when period=year"),
+      domains: z.string().optional().describe("Comma-separated domains, e.g. `flight,cruise`"),
+      offset: z.coerce.number().int().min(0).optional(),
+      limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(EVIDENCE_PAGE_SIZE)
+        .optional()
+        .describe(`Default and max ${EVIDENCE_PAGE_SIZE} — one page per request`),
+    }),
+  },
+  responses: {
+    200: {
+      description: "The measure and its evidence entries",
+      content: { "application/json": { schema: evidenceResponse } },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+    404: {
+      description: "Unknown key, or the row belongs to another user",
+      content: errorContent,
+    },
+    501: {
+      description: "`record` / `achievement` — served in release 2, not this one",
+      content: errorContent,
     },
   },
 });

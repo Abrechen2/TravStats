@@ -179,9 +179,11 @@ describe("AllTab: the legend names the lists it colours by", () => {
 
     const toggle = screen.getByRole("button", { name: /dashboard:legend.title/ });
     // Count the rows as they are drawn, rather than guessing which ones exist:
-    // each row carries one hidden swatch, and the toggle is not one of them.
+    // each row carries one hidden swatch; anything inside the toggle is not a row.
     const legend = toggle.parentElement as HTMLElement;
-    const rowCount = legend.querySelectorAll("span[aria-hidden]").length - 1;
+    const rowCount = [...legend.querySelectorAll("span[aria-hidden]")].filter(
+      (el) => !toggle.contains(el)
+    ).length;
     expect(rowCount).toBeGreaterThan(0);
 
     await user.click(toggle);

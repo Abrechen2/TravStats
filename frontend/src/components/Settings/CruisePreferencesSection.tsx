@@ -1,6 +1,12 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { CruiseSettings } from "../../store/settingsStore";
+import { Switch } from "../ui/Field";
+import { Segmented } from "../ui/Segmented";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
+
+/** A radio value cannot be null; this stands for "no default cabin". */
+const NO_CABIN = "none";
 
 interface CruisePreferencesSectionProps {
   cruise: CruiseSettings;
@@ -35,68 +41,57 @@ export default function CruisePreferencesSection({
         description={t("settings:cruisePreferences.description")}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="label" htmlFor="cruise-default-line">
-            {t("settings:cruisePreferences.defaultLine")}
-          </label>
-          <input
-            id="cruise-default-line"
-            type="text"
-            className="input"
-            value={cruise.defaultLine}
-            onChange={(e): void => onSetCruise({ defaultLine: e.target.value })}
-            placeholder={t("settings:cruisePreferences.defaultLinePlaceholder")}
-          />
-          <p className="mt-1 text-xs text-(--text-muted)">
-            {t("settings:cruisePreferences.defaultLineHint")}
-          </p>
-        </div>
-
-        <div>
-          <label className="label" htmlFor="cruise-default-cabin">
-            {t("settings:cruisePreferences.defaultCabin")}
-          </label>
-          <select
-            id="cruise-default-cabin"
-            className="input"
-            value={cruise.defaultCabinType ?? ""}
-            onChange={(e): void =>
-              onSetCruise({
-                defaultCabinType:
-                  e.target.value === ""
-                    ? null
-                    : (e.target.value as NonNullable<CruiseSettings["defaultCabinType"]>),
-              })
-            }
-          >
-            {CABIN_TYPES.map((cabin) => (
-              <option key={cabin ?? "none"} value={cabin ?? ""}>
-                {cabin === null
-                  ? t("settings:cruisePreferences.defaultCabinNone")
-                  : t(`cruise:cabinType.${cabin}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={cruise.showCruiseArcs}
-            onChange={(e): void => onSetCruise({ showCruiseArcs: e.target.checked })}
-            className="accent-(--accent)"
-          />
-          <span className="text-sm text-(--text-primary)">
-            {t("settings:cruisePreferences.showArcs")}
-          </span>
-        </label>
-        <p className="mt-1 ml-6 text-xs text-(--text-muted)">
-          {t("settings:cruisePreferences.showArcsHint")}
-        </p>
-      </div>
+      <SettingRows>
+        <SettingRow
+          title={t("settings:cruisePreferences.defaultLine")}
+          sub={t("settings:cruisePreferences.defaultLineHint")}
+          htmlFor="cruise-default-line"
+          control={
+            <input
+              id="cruise-default-line"
+              type="text"
+              className="input"
+              style={{ minWidth: 240 }}
+              value={cruise.defaultLine}
+              onChange={(e): void => onSetCruise({ defaultLine: e.target.value })}
+              placeholder={t("settings:cruisePreferences.defaultLinePlaceholder")}
+            />
+          }
+        />
+        <SettingRow
+          title={t("settings:cruisePreferences.defaultCabin")}
+          control={
+            <Segmented
+              label={t("settings:cruisePreferences.defaultCabin")}
+              value={cruise.defaultCabinType ?? NO_CABIN}
+              options={CABIN_TYPES.map((cabin) =>
+                cabin === null
+                  ? {
+                      value: NO_CABIN,
+                      label: t("settings:defaults.options.noneShort"),
+                      name: t("settings:cruisePreferences.defaultCabinNone"),
+                    }
+                  : { value: cabin, label: t(`cruise:cabinType.${cabin}`) }
+              )}
+              onChange={(value): void =>
+                onSetCruise({
+                  defaultCabinType:
+                    value === NO_CABIN
+                      ? null
+                      : (value as NonNullable<CruiseSettings["defaultCabinType"]>),
+                })
+              }
+            />
+          }
+        />
+        <Switch
+          id="cruise-show-arcs"
+          checked={cruise.showCruiseArcs}
+          onChange={(on): void => onSetCruise({ showCruiseArcs: on })}
+          label={t("settings:cruisePreferences.showArcs")}
+          sub={t("settings:cruisePreferences.showArcsHint")}
+        />
+      </SettingRows>
     </SectionCard>
   );
 }

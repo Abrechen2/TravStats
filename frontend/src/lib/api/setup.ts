@@ -7,11 +7,13 @@ export const setupApi = {
     setupComplete: boolean;
     requiresSetup: boolean;
     message: string;
+    publicDemoLogin?: boolean;
   }> => {
     const { data } = await api.get<{
       setupComplete: boolean;
       requiresSetup: boolean;
       message: string;
+      publicDemoLogin?: boolean;
     }>("/setup/status");
     return data;
   },

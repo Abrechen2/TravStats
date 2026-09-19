@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { lodgingImportLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
@@ -34,7 +35,20 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-router.post("/preview", async (req: AuthRequest, res: Response, next: NextFunction) => {
+/**
+ * The shared demo account does not run the CSV lodging import.
+ *
+ * `/commit` hands its rows to `backfillLodgingLocations` → `findLodgingPlace` →
+ * `getApiKey("googlePlaces")`, which takes no user argument, so every geocode is
+ * billed to the OPERATOR per request. `/preview` is the step that produces the
+ * rows `/commit` is given, and `/suggest-mapping` asks the admin's Ollama to
+ * read the CSV headers — the same compute the summarize route is guarded
+ * against. On a public preview whose demo password is printed on the login
+ * page, all three spend somebody else's money for a stranger (security audit of
+ * 2026-09-19, findings 4 and 3). `GET /batches` and `DELETE /batches/:id` stay
+ * open: they read and undo the account's own rows and cost nothing outside.
+ */
+router.post("/preview", rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = lodgingImportPreviewRequestSchema.safeParse(req.body);
@@ -47,7 +61,7 @@ router.post("/preview", async (req: AuthRequest, res: Response, next: NextFuncti
   }
 });
 
-router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/commit", rejectDemo, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // `userId` always comes from the authenticated session, never the body —
     // the request schema below has no userId field at all, so there is no
@@ -137,18 +151,22 @@ router.delete("/batches/:id", async (req: AuthRequest, res: Response, next: Next
   }
 });
 
-router.post("/suggest-mapping", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    requireUser(req);
-    const parsed = suggestMappingRequestSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+router.post(
+  "/suggest-mapping",
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      requireUser(req);
+      const parsed = suggestMappingRequestSchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    // Never throws — `{}` means "use your heuristic".
-    const mapping = await suggestLodgingCsvMapping(parsed.data.headers, parsed.data.sampleRows);
-    res.json({ success: true, data: { mapping } });
-  } catch (err) {
-    next(err);
+      // Never throws — `{}` means "use your heuristic".
+      const mapping = await suggestLodgingCsvMapping(parsed.data.headers, parsed.data.sampleRows);
+      res.json({ success: true, data: { mapping } });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 export default router;

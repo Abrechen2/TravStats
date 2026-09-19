@@ -87,10 +87,13 @@ describe("LodgingMoneySection", () => {
     expect(screen.queryByText(/lodging:stats\.money\.omitted/)).toBeNull();
   });
 
-  it("shows a dash rather than a zero when nothing is priced", () => {
-    // A 0 EUR average would read as "your nights were free".
+  // A 0 EUR average would read as "your nights were free" — and four "—"
+  // tiles with four empty rankings were most of a phone page (CT106 audit B12).
+  it("says once that nothing is priced instead of drawing empty figures", () => {
     render(<LodgingMoneySection stats={base} />);
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    expect(screen.getByText(/lodging:stats\.money\.noPrices/)).toBeInTheDocument();
+    expect(screen.queryByText("lodging:stats.money.avgPerNight")).toBeNull();
+    expect(screen.queryByText(/0,00|0\.00/)).toBeNull();
   });
 
   it("hides the award-value card when there are no award nights", () => {

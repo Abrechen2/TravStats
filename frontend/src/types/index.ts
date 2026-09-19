@@ -6,6 +6,8 @@ export interface User {
   id: string;
   username: string;
   isAdmin: boolean;
+  /** The SHARED demo account of a public instance — settings the server refuses are explained, not offered. NOT the raw `isDemo` column, which `seedDemoUser` sets on ordinary accounts too (backend utils/sharedDemo.ts). */
+  isSharedDemo?: boolean;
 }
 
 export interface Airport {
@@ -722,6 +724,14 @@ export interface AirlineRankingItem {
    *  has carried it since 2.5.0 — this side simply never declared it, so the
    *  card could not render what the endpoint was already sending. */
   iata?: string;
+  /**
+   * The canonical `airlineGroupKey` identity ("iata:LH", "name:some carrier")
+   * this row folds — always present. The evidence panel addresses a ranking
+   * row by this, never by `airline` (a display label): the API has carried
+   * it since the evidence resolvers landed (`routes/stats.ts`), this side
+   * simply never declared it either.
+   */
+  key: string;
 }
 
 export interface AirlineRankingResponse {
@@ -756,45 +766,4 @@ export interface CountryStatsResponse {
 export * from "./achievement";
 export * from "./cruise";
 export * from "./catalogue";
-
-export interface AircraftRankingItem {
-  registration: string;
-  count: number;
-  airline: string | null;
-  aircraft: string | null;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-}
-
-export interface AircraftRankingResponse {
-  aircraft: AircraftRankingItem[];
-  total: number;
-}
-
-export interface AircraftProfileFlight {
-  id: string;
-  flightNumber: string | null;
-  airline: string | null;
-  depIata: string | null;
-  arrIata: string | null;
-  depName: string | null;
-  arrName: string | null;
-  departureTime: string | null;
-  arrivalTime: string | null;
-  distanceKm: number;
-  status: string;
-}
-
-export interface AircraftProfileResponse {
-  registration: string;
-  modeS: string | null;
-  airline: string | null;
-  aircraft: string | null;
-  flightCount: number;
-  totalDistanceKm: number;
-  firstFlightDate: string | null;
-  lastFlightDate: string | null;
-  uniqueAirports: number;
-  flights: AircraftProfileFlight[];
-}
+export * from "./aircraft";

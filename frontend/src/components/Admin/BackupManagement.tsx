@@ -68,7 +68,7 @@ export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps):
       open
       onClose={onClose}
       title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
-      widthClass="max-w-2xl"
+      maxWidth={672}
       closeLabel={t("common:buttons.cancel")}
       footer={
         <>

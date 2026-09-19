@@ -16,7 +16,8 @@
     "activeDays": "Active travel days",
     "activeDaysHint": "Days with at least one activity",
     "achievements": "Achievements",
-    "achievementsHint": "{{points}} points"
+    "achievementsHint": "{{points}} points",
+    "countriesNoComparison": "Countries: no comparison for a part year"
   },
   "overviewToggle": {
     "noData": "no data"
@@ -73,7 +74,7 @@
   "overviewCard": {
     "noDataYet": "No data yet",
     "comingSoon": "Coming with V2.X",
-    "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} lifetime",
+    "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} in total",
     "lifetimeCount": "{{count}} experiences",
     "detailLink": "Details →",
     "unit": {
@@ -92,7 +93,8 @@
       "placesVisited": "Places visited",
       "countries": "Countries",
       "lists": "Lists",
-      "bestChecklist": "Best checklist"
+      "bestChecklist": "Best checklist",
+      "cruiseNights": "Nights aboard"
     },
     "topItems": {
       "airlines": "Top airlines",
@@ -109,7 +111,9 @@
       "dateline": "Crossed the date line",
       "birthdayAtSea": "Birthday at sea",
       "newYearAtSea": "New Year at sea"
-    }
+    },
+    "noEventsInYear": "Nothing in {{year}}.",
+    "allYearsOnly": "All years"
   },
   "overview2": {
     "sectionLabel": "Overall summary",
@@ -224,17 +228,15 @@
   },
   "overview": {
     "loading": "Loading multi-domain stats …",
-    "rangeLabel": "Range",
-    "rangeHint": "Cross-domain — drives KPIs, chart, heatmap and per-domain cards",
     "kpisLabel": "Overall summary",
-    "scopeLifetime": "Lifetime · all years",
+    "scopeLifetime": "All years",
     "scopeYear": "Year {{year}}",
     "scopeCompare": "Year {{year}} vs. {{compare}}",
     "activityLabel": "Activity & distribution",
-    "activityHint": "Toggle which domains contribute",
+    "activityHint": "Choose which areas are counted.",
     "perDomainLabel": "Per domain",
-    "perDomainHint": "Compact summary — full drill-down lives in the domain tab",
-    "perDomainHintScoped": "Scope: {{year}} · full drill-down in the domain tab",
+    "perDomainHint": "Short overview — all details in the area's tab",
+    "perDomainHintScoped": "{{year}} · all details in the area's tab",
     "totalFlights": "Total Flights",
     "totalDistance": "Total Distance",
     "avgDistance": "Avg Distance",
@@ -247,15 +249,16 @@
     "scopeHint": "independent of the year filter above",
     "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times",
     "noPricesRecorded_one": "No price recorded — {{count}} flight without one",
-    "noPricesRecorded_other": "No price recorded — {{count}} flights without one"
+    "noPricesRecorded_other": "No price recorded — {{count}} flights without one",
+    "scopeCompareSamePeriod": "Year {{year}} vs. same period in {{compare}}"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {
-    "allTime": "All time",
-    "selectYear": "Filter by year",
-    "compareWith": "Compare with",
     "vs": "vs {{year}}",
-    "scopeLabel": "── Year {{year}} ──"
+    "scopeLabel": "── Year {{year}} ──",
+    "vsSamePeriod": "vs. same period in {{year}}",
+    "vsFullYear": "vs. the whole of {{year}}",
+    "partialYearNote": "{{year}} is still running — a part year is set against a whole one here"
   },
   "byStatus": {
     "title": "By Status"
@@ -307,7 +310,7 @@
   },
   "airlines": {
     "title": "Top Airlines",
-    "flightsTotal": "{{count}} flights • {{hours}}h total",
+    "flightsTotal": "{{count}} flights • {{hours}} h total",
     "withoutAirline_one": "{{count}} flight without an airline — not ranked",
     "withoutAirline_other": "{{count}} flights without an airline — not ranked"
   },
@@ -643,6 +646,15 @@
     "seats": "Seats",
     "airlines": "Airlines",
     "aircraft": "Aircraft",
-    "countries": "Countries"
+    "countries": "Countries",
+    "heatmap": "Active days",
+    "keyFigures": "Key figures",
+    "cruiseDepth": "Depth & loyalty",
+    "cruiseTags": "Lines, regions, countries",
+    "cruiseFlags": "Highlights",
+    "rankings": "Rankings"
+  },
+  "period": {
+    "emptyYear": "Nothing recorded here for {{year}}."
   }
 }

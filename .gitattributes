@@ -46,3 +46,16 @@
 # byte compare (LF generator vs CRLF on disk) failed. Pin LF so the guard
 # is platform-stable.
 frontend/src/lib/generated/*.ts text eol=lf
+
+# The theme, for the same reason one file up. `scripts/generate-theme.mjs`
+# writes LF and `theme/__tests__/tokens.generated.test.ts` byte-compares the
+# checked-in files against a fresh generation — the guard that keeps
+# `design/tokens.json` the only place a colour is decided. With
+# core.autocrlf=true both files check out as CRLF and the compare fails on
+# Windows while passing on Linux, which is how the warden that watches the
+# token layer became a warden that is only awake on one machine.
+#
+# Measured 2026-09-15: 320 CRLF in tokens.css, 101 in tokens.ts, on a
+# checkout with no changes in it.
+frontend/src/theme/tokens.css text eol=lf
+frontend/src/theme/tokens.ts text eol=lf

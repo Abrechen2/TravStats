@@ -27,7 +27,8 @@ describe("PanelHeader", () => {
     const { container, rerender } = render(
       <PanelHeader title="Karte" expanded={true} onToggle={() => {}} />
     );
-    const chevron = (): SVGElement => container.querySelector("svg") as SVGElement;
+    // The chevron is the header's last svg; the first is the panel's map icon.
+    const chevron = (): SVGElement => [...container.querySelectorAll("svg")].pop() as SVGElement;
     expect(chevron().style.transform).toBe("none");
 
     rerender(<PanelHeader title="Karte" expanded={false} onToggle={() => {}} />);
@@ -178,8 +179,10 @@ describe("CruiseAppearanceSection", () => {
         onColorChange={onColorChange}
       />
     );
-    fireEvent.click(screen.getByLabelText("rgb(126,200,122)"));
-    expect(onColorChange).toHaveBeenCalledWith("solid", [126, 200, 122]);
+    // Any swatch on the shared palette; the case is about WHICH SLOT the
+    // click writes to, not about the hue.
+    fireEvent.click(screen.getByLabelText("rgb(143,163,184)"));
+    expect(onColorChange).toHaveBeenCalledWith("solid", [143, 163, 184]);
   });
 
   it("renders the arrow slider only when arrow props are provided (flat map only)", () => {
@@ -266,10 +269,8 @@ describe("FlightAppearanceSection", () => {
         onColorChange={onColorChange}
       />
     );
-    // Sky-blue [80,200,255] — the retired scheduled default — is still on the
-    // palette, so anyone who preferred it can pick it back.
-    fireEvent.click(screen.getByLabelText("rgb(80,200,255)"));
-    expect(onColorChange).toHaveBeenCalledWith("frequency", [80, 200, 255]);
+    fireEvent.click(screen.getByLabelText("rgb(143,163,184)"));
+    expect(onColorChange).toHaveBeenCalledWith("frequency", [143, 163, 184]);
   });
 });
 

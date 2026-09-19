@@ -65,6 +65,9 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 
         return {
           ...achievement,
+          // A retired definition is on the list only because it was earned; the
+          // flag lets a client keep it out of "x of y" the way `summary` does.
+          isRetired: !isLive(achievement.code),
           isUnlocked,
           unlockedAt: isUnlocked ? userAchievement?.unlockedAt || null : null,
           progress,

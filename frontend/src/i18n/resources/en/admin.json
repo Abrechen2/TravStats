@@ -279,7 +279,11 @@
       "message": "Turn off two-factor sign-in for “{{username}}”? Their next sign-in will need the password only. This is the way back into the account when both the phone AND the recovery codes are gone.",
       "confirm": "Reset"
     },
-    "description": "Everyone on this instance — change roles and deactivate accounts. A deactivated account can no longer sign in; its data is kept."
+    "description": "Everyone on this instance — change roles and deactivate accounts. A deactivated account can no longer sign in; its data is kept.",
+    "twoFactor": {
+      "on": "On",
+      "off": "Off"
+    }
   },
   "invitations": {
     "title": "Manage Invitations",

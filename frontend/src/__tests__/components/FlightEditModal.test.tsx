@@ -180,12 +180,12 @@ describe("FlightEditModal", () => {
   });
 
   it("always shows price + currency but hides taxes/fees when enableCostTracking is false (#192)", () => {
-    const { container } = render(
+    render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
     // Exactly ONE number field with the flag off: the price. Taxes and fees
     // (the other two step-0.01 inputs) stay behind the cost-tracking toggle.
-    const numberInputs = container.querySelectorAll('input[type="number"][step="0.01"]');
+    const numberInputs = document.body.querySelectorAll('input[type="number"][step="0.01"]');
     expect(numberInputs.length).toBe(1);
     expect((numberInputs[0] as HTMLInputElement).placeholder).toBe(
       "flights:form.placeholders.price"
@@ -193,15 +193,15 @@ describe("FlightEditModal", () => {
   });
 
   it("has no status select — status is a read-only pill plus a cancelled checkbox (#status-from-dates)", () => {
-    const { container } = render(
+    render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
     // The old status <select> had flown/scheduled/cancelled/historical options.
     // "flown" only ever appeared as a status option value, so its absence proves
     // the combobox is gone.
-    expect(container.querySelector('option[value="flown"]')).toBeFalsy();
+    expect(document.body.querySelector('option[value="flown"]')).toBeFalsy();
     // The pill renders the raw i18n key under the globally-mocked t(key) => key.
-    expect(container.textContent).toContain("flights:status.flown");
+    expect(document.body.textContent).toContain("flights:status.flown");
     const checkbox = screen.getByLabelText("flights:status.cancelledCheckbox") as HTMLInputElement;
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
@@ -209,20 +209,20 @@ describe("FlightEditModal", () => {
 
   it("renders the historical pill in amber, not red — historical is archival data, not an error", () => {
     const historicalFlight: Flight = { ...mockFlight, status: "historical" };
-    const { container } = render(
+    render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
     expect(pill).toBeTruthy();
     expect(pill.style.color).toBe("rgb(251, 191, 36)");
   });
 
   it("renders the duplicated pill in amber, not red", () => {
     const duplicatedFlight: Flight = { ...mockFlight, status: "duplicated" };
-    const { container } = render(
+    render(
       <FlightEditModal flight={duplicatedFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
     expect(pill).toBeTruthy();
     expect(pill.style.color).toBe("rgb(251, 191, 36)");
   });
@@ -267,11 +267,11 @@ describe("FlightEditModal", () => {
   // value can be chosen, never what a typed value submits as.
   it("submits the typed airline, operating airline and aircraft verbatim", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
     const byPlaceholder = (key: string): HTMLInputElement =>
-      container.querySelector(
+      document.body.querySelector(
         `input[placeholder="flights:form.placeholders.${key}"]`
       ) as HTMLInputElement;
 
@@ -293,10 +293,10 @@ describe("FlightEditModal", () => {
   // keep the old value, which made clearing a silent no-op.
   it("submits a cleared airline as null (explicit clear), not as an empty string", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
-    const airlineInput = container.querySelector(
+    const airlineInput = document.body.querySelector(
       'input[placeholder="flights:form.placeholders.airline"]'
     ) as HTMLInputElement;
     expect(airlineInput.value).toBe("LH");
@@ -317,11 +317,11 @@ describe("FlightEditModal", () => {
   // would pin the asymmetry this phase exists to remove.
   it("submits the typed booking reference and ticket number verbatim", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
     const byPlaceholder = (key: string): HTMLInputElement =>
-      container.querySelector(
+      document.body.querySelector(
         `input[placeholder="flights:form.placeholders.${key}"]`
       ) as HTMLInputElement;
 
@@ -348,11 +348,11 @@ describe("FlightEditModal", () => {
       frequentFlyerNumber: "992223334",
     };
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={parsedFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
     const byPlaceholder = (key: string): HTMLInputElement =>
-      container.querySelector(
+      document.body.querySelector(
         `input[placeholder="flights:form.placeholders.${key}"]`
       ) as HTMLInputElement;
 
@@ -371,10 +371,10 @@ describe("FlightEditModal", () => {
 
   it("submits an edited baggage allowance; absent untouched fields submit null (idempotent clear)", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
-    const baggageInput = container.querySelector(
+    const baggageInput = document.body.querySelector(
       'input[placeholder="flights:form.placeholders.baggageAllowance"]'
     ) as HTMLInputElement;
     expect(baggageInput.value).toBe("");
@@ -397,10 +397,10 @@ describe("FlightEditModal", () => {
   // and after the swap.
   it("submits a typed price as a number, and null when the field is empty", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const { container, getByText } = render(
+    const { getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
-    const priceInput = container.querySelector(
+    const priceInput = document.body.querySelector(
       'input[placeholder="flights:form.placeholders.price"]'
     ) as HTMLInputElement;
 

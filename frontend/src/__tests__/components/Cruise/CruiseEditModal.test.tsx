@@ -107,13 +107,11 @@ describe("CruiseEditModal", () => {
   // flown from the dates — a manual select just let the UI set a value the
   // backend would immediately overwrite. Mirrors FlightEditModal's treatment.
   it("has no status select — status is a read-only pill plus a Storniert checkbox (#status-from-dates)", () => {
-    const { container } = render(
-      <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
-    );
-    expect(container.querySelector('select[aria-label="field.status"]')).toBeFalsy();
+    render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(document.body.querySelector('select[aria-label="field.status"]')).toBeFalsy();
     // The pill renders the raw i18n key under the globally-mocked t(key) => key.
-    expect(container.textContent).toContain("status.scheduled");
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(document.body.textContent).toContain("status.scheduled");
+    const checkbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
   });
@@ -121,10 +119,8 @@ describe("CruiseEditModal", () => {
   it('checking the Storniert checkbox submits status "cancelled"', async () => {
     vi.mocked(cruiseApi.update).mockResolvedValue({ ...baseCruise, status: "cancelled" });
     const onSaved = vi.fn();
-    const { container } = render(
-      <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={onSaved} />
-    );
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={onSaved} />);
+    const checkbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
     await userEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
 
@@ -140,10 +136,10 @@ describe("CruiseEditModal", () => {
     const cancelledCruise: Cruise = { ...baseCruise, status: "cancelled" };
     vi.mocked(cruiseApi.update).mockResolvedValue({ ...baseCruise, status: "scheduled" });
     const onSaved = vi.fn();
-    const { container } = render(
+    render(
       <CruiseEditModal mode="edit" cruise={cancelledCruise} onClose={vi.fn()} onSaved={onSaved} />
     );
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
     await userEvent.click(checkbox);
     expect(checkbox.checked).toBe(false);

@@ -1,0 +1,218 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, resolve, sep } from "node:path";
+import { describe, expect, it } from "vitest";
+import baseline from "./designWardens.baseline.json";
+
+/**
+ * The wardens from `design/DESIGN_SYSTEM.md` §10.
+ *
+ * "A system that lives only in a document ages like the ones before it." Three
+ * of the four are here; the fourth — the generator test — sits beside the
+ * generator in `theme/__tests__/tokens.generated.test.ts`.
+ *
+ * All three are RATCHETS with a frozen list of today's offenders, the shape the
+ * repo already uses for file size, OpenAPI coverage and response shapes. Each
+ * fails on a NEW offender and equally on a STALE entry, so the lists can only
+ * shrink. That is the difference between a warden and a wish: a rule stated
+ * against 567 existing violations is a wish, and one that also refuses to let
+ * a fixed file stay on the list is a rule with a direction.
+ *
+ * To take a file off a list: fix it, then run
+ * `npx vitest --run designWardens` and remove the name the failure prints.
+ */
+
+const SRC = resolve(__dirname, "..");
+
+function sourceFiles(exts: string[], dir = SRC, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      if (entry === "__tests__") continue;
+      sourceFiles(exts, full, acc);
+      continue;
+    }
+    if (exts.some((ext) => entry.endsWith(ext))) acc.push(full);
+  }
+  return acc;
+}
+
+/**
+ * Baseline names are POSIX-relative, because the baseline is one file read on
+ * every machine. This used to be `file.replace("<SRC>/", "")`, which never
+ * matched on Windows — `join` builds backslash paths there, so every offender
+ * kept its absolute name, missed the baseline, and the ratchet fired in BOTH
+ * directions. The warden was green only on Linux, and "fixing" it by rewriting
+ * the baseline on Windows would have broken it everywhere else.
+ */
+const rel = (file: string): string => relative(SRC, file).split(sep).join("/");
+
+/** Compares an offender list against its frozen baseline, in both directions. */
+function expectRatchet(offenders: string[], frozen: readonly string[], what: string): void {
+  const added = offenders.filter((name) => !frozen.includes(name));
+  expect(added, `NEW ${what} — use the token layer instead`).toEqual([]);
+
+  const stale = frozen.filter((name) => !offenders.includes(name));
+  expect(stale, `these files no longer have ${what}; drop them from the baseline`).toEqual([]);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+describe("warden: no hex literal outside the theme", () => {
+  const offenders = sourceFiles([".ts", ".tsx"])
+    .filter((file) => !rel(file).startsWith("theme/"))
+    .filter((file) => /#[0-9a-fA-F]{6}\b/.test(readFileSync(file, "utf8")))
+    .map(rel)
+    .sort();
+
+  it("finds files to judge — otherwise the scan has drifted and passes silently", () => {
+    expect(offenders.length).toBeGreaterThan(0);
+  });
+
+  it("gains no new file that paints instead of reading a token", () => {
+    expectRatchet(offenders, baseline.hexLiterals, "hex literals");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+const TAILWIND_PALETTE =
+  /\b(?:bg|text|border|ring|from|to|via|fill|stroke|decoration|outline|shadow|divide|placeholder|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/;
+
+describe("warden: no raw Tailwind palette class", () => {
+  const offenders = sourceFiles([".ts", ".tsx"])
+    .filter((file) => TAILWIND_PALETTE.test(readFileSync(file, "utf8")))
+    .map(rel)
+    .sort();
+
+  it("gains no new file painting from Tailwind's palette", () => {
+    // `bg-slate-800` is a colour nobody decided. The token layer is the set of
+    // colours somebody did.
+    expectRatchet(offenders, baseline.tailwindPalette, "raw Tailwind palette classes");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+describe("warden: no dark: variant", () => {
+  /**
+   * CLOSED, so absolute rather than frozen.
+   *
+   * There were 92 of them across 18 files. TravStats is dark-only and
+   * `class="dark"` is fixed in index.html, so every `dark:` variant was a
+   * branch that is always taken — and the light class beside it was a colour
+   * nobody had ever seen. Both halves are gone: the dark value said what was
+   * meant, so it decided which token replaced the pair.
+   *
+   * The baseline entry stays at `[]` on purpose. It documents that this list
+   * reached zero rather than that the rule was never needed.
+   */
+  const offenders = sourceFiles([".ts", ".tsx", ".css"])
+    .filter((file) => /\bdark:[\w[\]/.()-]+/.test(readFileSync(file, "utf8")))
+    .map(rel)
+    .sort();
+
+  it("has none left", () => {
+    expect(offenders, "a dark: variant is a branch that is always taken").toEqual([]);
+    expect(baseline.darkVariants).toEqual([]);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+describe("warden: an overlay lives in the Dialog primitive", () => {
+  const offenders = sourceFiles([".tsx"])
+    .filter((file) => rel(file) !== "components/ui/Dialog.tsx")
+    .filter((file) => /fixed inset-0/.test(readFileSync(file, "utf8")))
+    .map(rel)
+    .sort();
+
+  /**
+   * Two lists, because "44 overlays" was never 44 things to do.
+   *
+   * `overlays` is the work list: dialogs that still draw their own scrim and
+   * will move onto `components/Modal` or `components/ui/Dialog`. It ratchets.
+   *
+   * `overlaysNotDialogs` is the rest — overlays that are not dialogs, where
+   * Escape, a focus trap and a confirm contract would be wrong. Each carries
+   * its reason, and the test refuses a short one, exactly as the beta-feature
+   * registry refuses a gate with no `why`. Without the split the counter
+   * reports work that does not exist, and a number nobody can drive to zero
+   * is a number people stop reading.
+   */
+  const exempt = baseline.overlaysNotDialogs as Record<string, string>;
+  const exemptFiles = Object.keys(exempt).sort();
+
+  it("gains no new hand-rolled overlay", () => {
+    expectRatchet(
+      offenders.filter((name) => !exemptFiles.includes(name)),
+      baseline.overlays,
+      "hand-rolled overlays"
+    );
+  });
+
+  it("keeps every not-a-dialog entry real, and every one of them explained", () => {
+    const stale = exemptFiles.filter((name) => !offenders.includes(name));
+    expect(stale, "these files no longer carry an overlay; drop them").toEqual([]);
+
+    for (const [name, reason] of Object.entries(exempt)) {
+      // A reason is what stops this list from becoming the place a dialog goes
+      // to avoid the shell. "not a dialog" is not a reason; why it is not one
+      // is.
+      expect(reason.length, `${name} needs a reason, not a label`).toBeGreaterThan(80);
+    }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+describe("warden: every CSS variable that is read is also defined", () => {
+  /**
+   * NOT a ratchet — an absolute rule, because it can be.
+   *
+   * Twelve names were referenced 55 times and defined nowhere. A missing
+   * custom property raises no error: the declaration is dropped and the border,
+   * the background or the colour simply is not there. That is the quietest
+   * class of defect in the app, and it is fully fixable, so it is not frozen —
+   * it is closed.
+   */
+  const definitions = new Set<string>();
+
+  for (const file of sourceFiles([".css"])) {
+    for (const match of readFileSync(file, "utf8").matchAll(/(--[\w-]+)\s*:/g)) {
+      definitions.add(match[1]);
+    }
+  }
+  // A property may also be set inline, as `style={{ "--pulse-color": … }}` —
+  // including with a cast, `["--domain-color" as string]: …`, which is how
+  // TypeScript lets a custom property into a `CSSProperties` object.
+  for (const file of sourceFiles([".ts", ".tsx"])) {
+    for (const match of readFileSync(file, "utf8").matchAll(
+      /["'](--[\w-]+)["'](?:\s+as\s+\w+)?\s*\]?\s*:/g
+    )) {
+      definitions.add(match[1]);
+    }
+  }
+
+  const references = new Map<string, string[]>();
+  for (const file of sourceFiles([".ts", ".tsx", ".css"])) {
+    for (const match of readFileSync(file, "utf8").matchAll(/var\(\s*(--[\w-]+)/g)) {
+      const name = match[1];
+      // Tailwind's own internals are defined by the framework, not by this
+      // repo: `--tw-ring-color` and the generated palette it ships
+      // (`--color-gray-200`, used as the border-colour compatibility default).
+      if (name.startsWith("--tw-") || /^--color-[a-z]+-\d{2,3}$/.test(name)) continue;
+      // `token()` builds its name — `var(--ts-${name})` — so the scan reads a
+      // prefix rather than a variable. A trailing dash is never a real name.
+      if (name.endsWith("-")) continue;
+      if (!references.has(name)) references.set(name, []);
+      references.get(name)?.push(rel(file));
+    }
+  }
+
+  it("reads variables at all — otherwise the scan has drifted", () => {
+    expect(references.size).toBeGreaterThan(20);
+  });
+
+  it("defines every variable it reads", () => {
+    const undefinedNames = [...references.entries()]
+      .filter(([name]) => !definitions.has(name))
+      .map(([name, files]) => `${name} (${[...new Set(files)].slice(0, 3).join(", ")})`)
+      .sort();
+    expect(undefinedNames, "these render as nothing — no error, just absent").toEqual([]);
+  });
+});

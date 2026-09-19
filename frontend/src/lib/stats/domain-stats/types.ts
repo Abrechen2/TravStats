@@ -24,11 +24,38 @@ export interface DomainSummary {
   headlineKpis: DomainKpi[];
   /** Optional ranked list (top airlines / cruise lines / hotel chains). The
    *  item labels are data — airline and chain names — and stay untranslated. */
-  topItems?: { titleKey: string; items: Array<{ label: string; value: number }> };
+  topItems?: {
+    titleKey: string;
+    items: Array<{ label: string; value: number }>;
+    /**
+     * Set when the labels are CODES rather than names — place categories
+     * ("viewpoint") — so the card translates them under this key prefix.
+     * The overview printed the raw code on a German page (CT106 audit B11).
+     */
+    labelKeyPrefix?: string;
+  };
   /** Achievement-style boolean flags rendered as small pills. */
   badges?: Array<{ labelKey: string; emoji: string }>;
   /** URL the "Details →" link on the summary card points to. */
   detailRoute: string;
+}
+
+/**
+ * The same card figures, for one year only.
+ *
+ * CT106 audit B03: the overview filtered the event COUNT by the selected year
+ * and then printed the lifetime KPIs under it — "Scope: 2005 · 1 flight" over
+ * 387,859 km, the same number as for 2026. Every figure on a year-scoped card
+ * now comes from here; what only exists for all years (badges, the lists a
+ * user keeps) is shown apart and labelled as such.
+ *
+ * Keyed by the year the adapter already uses for `yearlyEvents`, so the count
+ * and the figures under it can never disagree about which year an event is in.
+ * A year with no events has no entry.
+ */
+export interface YearSummary {
+  headlineKpis: DomainKpi[];
+  topItems?: DomainSummary["topItems"];
 }
 
 /**
@@ -60,7 +87,22 @@ export type DomainStats =
        * harder to spot than over-reporting it.
        */
       countriesByYear?: Record<number, string[]>;
+      /** Card figures per year — see `YearSummary`. */
+      summaryByYear: Record<number, YearSummary>;
       yearlyEvents: Record<number, number>;
+      /**
+       * `YYYY-MM-DD` -> how many events this domain counts on that day, keyed
+       * on the day the event is COUNTED in (its start), so it sums per year to
+       * exactly `yearlyEvents`. It exists so the overview can compare a year
+       * that is still running against the same span of another one rather than
+       * against twelve months of it — see `lib/stats/comparisonWindow.ts`.
+       *
+       * Required, not optional: a domain that could not name its days would
+       * hand the comparison a full year while its neighbours handed a partial
+       * one, which is the defect this index was added to end. An undated event
+       * appears here as little as it appears in `yearlyEvents`.
+       */
+      dailyEvents: Record<string, number>;
       yearlyActiveDays: Record<number, number>;
       monthlyActiveDays: Record<string, number>;
       /** YYYY-MM-DD -> 1 when this domain had any activity on that

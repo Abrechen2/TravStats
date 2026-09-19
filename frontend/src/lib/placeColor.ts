@@ -19,6 +19,7 @@
 // below the normal-vision separation floor, so colour alone would not have
 // been enough.
 
+import { paletteLedBy } from "./listPalette";
 import type { Rgb } from "./cruiseColor";
 import type { PlaceLabelList, PlaceLabelMode } from "./placeLabel";
 import { DOMAINS } from "../shared/domains";
@@ -88,15 +89,8 @@ export const DEFAULT_PLACE_COLOR_CONFIG: PlaceColorConfig = {
   colors: DEFAULT_PLACE_COLORS,
 };
 
-/** Quick-pick swatches offered beside each colour field. */
-export const PLACE_COLOR_PRESETS: readonly Rgb[] = [
-  PLACE_COLOR,
-  [148, 163, 184],
-  [125, 176, 219],
-  [196, 154, 108],
-  [126, 178, 121],
-  [226, 232, 240],
-];
+/** Quick-pick swatches: the shared ten, led by the places domain colour. */
+export const PLACE_COLOR_PRESETS: readonly Rgb[] = paletteLedBy(DOMAINS.poi.color);
 
 /** The minimum a colour resolver needs to know about a place. */
 export interface PlaceColorInput {

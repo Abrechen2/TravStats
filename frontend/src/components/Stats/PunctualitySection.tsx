@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { statsApi, type PunctualityStats } from "../../lib/api/stats";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import EvidenceTrigger from "./EvidenceTrigger";
 
 /**
  * Punctuality (#2): 2.5 recorded a delay per flight; this is the first place
@@ -51,9 +52,25 @@ export default function PunctualitySection(): JSX.Element | null {
       <h2 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
         {t("stats:punctuality.title")}
       </h2>
-      <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+      {/* The sample size lives IN this sentence — the surface inventory names
+          it "shown in the subtitle" rather than a tile of its own, so the
+          whole line becomes the control (`punctualitySampleSize`, servedIn 1;
+          every other punctuality figure here is servedIn 2 and stays plain
+          text). */}
+      <EvidenceTrigger
+        kind="metric"
+        evidenceKey="punctualitySampleSize"
+        scope={{ period: "allTime" }}
+        renderedValue={stats.sampleSize}
+        label={t("stats:punctuality.subtitle", { count: stats.sampleSize })}
+        // `block` for the same reason as the airlines line in
+        // `StatsFlightBreakdown`: this replaced a `<p>`, and an inline-block
+        // button reserves descender space a paragraph does not.
+        className="mb-6 block text-sm"
+        style={{ color: "var(--text-muted)" }}
+      >
         {t("stats:punctuality.subtitle", { count: stats.sampleSize })}
-      </p>
+      </EvidenceTrigger>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {tiles.map((tile) => (
           <div

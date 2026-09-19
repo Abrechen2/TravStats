@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import FlightsTablePage from "../../pages/FlightsTablePage";
 import { flightsApi, tripsApi } from "../../lib/api";
+import type { Flight } from "../../types";
+import {
+  countRenderedRows,
+  paginationControlsRendered,
+} from "../../pages/__tests__/tablePaginationTestSupport";
 
 /**
  * FlightsTablePage pulls in many heavy siblings (filters, modals, table
@@ -79,6 +84,50 @@ describe("FlightsTablePage", () => {
     );
 
     const link = await screen.findByRole("link", { name: /settings:import.openHub/ });
-    expect(link.getAttribute("href")).toBe("/settings?section=import");
+    expect(link.getAttribute("href")).toBe("/settings/data?section=import");
+  });
+
+  // Review finding (Alex T7, round 1): nothing tested that the wiring
+  // actually pages the rows — reverting `displayedFlights.map` ->
+  // `pagination.paged.map` or dropping `<TablePagination>` would have left
+  // the suite green.
+  it("shows only one page of rows while the summary strip keeps the full count", async () => {
+    const makeFlight = (i: number): Flight => ({
+      id: `f-${i}`,
+      userId: "u1",
+      airline: "LH",
+      flightNumber: `LH${100 + i}`,
+      depIata: "AAA",
+      depLat: 0,
+      depLon: 0,
+      arrIata: "BBB",
+      arrLat: 0,
+      arrLon: 0,
+      departureTime: "2026-01-01T00:00:00.000Z",
+      arrivalTime: "2026-01-01T02:00:00.000Z",
+      status: "flown",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const flights = Array.from({ length: 63 }, (_, i) => makeFlight(i));
+    vi.mocked(flightsApi.getAll).mockResolvedValue({
+      flights,
+      total: flights.length,
+      limit: 500,
+      offset: 0,
+    });
+    vi.mocked(tripsApi.getAll).mockResolvedValue([]);
+
+    const { container } = render(
+      <MemoryRouter>
+        <FlightsTablePage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(countRenderedRows(container)).toBe(50); // default page size
+    });
+    expect(paginationControlsRendered()).toBe(true);
+    // The FULL filtered count (63), not the 50 rows the page renders.
+    expect(screen.getByText("63")).toBeInTheDocument();
   });
 });

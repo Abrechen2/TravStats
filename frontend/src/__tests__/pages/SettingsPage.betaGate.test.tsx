@@ -1,8 +1,67 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage from "../../pages/SettingsPage";
+import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
+
+// A settings route renders its whole group at once on this branch (one route
+// per group), so every section in the group loads its data on mount. Each of
+// these escaped to the network once main's guard started counting (forgejo#110).
+// The modules below are the ones the sections import directly.
+vi.mock("@/lib/api/twoFactor", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/twoFactor")>();
+  return {
+    ...actual,
+    twoFactorApi: {
+      ...actual.twoFactorApi,
+      getTwoFactorStatus: vi.fn().mockResolvedValue({ enabled: false, recoveryCodesLeft: 0 }),
+    },
+  };
+});
+vi.mock("@/lib/api/passkeys", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/passkeys")>();
+  return {
+    ...actual,
+    passkeyApi: {
+      ...actual.passkeyApi,
+      availability: vi.fn().mockResolvedValue({ available: false, reason: null }),
+      list: vi.fn().mockResolvedValue([]),
+    },
+  };
+});
+vi.mock("@/lib/api/tokens", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/tokens")>();
+  return {
+    ...actual,
+    apiTokensApi: { ...actual.apiTokensApi, list: vi.fn().mockResolvedValue([]) },
+  };
+});
+vi.mock("@/lib/api/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/notifications")>();
+  return {
+    ...actual,
+    notificationsApi: {
+      ...actual.notificationsApi,
+      getPreferences: vi.fn().mockResolvedValue({
+        notificationEmail: null,
+        notifyBefore24h: false,
+        notifyBefore2h: false,
+      }),
+    },
+  };
+});
+vi.mock("@/lib/api/immich", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/immich")>();
+  return {
+    ...actual,
+    immichApi: { ...actual.immichApi, getSettings: vi.fn().mockResolvedValue(null) },
+  };
+});
+// "About" asks the raw API client for the version, not `versionApi`; these
+// tests read the navigation, not the section.
+vi.mock("../../components/Settings/AboutSection", () => ({
+  default: () => <section>about</section>,
+}));
 
 // Real store — the beta gate lives in it.
 vi.unmock("../../store/settingsStore");
@@ -42,9 +101,7 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
     setUnits: vi.fn(),
     setDefaults: vi.fn(),
     setCruise: vi.fn(),
-    savingProfile: false,
     uploadingProfilePicture: false,
-    saveProfileSettings: vi.fn(),
     handleAvatarUpload: vi.fn(),
     showPasswordModal: false,
     changingPassword: false,
@@ -94,39 +151,49 @@ vi.mock("@/lib/api/settings", async (importOriginal) => {
   };
 });
 
-// `t` echoes the key, so the Devices nav entry reads "settings:devices.title".
+// `t` echoes the key, so the Devices heading reads "settings:devices.title".
 const DEVICES_LABEL = "settings:devices.title";
 
+/**
+ * Settings became one route per group in 2.7.0, so both routes are mounted:
+ * every `?section=` link in these cases is a pre-2.7 URL and travels through
+ * the legacy redirect, which is exactly the path a real bookmark takes.
+ */
 const renderSettings = (initialEntry: string): void => {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsLegacyRedirect />} />
+        <Route path="/settings/:group" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
 };
 
-/** The nav = the sidebar buttons + the mobile <select> options. */
-const navListsDevices = (): boolean =>
-  screen.queryByRole("button", { name: DEVICES_LABEL }) !== null ||
-  screen.queryByRole("option", { name: DEVICES_LABEL }) !== null;
+/**
+ * The gate now decides whether the section is on the page at all, not whether
+ * a sidebar lists it — the sidebar lists groups. "Shown" therefore means the
+ * Devices section is mounted on the rendered group. Its landmark carries the
+ * label so the query works even with the section itself stubbed.
+ */
+const devicesShown = (): boolean => screen.queryByRole("region", { name: DEVICES_LABEL }) !== null;
 
 describe("SettingsPage — beta gate: devicePairing", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  it("does not list Devices in the nav when the flag is OFF", () => {
+  it("does not put Devices on the account page when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
-    expect(navListsDevices()).toBe(false);
+    await screen.findByRole("region", { name: "settings:profile.title" });
+    expect(devicesShown()).toBe(false);
   });
 
-  it("lists Devices in the nav when the flag is ON", () => {
+  it("puts Devices on the account page when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings");
-    expect(navListsDevices()).toBe(true);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
   /**
@@ -136,25 +203,25 @@ describe("SettingsPage — beta gate: devicePairing", () => {
    * deep link keeps working; a naive "remove devices from the sections array"
    * would bounce the user to "profile" instead.
    */
-  it("still renders DevicesSection for ?section=devices with the flag OFF, without listing it in the nav", () => {
+  it("still renders DevicesSection for ?section=devices with the flag OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings?section=devices");
 
-    expect(screen.getByTestId("devices-section")).toBeTruthy();
-    expect(navListsDevices()).toBe(false);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
-  it("renders DevicesSection for ?section=devices with the flag ON too", () => {
+  it("renders DevicesSection for ?section=devices with the flag ON too", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=devices");
 
-    expect(screen.getByTestId("devices-section")).toBeTruthy();
-    expect(navListsDevices()).toBe(true);
+    expect(await screen.findByTestId("devices-section")).toBeTruthy();
+    expect(devicesShown()).toBe(true);
   });
 
-  it("falls back to the first visible section when no ?section is given", () => {
+  it("leaves Devices off the account page when nothing names it", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("devices-section")).toBeNull();
   });
 });
@@ -186,9 +253,10 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     ["OFF", false],
     ["unknown", null],
     ["ON", true],
-  ])("renders the Dawarich card on externalServices when the flag is %s", (_label, flag) => {
+  ])("renders the Dawarich card on externalServices when the flag is %s", async (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
@@ -216,9 +284,10 @@ describe("SettingsPage — the routing provider card", () => {
     ["OFF", false],
     ["unknown", null],
     ["ON", true],
-  ])("renders when the flag is %s", (_label, flag) => {
+  ])("renders when the flag is %s", async (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
 
     expect(screen.getByTestId("routing-provider-section")).toBeTruthy();
     expect(screen.getByTestId("immich-connection-card")).toBeTruthy();

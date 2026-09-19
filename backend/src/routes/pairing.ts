@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { pairingClaimLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
@@ -79,6 +80,7 @@ const cookieOnly = (req: AuthRequest, _res: Response, next: NextFunction): void 
 router.post(
   "/start",
   authenticate,
+  rejectDemo,
   cookieOnly,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

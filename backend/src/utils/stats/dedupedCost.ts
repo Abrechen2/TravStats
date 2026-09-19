@@ -41,6 +41,20 @@ export interface DedupedCost {
    * price whose currency was never recorded has no unit at all.
    */
   unconvertedByCurrency: Record<string, number>;
+  /**
+   * This flight's own contribution to `base`, RAW and unrounded, in the same
+   * order as the input `flights` array — 0 for an unpriced flight, for a
+   * later segment of a booking already counted, and for an amount that could
+   * not convert (it is in `unconvertedByCurrency` instead). Added so evidence
+   * resolvers can reuse this EXACT rule per-row rather than re-deriving it
+   * (`services/evidence/metricEvidenceFlightCore.ts`, `businessTotalCost`,
+   * and `services/stats/summary.ts`'s `yearTotalCost`) — the alternative, a
+   * second cost loop that merely resembles this one, is the drift this
+   * feature exists to prevent.
+   */
+  perFlightBaseContribution: number[];
+  /** This flight's own `share.priced`, same order — true even when its booking's amount was counted on an earlier segment. */
+  perFlightPriced: boolean[];
 }
 
 /**
@@ -123,14 +137,19 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
   let pricedFlights = 0;
   let unpricedFlights = 0;
   const unconvertedByCurrency: Record<string, number> = {};
+  const perFlightBaseContribution: number[] = [];
+  const perFlightPriced: boolean[] = [];
 
+  // Returns what THIS call added to `base`, RAW — 0 when nothing did, so a
+  // caller can attribute the total back to individual rows without a second
+  // pass over the same amounts.
   const add = (
     amount: number,
     amountBase: number | null,
     snapshotCurrency: string | null,
     ownCurrency: string | null
-  ): void => {
-    if (amount === 0) return;
+  ): number => {
+    if (amount === 0) return 0;
     // An amount already IN the base currency needs no conversion and no
     // snapshot — 300 EUR in a EUR logbook is 300 EUR. This matters beyond
     // tidiness: every row written before #267 has a null snapshot, and without
@@ -139,7 +158,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     if (ownCurrency === baseCurrency) {
       base += amount;
       contributedToBase = true;
-      return;
+      return amount;
     }
     // A snapshot only counts when it is in the base currency being reported.
     // A user who switched base currency has snapshots in the old one; summing
@@ -147,20 +166,24 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     if (amountBase !== null && snapshotCurrency === baseCurrency) {
       base += amountBase;
       contributedToBase = true;
-      return;
+      return amountBase;
     }
     // No unit recorded is its own bucket. It is NOT assumed to be the base
     // currency — that assumption is how 11,662 AED became €11,662 once already.
     const key = ownCurrency ?? "unknown";
     unconvertedByCurrency[key] =
       Math.round(((unconvertedByCurrency[key] ?? 0) + amount) * 100) / 100;
+    return 0;
   };
 
   for (const flight of flights) {
     const share = flightCostShare(flight, seenBookingIds);
     if (share.priced) pricedFlights++;
     else unpricedFlights++;
-    add(share.amount, share.amountBase, share.snapshotCurrency, share.currency);
+    perFlightPriced.push(share.priced);
+    perFlightBaseContribution.push(
+      add(share.amount, share.amountBase, share.snapshotCurrency, share.currency)
+    );
   }
 
   return {
@@ -168,5 +191,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     pricedFlights,
     unpricedFlights,
     unconvertedByCurrency,
+    perFlightBaseContribution,
+    perFlightPriced,
   };
 }

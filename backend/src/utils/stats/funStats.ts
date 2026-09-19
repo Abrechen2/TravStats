@@ -1,9 +1,13 @@
-import { calculateDistance } from "../geo";
 import { calculateCo2Kg, toSeatClass } from "../../services/co2Calculator";
-import { getCachedAirports } from "../../services/airportCache";
 import { normalizeAirline } from "../airlineNormalize";
-import logger from "../logger";
 import { departureClockOf } from "./departureClock";
+import {
+  buildAirportTimezoneMap,
+  departureDaypartOf,
+  isLongHaulFlight,
+  isShortHaulFlight,
+  isWeekendDeparture,
+} from "./flightPredicates";
 import type { FlightData, FunStats } from "./types";
 import { isCountableFlight } from "../../shared/flightCounting";
 
@@ -36,48 +40,23 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
   const countableFlights = flights.filter(isCountableFlight);
 
   // Timezone hopper — count unique timezones across every airport touched
-  // (time-insensitive: only needs the airport metadata).
-  const timezones = new Set<string>();
-  const airportCodes = new Set<string>();
-
-  for (const flight of countableFlights) {
-    if (flight.depIata) airportCodes.add(flight.depIata);
-    if (flight.depIcao) airportCodes.add(flight.depIcao);
-    if (flight.arrIata) airportCodes.add(flight.arrIata);
-    if (flight.arrIcao) airportCodes.add(flight.arrIcao);
-  }
-
-  try {
-    const airports = await getCachedAirports(Array.from(airportCodes));
-    for (const airport of airports.values()) {
-      if (airport?.timezone) {
-        timezones.add(airport.timezone);
-      }
-    }
-  } catch (error) {
-    logger.error({
-      operation: "calculate_fun_stats",
-      message: "Failed to fetch airports for timezone calculation",
-      error,
-    });
-  }
+  // (time-insensitive: only needs the airport metadata). The map is keyed by
+  // CODE, so an airport named by both its IATA and its ICAO code appears
+  // twice in it and once in the set of its values — which is what this tile
+  // has always counted.
+  const timezoneByCode = await buildAirportTimezoneMap(countableFlights, "calculate_fun_stats");
+  const timezones = new Set(timezoneByCode.values());
 
   // Early bird vs night owl — the hour on the clock at the departure airport,
   // flown-only. A DATE_ONLY row has no real hour and is left out entirely
   // rather than counted as an afternoon flight on its 12:00 placeholder.
-  const departureHours = flownFlights
-    .map((f) => departureClockOf(f)?.hour ?? null)
-    .filter((h): h is number => h !== null);
-
-  const morningFlights = departureHours.filter((h) => h >= 6 && h < 12).length;
-  const afternoonFlights = departureHours.filter((h) => h >= 12 && h < 18).length;
-  const eveningFlights = departureHours.filter((h) => h >= 18 || h < 6).length;
+  const dayparts = flownFlights.map(departureDaypartOf);
+  const morningFlights = dayparts.filter((part) => part === "morning").length;
+  const afternoonFlights = dayparts.filter((part) => part === "afternoon").length;
+  const eveningFlights = dayparts.filter((part) => part === "evening").length;
 
   // Weekend warrior — the weekday on that same clock, flown-only.
-  const weekendFlights = flownFlights.filter((f) => {
-    const day = departureClockOf(f)?.weekday;
-    return day === 0 || day === 6;
-  }).length;
+  const weekendFlights = flownFlights.filter(isWeekendDeparture).length;
 
   // Loyalty score — percentage with most used airline (normalized names).
   // Time-insensitive — historical flights count toward airline preference.
@@ -93,19 +72,9 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
   const loyaltyScore =
     countableFlights.length > 0 ? Math.round((maxAirlineCount / countableFlights.length) * 100) : 0;
 
-  // Short haul king — flights under 500km (distance, time-insensitive).
-  const shortHaulFlights = countableFlights.filter((f) => {
-    if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) return false;
-    const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-    return dist < 500;
-  }).length;
-
-  // Long haul pilot — flights over 5000km (distance, time-insensitive).
-  const longHaulFlights = countableFlights.filter((f) => {
-    if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) return false;
-    const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-    return dist >= 5000;
-  }).length;
+  // Short haul king / long haul pilot — distance bands, time-insensitive.
+  const shortHaulFlights = countableFlights.filter(isShortHaulFlight).length;
+  const longHaulFlights = countableFlights.filter(isLongHaulFlight).length;
 
   // Fastest day — day with most flights. Calendar-date grouping is reliable
   // for historical too (the date is what the user remembers).

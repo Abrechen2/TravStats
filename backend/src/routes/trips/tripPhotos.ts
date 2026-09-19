@@ -6,6 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
 import { uploadReceiptLimiter } from "../../middleware/rateLimit";
+import { rejectDemo } from "../../middleware/demoGuard";
 import {
   uploadTripPhotos,
   uploadTripCover,
@@ -50,6 +51,10 @@ router.post(
   "/trips/:id/photos",
   authenticate,
   requireWriteScope,
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   uploadTripPhotos.array("photos", 20),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -182,6 +187,10 @@ router.post(
   "/trips/:id/cover",
   authenticate,
   requireWriteScope,
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadTripCover.single("cover"),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const uploaded = req.file;

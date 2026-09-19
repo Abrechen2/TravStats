@@ -1,3 +1,4 @@
+import Modal from "../Modal";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -112,77 +113,46 @@ export default function DomainImportPanel({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="domain-import-title"
+      <Modal
+        open
+        onClose={onClose}
+        title={adapter.panelTitle}
+        maxWidth={672}
+        closeLabel={t("common:buttons.close")}
       >
-        {/* Same height guard as the lodging form: routes, drop zone and a
-            parsed preview together outgrow a laptop viewport, and a centred
-            child with no limit overflows with nothing to scroll. */}
-        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-(--bg-surface) shadow-2xl">
-          <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-            <div>
-              <h2 id="domain-import-title" className="text-xl font-semibold text-(--text-primary)">
-                {adapter.panelTitle}
-              </h2>
-              <p className="mt-0.5 text-sm text-(--text-muted)">{adapter.panelHint}</p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("common:buttons.close")}
-              className="rounded-sm p-1 text-(--text-muted) hover:bg-(--bg-elevated) hover:text-(--text-primary)"
+        <p className="mb-4 text-sm text-(--text-muted)">{adapter.panelHint}</p>
+        <div className="flex flex-col gap-2">
+          {showDocumentRoute && parseDomain && (
+            <ImportRouteRow
+              primary
+              icon="✉️"
+              title={adapter.documentRoute?.title ?? t("import:route.document.title")}
+              description={
+                adapter.documentRoute?.description ?? t("import:route.document.description")
+              }
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-5 w-5"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.28 3.22a.75.75 0 00-1.06 1.06L8.94 10l-5.72 5.72a.75.75 0 101.06 1.06L10 11.06l5.72 5.72a.75.75 0 101.06-1.06L11.06 10l5.72-5.72a.75.75 0 10-1.06-1.06L10 8.94 4.28 3.22z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </header>
+              <div className="mt-3">
+                <Suspense fallback={<RouteFallback label={t("common:loading.default")} />}>
+                  <EmailImportTab
+                    domain={parseDomain}
+                    acceptedExtensions={acceptedExtensions}
+                    onEmailResult={handleEmailResult}
+                    onPdfResult={handlePdfResult}
+                    onError={handleError}
+                  />
+                </Suspense>
+              </div>
+            </ImportRouteRow>
+          )}
 
-          <div className="flex flex-col gap-2 px-6 py-5">
-            {showDocumentRoute && parseDomain && (
-              <ImportRouteRow
-                primary
-                icon="✉️"
-                title={adapter.documentRoute?.title ?? t("import:route.document.title")}
-                description={
-                  adapter.documentRoute?.description ?? t("import:route.document.description")
-                }
-              >
-                <div className="mt-3">
-                  <Suspense fallback={<RouteFallback label={t("common:loading.default")} />}>
-                    <EmailImportTab
-                      domain={parseDomain}
-                      acceptedExtensions={acceptedExtensions}
-                      onEmailResult={handleEmailResult}
-                      onPdfResult={handlePdfResult}
-                      onError={handleError}
-                    />
-                  </Suspense>
-                </div>
-              </ImportRouteRow>
-            )}
+          <ImportRouteList routes={adapter.routes ?? []} />
 
-            <ImportRouteList routes={adapter.routes ?? []} />
-
-            <ImportManualFooter
-              label={adapter.manualLabel ?? t("import:route.manual")}
-              onSelect={() => setShowManual(true)}
-            />
-          </div>
+          <ImportManualFooter
+            label={adapter.manualLabel ?? t("import:route.manual")}
+            onSelect={() => setShowManual(true)}
+          />
         </div>
-      </div>
+      </Modal>
 
       {/* Review modal — adapter renders the domain-specific preview. */}
       {parseState &&

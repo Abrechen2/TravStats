@@ -1,3 +1,5 @@
+import { rgb, tokens } from "../theme/tokens";
+import { LIST_PALETTE_RGB } from "./listPalette";
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_FLIGHT_COLORS,
@@ -23,14 +25,32 @@ const cfg = (partial: Partial<FlightColorConfig>): FlightColorConfig => ({
 });
 
 describe("defaults", () => {
-  it("defaults to status mode with orange (flown) + coral (planned)", () => {
+  it("defaults to status mode with the domain colour (flown) + info (planned)", () => {
     expect(DEFAULT_FLIGHT_COLOR_CONFIG.mode).toBe("status");
-    expect(DEFAULT_FLIGHT_COLOR_CONFIG.colors.past).toEqual([240, 169, 71]);
-    expect(DEFAULT_FLIGHT_COLOR_CONFIG.colors.upcoming).toEqual([251, 113, 133]);
+    // Derived, not written out: the claim is that the default IS the token,
+    // and a literal here is a second copy of the value it is checking. Planned
+    // was coral until 2.7.0; `info` is what the rest of the system says for
+    // "not yet happened".
+    expect(DEFAULT_FLIGHT_COLOR_CONFIG.colors.past).toEqual(rgb(tokens.domainColor.flight));
+    expect(DEFAULT_FLIGHT_COLOR_CONFIG.colors.upcoming).toEqual(rgb(tokens.color.info));
   });
 
-  it("keeps the retired sky-blue scheduled colour available as a preset", () => {
-    expect(FLIGHT_COLOR_PRESETS).toContainEqual([80, 200, 255]);
+  it("offers the shared palette, led by the domain's own colour", () => {
+    // Six hand-assembled swatch lists became one in 2.7.0. The retired
+    // sky-blue that used to be pinned here is not on it any more; the free
+    // colour input beside the swatches is what someone who wants it back uses.
+    expect(FLIGHT_COLOR_PRESETS[0]).toEqual(rgb(tokens.domainColor.flight));
+    expect(FLIGHT_COLOR_PRESETS.slice(1)).toEqual(LIST_PALETTE_RGB);
+  });
+
+  it("offers no hue the system reserves for a meaning", () => {
+    // A map reads colour as meaning: a route painted in the exact blue that
+    // means "planned" breaks the legend for whoever picked it. `listColor`
+    // excludes accent, bad, info, good and the cruise teal for that reason.
+    const reserved = [tokens.color.bad, tokens.color.info, tokens.color.good].map(rgb);
+    for (const hue of reserved) {
+      expect(LIST_PALETTE_RGB).not.toContainEqual(hue);
+    }
   });
 });
 
@@ -148,8 +168,8 @@ describe("localStorage migration (flightColorFromStored)", () => {
   it("nothing stored  ⇒  status mode with the default pair", () => {
     const out = flightColorFromStored({});
     expect(out.mode).toBe("status");
-    expect(out.colors.past).toEqual([240, 169, 71]);
-    expect(out.colors.upcoming).toEqual([251, 113, 133]);
+    expect(out.colors.past).toEqual(rgb(tokens.domainColor.flight));
+    expect(out.colors.upcoming).toEqual(rgb(tokens.color.info));
   });
 
   it("an already-migrated blob wins over the legacy field", () => {

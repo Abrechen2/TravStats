@@ -107,25 +107,25 @@ export default function MembershipsSection(): JSX.Element {
       />
 
       <MembershipManager
+        hideTitle
         reloadSignal={reloadSignal}
         chainCatalog={chains}
         renderRowExtra={(m) => (
-          <div className="mt-1 text-xs text-[var(--text-secondary)]">
+          <div className="t-caption mt-1">
             {coverage(m)}
             <button
               type="button"
               data-testid={`membership-hotels-${m.id}`}
               onClick={(): void => setOpenPicker((cur) => (cur === m.id ? null : m.id))}
-              className="ml-2 text-xs text-[var(--accent)] hover:underline"
+              className="ml-2 text-xs hover:underline"
+              style={{ color: "var(--ts-accent)", fontWeight: 600 }}
             >
               {t("settings:memberships.editHotels")}
             </button>
             {openPicker === m.id && (
               <div data-testid={`membership-hotel-picker-${m.id}`} className="mt-1 space-y-1 pl-4">
                 {independentLodgings.length === 0 ? (
-                  <p className="text-[var(--text-muted)]">
-                    {t("settings:memberships.noIndependentHotels")}
-                  </p>
+                  <p>{t("settings:memberships.noIndependentHotels")}</p>
                 ) : (
                   independentLodgings.map((l) => (
                     <label key={l.id} className="flex items-center gap-2">

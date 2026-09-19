@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireWriteScope } from "../../middleware/auth";
+import { rejectDemoWrites } from "../../middleware/demoGuard";
 import generalRouter from "./general";
 import parserRouter from "./parser";
 import apiKeysRouter from "./apiKeys";
@@ -26,6 +27,29 @@ router.use(authenticate);
 // request (PAT-cannot-mint-PAT defence), so this middleware is defence-in-depth
 // for every other settings sub-router.
 router.use(requireWriteScope);
+
+// Shared demo account: no keys, tokens, outbound URLs, pictures, notification
+// addresses or profile fields (spec §3).
+//
+// `/notifications` is on the list because it is a password-reset vector, not
+// merely a preference: a visitor who writes the shared account's
+// `notificationEmail` can then ask `/auth/forgot-password` for a link to their
+// own inbox and take the account over, locking every other visitor out
+// (finding C3). `/profile` carries the birthdate, which — like the name in
+// the settings profile block — is shown to everybody and survived every
+// reseed (I1).
+router.use(
+  [
+    "/api-keys",
+    "/tokens",
+    "/immich",
+    "/dawarich",
+    "/profile-picture",
+    "/notifications",
+    "/profile",
+  ],
+  rejectDemoWrites
+);
 
 // Mount sub-routers
 router.use("/", generalRouter);

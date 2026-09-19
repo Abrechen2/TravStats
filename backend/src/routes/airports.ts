@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import {
+  findExistingAirport,
   findOrCreateAirport,
   findNearestAirport,
   enrichAirportData,
@@ -13,6 +14,8 @@ import { deriveTimezone } from "../services/airportLookup";
 import { invalidateAirportCache } from "../services/airportCache";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
+import { rejectDemoWrites } from "../middleware/demoGuard";
+import { isSharedDemoUser } from "../utils/sharedDemo";
 
 const enrichAirportSchema = z
   .object({
@@ -110,13 +113,70 @@ router.get(
   }
 );
 
-// Get airport by IATA/ICAO code - with automatic external lookup and DB save (rate limited)
+/**
+ * One airport by IATA/ICAO code — and, on a miss, an external lookup that
+ * INSERTS a row into the global catalogue every account reads.
+ *
+ * That is why it is no longer public, unlike `/search` above (which only reads,
+ * and is unauthenticated so the signup-flow autocomplete works before anyone
+ * has credentials). Anyone at all could make this instance call a provider and
+ * then write what came back into the catalogue (security audit of 2026-09-19,
+ * finding 7). Every caller in the frontend already runs inside an authenticated
+ * page, and `AirportAutocomplete` catches a failure here and falls back to the
+ * search results, so nothing visible depends on the old openness.
+ *
+ * `rejectDemoWrites` is mounted too, and it does NOT close the write — it keys
+ * on the HTTP method, and this is a mutating GET, which is exactly the case the
+ * audit's finding 8 called "a future mutating GET would pass". It stays because
+ * a POST or DELETE added to this path later is then covered by construction;
+ * what closes the write is the branch in the handler below, because a guard
+ * that cannot see the difference between reading a known code and creating an
+ * unknown one is in the wrong place to make that distinction.
+ */
 router.get(
   "/:code",
+  authenticate,
+  rejectDemoWrites,
   airportSearchLimiter,
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { code } = req.params;
+
+      /**
+       * The shared demo account reads the catalogue and never extends it.
+       *
+       * `findOrCreateAirport` below is one call with two behaviours: a hit is a
+       * database read, a miss fetches from an external provider and INSERTS a
+       * global row. Without this branch the published `demo` login could walk
+       * the code space — `AAA`, `AAB`, `AAC` — and make the instance spend one
+       * outbound lookup per attempt and leave a permanent row per success, in
+       * the one table every account on the instance reads and `wipeDemoUser`
+       * deliberately never touches. Nothing would remove them; the 04:00 reseed
+       * only clears user-owned rows.
+       *
+       * The middleware above cannot do this: `rejectDemoWrites` sees a GET and
+       * passes, and refusing the whole route instead would take a legitimate
+       * read away — the demo's own flight form resolves codes through here.
+       * So the question is asked where the answer differs: is the code already
+       * known?
+       *
+       * A miss answers 404, byte-identical to the 404 an unknown code already
+       * gets when the external lookup finds nothing. No new status, no new
+       * body, and `AirportAutocomplete` already falls back to its search
+       * results on a failure here.
+       */
+      if (req.userId && (await isSharedDemoUser(req.userId))) {
+        // `findExistingAirport`, not `getCachedAirport`: the cache keeps a miss
+        // for five minutes, so a code looked up once before it was seeded would
+        // read 404 for the demo while every other account saw the airport.
+        // That helper is the same cache-then-table pair `findOrCreateAirport`
+        // uses, so the two can never disagree about what "already ours" means.
+        const known = await findExistingAirport(code);
+        if (!known) {
+          return res.status(404).json({ error: "Airport not found" });
+        }
+        return res.json(known);
+      }
 
       // Try to find in DB, or fetch from external API and save
       const airport = await findOrCreateAirport(code);
@@ -164,10 +224,16 @@ router.get(
 
 // POST /api/v1/airports/enrich
 // Enrich airport data with missing information (requires authentication)
+// `rejectDemoWrites`, like the create below: the airport catalogue is GLOBAL,
+// every account reads the same rows, and the nightly demo reseed does not
+// touch them (independent review, 2026-09-17, finding A3). Per route rather
+// than `router.use`, because the search routes above are deliberately
+// unauthenticated.
 router.post(
   "/enrich",
   authenticate,
   requireWriteScope,
+  rejectDemoWrites,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { iata, icao, lat, lon } = enrichAirportSchema.parse(req.body);
@@ -195,6 +261,7 @@ router.post(
   "/",
   authenticate,
   requireWriteScope,
+  rejectDemoWrites,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const parsed = createAirportSchema.safeParse(req.body);

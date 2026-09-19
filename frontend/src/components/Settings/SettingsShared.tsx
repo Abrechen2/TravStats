@@ -3,48 +3,49 @@ import React from "react";
 import HelpIcon from "../Help/HelpIcon";
 
 // ---------------------------------------------------------------------------
-// AmberToggle
-// ---------------------------------------------------------------------------
-interface AmberToggleProps {
-  checked: boolean;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  disabled?: boolean;
-  /** Lets an external `<label htmlFor>` name the toggle. */
-  id?: string;
-}
-
-export function AmberToggle({
-  checked,
-  onChange,
-  disabled = false,
-  id,
-}: AmberToggleProps): JSX.Element {
-  return (
-    <input
-      id={id}
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      disabled={disabled}
-      className="checkbox"
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
 // SectionCard
 // ---------------------------------------------------------------------------
 interface SectionCardProps {
   children: React.ReactNode;
 }
 
+/**
+ * A settings section: its heading ABOVE the card, its controls inside.
+ *
+ * Round-4 export ("Einstellungen v3"): the heading is a mono label with one
+ * explanatory line, standing on the page; the card below holds only what the
+ * reader operates. Every section used to draw its title inside its own card,
+ * so twenty cards each opened with a 20px heading and the page read as a
+ * stack of forms rather than one index of settings.
+ *
+ * The split is made here, once, from the section's own `SectionTitle` —
+ * twenty-two section files already pass their title as the first child, so
+ * none of them needed to change shape to get the new layout.
+ */
 export function SectionCard({ children }: SectionCardProps): JSX.Element {
+  const items = React.Children.toArray(children);
+  const headIndex = items.findIndex(
+    (child) => React.isValidElement(child) && child.type === SectionTitle
+  );
+  const head = headIndex === -1 ? null : items[headIndex];
+  const body = headIndex === -1 ? items : items.filter((_, index) => index !== headIndex);
+
   return (
-    <div
-      className="rounded-xl p-6 space-y-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      {children}
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      {head}
+      {body.length > 0 ? (
+        <div
+          className="space-y-4"
+          style={{
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+            borderRadius: "var(--ts-radius-card)",
+            padding: "var(--ts-space-xl)",
+          }}
+        >
+          {body}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -55,19 +56,30 @@ export function SectionCard({ children }: SectionCardProps): JSX.Element {
 interface SectionTitleProps {
   title: string;
   description?: string;
+  /** Beside the label: "Beta", a version. Small, and never an action. */
+  badge?: React.ReactNode;
+  /** Right-aligned on the label's line: a pointer elsewhere, a link. */
+  aside?: React.ReactNode;
 }
 
-export function SectionTitle({ title, description }: SectionTitleProps): JSX.Element {
+/**
+ * The mono label and its one line of explanation. A real `h2` — the label is
+ * set in capitals by CSS, so a screen reader still hears the words, not the
+ * letters.
+ */
+export function SectionTitle({ title, description, badge, aside }: SectionTitleProps): JSX.Element {
   return (
-    <div>
-      <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-        {title}
-      </h2>
-      {description && (
-        <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-          {description}
-        </p>
-      )}
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+      <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+        <h2 className="t-label-mono">{title}</h2>
+        {badge}
+        {aside ? (
+          <span className="t-caption" style={{ marginLeft: "auto" }}>
+            {aside}
+          </span>
+        ) : null}
+      </div>
+      {description && <p className="t-caption">{description}</p>}
     </div>
   );
 }

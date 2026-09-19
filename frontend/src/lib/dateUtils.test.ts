@@ -40,3 +40,17 @@ describe("dateUtils", () => {
     expect(result).toContain("10:00");
   });
 });
+
+describe("formatIsoDate (E7: ISO dates in tables)", () => {
+  it("prints YYYY-MM-DD in the given zone, not the viewer's", async () => {
+    const { formatIsoDate } = await import("./dateUtils");
+    // 23:30 UTC on Jan 14 is already Jan 15 in Tokyo.
+    expect(formatIsoDate("2027-01-14T23:30:00Z", "UTC")).toBe("2027-01-14");
+    expect(formatIsoDate("2027-01-14T23:30:00Z", "Asia/Tokyo")).toBe("2027-01-15");
+  });
+
+  it("falls back to UTC for a zone the runtime does not know", async () => {
+    const { formatIsoDate } = await import("./dateUtils");
+    expect(formatIsoDate("2027-01-14T10:00:00Z", "Not/AZone")).toBe("2027-01-14");
+  });
+});

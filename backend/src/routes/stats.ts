@@ -33,22 +33,13 @@ import {
   calculateAirportStats,
 } from "../utils/statsCalculator";
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../utils/cruiseStats";
-import {
-  calculateLodgingStats,
-  type LodgingStayData,
-  type LodgingRecord,
-} from "../utils/lodgingStats";
-import { buildMembershipContext, resolveStayProgramme } from "../services/lodging/stayMembership";
+import { calculateLodgingStats } from "../utils/lodgingStats";
 import { normalizeHistory } from "../utils/homeAirport";
 import type { SettingsDataJson } from "./settings/types";
 import logger from "../utils/logger";
 import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
-import { normalizeCountrySet, toCountryCode } from "../shared/countryEvidence";
-import {
-  airportCalendarDay,
-  buildTzMap,
-  withDepartureClock,
-} from "../services/stats/departureClock";
+import { normalizeCountrySet } from "../shared/countryEvidence";
+import { withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
@@ -68,7 +59,11 @@ import {
   withinWindow,
   type DatedRow,
 } from "../utils/stats/timeseries";
+import { readYearQuery } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
+import { loadTravelAccountData } from "../services/stats/travelAccountData";
+import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
+import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
 import { buildTripAccount } from "../services/stats/tripAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { statsEtag } from "../middleware/statsEtag";
@@ -101,13 +96,12 @@ router.get(
       const baseCurrency = await getBaseCurrency(userId);
 
       // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
-      const summarize = async (scopeYear: number | undefined) => ({
-        ...(await computeSummary(
-          await buildWhere(userId, fromDate, toDate, scopeYear),
-          baseCurrency
-        )),
-        daysAway: await loadDaysAway(userId, { year: scopeYear, fromDate, toDate }),
-      });
+      const summarize = async (scopeYear: number | undefined) => {
+        const where = await buildWhere(userId, fromDate, toDate, scopeYear);
+        const { stats } = await computeSummary(where, baseCurrency);
+        const daysAway = await loadDaysAway(userId, { year: scopeYear, fromDate, toDate });
+        return { ...stats, daysAway };
+      };
       if (year !== undefined && compareYear !== undefined) {
         const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
         res.json({ current, compare });
@@ -152,7 +146,7 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
     // rows now serve both. The cost is the parallelism between this scan and
     // the passport — the smaller price, since a full per-user scan is not
     // worth running twice concurrently to save the latency of running it once.
-    const [summary, flights] = await Promise.all([
+    const [{ stats: summary }, flights] = await Promise.all([
       buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
       prisma.flight.findMany({
         where: flightsWhere,
@@ -1215,7 +1209,6 @@ router.get(
       // "Swiss" are one carrier once either row's code is known, and the
       // catalogue names the group. The rule lives in shared/airlineNormalize.ts
       // and every client surface uses the same one.
-      //
       // A row without an airline is NOT an airline. It used to be folded in
       // under the label "Unknown", which could top the loyalty ranking on an
       // account with many imported rows — and it sat in the percentage
@@ -1237,6 +1230,7 @@ router.get(
         airline: g.label,
         count: g.count,
         percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
+        key: g.key, // Canonical identity, always present; evidence addresses this row by it.
         ...(g.iata ? { iata: g.iata } : {}),
       }));
 
@@ -1391,62 +1385,13 @@ router.get(
         return;
       }
 
-      const [user, cruises] = await Promise.all([
-        prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
-        prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere() },
-          include: {
-            stops: { include: { port: true } },
-            legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },
-            departurePort: true,
-            arrivalPort: true,
-          },
-        }),
-      ]);
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
 
-      const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
-        id: c.id,
-        shipId: c.shipId,
-        cruiseLine: c.cruiseLine,
-        cabinType: c.cabinType,
-        deck: c.deck,
-        startDate: c.startDate,
-        endDate: c.endDate,
-        stops: c.stops.map((s) => ({
-          portId: s.portId,
-          port: s.port
-            ? {
-                id: s.port.id,
-                name: s.port.name,
-                city: s.port.city,
-                country: s.port.country,
-                region: s.port.region,
-                unlocode: s.port.unlocode,
-                lat: s.port.lat,
-                lon: s.port.lon,
-                timezone: s.port.timezone,
-                isUserAdded: s.port.isUserAdded,
-              }
-            : null,
-          dayNumber: s.dayNumber,
-          isAtSea: s.isAtSea,
-          arrivalTime: s.arrivalTime,
-          departureTime: s.departureTime,
-          unresolvedPortName: s.unresolvedPortName,
-        })),
-        departurePort: c.departurePort,
-        arrivalPort: c.arrivalPort,
-        legDistancesKm: c.legs.map((l) => l.distanceKm),
-      }));
-
-      // calculateCruiseStats expects the birthday as {month, day} for the
-      // birthday-at-sea flag; pass undefined when the user has none set.
-      // Date#getMonth() returns 0-11; rangeContainsMonthDay expects 1-12.
-      // Without the +1, January birthdays would match nothing and every
-      // other birthday would be off by one month — found by Codex audit.
-      const userBirthday = user?.birthdate
-        ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
-        : undefined;
+      // One loader for the tab and for the evidence panel — see
+      // `services/stats/cruiseStatsData.ts` for why this is not inline.
+      const { rows: cruiseRows, userBirthday } = await loadCruiseStatsData(userId, year);
+      const cruiseStatsInput: CruiseStatsInput[] = cruiseRows.map((r) => r.input);
 
       // Defensive parity with the flight stats endpoints: a calculation
       // error on one malformed cruise must not 500 the whole tab — fall
@@ -1547,108 +1492,16 @@ router.get(
         return;
       }
 
-      const [stays, lodgings, settings, memberships] = await Promise.all([
-        prisma.lodgingStay.findMany({
-          where: { userId },
-          // The chain is joined for its NAME: the price and rating rankings
-          // are read by a human, and a chain id is not a label.
-          include: { lodging: { include: { chain: true } } },
-        }),
-        // Every lodging the user HAS, including ones with no stay yet — a
-        // hotel added but never checked into must still count toward
-        // lodgingsCount/chainsUnique (owner decision, finding 1).
-        //
-        // Loaded UNFILTERED on purpose: `visited === false` rows are needed
-        // here, not to be counted as visits but to be counted as bookmarks
-        // (`notedLodgingsCount`). Filtering them out in the query would make
-        // that figure unreachable without a second round-trip.
-        prisma.lodging.findMany({ where: { userId } }),
-        // Current base currency — spendBaseTotal is filtered against it so a
-        // stay snapshotted under an OLDER base currency never gets silently
-        // added under the current one's label (finding 2).
-        prisma.userSettings.findUnique({
-          where: { userId },
-          select: { baseCurrency: true },
-        }),
-        // Which card covered which stay is DERIVED, not stored: a membership
-        // attached to a chain covers every stay at that chain without the user
-        // restating it per stay. The link tables are what make that derivable.
-        prisma.lodgingMembership.findMany({
-          where: { userId },
-          include: { chains: true, lodgings: true },
-        }),
-      ]);
-      const baseCurrency = settings?.baseCurrency ?? "EUR";
-      const membershipContext = buildMembershipContext(memberships);
-      /**
-       * The key everything GROUPS or COUNTS on — never the free text.
-       *
-       * `schema.prisma` states this at `Lodging.isoCountryCode`: the text
-       * field keeps whatever the source wrote ("Deutschland", "Germany",
-       * "Schweiz/Suisse/Svizzera/Svizra"); grouping joins on the code. The
-       * write paths obeyed it, this one did not, and the statistics page
-       * listed "Deutschland" and "Germany" as two countries with the nights
-       * and money split between them.
-       *
-       * The stored column wins. When it is empty the text is resolved on the
-       * fly — through `shared/countryEvidence.ts`, the one home for that join,
-       * rather than through one of the two resolvers behind it: a bucket keyed
-       * differently here than the passport counts is a second opinion about
-       * what a country is. When nothing resolves, the text survives as its own
-       * key: "Dubai" is a city, and a row that names no country is a finding
-       * worth seeing, not one to drop.
-       *
-       * It also repairs the continents: `continentForCountry` understands ISO
-       * codes and English names, so German text used to fall through to the
-       * deliberately coarse coordinate guess — and a house without
-       * coordinates lost its continent altogether.
-       */
-      const countryKey = (l: {
-        country: string | null;
-        isoCountryCode: string | null;
-      }): string | null => l.isoCountryCode ?? toCountryCode(l.country) ?? l.country;
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
 
-      const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
-        id: l.id,
-        chainId: l.chainId,
-        type: l.type,
-        country: countryKey(l),
-        city: l.city,
-        visited: l.visited,
-      }));
-
-      const stayData: LodgingStayData[] = stays.map((s) => {
-        const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
-        return {
-          lodgingId: s.lodgingId,
-          lodgingName: s.lodging.name,
-          type: s.lodging.type,
-          country: countryKey(s.lodging),
-          city: s.lodging.city,
-          chainId: s.lodging.chainId,
-          chainName: s.lodging.chain?.name ?? null,
-          stars: s.lodging.stars,
-          lat: s.lodging.lat,
-          lon: s.lodging.lon,
-          checkIn: s.checkIn,
-          checkOut: s.checkOut,
-          datePrecision: s.datePrecision,
-          nights: s.nights,
-          status: s.status,
-          totalPriceBase: s.totalPriceBase,
-          fxBaseCurrency: s.fxBaseCurrency,
-          currency: s.currency,
-          totalPrice: s.totalPrice,
-          board: s.board,
-          isAwardStay: s.isAwardStay,
-          ratingOverall: s.ratingOverall,
-          ratingRoom: s.ratingRoom,
-          ratingBreakfast: s.ratingBreakfast,
-          ratingService: s.ratingService,
-          programName: programme.programName,
-          membershipTier: programme.tier,
-        };
-      });
+      // One loader for the tab and for the evidence panel — see
+      // `services/stats/lodgingStatsData.ts` for why this is not inline.
+      const {
+        stays: stayData,
+        lodgingRecords,
+        baseCurrency,
+      } = await loadLodgingStatsData(userId, year);
 
       // Defensive parity with the cruise/flight stats endpoints: a
       // calculation error on one malformed stay must not 500 the whole
@@ -1743,148 +1596,9 @@ router.get(
         return;
       }
 
-      const [stays, cruises, flights, trips] = await Promise.all([
-        prisma.lodgingStay.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            checkIn: true,
-            checkOut: true,
-            datePrecision: true,
-            nights: true,
-          },
-        }),
-        prisma.cruise.findMany({
-          where: { userId },
-          select: { status: true, startDate: true, endDate: true },
-        }),
-        prisma.flight.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            departureTime: true,
-            arrivalTime: true,
-            // Needed to decide whether a flight took a NIGHT, which is a
-            // question about the clocks at either end rather than about UTC.
-            depIata: true,
-            depIcao: true,
-            arrIata: true,
-            arrIcao: true,
-            depTimeSemantics: true,
-            arrTimeSemantics: true,
-          },
-        }),
-        prisma.trip.findMany({
-          where: { userId },
-          select: {
-            id: true,
-            name: true,
-            startDate: true,
-            endDate: true,
-            status: true,
-            category: true,
-            tags: true,
-            journalEntries: { select: { mood: true, weather: true } },
-            _count: { select: { photos: true } },
-            lodgingStays: {
-              select: {
-                status: true,
-                checkIn: true,
-                checkOut: true,
-                datePrecision: true,
-                nights: true,
-                totalPrice: true,
-                currency: true,
-                totalPriceBase: true,
-                fxBaseCurrency: true,
-              },
-            },
-            cruises: {
-              select: {
-                status: true,
-                startDate: true,
-                endDate: true,
-                price: true,
-                currency: true,
-              },
-            },
-            flights: {
-              select: {
-                status: true,
-                departureTime: true,
-                arrivalTime: true,
-                // The full cost shape `flightCostShare` needs: a flight's own
-                // cost is price PLUS taxes and fees, and a booking shared by
-                // several segments is counted once (AUD-080).
-                price: true,
-                taxes: true,
-                fees: true,
-                currency: true,
-                priceBase: true,
-                fxBaseCurrency: true,
-                bookingId: true,
-                booking: {
-                  select: {
-                    price: true,
-                    currency: true,
-                    priceBase: true,
-                    fxBaseCurrency: true,
-                  },
-                },
-              },
-            },
-          },
-        }),
-      ]);
-
-      const now = new Date();
-
-      // Resolve both ends' calendar days here, at the load, so the account
-      // stays a pure function over rows that carry their own answer (AUD-079).
-      const tzMap = await buildTzMap(flights);
-      const flightsWithLocalDays = flights.map((f) => {
-        const depTz =
-          (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-          (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-          null;
-        const arrTz =
-          (f.arrIata ? tzMap.get(f.arrIata) : undefined) ??
-          (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ??
-          null;
-        return {
-          ...f,
-          depLocalDay:
-            f.departureTime && depTz
-              ? airportCalendarDay(
-                  f.departureTime,
-                  depTz,
-                  f.depTimeSemantics as FlightTimeSemantics
-                )
-              : null,
-          arrLocalDay:
-            f.arrivalTime && arrTz
-              ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
-              : null,
-        };
-      });
-
-      const account = buildTravelAccount({ stays, cruises, flights: flightsWithLocalDays, now });
-      const tripAccount = buildTripAccount(
-        trips.map((t) => ({
-          id: t.id,
-          name: t.name,
-          startDate: t.startDate,
-          endDate: t.endDate,
-          status: t.status,
-          category: t.category,
-          tags: t.tags,
-          journalEntries: t.journalEntries,
-          photoCount: t._count.photos,
-          stays: t.lodgingStays,
-          cruises: t.cruises,
-          flights: t.flights,
-        }))
-      );
+      const data = await loadTravelAccountData(userId);
+      const account = buildTravelAccount(data);
+      const tripAccount = buildTripAccount(data.trips);
 
       res.json({ account, trips: tripAccount });
     } catch (error) {

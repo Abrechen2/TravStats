@@ -64,6 +64,14 @@ export interface DatedRow {
   date: Date;
   distanceKm: number;
   durationMin: number;
+  /**
+   * Optional: only the flight fetcher sets it (`fetchFlightDatedRows`) —
+   * the cruise one has no per-row identity a caller needs today. Added so
+   * `services/evidence/metricEvidenceScorecard.ts` can build evidence off
+   * the SAME rows `/stats/timeseries` buckets, rather than a second query
+   * that merely resembles this one.
+   */
+  id?: string;
 }
 
 export interface TimeseriesPoint {

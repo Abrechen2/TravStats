@@ -16,8 +16,12 @@
  *   - Prices, taxes, fees, delays, CO₂, actual-times, parser-template metadata
  *   - 22 cruises across every cruise line in seed data + varied regions
  *   - Cruise stops incl. sea days, renumbered consecutively per cruise
- *   - Trips + bookings linking flights + cruises
- *   - Both domains enabled on user settings
+ *   - Bulk trips + bookings linking flights + cruises
+ *   - A handful of narrated trips (seedStories) — coherent flights, lodging
+ *     stays, places, a tour route and a journal per trip
+ *   - Bulk lodging stays + places outside the narrated trips, plus place lists
+ *     (seedBulk)
+ *   - Flight, cruise, lodging and places domains enabled on user settings
  *   - Achievements recomputed at the end
  */
 
@@ -25,11 +29,16 @@ import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
+import { DEMO_USERNAME } from "./utils/sharedDemo";
+import { appVersion } from "./utils/version";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 import { linkRowsFor, resolveCompanions } from "./services/companionService";
+import { seedStories } from "./seedDemo/seedStories";
+import { stopTimesForDay } from "./seedDemo/cruiseTiming";
+import { seedBulk } from "./seedDemo/seedBulk";
 
-type AirportRow = {
+export type AirportRow = {
   id: number;
   iata: string | null;
   icao: string | null;
@@ -49,7 +58,6 @@ type PortRow = {
   unlocode: string | null;
 };
 
-const DEMO_USERNAME = "demo";
 const DEMO_PASSWORD = "demo123";
 
 // ------------------------------------------------------------------ utilities
@@ -183,6 +191,10 @@ const AIRPORT_IATAS = [
   "CAI",
   "RAK",
   "NBO",
+  "KEF",
+  "FLR",
+  "BGO",
+  "TOS",
 ];
 
 const AIRLINES = [
@@ -325,6 +337,30 @@ function weightedPick<T extends string>(pairs: ReadonlyArray<readonly [T, number
 
 // ------------------------------------------------------------- cruise domain
 
+/**
+ * One itinerary entry, in exactly the three states a stop may be in (see the
+ * cruise-stop invariant in CLAUDE.md).
+ *
+ * A port call names its port by UN/LOCODE, never by name. The catalogue holds
+ * two "Naples" (IT and US), two "Venice", two "Nassau", two "Las Palmas" and
+ * more, and the old name-keyed lookup returned whichever row Postgres happened
+ * to hand back LAST — which is physical row order, not a decision. Measured on
+ * the test database while finding B1 of the independent review of 2026-09-17
+ * was open: "Naples" resolved to Italy and "Las Palmas" to ARGENTINA, so the
+ * Canaries cruise sailed to the Río de la Plata, and a VACUUM could have
+ * swapped the other four the same way.
+ *
+ * `unresolvedPortName` is the deliberate third state: a place the port
+ * catalogue has no row for stays a PORT CALL carrying its name, which is what
+ * an import does with a port it cannot match. It used to be written as a sea
+ * day with the name in an excursion note (finding B2) — a state the Zod schema
+ * rejects and the statistics count as a day at sea.
+ */
+type CruiseStopTemplate =
+  | { locode: string; excursionNote?: string }
+  | { atSea: true }
+  | { unresolvedPortName: string; excursionNote?: string };
+
 type CruiseTemplate = {
   line: string;
   shipName: string;
@@ -334,11 +370,12 @@ type CruiseTemplate = {
   priceEur: number | null;
   tags: string[];
   durationDays: number;
-  stops: Array<{ portName?: string; isAtSea?: boolean; excursionNote?: string }>;
+  stops: CruiseStopTemplate[];
   companions: string[];
 };
 
-const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
+/** Exported so a test can assert each stop resolved to the locode it names. */
+export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
   {
     line: "AIDA Cruises",
     shipName: "AIDAnova",
@@ -350,13 +387,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["mittelmeer", "familie"],
     companions: ["Sarah Müller"],
     stops: [
-      { portName: "Barcelona", excursionNote: "Sagrada Família Tour" },
-      { portName: "Palma de Mallorca", excursionNote: "Kathedrale La Seu" },
-      { isAtSea: true },
-      { portName: "Civitavecchia", excursionNote: "Ausflug Rom" },
-      { portName: "Naples", excursionNote: "Pompeji + Vesuv" },
-      { portName: "Marseille" },
-      { portName: "Barcelona" },
+      { locode: "ESBCN", excursionNote: "Sagrada Família Tour" },
+      { locode: "ESPMI", excursionNote: "Kathedrale La Seu" },
+      { atSea: true },
+      { locode: "ITCVV", excursionNote: "Ausflug Rom" },
+      { locode: "ITNAP", excursionNote: "Pompeji + Vesuv" },
+      { locode: "FRMRS" },
+      { locode: "ESBCN" },
     ],
   },
   {
@@ -370,16 +407,16 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["norwegian-fjords", "bucket-list"],
     companions: ["Sarah Müller", "Jonas Weber"],
     stops: [
-      { portName: "Hamburg" },
-      { isAtSea: true },
-      { portName: "Bergen" },
-      { portName: "Flåm", excursionNote: "Flåmsbana Bahn" },
-      { portName: "Geiranger", excursionNote: "Dalsnibba Aussichtsplattform" },
-      { portName: "Ålesund" },
-      { isAtSea: true },
-      { portName: "Oslo" },
-      { portName: "Copenhagen" },
-      { portName: "Hamburg" },
+      { locode: "DEHAM" },
+      { atSea: true },
+      { locode: "NOBGO" },
+      { locode: "NOFLM", excursionNote: "Flåmsbana Bahn" },
+      { locode: "NOGEI", excursionNote: "Dalsnibba Aussichtsplattform" },
+      { locode: "NOAES" },
+      { atSea: true },
+      { locode: "NOOSL" },
+      { locode: "DKCPH" },
+      { locode: "DEHAM" },
     ],
   },
   {
@@ -393,13 +430,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["baltic", "metropolen"],
     companions: [],
     stops: [
-      { portName: "Kiel" },
-      { portName: "Copenhagen" },
-      { portName: "Stockholm" },
-      { isAtSea: true },
-      { portName: "Tallinn" },
-      { portName: "Gdańsk" },
-      { portName: "Kiel" },
+      { locode: "DEKEL" },
+      { locode: "DKCPH" },
+      { locode: "SESTO" },
+      { atSea: true },
+      { locode: "EETLL" },
+      { locode: "PLGDN" },
+      { locode: "DEKEL" },
     ],
   },
   {
@@ -413,14 +450,14 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["winter", "sonne"],
     companions: ["Sarah Müller"],
     stops: [
-      { portName: "Las Palmas" },
-      { isAtSea: true },
-      { portName: "Funchal" },
-      { isAtSea: true },
-      { portName: "Lisbon" },
-      { portName: "Málaga" },
-      { isAtSea: true },
-      { portName: "Las Palmas" },
+      { locode: "ESLPA" },
+      { atSea: true },
+      { locode: "PTFNC" },
+      { atSea: true },
+      { locode: "PTLIS" },
+      { locode: "ESAGP" },
+      { atSea: true },
+      { locode: "ESLPA" },
     ],
   },
   {
@@ -434,13 +471,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["griechenland"],
     companions: [],
     stops: [
-      { portName: "Athens (Piraeus)" },
-      { portName: "Mykonos" },
-      { portName: "Kuşadası", excursionNote: "Ephesos" },
-      { portName: "Istanbul" },
-      { isAtSea: true },
-      { portName: "Santorini" },
-      { portName: "Athens (Piraeus)" },
+      { locode: "GRPIR" },
+      { locode: "GRJMK" },
+      { locode: "TRKUS", excursionNote: "Ephesos" },
+      { locode: "TRIST" },
+      { atSea: true },
+      { locode: "GRJTR" },
+      { locode: "GRPIR" },
     ],
   },
   {
@@ -454,13 +491,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["adria"],
     companions: [],
     stops: [
-      { portName: "Venice" },
-      { portName: "Dubrovnik" },
-      { portName: "Naples" },
-      { isAtSea: true },
-      { portName: "Civitavecchia" },
-      { portName: "Genoa" },
-      { portName: "Venice" },
+      { locode: "ITVCE" },
+      { locode: "HRDBV" },
+      { locode: "ITNAP" },
+      { atSea: true },
+      { locode: "ITCVV" },
+      { locode: "ITGOA" },
+      { locode: "ITVCE" },
     ],
   },
   {
@@ -474,15 +511,15 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["karibik", "sonne", "winter"],
     companions: ["Anna Fischer"],
     stops: [
-      { portName: "Miami" },
-      { portName: "Nassau" },
-      { portName: "San Juan" },
-      { portName: "St. Thomas" },
-      { portName: "Bridgetown" },
-      { isAtSea: true },
-      { portName: "Cozumel" },
-      { isAtSea: true },
-      { portName: "Miami" },
+      { locode: "USMIA" },
+      { locode: "BSNAS" },
+      { locode: "PRSJU" },
+      { locode: "VISTT" },
+      { locode: "BBBGI" },
+      { atSea: true },
+      { locode: "MXCZM" },
+      { atSea: true },
+      { locode: "USMIA" },
     ],
   },
   {
@@ -496,14 +533,14 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["transatlantik", "langstrecke"],
     companions: ["Sarah Müller"],
     stops: [
-      { portName: "Hamburg" },
-      { isAtSea: true },
-      { isAtSea: true },
-      { portName: "Funchal" },
-      { isAtSea: true },
-      { isAtSea: true },
-      { portName: "Nassau" },
-      { portName: "Miami" },
+      { locode: "DEHAM" },
+      { atSea: true },
+      { atSea: true },
+      { locode: "PTFNC" },
+      { atSea: true },
+      { atSea: true },
+      { locode: "BSNAS" },
+      { locode: "USMIA" },
     ],
   },
   {
@@ -517,13 +554,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["mittelmeer"],
     companions: [],
     stops: [
-      { portName: "Palma de Mallorca" },
-      { portName: "Valencia" },
-      { portName: "Marseille" },
-      { portName: "Genoa" },
-      { portName: "Nice" },
-      { isAtSea: true },
-      { portName: "Palma de Mallorca" },
+      { locode: "ESPMI" },
+      { locode: "ESVLC" },
+      { locode: "FRMRS" },
+      { locode: "ITGOA" },
+      { locode: "FRNCE" },
+      { atSea: true },
+      { locode: "ESPMI" },
     ],
   },
   {
@@ -537,14 +574,14 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["fjorde"],
     companions: ["Jonas Weber"],
     stops: [
-      { portName: "Kiel" },
-      { isAtSea: true },
-      { portName: "Bergen" },
-      { portName: "Geiranger" },
-      { portName: "Ålesund" },
-      { portName: "Oslo" },
-      { isAtSea: true },
-      { portName: "Kiel" },
+      { locode: "DEKEL" },
+      { atSea: true },
+      { locode: "NOBGO" },
+      { locode: "NOGEI" },
+      { locode: "NOAES" },
+      { locode: "NOOSL" },
+      { atSea: true },
+      { locode: "DEKEL" },
     ],
   },
   {
@@ -558,16 +595,20 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["baltic", "premium"],
     companions: ["Clara Becker"],
     stops: [
-      { portName: "Kiel" },
-      { portName: "Copenhagen" },
-      { portName: "Stockholm" },
-      { portName: "Helsinki" },
-      { portName: "Tallinn" },
-      { isAtSea: true },
-      { portName: "Kiel" },
+      { locode: "DEKEL" },
+      { locode: "DKCPH" },
+      { locode: "SESTO" },
+      { locode: "FIHEL" },
+      { locode: "EETLL" },
+      { atSea: true },
+      { locode: "DEKEL" },
     ],
   },
   {
+    // Palermo and Valletta are port calls again. A `.map()` over this list
+    // rewrote them to sea days on the belief that the catalogue held neither —
+    // it holds ITPMO and MTMLA, which is what a locode shows and a name never
+    // did.
     line: "MSC Cruises",
     shipName: "MSC World Europa",
     region: "Mittelmeer",
@@ -578,14 +619,14 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["mittelmeer", "familie"],
     companions: [],
     stops: [
-      { portName: "Genoa" },
-      { portName: "Civitavecchia" },
-      { portName: "Palermo" },
-      { portName: "Valletta" },
-      { portName: "Barcelona" },
-      { portName: "Marseille" },
-      { portName: "Genoa" },
-    ].map((s) => (["Palermo", "Valletta"].includes(s.portName ?? "") ? { isAtSea: true } : s)),
+      { locode: "ITGOA" },
+      { locode: "ITCVV" },
+      { locode: "ITPMO" },
+      { locode: "MTMLA" },
+      { locode: "ESBCN" },
+      { locode: "FRMRS" },
+      { locode: "ITGOA" },
+    ],
   },
   {
     line: "MSC Cruises",
@@ -598,16 +639,19 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["nordsee"],
     companions: [],
     stops: [
-      { portName: "Hamburg" },
-      { portName: "Southampton" },
-      { portName: "Amsterdam" },
-      { isAtSea: true },
-      { portName: "Rotterdam" },
-      { portName: "Bremerhaven" },
-      { portName: "Hamburg" },
+      { locode: "DEHAM" },
+      { locode: "GBSOU" },
+      { locode: "NLAMS" },
+      { atSea: true },
+      { locode: "NLRTM" },
+      { locode: "DEBRV" },
+      { locode: "DEHAM" },
     ],
   },
   {
+    // Same correction as MSC World Europa: all four Gulf ports are in the
+    // catalogue (AEDXB, AEAUH, QADOH, OMMCT). The old comment claimed "dev DB
+    // has none of these" and turned the whole itinerary into open water.
     line: "MSC Cruises",
     shipName: "MSC Virtuosa",
     region: "Emirate",
@@ -618,17 +662,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["emirate", "luxus"],
     companions: ["Sarah Müller"],
     stops: [
-      { portName: "Dubai" },
-      { portName: "Abu Dhabi" },
-      { portName: "Doha" },
-      { isAtSea: true },
-      { portName: "Muscat" },
-      { portName: "Dubai" },
-    ].map((s) =>
-      ["Dubai", "Abu Dhabi", "Doha", "Muscat"].includes(s.portName ?? "")
-        ? { isAtSea: true } // dev DB has none of these — render as sea days
-        : s
-    ),
+      { locode: "AEDXB" },
+      { locode: "AEAUH" },
+      { locode: "QADOH" },
+      { atSea: true },
+      { locode: "OMMCT" },
+      { locode: "AEDXB" },
+    ],
   },
   {
     line: "Costa Cruises",
@@ -641,13 +681,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["mittelmeer"],
     companions: [],
     stops: [
-      { portName: "Barcelona" },
-      { portName: "Marseille" },
-      { portName: "Genoa" },
-      { portName: "Civitavecchia" },
-      { portName: "Naples" },
-      { portName: "Palma de Mallorca" },
-      { portName: "Barcelona" },
+      { locode: "ESBCN" },
+      { locode: "FRMRS" },
+      { locode: "ITGOA" },
+      { locode: "ITCVV" },
+      { locode: "ITNAP" },
+      { locode: "ESPMI" },
+      { locode: "ESBCN" },
     ],
   },
   {
@@ -661,14 +701,14 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["mittelmeer"],
     companions: [],
     stops: [
-      { portName: "Civitavecchia" },
-      { portName: "Naples" },
-      { portName: "Palermo" },
-      { portName: "Barcelona" },
-      { portName: "Marseille" },
-      { portName: "Genoa" },
-      { portName: "Civitavecchia" },
-    ].map((s) => (s.portName === "Palermo" ? { isAtSea: true } : s)),
+      { locode: "ITCVV" },
+      { locode: "ITNAP" },
+      { locode: "ITPMO" },
+      { locode: "ESBCN" },
+      { locode: "FRMRS" },
+      { locode: "ITGOA" },
+      { locode: "ITCVV" },
+    ],
   },
   {
     line: "Royal Caribbean International",
@@ -681,13 +721,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["karibik", "familie"],
     companions: ["Anna Fischer"],
     stops: [
-      { portName: "Fort Lauderdale" },
-      { isAtSea: true },
-      { portName: "San Juan" },
-      { portName: "St. Thomas" },
-      { portName: "Nassau" },
-      { isAtSea: true },
-      { portName: "Fort Lauderdale" },
+      { locode: "USFLL" },
+      { atSea: true },
+      { locode: "PRSJU" },
+      { locode: "VISTT" },
+      { locode: "BSNAS" },
+      { atSea: true },
+      { locode: "USFLL" },
     ],
   },
   {
@@ -701,13 +741,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["karibik", "luxus"],
     companions: ["Sarah Müller", "Jonas Weber"],
     stops: [
-      { portName: "Miami" },
-      { portName: "Cozumel" },
-      { isAtSea: true },
-      { portName: "Nassau" },
-      { portName: "Port Canaveral" },
-      { isAtSea: true },
-      { portName: "Miami" },
+      { locode: "USMIA" },
+      { locode: "MXCZM" },
+      { atSea: true },
+      { locode: "BSNAS" },
+      { locode: "USPCV" },
+      { atSea: true },
+      { locode: "USMIA" },
     ],
   },
   {
@@ -721,13 +761,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["karibik"],
     companions: [],
     stops: [
-      { portName: "Miami" },
-      { portName: "Nassau" },
-      { isAtSea: true },
-      { portName: "San Juan" },
-      { portName: "St. Thomas" },
-      { isAtSea: true },
-      { portName: "Miami" },
+      { locode: "USMIA" },
+      { locode: "BSNAS" },
+      { atSea: true },
+      { locode: "PRSJU" },
+      { locode: "VISTT" },
+      { atSea: true },
+      { locode: "USMIA" },
     ],
   },
   {
@@ -741,13 +781,13 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["alaska", "bucket-list"],
     companions: ["Clara Becker"],
     stops: [
-      { portName: "Seward" },
-      { isAtSea: true },
-      { portName: "Juneau" },
-      { portName: "Skagway" },
-      { portName: "Ketchikan" },
-      { isAtSea: true },
-      { portName: "Vancouver" },
+      { locode: "USSWD" },
+      { atSea: true },
+      { locode: "USJNU" },
+      { locode: "USSKW" },
+      { locode: "USKTN" },
+      { atSea: true },
+      { locode: "CAVAN" },
     ],
   },
   {
@@ -761,14 +801,18 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     tags: ["panama", "langstrecke", "luxus"],
     companions: ["Sarah Müller"],
     stops: [
-      { portName: "Fort Lauderdale" },
-      { isAtSea: true },
-      { portName: "Nassau" },
-      { isAtSea: true },
-      { portName: "Panama Canal (Colón)", excursionNote: "Panamakanal-Passage" },
-      { isAtSea: true },
-      { isAtSea: true },
-      { portName: "Vancouver" },
+      { locode: "USFLL" },
+      { atSea: true },
+      { locode: "BSNAS" },
+      { atSea: true },
+      // The one itinerary entry the port catalogue has no row for, and kept
+      // that way on purpose: it is the demo account's example of the third
+      // stop state, which a user meets whenever an import names a place the
+      // catalogue does not know.
+      { unresolvedPortName: "Panama Canal (Colón)", excursionNote: "Panamakanal-Passage" },
+      { atSea: true },
+      { atSea: true },
+      { locode: "CAVAN" },
     ],
   },
   {
@@ -781,25 +825,137 @@ const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
     durationDays: 3,
     tags: ["kurztrip", "wochenende"],
     companions: [],
-    stops: [{ portName: "Kiel" }, { portName: "Copenhagen" }, { portName: "Kiel" }],
+    stops: [{ locode: "DEKEL" }, { locode: "DKCPH" }, { locode: "DEKEL" }],
   },
 ];
 
 // ---------------------------------------------------------- main seed logic
 
+/**
+ * EVERY model in `prisma/schema.prisma` that belongs to one user, and what
+ * happens to it here. Written down because the wipe missed thirteen of them
+ * until the independent review of 2026-09-17 (finding A7), and because the
+ * next model with a `userId` will be noticed only if this list is read — a
+ * cascade you cannot see is indistinguishable from a table nobody thought of.
+ *
+ * Deleted by this function (30). Rows, not files — an uploaded receipt or
+ * training sample leaves its bytes on disk, as `demoGuard.uploads.test.ts`
+ * notes, which is why the upload routes refuse the account outright:
+ *   AnalyticsEvent · Booking · Companion · CountryDay · Cruise ·
+ *   CruiseStop · DataQualityFlag · DawarichSweepState · Document · Flight ·
+ *   ImportBatch ·
+ *   Lodging · LodgingMembership · LodgingStay · PairingCode ·
+ *   ParseTrainingLog · ParserTemplate · PendingFlightUpdate ·
+ *   PendingUpdateStatistics · PhotoJourney · Place · PlaceList · PlaceVisit ·
+ *   ReceiptUpload · TrainingData · Trip · TripJournalEntry · TripRoute ·
+ *   TripStop · UserAchievement
+ *
+ * Deleted by CASCADE from one of those, so they need no statement of their
+ * own — each reaches the user through exactly one owner:
+ *   CruiseCompanion, CruiseLeg, CruiseLegRoute (Cruise) ·
+ *   FlightCompanion (Flight/Companion) · ImmichImportJob (TripImmichAlbum) ·
+ *   LodgingPhoto (Lodging) · LodgingMembershipChain,
+ *   LodgingMembershipLodging (LodgingMembership) · PlaceListEntry
+ *   (PlaceList/Place) · PlaceVisitPhoto (PlaceVisit) · TripCompanion,
+ *   TripImmichAlbum, TripPhoto (Trip) · TripRouteLeg, TripRouteTrack
+ *   (TripRoute)
+ *
+ * Deliberately NOT deleted here, each for a stated reason:
+ *   ApiToken, TwoFactorRecoveryCode, WebAuthnCredential — `ensureUser`
+ *     removes them BEFORE this runs, together with the credential reset, so a
+ *     live session is ended before the first row is deleted (finding I4).
+ *   UserSettings — rewritten rather than removed, by `ensureUserSettings`
+ *     right after this; deleting it would drop the enabled domains the seeded
+ *     account needs and is what the upsert exists to avoid.
+ *   Invitation — reaches a user through TWO relations (creator and redeemer)
+ *     and is instance-level admin data. The demo cannot create one; deleting
+ *     invitations it happened to touch would destroy an admin's records.
+ *
+ * `Document` is the newest of them and the reason the count moved from 29 to
+ * 30: it arrived from main with `routes/documents.ts` AFTER this enumeration
+ * was written on 2026-09-17, so the sweep that produced the list never saw it.
+ *
+ * NOT user-owned at all, and never to be deleted here: Airport, Airline,
+ * Aircraft, Ship, Port, LodgingChain, Achievement, CuratedList, CuratedPlace,
+ * AdminSettings, SmtpConfig, Backup, AirportSeedingStatus, PoiBackfillAudit.
+ * Those are the global catalogues every account reads — which is exactly why
+ * the shared demo account may not write to them (finding A3).
+ */
 async function wipeDemoUser(userId: string): Promise<void> {
   // Cascade-safe teardown: deleting the user would wipe all owned rows via
   // onDelete: Cascade, but we want to keep the user row stable so we just
   // delete owned data. Order matters where there are optional FKs.
+  //
+  // New domains (Tasks 5-8: narrated trips, tours, lodging, places) go first —
+  // deleted before flights/cruises/trips so a stale FK never outlives the row
+  // it points at. PlaceVisit before PlaceList before Place: entries cascade
+  // off the list, but a place can still be a visit target until visits are
+  // gone. LodgingStay before Lodging for the same reason. TripJournalEntry and
+  // TripRoute (legs/tracks cascade with it) before TripStop, because
+  // TripRouteLeg cascades off either its route OR its endpoint stops — routes
+  // first means the legs are already gone by the time stops are deleted, and
+  // TripStop.routeId is SetNull on route delete rather than blocking it.
+  // Companion last of the new set: its join rows (FlightCompanion,
+  // CruiseCompanion) cascade, so it's safe regardless of flight/cruise order.
+  // Before everything it hangs off. A document FILED with an entry dies by
+  // cascade with that entry, but an UNFILED one has no owner but the user, so
+  // it outlived the reseed by up to `UNLINKED_TTL_DAYS` (7 days) with its bytes
+  // still readable through `GET /documents/:id/file`. `routes/documents.ts`
+  // arrived from main after the wipe was enumerated on 2026-09-17, so `Document`
+  // was never in any of the three lists above — an omission, not a decision
+  // (security audit of 2026-09-19, finding 1). Rows only: the bytes under
+  // `uploads/documents/` are the orphan sweep's business, which is the second
+  // reason the upload route now refuses the shared account outright.
+  await prisma.document.deleteMany({ where: { userId } });
+  await prisma.placeVisit.deleteMany({ where: { userId } });
+  await prisma.placeList.deleteMany({ where: { userId } }); // entries cascade
+  await prisma.place.deleteMany({ where: { userId } });
+  await prisma.lodgingStay.deleteMany({ where: { userId } });
+  await prisma.lodging.deleteMany({ where: { userId } });
+  await prisma.tripJournalEntry.deleteMany({ where: { trip: { userId } } });
+  await prisma.tripRoute.deleteMany({ where: { trip: { userId } } }); // legs/tracks cascade
+  await prisma.tripStop.deleteMany({ where: { trip: { userId } } });
+  await prisma.companion.deleteMany({ where: { userId } }); // join rows cascade
+
   await prisma.cruiseStop.deleteMany({
     where: { cruise: { userId } },
   });
   await prisma.cruise.deleteMany({ where: { userId } });
+  // Before the flights it hangs off, so the row goes whether or not the
+  // cascade fires. See the enumeration below.
+  await prisma.pendingFlightUpdate.deleteMany({ where: { userId } });
   await prisma.flight.deleteMany({ where: { userId } });
   await prisma.booking.deleteMany({ where: { userId } });
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.userAchievement.deleteMany({ where: { userId } });
   await prisma.analyticsEvent.deleteMany({ where: { userId } });
+
+  /**
+   * The twelve tables below were ALL missed until the independent review of
+   * 2026-09-17 (finding A7). The wipe covered the domains a visitor is shown
+   * — flights, cruises, trips, lodging, places — and nothing else, so a public
+   * instance accumulated the shared account's leavings for as long as it ran:
+   * a hotel loyalty number, an import batch naming an uploaded file, a parser
+   * template trained on somebody's booking mail, an uploaded receipt, a
+   * location-history sweep cursor, an unspent pairing code.
+   *
+   * `ImportBatch` goes LAST of all: flights, cruises, lodgings, stays and
+   * places point at it with `onDelete: SetNull`, so the order is not required
+   * for correctness, but deleting the batch after its contents keeps the
+   * reading obvious.
+   */
+  await prisma.countryDay.deleteMany({ where: { userId } });
+  await prisma.dataQualityFlag.deleteMany({ where: { userId } });
+  await prisma.dawarichSweepState.deleteMany({ where: { userId } });
+  await prisma.lodgingMembership.deleteMany({ where: { userId } }); // chain/lodging links cascade
+  await prisma.pairingCode.deleteMany({ where: { userId } });
+  await prisma.parseTrainingLog.deleteMany({ where: { userId } });
+  await prisma.parserTemplate.deleteMany({ where: { userId } });
+  await prisma.pendingUpdateStatistics.deleteMany({ where: { userId } });
+  await prisma.photoJourney.deleteMany({ where: { userId } });
+  await prisma.receiptUpload.deleteMany({ where: { userId } });
+  await prisma.trainingData.deleteMany({ where: { userId } });
+  await prisma.importBatch.deleteMany({ where: { userId } });
 }
 
 export async function ensureUser(): Promise<string> {
@@ -807,12 +963,56 @@ export async function ensureUser(): Promise<string> {
     where: { username: DEMO_USERNAME },
   });
   if (existing) {
+    // Restore the account itself BEFORE its data. The route guards should
+    // already refuse a credential/2FA/token change on the demo account
+    // server-side — this is the second line of defence, in case one of those
+    // guards is ever missed or bypassed: every re-seed puts the account back
+    // to a known-good, publicly-documented login.
+    //
+    // The order matters and used to be the other way round. `wipeDemoUser`
+    // deletes a few thousand rows across twenty tables; a visitor whose
+    // session is still live goes on writing for the whole of that window and
+    // leaves rows behind the delete has already passed. Bumping `sessionEpoch`
+    // first ends every session issued before this instant, so the wipe runs
+    // against an account nobody can reach (final review finding I4).
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        isDemo: true,
+        passwordHash: await hashPassword(DEMO_PASSWORD),
+        mustChangePassword: false,
+        twoFactorSecret: null,
+        twoFactorPendingSecret: null,
+        twoFactorEnabledAt: null,
+        twoFactorToken: null,
+        twoFactorTokenExpiry: null,
+        // Whatever a visitor typed about themselves. The name is read by the
+        // header greeting on every page and the birthdate feeds an
+        // achievement, so both are shown to the next visitor and both
+        // survived every reseed until now (finding I1).
+        firstName: null,
+        lastName: null,
+        birthdate: null,
+        // The account-takeover chain: set the notification address, ask
+        // /auth/forgot-password for a link, own the shared login (finding C3).
+        // Both guards that close it are newer than some installs, so the
+        // address and any outstanding token are cleared here as well.
+        notificationEmail: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        changeToken: null,
+        changeTokenExpiry: null,
+        // A reset of a shared public login must end sessions issued before
+        // it, exactly like every other credential reset (routes/auth.ts,
+        // routes/admin/users.ts, routes/passwordReset.ts) — otherwise a
+        // visitor's live demo JWT survives this reset.
+        sessionEpoch: { increment: 1 },
+      },
+    });
+    await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: existing.id } });
+    await prisma.webAuthnCredential.deleteMany({ where: { userId: existing.id } });
+    await prisma.apiToken.deleteMany({ where: { userId: existing.id } });
     await wipeDemoUser(existing.id);
-    // Heal a row seeded before the flag was set here — see below. Without this
-    // the repair only reaches installs that delete the demo user first.
-    if (!existing.isDemo) {
-      await prisma.user.update({ where: { id: existing.id }, data: { isDemo: true } });
-    }
     return existing.id;
   }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
@@ -833,35 +1033,68 @@ export async function ensureUser(): Promise<string> {
   return user.id;
 }
 
-async function ensureUserSettings(userId: string): Promise<void> {
+/**
+ * Both background sweeps stay OFF — historical enrichment (final review
+ * finding I5) and, since the independent review of 2026-09-17 (finding A4),
+ * flight auto-update beside it.
+ *
+ * They are the same kind of switch: each one arms a job that spends the
+ * instance's flight-API quota, and on a public instance the shared account is
+ * unattended by definition — the admin who pays for the key is not the person
+ * clicking around in it. The route refuses both blocks and the two workers
+ * skip the account, but a row flipped before either guard existed is only
+ * healed here, which is why this is an explicit `false` on BOTH branches of
+ * the upsert and not a default.
+ *
+ * `whatsNewSeenVersion` is stamped for the same reason `stampWhatsNewSeen`
+ * stamps a fresh signup: nothing is "new" to an account that starts here. The
+ * nightly reseed rebuilds this one from scratch, so without the stamp every
+ * visitor to a public preview meets the release highlights of a version they
+ * never ran before they see a single flight — measured on beta.travstats.de
+ * on 2026-09-18, where the 2.6.0 modal opened over the dashboard on first
+ * login and again after every reset.
+ */
+export async function ensureUserSettings(userId: string): Promise<void> {
   await prisma.userSettings.upsert({
     where: { userId },
     update: {
-      enabledDomains: ["flight", "cruise"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi"],
       data: {
         unitsSystem: "metric",
         defaultCategory: "vacation",
         welcomeSeen: true,
+        whatsNewSeenVersion: appVersion,
       } as Prisma.InputJsonValue,
-      historicalEnrichmentEnabled: true,
+      historicalEnrichmentEnabled: false,
+      autoUpdateEnabled: false,
     },
     create: {
       userId,
-      enabledDomains: ["flight", "cruise"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi"],
       data: {
         unitsSystem: "metric",
         defaultCategory: "vacation",
         welcomeSeen: true,
+        whatsNewSeenVersion: appVersion,
       } as Prisma.InputJsonValue,
-      historicalEnrichmentEnabled: true,
+      historicalEnrichmentEnabled: false,
+      autoUpdateEnabled: false,
     },
   });
 }
 
+/**
+ * Ports keyed by UN/LOCODE, never by name — see `CruiseStopTemplate`. The
+ * alias exists so the key's meaning travels with the type: a `Map<string,
+ * PortRow>` says nothing about which string, and the name-keyed version of
+ * this map is exactly what finding B1 was.
+ */
+export type PortsByLocode = Map<string, PortRow>;
+
 export async function loadPools(): Promise<{
   airports: Map<string, AirportRow>;
   ships: Map<string, ShipRow>;
-  ports: Map<string, PortRow>;
+  ports: PortsByLocode;
 }> {
   const airportRows = await prisma.airport.findMany({
     where: { iata: { in: AIRPORT_IATAS }, isClosed: false },
@@ -886,10 +1119,14 @@ export async function loadPools(): Promise<{
   for (const s of shipRows) ships.set(s.name, s);
 
   const portRows = await prisma.port.findMany({
+    where: { unlocode: { not: null } },
     select: { id: true, name: true, city: true, country: true, unlocode: true },
   });
-  const ports = new Map<string, PortRow>();
-  for (const p of portRows) ports.set(p.name, p);
+  const ports: PortsByLocode = new Map();
+  // The UN/LOCODE is unique in the catalogue, so this map has no "last one
+  // wins" to get wrong. Keying on `name` did, and it decided which country the
+  // demo account sailed to (finding B1).
+  for (const p of portRows) if (p.unlocode) ports.set(p.unlocode, p);
 
   return { airports, ships, ports };
 }
@@ -995,13 +1232,28 @@ function buildFlightRow(
   };
 }
 
-async function seedFlights(userId: string, airports: Map<string, AirportRow>): Promise<void> {
+/**
+ * Exported for the seed tests, which freeze `now` — see the parameter below.
+ */
+export async function seedFlights(
+  userId: string,
+  airports: Map<string, AirportRow>,
+  /**
+   * The instant this seed run calls "now". It used to be the hard-coded
+   * 2026-04-23, so every nightly reseed of a public instance created twenty
+   * "scheduled" flights that had already departed, and called flights flown
+   * that had not happened yet (finding B6, independent review 2026-09-17).
+   */
+  now: Date = new Date()
+): Promise<void> {
   const pool = Array.from(airports.values());
   const rows: FlightSeed[] = [];
 
-  const now = new Date("2026-04-23T00:00:00Z");
   const past = new Date("2015-01-01T00:00:00Z");
-  const future = new Date("2027-12-31T00:00:00Z");
+  // The forward horizon is RELATIVE, for the same reason `now` is: a fixed end
+  // date becomes the past the moment it arrives, and the upcoming flights
+  // would silently all be historic again.
+  const future = new Date(now.getTime() + 400 * 24 * 60 * 60 * 1000);
 
   // Realistic route-frequency distribution: routes the user flies often
   // (home-hub pairs, commutes) need to outnumber one-off trips, otherwise
@@ -1123,9 +1375,14 @@ async function linkFlightCompanions(userId: string, rows: FlightSeed[]): Promise
 export async function seedCruises(
   userId: string,
   ships: Map<string, ShipRow>,
-  ports: Map<string, PortRow>
+  ports: PortsByLocode,
+  /**
+   * The instant this seed run calls "now". Defaults to the real one — a fixed
+   * date here is how the nightly reseed of a public instance kept creating
+   * SCHEDULED cruises that had already sailed (finding B6). Tests freeze it.
+   */
+  now: Date = new Date()
 ): Promise<void> {
-  const now = new Date("2026-04-23T00:00:00Z");
   let created = 0;
 
   for (const [idx, tpl] of CRUISE_TEMPLATES.entries()) {
@@ -1158,14 +1415,14 @@ export async function seedCruises(
     const startDate = startBase;
     const endDate = new Date(startBase.getTime() + tpl.durationDays * 24 * 60 * 60 * 1000);
 
-    const firstPortStop = tpl.stops.find((s) => s.portName);
-    const lastPortStop = [...tpl.stops].reverse().find((s) => s.portName);
-    const departurePortId = firstPortStop?.portName
-      ? (ports.get(firstPortStop.portName)?.id ?? null)
-      : null;
-    const arrivalPortId = lastPortStop?.portName
-      ? (ports.get(lastPortStop.portName)?.id ?? null)
-      : null;
+    // Only a RESOLVED port can be the cruise's departure or arrival: a stop
+    // whose locode the catalogue does not hold has no id to point at, and the
+    // unresolved name lives on the stop rather than on the cruise.
+    const resolvedPortIds = tpl.stops
+      .map((s) => ("locode" in s ? (ports.get(s.locode)?.id ?? null) : null))
+      .filter((id): id is number => id !== null);
+    const departurePortId = resolvedPortIds[0] ?? null;
+    const arrivalPortId = resolvedPortIds[resolvedPortIds.length - 1] ?? null;
 
     const cruise = await prisma.cruise.create({
       data: {
@@ -1208,53 +1465,58 @@ export async function seedCruises(
       });
     }
 
-    // Create stops. Renumber consecutively; sea days are `isAtSea=true,
-    // portId=null` — matches the Zod union.
-    for (let i = 0; i < tpl.stops.length; i++) {
-      const stop = tpl.stops[i];
-      const dayStart = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayEnd = new Date(dayStart.getTime() + 10 * 60 * 60 * 1000);
-      if (stop.isAtSea) {
+    // Create stops. `dayNumber` is `index + 1`, and each stop lands in exactly
+    // one of the three states the invariant allows (see `CruiseStopTemplate`).
+    for (const [i, stop] of tpl.stops.entries()) {
+      const dayNumber = i + 1;
+      if ("atSea" in stop) {
         await prisma.cruiseStop.create({
           data: {
             cruiseId: cruise.id,
             portId: null,
-            dayNumber: i + 1,
+            dayNumber,
             isAtSea: true,
             arrivalTime: null,
             departureTime: null,
             excursionNote: null,
+            unresolvedPortName: null,
           },
         });
-      } else if (stop.portName) {
-        const port = ports.get(stop.portName);
-        if (!port) {
-          // fall back to a sea day so dayNumbers stay consecutive
-          await prisma.cruiseStop.create({
-            data: {
-              cruiseId: cruise.id,
-              portId: null,
-              dayNumber: i + 1,
-              isAtSea: true,
-              arrivalTime: null,
-              departureTime: null,
-              excursionNote: `(geplant: ${stop.portName} — Hafen nicht im Seed)`,
-            },
-          });
-          continue;
-        }
+        continue;
+      }
+      const { arrivalTime, departureTime } = stopTimesForDay(startDate, endDate, i);
+      const port = "locode" in stop ? ports.get(stop.locode) : undefined;
+      if ("locode" in stop && !port) {
+        // A locode the catalogue does not hold means the catalogue is
+        // incomplete, not that the ship stayed at sea. The call is kept as an
+        // unresolved port carrying the locode, which is all we know about it —
+        // the same state an import produces for a port it cannot match.
         await prisma.cruiseStop.create({
           data: {
             cruiseId: cruise.id,
-            portId: port.id,
-            dayNumber: i + 1,
+            portId: null,
+            dayNumber,
             isAtSea: false,
-            arrivalTime: dayStart,
-            departureTime: dayEnd,
+            arrivalTime,
+            departureTime,
             excursionNote: stop.excursionNote ?? null,
+            unresolvedPortName: stop.locode,
           },
         });
+        continue;
       }
+      await prisma.cruiseStop.create({
+        data: {
+          cruiseId: cruise.id,
+          portId: port?.id ?? null,
+          dayNumber,
+          isAtSea: false,
+          arrivalTime,
+          departureTime,
+          excursionNote: stop.excursionNote ?? null,
+          unresolvedPortName: "unresolvedPortName" in stop ? stop.unresolvedPortName : null,
+        },
+      });
     }
 
     created++;
@@ -1276,13 +1538,17 @@ async function seedTripsAndBookings(userId: string): Promise<void> {
     select: { id: true, startDate: true },
   });
 
+  // "Tokio Kurztrip" and "Adria-Kreuzfahrt" — NOT "Japan 2022" / "Mittelmeer-
+  // Kreuzfahrt" — because those names are already narrated trips in
+  // seedDemo/stories.ts ("Japan – Tokio bis Kyoto", "Mittelmeer-Kreuzfahrt");
+  // a duplicate name here would look like the same trip seeded twice.
   const tripDefs = [
     { name: "USA Roadtrip", color: "#38bdf8", tagCount: 6 },
-    { name: "Japan 2022", color: "#f472b6", tagCount: 4 },
+    { name: "Tokio Kurztrip", color: "#f472b6", tagCount: 4 },
     { name: "Südostasien Rundreise", color: "#fb923c", tagCount: 8 },
     { name: "Skandinavien im Sommer", color: "#818cf8", tagCount: 5 },
     { name: "Wochenende Barcelona", color: "#34d399", tagCount: 2 },
-    { name: "Mittelmeer-Kreuzfahrt", color: "#fbbf24", tagCount: 0 },
+    { name: "Adria-Kreuzfahrt", color: "#fbbf24", tagCount: 0 },
     { name: "Karibik-Auszeit", color: "#fb7185", tagCount: 0 },
     { name: "Alaska Expedition", color: "#60a5fa", tagCount: 0 },
   ];
@@ -1329,28 +1595,37 @@ async function seedTripsAndBookings(userId: string): Promise<void> {
   console.log(`   → created ${tripDefs.length} trips`);
 }
 
-async function main(): Promise<void> {
-  console.log("🌱 Seeding demo account (demo / demo123) ...");
+/**
+ * Runs the full standard demo seed and returns the userId plus final row
+ * counts per domain. Idempotent: a second call wipes and re-creates
+ * everything, landing on exactly the same counts (see
+ * `seedDemo.full.test.ts`) — every seeder here is deterministic in row
+ * COUNT (only attributes use `Math.random`), except `seedTripsAndBookings`'s
+ * optional per-trip `Booking`, which is not part of the counts returned here.
+ */
+export async function runDemoSeed(
+  /**
+   * One instant for the whole run, taken once here, so flights and cruises
+   * agree on what "now" is and the nightly reseed of a public instance keeps
+   * producing journeys that are upcoming when it says they are (finding B6).
+   */
+  now: Date = new Date()
+): Promise<{ userId: string; counts: Record<string, number> }> {
   const userId = await ensureUser();
-  console.log(`   user id = ${userId}`);
-
   await ensureUserSettings(userId);
-  console.log("   ✓ user settings — flight + cruise domains enabled");
-
   const { airports, ships, ports } = await loadPools();
-  console.log(`   pools: ${airports.size} airports, ${ships.size} ships, ${ports.size} ports`);
-
   if (airports.size < 60) {
     throw new Error(
       `Expected 60+ airports in pool, got ${airports.size}. Run seedAirportsFromCSV first.`
     );
   }
 
-  await seedFlights(userId, airports);
-  await seedCruises(userId, ships, ports);
+  await seedFlights(userId, airports, now);
+  await seedCruises(userId, ships, ports, now);
   await seedTripsAndBookings(userId);
+  await seedStories(userId, airports);
+  await seedBulk(userId);
 
-  console.log("   recomputing achievements ...");
   try {
     await checkAndUpdateAchievements(userId);
   } catch (err) {
@@ -1358,24 +1633,29 @@ async function main(): Promise<void> {
     console.warn("   ! achievement recompute failed:", err);
   }
 
-  // Final counts
-  const [fc, cc, tc, bc, ac] = await Promise.all([
+  const [flights, cruises, trips, stays, places, placeLists, tours, journal] = await Promise.all([
     prisma.flight.count({ where: { userId } }),
     prisma.cruise.count({ where: { userId } }),
     prisma.trip.count({ where: { userId } }),
-    prisma.booking.count({ where: { userId } }),
-    prisma.userAchievement.count({ where: { userId } }),
+    prisma.lodgingStay.count({ where: { userId } }),
+    prisma.place.count({ where: { userId } }),
+    prisma.placeList.count({ where: { userId } }),
+    prisma.tripRoute.count({ where: { trip: { userId } } }),
+    prisma.tripJournalEntry.count({ where: { trip: { userId } } }),
   ]);
 
+  return { userId, counts: { flights, cruises, trips, stays, places, placeLists, tours, journal } };
+}
+
+async function main(): Promise<void> {
+  console.log("🌱 Seeding demo account (demo / demo123) ...");
+  const { userId, counts } = await runDemoSeed();
   console.log("");
   console.log("✅ Demo seed complete");
   console.log(`   Username: ${DEMO_USERNAME}`);
   console.log(`   Password: ${DEMO_PASSWORD}`);
-  console.log(`   Flights:      ${fc}`);
-  console.log(`   Cruises:      ${cc}`);
-  console.log(`   Trips:        ${tc}`);
-  console.log(`   Bookings:     ${bc}`);
-  console.log(`   Achievements: ${ac}`);
+  console.log(`   user id: ${userId}`);
+  for (const [k, v] of Object.entries(counts)) console.log(`   ${k}: ${v}`);
 }
 
 // Only auto-run the full demo seed when executed directly (npm run seed:demo).

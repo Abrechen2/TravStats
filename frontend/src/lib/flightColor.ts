@@ -21,6 +21,8 @@
 // `resolveFlightColor` / `buildFlightLegend` below, so the map and the legend
 // cannot disagree, and a future 4th mode needs no legend edit.
 
+import { paletteLedBy } from "./listPalette";
+import { tokens } from "../theme/tokens";
 import type { Rgb } from "./cruiseColor";
 import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_UPCOMING_COLOR } from "./statusColors";
 
@@ -68,14 +70,7 @@ export const DEFAULT_FLIGHT_COLOR_CONFIG: FlightColorConfig = {
 /** Quick-pick swatches offered next to each colour field. Includes sky-blue
  *  [80,200,255] — the retired `FLIGHT_STATUS_SCHEDULED_COLOR` — so users who
  *  preferred the old flight-only "planned" tint can pick it back explicitly. */
-export const FLIGHT_COLOR_PRESETS: readonly Rgb[] = [
-  [240, 169, 71], // flight orange (brand)
-  [251, 113, 133], // coral
-  [80, 200, 255], // sky-blue — the former scheduled default
-  [126, 200, 122], // green
-  [178, 132, 224], // violet
-  [226, 232, 240], // slate-200
-];
+export const FLIGHT_COLOR_PRESETS: readonly Rgb[] = paletteLedBy(tokens.domainColor.flight);
 
 /** Soft grey for routes whose only flights are historical (legacy data).
  *  Applied ONLY in "frequency" mode — the mode that inherits the old

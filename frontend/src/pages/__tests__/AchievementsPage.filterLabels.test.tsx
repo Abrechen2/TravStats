@@ -29,11 +29,11 @@ import AchievementsPage from "../AchievementsPage";
  * next to the control as bare text and never associated with it, so a screen
  * reader announced two nameless combo boxes.
  *
- * `getByLabelText` is the assertion that can tell the two apart — it resolves
- * through the accessible name, which is exactly what was missing, and finds
- * nothing when the label is merely adjacent.
+ * The selects became pill groups in round 4; the property that matters is
+ * the same — each control set has an accessible name, which `findByRole` with
+ * `name` resolves and which an adjacent bare label would not provide.
  */
-describe("AchievementsPage — the filter controls carry their labels", () => {
+describe("AchievementsPage — the filter groups carry their labels", () => {
   beforeEach(() => {
     getAllMock.mockReset();
     getLeaderboardMock.mockReset();
@@ -50,8 +50,8 @@ describe("AchievementsPage — the filter controls carry their labels", () => {
 
     await waitFor(() => expect(getAllMock).toHaveBeenCalled());
 
-    const select = await screen.findByLabelText("achievements:filters.category");
-    expect(select.tagName).toBe("SELECT");
+    const group = await screen.findByRole("group", { name: "achievements:filters.category" });
+    expect(group.querySelectorAll("button").length).toBeGreaterThan(0);
   });
 
   it("names the tier filter", async () => {
@@ -63,7 +63,7 @@ describe("AchievementsPage — the filter controls carry their labels", () => {
 
     await waitFor(() => expect(getAllMock).toHaveBeenCalled());
 
-    const select = await screen.findByLabelText("achievements:filters.tier");
-    expect(select.tagName).toBe("SELECT");
+    const group = await screen.findByRole("group", { name: "achievements:filters.tier" });
+    expect(group.querySelectorAll("button").length).toBe(5);
   });
 });

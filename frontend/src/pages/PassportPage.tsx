@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import AppShell from "../components/ui/AppShell";
 
-import NavigationBar from "../components/NavigationBar";
-import PageTransition from "../components/PageTransition";
 import CountryTable from "../components/Passport/CountryTable";
 import EvidenceSummary from "../components/Passport/EvidenceSummary";
 import { countryName } from "../components/Passport/countryName";
@@ -103,74 +101,73 @@ export default function PassportPage(): JSX.Element {
 
   if (!isEnabled("flight")) {
     return (
-      <PageTransition>
-        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-          <NavigationBar />
-          <div className="max-w-5xl mx-auto px-4 py-10">
-            <h1 className="text-2xl font-bold mb-2">{t("passport:title")}</h1>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("passport:needsFlights")}
-            </p>
-          </div>
-        </div>
-      </PageTransition>
+      <AppShell width="reading">
+        <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("passport:needsFlights")}
+        </p>
+      </AppShell>
     );
   }
 
   return (
-    <PageTransition>
-      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-        <NavigationBar />
-        <div className="max-w-5xl mx-auto px-4 py-6 print:max-w-none print:py-0">
-          <div className="flex items-baseline justify-between mb-4 print:hidden">
-            <Link to="/stats" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              ← {t("passport:backToStats")}
-            </Link>
-            {passport && passport.summary.countriesTotal > 0 && (
-              <button
-                type="button"
-                onClick={(): void => window.print()}
-                className="text-sm px-3 py-1.5 rounded-lg border"
-                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
-              >
-                {t("passport:print")}
-              </button>
-            )}
-          </div>
-
-          {loading && (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("common:loading.default")}
-            </p>
-          )}
-
-          {/* A failed load says so. It must never fall through to a card of
-              zeros, which reads as "you have never travelled". */}
-          {!loading && failure !== null && (
-            <div
-              className="rounded-xl p-6"
-              style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+    <AppShell width="list">
+      <div className="print:max-w-none print:py-0">
+        {/* T3 (2026-09-17 tester feedback): the "Zurück zu Statistiken" link
+            duplicated the header's own navigation and led nowhere else in the
+            app — removed rather than kept as a second way back. */}
+        {passport && passport.summary.countriesTotal > 0 && (
+          <div className="flex justify-end mb-4 print:hidden">
+            <button
+              type="button"
+              onClick={(): void => window.print()}
+              className="text-sm px-3 py-1.5 rounded-lg border"
+              style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
             >
-              <p className="text-sm mb-3">{t("passport:loadError")}</p>
-              <button
-                type="button"
-                onClick={(): void => window.location.reload()}
-                className="text-sm px-3 py-1.5 rounded-lg border"
-                style={{ borderColor: "var(--border)" }}
-              >
-                {t("common:buttons.retry")}
-              </button>
-            </div>
-          )}
+              {t("passport:print")}
+            </button>
+          </div>
+        )}
 
-          {!loading && failure === null && passport !== null && (
-            <>
+        {loading && (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("common:loading.default")}
+          </p>
+        )}
+
+        {/* A failed load says so. It must never fall through to a card of
+              zeros, which reads as "you have never travelled". */}
+        {!loading && failure !== null && (
+          <div
+            className="rounded-xl p-6"
+            style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+          >
+            <p className="text-sm mb-3">{t("passport:loadError")}</p>
+            <button
+              type="button"
+              onClick={(): void => window.location.reload()}
+              className="text-sm px-3 py-1.5 rounded-lg border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {t("common:buttons.retry")}
+            </button>
+          </div>
+        )}
+
+        {!loading && failure === null && passport !== null && (
+          <>
+            {/* T3 (2026-09-17 tester feedback): this used to be the app's one
+                light "paper" surface (`.ts-paper`, since removed from
+                theme/ui.css). The owner's decision was to make the passport
+                dark like the rest of the app instead of keeping a second
+                palette alive for one page. */}
+            <div className="rounded-2xl p-3 sm:p-6 print:p-0">
               {passport.summary.countriesTotal === 0 ? (
                 <div
                   className="rounded-xl p-8 text-center"
                   style={{ background: "var(--bg-elevated)" }}
                 >
-                  <h1 className="text-2xl font-bold mb-2">{t("passport:title")}</h1>
+                  <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {t("passport:empty")}
                   </p>
@@ -179,7 +176,7 @@ export default function PassportPage(): JSX.Element {
                 <>
                   {/* ── the paper card ─────────────────────────────────── */}
                   <section
-                    className="rounded-xl p-6 mb-6 border"
+                    className="rounded-xl p-4 sm:p-6 mb-6 border"
                     style={{
                       background: "var(--bg-elevated)",
                       borderColor: "var(--border)",
@@ -229,40 +226,6 @@ export default function PassportPage(): JSX.Element {
                         <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
                           {t("passport:summary.countriesTotal")}
                         </dd>
-                        {/* Design §5: every user's number moved when evidence tiers
-                            arrived, and a number that changes without explanation
-                            reads as data loss. Said once, with the real figures. */}
-                        {passport.summary.legacyCountries !== passport.summary.countries &&
-                          !countingNotice.dismissed && (
-                            <dd
-                              className="mt-2 rounded-md px-3 py-2 text-xs"
-                              style={{
-                                background: "var(--bg-elevated)",
-                                border: "1px solid var(--color-border)",
-                                color: "var(--text-primary)",
-                              }}
-                            >
-                              <span>
-                                {t("passport:countingChanged.text", {
-                                  before: passport.summary.legacyCountries,
-                                  after: passport.summary.countries,
-                                })}
-                              </span>
-                              <span className="ml-2">
-                                <a href="#passport-evidence" className="underline">
-                                  {t("passport:countingChanged.what")}
-                                </a>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={countingNotice.dismiss}
-                                className="ml-3 underline"
-                                style={{ color: "var(--text-muted)" }}
-                              >
-                                {t("passport:countingChanged.dismiss")}
-                              </button>
-                            </dd>
-                          )}
                       </div>
                       {[
                         ["airports", passport.summary.airports],
@@ -303,6 +266,42 @@ export default function PassportPage(): JSX.Element {
                       </div>
                     </dl>
 
+                    {/* Across the full width, not inside the country figure's column,
+                        where a phone squeezed it to one word per line (B08). Design §5: every user's number moved when evidence tiers
+                            arrived, and a number that changes without explanation
+                            reads as data loss. Said once, with the real figures. */}
+                    {passport.summary.legacyCountries !== passport.summary.countries &&
+                      !countingNotice.dismissed && (
+                        <p
+                          className="mb-6 rounded-md px-3 py-2 text-xs"
+                          style={{
+                            background: "var(--bg-elevated)",
+                            border: "1px solid var(--color-border)",
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          <span>
+                            {t("passport:countingChanged.text", {
+                              before: passport.summary.legacyCountries,
+                              after: passport.summary.countries,
+                            })}
+                          </span>
+                          <span className="ml-2">
+                            <a href="#passport-evidence" className="underline">
+                              {t("passport:countingChanged.what")}
+                            </a>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={countingNotice.dismiss}
+                            className="ml-3 underline"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {t("passport:countingChanged.dismiss")}
+                          </button>
+                        </p>
+                      )}
+
                     {/* Why the headline is not the total — the rule, named. */}
                     <section id="passport-evidence">
                       <EvidenceSummary summary={passport.summary} hasTracks={hasTracks} />
@@ -338,7 +337,7 @@ export default function PassportPage(): JSX.Element {
 
                   {/* ── the continent band ─────────────────────────────── */}
                   <section
-                    className="rounded-xl p-6 mb-6 border"
+                    className="rounded-xl p-4 sm:p-6 mb-6 border"
                     style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
                     aria-labelledby="continents-heading"
                   >
@@ -388,10 +387,10 @@ export default function PassportPage(): JSX.Element {
                   <CountryTable countries={passport.countries} locale={locale} />
                 </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
-    </PageTransition>
+    </AppShell>
   );
 }

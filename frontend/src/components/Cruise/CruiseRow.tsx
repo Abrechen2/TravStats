@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
 import type { Cruise } from "../../types";
 import TripPill from "../Trips/TripPill";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
+import { TableRow, type TableColumn } from "../ui/Table";
 
 export type CruiseColumnId =
   "ship" | "line" | "dates" | "ports" | "status" | "cabin" | "price" | "trip" | "actions";
@@ -12,29 +14,41 @@ interface Props {
   cruise: Cruise;
   onOpen: () => void;
   actions?: JSX.Element;
-  /**
-   * Column visibility from the page's ColumnPicker — MUST mirror the header
-   * exactly or cells shift under the wrong columns. Absent = all visible.
-   */
-  isColumnVisible?: (id: CruiseColumnId) => boolean;
-  /** Row position, for the zebra striping the other two lists have. */
-  index?: number;
+  /** The visible columns, in order — the row renders exactly one cell each. */
+  columns: readonly TableColumn[];
 }
+
+/**
+ * Where each column goes once the table becomes a row below 640px.
+ *
+ * The ship names the journey, the dates say when, the status says what state
+ * it is in — the three the owner asked to survive a phone. Everything else is
+ * dropped there and read in the cruise itself. The widths are the desktop
+ * grid; they have no effect narrow, where the grid is three areas.
+ */
+export const CRUISE_COLUMN_LAYOUT: Record<
+  CruiseColumnId,
+  Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & { align?: "end" }
+> = {
+  ship: { min: 160, grow: 2, onNarrow: "title" },
+  line: { min: 110, grow: 1, priority: 2 },
+  dates: { min: 176, mono: true, onNarrow: "subtitle" },
+  ports: { min: 64, align: "end", priority: 3 },
+  // 128: the "Abgeschlossen" pill measured 124px and ran past a 110px column.
+  status: { min: 128, onNarrow: "trailing" },
+  cabin: { min: 90, mono: true, priority: 3 },
+  price: { min: 84, align: "end", mono: true, priority: 3 },
+  trip: { min: 110, grow: 1, priority: 2 },
+  actions: { min: 88, align: "end" },
+};
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return "—";
   return new Date(iso).toISOString().slice(0, 10);
 };
 
-export function CruiseRow({
-  cruise,
-  onOpen,
-  actions,
-  isColumnVisible,
-  index = 0,
-}: Props): JSX.Element {
+export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
-  const visible = isColumnVisible ?? ((): boolean => true);
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
@@ -44,73 +58,52 @@ export function CruiseRow({
   // (a yen amount has none), the code instead of the symbol, and the
   // machine's decimal point inside a German page.
   const price = cruise.price !== null ? formatAmount(cruise.price, cruise.currency) : "—";
-  return (
-    <tr
-      onClick={onOpen}
-      className="cursor-pointer transition-colors"
-      style={{
-        // Zebra, like the other two lists. This table had none, which is the
-        // single most visible difference when moving between the pages.
-        background: index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-        borderTop: "1px solid var(--color-border)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = "var(--bg-muted)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background =
-          index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
-      }}
-    >
-      {visible("ship") && (
-        <td className="px-4 py-3 text-sm text-(--text-primary)">{displayShip}</td>
-      )}
-      {visible("line") && <td className="px-4 py-3 text-sm text-(--text-muted)">{displayLine}</td>}
-      {visible("dates") && (
-        <td className="px-4 py-3 text-sm text-(--text-muted)">
-          {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
-        </td>
-      )}
-      {visible("ports") && (
-        <td className="px-4 py-3 text-sm text-(--text-muted)">
-          {portsCount}
-          {unresolvedCount > 0 && (
-            <span
-              className="ml-1 text-xs"
-              title={t("list.unresolvedPorts", { count: unresolvedCount })}
-              aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
-            >
-              (+{unresolvedCount})
-            </span>
-          )}
-        </td>
-      )}
-      {visible("status") && (
-        <td className="px-4 py-3 text-sm">
+
+  const cell: Record<CruiseColumnId, ReactNode> = {
+    ship: displayShip,
+    line: displayLine,
+    dates: `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`,
+    ports: (
+      <>
+        {portsCount}
+        {unresolvedCount > 0 && (
           <span
-            className="rounded-full px-2 py-1 text-xs font-semibold"
-            style={cruiseStatusPillStyle(cruise.status)}
+            className="ml-1 text-xs"
+            title={t("list.unresolvedPorts", { count: unresolvedCount })}
+            aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
           >
-            {t(`status.${cruise.status}`)}
+            (+{unresolvedCount})
           </span>
-        </td>
-      )}
-      {visible("cabin") && (
-        <td className="px-4 py-3 text-sm text-(--text-muted)">{cruise.cabinNumber ?? "—"}</td>
-      )}
-      {visible("price") && (
-        <td className="px-4 py-3 text-right text-sm text-(--text-muted)">{price}</td>
-      )}
-      {visible("trip") && (
-        <td className="px-4 py-3 text-sm" data-testid={`cruise-trip-cell-${cruise.id}`}>
-          <TripPill trip={cruise.trip} />
-        </td>
-      )}
-      {visible("actions") && (
-        <td className="px-4 py-3 text-right text-sm" onClick={(e) => e.stopPropagation()}>
-          {actions}
-        </td>
-      )}
-    </tr>
+        )}
+      </>
+    ),
+    status: (
+      <span className="ts-status-pill" style={cruiseStatusPillStyle(cruise.status)}>
+        {t(`status.${cruise.status}`)}
+      </span>
+    ),
+    cabin: cruise.cabinNumber ?? "—",
+    price,
+    trip: (
+      <span data-testid={`cruise-trip-cell-${cruise.id}`}>
+        <TripPill trip={cruise.trip} />
+      </span>
+    ),
+    // The row itself opens the cruise, so a click that lands on an action must
+    // not also reach it — the defect measured in August, where deleting a
+    // flight opened the edit dialog for the row underneath the button.
+    actions: (
+      <span data-testid={`cruise-actions-${cruise.id}`} onClick={(e) => e.stopPropagation()}>
+        {actions}
+      </span>
+    ),
+  };
+
+  return (
+    <TableRow
+      columns={columns}
+      onClick={onOpen}
+      cells={columns.map((column) => cell[column.key as CruiseColumnId])}
+    />
   );
 }

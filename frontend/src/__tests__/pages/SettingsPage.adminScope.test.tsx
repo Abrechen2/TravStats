@@ -1,11 +1,103 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage from "../../pages/SettingsPage";
+import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
+
+// A settings route renders its whole group at once on this branch (one route
+// per group), so every section in the group loads its data on mount. Each of
+// these escaped to the network once main's guard started counting (forgejo#110).
+// The modules below are the ones the sections import directly.
+vi.mock("@/lib/api/twoFactor", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/twoFactor")>();
+  return {
+    ...actual,
+    twoFactorApi: {
+      ...actual.twoFactorApi,
+      getTwoFactorStatus: vi.fn().mockResolvedValue({ enabled: false, recoveryCodesLeft: 0 }),
+    },
+  };
+});
+vi.mock("@/lib/api/passkeys", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/passkeys")>();
+  return {
+    ...actual,
+    passkeyApi: {
+      ...actual.passkeyApi,
+      availability: vi.fn().mockResolvedValue({ available: false, reason: null }),
+      list: vi.fn().mockResolvedValue([]),
+    },
+  };
+});
+vi.mock("@/lib/api/tokens", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/tokens")>();
+  return {
+    ...actual,
+    apiTokensApi: { ...actual.apiTokensApi, list: vi.fn().mockResolvedValue([]) },
+  };
+});
+vi.mock("@/lib/api/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/notifications")>();
+  return {
+    ...actual,
+    notificationsApi: {
+      ...actual.notificationsApi,
+      getPreferences: vi.fn().mockResolvedValue({
+        notificationEmail: null,
+        notifyBefore24h: false,
+        notifyBefore2h: false,
+      }),
+    },
+  };
+});
+vi.mock("@/lib/api/immich", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/immich")>();
+  return {
+    ...actual,
+    immichApi: { ...actual.immichApi, getSettings: vi.fn().mockResolvedValue(null) },
+  };
+});
+// "About" asks the raw API client for the version, not `versionApi`; these
+// tests read the navigation, not the section.
+vi.mock("../../components/Settings/AboutSection", () => ({
+  default: () => <section>about</section>,
+}));
+
+vi.mock("@/lib/api/flights", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/flights")>();
+  return {
+    ...actual,
+    flightsApi: {
+      ...actual.flightsApi,
+      bulkRefreshPreview: vi
+        .fn()
+        .mockResolvedValue({ hasHistoricalProvider: false, aerodataboxQuota: null, count: 0 }),
+    },
+  };
+});
+vi.mock("@/lib/api/settings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/settings")>();
+  return {
+    ...actual,
+    settingsApi: { ...actual.settingsApi, getApiKeyQuotas: vi.fn().mockResolvedValue({}) },
+  };
+});
 
 vi.unmock("../../store/settingsStore");
 
+// Released from the beta registry on 2026-09-18, so these three now mount
+// unconditionally and fetch on mount. They were never the subject of these
+// cases — the gate used to keep them out of the tree, and the network guard in
+// `src/__tests__/setup.ts` failed the suite the moment it stopped.
+vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
+  default: () => <div data-testid="dawarich-connection-card" />,
+}));
+vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
+  default: () => <div data-testid="immich-connection-card" />,
+}));
+vi.mock("../../components/Settings/RoutingProviderSection", () => ({
+  default: () => <div data-testid="routing-provider-section" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
@@ -26,9 +118,7 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
     setUnits: vi.fn(),
     setDefaults: vi.fn(),
     setCruise: vi.fn(),
-    savingProfile: false,
     uploadingProfilePicture: false,
-    saveProfileSettings: vi.fn(),
     handleAvatarUpload: vi.fn(),
     showPasswordModal: false,
     changingPassword: false,
@@ -60,19 +150,21 @@ const renderAt = (initialEntry: string): void => {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsLegacyRedirect />} />
+        <Route path="/settings/:group" element={<SettingsPage />} />
         <Route path="/admin" element={<div data-testid="admin-page" />} />
       </Routes>
     </MemoryRouter>
   );
 };
 
-/** `t` echoes the key, so a nav entry for the old section would read this. */
+/** `t` echoes the key, so a nav entry or a section for the old one reads this. */
 const ADMIN_LABEL = "settings:admin.title";
 
 const navListsAdmin = (): boolean =>
   screen.queryByRole("button", { name: ADMIN_LABEL }) !== null ||
-  screen.queryByRole("option", { name: ADMIN_LABEL }) !== null;
+  screen.queryByRole("option", { name: ADMIN_LABEL }) !== null ||
+  screen.queryByRole("region", { name: ADMIN_LABEL }) !== null;
 
 describe("SettingsPage — the settings/admin boundary", () => {
   beforeEach(() => {
@@ -80,14 +172,16 @@ describe("SettingsPage — the settings/admin boundary", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false, enabledDomains: ["flight"] });
   });
 
-  it("offers no Admin section to an admin — the panel is a peer, not a subsection", () => {
+  it("offers no Admin section to an admin — the panel is a peer, not a subsection", async () => {
     isAdmin = true;
     renderAt("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(navListsAdmin()).toBe(false);
   });
 
-  it("offers no Admin section to a normal user either", () => {
+  it("offers no Admin section to a normal user either", async () => {
     renderAt("/settings");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(navListsAdmin()).toBe(false);
   });
 
@@ -103,13 +197,14 @@ describe("SettingsPage — the settings/admin boundary", () => {
     expect(await screen.findByTestId("admin-page")).toBeTruthy();
   });
 
-  it("does NOT redirect a non-admin — they have no admin panel to be sent to", () => {
+  it("does NOT redirect a non-admin — they have no admin panel to be sent to", async () => {
     renderAt("/settings?section=admin");
+    await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("admin-page")).toBeNull();
   });
 
-  it("states the scope of the surface, so a same-named admin entry is distinguishable", () => {
+  it("states the scope of the surface, so a same-named admin entry is distinguishable", async () => {
     renderAt("/settings");
-    expect(screen.getByText("settings:scopeHint")).toBeTruthy();
+    expect(await screen.findByText("settings:scopeHint")).toBeTruthy();
   });
 });

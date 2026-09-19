@@ -836,11 +836,10 @@ export function DeckGLMap({
         )}
       </MapGL>
 
-      {/* Consolidated map control panel — same design + kit as the globe.
-          Layers (place names / relief) + appearance (route + airport
-          marker colour / width / size), so the port/airport look is
-          adjustable from the individual tab views too. */}
-      <div className="absolute bottom-4 left-4 z-20" style={{ pointerEvents: "auto" }}>
+      {/* Consolidated map control panel — same design + kit as the globe:
+          layers + appearance, adjustable from the tab views too. Docked
+          above the map credit on phones — `ts-map-panel-dock` (B02). */}
+      <div className="ts-map-panel-dock absolute left-4 z-20" style={{ pointerEvents: "auto" }}>
         <FlatMapControlPanel
           showPlaceLabels={showPlaceLabels}
           onShowPlaceLabelsChange={setShowPlaceLabels}

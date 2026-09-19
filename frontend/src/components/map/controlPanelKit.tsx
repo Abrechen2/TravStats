@@ -11,6 +11,7 @@ import { useCallback, useState } from "react";
 import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
 import { type Rgb } from "../../lib/cruiseColor";
 import { rgbCss } from "../../lib/flightColor";
+import { Icon } from "../ui/Icon";
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
@@ -87,7 +88,7 @@ export function PanelHeader({
       style={{ background: "transparent" }}
     >
       <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
-        <span aria-hidden>🗺️</span>
+        <Icon name="map" size={16} />
         {title}
       </span>
       <svg

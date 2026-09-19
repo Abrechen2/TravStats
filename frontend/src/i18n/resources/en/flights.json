@@ -439,7 +439,15 @@
     "registration": "Registration",
     "distance": "Distance",
     "overflownCountries": "Countries overflown",
-    "openTrip": "Open trip"
+    "openTrip": "Open trip",
+    "backToLogbook": "Logbook · Flights",
+    "departurePlanned": "Departure (planned)",
+    "departureActual": "Actual departure",
+    "arrivalPlanned": "Arrival (planned)",
+    "arrivalActual": "Actual landing",
+    "timezones": "Time zones",
+    "planned": "planned",
+    "flightTime": "Flight time"
   },
   "price": {
     "package": "Package",

@@ -1,3 +1,4 @@
+import { rgb, tokens } from "../../../theme/tokens";
 import { describe, it, expect } from "vitest";
 import { resolveFlightArcColor, resolveCruisePathColor } from "../buildGlobeLayers";
 import {
@@ -38,29 +39,31 @@ describe("resolveFlightArcColor", () => {
     expect(resolveFlightArcColor({ status: "scheduled", quartile: 3 }, cfg)).toEqual(washOut(BASE));
   });
 
-  it("defaults (no user customisation) stay orange / coral", () => {
+  it("defaults (no user customisation) are the domain colour and info", () => {
     expect(
       resolveFlightArcColor({ status: "past", quartile: 2 }, DEFAULT_FLIGHT_COLOR_CONFIG)
-    ).toEqual([240, 169, 71]);
+    ).toEqual(rgb(tokens.domainColor.flight));
     expect(
       resolveFlightArcColor({ status: "scheduled", quartile: 2 }, DEFAULT_FLIGHT_COLOR_CONFIG)
-    ).toEqual([251, 113, 133]);
+    ).toEqual(rgb(tokens.color.info));
   });
 });
 
 describe("resolveCruisePathColor", () => {
-  const CRUISE_PAST: [number, number, number] = [74, 144, 217];
-  const CRUISE_PLANNED: [number, number, number] = [34, 211, 238];
+  const CRUISE_PAST = rgb(tokens.domainColor.cruise);
+  const CRUISE_PLANNED = rgb(tokens.color.info);
 
   it("renders a past cruise at full alpha", () => {
     expect(resolveCruisePathColor({ status: "flown", color: CRUISE_PAST })).toEqual([
-      74, 144, 217, 230,
+      ...CRUISE_PAST,
+      230,
     ]);
   });
 
   it("dims a planned (scheduled) cruise — parity with the flat map", () => {
     expect(resolveCruisePathColor({ status: "scheduled", color: CRUISE_PLANNED })).toEqual([
-      34, 211, 238, 150,
+      ...CRUISE_PLANNED,
+      150,
     ]);
   });
 

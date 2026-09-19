@@ -2,6 +2,7 @@ import type { CSSProperties, JSX } from "react";
 import { useTranslation } from "../../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { formatCurrency } from "../../../../lib/units";
+import { lodgingSpendNothingConverted } from "../../../../lib/lodgingSpendConverted";
 import type { LodgingStats } from "../../../../types/lodging";
 
 interface LodgingCurrencyBreakdownProps {
@@ -86,7 +87,11 @@ export function LodgingCurrencyBreakdown({
         <span style={{ color: "var(--text-muted)" }}>
           {t("dashboard:lodgingTab.currencyBreakdown.baseLabel")}:{" "}
         </span>
-        <strong>{formatCurrency(stats.spendBaseTotal, baseCurrency)}</strong>
+        <strong>
+          {lodgingSpendNothingConverted(stats)
+            ? "—"
+            : formatCurrency(stats.spendBaseTotal, baseCurrency)}
+        </strong>
       </div>
 
       {entries.length === 0 ? (

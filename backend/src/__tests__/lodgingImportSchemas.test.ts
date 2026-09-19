@@ -160,6 +160,43 @@ describe("lodgingImport schemas", () => {
     });
   });
 
+  // ---- Codex review, 2026-09-17: the commit-row span had no bound beyond ----
+  // ---- checkOut >= checkIn, mirroring the same gap in schemas/lodging.ts ----
+
+  describe("stay span cap on commit (mirrors schemas/lodging.ts MAX_STAY_SPAN_NIGHTS)", () => {
+    it("rejects a commit row whose stay spans more than 3650 nights", () => {
+      const result = lodgingImportCommitRequestSchema.safeParse({
+        source: "csv",
+        fileName: null,
+        rows: [
+          {
+            sourceRowIndex: 0,
+            action: "create",
+            lodging: { name: "Centuries Inn" },
+            stay: { checkIn: "1900-01-01", checkOut: "2000-01-01" },
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts a commit row whose stay spans exactly 3650 nights", () => {
+      const result = lodgingImportCommitRequestSchema.safeParse({
+        source: "csv",
+        fileName: null,
+        rows: [
+          {
+            sourceRowIndex: 0,
+            action: "create",
+            lodging: { name: "Decade Inn" },
+            stay: { checkIn: "2020-01-01", checkOut: "2029-12-29" },
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
   // ---- Finding 3: DELETE /batches/:id was the only client-supplied value ----
   // ---- that never touched Zod                                            ----
 

@@ -10,6 +10,7 @@ import { validateReceiptFile } from "../utils/fileValidation";
 import logger from "../utils/logger";
 import { createDocument } from "../services/documents/documentService";
 import { RECEIPT_SOURCE, receiptUrlFor } from "../services/documents/receipts";
+import { rejectDemo } from "../middleware/demoGuard";
 
 const router = Router();
 
@@ -61,6 +62,10 @@ router.post(
   "/receipt",
   authenticate,
   requireWriteScope,
+  // The shared demo account uploads nothing (finding I2): a file it writes
+  // is shown to the next visitor, outlives the nightly reseed and fills the
+  // data volume. ABOVE multer, so a refused request writes no bytes.
+  rejectDemo,
   uploadReceiptLimiter,
   uploadReceipt.single("receipt"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
