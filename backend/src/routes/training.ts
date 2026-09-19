@@ -18,6 +18,13 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import { deriveTemplateFromAnnotation } from "../services/parsers/userTemplates/deriver";
 import { extractEmailFromFile } from "../services/emailExtractor";
+import { scoreDocument } from "../services/parsing/documentDomain";
+import {
+  WORKSHOP_DOMAINS,
+  isLabelOfDomain,
+  isWorkshopDomain,
+  type WorkshopDomain,
+} from "../shared/annotationLabels";
 
 const router = Router();
 router.use(authenticate);
@@ -84,7 +91,42 @@ const annotateSchema = z.object({
   annotations: z.record(z.string(), z.unknown()),
   extractedData: z.array(z.record(z.string(), z.unknown())),
   tags: z.array(z.string()).optional(),
+  /**
+   * The user's answer to "what kind of document is this?", which overrides the
+   * classifier's. It is offered as a correction and not asked as a question:
+   * `scoreDocument` is right often enough that asking first would be a modal
+   * in front of every upload, and wrong often enough that the answer must be
+   * changeable — forgejo#124 phase 6, forgejo#57 for the classifier itself.
+   */
+  domain: z.enum(WORKSHOP_DOMAINS).optional(),
 });
+
+/**
+ * What kind of document did the user just upload?
+ *
+ * A boarding pass is a flight by construction — there is no other kind — so
+ * only mail text is scored. The classifier never refuses (see its header), so
+ * this always has an answer; being wrong is cheap because the annotation step
+ * shows it and lets the user change it.
+ */
+/** Every label the marks carry, whatever else the annotation blob holds. */
+function annotatedLabels(annotations: Record<string, unknown>): string[] {
+  const selections = annotations.textSelections;
+  if (!Array.isArray(selections)) return [];
+  return selections
+    .map((selection) =>
+      typeof selection === "object" && selection !== null
+        ? (selection as Record<string, unknown>).label
+        : undefined
+    )
+    .filter((label): label is string => typeof label === "string" && label.length > 0);
+}
+
+function classifyUpload(type: string, fullText: string): WorkshopDomain {
+  if (type !== "email" || fullText.length === 0) return "flight";
+  const detected = scoreDocument(fullText).domain;
+  return isWorkshopDomain(detected) ? detected : "flight";
+}
 
 // POST /api/v1/training/upload
 //
@@ -138,10 +180,15 @@ router.post(
         );
       }
 
+      const fullTextForDomain =
+        typeof initialAnnotations.fullText === "string" ? initialAnnotations.fullText : "";
+      const domain = classifyUpload(type, fullTextForDomain);
+
       const record = await prisma.trainingData.create({
         data: {
           userId,
           type,
+          domain,
           originalFile: req.file.path,
           annotations: initialAnnotations as Parameters<
             typeof prisma.trainingData.create
@@ -153,7 +200,12 @@ router.post(
       });
 
       logger.info({ operation: "training_upload", id: record.id, type });
-      res.json({ id: record.id, type: record.type, status: record.status });
+      res.json({
+        id: record.id,
+        type: record.type,
+        status: record.status,
+        domain: record.domain,
+      });
     } catch (error) {
       next(error);
     }
@@ -173,6 +225,9 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     res.json({
       id: record.id,
       type: record.type,
+      // What the workshop will derive a template FOR. The annotation UI reads
+      // it to pick its label set, and offers the user the correction.
+      domain: record.domain,
       status: record.status,
       annotations: record.annotations,
       extractedData: record.extractedData,
@@ -189,12 +244,24 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 router.post("/:id/annotate", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const { annotations, extractedData, tags } = annotateSchema.parse(req.body);
+    const { annotations, extractedData, tags, domain } = annotateSchema.parse(req.body);
 
     const record = await prisma.trainingData.findFirst({
       where: { id: req.params.id, userId },
     });
     if (!record) throw new AppError("Training data not found", 404);
+
+    // A label belongs to a domain, and a mark carrying another domain's label
+    // is not something to store and reason about later: the deriver would
+    // read `checkIn` out of a flight sample as a lodging field, or drop a
+    // flight label from a hotel sample silently. Refused here, at the
+    // boundary, in the vocabulary `shared/annotationLabels.ts` owns.
+    const effectiveDomain = domain ?? (isWorkshopDomain(record.domain) ? record.domain : "flight");
+    for (const label of annotatedLabels(annotations)) {
+      if (!isLabelOfDomain(effectiveDomain, label)) {
+        throw new AppError(`"${label}" is not a ${effectiveDomain} field`, 400);
+      }
+    }
 
     await prisma.trainingData.update({
       where: { id: record.id },
@@ -206,13 +273,23 @@ router.post("/:id/annotate", async (req: AuthRequest, res: Response, next: NextF
           typeof prisma.trainingData.update
         >[0]["data"]["extractedData"],
         tags: tags ?? [],
+        // The user's correction, stored BEFORE the derivation reads it back —
+        // the deriver takes the domain from the row, so a correction that
+        // arrived with the annotation has to already be there.
+        ...(domain ? { domain } : {}),
       },
     });
 
-    const templateId = await deriveTemplateFromAnnotation(record.id, userId);
+    const derivation = await deriveTemplateFromAnnotation(record.id, userId);
 
-    logger.info({ operation: "training_annotate", id: record.id, templateId });
-    res.json({ success: true, templateId });
+    logger.info({ operation: "training_annotate", id: record.id, derivation });
+    res.json({
+      success: true,
+      // Kept for the shape older clients read: the id when there is one,
+      // absent when the workshop abstained. `derivation` says WHY.
+      templateId: derivation.status === "derived" ? derivation.templateId : undefined,
+      derivation,
+    });
   } catch (error) {
     next(error);
   }

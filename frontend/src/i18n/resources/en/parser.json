@@ -46,5 +46,114 @@
       "loaded": "{{count}} templates loaded · daily auto-update from GitHub",
       "adminOnly": "Only an admin can refresh. The daily auto-update still runs."
     }
+  },
+  "domains": {
+    "flight": "Flight",
+    "lodging": "Stay",
+    "cruise": "Cruise",
+    "place": "Place"
+  },
+  "labelGroups": {
+    "flight": "Flight",
+    "route": "Route",
+    "boarding": "Boarding",
+    "booking": "Booking",
+    "property": "Property",
+    "stay": "Stay",
+    "place": "Address",
+    "money": "Price",
+    "ship": "Ship",
+    "voyage": "Voyage",
+    "cabin": "Cabin"
+  },
+  "labels": {
+    "flight": {
+      "flightNumber": "Flight number",
+      "airline": "Airline",
+      "aircraft": "Aircraft type",
+      "departureCode": "Departure code",
+      "arrivalCode": "Arrival code",
+      "departureDate": "Departure date",
+      "departureTime": "Departure time",
+      "arrivalDate": "Arrival date",
+      "arrivalTime": "Arrival time",
+      "seat": "Seat",
+      "seatClass": "Seat class",
+      "terminal": "Terminal",
+      "gate": "Gate",
+      "boardingGroup": "Boarding group",
+      "pnr": "Booking reference",
+      "ticketNumber": "Ticket number"
+    },
+    "lodging": {
+      "hotelName": "Property name",
+      "roomCategory": "Room category",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "guests": "Guests",
+      "address": "Address",
+      "postcode": "Postcode",
+      "city": "City",
+      "country": "Country",
+      "totalPrice": "Total price",
+      "pricePerNight": "Price per night",
+      "currency": "Currency",
+      "confirmationNumber": "Confirmation number"
+    },
+    "cruise": {
+      "shipName": "Ship",
+      "cruiseLine": "Cruise line",
+      "routeName": "Itinerary name",
+      "startDate": "Embarkation",
+      "endDate": "Disembarkation",
+      "departurePortName": "Departure port",
+      "arrivalPortName": "Arrival port",
+      "cabinNumber": "Cabin number",
+      "cabinType": "Cabin type",
+      "deck": "Deck",
+      "price": "Price",
+      "currency": "Currency",
+      "bookingReference": "Booking reference"
+    },
+    "place": {
+      "name": "Name",
+      "category": "Category",
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "visitedAt": "Visit date",
+      "notes": "Note"
+    }
+  },
+  "workshop": {
+    "domainTitle": "Kind of document",
+    "domainDetected": "Recognised as {{domain}}. If that is wrong, pick the right kind here.",
+    "domainOverridden": "Recognised as {{domain}} — you changed it.",
+    "labelSelect": "Field for the marked text",
+    "markedFields": "Marked fields",
+    "markedNothing": "Nothing marked yet.",
+    "derivedBanner": "Template derived. Check it under “My Templates” with the preview before activating it.",
+    "dismiss": "Dismiss"
+  },
+  "derivation": {
+    "cannot": {
+      "cruiseNeedsRepeatingBlocks": "No template can be derived for a cruise yet: a port list is a repeating block, and the reader for that does not exist. Your marks are saved all the same.",
+      "noPlaceDocumentReader": "There is no document reader for places yet, so no template comes out of this. Your marks are saved all the same.",
+      "lodgingNeedsNameAndDates": "Too little marked: without a property name, a check-in and a check-out this is not a stay, and a template missing those three would propose things nobody can check.",
+      "lodgingDateNotUnderstood": "The date format in this mail is not read yet (month names are, purely numeric like 10.03.2026 is not). A template built on it would decline every mail this sender writes.",
+      "noDistinguishingMarker": "Nothing in this mail names the sender — only this one booking. A template with no sender marker would match every stay confirmation you ever parse.",
+      "notDerivable": "The workshop derives no template for this kind of document."
+    }
+  },
+  "preview": {
+    "run": "Preview",
+    "ownSample": "Its own sample",
+    "heldOutSample": "Held-out sample",
+    "noSecondSample": "No second sample of this kind yet. Annotate another mail from the same sender to see whether the template reads that one too.",
+    "readNothing": "The template would read nothing here.",
+    "canActivate": "The template reads its own sample — it can be activated.",
+    "cannotActivate": "The template does not even read its own sample. Activating it would achieve nothing.",
+    "requiredFirst": "Run the preview first — a template is not activated before it has read something once.",
+    "failed": "Could not run the preview."
   }
 }

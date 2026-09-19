@@ -6,6 +6,7 @@ import * as api from "../../../lib/api";
 vi.mock("../../../lib/api", () => ({
   parserTemplatesApi: {
     list: vi.fn(),
+    preview: vi.fn(),
     setStatus: vi.fn(),
     delete: vi.fn(),
   },
@@ -48,6 +49,23 @@ describe("MyTemplates", () => {
     vi.mocked(api.parserTemplatesApi.list).mockResolvedValue(mockTemplates);
     vi.mocked(api.parserTemplatesApi.setStatus).mockResolvedValue(undefined);
     vi.mocked(api.parserTemplatesApi.delete).mockResolvedValue(undefined);
+    vi.mocked(api.parserTemplatesApi.preview).mockResolvedValue({
+      templateId: "t2",
+      domain: "flight",
+      own: {
+        sampleId: "s1",
+        filename: null,
+        result: {
+          matched: true,
+          fields: [{ name: "flightNumber", value: "LH103" }],
+          confidence: 90,
+        },
+      },
+      heldOut: null,
+      heldOutReason: "noSecondSample",
+      canActivate: true,
+      patternsHash: "abc123",
+    });
   });
 
   it("zeigt Templates nach Laden", async () => {
@@ -62,9 +80,19 @@ describe("MyTemplates", () => {
     await waitFor(() => expect(screen.getByText("parser:myTemplates.empty")).toBeInTheDocument());
   });
 
-  it("aktiviert ein disabled Template", async () => {
+  // Since forgejo#124 phase 6 activation has a gate in front of it: the
+  // template is run against its own sample first, and the button stays shut
+  // until that has answered. This test used to click straight through, which
+  // is the behaviour the phase removed.
+  it("aktiviert ein disabled Template erst nach der Vorschau", async () => {
     render(<MyTemplates />);
     await waitFor(() => screen.getByText("Ryanair EN"));
+
+    expect(screen.getByTestId("activate-t2")).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId("preview-t2"));
+    await waitFor(() => expect(screen.getByTestId("activate-t2")).not.toBeDisabled());
+
     fireEvent.click(screen.getByTestId("activate-t2"));
     await waitFor(() =>
       expect(api.parserTemplatesApi.setStatus).toHaveBeenCalledWith("t2", "active")
