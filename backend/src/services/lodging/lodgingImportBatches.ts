@@ -6,7 +6,6 @@ import {
   type LodgingImportBatchSummary,
   type LodgingImportSource,
 } from "../../schemas/lodgingImport";
-import { collectLodgingPhotoFilenames, removeLodgingPhotoFiles } from "./deleteLodgingPhotoFiles";
 
 /** The column is a plain String; narrow it back to the union on the way out. */
 function asSource(value: string): LodgingImportSource {
@@ -84,7 +83,6 @@ export async function revertLodgingImportBatch(
   userId: string,
   batchId: string
 ): Promise<RevertResult> {
-  let orphanedPhotoFiles: string[] = [];
   const result = await prisma.$transaction(
     async (tx) => {
       // Scoped to the domain as well as the user: a flight batch reverted
@@ -114,11 +112,15 @@ export async function revertLodgingImportBatch(
       const emptyIds = batchLodgings.filter(isEmpty).map((l) => l.id);
       const occupiedIds = batchLodgings.filter((l) => !isEmpty(l)).map((l) => l.id);
 
-      // Read before the delete, removed after the transaction commits — the
-      // cascade takes the photo rows and with them the filenames (AUD-042).
-      orphanedPhotoFiles = emptyIds.length
-        ? await collectLodgingPhotoFilenames({ id: { in: emptyIds } })
-        : [];
+      // There is deliberately NO photo-file rescue here, and there used to be
+      // one. It read the filenames of `emptyIds` before the delete so they
+      // could be unlinked after the commit (AUD-042) — but `isEmpty` above
+      // requires `_count.photos === 0`, so a house that reaches `emptyIds`
+      // has no photo rows and the collector could only ever return an empty
+      // list (data-integrity audit 2026-09-19, finding 8). The code ran on
+      // every revert, cost a query, and read as a guarantee it was not making.
+      // A house WITH photographs is detached instead of deleted, which is
+      // exactly why nothing needs cleaning up.
       const lodgings = emptyIds.length
         ? await tx.lodging.deleteMany({ where: { id: { in: emptyIds } } })
         : { count: 0 };
@@ -152,6 +154,5 @@ export async function revertLodgingImportBatch(
     "Lodging import batch reverted"
   );
 
-  removeLodgingPhotoFiles(orphanedPhotoFiles);
   return result;
 }
