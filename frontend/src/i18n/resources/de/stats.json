@@ -656,7 +656,61 @@
     "cruiseDepth": "Tiefe & Treue",
     "cruiseTags": "Reedereien, Regionen, Länder",
     "cruiseFlags": "Besonderheiten",
-    "rankings": "Ranglisten"
+    "rankings": "Ranglisten",
+    "records": "Rekorde"
+  },
+  "records": {
+    "title": "Rekorde",
+    "intro": "Die Bestwerte aus deinem Logbuch. Was sich nicht ableiten lässt, fehlt hier — statt als Null zu erscheinen.",
+    "empty": "Noch kein Flug, aus dem sich ein Rekord ableiten lässt.",
+    "noDetail": "Keine weiteren Angaben hinterlegt.",
+    "openFlight": "Flug öffnen",
+    "range": "{{start}} bis {{end}}",
+    "names": {
+      "longest-flight": "Längster Flug",
+      "shortest-flight": "Kürzester Flug",
+      "busiest-day": "Vollster Tag",
+      "longest-aloft": "Längste Zeit in der Luft",
+      "biggest-delay": "Größte Verspätung",
+      "northernmost": "Nördlichster Punkt",
+      "longest-streak": "Längste Serie"
+    },
+    "units": {
+      "flights_one": "Flug",
+      "flights_other": "Flüge",
+      "days_one": "Tag",
+      "days_other": "Tage",
+      "north": "Nord"
+    }
+  },
+  "wrapped": {
+    "title": "Dein Jahr",
+    "intro": "Ein Rückblick auf {{year}} — aus deinem Logbuch, nichts geschätzt.",
+    "yearLabel": "Jahr",
+    "loadError": "Dein Jahr konnte nicht geladen werden.",
+    "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug oder eine Kreuzfahrt erfasst ist, entsteht hier ein Rückblick.",
+    "emptyYear": "In {{year}} ist kein Flug erfasst.",
+    "needsFlights": "Dieser Rückblick wird aus Flügen gebaut. Schalte den Bereich Flüge ein, um ihn zu sehen.",
+    "rankTop": "Dein flugreichstes Jahr bisher.",
+    "rankSecond": "Nur {{year}} hatte mehr Flüge.",
+    "flights": "Flüge",
+    "flightsDesc": "gezählt in {{year}}",
+    "distance": "Strecke",
+    "distanceDesc": "{{factor}}× um die Erde",
+    "distanceDescShort": "Summe aller Flugstrecken des Jahres",
+    "newCountries": "Neue Länder",
+    "newCountriesDesc": "in diesem Jahr erstmals belegt",
+    "cruises": "Kreuzfahrten",
+    "cruisesDesc": "in diesem Jahr begonnen",
+    "topAirline": "Meistgeflogene Airline",
+    "topAirlineDesc_one": "{{count}} Flug",
+    "topAirlineDesc_other": "{{count}} Flüge",
+    "noAirline": "Kein Flug dieses Jahres nennt eine Airline.",
+    "topRoute": "Meistgeflogene Strecke",
+    "topRouteDesc_one": "{{count}} Flug, beide Richtungen zusammen",
+    "topRouteDesc_other": "{{count}} Flüge, beide Richtungen zusammen",
+    "noRoute": "Keine Strecke ableitbar.",
+    "none": "—"
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
