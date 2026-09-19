@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { loginFailure } from "../loginFailure";
+import { loginFailure, PASSWORD_LOGIN_COPY, type LoginFailureCopy } from "../loginFailure";
 
 /**
  * forgejo#88, findings 3 and 4.
@@ -90,6 +90,60 @@ describe("loginFailure — the login form speaks the reader's language", () => {
   });
 
   /**
+   * The same three answers on every sign-in surface, and nothing else shared.
+   *
+   * `authLimiter` sits on `/auth/login`, `/auth/2fa/verify` and
+   * `/auth/passkeys/login/*` in ONE address-keyed bucket, so all three screens
+   * can meet the 429 — that is what has to travel. What must NOT travel is a
+   * status the surface cannot read: `/passkeys/login/verify` answers 403 for a
+   * deactivated account AND for "set a new password first", so a shared
+   * 403 rule would be wrong half the time there.
+   */
+  describe("per-surface copy", () => {
+    const TWO_FACTOR: LoginFailureCopy = { refused: "twoFactor.rejected" };
+    const PASSKEY: LoginFailureCopy = { refused: "login.passkeyFailed" };
+
+    it("carries the rate limit and the database to every surface", () => {
+      for (const copy of [TWO_FACTOR, PASSKEY]) {
+        expect(
+          loginFailure(axiosLike(429, { code: "RATE_LIMITED", retryAfterSeconds: 120 }), copy)
+        ).toEqual({ key: "login.errors.rateLimitedMinutes", retryAfterMinutes: 2 });
+        expect(loginFailure(axiosLike(503, { code: "DB_UNAVAILABLE" }), copy).key).toBe(
+          "login.dbUnavailable"
+        );
+      }
+    });
+
+    it("refuses to read a 403 on a surface that cannot tell what it means", () => {
+      // The passkey screen: never "your account is switched off".
+      expect(loginFailure(axiosLike(403, { error: "Account is deactivated" }), PASSKEY).key).toBe(
+        "login.passkeyFailed"
+      );
+      // The password form: 403 can only be the deactivation check there.
+      expect(loginFailure(axiosLike(403, {}), PASSWORD_LOGIN_COPY).key).toBe(
+        "login.errors.accountDeactivated"
+      );
+    });
+
+    it("does not call a browser-side ceremony failure a server outage", () => {
+      // `startAuthentication` throws in the BROWSER for a timeout, an
+      // unsupported authenticator or a mismatched rpId. None of those reached
+      // the server, so the passkey copy leaves `unreachable` unset.
+      expect(loginFailure(new Error("boom"), PASSKEY).key).toBe("login.passkeyFailed");
+      // The password form only ever fails through axios, so it keeps the answer.
+      expect(loginFailure(new Error("boom"), PASSWORD_LOGIN_COPY).key).toBe(
+        "login.serverUnreachable"
+      );
+    });
+
+    it("keeps a server error apart from a wrong password on the form that can tell", () => {
+      expect(loginFailure(axiosLike(500, {}), PASSWORD_LOGIN_COPY).key).toBe("login.failed");
+      // A surface with one message for everything says that one message.
+      expect(loginFailure(axiosLike(500, {}), TWO_FACTOR).key).toBe("twoFactor.rejected");
+    });
+  });
+
+  /**
    * The whole mapping is worthless if a key is missing: react-i18next renders
    * the key itself, so the reader would see `login.errors.invalidCredentials`
    * where the English prose used to be — a worse answer than the bug.
@@ -120,9 +174,23 @@ describe("loginFailure — the login form speaks the reader's language", () => {
       axiosLike(503, {}),
     ];
 
+    // Every copy object the app actually passes, not just the default: a key
+    // named only by the 2FA or passkey screen is exactly as silent.
+    const copies: LoginFailureCopy[] = [
+      PASSWORD_LOGIN_COPY,
+      { refused: "twoFactor.rejected" },
+      { refused: "login.passkeyFailed" },
+    ];
+
     for (const locale of ["de", "en"]) {
       const tree = load(locale);
       for (const err of cases) {
+        for (const copy of copies) {
+          const { key: k, retryAfterMinutes: m } = loginFailure(err, copy);
+          for (const candidate of m === undefined ? [k] : [`${k}_one`, `${k}_other`]) {
+            expect(at(tree, candidate), `${locale}: ${candidate}`).toBeTypeOf("string");
+          }
+        }
         const { key, retryAfterMinutes } = loginFailure(err);
         // A plural key resolves through its `_one` / `_other` variants.
         const candidates = retryAfterMinutes === undefined ? [key] : [`${key}_one`, `${key}_other`];

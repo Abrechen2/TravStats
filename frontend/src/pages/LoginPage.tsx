@@ -8,7 +8,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
 import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
-import { loginFailure } from "../lib/loginFailure";
+import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -82,6 +82,20 @@ export default function LoginPage(): JSX.Element {
       .catch(() => setPublicDemoLogin(false));
   }, []);
 
+  /**
+   * Every refusal of a passkey reads the one line, deliberately.
+   *
+   * `/auth/passkeys/login/verify` answers 403 for a deactivated account AND for
+   * "set a new password before signing in with a passkey" — two different
+   * things under one status — so this screen genuinely cannot tell them apart
+   * and names no `deactivated` key. What it CAN now tell apart is the 429: the
+   * route carries `authLimiter` on the same address-keyed bucket as the password
+   * form, so a password manager retrying an assertion trips it, and the fixed
+   * "Passkey-Anmeldung fehlgeschlagen" sent the reader hunting a broken
+   * credential instead of waiting a minute.
+   */
+  const passkeyCopy: LoginFailureCopy = { refused: "login.passkeyFailed" };
+
   const handlePasskeyLogin = async (): Promise<void> => {
     setError("");
     setPasskeyLoading(true);
@@ -96,7 +110,12 @@ export default function LoginPage(): JSX.Element {
       if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "AbortError")) {
         return;
       }
-      setError(t("login.passkeyFailed"));
+      const failure = loginFailure(err, passkeyCopy);
+      setError(
+        failure.retryAfterMinutes !== undefined
+          ? t(failure.key, { count: failure.retryAfterMinutes })
+          : t(failure.key)
+      );
     } finally {
       setPasskeyLoading(false);
     }
