@@ -61,6 +61,36 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     expect(after?.isDemo).toBe(true);
   });
 
+  it("refuses a row named demo that carries somebody else's password", async () => {
+    // The other half of the heal above, and the reason the heal cannot simply
+    // trust the name. An unflagged `demo` is EITHER the built-in account from
+    // before the flag existed — which still carries `demo123`, and is healed —
+    // OR a real person who picked the name on their own instance. Resetting
+    // the second published their login and deleted their rows from thirty
+    // tables (data-integrity audit 2026-09-19, finding 1).
+    //
+    // `scripts/backfillDemoFlag.ts` already draws the line in the same place
+    // and in the same way: by the seeded password, not by the name.
+    const person = await prisma.user.create({
+      data: {
+        username: DEMO_USERNAME,
+        passwordHash: await hashPassword("a-real-persons-password"),
+        firstName: "Real",
+        isDemo: false,
+      },
+      select: { id: true },
+    });
+
+    await expect(ensureUser()).rejects.toThrow(/refusing to reseed/i);
+
+    const after = await prisma.user.findUnique({
+      where: { id: person.id },
+      select: { isDemo: true, firstName: true },
+    });
+    expect(after?.isDemo).toBe(false);
+    expect(after?.firstName).toBe("Real");
+  });
+
   it("is idempotent — a second call keeps the same user and the flag", async () => {
     const first = await ensureUser();
     const second = await ensureUser();

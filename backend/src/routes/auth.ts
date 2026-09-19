@@ -4,7 +4,12 @@ import { takeUserCountLock } from "../utils/userCountLock";
 import crypto from "crypto";
 import { prisma } from "../db";
 import { hashPassword, comparePassword } from "../utils/password";
-import { registerSchema, loginSchema, changePasswordSchema } from "../schemas/auth";
+import {
+  registerSchema,
+  loginSchema,
+  changePasswordSchema,
+  isReservedUsername,
+} from "../schemas/auth";
 import { AppError } from "../middleware/errorHandler";
 import { authLimiter } from "../middleware/rateLimit";
 import { authenticate, AuthRequest } from "../middleware/auth";
@@ -39,6 +44,22 @@ router.post("/register", authLimiter, async (req: Request, res: Response, next: 
     const rawToken = req.body.invitationToken;
     const invitationToken =
       typeof rawToken === "string" && rawToken.length <= 128 ? rawToken : undefined;
+
+    // A name the system already means — see `RESERVED_USERNAMES`.
+    //
+    // This is a route check rather than a `.refine()` on `registerSchema`
+    // because a ZodError body carries `details[].message` and no `code`, and
+    // `RegisterPage.tsx` renders `details[0].message` verbatim: a refine would
+    // print English prose into a German page, which is the failure the code
+    // union exists to end (forgejo#88 finding 3). The predicate itself stays
+    // in `schemas/auth.ts`, so both entry points ask the same question.
+    if (isReservedUsername(username)) {
+      throw new AppError(
+        `The username "${username}" is reserved by this instance`,
+        400,
+        "USERNAME_RESERVED"
+      );
+    }
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({

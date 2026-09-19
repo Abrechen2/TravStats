@@ -99,11 +99,49 @@ describe("TourTrackList", () => {
     expect(screen.getByText("trips:tours.tracks.uploading")).toBeInTheDocument();
   });
 
-  it("calls onDelete with the track when its delete button is clicked", () => {
+  // Data-integrity audit 2026-09-19, finding 4: the delete link used to call
+  // `onDelete` on the first click. For a track uploaded as a GPX the server
+  // keeps the parsed points and not the file, so that click destroyed the
+  // only copy — with no question asked and nothing to undo it with.
+  it("asks before deleting, and deletes nothing until the question is answered", () => {
     const track = makeTrack();
     const props = renderList({ tracks: [track] });
+
     fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(screen.getByText("trips:tours.tracks.deleteConfirm.title")).toBeInTheDocument();
+  });
+
+  it("names the track in the question — its window and its point count", () => {
+    renderList({ tracks: [makeTrack()] });
+    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+
+    // The mocked `t` returns the key, so the interpolation itself cannot be
+    // read here. What IS observable is that the message key is used with the
+    // two values that identify the row — a dialog that named neither would
+    // have to reach this component without them.
+    expect(screen.getByText("trips:tours.tracks.deleteConfirm.message")).toBeInTheDocument();
+  });
+
+  it("calls onDelete with the track once the delete is confirmed", () => {
+    const track = makeTrack();
+    const props = renderList({ tracks: [track] });
+
+    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    fireEvent.click(screen.getByText("trips:tours.tracks.deleteConfirm.confirm"));
+
     expect(props.onDelete).toHaveBeenCalledWith(track);
+  });
+
+  it("deletes nothing when the question is cancelled", () => {
+    const props = renderList({ tracks: [makeTrack()] });
+
+    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    fireEvent.click(screen.getByText("common:buttons.cancel"));
+
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByText("trips:tours.tracks.deleteConfirm.title")).not.toBeInTheDocument();
   });
 
   it("disables the Dawarich pull button and shows the reason when no connection is configured", () => {

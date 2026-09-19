@@ -48,13 +48,54 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * back by reverting it.
  */
 function describeCounts(batch: ImportBatchSummary, t: Translate): string {
-  const { lodgings, stays, flights, cruises } = batch.counts;
+  const { lodgings, stays, flights, cruises, places } = batch.counts;
   if (batch.domain === "flight") return t("settings:import.log.counts.flights", { count: flights });
   if (batch.domain === "cruise") return t("settings:import.log.counts.cruises", { count: cruises });
+  if (batch.domain === "poi") return t("settings:import.log.counts.places", { count: places });
   return t("lodging:import.batches.created", {
     hotels: t("lodging:units.hotels", { count: lodgings }),
     stays: t("lodging:units.stays", { count: stays }),
   });
+}
+
+/** How many rows the revert of this batch would delete. */
+function revertCount(batch: ImportBatchSummary): number {
+  const { lodgings, stays, flights, cruises, places } = batch.counts;
+  if (batch.domain === "flight") return flights;
+  if (batch.domain === "cruise") return cruises;
+  if (batch.domain === "poi") return places;
+  return lodgings + stays;
+}
+
+/**
+ * What the dialog promises, per domain — because the domains do different
+ * things and only one of them did what the dialog said.
+ *
+ * The lodging revert really is careful: `revertLodgingImportBatch` keeps a
+ * house that other stays still hang from, and detaches it instead of deleting
+ * it. Its sentence says so, and it is true.
+ *
+ * The flight, cruise and POI arms are a `deleteMany` scoped to the batch
+ * (`importBatchService.ts:341`, and the POI arm above it). Nothing is checked
+ * and nothing is kept: a flight the user corrected by hand after the import
+ * goes, and the documents filed against it cascade with it. Showing all four
+ * the lodging arm's promise was a statement about the code that was false for
+ * three of them (data-integrity audit 2026-09-19, finding 5).
+ *
+ * The honest minimum is to say which of the two it is. Making the other three
+ * behave like lodging is a different, larger change — and one the user should
+ * be asked about, not surprised by.
+ */
+function confirmKeys(domain: ImportBatchSummary["domain"]): { title: string; message: string } {
+  return domain === "lodging"
+    ? {
+        title: "lodging:import.batches.confirmTitle",
+        message: "lodging:import.batches.confirmMessage",
+      }
+    : {
+        title: "settings:import.log.confirm.title",
+        message: "settings:import.log.confirm.message",
+      };
 }
 
 export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element {
@@ -293,7 +334,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         open={confirmingBatch !== undefined && confirmingBatch !== null}
         onClose={() => setConfirmingId(null)}
         busy={reverting}
-        title={t("lodging:import.batches.confirmTitle")}
+        title={t(confirmKeys(confirmingBatch?.domain ?? "lodging").title)}
         maxWidth={448}
         closeLabel={t("common:buttons.close")}
         footer={
@@ -320,7 +361,10 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         }
       >
         <p className="text-sm text-[var(--text-muted)]">
-          {t("lodging:import.batches.confirmMessage")}
+          {confirmingBatch &&
+            t(confirmKeys(confirmingBatch.domain).message, {
+              count: revertCount(confirmingBatch),
+            })}
         </p>
       </Modal>
     </div>

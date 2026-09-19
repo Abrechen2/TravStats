@@ -35,7 +35,11 @@ export type ApiErrorCode =
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */
-  | "ANNOTATION_TEXT_MISMATCH";
+  | "ANNOTATION_TEXT_MISMATCH"
+  /** The requested username is reserved by the system — see
+   *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
+   *  into its own sentence, in the reader's language. */
+  | "USERNAME_RESERVED";
 
 interface AuthRequest extends Request {
   user?: {

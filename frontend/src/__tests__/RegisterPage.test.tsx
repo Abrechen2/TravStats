@@ -114,4 +114,48 @@ describe("RegisterPage", () => {
       { timeout: 3000 }
     );
   });
+
+  it("translates a reserved username instead of printing the backend's English", async () => {
+    // Data-integrity audit 2026-09-19, finding 1: `demo` is reserved, because
+    // the demo seeder identifies the account it resets by that name. The
+    // backend answers with a CODE for exactly this reason — the fallback below
+    // is `details[0].message`, which is English prose meant for a log and was
+    // what a German reader would otherwise have been shown.
+    const { authApi } = await import("../lib/api");
+    vi.mocked(authApi.register).mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: {
+          error: 'The username "demo" is reserved by this instance',
+          code: "USERNAME_RESERVED",
+        },
+      },
+    });
+
+    const { container } = render(
+      <BrowserRouter>
+        <RegisterPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/register\.username/i), {
+      target: { value: "demo" },
+    });
+    fireEvent.change(screen.getByLabelText(/register\.password$/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.change(screen.getByLabelText(/register\.confirmPassword/i), {
+      target: { value: "password123" },
+    });
+    const form = container.querySelector("form");
+    if (form) fireEvent.submit(form);
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(/register\.usernameReserved/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+    expect(screen.queryByText(/reserved by this instance/i)).not.toBeInTheDocument();
+  });
 });

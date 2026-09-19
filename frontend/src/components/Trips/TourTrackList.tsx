@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import ConfirmModal from "../Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import type { TourTrackMeta } from "../../types/tour";
 
 interface Props {
@@ -52,6 +55,13 @@ function formatWindow(startedAt: string, endedAt: string): string {
  * `loadError` (the fetch failed — NOT the same as an empty list), and the
  * empty list itself (an honest zero, shown only once loading has actually
  * succeeded).
+ *
+ * "No state of its own" is about the DATA. The delete confirmation below is
+ * the one exception and is not data: which row a dialog is open over belongs
+ * to the dialog. Until the data-integrity audit of 2026-09-19 (finding 4) the
+ * delete link called `onDelete` on the first click, and for a track uploaded
+ * as a GPX file that click destroyed the only copy — the server stores the
+ * parsed points, not the file. Every other delete in this tree asks first.
  */
 export default function TourTrackList({
   tracks,
@@ -66,6 +76,7 @@ export default function TourTrackList({
   onPullDawarich,
 }: Props): JSX.Element {
   const { t } = useTranslation("trips");
+  const [pendingDelete, setPendingDelete] = useState<TourTrackMeta | null>(null);
 
   return (
     <div className="space-y-3">
@@ -147,12 +158,37 @@ export default function TourTrackList({
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}
               </span>
               <span className="text-(--text-muted)">{formatDistanceKm(track.distanceKm)} km</span>
-              <button type="button" className="text-xs underline" onClick={() => onDelete(track)}>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => setPendingDelete(track)}
+              >
                 {t("trips:tours.tracks.deleteLabel")}
               </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => {
+            const track = pendingDelete;
+            setPendingDelete(null);
+            onDelete(track);
+          }}
+          title={t("trips:tours.tracks.deleteConfirm.title")}
+          // The window and the point count, because a list of tracks is a list
+          // of time spans — "Track löschen?" over four of them names nothing.
+          message={t("trips:tours.tracks.deleteConfirm.message", {
+            window: formatWindow(pendingDelete.startedAt, pendingDelete.endedAt),
+            count: pendingDelete.pointCount,
+          })}
+          confirmText={t("trips:tours.tracks.deleteConfirm.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       )}
     </div>
   );

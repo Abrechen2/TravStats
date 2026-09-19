@@ -585,7 +585,16 @@
         "flights_other": "{{count}} Flüge",
         "cruises": "{{count}} Kreuzfahrten",
         "cruises_one": "{{count}} Kreuzfahrt",
-        "cruises_other": "{{count}} Kreuzfahrten"
+        "cruises_other": "{{count}} Kreuzfahrten",
+        "places": "{{count}} Orte",
+        "places_one": "{{count}} Ort",
+        "places_other": "{{count}} Orte"
+      },
+      "confirm": {
+        "title": "Import wirklich rückgängig machen?",
+        "message": "Alle {{count}} Einträge, die dieser Import angelegt hat, werden gelöscht — auch bearbeitete, samt Dokumenten.",
+        "message_one": "Der Eintrag, den dieser Import angelegt hat, wird gelöscht — auch wenn er bearbeitet wurde, samt Dokumenten.",
+        "message_other": "Alle {{count}} Einträge, die dieser Import angelegt hat, werden gelöscht — auch bearbeitete, samt Dokumenten."
       },
       "reverted": "{{count}} Einträge entfernt.",
       "reverted_one": "{{count}} Eintrag entfernt.",

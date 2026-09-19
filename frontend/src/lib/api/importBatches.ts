@@ -8,7 +8,15 @@ import { api } from "./client";
  * record now, one list, one way to take a run back.
  */
 
-export type ImportBatchDomain = "flight" | "cruise" | "lodging";
+/**
+ * Mirrors `IMPORT_DOMAINS` in `backend/src/services/importBatchService.ts`.
+ *
+ * `poi` was missing here while the backend both wrote and reverted it, so the
+ * compiler let every `switch` on this type look exhaustive when it was not —
+ * which is how a POI batch came to be described, and warned about, in the
+ * words of the lodging arm (data-integrity audit 2026-09-19, finding 5).
+ */
+export type ImportBatchDomain = "flight" | "cruise" | "lodging" | "poi";
 export type ImportBatchSource = "csv" | "email" | "pdf";
 
 export interface ImportBatchSummary {
@@ -18,7 +26,7 @@ export interface ImportBatchSummary {
   fileName: string | null;
   createdAt: string;
   /** Rows this batch still owns, per kind — a reverted-around row is gone from here. */
-  counts: { lodgings: number; stays: number; flights: number; cruises: number };
+  counts: { lodgings: number; stays: number; flights: number; cruises: number; places: number };
 }
 
 export interface ImportRevertSummary {

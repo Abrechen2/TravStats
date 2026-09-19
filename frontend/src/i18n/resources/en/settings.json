@@ -585,7 +585,16 @@
         "flights_other": "{{count}} flights",
         "cruises": "{{count}} cruises",
         "cruises_one": "{{count}} cruise",
-        "cruises_other": "{{count}} cruises"
+        "cruises_other": "{{count}} cruises",
+        "places": "{{count}} places",
+        "places_one": "{{count}} place",
+        "places_other": "{{count}} places"
+      },
+      "confirm": {
+        "title": "Undo this import?",
+        "message": "All {{count}} entries this import created will be deleted — edited ones too, along with their documents.",
+        "message_one": "The entry this import created will be deleted — even if it was edited, along with its documents.",
+        "message_other": "All {{count}} entries this import created will be deleted — edited ones too, along with their documents."
       },
       "reverted": "{{count}} entries removed.",
       "reverted_one": "{{count}} entry removed.",

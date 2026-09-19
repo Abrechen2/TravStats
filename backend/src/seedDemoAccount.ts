@@ -28,7 +28,7 @@
 import { randomUUID } from "crypto";
 import { Prisma } from "./prisma";
 import { prisma } from "./db";
-import { hashPassword } from "./utils/password";
+import { hashPassword, comparePassword } from "./utils/password";
 import { DEMO_USERNAME } from "./utils/sharedDemo";
 import { appVersion } from "./utils/version";
 import { checkAndUpdateAchievements } from "./utils/achievements";
@@ -838,14 +838,15 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  * next model with a `userId` will be noticed only if this list is read — a
  * cascade you cannot see is indistinguishable from a table nobody thought of.
  *
- * Deleted by this function (30). Rows, not files — an uploaded receipt or
+ * Deleted by this function (31). Rows, not files — an uploaded receipt or
  * training sample leaves its bytes on disk, as `demoGuard.uploads.test.ts`
  * notes, which is why the upload routes refuse the account outright:
  *   AnalyticsEvent · Booking · Companion · CountryDay · Cruise ·
  *   CruiseStop · DataQualityFlag · DawarichSweepState · Document · Flight ·
  *   ImportBatch ·
  *   Lodging · LodgingMembership · LodgingStay · PairingCode ·
- *   ParseTrainingLog · ParserTemplate · PendingFlightUpdate ·
+ *   ParseTrainingLog · ParserTemplate · PasswordResetRequest ·
+ *   PendingFlightUpdate ·
  *   PendingUpdateStatistics · PhotoJourney · Place · PlaceList · PlaceVisit ·
  *   ReceiptUpload · TrainingData · Trip · TripJournalEntry · TripRoute ·
  *   TripStop · UserAchievement
@@ -951,6 +952,16 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.pairingCode.deleteMany({ where: { userId } });
   await prisma.parseTrainingLog.deleteMany({ where: { userId } });
   await prisma.parserTemplate.deleteMany({ where: { userId } });
+  // An ADMIN INBOX item — "this account asked to have its password reset" —
+  // carrying no token, which is why the omission cost nothing that could be
+  // spent. What it did cost was an administrator's attention: the row outlived
+  // every reset (data-integrity audit 2026-09-19, finding 7), so a public
+  // instance left an open task about an account that no longer holds the data
+  // the request was raised for, and the account is one whose password is
+  // printed on the login page. The table arrived on 2026-09-19 (migration
+  // `20260919140631_password_reset_requests`) and was in none of the three
+  // lists above, exactly as `Document` had been two days earlier.
+  await prisma.passwordResetRequest.deleteMany({ where: { userId } });
   await prisma.pendingUpdateStatistics.deleteMany({ where: { userId } });
   await prisma.photoJourney.deleteMany({ where: { userId } });
   await prisma.receiptUpload.deleteMany({ where: { userId } });
@@ -962,6 +973,40 @@ export async function ensureUser(): Promise<string> {
   const existing = await prisma.user.findUnique({
     where: { username: DEMO_USERNAME },
   });
+  if (existing && !existing.isDemo) {
+    // An unflagged row named `demo` is one of two things, and they must not be
+    // treated alike.
+    //
+    // It is the built-in demo account created by a pre-2.5.0 version, which
+    // wrote no `isDemo` at all — or it is a real person who happened to pick
+    // the name on their own instance. `utils/sharedDemo.ts` already states the
+    // difference ("`demo` without the flag is a user who happened to pick the
+    // name"), and nothing held the seeder to it: it reset whatever it found.
+    //
+    // Measured by the data-integrity audit of 2026-09-19 (finding 1) against a
+    // real row with `isDemo: false`, a private password hash and a first name:
+    // one boot with CREATE_DEMO_USER=true published that person's login as
+    // demo/demo123, removed their passkeys, recovery codes, API tokens and
+    // two-factor secret, nulled their name and birthdate, and deleted their
+    // rows from thirty tables. Nothing about the run was reversible and
+    // nothing about it was visible in the UI afterwards.
+    //
+    // The PASSWORD tells the two apart, and `scripts/backfillDemoFlag.ts`
+    // already answers the same question the same way — "the account is
+    // identified by its seeded password, not by its name alone". A legacy demo
+    // row still carries `demo123`, so it is healed and reseeded exactly as
+    // before; a real person's account carries something else, and the seeder
+    // refuses rather than reseeding it. One bcrypt compare, only on a boot
+    // that finds an unflagged `demo` at all.
+    const isLegacyDemoRow = await comparePassword(DEMO_PASSWORD, existing.passwordHash);
+    if (!isLegacyDemoRow) {
+      throw new Error(
+        `A user named "${DEMO_USERNAME}" exists, is not flagged as the demo account, and does ` +
+          `not carry the seeded demo password — refusing to reseed. Rename that account (or ` +
+          `delete it) before enabling CREATE_DEMO_USER.`
+      );
+    }
+  }
   if (existing) {
     // Restore the account itself BEFORE its data. The route guards should
     // already refuse a credential/2FA/token change on the demo account
