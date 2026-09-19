@@ -58,17 +58,33 @@ export default function SimplifiedFlightFormV2({
    * validation: `canSubmit` is the same guard the hook is about to apply, and
    * when it holds nothing is focused and the submit runs untouched.
    *
-   * **Only the form's own submit needs this, and that is not an oversight.**
-   * Both footer buttons are `disabled` while `canSubmit` is false, so neither
-   * can reach a refusal; what can is Enter in any input, which submits the
-   * `<form>` past the disabled buttons entirely. That is also the user who
-   * needs it most — they never looked at the button, so the greyed-out state
-   * told them nothing. `useFlightForm` guards its handlers for exactly the
-   * same reason ("canSubmit only greys out the button").
+   * **Every save path runs it, including both footer buttons.** It used to
+   * run on the form's own submit alone, because the two footer buttons were
+   * `disabled` while `canSubmit` was false — and the beta audit of 2026-09-19
+   * measured what that costs: clearing a required time greys BOTH buttons
+   * out, so "the first missing field is focused on a refused save" was
+   * unreachable by the only route most users take. A disabled button is a
+   * refusal that names nothing and points nowhere.
+   *
+   * The buttons are now enabled whenever the form is not saving. Pressing one
+   * with something missing takes the refusal `useFlightForm` already had
+   * (which names the class of problem at the top of the dialog) and adds what
+   * it never had: the cursor in the field, with its section unfolded. The
+   * hook's own `!canSubmit` guards stay exactly as they were — they are what
+   * keeps the refusal real ("canSubmit only greys out the button").
    */
-  const handleSubmitWithFocus = (e: React.FormEvent): void => {
+  const focusFirstGapIfIncomplete = (): void => {
     if (!form.canSubmit) focusFirstMissingRequired(formRef.current);
+  };
+
+  const handleSubmitWithFocus = (e: React.FormEvent): void => {
+    focusFirstGapIfIncomplete();
     void form.handleSubmit(e);
+  };
+
+  const handleSubmitAndReturnWithFocus = (e: React.FormEvent): void => {
+    focusFirstGapIfIncomplete();
+    void form.handleSubmitAndReturn(e);
   };
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
@@ -104,13 +120,15 @@ export default function SimplifiedFlightFormV2({
             </button>
             {form.step === "complete" && (
               <>
+                {/* Enabled whenever the form is not saving. `canSubmit` still
+                    decides the TITLE — a hint about what is missing before the
+                    click — but no longer the `disabled` state, which made the
+                    refusal unreachable (beta audit 2026-09-19, forgejo#88 P9). */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    void form.handleSubmitAndReturn(e);
-                  }}
-                  className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={form.loading || !form.canSubmit}
+                  onClick={handleSubmitAndReturnWithFocus}
+                  className="btn-secondary"
+                  disabled={form.loading}
                   title={
                     !form.canSubmit
                       ? t("flights:form.validation.selectAirportsAndDates")
@@ -122,8 +140,8 @@ export default function SimplifiedFlightFormV2({
                 <button
                   type="submit"
                   form={formId}
-                  className={`btn-primary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={form.loading || !form.canSubmit}
+                  className="btn-primary"
+                  disabled={form.loading}
                   title={
                     !form.canSubmit
                       ? t("flights:form.validation.selectAirportsAndDates")

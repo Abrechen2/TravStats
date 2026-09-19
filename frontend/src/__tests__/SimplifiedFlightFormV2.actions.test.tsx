@@ -30,6 +30,25 @@ vi.mock("@/lib/api/trips", async (importOriginal) => {
   return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
 });
 
+// EmailImportTab fetches `/parser-capabilities` through `lib/api/client` --
+// a different module than the `lib/api` barrel mocked above, so the request
+// escaped to the real network and then failed whichever test happened to be
+// running when it landed. Same shape as the trips mock above (forgejo#110).
+vi.mock("@/lib/api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/client")>();
+  const stub = (): Promise<{ data: Record<string, never> }> => Promise.resolve({ data: {} });
+  return {
+    ...actual,
+    api: {
+      get: vi.fn(stub),
+      post: vi.fn(stub),
+      put: vi.fn(stub),
+      patch: vi.fn(stub),
+      delete: vi.fn(stub),
+    },
+  };
+});
+
 /**
  * forgejo#88, point 9 — which action the footer offers first, and what a
  * refused save does.
@@ -84,8 +103,7 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
   it("focuses the first empty required field when the form refuses to save", async () => {
     await openManualEntry();
 
-    // Enter in any input reaches the form's own submit handler — the path a
-    // user takes without looking at the (disabled) button.
+    // Enter in any input reaches the form's own submit handler.
     fireEvent.submit(screen.getByRole("dialog").querySelector("form")!);
 
     await waitFor(() => {
@@ -97,6 +115,44 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
         "flights:form.placeholders.departureAirport"
       );
     });
+  });
+
+  /**
+   * The route the beta audit of 2026-09-19 found unreachable (forgejo#88 P9,
+   * third point): both save BUTTONS were disabled while a required field was
+   * empty, so the focus-the-gap behaviour above could only be triggered by
+   * pressing Enter in an input -- which is not what a user who clicks Save
+   * does. Both buttons now reach it.
+   */
+  it("focuses the first empty required field from the save-and-return button", async () => {
+    await openManualEntry();
+
+    fireEvent.click(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i }));
+
+    await waitFor(() => {
+      const focused = document.activeElement as HTMLElement | null;
+      expect(focused?.getAttribute("placeholder")).toBe(
+        "flights:form.placeholders.departureAirport"
+      );
+    });
+  });
+
+  /**
+   * The primary button is asserted through its ASSOCIATION, not a click:
+   * jsdom does not submit a form for a submit button that is tied to it by
+   * the `form` attribute (the button lives in the dialog footer, outside the
+   * <form>), so a click here would measure jsdom rather than the app. What a
+   * browser needs is exactly the two things below -- an enabled submit button
+   * pointing at the form -- and the form's own submit path is pinned above.
+   */
+  it("leaves the primary save button enabled and tied to the form", async () => {
+    await openManualEntry();
+
+    const save = screen.getByRole("button", { name: /flights:form\.submit$/i });
+    const form = screen.getByRole("dialog").querySelector("form");
+    expect(save).toBeEnabled();
+    expect(save.getAttribute("type")).toBe("submit");
+    expect(save.getAttribute("form")).toBe(form?.getAttribute("id"));
   });
 
   /**
