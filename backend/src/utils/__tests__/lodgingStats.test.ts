@@ -29,6 +29,15 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   totalPrice: 190,
   isAwardStay: false,
   ratingOverall: 4,
+  // A stay priced in the base currency has `totalPrice === totalPriceBase` by
+  // construction: `convertToBase` short-circuits an identical currency pair at
+  // rate 1, so no row the app can write has the two disagree. Keeping them in
+  // step here matters because `lodgingBaseAmount` reads the OWN price first for
+  // such a stay — a fixture that overrode only the snapshot would silently
+  // measure this helper's default instead of the amount the test named.
+  ...(o.totalPriceBase !== undefined && o.totalPrice === undefined
+    ? { totalPrice: o.totalPriceBase }
+    : {}),
   ...o,
 });
 
@@ -126,15 +135,78 @@ describe("calculateLodgingStats", () => {
     expect(s.spendUnconvertedStays).toBe(1);
   });
 
+  /**
+   * The rows that predate the FX columns. Every stay entered before
+   * `total_price_base` shipped carries a null snapshot, and requiring one
+   * emptied `spendBaseTotal` for a whole logbook while the footnote blamed a
+   * missing exchange rate for stays that needed none — the same defect the
+   * cruise money tile drew as a dash on 2026-09-19.
+   */
+  it("counts a stay priced in the base currency although it has no snapshot", () => {
+    const s = calculateLodgingStats([
+      stay({ currency: "EUR", totalPrice: 190, totalPriceBase: null, fxBaseCurrency: null }),
+      stay({
+        lodgingId: "l2",
+        currency: "EUR",
+        totalPrice: 310,
+        totalPriceBase: null,
+        fxBaseCurrency: null,
+      }),
+    ]);
+    expect(s.spendBaseTotal).toBe(500);
+    expect(s.spendBaseByCurrency).toEqual({ EUR: 500 });
+    // Nothing was withheld, so nothing may be reported as withheld.
+    expect(s.spendUnconvertedStays).toBe(0);
+  });
+
+  it("still counts a FOREIGN stay with no snapshot as unconverted", () => {
+    const s = calculateLodgingStats([
+      stay({ currency: "EUR", totalPrice: 190, totalPriceBase: null, fxBaseCurrency: null }),
+      stay({
+        lodgingId: "l2",
+        currency: "USD",
+        totalPrice: 400,
+        totalPriceBase: null,
+        fxBaseCurrency: null,
+      }),
+    ]);
+    expect(s.spendBaseTotal).toBe(190);
+    expect(s.spendUnconvertedStays).toBe(1);
+  });
+
+  /**
+   * An account that moved its base currency to USD and back holds euro stays
+   * whose snapshot reads USD. There the snapshot is the stale reading and the
+   * price is not, so the own-currency branch is tried FIRST — booking such a
+   * stay under the old currency hid a home-currency amount behind a "converted
+   * under a currency you have left" hint.
+   */
+  it("books a base-currency stay at its own price although its snapshot is stale", () => {
+    const s = calculateLodgingStats([
+      stay({ currency: "EUR", totalPrice: 190, totalPriceBase: 205, fxBaseCurrency: "USD" }),
+    ]);
+    expect(s.spendBaseTotal).toBe(190);
+    expect(s.spendBaseByCurrency).toEqual({ EUR: 190 });
+    expect(s.spendUnconvertedStays).toBe(0);
+  });
+
   it("never mixes totalPriceBase amounts snapshotted into different base currencies (finding 2)", () => {
     // Stay 1 was snapshotted while the user's base currency was EUR; stay 2
     // was snapshotted AFTER the user switched their base currency to CHF.
     // The old EUR snapshot is a permanent historical record — it must never
     // be silently added into a "CHF" total just because CHF is now current.
+    // Both priced in euros, so neither reaches CHF by being priced in it —
+    // the snapshot is the only road, which is the road this test is about.
     const s = calculateLodgingStats(
       [
-        stay({ lodgingId: "l1", fxBaseCurrency: "EUR", totalPriceBase: 190 }),
-        stay({ lodgingId: "l2", fxBaseCurrency: "CHF", totalPriceBase: 424 }),
+        stay({ lodgingId: "l1", currency: "EUR", totalPrice: 190, totalPriceBase: 190 }),
+        stay({
+          lodgingId: "l2",
+          currency: "EUR",
+          totalPrice: 400,
+          totalPriceBase: 424,
+          fxBaseCurrency: "CHF",
+        }),
       ],
       "CHF"
     );
@@ -144,8 +216,17 @@ describe("calculateLodgingStats", () => {
 
   it("defaults currentBaseCurrency to EUR when the caller omits it", () => {
     const s = calculateLodgingStats([
-      stay({ lodgingId: "l1", fxBaseCurrency: "EUR", totalPriceBase: 100 }),
-      stay({ lodgingId: "l2", fxBaseCurrency: "CHF", totalPriceBase: 500 }),
+      stay({ lodgingId: "l1", currency: "EUR", totalPrice: 100, totalPriceBase: 100 }),
+      // Priced in francs and snapshotted while the account's base was CHF:
+      // foreign to the EUR being defaulted to, so only the snapshot could
+      // have carried it, and that snapshot is in the wrong currency.
+      stay({
+        lodgingId: "l2",
+        currency: "CHF",
+        totalPrice: 520,
+        totalPriceBase: 500,
+        fxBaseCurrency: "CHF",
+      }),
     ]);
     expect(s.spendBaseTotal).toBe(100);
     expect(s.spendBaseByCurrency).toEqual({ EUR: 100, CHF: 500 });

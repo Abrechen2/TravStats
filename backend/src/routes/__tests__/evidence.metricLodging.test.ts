@@ -191,8 +191,13 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
           datePrecision: "DAY",
           totalPrice: 300,
           currency: "EUR",
-          totalPriceBase: 300,
-          fxBaseCurrency: "EUR",
+          // NO snapshot, on purpose: this is what every stay entered before
+          // the FX columns shipped looks like, and it is an amount already in
+          // the account's base currency, so it needs none. Requiring one made
+          // the panel list it as unconverted while the tile above it counted
+          // the same 300 (`shared/lodgingSpendBase.ts`).
+          totalPriceBase: null,
+          fxBaseCurrency: null,
           ratingOverall: 5,
           ratingRoom: 5,
           ratingBreakfast: 5,

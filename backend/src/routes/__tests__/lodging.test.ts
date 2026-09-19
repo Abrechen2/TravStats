@@ -986,6 +986,48 @@ describe("Lodging API", () => {
       expect(res.body.data.totalSpendBase).toBe(100); // ONLY the EUR-snapshotted stay
       expect(res.body.data.totalSpendBaseByCurrency).toEqual({ CHF: 424, EUR: 100 });
     });
+
+    /**
+     * The list column and the stats tab are summed from the same stays, so
+     * they answer with the same rule (`shared/lodgingSpendBase.ts`). A stay
+     * priced in the base currency needs no snapshot — every stay entered
+     * before the FX columns shipped has none, and requiring one left a house
+     * reading "0 €" beside bills it had.
+     */
+    it("counts a stay priced in the base currency although it has no snapshot", async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Before The FX Columns" } });
+      await prisma.lodgingStay.createMany({
+        data: [
+          {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2021-01-01T00:00:00.000Z"),
+            checkOut: new Date("2021-01-02T00:00:00.000Z"),
+            totalPrice: 180,
+            currency: "EUR",
+            totalPriceBase: null,
+            fxBaseCurrency: null,
+          },
+          {
+            // Foreign and unconverted: still out, and the shortcut does not
+            // reach it — this is what keeps the branch honest.
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2021-02-01T00:00:00.000Z"),
+            checkOut: new Date("2021-02-02T00:00:00.000Z"),
+            totalPrice: 900,
+            currency: "USD",
+            totalPriceBase: null,
+            fxBaseCurrency: null,
+          },
+        ],
+      });
+
+      const res = await request(app).get(`/api/v1/lodging/${l.id}`).set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalSpendBase).toBe(180);
+      expect(res.body.data.totalSpendBaseByCurrency).toEqual({ EUR: 180 });
+    });
   });
 
   describe("GET /api/v1/lodging — sort applies to the full result set, then paginates (finding 2)", () => {

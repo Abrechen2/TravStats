@@ -2,11 +2,12 @@
  * What a night cost. Pure — no I/O, no Prisma.
  *
  * Everything here works in the user's CURRENT base currency and only from the
- * stays whose FX snapshot matches it: the same slice `spendBaseTotal` sums.
- * Mixing in a stay snapshotted under an older base currency would average
- * euros with kroner and produce a number that is wrong without looking wrong,
- * so those land in `unpricedStays` instead.
+ * stays that reach it — `shared/lodgingSpendBase.ts` decides which, the same
+ * rule `spendBaseTotal` sums. Mixing in a stay snapshotted under an older
+ * base currency would average euros with kroner and produce a number that is
+ * wrong without looking wrong, so those land in `unpricedStays` instead.
  */
+import { lodgingBaseAmount } from "../../shared/lodgingSpendBase";
 import type { StayTiming } from "../../shared/lodgingTiming";
 import type {
   LodgingPriceGroup,
@@ -28,17 +29,20 @@ function round2(n: number): number {
 }
 
 /**
- * A stay contributes a per-night price only when all three hold: it was
- * converted, into the CURRENT base currency, and it actually spans a night.
- * A same-day stay has a total but no per-night rate — dividing by zero nights
- * is how an average becomes Infinity.
+ * What this stay contributes to the comparable totals: its amount in the
+ * CURRENT base currency, but only if it actually spans a night.
+ *
+ * A same-day stay has a total and no per-night rate — dividing by zero nights
+ * is how an average becomes Infinity — so it contributes to neither figure
+ * here, and `computePriceStats` reports it as unpriced-for-comparison.
+ *
+ * Which stays reach the base currency at all is NOT decided here: that is
+ * `lodgingBaseAmount`'s one job, shared with the rollup, the list column and
+ * the evidence panel.
  */
-function perNightPrice(entry: StayWithNights, currentBaseCurrency: string): number | null {
-  const { stay, nights } = entry;
-  if (nights <= 0) return null;
-  if (stay.totalPriceBase === null) return null;
-  if (stay.fxBaseCurrency !== currentBaseCurrency) return null;
-  return stay.totalPriceBase / nights;
+function comparableBaseTotal(entry: StayWithNights, currentBaseCurrency: string): number | null {
+  if (entry.nights <= 0) return null;
+  return lodgingBaseAmount(entry.stay, currentBaseCurrency);
 }
 
 interface Accumulator {
@@ -119,8 +123,8 @@ export function computePriceStats(
   let dearestValue = Number.NEGATIVE_INFINITY;
 
   for (const entry of entries) {
-    const price = perNightPrice(entry, currentBaseCurrency);
-    if (price === null) {
+    const total = comparableBaseTotal(entry, currentBaseCurrency);
+    if (total === null) {
       // Only a stay that HAS a price but no comparable one is a gap worth
       // reporting. A stay with no price at all was never a money question.
       if (entry.stay.totalPrice !== null) unpricedStays += 1;
@@ -128,7 +132,7 @@ export function computePriceStats(
     }
 
     const { stay, nights } = entry;
-    const total = stay.totalPriceBase!;
+    const price = total / nights;
     pricedNights += nights;
     pricedStays += 1;
     for (let i = 0; i < nights; i += 1) nightlyPrices.push(price);

@@ -10,6 +10,7 @@
 import { Prisma } from "../../prisma";
 
 import { classifyStay } from "../../shared/lodgingCounting";
+import { lodgingBaseAmount, type LodgingStayFx } from "../../shared/lodgingSpendBase";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
 import type { LodgingQueryInput } from "../../schemas/lodging";
 import type { LodgingListRow } from "../../routes/lodging";
@@ -18,24 +19,39 @@ export interface RatedStay {
   ratingOverall: number | null;
 }
 
-export interface AggregateStayFx {
-  totalPriceBase: number | null;
-  fxBaseCurrency: string | null;
-}
+/** The price columns the spend rule reads — `shared/lodgingSpendBase.ts`
+ *  owns the rule itself, so this list is its interface, not a second copy. */
+export type AggregateStayFx = LodgingStayFx;
 
 /**
- * Sums `totalPriceBase` grouped by the currency it was snapshotted into
- * (`fxBaseCurrency`) — never across currencies. A stay snapshotted before
- * the user switched their base currency keeps its OLD `fxBaseCurrency` key
- * here forever (the snapshot itself never gets recalculated), so summing
- * everything under the CURRENT base currency's label would silently add
- * amounts that were never actually converted into it (finding 2).
+ * Sums each stay's amount under the currency it is an amount IN — never
+ * across currencies.
+ *
+ * A stay reaching TODAY's base currency is booked there, whether by being
+ * priced in it or by a snapshot taken in it; `lodgingBaseAmount` decides.
+ * Everything else that HAS a snapshot is booked under the currency that
+ * snapshot was taken in, and stays there: a stay snapshotted before the user
+ * switched their base currency keeps its OLD `fxBaseCurrency` forever (the
+ * snapshot is never recalculated), so summing everything under the current
+ * label would silently add amounts that were never converted into it
+ * (finding 2).
+ *
+ * This is the list column's half of the same rule `calculateLodgingStats`
+ * applies to the stats tab. Two spellings of it would let a house's spend on
+ * the list disagree with the total on the tab that is summed from the same
+ * stays.
  */
 export function sumSpendBaseByCurrency<T extends AggregateStayFx>(
-  stays: T[]
+  stays: T[],
+  currentBaseCurrency: string
 ): Record<string, number> {
   const byCurrency: Record<string, number> = {};
   for (const s of stays) {
+    const baseAmount = lodgingBaseAmount(s, currentBaseCurrency);
+    if (baseAmount !== null) {
+      byCurrency[currentBaseCurrency] = (byCurrency[currentBaseCurrency] ?? 0) + baseAmount;
+      continue;
+    }
     if (s.totalPriceBase === null || s.fxBaseCurrency === null) continue;
     byCurrency[s.fxBaseCurrency] = (byCurrency[s.fxBaseCurrency] ?? 0) + s.totalPriceBase;
   }
@@ -61,9 +77,9 @@ export interface LodgingAggregates {
   overallRating: number | null;
   stayCount: number;
   nights: number;
-  /** Sum of totalPriceBase for stays whose FX snapshot matches `currentBaseCurrency` — see sumSpendBaseByCurrency. */
+  /** Sum of the amounts that reach `currentBaseCurrency` — see sumSpendBaseByCurrency. */
   totalSpendBase: number;
-  /** Full per-fxBaseCurrency breakdown (finding 2) — lets the UI show spend snapshotted under a currency the user has since moved away from, instead of silently folding it into totalSpendBase. */
+  /** Full per-currency breakdown (finding 2) — lets the UI show spend snapshotted under a currency the user has since moved away from, instead of silently folding it into totalSpendBase. */
   totalSpendBaseByCurrency: Record<string, number>;
 }
 
@@ -75,7 +91,7 @@ export function computeAggregates(
   // over. Future and cancelled bookings contribute nothing to any figure —
   // the same verdict the stats path (calculateLodgingStats) already applies.
   const visited = stays.filter((s) => classifyStay(s) === "visited");
-  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(visited);
+  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(visited, currentBaseCurrency);
   return {
     overallRating: deriveOverallRating(visited),
     stayCount: visited.length,

@@ -28,6 +28,15 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   ratingRoom: null,
   ratingBreakfast: null,
   ratingService: null,
+  // A stay priced in the base currency has `totalPrice === totalPriceBase` by
+  // construction: `convertToBase` short-circuits an identical currency pair at
+  // rate 1, so no row the app can write has the two disagree. Keeping them in
+  // step here matters because `lodgingBaseAmount` reads the OWN price first for
+  // such a stay — a fixture that overrode only the snapshot would silently
+  // measure this helper's default instead of the amount the test named.
+  ...(o.totalPriceBase !== undefined && o.totalPrice === undefined
+    ? { totalPrice: o.totalPriceBase }
+    : {}),
   ...o,
 });
 
@@ -110,12 +119,46 @@ describe("lodging rating statistics", () => {
 
   it("keeps a stay without a comparable price out of the value ranking", () => {
     const r = ratings([
-      stay({ ratingOverall: 5, totalPriceBase: null }),
-      stay({ lodgingId: "l2", ratingOverall: 5, fxBaseCurrency: "USD" }),
+      // No price at all, and a foreign price converted under a base currency
+      // this account has left. Neither has an amount in EUR, and neither can
+      // borrow one: the own-price shortcut needs the price to BE in euros.
+      stay({ ratingOverall: 5, totalPrice: null, totalPriceBase: null, fxBaseCurrency: null }),
+      stay({
+        lodgingId: "l2",
+        ratingOverall: 5,
+        currency: "USD",
+        totalPrice: 200,
+        totalPriceBase: 190,
+        fxBaseCurrency: "USD",
+      }),
     ]);
     expect(r.bestValue).toEqual([]);
     // …but they still count toward the averages, which need no price.
     expect(r.ratedStays).toBe(2);
+  });
+
+  /**
+   * Value is rating per base-currency unit, so it needs an AMOUNT in the base
+   * currency — not a snapshot. This file used to spell that test three
+   * conditions of its own, under a comment claiming parity with `money.ts`,
+   * and the claim expired the moment that file learned the own-currency
+   * shortcut: a pre-FX euro logbook drew a populated price-per-night and an
+   * EMPTY best-value list on the same page, from the same stays.
+   */
+  it("ranks a stay priced in the base currency although it has no snapshot", () => {
+    const r = ratings([
+      stay({
+        lodgingName: "Vor den FX-Spalten",
+        ratingOverall: 5,
+        currency: "EUR",
+        totalPrice: 100,
+        totalPriceBase: null,
+        fxBaseCurrency: null,
+      }),
+    ]);
+    expect(r.bestValue).toHaveLength(1);
+    expect(r.bestValue[0].lodgingName).toBe("Vor den FX-Spalten");
+    expect(r.bestValue[0].pricePerNight).toBe(50);
   });
 
   it("returns nulls rather than NaN for an empty input", () => {

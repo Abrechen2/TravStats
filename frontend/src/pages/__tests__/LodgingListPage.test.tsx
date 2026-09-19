@@ -460,7 +460,10 @@ describe("LodgingListPage", () => {
         totalSpendBaseByCurrency: { EUR: 883 },
         stays: [
           makeStay({ totalPrice: 840, currency: "CHF", ...CONVERTED }),
-          makeStay({ id: "stay-2", totalPrice: 1120, currency: "EUR" }),
+          // Dollars with no snapshot. A EUR amount here would need no rate at
+          // all and would be IN the 883 — a footnote naming it would describe
+          // a row the figure already counts (shared/lodgingSpendBase.ts).
+          makeStay({ id: "stay-2", totalPrice: 1120, currency: "USD" }),
         ],
       }),
     ]);
@@ -473,6 +476,37 @@ describe("LodgingListPage", () => {
     const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.textContent).toMatch(/883/);
     expect(row?.textContent).toContain("lodging:fx.omittedFromTotal");
+  });
+
+  /**
+   * Every stay entered before the FX columns shipped carries no snapshot, and
+   * a stay priced in the base currency needs none — the backend counts it, so
+   * the footnote must not name it. It used to, because this side asked only
+   * whether a snapshot existed: the row showed a complete total and a line
+   * underneath claiming it had left that very amount out.
+   */
+  it("names no omitted stay for a base-currency price that carries no snapshot", async () => {
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 1120,
+        totalSpendBaseByCurrency: { EUR: 1120 },
+        stays: [
+          makeStay({ totalPrice: 840, currency: "CHF", ...CONVERTED }),
+          makeStay({ id: "stay-2", totalPrice: 1120, currency: "EUR" }),
+        ],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
+    expect(row?.textContent).toMatch(/1[.,]?120/);
+    expect(row?.textContent).not.toContain("lodging:fx.omittedFromTotal");
+    // Nor the stronger claim that NOTHING converted.
+    expect(row?.textContent).not.toContain("lodging:fx.markerNone");
   });
 
   it("renders — (not 0 €) in the spend column when every stay's price has been cleared", async () => {
