@@ -258,7 +258,15 @@ function lineAnchoredRule(
   fullText: string
 ): FieldRule | null {
   if (!LINE_ANCHORABLE.has(label)) return null;
-  const pattern = `^[ \\t]*(${escapeRegex(value).replace(/\s+/g, "\\s+")})[ \\t]*$`;
+  // A value that spans a line break is not a line, so it cannot be one's
+  // marker. `\s+` matched the break as readily as a space under `m`, so a
+  // wrapped letterhead ("Hotel Seeblick" / "Garni") produced a rule whose
+  // capture reached into the next line — the one thing every capture class in
+  // this file is shaped to prevent. `[ \t]+` keeps the generalisation to what
+  // a sender may really reflow, and the refusal below is the honest answer to
+  // the rest.
+  if (/[\r\n]/.test(value)) return null;
+  const pattern = `^[ \\t]*(${escapeRegex(value).replace(/[ \t]+/g, "[ \\t]+")})[ \\t]*$`;
   if (!new RegExp(pattern, "im").test(fullText)) return null;
   return { patterns: [pattern], flags: "im", transform };
 }

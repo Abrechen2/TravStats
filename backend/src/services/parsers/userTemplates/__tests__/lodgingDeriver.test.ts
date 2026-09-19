@@ -300,7 +300,7 @@ describe("a user-derived lodging template", () => {
       if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
       const rule = derived.template.fields.hotelName;
       expect(rule?.stacked).toBeUndefined();
-      expect(rule?.patterns?.[0]).toBe("^[ \\t]*(Hotel\\s+Seeblick\\s+Garni)[ \\t]*$");
+      expect(rule?.patterns?.[0]).toBe("^[ \\t]*(Hotel[ \\t]+Seeblick[ \\t]+Garni)[ \\t]*$");
       expect(rule?.flags).toBe("im");
     });
 
@@ -326,6 +326,35 @@ describe("a user-derived lodging template", () => {
       expect(read?.hotelName).toBe("Hotel Seeblick Garni");
       expect(read?.checkIn).toBe("2026-05-04");
       expect(read?.checkOut).toBe("2026-05-07");
+    });
+
+    it("refuses a letterhead the sender wrapped across two lines", () => {
+      // Review of `fix/workshop-lodging-derivation`, finding 3. `\s+`
+      // matched the line break as readily as a space under `m`, so the rule
+      // captured across it — the one thing every capture class in this file
+      // is shaped to prevent. A value that spans a break is not a line, and
+      // cannot be one's marker; the refusal is the honest answer.
+      const value = "Hotel Seeblick\nGarni";
+      const wrapped = [value, "Anreise: 10. März 2026", "Abreise: 12. März 2026"].join("\n");
+      const derived = deriveLodgingTemplate({
+        ...letterheadInput,
+        fullText: wrapped,
+        selections: [
+          { start: 0, end: value.length, text: value, label: "hotelName" },
+          select(wrapped, "10. März 2026", "checkIn"),
+          select(wrapped, "12. März 2026", "checkOut"),
+        ],
+      });
+      expect(derived).toEqual({ ok: false, refusal: "lodgingNeedsNameAndDates" });
+    });
+
+    it("generalises the spacing a sender may reflow, and nothing more", () => {
+      const derived = deriveLodgingTemplate(letterheadInput);
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      const respaced = LETTERHEAD.replace("Hotel Seeblick Garni", "Hotel  Seeblick\tGarni");
+      expect(applyLodgingTemplate(derived.template, LETTERHEAD_SUBJECT, respaced)?.hotelName).toBe(
+        "Hotel Seeblick Garni"
+      );
     });
 
     it("still prefers the label when the sender printed one above the name", () => {
