@@ -70,6 +70,20 @@ interface CostItem {
  * currency is downgraded to unconvertible here (not later): the stored
  * `priceBase` number is real, but it is real in a currency the sum below is
  * no longer being computed in.
+ *
+ * An item already priced IN the current base currency is convertible at its
+ * own price, with no snapshot required — 300 EUR in a EUR logbook is 300 EUR.
+ * Without that branch a trip whose costs were entered before the snapshot
+ * columns existed carried at least one `priceBase: null` item, and `excluded`
+ * swallowed the whole trip: the same defect the cruise money tile drew as a
+ * dash on 2026-09-19, where a derivation that insists on a new column treated
+ * every pre-existing row as worthless. `utils/stats/dedupedCost.ts` has
+ * carried the branch for flights since #267.
+ *
+ * The shortcut compares the NORMALISED currency, the same `?? "EUR"` the item
+ * is pushed with two lines down. Reading the raw column here would let an item
+ * be labelled EUR by `dominantCurrencyBucket` and excluded for not being EUR
+ * in the very same call.
  */
 function pushIfPriced(
   items: CostItem[],
@@ -80,9 +94,13 @@ function pushIfPriced(
   currentBaseCurrency: string
 ): void {
   if (price == null || price <= 0) return;
-  const convertible = priceBase != null && fxBaseCurrency === currentBaseCurrency;
   // No currency on the schema's default column is EUR; matches sumByCurrency.
-  items.push({ price, currency: currency ?? "EUR", priceBase: convertible ? priceBase : null });
+  const ownCurrency = currency ?? "EUR";
+  const convertible =
+    ownCurrency === currentBaseCurrency ||
+    (priceBase != null && fxBaseCurrency === currentBaseCurrency);
+  const baseAmount = ownCurrency === currentBaseCurrency ? price : priceBase;
+  items.push({ price, currency: ownCurrency, priceBase: convertible ? baseAmount : null });
 }
 
 /**

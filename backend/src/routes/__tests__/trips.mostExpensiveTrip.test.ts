@@ -222,3 +222,106 @@ describe("GET /trips?includeInsights=true — a stale base-currency snapshot", (
     });
   });
 });
+
+/**
+ * A cost item already priced IN the base currency needs no FX snapshot.
+ *
+ * Every trip whose costs were entered before the snapshot columns existed
+ * carries `priceBase: null` on at least one item, and `costItemsForTrip` used
+ * to downgrade that to unconvertible — which puts the WHOLE trip into
+ * `excluded` and can leave the superlative with nothing to name at all. Same
+ * defect class the cruise money tile drew as a dash on 2026-09-19: a
+ * derivation that insists on a new column treats every pre-existing row as
+ * worthless.
+ *
+ * Its own user, for the reason the block above gives: the base currency is
+ * account-wide, so these fixtures cannot share one.
+ */
+describe("GET /trips?includeInsights=true — a cost item already in the base currency", () => {
+  let authCookie: string;
+  let userId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: "baseCurrencyNoSnapshotTest" } });
+    const user = await prisma.user.create({
+      data: {
+        username: "baseCurrencyNoSnapshotTest",
+        passwordHash: await hashPassword("password123"),
+      },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
+    await prisma.userSettings.create({ data: { userId, data: {}, baseCurrency: "EUR" } });
+  });
+
+  afterAll(async () => {
+    await prisma.trip.deleteMany({ where: { userId } });
+    await prisma.userSettings.deleteMany({ where: { userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.$disconnect();
+  });
+
+  it("ranks a trip whose euro costs predate the snapshot columns", async () => {
+    const preSnapshot = await prisma.trip.create({
+      data: { userId, name: "Entered before the FX columns", status: "completed" },
+    });
+    await prisma.booking.create({
+      data: { userId, tripId: preSnapshot.id, price: 2000, currency: "EUR" },
+    });
+
+    // The shortcut is about the currency the price is IN, not about the
+    // absence of a snapshot: a dollar price with no rate stays unconvertible.
+    const foreign = await prisma.trip.create({
+      data: { userId, name: "Dollars, no rate on file", status: "completed" },
+    });
+    await prisma.booking.create({
+      data: { userId, tripId: foreign.id, price: 5000, currency: "USD" },
+    });
+
+    const res = await request(app)
+      .get("/api/v1/trips?includeInsights=true")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.mostExpensiveTrip).toMatchObject({
+      tripId: preSnapshot.id,
+      name: "Entered before the FX columns",
+      amount: 2000,
+      currency: "EUR",
+    });
+    expect(res.body.mostExpensiveTrip.excluded).toEqual({ count: 1, reason: "unconvertible" });
+  });
+
+  it("adds a snapshot-less euro item to a foreign one that does carry a snapshot", async () => {
+    const mixed = await prisma.trip.create({
+      data: { userId, name: "One of each", status: "completed" },
+    });
+    await prisma.booking.create({
+      data: { userId, tripId: mixed.id, price: 1000, currency: "EUR" },
+    });
+    await prisma.booking.create({
+      data: {
+        userId,
+        tripId: mixed.id,
+        price: 1200,
+        currency: "USD",
+        priceBase: 1100,
+        fxRate: 0.9167,
+        fxRateDate: new Date("2026-01-01"),
+        fxBaseCurrency: "EUR",
+      },
+    });
+
+    const res = await request(app)
+      .get("/api/v1/trips?includeInsights=true")
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(200);
+    // 1000 + 1100 = 2100 base, beating the 2000 trip above. The DISPLAYED
+    // figure stays the dominant per-currency bucket, which is the dollars.
+    expect(res.body.mostExpensiveTrip).toMatchObject({
+      tripId: mixed.id,
+      amount: 1200,
+      currency: "USD",
+    });
+    expect(res.body.mostExpensiveTrip.excluded).toEqual({ count: 1, reason: "unconvertible" });
+  });
+});
