@@ -331,6 +331,47 @@ describe("EvidencePanel", () => {
     logged.mockRestore();
   });
 
+  /**
+   * A browser probe on 2026-09-19 still counted a `[role=dialog]` after Escape
+   * on the 404 error panel, which would have meant the error state closed by a
+   * different contract from the loaded one. It does not: `Modal` is mounted on
+   * `isOpen` and `useDialogChrome` keys Escape off the same flag, so the state
+   * of the FETCH never reaches the keyboard. This pins that, and the probe's
+   * reading is recorded as an artefact in the task report.
+   */
+  it("Escape closes the panel from the ERROR state too, and drops `?evidence`", async () => {
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.mocked(evidenceApi.get).mockRejectedValue(
+      new AxiosError("not found", undefined, undefined, undefined, {
+        status: 404,
+        data: {},
+        statusText: "",
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      })
+    );
+
+    function ParamProbe() {
+      const [params] = useSearchParams();
+      return <span data-testid="param">{params.get("evidence") ?? "none"}</span>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/stats?evidence=ranking%3Aairline%3A"]}>
+        <ParamProbe />
+        <EvidencePanel />
+      </MemoryRouter>
+    );
+
+    await screen.findByText("evidence:panel.loadError");
+    expect(screen.getByTestId("param")).toHaveTextContent("ranking:airline:");
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("param")).toHaveTextContent("none");
+    logged.mockRestore();
+  });
+
   it("Escape closes the panel and returns focus to whatever opened it", async () => {
     vi.mocked(evidenceApi.get).mockResolvedValue(response());
 
