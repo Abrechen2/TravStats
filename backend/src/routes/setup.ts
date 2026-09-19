@@ -4,6 +4,7 @@ import { appVersion } from "../utils/version";
 import { z } from "zod";
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
+import { isReservedUsername } from "../schemas/auth";
 import { issueAuthCookie } from "../utils/session";
 import { AppError } from "../middleware/errorHandler";
 import { takeUserCountLock } from "../utils/userCountLock";
@@ -71,6 +72,20 @@ router.post("/initialize", authLimiter, async (req: Request, res: Response, next
       enabledDomains,
       usageStatsConsent,
     } = validated;
+
+    // The third door into the user table, and the one most easily forgotten:
+    // the reservation was added to `/auth/register` and `POST /admin/users`
+    // first (data-integrity audit 2026-09-19, finding 1). An instance whose
+    // very first account is called `demo` is the worst version of the problem
+    // — that account is the administrator, and `CREATE_DEMO_USER` on the same
+    // boot would have met it before the flag existed to protect it.
+    if (isReservedUsername(username)) {
+      throw new AppError(
+        `The username "${username}" is reserved by this instance`,
+        400,
+        "USERNAME_RESERVED"
+      );
+    }
 
     // Hashing stays outside the lock: it is the slow part and it needs nothing
     // from the count.

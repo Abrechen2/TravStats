@@ -77,3 +77,35 @@ describe("POST /admin/users", () => {
     expect(await prisma.user.count({ where: { username: "Demo" } })).toBe(0);
   });
 });
+
+describe("POST /setup/initialize", () => {
+  /**
+   * The third door, and the worst version of the problem: the account it
+   * creates is the instance's administrator. A first boot that names them
+   * `demo` and enables CREATE_DEMO_USER in the same compose file used to hand
+   * that administrator's login to every visitor.
+   *
+   * This instance already has an admin, so both requests below are refused —
+   * the CODE is what says WHICH refusal happened, and that the reservation is
+   * checked before the admin count rather than after it.
+   */
+  it("refuses a reserved username, ahead of the already-configured check", async () => {
+    const res = await request(app)
+      .post("/api/v1/setup/initialize")
+      .send({ username: "demo", password: PASSWORD });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("USERNAME_RESERVED");
+  });
+
+  it("gets the ordinary refusal for a name that is not reserved (the control)", async () => {
+    const res = await request(app)
+      .post("/api/v1/setup/initialize")
+      .send({ username: `${ADMIN}-setup`, password: PASSWORD });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBeUndefined();
+    expect(res.body.error).toMatch(/already completed/i);
+    expect(await prisma.user.count({ where: { username: `${ADMIN}-setup` } })).toBe(0);
+  });
+});
