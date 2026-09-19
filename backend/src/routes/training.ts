@@ -52,6 +52,55 @@ export function getTrainingUploadDir(): string {
   return TRAINING_UPLOAD_DIR;
 }
 
+/**
+ * Remove the uploaded file behind a sample, if it is still one of ours.
+ *
+ * `originalFile` is written by the multer storage above, so the containment
+ * check is not defending against a caller — it is what keeps a row restored
+ * from an older backup, carrying an absolute path from another machine, from
+ * turning a delete into an unlink of something else.
+ *
+ * A miss is logged rather than raised: by the time this runs the database row
+ * is already gone, and failing the request would tell the user the sample is
+ * still there when it is not.
+ */
+function removeTrainingFile(originalFile: string, id: string): void {
+  const root = path.resolve(TRAINING_UPLOAD_DIR);
+  const resolved = path.resolve(originalFile);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    logger.warn(
+      { operation: "training_delete_file", id },
+      "Training file lies outside the upload directory — left alone"
+    );
+    return;
+  }
+  try {
+    fs.unlinkSync(resolved);
+  } catch (err) {
+    // ENOENT is the ordinary case for a sample whose file a sweep already took.
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      logger.warn(
+        { operation: "training_delete_file", id, err },
+        "Could not remove the training file"
+      );
+    }
+  }
+}
+
+/**
+ * How many samples one list request may ask for.
+ *
+ * The bound sits in the Prisma call as a `take`, so it bounds the WORK and not
+ * just the answer. 50 is a real user's whole workshop history several times
+ * over — the list exists so a sample can be found and removed again, not so a
+ * corpus can be paged through.
+ */
+const MAX_TRAINING_LIST = 100;
+
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(MAX_TRAINING_LIST).default(50),
+});
+
 const trainingStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, TRAINING_UPLOAD_DIR),
   filename: (_req, file, cb) => {
@@ -212,6 +261,62 @@ router.post(
   }
 );
 
+// GET /api/v1/training
+//
+// The caller's own samples, newest first.
+//
+// This router served upload, read-by-id and annotate and nothing else, so a
+// sample could not be found again once the annotation view was closed: the id
+// was handed out once, in the upload response, and never again (beta API audit
+// of 2026-09-19, unlisted finding 3). That mattered because a sample is a
+// COPY of a real document — a boarding pass with a passenger's name on it,
+// kept as a file on the data volume and base64'd into a jsonb column on top.
+// This half says which ids exist; DELETE below is the half that removes one.
+//
+// `annotations` and `extractedData` are deliberately not selected: the first
+// holds the whole mail text or that base64 image, so twenty rows would be
+// megabytes for a view that shows a filename and a date. Read one sample by
+// id for the blob.
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { limit } = listQuerySchema.parse(req.query);
+
+    const records = await prisma.trainingData.findMany({
+      where: { userId },
+      // `createdAt` is neither unique nor nullable-free across restores, so
+      // the id keeps the order total — the same tie-breaker `routes/flights.ts`
+      // carries, and for the same reason.
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        domain: true,
+        status: true,
+        tags: true,
+        createdAt: true,
+        originalFile: true,
+      },
+    });
+
+    res.json({
+      samples: records.map((record) => ({
+        id: record.id,
+        type: record.type,
+        domain: record.domain,
+        status: record.status,
+        tags: record.tags,
+        createdAt: record.createdAt.toISOString(),
+        // The name, never the path: the path names the data volume's layout.
+        filename: path.basename(record.originalFile),
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/v1/training/:id
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -294,5 +399,43 @@ router.post("/:id/annotate", async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 });
+
+// DELETE /api/v1/training/:id
+//
+// Another user's id is answered 404 and never 403. The two are
+// distinguishable, and the difference is itself the leak: a 403 would confirm
+// that the id exists and belongs to somebody. Same status and same message as
+// the GET above, so there is nothing to compare.
+router.delete(
+  "/:id",
+  // The same guard the upload route carries, in the same place. The shared
+  // demo account can own no sample, so this refuses nothing that would
+  // otherwise have succeeded — which is exactly why it belongs here: a
+  // boundary that holds only because of what the data happens to contain is
+  // not a boundary. Measured on the beta, where the demo account is logged in
+  // by every visitor at once.
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const record = await prisma.trainingData.findFirst({
+        where: { id: req.params.id, userId },
+      });
+      if (!record) throw new AppError("Training data not found", 404);
+
+      // The row first: it carries the annotation blob, which is the copy a
+      // read route can still serve. Once it is gone nothing references the
+      // file, so a failed unlink leaves bytes that no request can reach —
+      // logged, never swallowed, so an operator can sweep them.
+      await prisma.trainingData.delete({ where: { id: record.id } });
+      removeTrainingFile(record.originalFile, record.id);
+
+      logger.info({ operation: "training_delete", id: record.id });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;

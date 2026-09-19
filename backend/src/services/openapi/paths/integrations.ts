@@ -756,29 +756,3 @@ registry.registerPath({
     403: { description: "Not an admin", content: errorContent },
   },
 });
-
-registry.registerPath({
-  method: "post",
-  path: "/training/upload",
-  summary: "Upload a document to improve parsing",
-  tags: parseTag,
-  responses: { 201: { description: "Uploaded" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/training/{id}",
-  summary: "One training document",
-  tags: parseTag,
-  request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Document" }, 404: notFound },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/training/{id}/annotate",
-  summary: "Say what a training document should have produced",
-  tags: parseTag,
-  request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Annotated" }, 400: badInput, 404: notFound },
-});
