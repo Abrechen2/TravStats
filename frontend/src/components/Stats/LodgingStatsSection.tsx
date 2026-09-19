@@ -91,35 +91,40 @@ export default function LodgingStatsSection({
       <PeriodComparisonStrip
         year={shown.year}
         compareYear={shown.compareYear}
+        // Every row carries its key, and none of them duplicates a trigger:
+        // whenever this strip is drawn, `LodgingStatStrip` below is told to
+        // `omit` exactly stays, nights and houses, so these ARE the only
+        // places those three figures appear. The comment here used to claim
+        // the opposite — that the strip below still carried them — which left
+        // three served measures opening nothing in the one view where the
+        // year-over-year comparison is shown.
         rows={[
           {
             key: "stays",
             label: t("dashboard:lodgingTab.stats.stays"),
             current: stats.staysCount,
             previous: previous.staysCount,
+            evidenceKey: "lodgingStaysCount",
           },
           {
             key: "nights",
             label: t("dashboard:lodgingTab.stats.nights"),
             current: stats.totalNights,
             previous: previous.totalNights,
+            evidenceKey: "lodgingNightsTotal",
           },
           {
             key: "houses",
             label: t("dashboard:lodgingTab.stats.hotels"),
             current: stats.lodgingsCount,
             previous: previous.lodgingsCount,
+            evidenceKey: "lodgingsUniqueCount",
           },
           {
             key: "countries",
             label: t("stats:sections.countries"),
             current: stats.countriesCount,
             previous: previous.countriesCount,
-            // The only row here whose measure a resolver answers for. Stays,
-            // nights and houses are the three cells the strip below omits
-            // precisely BECAUSE this strip shows them, and those three already
-            // carry their triggers there — a second trigger for the same
-            // number in the same view is two places to keep honest.
             evidenceKey: "lodgingCountriesCount",
           },
         ]}
