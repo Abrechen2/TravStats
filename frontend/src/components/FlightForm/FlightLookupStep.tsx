@@ -204,8 +204,18 @@ export default function FlightLookupStep({
             {loading ? t("flights:form.searching") : t("flights:form.searchFlight")}
           </button>
         </div>
-        {flightNumber.trim() && !searchDate && (
-          <p className="mt-1 text-xs text-yellow-400">{t("flights:form.dateImproves")}</p>
+        {/* Two hints, never both: what is MISSING before the search can run at
+            all, then what would make it better. The empty case used to say
+            nothing, leaving a disabled button with no reason (forgejo#88
+            finding 8). */}
+        {!flightNumber.trim() ? (
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("flights:form.flightNumberRequired")}
+          </p>
+        ) : (
+          !searchDate && (
+            <p className="mt-1 text-xs text-yellow-400">{t("flights:form.dateImproves")}</p>
+          )
         )}
       </ImportRouteRow>
 

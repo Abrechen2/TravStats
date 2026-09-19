@@ -163,7 +163,8 @@
       "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
       "mergedNoChange": "Keine neuen Felder zu ergänzen"
     },
-    "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt."
+    "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt.",
+    "flightNumberRequired": "Gib zuerst eine Flugnummer ein, zum Beispiel LH400."
   },
   "list": {
     "title": "Flüge",

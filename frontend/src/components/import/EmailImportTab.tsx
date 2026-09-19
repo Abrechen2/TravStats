@@ -184,14 +184,25 @@ export default function EmailImportTab({
             className="w-full h-32 bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm text-slate-200 resize-none"
             placeholder={t("import:email.textPlaceholder")}
           />
-          <button
-            type="button"
-            onClick={() => void handleTextParse()}
-            disabled={!emailText.trim() || showLoader}
-            className="btn-primary self-end px-4 py-2 text-sm"
-          >
-            {t("import:email.parse")}
-          </button>
+          <div className="flex items-center justify-end gap-3">
+            {/* Says WHY the button is off. It has been correctly disabled on an
+                empty box for a while, which already ended the silent no-op the
+                audit hit — but an unexplained disabled button is its own small
+                dead end (forgejo#88 finding 8). */}
+            {!emailText.trim() && (
+              <p className="t-caption" style={{ color: "var(--text-muted)" }}>
+                {t("import:email.pasteFirst")}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => void handleTextParse()}
+              disabled={!emailText.trim() || showLoader}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              {t("import:email.parse")}
+            </button>
+          </div>
         </div>
       </details>
     </div>
