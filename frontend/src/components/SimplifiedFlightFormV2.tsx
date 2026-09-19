@@ -10,7 +10,7 @@
  * Step UIs live in FlightForm/FlightLookupStep, FlightSelectStep, FlightCompleteStep
  */
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import Modal from "./Modal";
 
@@ -19,6 +19,7 @@ import FlightLookupStep from "./FlightForm/FlightLookupStep";
 import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
+import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
 
 import type { Flight, FlightInput, UserAchievement } from "../types";
 
@@ -45,6 +46,30 @@ export default function SimplifiedFlightFormV2({
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
   // The footer's submit button sits outside the <form>; `form={id}` ties it back.
   const formId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  /**
+   * A refused save puts the cursor in the first field that is missing
+   * (forgejo#88, point 9).
+   *
+   * The refusal itself is `useFlightForm`'s — it answers with one sentence at
+   * the top of the dialog that names no field, which on a form this long means
+   * the user scrolls looking for what is empty. Focusing is not a second
+   * validation: `canSubmit` is the same guard the hook is about to apply, and
+   * when it holds nothing is focused and the submit runs untouched.
+   *
+   * Wraps BOTH submit paths, because Enter in any input reaches `handleSubmit`
+   * while the footer's "Speichern + Rückflug" reaches the other one, and a
+   * user who pressed Enter is exactly the user who did not look at the button.
+   */
+  const withFocusOnRefusal = (
+    submit: (e: React.FormEvent) => Promise<void> | void
+  ): ((e: React.FormEvent) => void) => {
+    return (e: React.FormEvent): void => {
+      if (!form.canSubmit) focusFirstMissingRequired(formRef.current);
+      void submit(e);
+    };
+  };
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const textClass = "text-white";
@@ -81,9 +106,7 @@ export default function SimplifiedFlightFormV2({
               <>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    void form.handleSubmitAndReturn(e);
-                  }}
+                  onClick={withFocusOnRefusal(form.handleSubmitAndReturn)}
                   className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
                   disabled={form.loading || !form.canSubmit}
                   title={
@@ -130,7 +153,12 @@ export default function SimplifiedFlightFormV2({
           </div>
         )}
 
-        <form id={formId} onSubmit={form.handleSubmit} className="space-y-6 pt-2">
+        <form
+          id={formId}
+          ref={formRef}
+          onSubmit={withFocusOnRefusal(form.handleSubmit)}
+          className="space-y-6 pt-2"
+        >
           {form.step === "input" && (
             <FlightLookupStep
               flightNumber={form.flightNumber}
