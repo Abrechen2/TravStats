@@ -16,6 +16,13 @@ const tripsGetAllMock = vi.fn();
 // network, which the setup refuses (forgejo#110).
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 
+// The stay's delete dialog counts the kept originals that cascade with it.
+// The section above is stubbed out, so this mock serves the COUNT only.
+const listForEntryMock = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...args: unknown[]) => listForEntryMock(...args) },
+}));
+
 vi.mock("../../lib/api/lodging", () => ({
   getLodging: (...args: unknown[]) => getLodgingMock(...args),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
@@ -159,6 +166,8 @@ describe("LodgingDetailPage", () => {
     deleteStayMock.mockResolvedValue(undefined);
     listMembershipsMock.mockReset();
     tripsGetAllMock.mockReset();
+    listForEntryMock.mockReset();
+    listForEntryMock.mockResolvedValue([]);
     listMembershipsMock.mockResolvedValue([]);
     tripsGetAllMock.mockResolvedValue([]);
     useToastStore.setState({ toasts: [] });
@@ -771,5 +780,81 @@ describe("LodgingDetailPage", () => {
     expect(await screen.findByTestId("stay-editor-save")).toBeInTheDocument();
     // … and has nothing to delete.
     expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+  });
+  /**
+   * Findings 3 and 6 of the write-path audit (2026-09-19).
+   * `Document.lodgingStayId` carries `onDelete: Cascade` — measured against
+   * the live database by
+   * `backend/src/__tests__/integrity/cascades.integrity.test.ts` — while the
+   * dialog's only warning about attachments was the LEGACY single
+   * `receiptUrl`. Finding 6 is exactly that gap.
+   */
+  it("names the documents that cascade with the stay", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    listForEntryMock.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+    expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: "stay-1" });
+  });
+
+  it("keeps the legacy receipt note beside the document line", async () => {
+    // The two are different things: `receiptUrl` is the ONE file the cost
+    // block links to, the documents are the folder. Naming one is not naming
+    // the other, which is what finding 6 measured.
+    getLodgingMock.mockResolvedValue(
+      makeLodging({}, [{ ...baseStay, receiptUrl: "/uploads/receipts/r1.pdf" }])
+    );
+    listForEntryMock.mockResolvedValue([{ id: "d1" }]);
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+    expect(dialog.textContent).toContain("lodging:stay.confirmDelete.receiptNote");
+  });
+
+  it("counts nothing until the stay dialog is opening", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    // A reader who never reaches for a stay's delete button pays for no
+    // request — the page already mounts a documents section of its own.
+    expect(listForEntryMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the stay dialog at once and adds the line when the count arrives", async () => {
+    let settle: (rows: { id: string }[]) => void = () => {};
+    listForEntryMock.mockReturnValue(
+      new Promise<{ id: string }[]>((resolve) => {
+        settle = resolve;
+      })
+    );
+    getLodgingMock.mockResolvedValue(makeLodging());
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("lodging:stay.confirmDelete.body");
+    expect(dialog.textContent).not.toContain("documents:deleteCascadeNote");
+
+    settle([{ id: "d1" }]);
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
   });
 });
