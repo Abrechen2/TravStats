@@ -177,20 +177,51 @@ describe("hasSecondWitness — a lone flight number needs corroboration (#291)",
     expect(hasFlightEvidence({ flightNumber: "LH400" }, "Erinnerung\nLH400 um 07:35")).toBe(true);
   });
 
-  it("accepts booking vocabulary anywhere in the mail", () => {
+  it("accepts a confirmation phrase anywhere in the mail", () => {
     // The Emirates confirmations in the corpus print their onward legs
-    // (EK051) with no route at all; only the subject says it is a booking.
-    for (const anchor of [
+    // (EK051) with no route at all; only the SUBJECT says it is a booking,
+    // which is why the phrase is looked for across the whole document.
+    for (const phrase of [
       "Ihre Buchung ist bestätigt",
-      "Your booking is confirmed",
-      "Reservierung 4711",
+      "Deine Buchung ist da",
+      "Buchungsnummer: ABC123",
+      "Buchungscode ABC123",
+      "Ihre Buchungsbestätigung",
+      "Reservierungsnummer 4711",
+      "Reservierungscode 4711",
+      "Ticketnummer 220-1234567890",
+      "Ihr E-Ticket",
       "PNR: JLNBLW",
-      "Ihr Ticket",
-      "Boarding 06:55",
-      "Abflug München",
-      "Departure Munich",
+      "Your booking is confirmed",
+      "Booking reference ABC123",
+      "Booking confirmation for your trip",
+      "Confirmation number ABC123",
+      "Record locator ABC123",
+      "Your boarding pass",
+      "Ihre Bordkarte",
     ]) {
-      expect(hasSecondWitness("EK051", `${anchor}\nEK051`)).toBe(true);
+      expect(hasSecondWitness("EK051", `${phrase}\nEK051`)).toBe(true);
+    }
+  });
+
+  it("refuses the marketing words a bare vocabulary let through", () => {
+    // Both measured in review against the first cut of this rule, which
+    // matched single words document-wide: each of these flipped a marketing
+    // mail back into a flight. A word like "Abflug" describes a service
+    // anyone can advertise; a confirmation phrase describes a transaction
+    // that already belongs to the reader.
+    expect(
+      hasSecondWitness(
+        "FB23",
+        `${NEWSLETTER}\nRegelmäßiger Abflug ab Flughafen Düsseldorf täglich.`
+      )
+    ).toBe(false);
+    expect(
+      hasSecondWitness("FB23", "Preisvergleich: FB23 bei Booking.com und anderen Anbietern.")
+    ).toBe(false);
+    // The rest of the retired word list, for the same reason.
+    for (const word of ["Buchung", "Ticket", "Reservierung", "Boarding", "Departure", "booking"]) {
+      expect(hasSecondWitness("FB23", `Aktion FB23 — ${word} jetzt entdecken`)).toBe(false);
     }
   });
 
@@ -210,6 +241,24 @@ describe("hasSecondWitness — a lone flight number needs corroboration (#291)",
 
   it("finds the number even when the mail prints a space in it", () => {
     expect(hasSecondWitness("LH2316", "LH 2316\n07:55 MUC")).toBe(true);
+  });
+
+  it("reaches across the tabular rows a real itinerary puts in between", () => {
+    // Shaped on the "Buchungsdetails" layout that 19 of the 31 corpus mails
+    // use: the flight number stands alone on its line and the departure time
+    // is two tab-delimited rows below it, behind a weekday, a date and a long
+    // airport name. "LH400 um 07:35" would not have exercised that distance —
+    // and the distance is the whole reason WITNESS_WINDOW is 200 and not 40.
+    // No confirmation phrase here on purpose: this pins the clock-time branch.
+    const itinerary = [
+      "LH 2316",
+      "Mo\t13-Jan-25\tMünchen, Franz Josef Strauß - Flughafen (MUC)\tTerminal 2",
+      "\t\tLuxemburg, Luxembourg (LUX)\tEconomy",
+      "07:55\t08:55\tAirbus A319\t1h 00m",
+    ].join("\n");
+
+    expect(itinerary.indexOf("07:55") - itinerary.indexOf("LH 2316")).toBeGreaterThan(100);
+    expect(hasSecondWitness("LH2316", itinerary)).toBe(true);
   });
 
   it("refuses an empty document outright", () => {

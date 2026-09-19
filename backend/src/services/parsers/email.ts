@@ -130,7 +130,14 @@ export async function parseEmail(
   // The document every candidate is judged against, built from the CLEANED
   // body: that is what the providers read, so the gate and the provider see
   // the same mail. Built once here because all four exits below need it.
-  const evidenceSource = combinedSource(subject, cleanedText, html);
+  //
+  // The HTML half goes through the same cleaner rather than in raw, because
+  // raw markup is not what anyone READS. Review found a hidden
+  // `<a href="…/manage-booking?utm=x" style="display:none">` corroborating a
+  // marketing token out of an href the recipient never sees; `cleanEmailBody`
+  // strips tags (attributes and all) and bare URLs, so the gate judges the
+  // words on the page. `evidenceSourceHtml.test.ts` pins both directions.
+  const evidenceSource = combinedSource(subject, cleanedText, html && cleanEmailBody(html));
 
   if (shouldLog) {
     log.info({

@@ -64,15 +64,27 @@ export function isCredibleFlightNumber(flightNumber: string | undefined): boolea
 const TIME_OF_DAY = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
 
 /**
- * Words only a document about actually travelling prints.
+ * Phrases a mail addressed to ONE traveller about ONE booking prints, and
+ * marketing copy does not.
  *
- * German and English side by side because the corpus is both, and unanchored
- * at the tail on purpose: "buchung" has to catch "Buchungsdetails" and
- * "Flugbuchung", which is how nearly every Lufthansa confirmation in the
- * corpus announces itself.
+ * The first cut of this list was single words — `buchung|booking|ticket|
+ * abflug|departure|boarding|reservierung` — and review measured it open in
+ * both languages. Adding one ordinary sentence of German airline copy,
+ * "Regelmäßiger Abflug ab Flughafen Düsseldorf täglich.", put the FB23
+ * newsletter straight back to a flight; an English price comparison naming
+ * "Booking.com" did the same. Those two are negative tests below.
+ *
+ * A word like "Abflug" describes a service anyone can advertise. "Ihre
+ * Buchung", "Buchungsnummer", "record locator" describe a transaction that
+ * has already happened and belongs to the reader — which is the distinction
+ * the witness actually needs.
+ *
+ * German and English side by side because the corpus is both. Matching is
+ * case-insensitive and word-boundaried at each end, so "Buchungsnummer:"
+ * counts and "Buchungsnummerngenerator" would not.
  */
-const BOOKING_VOCABULARY =
-  /\b(?:buchung|booking|reservierung|pnr|ticket|boarding|abflug|departure)/i;
+const CONFIRMATION_PHRASES =
+  /\b(?:ihre buchung|deine buchung|buchungsnummer|buchungscode|buchungsbestätigung|reservierungsnummer|reservierungscode|ticketnummer|e-ticket|pnr|your booking|booking reference|booking confirmation|confirmation number|record locator|boarding pass|bordkarte)\b/i;
 
 /**
  * How far either side of the number a clock time still counts as "near it".
@@ -109,10 +121,13 @@ const WITNESS_WINDOW = 200;
  *
  *   - a **clock time** within {@link WITNESS_WINDOW} of the number. A booking
  *     says when; a campaign says how cheap.
- *   - **booking vocabulary** anywhere in the mail. This is what keeps the
- *     Emirates confirmations in the corpus whole: their onward legs print
- *     `EK051` with no route at all, and only the subject — "Ihre Buchung ist
- *     bestätigt" — says the mail is a booking.
+ *   - a **confirmation phrase** ({@link CONFIRMATION_PHRASES}) anywhere in the
+ *     mail. This is what keeps the Emirates confirmations in the corpus whole:
+ *     their onward legs print `EK051` with no route at all, and only the
+ *     SUBJECT — "Ihre Buchung ist bestätigt" — says the mail is a booking, so
+ *     the subject has to stay in scope and the scope has to be the whole
+ *     document. That is safe for phrases in a way it was not for words: a
+ *     campaign advertises departures, it does not quote your booking number.
  *
  * A route is the third witness and never reaches here: {@link hasFlightEvidence}
  * has already accepted it. A bare DATE is pointedly not a witness — #17, #35
@@ -126,7 +141,7 @@ const WITNESS_WINDOW = 200;
  */
 export function hasSecondWitness(flightNumber: string, sourceText: string): boolean {
   if (!sourceText) return false;
-  if (BOOKING_VOCABULARY.test(sourceText)) return true;
+  if (CONFIRMATION_PHRASES.test(sourceText)) return true;
   return TIME_OF_DAY.test(windowAround(sourceText, flightNumber));
 }
 
