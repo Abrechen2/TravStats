@@ -383,11 +383,21 @@ export default function LoginPage(): JSX.Element {
                 {t("login.forgotPasswordModal.title")}
               </h2>
 
-              {smtpEnabled === false ? (
-                <div className="text-sm space-y-2 mb-4" style={{ color: "var(--text-muted)" }}>
-                  <p>{t("login.forgotPasswordModal.noSmtp")}</p>
-                  {adminContactEmail && (
-                    <p>
+              {forgotSuccess ? (
+                /* Two sentences, one of them false on the other instance —
+                   which is why the branch is here and not in the route. The
+                   copy is chosen by what the instance CAN do, never by whether
+                   the account exists: the request answers 200 either way, and
+                   a message that differed would be the enumeration oracle the
+                   route spends its whole length avoiding (forgejo#88). */
+                <div className="text-sm space-y-2 mb-4" style={{ color: "var(--ts-good)" }}>
+                  <p>
+                    {smtpEnabled === false
+                      ? t("login.forgotPasswordModal.noSmtpNotified")
+                      : t("login.forgotPasswordModal.success")}
+                  </p>
+                  {smtpEnabled === false && adminContactEmail && (
+                    <p style={{ color: "var(--text-muted)" }}>
                       {t("login.forgotPasswordModal.noSmtpContact")}{" "}
                       <a
                         href={`mailto:${adminContactEmail}`}
@@ -399,12 +409,18 @@ export default function LoginPage(): JSX.Element {
                     </p>
                   )}
                 </div>
-              ) : forgotSuccess ? (
-                <p className="text-sm text-green-400 mb-4">
-                  {t("login.forgotPasswordModal.success")}
-                </p>
               ) : (
                 <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  {/* The form is offered WITHOUT mail delivery too, since
+                      2026-09-19: the request reaches an administrator in the
+                      inbox instead of a mailbox. Before that this branch
+                      rendered a dead sentence and no input at all, and the
+                      administrator was never told anyone had asked. */}
+                  {smtpEnabled === false && (
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                      {t("login.forgotPasswordModal.noSmtp")}
+                    </p>
+                  )}
                   <div>
                     <label
                       htmlFor="forgotUsername"
