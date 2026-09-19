@@ -871,8 +871,15 @@ model AdminSettings {
 }
 
 model TrainingData {
-  id            String    @id @default(uuid())
-  userId        String    @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  /// Which KIND of document this sample is — 'flight' | 'lodging' | 'cruise' |
+  /// 'place'. `type` beside it is the MEDIUM (a mail or a boarding pass) and
+  /// never answered this; without the distinction the workshop derived every
+  /// template as a flight template, which is what forgejo#124 phase 6 ends.
+  /// Existing rows default to `flight` because that is the only value they
+  /// could have had: nothing else was derivable before this column.
+  domain        String    @default("flight")
   type          String // "email" | "boarding_pass"
   originalFile  String    @map("original_file") // Path to uploaded file
   annotations   Json // Markierte Bereiche (Text-Selections oder Bounding Boxes)
