@@ -51,7 +51,17 @@
   },
   "progress": {
     "label": "Fortschritt",
-    "unlocked": "Freigeschaltet am {{date}}"
+    "unlocked": "Freigeschaltet am {{date}}",
+    "units": {
+      "km": "km",
+      "hours": "Std.",
+      "days": "Tage",
+      "nights": "Nächte"
+    },
+    "evidence": {
+      "trigger": "Die Einträge dahinter",
+      "none": "Für diese Regel gibt es noch keine Einzelliste."
+    }
   },
   "alerts": {
     "unlocked": "Neu freigeschaltete Erfolge: {{count}}",

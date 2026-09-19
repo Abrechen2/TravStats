@@ -61,6 +61,16 @@ export function filterEmailText(text: string): string {
         return true;
       }
 
+      // A header line whose address the redaction above just removed. It is
+      // not evidence of a sender any more, it only looks like one: the parser
+      // workshop's `^From:` read matched it, captured nothing and reported a
+      // sample as having no sender at all (beta audit 2026-09-19, NOT FIXED
+      // 5). Who sent a training sample is kept on the row now, read from the
+      // real headers at upload, so nothing needs this husk.
+      if (/^(from|to|cc|bcc|reply-to|sender):\s*$/i.test(line)) {
+        return false;
+      }
+
       const lowerLine = line.toLowerCase();
       if (footerKeywords.some((keyword) => lowerLine.includes(keyword))) {
         return false;

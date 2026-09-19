@@ -32,6 +32,10 @@ export type ApiErrorCode =
   /** A workshop template was activated before its preview had run — the
    *  parser page turns this into "run the preview", not a generic toast. */
   | "PREVIEW_REQUIRED"
+  /** A training annotation whose offsets do not cut their own value out of
+   *  the text being saved. The two used to be allowed to disagree, which
+   *  corrupted every derivation built on it in silence. */
+  | "ANNOTATION_TEXT_MISMATCH"
   /** The requested username is reserved by the system — see
    *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
    *  into its own sentence, in the reader's language. */

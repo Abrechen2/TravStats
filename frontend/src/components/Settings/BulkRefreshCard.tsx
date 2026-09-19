@@ -23,11 +23,18 @@ import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { flightsApi, type AerodataboxQuota, type BulkRefreshSummary } from "../../lib/api/flights";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { useAuthStore } from "../../store/authStore";
+import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefusal";
 
 const MAX_PER_BATCH = 25;
 
 export default function BulkRefreshCard(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
+  // Which account is asking. The remembered refusal is the SERVER's answer
+  // about one account, so it has to travel with that account's id -- see
+  // `lib/bulkRefreshRefusal.ts` for what a tab-global flag cost.
+  const userId = useAuthStore((s) => s.user?.id);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [hasProvider, setHasProvider] = useState(true);
   const [quota, setQuota] = useState<AerodataboxQuota | null>(null);
@@ -58,6 +65,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
         errObj.response?.status === 403 &&
         errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN"
       ) {
+        rememberQuotaRefused(userId);
         setDemoBlocked(true);
         setRemaining(null);
         setPreviewError(null);
@@ -69,9 +77,33 @@ export default function BulkRefreshCard(): JSX.Element | null {
     }
   };
 
+  /**
+   * The shared demo does not ask.
+   *
+   * Beta audit 2026-09-19, unlisted finding 2: every load of
+   * `/settings/account` -- which draws all four general groups on one page,
+   * this card among them -- fired `GET /flights/refresh-historical-bulk/preview`
+   * and took a 403 with a console error. `rejectDemoQuota` refuses the demo
+   * before the handler runs, so the answer was known before the request: the
+   * account may not spend the instance's RapidAPI quota, and the card already
+   * says so from `demoBlocked`.
+   *
+   * Knowing the answer is why the request goes, not merely because it is
+   * noisy -- the same reason `NotificationsSection` does not fetch the shared
+   * account's address. The 403 branch in `loadPreview` stays: the server
+   * refuses EVERY `isDemo` account (the preview's own admin, the local dev
+   * admin), and only the shared one is visible from here.
+   */
+  const isSharedDemo = useIsDemoAccount();
+
   useEffect(() => {
+    if (isSharedDemo || wasQuotaRefused(userId)) {
+      setDemoBlocked(true);
+      return;
+    }
     void loadPreview();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreview is re-created each render; these two are the real inputs
+  }, [isSharedDemo, userId]);
 
   const handleRun = async (): Promise<void> => {
     setRunning(true);

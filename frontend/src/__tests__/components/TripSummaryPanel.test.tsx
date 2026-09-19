@@ -11,6 +11,10 @@ vi.mock("../../lib/api", () => ({
   tripsApi: { summarize: vi.fn() },
 }));
 
+// The card asks the instance whether it has a text model at all; these cases
+// are about an instance that does.
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
     selector({ addToast: vi.fn() }),

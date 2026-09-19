@@ -3,9 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Trip } from "../../../types";
 
+// The documents section fetches its entry's kept originals on mount. It has
+// its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
+// this surface mounts it — here it would only be a request reaching the
+// network, which the setup refuses (forgejo#110).
+vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
+
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));
+// TripOverview renders the summary card, which asks the instance whether it
+// has a text model at all (`GET /parser-capabilities`). The network guard
+// fails any test that lets that request out (forgejo#110).
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => false }),
 }));

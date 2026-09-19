@@ -92,7 +92,15 @@ export default function TablePagination({
         </div>
         <label className="flex items-center gap-2">
           <span>{t("common:table.pagination.pageSize")}</span>
+          {/* The visible words, repeated as the accessible name. The wrapping
+              <label> already associates them, but the beta audit of
+              2026-09-19 (unlisted 7) read this control's accessible name as
+              empty on /lodging and /flights -- an unnamed select in a row of
+              four carefully named buttons. Naming it outright costs one
+              attribute and does not depend on the wrapper surviving a
+              refactor. */}
           <select
+            aria-label={t("common:table.pagination.pageSize")}
             value={pageSize}
             onChange={(e): void =>
               setPageSize(e.target.value === "all" ? "all" : Number(e.target.value))

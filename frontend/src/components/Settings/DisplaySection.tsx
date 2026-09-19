@@ -6,6 +6,8 @@ import type { DisplaySettings } from "../../store/settingsStore";
 import { groupTimeZones } from "../../lib/timezones";
 import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import DemoLockedNotice from "./DemoLockedNotice";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 
 interface DisplaySectionProps {
   display: DisplaySettings;
@@ -29,6 +31,12 @@ export default function DisplaySection({
   // and the grouping is pure, so rebuilding it on every keystroke elsewhere in
   // the settings form would be wasted work.
   const timezoneGroups = useMemo(() => groupTimeZones(display.timezone), [display.timezone]);
+  // The server refuses a settings PUT from the shared demo with a 403, and
+  // until the beta audit of 2026-09-19 nothing here said so: the change was
+  // applied locally, the toast said "Speichern fehlgeschlagen", and the new
+  // value survived a reload. The store rolls the value back now; these
+  // controls say beforehand that there is nothing to roll back FROM.
+  const isDemo = useIsDemoAccount();
 
   return (
     <SectionCard>
@@ -36,6 +44,7 @@ export default function DisplaySection({
         title={t("settings:display.title")}
         description={t("settings:display.description")}
       />
+      {isDemo && <DemoLockedNotice />}
       <SettingRows>
         <SettingRow
           title={t("settings:display.language")}
@@ -49,6 +58,7 @@ export default function DisplaySection({
                 { value: "en", label: t("settings:display.languages.en") },
               ]}
               onChange={(lang) => void changeLanguage(lang)}
+              disabled={isDemo}
             />
           }
         />
@@ -62,6 +72,7 @@ export default function DisplaySection({
               id="display-timezone"
               value={display.timezone}
               onChange={(e) => onSetDisplay({ timezone: e.target.value })}
+              disabled={isDemo}
               className="input"
               style={{ minWidth: 220 }}
             >
@@ -89,6 +100,7 @@ export default function DisplaySection({
                 label: t(`settings:display.dateFormats.${key}`),
               }))}
               onChange={(dateFormat) => onSetDisplay({ dateFormat })}
+              disabled={isDemo}
             />
           }
         />
@@ -104,6 +116,7 @@ export default function DisplaySection({
                 label: t(`settings:display.timeFormats.${value}`),
               }))}
               onChange={(timeFormat) => onSetDisplay({ timeFormat })}
+              disabled={isDemo}
             />
           }
         />

@@ -162,7 +162,7 @@ export function FlightsFilterBar({
       onReset={onReset}
       // Silent while nothing is known: "0 angezeigt" over a failed load is a
       // count of a list nobody could read.
-      resultLabel={loading || loadError ? "" : t("common:filters.showing", { count: resultCount })}
+      resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: resultCount })}
     />
   );
 }

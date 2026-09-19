@@ -13,6 +13,7 @@ import { Icon, type IconName } from "../ui/Icon";
 import DetailSection from "../ui/DetailSection";
 import PeopleList from "../ui/PeopleList";
 import TripSummaryPanel from "./TripSummaryPanel";
+import DocumentsSection from "../documents/DocumentsSection";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -295,6 +296,11 @@ export default function TripOverview({
           )}
 
           {nothingLinked && <p className="t-caption">{t("trips:detail.noLinks")}</p>}
+
+          {/* On the overview rather than in TripDetailPage: that page is frozen
+              at its recorded size by the file-size ratchet, and the trip's own
+              papers belong with the trip's own summary anyway. */}
+          <DocumentsSection entry={{ type: "trip", id: trip.id }} />
 
           {trip.notes && (
             <DetailSection title={t("trips:detail.notes")}>

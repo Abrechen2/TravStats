@@ -86,20 +86,65 @@ describe("DomainTabStrip", () => {
     expect(onSelect).toHaveBeenCalledWith("flight");
   });
 
-  it("dims but still allows clicking a disabled-domain tab (so user can see the 'coming soon' screen)", () => {
-    const onSelect = vi.fn();
-    render(
-      <DomainTabStrip
-        active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
-        onSelect={onSelect}
-      />
-    );
-    const poi = screen.getByRole("tab", { name: /poi/i });
-    expect(poi.getAttribute("data-disabled")).toBe("true");
-    fireEvent.click(poi);
-    expect(onSelect).toHaveBeenCalledWith("poi");
+  // forgejo#88 P5, re-measured in the beta audit of 2026-09-19: the dimmed tab
+  // carried a pointer cursor and aria-disabled, no title and no aria-label, and
+  // the click did NOTHING — `onSelect` went to /dashboard/poi and
+  // `useDashboardRoute` bounced it back. The tab stays visible (that is how the
+  // area gets switched back on), so the click has to land somewhere that
+  // explains itself: the domain's own route, which draws DomainDisabledNotice.
+  describe("a tab whose domain is switched off", () => {
+    const renderWithPoiOff = (onSelect = vi.fn()): typeof onSelect => {
+      render(
+        <DomainTabStrip
+          active="all"
+          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          onSelect={onSelect}
+        />
+      );
+      return onSelect;
+    };
+
+    it("is dimmed but still drawn", () => {
+      renderWithPoiOff();
+      expect(screen.getByRole("tab", { name: /poi/i }).getAttribute("data-disabled")).toBe("true");
+    });
+
+    /**
+     * It carried `aria-disabled` while the click did nothing, which was at
+     * least honest. Once the click reaches the notice, the attribute tells
+     * assistive tech to skip the ONLY route back to the switch that turns the
+     * area on (review, 2026-09-19). Dimming is a fact about the area and
+     * stays; "not operable" was never true of this control again.
+     */
+    it("does not tell assistive tech to skip the one way back", () => {
+      renderWithPoiOff();
+      expect(screen.getByRole("tab", { name: /poi/i })).not.toHaveAttribute("aria-disabled");
+    });
+
+    it("says why, in the title and the accessible name", () => {
+      renderWithPoiOff();
+      const poi = screen.getByRole("tab", { name: /poi/i });
+      expect(poi.getAttribute("title")).toBe("dashboard:tabStrip.disabledHint");
+      expect(poi.getAttribute("aria-label")).toBe("POIs — dashboard:tabStrip.disabledHint");
+    });
+
+    it("routes to the domain's own page on click, instead of doing nothing", () => {
+      navigateSpy.mockClear();
+      const onSelect = renderWithPoiOff();
+      fireEvent.click(screen.getByRole("tab", { name: /poi/i }));
+      expect(navigateSpy).toHaveBeenCalledWith("/places");
+      // Not the dashboard tab — that route normalises straight back out.
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("leaves an ENABLED tab on the plain tab switch", () => {
+      navigateSpy.mockClear();
+      const onSelect = renderWithPoiOff();
+      fireEvent.click(screen.getByRole("tab", { name: /cruises/i }));
+      expect(onSelect).toHaveBeenCalledWith("cruise");
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
   });
 
   // The POI tab sat behind `poiDomain` until 2026-09-05, when the gate's own
@@ -163,6 +208,21 @@ describe("DomainTabStrip", () => {
       const tour = screen.getByRole("tab", { name: /tours/i });
       expect(tour).toBeTruthy();
       expect(tour.getAttribute("data-disabled")).toBe("false");
+    });
+
+    /**
+     * The tab kept a hard-coded "Beta" pill after the gate was removed
+     * (auditor 3, 2026-09-19). `config/betaFeatures.ts` holds one key,
+     * `devicePairing`, and the 2.7.0 announcement tells readers tours have
+     * shipped -- so the badge was contradicting both the registry and the
+     * release notes. A badge that no registry entry backs is a badge nothing
+     * can ever take away.
+     */
+    it("draws no Beta badge on the Touren tab — tours are released", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      expect(screen.getByRole("tab", { name: /tours/i }).textContent).not.toMatch(/beta/i);
+      expect(screen.queryByText("Beta")).not.toBeInTheDocument();
     });
   });
 });

@@ -26,7 +26,10 @@
       "unattributedLocationHistoryOnly": "{{count}} evidenced only by location history",
       "unattributedEntryRemoved": "{{count}} whose entry has since been removed",
       "unattributedNotPerEntry": "{{count}} cannot be split across individual entries"
-    }
+    },
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "copyFailed": "Copying failed"
   },
   "entry": {
     "contribution": "contributes {{value}}",

@@ -142,6 +142,7 @@
   "errors": {
     "loadFailed": "Fehler beim Laden der Training-Daten",
     "saveFailed": "Fehler beim Speichern",
+    "marksOutOfSync": "Die Markierungen passen nicht zum gespeicherten Text. Markiere die Werte bitte erneut und speichere dann.",
     "loadImageFailed": "Fehler beim Laden des Bildes",
     "startTrainingFailed": "Fehler beim Starten des Trainings",
     "deleteFailed": "Fehler beim Löschen",
@@ -152,13 +153,20 @@
     "trainingStarted": "Training gestartet!"
   },
   "annotation": {
-    "title": "Email Annotation",
-    "description": "Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu",
+    "title": "Dokument annotieren",
+    "descriptionFlight": "Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu",
+    "descriptionOther": "Markiere die relevanten Textpassagen und weise ihnen Labels zu",
     "selectFlight": "Flug für Annotation auswählen",
     "cancelDrawing": "Zeichnen abbrechen (ESC)",
     "drawingInstructions": "Zeichne eine Box. Drücke ESC oder klicke \"Abbrechen\" zum Abbrechen.",
     "selectLabel": "Label wählen...",
     "showFiltered": "Gefiltert anzeigen",
+    "filterLocked": "Text bleibt wie markiert — die Markierungen zeigen auf genau diese Fassung",
+    "marksDropped": "Die gespeicherten Markierungen passten nicht mehr zum Text und wurden verworfen — bitte neu markieren.",
+    "emailText": "Text der Nachricht",
+    "tags": "Schlagworte",
+    "noText": "Kein Text verfügbar",
+    "selectedText": "Ausgewählter Text: „{{value}}“",
     "imageLoading": "Bild wird geladen...",
     "emailTextLoading": "Email Text wird geladen...",
     "changeLabelForSelected": "Label für ausgewählte Box ändern",
@@ -167,7 +175,31 @@
     "drawBoundingBoxes": "Zeichne Bounding Boxes um relevante Bereiche",
     "saving": "Speichern...",
     "saveOnly": "Nur speichern",
-    "saveAndTrain": "Speichern & Trainieren"
+    "saveAndTrain": "Speichern & Trainieren",
+    "groundTruth": {
+      "title": "Flugdaten (Referenzwerte)",
+      "flight": "Flug {{index}}",
+      "addFlight": "+ Flug hinzufügen",
+      "remove": "Entfernen",
+      "fields": {
+        "flightNumber": "Flugnummer",
+        "airline": "Fluggesellschaft",
+        "aircraft": "Flugzeugtyp",
+        "departureCode": "Abflug-Code",
+        "arrivalCode": "Ankunfts-Code",
+        "departureDate": "Abflugdatum",
+        "departureTime": "Abflugzeit",
+        "arrivalDate": "Ankunftsdatum",
+        "arrivalTime": "Ankunftszeit",
+        "seat": "Sitzplatz",
+        "seatClass": "Sitzklasse",
+        "terminal": "Terminal",
+        "gate": "Gate",
+        "boardingGroup": "Boarding-Gruppe",
+        "pnr": "PNR / Buchungsreferenz",
+        "ticketNumber": "Ticketnummer"
+      }
+    }
   },
   "preview": {
     "title": "Training-Daten Vorschau",

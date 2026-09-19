@@ -930,6 +930,22 @@ model TrainingData {
   /// could have had: nothing else was derivable before this column.
   domain        String    @default("flight")
   type          String // "email" | "boarding_pass"
+  /// Who sent the sample, and what the message was called — read from the
+  /// uploaded file's headers ONCE, at upload, and kept.
+  ///
+  /// The annotation blob cannot answer either question. For an `.eml` the
+  /// extractor hands the workshop the BODY, header block removed, and the
+  /// annotation view then saves it through `filterEmailText`, which strips
+  /// every address it finds. So both anchor sources a lodging template needs
+  /// — the sender's domain and the subject — were structurally absent by the
+  /// time the deriver ran, and every browser upload abstained with
+  /// `noDistinguishingMarker` (beta audit 2026-09-19, NOT FIXED 5).
+  ///
+  /// Null on a row written before this column existed and on a pasted sample
+  /// that carries no header block; the deriver falls back to reading `From:`
+  /// and `Subject:` out of the text, which is all it ever had.
+  senderAddress String?   @map("sender_address")
+  subject       String?
   originalFile  String    @map("original_file") // Path to uploaded file
   annotations   Json // Markierte Bereiche (Text-Selections oder Bounding Boxes)
   extractedData Json // Extrahierte Flight-Daten (als Ground Truth)

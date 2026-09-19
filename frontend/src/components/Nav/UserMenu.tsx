@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { displayName, initials, type DisplayableUser } from "../../lib/userDisplay";
 import { Icon } from "../ui/Icon";
+import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 
 interface UserMenuProps {
   user: DisplayableUser | null | undefined;
@@ -58,6 +59,13 @@ export default function UserMenu({
   const { t } = useTranslation(["dashboard", "settings", "common"]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  /**
+   * The browser's own install offer, which it otherwise buries in a menu
+   * nobody opens (auditor 3, 2026-09-19). `canInstall` is false wherever the
+   * offer does not exist -- Safari, Firefox, an already-installed app -- and
+   * the entry is then not drawn at all, rather than drawn and failing.
+   */
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   // Outside clicks go through the project's own hook rather than a second
   // hand-rolled document listener; Escape is added here because the hook does
@@ -155,6 +163,21 @@ export default function UserMenu({
             <Icon name="book-open" size={16} />
             {t("common:help.title")}
           </a>
+          {canInstall && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                promptInstall();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
+              style={{ color: "var(--ts-text)" }}
+            >
+              <Icon name="smartphone" size={16} />
+              {t("dashboard:installApp")}
+            </button>
+          )}
           {onReportBug && (
             <button
               type="button"

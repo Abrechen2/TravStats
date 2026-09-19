@@ -6,6 +6,7 @@ import { WORKSHOP_DOMAIN_SPECS, isWorkshopDomain } from "../../../shared/annotat
 import type { AnnotationSelection } from "./annotations";
 import { escapeRegex } from "./annotations";
 import { deriveLodgingTemplate } from "./lodgingDeriver";
+import { senderAddressIn, senderDomainOf, subjectIn } from "./sampleHeaders";
 
 // Character classes and length quantifiers per field
 const FIELD_SPEC: Record<string, { chars: string; len: string }> = {
@@ -55,11 +56,21 @@ export function derivePatternFromSelection(
 
 /**
  * Extracts a TemplateFingerprint from plain-text email content.
+ *
+ * `senderDomain` is what the SAMPLE ROW knows — read from the real headers at
+ * upload and kept in a column, because an `.eml`'s header block never reaches
+ * the stored text (see `TrainingData.senderAddress`). The in-text `From:` read
+ * is the fallback for a row written before that column existed and for a
+ * pasted sample that carries its own header block.
  */
-export function extractFingerprint(fullText: string, subject: string): TemplateFingerprint {
-  // Sender domain from "From:" header line
-  const fromMatch = /^From:\s*.*?@([\w.-]+)/im.exec(fullText);
-  const senderDomains = fromMatch ? [fromMatch[1].toLowerCase()] : [];
+export function extractFingerprint(
+  fullText: string,
+  subject: string,
+  senderDomain?: string
+): TemplateFingerprint {
+  const inText = senderDomainOf(senderAddressIn(fullText));
+  const resolved = senderDomain ?? inText;
+  const senderDomains = resolved ? [resolved] : [];
 
   // Subject pattern (stripped of user-specific data — dates, booking codes, routes)
   const cleanSubject = subject
@@ -105,10 +116,26 @@ export type DerivationOutcome =
 interface SampleAnnotations {
   fullText: string;
   subject: string;
+  /** The sender's domain, from the row's column or from the text. */
+  senderDomain?: string;
   selections: AnnotationSelection[];
 }
 
-function readAnnotations(annotations: unknown): SampleAnnotations | null {
+/**
+ * What the deriver reads, and in which order: the sample row's own
+ * `senderAddress` and `subject` columns first, the header block inside the
+ * stored text second.
+ *
+ * The order is the fix for the beta audit's NOT FIXED 5. The columns hold what
+ * the uploaded file's headers said; the text is what survived
+ * `filterEmailText`, which removes every address and leaves an `.eml` with no
+ * header block at all. Reading the text first would mean preferring the
+ * damaged copy to the intact one.
+ */
+function readAnnotations(
+  annotations: unknown,
+  stored?: { senderAddress: string | null; subject: string | null }
+): SampleAnnotations | null {
   if (typeof annotations !== "object" || annotations === null) return null;
   const ann = annotations as Record<string, unknown>;
   const fullText = typeof ann.fullText === "string" ? ann.fullText : "";
@@ -124,8 +151,10 @@ function readAnnotations(annotations: unknown): SampleAnnotations | null {
       )
     : [];
   if (!fullText || selections.length === 0) return null;
-  const subjectMatch = /^Subject:\s*(.+)$/im.exec(fullText);
-  return { fullText, subject: subjectMatch ? subjectMatch[1].trim() : "", selections };
+  const subject = stored?.subject?.trim() || subjectIn(fullText) || "";
+  const senderDomain =
+    senderDomainOf(stored?.senderAddress) ?? senderDomainOf(senderAddressIn(fullText));
+  return { fullText, subject, ...(senderDomain ? { senderDomain } : {}), selections };
 }
 
 /** Flight patterns, unchanged since the workshop shipped — see `FIELD_SPEC`. */
@@ -197,10 +226,13 @@ export async function deriveTemplateFromAnnotation(
       return { status: "abstained", domain, reason: spec.reason ?? "notDerivable" };
     }
 
-    const sample = readAnnotations(td.annotations);
+    const sample = readAnnotations(td.annotations, {
+      senderAddress: td.senderAddress,
+      subject: td.subject,
+    });
     if (!sample) return { status: "failed", reason: "noAnnotations" };
 
-    const fingerprint = extractFingerprint(sample.fullText, sample.subject);
+    const fingerprint = extractFingerprint(sample.fullText, sample.subject, sample.senderDomain);
     let patterns: Prisma.InputJsonValue;
     let name: string;
 

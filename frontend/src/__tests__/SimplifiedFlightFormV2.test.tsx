@@ -37,6 +37,25 @@ vi.mock("@/lib/api/trips", async (importOriginal) => {
   return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
 });
 
+// EmailImportTab fetches `/parser-capabilities` through `lib/api/client` --
+// a different module than the `lib/api` barrel mocked above, so the request
+// escaped to the real network and then failed whichever test happened to be
+// running when it landed. Same shape as the trips mock above (forgejo#110).
+vi.mock("@/lib/api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/client")>();
+  const stub = (): Promise<{ data: Record<string, never> }> => Promise.resolve({ data: {} });
+  return {
+    ...actual,
+    api: {
+      get: vi.fn(stub),
+      post: vi.fn(stub),
+      put: vi.fn(stub),
+      patch: vi.fn(stub),
+      delete: vi.fn(stub),
+    },
+  };
+});
+
 describe("SimplifiedFlightFormV2", () => {
   const mockOnSubmit = vi.fn();
   const mockOnCancel = vi.fn();
@@ -79,7 +98,20 @@ describe("SimplifiedFlightFormV2", () => {
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("should show error when airports are missing", async () => {
+  /**
+   * These two used to assert the opposite: that both save buttons are
+   * DISABLED while a required field is empty. The beta audit of 2026-09-19
+   * measured the cost of that (forgejo#88 P9, third point) -- clearing a
+   * required time greys both buttons out, so the refusal that names what is
+   * missing and focuses it was unreachable by the only route most users
+   * take. A greyed-out button refuses without saying why, and there is
+   * nowhere to click to find out.
+   *
+   * The buttons are now enabled whenever the form is not saving. `canSubmit`
+   * still decides the title, and still guards `useFlightForm`'s handlers --
+   * what changed is only who gets to reach the refusal.
+   */
+  it("keeps both save buttons clickable while a required field is empty", async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     // Navigate to complete step via manual entry action
@@ -90,24 +122,41 @@ describe("SimplifiedFlightFormV2", () => {
       // Anchor on $ to match flights:form.submit and exclude submitAndReturn,
       // which was added when "Save + add return flight" got its own button.
       const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
-      expect(submitButton).toBeDisabled();
+      expect(submitButton).toBeEnabled();
     });
+    expect(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i })).toBeEnabled();
   });
 
-  it("should validate required fields", async () => {
+  it("says in the button's title what is still missing", async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     const skipButton = screen.getByText(/flights:form\.manualEntryAction/i);
     fireEvent.click(skipButton);
 
     await waitFor(() => {
-      // Anchor on $ to match flights:form.submit and exclude submitAndReturn,
-      // which was added when "Save + add return flight" got its own button.
       const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
-      expect(submitButton).toBeInTheDocument();
-      // Button should be disabled when airports are missing
-      expect(submitButton).toBeDisabled();
+      expect(submitButton.getAttribute("title")).toBe(
+        "flights:form.validation.selectAirportsAndDates"
+      );
     });
+  });
+
+  it("refuses the save from the BUTTON, names the reason, and calls nothing", async () => {
+    render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /flights:form\.submitAndReturn/i })
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/errors:missingAirports/i)).toBeInTheDocument();
+    });
+    expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
   /**
@@ -144,9 +193,9 @@ describe("SimplifiedFlightFormV2", () => {
   });
 
   /** ...and the refusal still says what is missing once the user submits.
-   *  Both footer buttons are disabled while the airports are empty, so the
-   *  submit that reaches the refusal is the one the form itself dispatches —
-   *  Enter in any input. */
+   *  This is the form's OWN submit -- Enter in any input -- which was the only
+   *  route to the refusal while the footer buttons were disabled, and is still
+   *  a route now that they are not. */
   it("names the missing airports once a submit is attempted", async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 

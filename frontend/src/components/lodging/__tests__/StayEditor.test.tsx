@@ -10,6 +10,12 @@ import type { LodgingStay, LodgingMembership } from "../../../types/lodging";
 // Mocked at the resolved-module level — StayEditor.tsx imports the same
 // "../../lib/api/lodging" file (this test lives 3 dirs under src, matching
 // the 3-level "../../../lib/api/lodging" specifier here).
+// The documents section fetches its entry's kept originals on mount. It has
+// its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
+// this surface mounts it — here it would only be a request reaching the
+// network, which the setup refuses (forgejo#110).
+vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
+
 vi.mock("../../../lib/api/lodging", () => ({
   createStay: vi.fn(),
   updateStay: vi.fn(),

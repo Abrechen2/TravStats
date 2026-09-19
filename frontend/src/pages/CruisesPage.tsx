@@ -386,7 +386,7 @@ export default function CruisesPage(): JSX.Element {
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
           resultLabel={
-            loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+            loading || loadError ? "" : t("common:filters.matching", { count: filtered.length })
           }
         />
 

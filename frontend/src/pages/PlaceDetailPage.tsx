@@ -10,6 +10,7 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
+import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -262,6 +263,14 @@ export default function PlaceDetailPage(): JSX.Element {
       {/* Proof hangs off the VISIT, not the place: "I was here in 2019" and
           "I was here last week" are two different sets of pictures. */}
       {!isPlanned && <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />}
+      {/* Same reasoning, same place: the API files documents against the VISIT
+          (`/places/visits/:id/documents`), so a ticket belongs to the day it
+          was used rather than to the place that is always there.
+          NOT guarded by `isPlanned`, unlike the photographs above: a ticket
+          exists BEFORE the day it is used, and that is the commonest reason
+          to keep one at all. The photo strip is guarded because a picture of
+          a visit that has not happened is not a thing. */}
+      <DocumentsSection entry={{ type: "placeVisit", id: v.id }} layout="inline" />
     </li>
   );
 

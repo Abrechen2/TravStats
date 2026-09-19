@@ -311,6 +311,19 @@ const detectInitialDateFormat = (): DateFormat => {
  */
 let saveQueue: Promise<void> = Promise.resolve();
 
+/** Exactly the slices `saveRemoteSettings` transmits, and `snapshotOf` records. */
+type SettingsSnapshotGroups = Pick<
+  SettingsState,
+  | "profile"
+  | "display"
+  | "units"
+  | "defaults"
+  | "notifications"
+  | "features"
+  | "cruise"
+  | "enabledDomains"
+>;
+
 export const snapshotOf = (state: SettingsState): string =>
   JSON.stringify([
     state.profile,
@@ -322,6 +335,43 @@ export const snapshotOf = (state: SettingsState): string =>
     state.cruise,
     state.enabledDomains,
   ]);
+
+/**
+ * `snapshotOf` read backwards — the last values the server is known to hold.
+ *
+ * Beta audit 2026-09-19, unlisted finding 1: as the shared demo, changing a
+ * display setting is refused with a 403, the toast says "Speichern
+ * fehlgeschlagen" — and the change stayed on screen AND survived a reload,
+ * because the store had already applied it and `persist` had already written
+ * it to localStorage. An optimistic update with no rollback is not optimism,
+ * it is a second source of truth that only ever disagrees.
+ *
+ * Reading the snapshot back rather than keeping a parallel object: the string
+ * is already the store's own record of the server's state, already stripped
+ * from `partialize`, and already captured before the awaits. A second copy of
+ * it is the thing that would drift.
+ */
+export function groupsFromSnapshot(raw: string | null): SettingsSnapshotGroups | null {
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length !== 8) return null;
+    const [profile, display, units, defaults, notifications, features, cruise, enabledDomains] =
+      parsed as [
+        SettingsState["profile"],
+        SettingsState["display"],
+        SettingsState["units"],
+        SettingsState["defaults"],
+        SettingsState["notifications"],
+        SettingsState["features"],
+        SettingsState["cruise"],
+        SettingsState["enabledDomains"],
+      ];
+    return { profile, display, units, defaults, notifications, features, cruise, enabledDomains };
+  } catch {
+    return null;
+  }
+}
 
 const defaultSettings: Omit<
   SettingsState,
@@ -620,6 +670,9 @@ export const useSettingsStore = create<SettingsState>()(
           // What this request is about to send. Captured BEFORE the awaits, so
           // an edit made while it is in flight is not swept up by its response.
           const sentSnapshot = snapshotOf(get());
+          // What the server is known to hold, for the rollback below. Also
+          // captured before the awaits, for the same reason.
+          const confirmedSnapshot = get().remoteSnapshot;
 
           // The two writes are independent (issue #186): a 400 from the
           // general settings PUT (e.g. a rejected profilePicture value) used
@@ -652,6 +705,24 @@ export const useSettingsStore = create<SettingsState>()(
           if (failures.length > 0) {
             for (const failure of failures) {
               logger.warn("Failed to save settings remotely", failure.reason);
+            }
+            // Put the refused values back (beta audit 2026-09-19, unlisted
+            // finding 1). As the shared demo the PUT answers 403, and the
+            // change used to stay on screen and survive a reload, because
+            // `persist` had already written it: the app showed a setting the
+            // server had refused, which is worse than the refusal.
+            //
+            // Only the GENERAL settings PUT rolls back, and only what it sent.
+            // The birthdate write is independent (#186) and a failure there
+            // must not undo a save that went through. An edit made while the
+            // request was in flight is not restored either: it was never sent,
+            // so it was never refused, and `hasPendingChanges` will offer it
+            // to the next debounce.
+            const generalFailed = results[0].status === "rejected";
+            const restore = generalFailed ? groupsFromSnapshot(confirmedSnapshot) : null;
+            if (restore) {
+              const stillPending = snapshotOf(get()) === sentSnapshot;
+              if (stillPending) set(restore);
             }
             // Surface a real failure instead of only logging a warning, so
             // callers (e.g. saveProfileSettings) can show their error toast.

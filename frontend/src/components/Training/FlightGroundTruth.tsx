@@ -1,3 +1,4 @@
+import { useTranslation } from "../../hooks/useTranslation";
 import type { Flight } from "./types";
 
 /**
@@ -11,14 +12,28 @@ import type { Flight } from "./types";
  * grid could not be shown for a hotel or a sailing without a second copy of
  * itself.
  *
- * The labels and placeholders are the ones that shipped, character for
- * character. Translating them is a separate change with its own DE/EN pair;
- * doing it inside an extraction would hide a copy change in a move.
+ * The labels WERE the ones that shipped, character for character: English,
+ * in a German-first UI, under an English heading "Flight Data (Ground
+ * Truth)". That was the separate change this header asked for, and it
+ * happened on 2026-09-19 (beta audit, unlisted finding 2) — heading, field
+ * labels and the two buttons now come from `training:annotation.groundTruth`
+ * with a DE and an EN side.
+ *
+ * The seat classes are deliberately NOT translated: Economy, Premium
+ * Economy, Business and First are what the industry prints on a German
+ * boarding pass too, and a translation would be a word no document uses.
+ *
+ * The placeholders stay as they are — an example value (LH103, MUC) is not
+ * copy in either language.
  */
 
 interface FieldSpec {
+  /**
+   * The Flight field, and — the same string — the key under
+   * `training:annotation.groundTruth.fields`. Renaming one without the other
+   * renders the key itself as the label, which the component's test catches.
+   */
   key: keyof Flight;
-  label: string;
   kind?: "text" | "date" | "time" | "seatClass";
   placeholder?: string;
   maxLength?: number;
@@ -27,22 +42,22 @@ interface FieldSpec {
 }
 
 const FIELDS: readonly FieldSpec[] = [
-  { key: "flightNumber", label: "Flight Number", placeholder: "LH103" },
-  { key: "airline", label: "Airline", placeholder: "Lufthansa" },
-  { key: "aircraft", label: "Aircraft Type", placeholder: "A320, Boeing 737" },
-  { key: "departureCode", label: "Departure Code", placeholder: "MUC", maxLength: 3, upper: true },
-  { key: "arrivalCode", label: "Arrival Code", placeholder: "FRA", maxLength: 3, upper: true },
-  { key: "departureDate", label: "Departure Date", kind: "date" },
-  { key: "departureTime", label: "Departure Time", kind: "time" },
-  { key: "arrivalDate", label: "Arrival Date", kind: "date" },
-  { key: "arrivalTime", label: "Arrival Time", kind: "time" },
-  { key: "seat", label: "Seat", placeholder: "12A" },
-  { key: "seatClass", label: "Seat Class", kind: "seatClass" },
-  { key: "terminal", label: "Terminal", placeholder: "2" },
-  { key: "gate", label: "Gate", placeholder: "A12" },
-  { key: "boardingGroup", label: "Boarding Group", placeholder: "1" },
-  { key: "pnr", label: "PNR / Booking Reference", placeholder: "ABC123" },
-  { key: "ticketNumber", label: "Ticket Number", placeholder: "2202236084346" },
+  { key: "flightNumber", placeholder: "LH103" },
+  { key: "airline", placeholder: "Lufthansa" },
+  { key: "aircraft", placeholder: "A320, Boeing 737" },
+  { key: "departureCode", placeholder: "MUC", maxLength: 3, upper: true },
+  { key: "arrivalCode", placeholder: "FRA", maxLength: 3, upper: true },
+  { key: "departureDate", kind: "date" },
+  { key: "departureTime", kind: "time" },
+  { key: "arrivalDate", kind: "date" },
+  { key: "arrivalTime", kind: "time" },
+  { key: "seat", placeholder: "12A" },
+  { key: "seatClass", kind: "seatClass" },
+  { key: "terminal", placeholder: "2" },
+  { key: "gate", placeholder: "A12" },
+  { key: "boardingGroup", placeholder: "1" },
+  { key: "pnr", placeholder: "ABC123" },
+  { key: "ticketNumber", placeholder: "2202236084346" },
 ];
 
 const SEAT_CLASSES: ReadonlyArray<{ value: string; label: string }> = [
@@ -66,30 +81,35 @@ export default function FlightGroundTruth({
   onAdd,
   onRemove,
 }: FlightGroundTruthProps): JSX.Element {
+  const { t } = useTranslation(["training"]);
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-(--text-primary)">Flight Data (Ground Truth)</h3>
+        <h3 className="text-sm font-medium text-(--text-primary)">
+          {t("training:annotation.groundTruth.title")}
+        </h3>
         <button
           onClick={onAdd}
           className="px-3 py-1 text-sm font-medium"
           style={{ color: "var(--ts-accent)" }}
         >
-          + Flug hinzufügen
+          {t("training:annotation.groundTruth.addFlight")}
         </button>
       </div>
       <div className="space-y-4">
         {flights.map((flight, index) => (
           <div key={index} className="p-4 border border-border rounded-lg bg-(--bg-base)">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-(--text-primary)">Flug {index + 1}</h4>
+              <h4 className="text-sm font-semibold text-(--text-primary)">
+                {t("training:annotation.groundTruth.flight", { index: index + 1 })}
+              </h4>
               {flights.length > 1 && (
                 <button
                   onClick={() => onRemove(index)}
                   className="px-2 py-1 text-xs font-medium"
                   style={{ color: "var(--danger)" }}
                 >
-                  Entfernen
+                  {t("training:annotation.groundTruth.remove")}
                 </button>
               )}
             </div>
@@ -97,7 +117,7 @@ export default function FlightGroundTruth({
               {FIELDS.map((field) => (
                 <div key={String(field.key)}>
                   <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                    {field.label}
+                    {t(`training:annotation.groundTruth.fields.${String(field.key)}`)}
                   </label>
                   {field.kind === "seatClass" ? (
                     <select

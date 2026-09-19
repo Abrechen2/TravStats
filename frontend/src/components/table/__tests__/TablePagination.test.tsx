@@ -27,6 +27,33 @@ describe("paginationRange", () => {
 // What's load-bearing here is the wiring: which button calls which setter,
 // and when they disable.
 describe("TablePagination", () => {
+  /**
+   * Beta audit 2026-09-19, unlisted finding 7: the "Zeilen pro Seite" select
+   * on /lodging and /flights was read as having an empty aria-label -- the one
+   * control in this row without a name of its own, beside four buttons that
+   * each carry one.
+   *
+   * Measured before changing anything: the wrapping <label> DOES name it, so
+   * `getByLabelText` passed already and a test written that way would have
+   * been vacuous. What was missing is the explicit attribute, which is what
+   * the audit read and what survives the <label> wrapper being refactored
+   * away. The assertion is therefore on the attribute, deliberately.
+   */
+  it("names the page-size select explicitly, not only through its wrapper", () => {
+    render(
+      <TablePagination
+        page={1}
+        pageCount={3}
+        pageSize={25}
+        total={60}
+        setPage={vi.fn()}
+        setPageSize={vi.fn()}
+      />
+    );
+    const select = screen.getByLabelText("common:table.pagination.pageSize");
+    expect(select.getAttribute("aria-label")).toBe("common:table.pagination.pageSize");
+  });
+
   it("renders the range text", () => {
     render(
       <TablePagination

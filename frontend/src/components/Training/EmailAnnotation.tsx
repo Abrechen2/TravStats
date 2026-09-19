@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
+import { markFromSelection, marksAlign, type TextMark } from "./marks";
 import type { TemplateDerivation } from "../../lib/api/types";
 import AnnotationLabelSelect from "./AnnotationLabelSelect";
 import FlightGroundTruth from "./FlightGroundTruth";
@@ -49,17 +50,19 @@ export default function EmailAnnotation({
     label: string;
     flightIndex?: number;
   } | null>(null);
-  const [annotations, setAnnotations] = useState<
-    Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>
-  >([]);
+  const [annotations, setAnnotations] = useState<TextMark[]>([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
-  const [annotationHistory, setAnnotationHistory] = useState<
-    Array<Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>>
-  >([]);
+  const [annotationHistory, setAnnotationHistory] = useState<TextMark[][]>([]);
   const [flightHistory, setFlightHistory] = useState<Flight[][]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  /**
+   * The stored marks were thrown away because they no longer fitted the
+   * stored text — see the load effect.
+   */
+  const [marksDropped, setMarksDropped] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -80,16 +83,46 @@ export default function EmailAnnotation({
             setEmailText(showFiltered ? filtered : annotationsData.fullText);
           }
           if (Array.isArray(annotationsData.textSelections)) {
-            setAnnotations(
-              annotationsData.textSelections as Array<{
-                start: number;
-                end: number;
-                text: string;
-                label: string;
-                flightIndex?: number;
-              }>
-            );
+            const stored = annotationsData.textSelections as TextMark[];
+            const text =
+              typeof annotationsData.fullText === "string" ? annotationsData.fullText : "";
+            // A sample annotated before the offsets and the saved text were
+            // made to agree can carry marks that point into a DIFFERENT
+            // document — the raw mail, while `fullText` is the filtered one.
+            // Rendering those paints highlights over the wrong words, and the
+            // annotate route now refuses the save with a 400 the reader has no
+            // way to clear: there is no per-mark delete, and Undo is empty on
+            // load. So they are dropped here, once, and the reader is told.
+            if (stored.length > 0 && !marksAlign(text, stored)) {
+              setAnnotations([]);
+              setMarksDropped(true);
+            } else {
+              setAnnotations(stored);
+            }
           }
+          // Has this sample been SAVED before? Then its text is shown as it
+          // was stored, marked or not.
+          //
+          // Running the filter over an already-filtered document is a SECOND
+          // pass, and it is not idempotent — the greeting rules are anchored
+          // at the start of a line, so one pass can expose a line the next
+          // pass then removes. A sample saved deliberately unfiltered loses
+          // its headers the same way, which quietly undoes the reader's own
+          // choice. And where there are marks, the text they were measured
+          // against is the only text they fit.
+          //
+          // The question is answered by which KEYS the annotation blob holds,
+          // not by how many marks it has: an upload writes `{fullText}` alone,
+          // every save writes `textSelections` (empty array included) and,
+          // since this branch, `filtered`. A legacy save with nothing marked
+          // has the first and not the second, and was being filtered again.
+          //
+          // `TrainingData.status` cannot answer it: the annotate route never
+          // writes that column (`routes/training.ts` — it is set to "pending"
+          // at upload and next changed by the training job), so a saved sample
+          // is still "pending".
+          const wasSaved = "textSelections" in annotationsData || "filtered" in annotationsData;
+          if (wasSaved) setShowFiltered(false);
         }
 
         if (
@@ -194,22 +227,23 @@ export default function EmailAnnotation({
 
   const handleSaveAnnotation = () => {
     if (selectedText && selectedText.label && selectedText.label !== "") {
-      const text = displayText.substring(selectedText.start, selectedText.end).trim();
       const flightIndex = selectedText.flightIndex ?? selectedFlightIndex;
+      // The offsets move with the trim. They did not, so a selection that
+      // caught the newline in front of a value stored a value its own offsets
+      // did not point at, and `labelContextOf` then read the line above.
+      const mark = markFromSelection(displayText, { ...selectedText, flightIndex });
+      if (!mark) {
+        setSelectedText(null);
+        return;
+      }
+      const text = mark.text;
 
       // Save current state to history for undo
       setAnnotationHistory([...annotationHistory, annotations]);
       setFlightHistory([...flightHistory, flights]);
 
       // Annotation hinzufügen
-      setAnnotations([
-        ...annotations,
-        {
-          ...selectedText,
-          text,
-          flightIndex,
-        },
-      ]);
+      setAnnotations([...annotations, mark]);
 
       // Automatisch Groundtruth ausfüllen. Only the flight domain has a
       // second form to fill: elsewhere the annotation is the ground truth.
@@ -308,9 +342,18 @@ export default function EmailAnnotation({
   const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
+      // The text that was MARKED against, never a freshly filtered copy of
+      // it. This saved `filterEmailText(originalEmailText)` whatever was on
+      // screen, so with the filter switched off every offset was measured in
+      // one document and stored against another — and nothing said so, because
+      // a shifted offset still yields a template, just one built on the wrong
+      // label. `filtered` records which version it is — the load effect above
+      // reads it back — and the annotate route refuses the payload outright if
+      // the two ever disagree again.
       const annotationData = {
         type: "email",
-        fullText: filterEmailText(originalEmailText),
+        fullText: displayText,
+        filtered: showFiltered,
         textSelections: annotations,
       };
 
@@ -357,7 +400,22 @@ export default function EmailAnnotation({
       onComplete(response.derivation);
     } catch (error) {
       logger.error("Failed to save annotation:", error);
-      alert(t("training:errors.saveFailed"));
+      // The route refuses a payload whose offsets do not cut their own value
+      // out of the text with its own code. "Fehler beim Speichern" would read
+      // as a bug in the page; the reader needs to know the marks are the
+      // thing that is wrong, and that re-marking clears it. The code itself is
+      // never shown — the same rule `MyTemplates` follows for
+      // `PREVIEW_REQUIRED`.
+      const code =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { data?: { code?: string } } }).response?.data?.code
+          : undefined;
+      const message =
+        code === "ANNOTATION_TEXT_MISMATCH"
+          ? t("training:errors.marksOutOfSync")
+          : t("training:errors.saveFailed");
+      setSaveError(message);
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -366,7 +424,9 @@ export default function EmailAnnotation({
   if (loading) {
     return (
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-(--text-primary) mb-4">Email Annotation</h2>
+        <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
+          {t("training:annotation.title")}
+        </h2>
         <p className="text-sm text-(--text-muted)">{t("training:annotation.emailTextLoading")}</p>
       </div>
     );
@@ -376,7 +436,7 @@ export default function EmailAnnotation({
 
   // Render text with visual highlights for annotations
   const renderTextWithHighlights = () => {
-    if (!displayText) return "Kein Text verfügbar";
+    if (!displayText) return t("training:annotation.noText");
 
     // Sort annotations by start position
     const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
@@ -446,7 +506,17 @@ export default function EmailAnnotation({
       <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
         {t("training:annotation.title")}
       </h2>
-      <p className="text-sm text-(--text-muted) mb-4">{t("training:annotation.description")}</p>
+      {/* The instruction has to know what kind of document this is. It told
+          the reader of a hotel confirmation to "choose a flight first" — there
+          is no flight to choose, and no flight picker on screen for a
+          non-flight sample (beta audit 2026-09-19, unlisted finding 2). */}
+      <p className="text-sm text-(--text-muted) mb-4">
+        {t(
+          isFlight
+            ? "training:annotation.descriptionFlight"
+            : "training:annotation.descriptionOther"
+        )}
+      </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln — a flight mail is the only one that
@@ -491,8 +561,15 @@ export default function EmailAnnotation({
             className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
           >
             <p className="text-sm font-medium text-(--text-primary) mb-2">
-              Ausgewählter Text: &quot;{displayText.substring(selectedText.start, selectedText.end)}
-              &quot;
+              {/* The TRIMMED value, resolved through the same helper the mark
+                  itself is built with. The preview showed the raw selection,
+                  so a drag that caught the newline in front of a value offered
+                  to label something the stored mark would not contain — two
+                  answers to one question, which is what `markFromSelection`
+                  exists to end. */}
+              {t("training:annotation.selectedText", {
+                value: markFromSelection(displayText, selectedText)?.text ?? "",
+              })}
             </p>
             {isFlight && (
               <p className="text-xs text-(--text-muted) mb-2">
@@ -532,19 +609,44 @@ export default function EmailAnnotation({
           </div>
         )}
 
+        {marksDropped && (
+          <p role="status" className="text-sm" style={{ color: "var(--warning)" }}>
+            {t("training:annotation.marksDropped")}
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+            {saveError}
+          </p>
+        )}
+
         {/* Email Text Display */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-(--text-primary)">Email Text</label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="block text-sm font-medium text-(--text-primary)">
+              {t("training:annotation.emailText")}
+            </label>
+            {/* Locked once anything is marked: the marks point into the text
+                on screen, and that text is what gets saved. Switching the
+                filter under them would move every offset off its value — the
+                defect this whole change is about, one level up. */}
+            <label
+              className={`flex items-center gap-2 ${
+                annotations.length > 0 ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+              title={annotations.length > 0 ? t("training:annotation.filterLocked") : undefined}
+            >
               <input
                 type="checkbox"
                 checked={showFiltered}
+                disabled={annotations.length > 0}
                 onChange={(e) => setShowFiltered(e.target.checked)}
                 className="rounded-sm border-border text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-(--text-muted)">
-                {t("training:annotation.showFiltered")}
+                {annotations.length > 0
+                  ? t("training:annotation.filterLocked")
+                  : t("training:annotation.showFiltered")}
               </span>
             </label>
           </div>
@@ -593,7 +695,9 @@ export default function EmailAnnotation({
 
         {/* Tags */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-(--text-primary) mb-2">Tags</label>
+          <label className="block text-sm font-medium text-(--text-primary) mb-2">
+            {t("training:annotation.tags")}
+          </label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"

@@ -85,6 +85,29 @@ function resolveDottedPath(resource: unknown, dottedKey: string): unknown {
   }, resource);
 }
 
+/**
+ * What i18next can actually serve for a key: the key itself, or -- for a call
+ * that passes `count` -- its plural forms.
+ *
+ * The guard used to demand the bare key, which made a pluralised common key
+ * impossible: `common:filters.matching` became `matching_one` /
+ * `matching_other` on 2026-09-19 (a counter that read "1 treffen zu"), and
+ * the scanner reported the working call site as broken. Suffix-aware is the
+ * honest reading of "resolves to a string" -- what must hold is that the
+ * reader gets copy, not that the JSON has one particular shape.
+ *
+ * `_other` alone is not enough: a key with only the plural form renders the
+ * raw key path for count === 1, which is the defect this whole file exists
+ * to catch.
+ */
+function servedForm(resource: unknown, dottedKey: string): unknown {
+  const direct = resolveDottedPath(resource, dottedKey);
+  if (typeof direct === "string") return direct;
+  const one = resolveDottedPath(resource, `${dottedKey}_one`);
+  const other = resolveDottedPath(resource, `${dottedKey}_other`);
+  return typeof one === "string" && typeof other === "string" ? other : direct;
+}
+
 for (const [namespace, { de, en }] of Object.entries(NAMESPACES)) {
   describe(`every literal t("${namespace}:...") call resolves to a string`, () => {
     const usages = findNamespaceKeyUsages(namespace);
@@ -95,8 +118,8 @@ for (const [namespace, { de, en }] of Object.entries(NAMESPACES)) {
 
     for (const [dottedKey, files] of usages) {
       it(`${namespace}:${dottedKey} (used in ${files.join(", ")})`, () => {
-        const deValue = resolveDottedPath(de, dottedKey);
-        const enValue = resolveDottedPath(en, dottedKey);
+        const deValue = servedForm(de, dottedKey);
+        const enValue = servedForm(en, dottedKey);
 
         expect(
           typeof deValue === "string",
