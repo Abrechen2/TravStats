@@ -19,6 +19,7 @@ import { prisma } from "../db";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
+import { isAchievementHeld } from "./achievementHeld";
 import type { FlightData, UserStats } from "./achievementStats";
 
 export type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
@@ -49,19 +50,27 @@ export type UserAchievementWithRelation = UserAchievement & { achievement: Achie
  * `upsert` and not `create` — so the decision was never protected by it.
  */
 type PlannedWrite =
-  | { kind: "unlock"; achievementId: string; requirement: number; wasUnlocked: boolean }
-  // `revoking` says the row is being written DOWN through its requirement, and
-  // is what clears `unlockedAt`. Carried on the write rather than re-derived at
-  // apply time because the comparison needs the requirement and the snapshot,
-  // and neither is in scope there — the plan is where that is known.
-  | { kind: "progress"; rowId: string; progress: number; revoking: boolean }
+  // `hadUnlockDate` says the snapshot already carried an `unlockedAt`. It is
+  // what decides whether this write stamps one, and it is NOT the same question
+  // as `wasUnlocked` (which reads the measure): a badge whose measure has since
+  // fallen is still held, and a badge earned before the column meant anything
+  // meets its requirement without carrying a date. Carried on the write rather
+  // than re-derived at apply time because the snapshot is not in scope there.
+  | {
+      kind: "unlock";
+      achievementId: string;
+      requirement: number;
+      wasUnlocked: boolean;
+      hadUnlockDate: boolean;
+    }
+  | { kind: "progress"; rowId: string; progress: number }
   | { kind: "track"; achievementId: string; progress: number };
 
 export interface AchievementWritePlan {
   writes: PlannedWrite[];
-  /** Codes of badges the user holds but no longer meets — logged after the
-   *  write succeeds, because "revoked" only becomes true once it is stored. */
-  revoked: string[];
+  /** Codes of badges the user still holds whose measure has fallen below the
+   *  requirement. Logged, never acted on — see `planAchievementWrites`. */
+  belowRequirement: string[];
 }
 
 /**
@@ -75,11 +84,15 @@ export function planAchievementWrites(
   flights: FlightData[]
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
-  const revoked: string[] = [];
+  const belowRequirement: string[] = [];
 
   for (const achievement of allAchievements) {
     const existing = existingAchievementMap.get(achievement.id);
     const wasUnlocked = Boolean(existing && existing.progress >= achievement.requirement);
+    const hadUnlockDate = Boolean(existing?.unlockedAt);
+    // Held is the union — see `achievementHeld.ts`. A run may lower a measure;
+    // it may not take a badge away.
+    const wasHeld = isAchievementHeld(existing, achievement.requirement);
 
     // Every achievement is re-evaluated on every run, unlocked ones included.
     // This used to `continue` on an already-unlocked achievement, which meant a
@@ -89,11 +102,18 @@ export function planAchievementWrites(
     const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {
-      // Steady state: the user already holds it and the stored progress is
-      // already the requirement. Re-evaluating is cheap (in memory), but writing
-      // is not — without this guard every flight save would re-upsert every badge
-      // the user has ever earned.
-      if (wasUnlocked && existing && existing.progress === achievement.requirement) {
+      // Steady state: the user already holds it, the stored progress is already
+      // the requirement, and the date is on the row. Re-evaluating is cheap (in
+      // memory), but writing is not — without this guard every flight save would
+      // re-upsert every badge the user has ever earned. `hadUnlockDate` is part
+      // of the condition so a row that meets its requirement without a date gets
+      // one written exactly once, instead of being skipped forever.
+      if (
+        wasUnlocked &&
+        hadUnlockDate &&
+        existing &&
+        existing.progress === achievement.requirement
+      ) {
         continue;
       }
       writes.push({
@@ -101,28 +121,37 @@ export function planAchievementWrites(
         achievementId: achievement.id,
         requirement: achievement.requirement,
         wasUnlocked,
+        hadUnlockDate,
       });
     } else if (existing) {
-      // Nothing changed — skip the write. (An unlocked badge that is still
-      // unlocked never reaches here; this is the progress-row steady state.)
+      // Nothing changed — skip the write. (A badge still meeting its
+      // requirement never reaches here; this is the progress-row steady state.)
       if (existing.progress === progress) {
         continue;
       }
-      if (wasUnlocked) {
-        // The user holds this badge but no longer meets its requirement — the
-        // flights behind it were deleted, or it was granted by a scoring bug.
-        // Writing the true progress drops it back below the threshold, which is
-        // what "revoked" means here: held-ness is derived from
-        // `progress >= requirement` everywhere, so there is no flag to clear.
-        // `unlockedAt` is cleared alongside it, so the ROW says so too and not
-        // only this log line.
-        revoked.push(achievement.code);
+      if (wasHeld) {
+        // The user holds this badge and the measure no longer reaches its
+        // requirement. This is NOT a revocation, and the write below does not
+        // clear `unlockedAt`.
+        //
+        // It used to. The 2026-09-19 integrity audit restored the 2.6.2 prod
+        // mirror and booted it: `AWAY_SHARE_25`, earned 2026-09-03, came back
+        // with progress 25 → 24 and `unlockedAt` NULL — not because the
+        // traveller had done anything, but because `lodgingStats/rhythm.ts`
+        // divides the current year by the days elapsed so far, so the share
+        // falls on every night spent at home. The same boot on CT106 with
+        // TZ=Europe/Berlin took `NOT_A_MORNING_PERSON` off two users and gave
+        // it to a third, dated that day, because a process clock had moved.
+        //
+        // The owner's rule is that a badge once earned stays earned, so the
+        // measure is written down (it is a measurement, and the progress bar
+        // has to be able to tell the truth) and the badge stays.
+        belowRequirement.push(achievement.code);
       }
       writes.push({
         kind: "progress",
         rowId: existing.id,
         progress,
-        revoking: wasUnlocked,
       });
     } else if (progress > 0) {
       // Only create a progress row when there's something to track.
@@ -130,7 +159,7 @@ export function planAchievementWrites(
     }
   }
 
-  return { writes, revoked };
+  return { writes, belowRequirement };
 }
 
 /**
@@ -166,10 +195,13 @@ export async function applyAchievementWrites(
                 // already holds must not make it look freshly earned — that would
                 // reshuffle the trophy case on every flight they add.
                 //
-                // The other branch is the only place a date is ever set: a badge
-                // being earned, now or again after a revocation cleared the old
-                // one. Every other write leaves the column null.
-                ...(write.wasUnlocked ? {} : { unlockedAt: new Date() }),
+                // Keyed on the DATE, not on the measure: a row that meets its
+                // requirement but carries no date was earned before the column
+                // meant anything (or while the old revoke path was clearing it),
+                // and this is where it gets one. A row that has a date keeps it
+                // whatever the measure does. No other write touches the column,
+                // and nothing clears it.
+                ...(write.hadUnlockDate ? {} : { unlockedAt: new Date() }),
               },
               create: {
                 userId,
@@ -179,21 +211,22 @@ export async function applyAchievementWrites(
               },
               include: { achievement: true },
             });
-            // Only count as newly-unlocked when the snapshot had no unlock yet.
-            // Re-upserting an already-unlocked row shouldn't emit another event.
-            if (!write.wasUnlocked) {
+            // Only count as newly-unlocked when the snapshot held it by neither
+            // reading. Re-upserting a row the user already holds — including one
+            // whose measure had dipped and recovered — emits no second event,
+            // and stamping a missing date on an old row is bookkeeping, not an
+            // unlock the user should be told about again.
+            if (!write.wasUnlocked && !write.hadUnlockDate) {
               newlyUnlocked.push(updated);
             }
           } else if (write.kind === "progress") {
             await tx.userAchievement.update({
               where: { id: write.rowId },
               data: {
+                // `progress` only. The column that says the badge was earned is
+                // never written here — not to clear it, and not to set it, which
+                // would let a stale plan undo or invent a concurrent unlock.
                 progress: write.progress,
-                // A revocation clears the date; an ordinary progress tick on a
-                // badge that was never held has nothing to clear and must not
-                // write the column at all, or a concurrent unlock could be
-                // undone by a stale plan.
-                ...(write.revoking ? { unlockedAt: null } : {}),
               },
             });
           } else {
@@ -213,11 +246,11 @@ export async function applyAchievementWrites(
       });
     }
 
-    if (plan.revoked.length > 0) {
+    if (plan.belowRequirement.length > 0) {
       logger.info({
-        operation: "revoke_achievements",
-        message: "Achievements no longer met their requirement and were revoked",
-        context: { userId, codes: plan.revoked },
+        operation: "achievements_below_requirement",
+        message: "Held achievements whose measure fell below their requirement — kept",
+        context: { userId, codes: plan.belowRequirement },
       });
     }
   } catch (error) {

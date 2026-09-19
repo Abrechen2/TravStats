@@ -130,6 +130,14 @@ export function computeRhythmStats(entries: StayWithNights[], now: Date): Lodgin
   // Share of the year spent away. The CURRENT year is divided by the days
   // elapsed so far, not by 365 — otherwise every January reports a share that
   // can only ever look like a collapse against last year.
+  //
+  // This share therefore FALLS on every night spent at home, and it is meant
+  // to: it is a measurement of the year so far, not a running total. It used to
+  // cost badges — the 2026-09-19 integrity audit booted the 2.6.2 prod mirror
+  // and watched AWAY_SHARE_25, earned 2026-09-03, go 25 → 24 and lose its
+  // `unlockedAt`. The defect was never here; it was the engine treating a
+  // falling measure as a revocation. That is fixed in `achievementWrites.ts`,
+  // so this denominator stays exactly as it is.
   const nowYear = now.getUTCFullYear();
   const startOfYear = Date.UTC(nowYear, 0, 1);
   const elapsedThisYear = Math.max(

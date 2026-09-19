@@ -9,6 +9,7 @@ import { computeFlightSequenceStats } from "./flightSequenceStats";
 import logger from "./logger";
 import { getCachedAirports } from "../services/airportCache";
 import { normalizeAircraft } from "./aircraftNormalize";
+import { localWallClockOf, type FlightTimeSemantics } from "./timezone";
 import { isCountableFlight } from "../shared/flightCounting";
 import { flightDurationOf } from "../shared/flightDuration";
 import {
@@ -450,7 +451,10 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
   }
 
   // Batch fetch airports using cache
-  let airportMap: Map<string, { country: string | null; lat: number; lon: number }>;
+  let airportMap: Map<
+    string,
+    { country: string | null; lat: number; lon: number; timezone: string | null }
+  >;
   try {
     const cachedAirports = await getCachedAirports(Array.from(airportCodes));
     airportMap = new Map();
@@ -462,6 +466,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
           country: airport.country || null,
           lat: airport.lat,
           lon: airport.lon,
+          // Carried for the departure-hour rules below. Without it the engine
+          // reads the hour off the PROCESS clock — see the red-eye block.
+          timezone: airport.timezone || null,
         });
       }
     }
@@ -546,32 +553,43 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // 12:00 placeholders would skew the counts. Year/month aggregation
     // (monthsWithFlights, flightsByMonth, flightsByYear) is reliable enough
     // for historical flights so those remain inclusive.
-    if (flight.departureTime) {
+    //
+    // Every one of them is read on the DEPARTURE AIRPORT'S clock, via the same
+    // `localWallClockOf` the timeseries endpoint buckets on (#266). They used
+    // to be `getHours()` / `getDay()` / `getMonth()`, which is the clock of
+    // whatever machine ran the engine — see the red-eye block below for what
+    // that cost on CT106.
+    const depClock = flight.departureTime
+      ? localWallClockOf(
+          flight.departureTime,
+          airportMap.get(depCode || "")?.timezone ?? null,
+          (flight.depTimeSemantics as FlightTimeSemantics) || "UNKNOWN"
+        )
+      : null;
+
+    if (depClock) {
       if (flight.status === "flown") {
-        // Night flights (00:00 - 06:00)
-        const depHour = flight.departureTime.getHours();
-        if (depHour >= 0 && depHour < 6) {
+        // Night flights (00:00 - 06:00). `hour` is null on a DATE_ONLY row,
+        // whose 12:00 is a placeholder and not a clock.
+        if (depClock.hour !== null && depClock.hour >= 0 && depClock.hour < 6) {
           stats.nightFlights++;
         }
 
         // Weekend flights
-        const depDay = flight.departureTime.getDay();
-        if (depDay === 0 || depDay === 6) {
+        if (depClock.weekday === 0 || depClock.weekday === 6) {
           stats.weekendFlights++;
         }
       }
 
       // Months with flights
-      const monthKey = `${flight.departureTime.getFullYear()}-${String(
-        flight.departureTime.getMonth() + 1
-      ).padStart(2, "0")}`;
+      const monthKey = `${depClock.year}-${String(depClock.month + 1).padStart(2, "0")}`;
       stats.monthsWithFlights.add(monthKey);
 
       const monthCount = stats.flightsByMonth.get(monthKey) || 0;
       stats.flightsByMonth.set(monthKey, monthCount + 1);
 
       // Years with flights
-      const yearKey = String(flight.departureTime.getFullYear());
+      const yearKey = String(depClock.year);
       const yearCount = stats.flightsByYear.get(yearKey) || 0;
       stats.flightsByYear.set(yearKey, yearCount + 1);
     }
@@ -626,10 +644,25 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
 
     // Red-eye / not-a-morning-person (departure hour local) — needs precise
     // local hour, so flown-only. Historical placeholders would skew this.
-    if (flight.departureTime && flight.status === "flown") {
-      const h = flight.departureTime.getHours();
-      if (h >= 23 || h < 5) stats.redEyeFlights++;
-      if (h >= 4 && h < 7) stats.earlyMorningFlights++;
+    //
+    // The hour is resolved on the DEPARTURE AIRPORT'S clock, through the same
+    // `localWallClockOf` the timeseries buckets on. It used to be
+    // `departureTime.getHours()`, which reads the clock of whatever machine
+    // happened to run the engine: the 2026-09-19 integrity audit booted CT106
+    // with TZ=Europe/Berlin and watched NOT_A_MORNING_PERSON leave two users
+    // and arrive, dated that day, on a third — the same flights, a different
+    // container. Under TZ=UTC nothing moved at all.
+    //
+    // A DATE_ONLY row yields `hour: null` (its 12:00 is a placeholder, not a
+    // clock) and is left out of both buckets rather than counted at noon.
+    // Without a timezone the stored components stand, which is UTC — never the
+    // process zone.
+    if (depClock && flight.status === "flown") {
+      const h = depClock.hour;
+      if (h !== null) {
+        if (h >= 23 || h < 5) stats.redEyeFlights++;
+        if (h >= 4 && h < 7) stats.earlyMorningFlights++;
+      }
     }
 
     // Notes

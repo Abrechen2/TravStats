@@ -4,6 +4,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { statsLimiter } from "../middleware/rateLimit";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { resolveRank } from "../utils/achievementRank";
+import { isAchievementHeld } from "../utils/achievementHeld";
 import { achievements as catalogueDefinitions } from "../data/achievements";
 
 const router = Router();
@@ -56,12 +57,12 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       .filter((achievement) => {
         if (isLive(achievement.code)) return true;
         const ua = userAchievementMap.get(achievement.id);
-        return !!ua && ua.progress >= achievement.requirement;
+        return isAchievementHeld(ua, achievement.requirement);
       })
       .map((achievement) => {
         const userAchievement = userAchievementMap.get(achievement.id);
         const progress = userAchievement?.progress || 0;
-        const isUnlocked = !!userAchievement && progress >= achievement.requirement;
+        const isUnlocked = isAchievementHeld(userAchievement, achievement.requirement);
 
         return {
           ...achievement,
@@ -76,7 +77,9 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       });
 
     // Calculate totals only for unlocked achievements
-    const unlocked = userAchievements.filter((ua) => ua.progress >= ua.achievement.requirement);
+    const unlocked = userAchievements.filter((ua) =>
+      isAchievementHeld(ua, ua.achievement.requirement)
+    );
 
     const totalPoints = unlocked.reduce((sum, ua) => sum + ua.achievement.points, 0);
     const unlockedLive = unlocked.filter((ua) => isLive(ua.achievement.code));
@@ -138,11 +141,12 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
       orderBy: { unlockedAt: { sort: "desc", nulls: "last" } },
     });
 
-    // Only return actually unlocked achievements (progress >= requirement).
-    // Held-ness is derived from the numbers, never from `unlockedAt` — the date
-    // is a label on that fact, not the fact itself.
+    // Only badges the user actually holds — `isAchievementHeld` is the one home
+    // for that question. A badge whose measure has since dipped below its
+    // requirement stays on this list, and stays at its original date, because it
+    // is still earned (see utils/achievementHeld.ts).
     const recentAchievements = allRecent
-      .filter((ua) => ua.progress >= ua.achievement.requirement)
+      .filter((ua) => isAchievementHeld(ua, ua.achievement.requirement))
       .slice(0, limit);
 
     res.json({ achievements: recentAchievements });
@@ -199,6 +203,10 @@ router.get(
         select: {
           userId: true,
           progress: true,
+          // Selected because held-ness reads it — dropping it here would quietly
+          // put the leaderboard back on the progress-only rule the other two
+          // lists left behind.
+          unlockedAt: true,
           achievement: {
             select: {
               points: true,
@@ -215,7 +223,8 @@ router.get(
         },
       });
 
-      // Only count actually unlocked achievements (progress >= requirement)
+      // Only count badges the user actually holds — same rule as the two lists
+      // above, so a dipped measure does not silently cost someone their points.
       const userPointsMap = new Map<
         string,
         {
@@ -226,7 +235,7 @@ router.get(
       >();
 
       for (const ua of userAchievements) {
-        if (ua.progress < ua.achievement.requirement) continue;
+        if (!isAchievementHeld(ua, ua.achievement.requirement)) continue;
 
         const userId = ua.userId;
         if (!userPointsMap.has(userId)) {

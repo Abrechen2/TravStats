@@ -4,7 +4,12 @@ import { checkAndUpdateAchievements } from "../utils/achievements";
 
 /**
  * The boot-time pass exists because the engine otherwise only runs on a flight/cruise
- * write. Without it, a user who adds nothing keeps a badge a scoring fix has invalidated.
+ * write. Without it, a user who adds nothing keeps a MEASURE a scoring fix has
+ * invalidated — the progress bar goes on showing a number the data no longer supports.
+ *
+ * It does not take badges away. It used to: the 2026-09-19 integrity audit booted the
+ * 2.6.2 prod mirror and this pass was the thing that emptied AWAY_SHARE_25's
+ * `unlockedAt`. A restart is not an event in the user's travel history.
  */
 
 const AIRPORTS_10 = "AIRPORTS_10"; // requirement: 10 distinct airports
@@ -67,7 +72,7 @@ afterAll(async () => {
 });
 
 describe("recheckAllAchievements", () => {
-  it("revokes a stale badge without the user touching anything", async () => {
+  it("corrects a stale measure without the user touching anything — and keeps the badge", async () => {
     await seedFlights(6);
     await checkAndUpdateAchievements(userId);
 
@@ -81,6 +86,7 @@ describe("recheckAllAchievements", () => {
       include: { achievement: true },
     });
     expect(stale!.progress).toBeGreaterThanOrEqual(stale!.achievement.requirement);
+    const originalDate = stale!.unlockedAt!;
 
     const { users, failed } = await recheckAllAchievements();
     expect(users).toBeGreaterThan(0);
@@ -92,6 +98,10 @@ describe("recheckAllAchievements", () => {
     });
     expect(after!.progress).toBe(0);
     expect(after!.progress).toBeLessThan(after!.achievement.requirement);
+    // A boot must not un-earn anything. This is the assertion that fails on the
+    // pre-2026-09-19 engine, where the same pass wrote NULL here.
+    expect(after!.unlockedAt).toBeInstanceOf(Date);
+    expect(after!.unlockedAt!.getTime()).toBe(originalDate.getTime());
   });
 
   it("is idempotent — a second pass over unchanged data changes nothing", async () => {
@@ -112,6 +122,6 @@ describe("recheckAllAchievements", () => {
     });
     expect(second!.progress).toBe(first!.progress);
     // The write is skipped entirely, so even the unlock date is untouched.
-    expect(second!.unlockedAt.getTime()).toBe(first!.unlockedAt.getTime());
+    expect(second!.unlockedAt!.getTime()).toBe(first!.unlockedAt!.getTime());
   });
 });
