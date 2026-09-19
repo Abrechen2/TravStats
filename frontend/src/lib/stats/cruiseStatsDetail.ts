@@ -70,6 +70,20 @@ export interface CruiseStatsDetail {
 const MONTHS = 12;
 const DAY_MS = 86_400_000;
 
+/**
+ * Whether a cruise has a price worth counting.
+ *
+ * Exported because the money block needs the SAME answer outside the fold, to
+ * say how many BOOKED cruises its rows leave out; the backend spells the same
+ * rule in `services/stats/cruiseSpendBase.ts`. A null or zero price is "no
+ * price", never a free voyage.
+ */
+export function isPricedCruise<T extends { price: number | null }>(
+  cruise: T
+): cruise is T & { price: number } {
+  return typeof cruise.price === "number" && cruise.price > 0;
+}
+
 /** Nights between two dates, or null when either is missing or unreadable. */
 export function nightsBetween(start: string | null, end: string | null): number | null {
   if (!start || !end) return null;
@@ -127,7 +141,7 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
       mostPorts = { cruise, ports };
     }
 
-    if (typeof cruise.price === "number" && cruise.price > 0) {
+    if (isPricedCruise(cruise)) {
       pricedCruises += 1;
       const currency = cruise.currency ?? "EUR";
       const row = spend.get(currency) ?? { currency, total: 0, cruises: 0, nights: 0 };

@@ -272,6 +272,8 @@
       "cruisesCount_one": "{{count}} cruise",
       "none": "No cruise has a price recorded.",
       "coverage": "From {{priced}} of {{total}} cruises with a recorded price.",
+      "bookedNotCounted_one": "{{count}} booked cruise is not counted",
+      "bookedNotCounted_other": "{{count}} booked cruises are not counted",
       "baseTotal": "Total in base currency",
       "baseTotalDesc": "Added up at the rates recorded with each booking, in {{currency}}.",
       "baseTotalNone": "None of these cruises has a rate to {{currency}} recorded — hence no total rather than a zero.",

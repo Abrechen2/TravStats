@@ -22,6 +22,12 @@ interface Props {
 interface MoneyProps extends Props {
   /** Absent when the backend does not answer for it — the tile is then not drawn. */
   totalSpendBase?: CruiseTotalSpendBase;
+  /**
+   * Priced cruises in scope that have NOT sailed, and are therefore in none of
+   * the figures here. Named on screen when there are any; 0 prints nothing,
+   * because a note explaining an exclusion that did not happen is noise.
+   */
+  bookedPricedCount: number;
   scope: EvidenceScopeParams;
 }
 
@@ -185,6 +191,12 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
  * price and a currency to add — so each currency keeps its own line, and a
  * per-night average only exists inside one.
  *
+ * ONE POPULATION, and it is the server's: cruises that SAILED. The rows, the
+ * coverage line and the tile all answer for the same set, because a booked
+ * cruise's price in the rows beside a total that ignored it read as a broken
+ * total rather than as two different questions. What the filter withholds is
+ * named under the rows instead of vanishing.
+ *
  * The tile below them is a different figure arrived at a different way. It
  * comes from the SERVER (`totalSpendBase` on `GET /stats/cruise`), which reads
  * the FX snapshot every cruise has carried since Task 10 and adds only the
@@ -197,6 +209,7 @@ export function CruiseMoneySection({
   detail,
   accent,
   totalSpendBase,
+  bookedPricedCount,
   scope,
 }: MoneyProps): JSX.Element | null {
   const { t } = useTranslation(["cruise", "common"]);
@@ -268,6 +281,11 @@ export function CruiseMoneySection({
           total: detail.pricedCruises + detail.unpricedCruises,
         })}
       </p>
+      {bookedPricedCount > 0 && (
+        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("cruise:stats.money.bookedNotCounted", { count: bookedPricedCount })}
+        </p>
+      )}
       {detail.spendByCurrency.length > 1 && (
         <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
           {t("cruise:stats.money.noTotalNote")}

@@ -76,7 +76,8 @@ const LIFETIME = { period: "allTime" } as const;
 
 function renderSection(
   totalSpendBase: CruiseTotalSpendBase | undefined,
-  onSearch: (search: string) => void = () => {}
+  onSearch: (search: string) => void = () => {},
+  bookedPricedCount = 0
 ): void {
   render(
     <MemoryRouter>
@@ -85,6 +86,7 @@ function renderSection(
         accent="var(--domain-cruise)"
         locale="de-DE"
         totalSpendBase={totalSpendBase}
+        bookedPricedCount={bookedPricedCount}
         scope={LIFETIME}
       />
       <LocationProbe onChange={onSearch} />
@@ -131,6 +133,17 @@ describe("CruiseMoneySection base-currency total", () => {
     expect(tile?.textContent).toContain("—");
     expect(tile?.textContent).not.toMatch(/0[,.]00/);
     expect(screen.getByText(/cruise:stats\.money\.baseTotalNone.*EUR/)).toBeInTheDocument();
+  });
+
+  it("names the booked cruises its figures leave out, and stays silent at zero", () => {
+    renderSection({ value: 2030.55, excludedCount: 0, currency: "EUR" }, () => {}, 1);
+    expect(
+      screen.getByText(/cruise:stats\.money\.bookedNotCounted.*"count":1/)
+    ).toBeInTheDocument();
+
+    cleanup();
+    renderSection({ value: 2030.55, excludedCount: 0, currency: "EUR" });
+    expect(screen.queryByText(/bookedNotCounted/)).not.toBeInTheDocument();
   });
 
   it("draws no tile at all when the backend answered for no such figure", () => {
