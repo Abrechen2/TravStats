@@ -11,19 +11,30 @@ import {
 } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
+import AnnotationLabelSelect from "./AnnotationLabelSelect";
+import FlightGroundTruth from "./FlightGroundTruth";
+import type { WorkshopDomain } from "../../shared/annotationLabels";
 
 interface EmailAnnotationProps {
   trainingDataId: string;
+  /**
+   * Which kind of document this is — it decides the labels on offer and what
+   * the workshop will derive. Defaults to `flight`, which is what every
+   * sample was before forgejo#124 phase 6.
+   */
+  domain?: WorkshopDomain;
   onComplete: () => void;
   onCancel?: () => void;
 }
 
 export default function EmailAnnotation({
   trainingDataId,
+  domain = "flight",
   onComplete,
   onCancel,
 }: EmailAnnotationProps): JSX.Element {
-  const { t } = useTranslation(["training", "common"]);
+  const { t } = useTranslation(["training", "parser", "common"]);
+  const isFlight = domain === "flight";
   const [originalEmailText, setOriginalEmailText] = useState("");
   const [emailText, setEmailText] = useState("");
   const [showFiltered, setShowFiltered] = useState(true);
@@ -47,6 +58,14 @@ export default function EmailAnnotation({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [derivedTemplateId, setDerivedTemplateId] = useState<string | null>(null);
+  /**
+   * Why no template came out of the annotation, when none did.
+   *
+   * Shown instead of a silent nothing: cruise and place have no reader that
+   * could run one, and a lodging mail can be marked too thinly to build one
+   * from (forgejo#124 phase 6). The annotation itself is still saved.
+   */
+  const [derivationNote, setDerivationNote] = useState<string | null>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const labelSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -196,8 +215,9 @@ export default function EmailAnnotation({
         },
       ]);
 
-      // Automatisch Groundtruth ausfüllen
-      if (flightIndex < flights.length && text) {
+      // Automatisch Groundtruth ausfüllen. Only the flight domain has a
+      // second form to fill: elsewhere the annotation is the ground truth.
+      if (isFlight && flightIndex < flights.length && text) {
         const updatedFlights = [...flights];
         const flight = updatedFlights[flightIndex];
 
@@ -317,16 +337,30 @@ export default function EmailAnnotation({
         return converted;
       });
 
+      // Outside the flight domain the marks ARE the ground truth: there is no
+      // second form to reconcile them with, so they travel as one record of
+      // label → value rather than as a list of flights.
+      const groundTruth = isFlight
+        ? flightsForBackend
+        : [Object.fromEntries(annotations.map((a) => [a.label, a.text]))];
+
       const response = await trainingApi.annotate(
         trainingDataId,
         annotationData,
-        flightsForBackend,
-        tags
+        groundTruth,
+        tags,
+        domain
       );
 
       if (response.templateId) {
         setDerivedTemplateId(response.templateId);
       }
+      const derivation = response.derivation;
+      setDerivationNote(
+        derivation && derivation.status === "abstained"
+          ? `parser:derivation.cannot.${derivation.reason}`
+          : null
+      );
 
       onComplete();
     } catch (error) {
@@ -423,32 +457,35 @@ export default function EmailAnnotation({
       <p className="text-sm text-(--text-muted) mb-4">{t("training:annotation.description")}</p>
 
       <div className="space-y-4">
-        {/* Flug-Auswahl vor dem Labeln */}
-        <div className="p-4 bg-(--bg-base) rounded-lg border border-border">
-          <label className="block text-sm font-medium text-(--text-primary) mb-2">
-            {t("training:annotation.selectFlight")}
-          </label>
-          <div className="flex gap-2 items-center">
-            <select
-              value={selectedFlightIndex}
-              onChange={(e) => setSelectedFlightIndex(parseInt(e.target.value))}
-              className="input flex-1"
-              disabled={flights.length === 0}
-            >
-              {flights.map((_, index) => (
-                <option key={index} value={index}>
-                  Flug {index + 1}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleAddFlight}
-              className="px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
-            >
-              + Flug hinzufügen
-            </button>
+        {/* Flug-Auswahl vor dem Labeln — a flight mail is the only one that
+            carries several of the thing being annotated. */}
+        {isFlight && (
+          <div className="p-4 bg-(--bg-base) rounded-lg border border-border">
+            <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              {t("training:annotation.selectFlight")}
+            </label>
+            <div className="flex gap-2 items-center">
+              <select
+                value={selectedFlightIndex}
+                onChange={(e) => setSelectedFlightIndex(parseInt(e.target.value))}
+                className="input flex-1"
+                disabled={flights.length === 0}
+              >
+                {flights.map((_, index) => (
+                  <option key={index} value={index}>
+                    Flug {index + 1}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAddFlight}
+                className="px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                + Flug hinzufügen
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Sticky Label Selector */}
         {selectedText && (
@@ -460,45 +497,24 @@ export default function EmailAnnotation({
               Ausgewählter Text: &quot;{displayText.substring(selectedText.start, selectedText.end)}
               &quot;
             </p>
-            <p className="text-xs text-(--text-muted) mb-2">
-              Flug {selectedFlightIndex + 1} wird annotiert
-            </p>
+            {isFlight && (
+              <p className="text-xs text-(--text-muted) mb-2">
+                Flug {selectedFlightIndex + 1} wird annotiert
+              </p>
+            )}
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Label
                 </label>
-                <select
+                {/* The label set follows the DOMAIN of the document — the
+                    hardcoded flight list that stood here offered "Gate" for a
+                    hotel confirmation (forgejo#124 phase 6). */}
+                <AnnotationLabelSelect
+                  domain={domain}
                   value={selectedText.label}
-                  onChange={(e) => setSelectedText({ ...selectedText, label: e.target.value })}
-                  className="input w-full"
-                >
-                  <option value="">{t("training:annotation.selectLabel")}</option>
-                  <optgroup label="Flug">
-                    <option value="flightNumber">Flight Number</option>
-                    <option value="airline">Airline</option>
-                    <option value="aircraft">Aircraft Type</option>
-                  </optgroup>
-                  <optgroup label="Route">
-                    <option value="departureCode">Departure Code</option>
-                    <option value="arrivalCode">Arrival Code</option>
-                    <option value="departureDate">Departure Date</option>
-                    <option value="departureTime">Departure Time</option>
-                    <option value="arrivalDate">Arrival Date</option>
-                    <option value="arrivalTime">Arrival Time</option>
-                  </optgroup>
-                  <optgroup label="Boarding">
-                    <option value="seat">Seat</option>
-                    <option value="seatClass">Seat Class</option>
-                    <option value="terminal">Terminal</option>
-                    <option value="gate">Gate</option>
-                    <option value="boardingGroup">Boarding Group</option>
-                  </optgroup>
-                  <optgroup label="Buchung">
-                    <option value="pnr">PNR / Booking Reference</option>
-                    <option value="ticketNumber">Ticket Number</option>
-                  </optgroup>
-                </select>
+                  onChange={(label) => setSelectedText({ ...selectedText, label })}
+                />
               </div>
               <button
                 onClick={handleSaveAnnotation}
@@ -546,241 +562,37 @@ export default function EmailAnnotation({
           </div>
         </div>
 
-        {/* Multi-Flight Support */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-(--text-primary)">
-              Flight Data (Ground Truth)
+        {/* Ground truth. A flight mail can describe several flights, so it
+            gets the grid; every other domain's evidence IS the annotation,
+            and a second form beside it would be two places to correct. */}
+        {isFlight ? (
+          <FlightGroundTruth
+            flights={flights}
+            onChange={handleFlightChange}
+            onAdd={handleAddFlight}
+            onRemove={handleRemoveFlight}
+          />
+        ) : (
+          <div>
+            <h3 className="text-sm font-medium text-(--text-primary) mb-2">
+              {t("parser:workshop.markedFields")}
             </h3>
-            <button
-              onClick={handleAddFlight}
-              className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-            >
-              + Flug hinzufügen
-            </button>
+            {annotations.length === 0 ? (
+              <p className="text-sm text-(--text-muted)">{t("parser:workshop.markedNothing")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {annotations.map((annotation, index) => (
+                  <li key={index} className="text-sm text-(--text-primary)">
+                    <span className="text-(--text-muted)">
+                      {t(`parser:labels.${domain}.${annotation.label}`)}:{" "}
+                    </span>
+                    {annotation.text}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <div className="space-y-4">
-            {flights.map((flight, index) => (
-              <div key={index} className="p-4 border border-border rounded-lg bg-(--bg-base)">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-(--text-primary)">Flug {index + 1}</h4>
-                  {flights.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveFlight(index)}
-                      className="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800"
-                    >
-                      Entfernen
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Flug */}
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Flight Number
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.flightNumber || ""}
-                      onChange={(e) => handleFlightChange(index, "flightNumber", e.target.value)}
-                      className="input w-full"
-                      placeholder="LH103"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Airline
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.airline || ""}
-                      onChange={(e) => handleFlightChange(index, "airline", e.target.value)}
-                      className="input w-full"
-                      placeholder="Lufthansa"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Aircraft Type
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.aircraft || ""}
-                      onChange={(e) => handleFlightChange(index, "aircraft", e.target.value)}
-                      className="input w-full"
-                      placeholder="A320, Boeing 737"
-                    />
-                  </div>
-                  {/* Route */}
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Departure Code
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.departureCode || ""}
-                      onChange={(e) =>
-                        handleFlightChange(index, "departureCode", e.target.value.toUpperCase())
-                      }
-                      className="input w-full"
-                      placeholder="MUC"
-                      maxLength={3}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Arrival Code
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.arrivalCode || ""}
-                      onChange={(e) =>
-                        handleFlightChange(index, "arrivalCode", e.target.value.toUpperCase())
-                      }
-                      className="input w-full"
-                      placeholder="FRA"
-                      maxLength={3}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Departure Date
-                    </label>
-                    <input
-                      type="date"
-                      value={flight.departureDate || ""}
-                      onChange={(e) => handleFlightChange(index, "departureDate", e.target.value)}
-                      className="input w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Departure Time
-                    </label>
-                    <input
-                      type="time"
-                      value={flight.departureTime || ""}
-                      onChange={(e) => handleFlightChange(index, "departureTime", e.target.value)}
-                      className="input w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Arrival Date
-                    </label>
-                    <input
-                      type="date"
-                      value={flight.arrivalDate || ""}
-                      onChange={(e) => handleFlightChange(index, "arrivalDate", e.target.value)}
-                      className="input w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Arrival Time
-                    </label>
-                    <input
-                      type="time"
-                      value={flight.arrivalTime || ""}
-                      onChange={(e) => handleFlightChange(index, "arrivalTime", e.target.value)}
-                      className="input w-full"
-                    />
-                  </div>
-                  {/* Boarding */}
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Seat
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.seat || ""}
-                      onChange={(e) => handleFlightChange(index, "seat", e.target.value)}
-                      className="input w-full"
-                      placeholder="12A"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Seat Class
-                    </label>
-                    <select
-                      value={flight.seatClass || ""}
-                      onChange={(e) => handleFlightChange(index, "seatClass", e.target.value)}
-                      className="input w-full"
-                    >
-                      <option value="">–</option>
-                      <option value="economy">Economy</option>
-                      <option value="premium_economy">Premium Economy</option>
-                      <option value="business">Business</option>
-                      <option value="first">First</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Terminal
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.terminal || ""}
-                      onChange={(e) => handleFlightChange(index, "terminal", e.target.value)}
-                      className="input w-full"
-                      placeholder="2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Gate
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.gate || ""}
-                      onChange={(e) => handleFlightChange(index, "gate", e.target.value)}
-                      className="input w-full"
-                      placeholder="A12"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Boarding Group
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.boardingGroup || ""}
-                      onChange={(e) => handleFlightChange(index, "boardingGroup", e.target.value)}
-                      className="input w-full"
-                      placeholder="1"
-                    />
-                  </div>
-                  {/* Buchung */}
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      PNR / Booking Reference
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.pnr || ""}
-                      onChange={(e) => handleFlightChange(index, "pnr", e.target.value)}
-                      className="input w-full"
-                      placeholder="ABC123"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                      Ticket Number
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.ticketNumber || ""}
-                      onChange={(e) => handleFlightChange(index, "ticketNumber", e.target.value)}
-                      className="input w-full"
-                      placeholder="2202236084346"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Tags */}
         <div className="mb-6">
@@ -850,6 +662,12 @@ export default function EmailAnnotation({
             templateId={derivedTemplateId}
             onDismiss={() => setDerivedTemplateId(null)}
           />
+        )}
+
+        {derivationNote && (
+          <p className="text-sm" style={{ color: "var(--warning)" }}>
+            {t(derivationNote)}
+          </p>
         )}
       </div>
     </div>

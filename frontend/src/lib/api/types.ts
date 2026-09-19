@@ -1,4 +1,5 @@
 import type { DomainKey } from "../../shared/domains";
+import type { WorkshopDomain } from "../../shared/annotationLabels";
 import type { ParsedBooking } from "../../types";
 import type { CountryTier } from "../../types/passport";
 
@@ -170,6 +171,12 @@ export interface UserSettings {
 export interface TrainingDataEntry {
   id: string;
   type: "email" | "boarding_pass";
+  /**
+   * Which KIND of document this sample is, classified on upload and
+   * correctable by the user — forgejo#124 phase 6. `type` beside it is the
+   * medium, and never answered this.
+   */
+  domain?: WorkshopDomain;
   status: "pending" | "trained" | "failed";
   annotations?: Record<string, unknown>;
   extractedData?: unknown[];
@@ -185,13 +192,49 @@ export interface TrainingUploadResult {
   id: string;
   type: string;
   status: string;
+  domain?: WorkshopDomain;
   message?: string;
 }
+
+/**
+ * Why no template came out of an annotation, when none did.
+ *
+ * Abstention is a result: cruise and place have no reader that could run a
+ * derived template, and a lodging mail can be annotated too thinly to build
+ * one from. The page renders the reason — `parser:derivation.cannot.<reason>`
+ * — instead of a silent nothing.
+ */
+export type TemplateDerivation =
+  | { status: "derived"; templateId: string; domain: WorkshopDomain }
+  | { status: "abstained"; domain: WorkshopDomain; reason: string }
+  | { status: "failed"; reason: string };
 
 export interface TrainingAnnotationResult {
   success: boolean;
   message?: string;
   templateId?: string;
+  derivation?: TemplateDerivation;
+}
+
+/** One side of a workshop preview — its own sample, or the held-out one. */
+export interface TemplatePreviewSide {
+  sampleId: string;
+  filename: string | null;
+  result: {
+    matched: boolean;
+    fields: Array<{ name: string; value: string }>;
+    confidence: number | null;
+  };
+}
+
+export interface TemplatePreviewResult {
+  templateId: string;
+  domain: WorkshopDomain;
+  own: TemplatePreviewSide | null;
+  heldOut: TemplatePreviewSide | null;
+  heldOutReason: "noSecondSample" | null;
+  canActivate: boolean;
+  previewOf: string;
 }
 
 // ==================== Pending Updates Interfaces ====================
@@ -452,6 +495,8 @@ export interface TemplateStatusResult {
 export interface UserTemplateItem {
   id: string;
   name: string;
+  /** Which parser may use it. A lodging template is never tried on a flight. */
+  domain?: WorkshopDomain;
   status: "pending" | "active" | "disabled";
   createdAt: string;
   updatedAt: string;

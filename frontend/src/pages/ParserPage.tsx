@@ -9,6 +9,8 @@ import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotatio
 import ParseLogStats from "../components/Training/ParseLogStats";
 import TemplateStatusView from "../components/TemplateStatusView";
 import MyTemplates from "../components/Parser/MyTemplates";
+import DomainPicker from "../components/Parser/DomainPicker";
+import type { WorkshopDomain } from "../shared/annotationLabels";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { Icon } from "../components/ui/Icon";
@@ -20,14 +22,26 @@ export default function ParserPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const addToast = useToastStore((state) => state.addToast);
   const [activeTab, setActiveTab] = useState<Tab>("annotate");
-  const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{
+    id: string;
+    type: string;
+    /** What the classifier said, kept so the picker can mark an override. */
+    detected: WorkshopDomain;
+  } | null>(null);
+  /** The domain the annotation is FOR — the classifier's answer until the
+   *  user corrects it (forgejo#124 phase 6). */
+  const [domain, setDomain] = useState<WorkshopDomain>("flight");
   const emailFileInputRef = useRef<HTMLInputElement>(null);
   const boardingPassFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (file: File, type: "email" | "boarding_pass"): Promise<void> => {
     try {
       const result = await trainingApi.upload(file, type);
-      setUploadedFile({ id: result.id, type: result.type });
+      // A boarding pass is a flight by construction; only mail is classified,
+      // and an older server that sends no domain keeps the old behaviour.
+      const detected = result.domain ?? "flight";
+      setUploadedFile({ id: result.id, type: result.type, detected });
+      setDomain(detected);
     } catch (error) {
       logger.error({ err: error }, "ParserPage: upload failed");
       addToast("error", t("parser:annotate.uploadError"));
@@ -164,11 +178,19 @@ export default function ParserPage(): JSX.Element {
                   </button>
                 </div>
                 {uploadedFile.type === "email" ? (
-                  <EmailAnnotation
-                    trainingDataId={uploadedFile.id}
-                    onComplete={handleAnnotationComplete}
-                    onCancel={handleCancel}
-                  />
+                  <div className="space-y-4">
+                    <DomainPicker
+                      value={domain}
+                      detected={uploadedFile.detected}
+                      onChange={setDomain}
+                    />
+                    <EmailAnnotation
+                      trainingDataId={uploadedFile.id}
+                      domain={domain}
+                      onComplete={handleAnnotationComplete}
+                      onCancel={handleCancel}
+                    />
+                  </div>
                 ) : (
                   <BoardingPassAnnotation
                     trainingDataId={uploadedFile.id}
