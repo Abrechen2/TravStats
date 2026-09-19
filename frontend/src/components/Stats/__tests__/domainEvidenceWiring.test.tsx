@@ -20,6 +20,7 @@ import LodgingMoneySection from "../lodging/LodgingMoneySection";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
 import { CruiseFunSection } from "../cruise/CruiseDetailSections";
 import type { CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
+import { expectNoNestedTriggers } from "./noNestedTriggers";
 
 /**
  * Which tiles on the cruise, lodging and places surfaces open the evidence
@@ -353,5 +354,30 @@ describe("the numbers inside a sentence, and the strip's own figures", () => {
     );
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByText(/cruise:stats.fun.companionsTotalAfter/)).toBeInTheDocument();
+  });
+
+  it("nests no trigger inside another, on either surface", async () => {
+    cleanup();
+    const detail = {
+      first: null,
+      mostPorts: null,
+      highestDeck: null,
+      onTrips: 0,
+      cabinTypes: new Map<string, number>(),
+      companions: new Map([["Ada", 2]]),
+    } as unknown as CruiseStatsDetail;
+    const money = render(
+      <MemoryRouter>
+        <LodgingMoneySection stats={lodgingStats} evidenceScope={SCOPE} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(money.container);
+    cleanup();
+    const cruise = render(
+      <MemoryRouter>
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(cruise.container);
   });
 });

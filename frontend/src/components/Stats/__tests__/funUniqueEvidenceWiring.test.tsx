@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import type { JSX } from "react";
 import type { FunStats, UniqueStats } from "../../../types";
 import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
+import { expectNoNestedTriggers } from "./noNestedTriggers";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -161,6 +162,16 @@ describe("the fun and unique tiles open the measures they render", () => {
   it("opens a DIFFERENT measure from each figure of a split card", async () => {
     const keys = await keysOpenedBy(<StatsUniqueSection uniqueStats={uniqueStats} />);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("nests no trigger inside another", async () => {
+    cleanup();
+    const { container } = render(
+      <MemoryRouter>
+        <StatsUniqueSection uniqueStats={uniqueStats} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(container);
   });
 
   it("every key these surfaces open is a registered measure that release 1 serves", async () => {

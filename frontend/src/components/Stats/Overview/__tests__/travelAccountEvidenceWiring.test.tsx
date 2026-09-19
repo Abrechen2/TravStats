@@ -10,6 +10,7 @@ vi.mock("../../../../lib/api/stats", () => ({
 }));
 
 import TravelAccountSection from "../TravelAccountSection";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 
 /**
  * Which travel-account tiles open the evidence panel (task 7b-2), read from
@@ -133,6 +134,17 @@ describe("the travel-account tiles open the measures they render", () => {
     expect(new Set(keys).size).toBe(keys.length);
     // `avgTripDays` is a `ratio`, which release 1 does not serve at all.
     expect(keys).not.toContain("travelAccountAvgTripDays");
+  });
+
+  it("nests no trigger inside another", async () => {
+    cleanup();
+    const { container } = render(
+      <MemoryRouter>
+        <TravelAccountSection />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getAllByRole("button").length).toBeGreaterThan(0));
+    expectNoNestedTriggers(container);
   });
 
   it("every key this section opens is a registered measure that release 1 serves", async () => {

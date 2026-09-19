@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { act } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
 import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
+import { expectNoNestedTriggers } from "./noNestedTriggers";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
@@ -110,6 +111,33 @@ describe("PoiStatsSection evidence wiring", () => {
       ].sort()
     );
     expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
+  });
+
+  /**
+   * Both cards here are card-wide triggers AND carry an inline one in their
+   * description, which is the pairing that nests. It nested once, and the key
+   * assertion above did not notice: the inner click bubbled to the card, so
+   * the set still held only served keys — just the wrong one, twice.
+   */
+  it("nests no trigger inside another, in either view", async () => {
+    listPlacesMock.mockResolvedValue([
+      place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
+    ]);
+    const lifetime = render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
+    await screen.findByText("places:stats.visitedPlaces");
+    expectNoNestedTriggers(lifetime.container);
+    cleanup();
+    const year = render(
+      <MemoryRouter>
+        <PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
+    await screen.findByText("places:stats.visitedPlaces");
+    expectNoNestedTriggers(year.container);
   });
 });
 
