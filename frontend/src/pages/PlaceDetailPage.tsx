@@ -12,12 +12,14 @@ import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
+import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
@@ -43,6 +45,21 @@ export default function PlaceDetailPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /**
+   * Which visit the reader is being asked about, if any.
+   *
+   * There was no question at all before: the row's delete icon called the API
+   * on the first click. Finding 3 of the write-path audit (2026-09-19) is why
+   * that mattered — `Document.placeVisitId` cascades (`onDelete: Cascade`,
+   * proven live by
+   * `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and the
+   * route deletes the visit's photograph FILES from disk as well. One
+   * mis-aimed click took a ticket and a day's pictures with it.
+   */
+  const [confirmVisitDelete, setConfirmVisitDelete] = useState<PlaceVisit | null>(null);
+  const visitDocumentCount = useDocumentCount(
+    confirmVisitDelete ? { type: "placeVisit", id: confirmVisitDelete.id } : null
+  );
   const [addingVisit, setAddingVisit] = useState(false);
   const [visitDate, setVisitDate] = useState("");
   const [visitTime, setVisitTime] = useState("");
@@ -144,6 +161,8 @@ export default function PlaceDetailPage(): JSX.Element {
       } catch (err: unknown) {
         logger.error({ err }, "PlaceDetailPage: delete visit failed");
         addToast("error", t("places:detail.visitDeleteFailed"));
+      } finally {
+        setConfirmVisitDelete(null);
       }
     },
     [addToast, t, load]
@@ -255,7 +274,7 @@ export default function PlaceDetailPage(): JSX.Element {
             <RowActionButton
               icon="delete"
               label={t("common:buttons.delete")}
-              onClick={() => void removeVisit(v.id)}
+              onClick={() => setConfirmVisitDelete(v)}
             />
           </RowActions>
         </span>
@@ -467,6 +486,25 @@ export default function PlaceDetailPage(): JSX.Element {
             setPlace(saved);
             setEditing(false);
           }}
+        />
+      )}
+
+      {confirmVisitDelete !== null && (
+        <ConfirmModal
+          isOpen
+          title={t("places:detail.visitDeleteTitle")}
+          message={withDocumentNote(
+            t("places:detail.visitDeleteMessage", {
+              visit: formatVisit(confirmVisitDelete),
+            }),
+            t,
+            visitDocumentCount
+          )}
+          confirmText={t("common:buttons.delete")}
+          cancelText={t("common:buttons.cancel")}
+          onConfirm={() => void removeVisit(confirmVisitDelete.id)}
+          onClose={() => setConfirmVisitDelete(null)}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}
 

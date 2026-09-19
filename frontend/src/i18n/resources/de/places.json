@@ -101,6 +101,8 @@
     "visitAdded": "Besuch eingetragen.",
     "visitFailed": "Der Besuch konnte nicht eingetragen werden.",
     "visitDeleteFailed": "Der Besuch konnte nicht gelöscht werden.",
+    "visitDeleteTitle": "Besuch löschen?",
+    "visitDeleteMessage": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seiner Beleg-Fotos. Der Ort selbst bleibt bestehen.",
     "notes": "Notiz",
     "masterData": "Stammdaten",
     "position": "Position",

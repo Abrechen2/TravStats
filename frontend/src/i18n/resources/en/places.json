@@ -101,6 +101,8 @@
     "visitAdded": "Visit recorded.",
     "visitFailed": "The visit could not be recorded.",
     "visitDeleteFailed": "The visit could not be deleted.",
+    "visitDeleteTitle": "Delete visit?",
+    "visitDeleteMessage": "The visit of {{visit}} will be permanently deleted, along with its photographs. The place itself stays.",
     "notes": "Note",
     "masterData": "Details",
     "position": "Position",
