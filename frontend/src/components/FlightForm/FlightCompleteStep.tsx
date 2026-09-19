@@ -244,6 +244,26 @@ export default function FlightCompleteStep({
    * is what the closed header shows; keeping both in the parent means one
    * place decides what "filled in" means for a given field.
    */
+  /**
+   * The core group is open by default, but it can be folded — by the user, or
+   * by a session that remembers one — and a folded group that says nothing is
+   * exactly what the summaries exist to prevent. It is also the group a
+   * refused save unfolds, so its header is what the user sees a moment before
+   * the cursor lands.
+   */
+  const coreSummary = summaryLine([
+    {
+      label: t("flights:form.from"),
+      value: departure?.iata ?? departure?.name ?? "",
+    },
+    {
+      label: t("flights:form.to"),
+      value: arrival?.iata ?? arrival?.name ?? "",
+    },
+    { label: t("flights:form.departureDate"), value: departureDate },
+    { label: t("flights:form.airline"), value: airline },
+  ]);
+
   const priceAndSeatSummary = summaryLine([
     { label: t("flights:form.price"), value: priceSummaryValue(cost.price, cost.currency) },
     { label: t("flights:form.seat"), value: seatNumber },
@@ -354,7 +374,12 @@ export default function FlightCompleteStep({
       {/* Kern — route, times and airline, open by default (forgejo#88, point
           9). The three groups below it are folded: this is the part without
           which there is no flight to record. */}
-      <FlightFormSection id="core" title={t("flights:form.sections.core")} defaultOpen>
+      <FlightFormSection
+        id="core"
+        title={t("flights:form.sections.core")}
+        summary={coreSummary}
+        defaultOpen
+      >
         <div className="space-y-6">
           {/* Airports */}
           <div className="grid grid-cols-2 gap-4">

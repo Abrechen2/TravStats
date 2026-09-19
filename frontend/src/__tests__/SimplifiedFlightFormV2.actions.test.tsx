@@ -56,6 +56,7 @@ const openManualEntry = async (): Promise<void> => {
 describe("SimplifiedFlightFormV2 — the footer's actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     vi.mocked(companionsApi.list).mockResolvedValue([]);
   });
 
@@ -96,5 +97,29 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
         "flights:form.placeholders.departureAirport"
       );
     });
+  });
+
+  /**
+   * The case the focus fix exists for, and the one it silently failed at
+   * first: `focus()` on a control inside a closed `<details>` is a NO-OP. With
+   * the core folded — which the session remembers, so this is not an exotic
+   * state — the old code moved nothing and the user got the same nameless
+   * error as before.
+   */
+  it("unfolds a closed group to reach the field that is missing", async () => {
+    await openManualEntry();
+
+    const core = document.querySelector('details[data-section="core"]') as HTMLDetailsElement;
+    fireEvent.click(core.querySelector("summary")!);
+    await waitFor(() => expect(core.open).toBe(false));
+
+    fireEvent.submit(screen.getByRole("dialog").querySelector("form")!);
+
+    await waitFor(() => expect(core.open).toBe(true));
+    expect((document.activeElement as HTMLElement | null)?.getAttribute("placeholder")).toBe(
+      "flights:form.placeholders.departureAirport"
+    );
+    // And the unfold is remembered, exactly as a click on the heading is.
+    expect(window.sessionStorage.getItem("travstats.flightForm.section.core")).toBe("open");
   });
 });

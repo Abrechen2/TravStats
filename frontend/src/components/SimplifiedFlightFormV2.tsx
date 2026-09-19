@@ -58,17 +58,17 @@ export default function SimplifiedFlightFormV2({
    * validation: `canSubmit` is the same guard the hook is about to apply, and
    * when it holds nothing is focused and the submit runs untouched.
    *
-   * Wraps BOTH submit paths, because Enter in any input reaches `handleSubmit`
-   * while the footer's "Speichern + Rückflug" reaches the other one, and a
-   * user who pressed Enter is exactly the user who did not look at the button.
+   * **Only the form's own submit needs this, and that is not an oversight.**
+   * Both footer buttons are `disabled` while `canSubmit` is false, so neither
+   * can reach a refusal; what can is Enter in any input, which submits the
+   * `<form>` past the disabled buttons entirely. That is also the user who
+   * needs it most — they never looked at the button, so the greyed-out state
+   * told them nothing. `useFlightForm` guards its handlers for exactly the
+   * same reason ("canSubmit only greys out the button").
    */
-  const withFocusOnRefusal = (
-    submit: (e: React.FormEvent) => Promise<void> | void
-  ): ((e: React.FormEvent) => void) => {
-    return (e: React.FormEvent): void => {
-      if (!form.canSubmit) focusFirstMissingRequired(formRef.current);
-      void submit(e);
-    };
+  const handleSubmitWithFocus = (e: React.FormEvent): void => {
+    if (!form.canSubmit) focusFirstMissingRequired(formRef.current);
+    void form.handleSubmit(e);
   };
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
@@ -106,7 +106,9 @@ export default function SimplifiedFlightFormV2({
               <>
                 <button
                   type="button"
-                  onClick={withFocusOnRefusal(form.handleSubmitAndReturn)}
+                  onClick={(e) => {
+                    void form.handleSubmitAndReturn(e);
+                  }}
                   className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
                   disabled={form.loading || !form.canSubmit}
                   title={
@@ -153,12 +155,7 @@ export default function SimplifiedFlightFormV2({
           </div>
         )}
 
-        <form
-          id={formId}
-          ref={formRef}
-          onSubmit={withFocusOnRefusal(form.handleSubmit)}
-          className="space-y-6 pt-2"
-        >
+        <form id={formId} ref={formRef} onSubmit={handleSubmitWithFocus} className="space-y-6 pt-2">
           {form.step === "input" && (
             <FlightLookupStep
               flightNumber={form.flightNumber}
