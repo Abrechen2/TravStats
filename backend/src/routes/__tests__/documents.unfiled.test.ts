@@ -7,7 +7,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { documentPath } from "../../services/documents/documentStore";
-import { UNLINKED_TTL_DAYS } from "../../services/documents/documentService";
+import { UNLINKED_TTL_DAYS, sweepDocuments } from "../../services/documents/documentService";
 
 /**
  * An unfiled upload is deleted — row and bytes — by the hourly sweep, and until
@@ -102,8 +102,12 @@ describe("GET /documents/unfiled", () => {
     const row = (res.body.data as UnfiledDto[]).find((d) => d.id === loose)!;
     expect(row.entry).toBeNull();
     expect(row.displayName).toBe("loose-one.pdf");
+    // Measured from `unlinkedAt`, which for a freshly uploaded document is the
+    // same moment as `createdAt` — but stamped by a different clock (Postgres'
+    // `now()` against the server's `new Date()`), so they differ by a
+    // millisecond or two. A second of slack, not an exact equality.
     const expected = new Date(row.createdAt).getTime() + UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000;
-    expect(new Date(row.deletesAt).getTime()).toBe(expected);
+    expect(Math.abs(new Date(row.deletesAt!).getTime() - expected)).toBeLessThan(1000);
   });
 
   it("gives the user thirty days, not seven", async () => {
@@ -126,6 +130,50 @@ describe("GET /documents/unfiled", () => {
 
     const after = await request(app).get("/api/v1/documents/unfiled").set("Cookie", ownerCookie);
     expect((after.body.data as UnfiledDto[]).map((d) => d.id)).not.toContain(id);
+  });
+
+  it("restarts the clock when an OLD document is unfiled", async () => {
+    // The defect this pins: the sweep and `deletesAt` counted from `createdAt`,
+    // the age of the FILE. A document uploaded two months ago and unfiled today
+    // was therefore already past a 30-day TTL the instant it was unfiled — the
+    // inbox showed a deletion date in the PAST and the next hourly pass deleted
+    // it. The TTL is about how long it has belonged to nothing.
+    const id = await upload(ownerCookie, "old-and-filed", { type: "flight", id: flightId });
+    const longAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    await prisma.document.update({ where: { id }, data: { createdAt: longAgo } });
+
+    // Unfile it, now.
+    await request(app)
+      .patch(`/api/v1/documents/${id}`)
+      .set("Cookie", ownerCookie)
+      .send({ entry: null })
+      .expect(200);
+
+    const res = await request(app).get("/api/v1/documents/unfiled").set("Cookie", ownerCookie);
+    const row = (res.body.data as UnfiledDto[]).find((d) => d.id === id)!;
+
+    // Uploaded two months ago, and still has its full thirty days.
+    expect(new Date(row.createdAt).getTime()).toBeLessThan(longAgo.getTime() + 60_000);
+    const daysFromNow = (new Date(row.deletesAt!).getTime() - Date.now()) / 86_400_000;
+    expect(daysFromNow).toBeGreaterThan(UNLINKED_TTL_DAYS - 1);
+    expect(daysFromNow).toBeLessThanOrEqual(UNLINKED_TTL_DAYS);
+
+    // And the sweep agrees with the screen — on the old code it deleted this
+    // row on its next pass.
+    const result = await sweepDocuments();
+    expect(result.expiredUnfiled).toBe(0);
+    expect(await prisma.document.findUnique({ where: { id } })).not.toBeNull();
+  });
+
+  it("sweeps a document that has been unfiled for longer than the TTL", async () => {
+    const id = await upload(ownerCookie, "unfiled-long-ago");
+    const past = new Date(Date.now() - (UNLINKED_TTL_DAYS + 1) * 24 * 60 * 60 * 1000);
+    await prisma.document.update({ where: { id }, data: { unlinkedAt: past } });
+
+    const result = await sweepDocuments();
+
+    expect(result.expiredUnfiled).toBeGreaterThanOrEqual(1);
+    expect(await prisma.document.findUnique({ where: { id } })).toBeNull();
   });
 
   it("refuses an anonymous caller", async () => {

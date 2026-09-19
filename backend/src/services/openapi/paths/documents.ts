@@ -51,9 +51,11 @@ registry.registerPath({
   path: "/documents/unfiled",
   summary: "Your uploads that are filed with nothing yet",
   description:
-    "Newest first, bounded. Each carries `deletesAt`: an unfiled document is removed — row and " +
-    "file — thirty days after it was uploaded. The endpoint exists so that deletion is announced " +
-    "before it happens; the inbox's review tab lists these.",
+    "Ordered by when each became unfiled, newest first, bounded. Each carries `deletesAt`: an " +
+    "unfiled document is removed — row and file — thirty days after it BECAME unfiled, not " +
+    "after it was uploaded, so unfiling an old document gives it the full thirty days. The " +
+    "endpoint exists so that deletion is announced before it happens; the inbox's review tab " +
+    "lists these.",
   tags,
   responses: {
     200: {

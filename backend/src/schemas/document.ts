@@ -104,7 +104,14 @@ export const documentDtoSchema = z.object({
  * UNLINKED_TTL_DAYS, and until 2026-09-19 nothing told anybody that.
  */
 export const unfiledDocumentDtoSchema = documentDtoSchema.extend({
-  deletesAt: z.string().describe("ISO instant at which the sweep will remove this document"),
+  deletesAt: z
+    .string()
+    .nullable()
+    .describe(
+      "ISO instant at which the sweep will remove this document, measured from when it " +
+        "became unfiled. Null only for a row that carries no such stamp, which the sweep " +
+        "also leaves alone."
+    ),
 });
 
 export const documentLimitsSchema = z.object(

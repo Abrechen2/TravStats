@@ -62,12 +62,16 @@ export interface TravelDocument {
  * An unfiled document, as `GET /documents/unfiled` lists it.
  *
  * `deletesAt` is the date the server's hourly sweep will remove it, row and
- * bytes. It is the reason the endpoint exists: the sweep used to be silent, so
- * an upload that was never filed vanished after a week without anyone being
- * told (2026-09-19 integrity audit, finding 4).
+ * bytes, counted from when it BECAME unfiled rather than from its upload. It
+ * is the reason the endpoint exists: the sweep used to be silent, so an upload
+ * that was never filed vanished after a week without anyone being told
+ * (2026-09-19 integrity audit, finding 4).
+ *
+ * Null when the server cannot date the row — which the sweep also abstains on,
+ * so the screen and the deletion agree. Nothing produces such a row today.
  */
 export interface UnfiledDocument extends TravelDocument {
-  deletesAt: string;
+  deletesAt: string | null;
 }
 
 /** Bytes, per format. */

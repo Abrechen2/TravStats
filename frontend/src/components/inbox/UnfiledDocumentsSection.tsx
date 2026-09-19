@@ -84,9 +84,16 @@ export default function UnfiledDocumentsSection(): JSX.Element | null {
               <span className="t-caption">
                 {t("dataQuality:unfiledDocuments.uploaded")}{" "}
                 <time dateTime={document.createdAt}>{formatDate(document.createdAt)}</time>
-                {" · "}
-                {t("dataQuality:unfiledDocuments.deletesOn")}{" "}
-                <time dateTime={document.deletesAt}>{formatDate(document.deletesAt)}</time>
+                {/* Only when the server could date it. It abstains on a row it
+                    cannot date and so does the sweep, so an absent clause here
+                    means nothing is going to be deleted either. */}
+                {document.deletesAt && (
+                  <>
+                    {" · "}
+                    {t("dataQuality:unfiledDocuments.deletesOn")}{" "}
+                    <time dateTime={document.deletesAt}>{formatDate(document.deletesAt)}</time>
+                  </>
+                )}
               </span>
             </span>
             <a

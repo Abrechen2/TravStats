@@ -2722,6 +2722,17 @@ model Document {
   createdAt DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
   linkedAt  DateTime? @map("linked_at")
+  /// Since WHEN this document has belonged to nothing — the clock the sweep
+  /// runs on, and the one `deletesAt` is measured from. Null exactly when the
+  /// document IS filed.
+  ///
+  /// The sweep used to count from `createdAt`, which is the age of the FILE and
+  /// not the age of the problem. Unfiling a document uploaded two months ago
+  /// therefore put it past the TTL the moment it was unfiled, and the next
+  /// hourly pass deleted it — while the inbox, reading the same `createdAt`,
+  /// had just promised a date in the past. Whatever the TTL is, the user is
+  /// owed it from the moment the document became unfiled.
+  unlinkedAt DateTime? @map("unlinked_at")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight      Flight?      @relation(fields: [flightId], references: [id], onDelete: Cascade)
@@ -2737,5 +2748,7 @@ model Document {
   @@index([tripId])
   @@index([placeVisitId])
   @@index([userId, linkedAt])
+  /// The sweep asks exactly this: unfiled rows past their stamp.
+  @@index([unlinkedAt])
   @@map("documents")
 }
