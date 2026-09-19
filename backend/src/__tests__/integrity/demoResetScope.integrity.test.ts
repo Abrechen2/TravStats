@@ -1,20 +1,21 @@
 /**
- * Auditor I2, data-integrity audit 2026-09-19 — NOT COMMITTED.
+ * Data-integrity audit 2026-09-19 — the SCOPE of the demo reset.
  *
- * Two questions about the demo reset (`seedDemoAccount.ts`, run on every boot
- * with `CREATE_DEMO_USER=true`, and the only thing that empties an account
- * wholesale without a click):
+ * `seedDemoAccount.ts` runs on every boot with `CREATE_DEMO_USER=true` and is
+ * the only thing that empties an account wholesale without a click. The
+ * question here is what it reaches: does it delete the demo user's rows and
+ * nothing else — not a second user's, not the shared catalogues'?
  *
- *  1. Does it delete ONLY the shared demo user's rows?  (scope)
- *  2. WHICH account does it pick?  `ensureUser()` used to look the account up
- *     by `username = "demo"` alone — it never asked whether the row it found
- *     was the seeded demo account (`isDemo`), and no reserved-username list
- *     stopped a real person from registering that name. Since the fix of
- *     2026-09-19 the flag decides: an account named `demo` that is not flagged
- *     is REFUSED, and `RESERVED_USERNAMES` keeps the collision from arising.
+ * WHICH account it picks is the other question, and it is NOT asked here.
+ * `ensureUser()` takes the username from a constant, so the only way to pose
+ * it is to make the `demo` row itself look like somebody else's — and on a
+ * database that already has a demo account, that means writing a foreign
+ * password hash onto a row this suite does not own. `seedDemoAccount.isDemo`
+ * asks it instead: that suite deletes and recreates the demo row around every
+ * case, which is its documented convention, so it can shape the row freely.
  *
- * The test creates its own throwaway `demo` user and deletes it again, so it
- * leaves the shared 5437 database exactly as it found it.
+ * This one never writes to a pre-existing demo account beyond what
+ * `ensureUser()` itself does, and it removes every row it created.
  */
 import { prisma } from "../../db";
 import { ensureUser } from "../../seedDemoAccount";
@@ -133,17 +134,21 @@ beforeAll(async () => {
   const existingDemo = await prisma.user.findUnique({ where: { username: DEMO_USERNAME } });
   demoPreexisted = existingDemo !== null;
   if (existingDemo) {
+    // Used as found: no credential of an account this suite did not create is
+    // ever written. Its rows are about to be deleted, but that is what
+    // `ensureUser()` does on every boot and what the account is for.
     demoId = existingDemo.id;
   } else {
     // A genuine demo account — the flag is what the seeder goes by since the
-    // 2026-09-19 fix. Test 4 below turns the flag off again to play the part
-    // of a real person who registered the name.
+    // 2026-09-19 fix.
     const created = await prisma.user.create({
       data: { username: DEMO_USERNAME, passwordHash: "seeded-demo-hash", isDemo: true },
     });
     demoId = created.id;
-    await seedContentFor(demoId, `${TAG}-demo`);
   }
+  // Seeded either way, so the wipe below has something to remove whichever
+  // branch ran — the suite must not need a particular starting database.
+  await seedContentFor(demoId, `${TAG}-demo`);
 });
 
 afterAll(async () => {
@@ -158,10 +163,11 @@ afterAll(async () => {
 
 describe("the demo reset (ensureUser -> wipeDemoUser)", () => {
   it("empties the account it picked", async () => {
-    expect(demoPreexisted).toBe(false); // the throwaway account this test made
+    // At LEAST the rows this suite seeded — a database that already had a demo
+    // account carries its own on top, and the assertion must hold either way.
     const before = await countsFor(demoId);
-    expect(before.flights).toBe(1);
-    expect(before.documents).toBe(2);
+    expect(before.flights).toBeGreaterThanOrEqual(1);
+    expect(before.documents).toBeGreaterThanOrEqual(2);
 
     const returned = await ensureUser();
     expect(returned).toBe(demoId);
@@ -190,41 +196,6 @@ describe("the demo reset (ensureUser -> wipeDemoUser)", () => {
     expect(
       await prisma.lodgingChain.findUnique({ where: { id: userAddedChainId } })
     ).not.toBeNull();
-  });
-
-  it("REFUSES an account named demo that is not the demo account, and keeps every row of it", async () => {
-    // The finding (audit 2026-09-19, finding 1): `ensureUser()` looked the
-    // account up by username alone. A real person who had registered the name
-    // `demo` lost their password to demo123, their passkeys, recovery codes,
-    // API tokens and 2FA secret, their first name and birthdate, and their
-    // rows in thirty tables — on one boot with CREATE_DEMO_USER=true.
-    //
-    // The flag decides now. This test plays that person: the same row, with
-    // `isDemo` off, a private hash and a name.
-    await prisma.user.update({
-      where: { id: demoId },
-      data: { isDemo: false, passwordHash: "a-real-persons-hash", firstName: "Real" },
-    });
-    await seedContentFor(demoId, `${TAG}-real`);
-    const before = await countsFor(demoId);
-    expect(before.flights).toBe(1);
-
-    await expect(ensureUser()).rejects.toThrow(/refusing to reseed/i);
-
-    const after = await prisma.user.findUniqueOrThrow({ where: { id: demoId } });
-    expect(after.isDemo).toBe(false);
-    expect(after.passwordHash).toBe("a-real-persons-hash");
-    expect(after.firstName).toBe("Real");
-    expect(await countsFor(demoId)).toEqual(before);
-
-    // Hand the row back as a demo account for the test that follows, and
-    // empty it again — through the seeder, which is the thing under test.
-    await prisma.user.update({
-      where: { id: demoId },
-      data: { isDemo: true, firstName: null },
-    });
-    await ensureUser();
-    expect((await countsFor(demoId)).flights).toBe(0);
   });
 
   it("clears the reset account's PasswordResetRequest", async () => {
