@@ -26,6 +26,22 @@ import { logger } from "../lib/logger";
  * `null` means "unknown", never "none": while the request is in flight, and
  * after one that failed. The dialog shows its base sentence then and opens at
  * once — a warning is worth adding to a question, never worth delaying it.
+ *
+ * **The shared demo account is NOT exempted, and that was measured rather than
+ * assumed.** Skipping the request there would have been free if the demo could
+ * not delete anyway, so the five delete routes were read: none of
+ * `DELETE /flights/:id`, `/cruises/:id`, `/lodging/:id/stays/:stayId`,
+ * `/places/visits/:visitId` or `/trips/:id` mounts `rejectDemo` or
+ * `rejectDemoWrites`, and none of their routers mounts one globally — the demo
+ * is refused on credentials, connections and quota (`middleware/demoGuard.ts`
+ * says so: "Travel data stays editable; a nightly reseed restores it"), not on
+ * travel data. So a visitor of a public preview really does delete the entry
+ * AND its documents, and is the reader least likely to know what a cascade is.
+ * The list endpoint the count uses carries `authenticate` alone
+ * (`backend/src/routes/documents.ts`, the `ENTRY_LIST_PATHS` loop), so the demo
+ * can read it; `rejectDemo` guards the upload, patch and delete there, not the
+ * read. An exemption would have bought one request and cost the warning to
+ * exactly the account that needs it most.
  */
 export function useDocumentCount(entry: DocumentEntryRef | null): number | null {
   const [count, setCount] = useState<number | null>(null);
