@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Router, Response, NextFunction } from "express";
-import type { ParserTemplate } from "../prisma";
+import type { ParserTemplate, TrainingData } from "../prisma";
 import { z } from "zod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
@@ -13,6 +13,7 @@ import type {
   TemplatePatterns,
   UserTemplate,
 } from "../services/parsers/userTemplates/types";
+import { senderAddressIn, subjectIn } from "../services/parsers/userTemplates/sampleHeaders";
 import { isWorkshopDomain } from "../shared/annotationLabels";
 import logger from "../utils/logger";
 
@@ -148,18 +149,22 @@ function domainOf(row: ParserTemplate): TemplateDomain {
  * would read as proof that the template generalises.
  */
 function sampleText(
-  annotations: unknown
+  sample: Pick<TrainingData, "annotations" | "senderAddress" | "subject">
 ): { subject: string; body: string; fromAddress: string } | null {
+  const annotations = sample.annotations;
   if (typeof annotations !== "object" || annotations === null) return null;
   const ann = annotations as Record<string, unknown>;
   const fullText = typeof ann.fullText === "string" ? ann.fullText : "";
   if (fullText.length === 0) return null;
-  const subjectMatch = /^Subject:\s*(.+)$/im.exec(fullText);
-  const fromMatch = /^From:\s*(?:.*?<)?([^\s<>]+@[^\s<>]+?)>?\s*$/im.exec(fullText);
+  // The row's columns first, the text second — the same order the deriver
+  // reads in, and for the same reason: an uploaded `.eml` keeps neither header
+  // in the text it stores (beta audit 2026-09-19, NOT FIXED 5). A preview that
+  // read only the text would hand the flight fingerprint an empty sender and
+  // report a template as not matching its own sample.
   return {
-    subject: subjectMatch ? subjectMatch[1].trim() : "",
+    subject: sample.subject?.trim() || subjectIn(fullText) || "",
     body: fullText,
-    fromAddress: fromMatch ? fromMatch[1].trim() : "",
+    fromAddress: sample.senderAddress?.trim() || senderAddressIn(fullText) || "",
   };
 }
 
@@ -190,7 +195,7 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
     const own = template.sourceId
       ? await prisma.trainingData.findFirst({ where: { id: template.sourceId, userId } })
       : null;
-    const ownText = own ? sampleText(own.annotations) : null;
+    const ownText = own ? sampleText(own) : null;
     const ownSide: PreviewSide | null =
       own && ownText
         ? {
@@ -214,7 +219,7 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
       where: { userId, domain, id: { not: own?.id ?? "" } },
       orderBy: { createdAt: "desc" },
     });
-    const heldOutText = heldOutRow ? sampleText(heldOutRow.annotations) : null;
+    const heldOutText = heldOutRow ? sampleText(heldOutRow) : null;
     const heldOutSide: PreviewSide | null =
       heldOutRow && heldOutText
         ? {

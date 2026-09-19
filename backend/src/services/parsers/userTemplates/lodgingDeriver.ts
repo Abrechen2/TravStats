@@ -237,7 +237,14 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
   const anchors: string[] = [];
   const subjectAnchor = senderAnchorFromSubject(input.subject);
   if (subjectAnchor) anchors.push(subjectAnchor);
-  if (input.senderDomain && fullText.toLowerCase().includes(input.senderDomain.toLowerCase())) {
+  // An anchor is only an anchor where the reader will look for it, and
+  // `applyLodgingTemplate` searches the subject and the body joined by a
+  // newline. Checking the body alone dropped a domain that only the subject
+  // names, and — worse — would have let a domain through that the engine
+  // could never find, now that the subject is read from a column rather than
+  // out of the text.
+  const haystack = [input.subject, fullText].join("\n").toLowerCase();
+  if (input.senderDomain && haystack.includes(input.senderDomain.toLowerCase())) {
     anchors.push(input.senderDomain);
   }
   if (anchors.length === 0) {

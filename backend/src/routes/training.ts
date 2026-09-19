@@ -17,7 +17,8 @@ import { AppError } from "../middleware/errorHandler";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { deriveTemplateFromAnnotation } from "../services/parsers/userTemplates/deriver";
-import { extractEmailFromFile } from "../services/emailExtractor";
+import { extractEmailFromFile, type ExtractedEmail } from "../services/emailExtractor";
+import { senderAddressIn, subjectIn } from "../services/parsers/userTemplates/sampleHeaders";
 import { scoreDocument } from "../services/parsing/documentDomain";
 import {
   WORKSHOP_DOMAINS,
@@ -171,6 +172,37 @@ function annotatedLabels(annotations: Record<string, unknown>): string[] {
     .filter((label): label is string => typeof label === "string" && label.length > 0);
 }
 
+/**
+ * Who sent this sample and what it was called — the two anchors a derived
+ * template can carry, captured while they still exist.
+ *
+ * They do not survive the round trip otherwise, and that is the whole of the
+ * workshop's lodging bug (beta audit 2026-09-19, NOT FIXED 5). For an `.eml`
+ * the extractor hands back the BODY with the header block removed; the
+ * annotation view then saves that body through `filterEmailText`, which
+ * strips every address it finds. So by the time `deriveTemplateFromAnnotation`
+ * regexed `^From:` and `^Subject:` out of the stored text there was nothing
+ * left to find, and every browser upload of a hotel confirmation abstained
+ * with `noDistinguishingMarker` — while the same body posted to the API with
+ * its `From:` line still on it derived a template.
+ *
+ * The in-text read stays, as the fallback: for a `.txt` or a pasted sample
+ * the header block is part of the document the user annotates.
+ */
+interface SampleIdentity {
+  senderAddress?: string;
+  subject?: string;
+}
+
+function sampleIdentity(extracted: ExtractedEmail, fullText: string): SampleIdentity {
+  const senderAddress = extracted.from ?? senderAddressIn(fullText) ?? undefined;
+  const subject = extracted.subject.trim() || subjectIn(fullText) || undefined;
+  return {
+    ...(senderAddress ? { senderAddress } : {}),
+    ...(subject ? { subject } : {}),
+  };
+}
+
 function classifyUpload(type: string, fullText: string): WorkshopDomain {
   if (type !== "email" || fullText.length === 0) return "flight";
   const detected = scoreDocument(fullText).domain;
@@ -208,6 +240,7 @@ router.post(
       // Pre-populate annotations with file content so annotation components can render it
       const _fileExt = path.extname(req.file.originalname).toLowerCase();
       let initialAnnotations: Record<string, unknown> = {};
+      let identity: SampleIdentity = {};
       try {
         if (type === "email") {
           const buffer = fs.readFileSync(req.file.path);
@@ -215,6 +248,7 @@ router.post(
           // Strip NUL bytes — PostgreSQL jsonb rejects them
           const fullText = (extracted.text || extracted.subject || "").replace(/\0/g, "");
           if (fullText) initialAnnotations = { fullText };
+          identity = sampleIdentity(extracted, fullText);
         } else if (type === "boarding_pass") {
           const buffer = fs.readFileSync(req.file.path);
           const mimeType = req.file.mimetype || "image/jpeg";
@@ -238,6 +272,7 @@ router.post(
           userId,
           type,
           domain,
+          ...identity,
           originalFile: req.file.path,
           annotations: initialAnnotations as Parameters<
             typeof prisma.trainingData.create
