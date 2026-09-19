@@ -24,6 +24,59 @@
         "description": "Bei keinem deiner Einträge widersprechen sich gerade zwei Angaben."
       }
     },
+    "photoJourneys": {
+      "title": "Foto-Reisen",
+      "description": "Fotoserien, die keine erfasste Reise erklärt. Vorschläge — erst deine Antwort macht daraus einen Eintrag.",
+      "scan": "Fotos durchsuchen",
+      "scanning": "Wird durchsucht …",
+      "thumbAlt": "Vorschaubild {{position}} dieser Fotoserie",
+      "kind": {
+        "place": "Ort besucht?",
+        "trip": "Reise?",
+        "stay": "Übernachtung?"
+      },
+      "facts": {
+        "photos": "{{photos}} Fotos",
+        "located": "{{located}} mit Ort",
+        "nights": "{{nights}} Nächte",
+        "airport": "nächster eigener Flughafen: {{iata}}"
+      },
+      "creates": {
+        "place": "Übernehmen legt einen Besuch an diesem Ort am ersten Tag an.",
+        "trip": "Übernehmen legt eine Reise mit diesem Zeitraum an.",
+        "stay": "Übernehmen merkt die Frage nur als beantwortet. Eine Übernachtung braucht eine Unterkunft, die dieser Fund nicht nennt — die legst du selbst an."
+      },
+      "actions": {
+        "accept": "Übernehmen",
+        "dismiss": "Verwerfen"
+      },
+      "empty": {
+        "title": "Keine Vorschläge",
+        "description": "Deine Fotos erzählen gerade nichts, was nicht schon im Logbuch steht.",
+        "noImmich": {
+          "title": "Keine Fotobibliothek verbunden",
+          "description": "Foto-Reisen liest deine eigene Immich-Bibliothek — die Bilder verlassen deine Maschinen nicht.",
+          "banner": "Verbinde Immich, dann kann gesucht werden.",
+          "link": "Zu Einstellungen → Externe Dienste"
+        }
+      },
+      "messages": {
+        "scanned": "Durchsucht: {{created}} neue Vorschläge, {{updated}} aktualisiert.",
+        "noImmich": "Es ist keine Fotobibliothek verbunden — es wurde nichts durchsucht.",
+        "accepted": {
+          "trip": "Reise angelegt.",
+          "placeVisit": "Besuch am Ort eingetragen.",
+          "none": "Als beantwortet gemerkt. Angelegt wurde nichts."
+        },
+        "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen."
+      },
+      "errors": {
+        "loadFailed": "Die Foto-Vorschläge konnten nicht geladen werden.",
+        "scanFailed": "Die Foto-Suche konnte nicht gestartet werden.",
+        "acceptFailed": "Der Vorschlag konnte nicht übernommen werden.",
+        "dismissFailed": "Der Vorschlag konnte nicht verworfen werden."
+      }
+    },
     "messages": {
       "resolved": "Danke – wir prüfen den Eintrag beim nächsten Durchlauf erneut.",
       "dismissed": "Verstanden. Diese Frage wird nicht mehr gestellt.",
