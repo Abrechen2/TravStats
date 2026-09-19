@@ -29,7 +29,10 @@ import { describe, expect, it } from "vitest";
 const RESOURCES_ROOT = path.resolve(__dirname, "..", "resources");
 
 /** A mark hung on the end of a label, e.g. "Abflugdatum *". */
-const TRAILING_MARK = /\s\*$/;
+// A star at the end, with or without a space before it and with or without
+// trailing whitespace after it — a reviewer noted that `/\s\*$/` would let
+// "Flugnummer*" and "Flugnummer * " through, which is the same defect.
+const TRAILING_MARK = /\*\s*$/;
 
 function collectOffenders(dir: string, locale: string): string[] {
   const offenders: string[] = [];
