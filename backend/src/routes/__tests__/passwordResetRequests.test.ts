@@ -26,7 +26,7 @@ import { SMTP_CONFIG_ID } from "../admin/smtp";
  *    who is locked out of the instance.
  */
 
-const NAMES = ["prr-known", "prr-admin", "prr-plain", "prr-mailed"];
+const NAMES = ["prr-known", "prr-admin", "prr-plain", "prr-mailed", "prr-deactivated"];
 const cleanup = async (): Promise<void> => {
   // The whole table, not just this file's users: three assertions below count
   // rows globally, which is the honest way to prove "no row was written" — and
@@ -120,6 +120,24 @@ describe("password-reset requests reach the admin inbox (forgejo#88)", () => {
     const rows = await prisma.passwordResetRequest.findMany({ where: { userId: knownId } });
     expect(rows).toHaveLength(1);
     expect(rows[0].requestedAt.getTime()).toBeGreaterThan(first!.requestedAt.getTime());
+  });
+
+  it("records nothing for a DEACTIVATED account — and says the same thing", async () => {
+    await prisma.user.create({
+      data: { username: "prr-deactivated", passwordHash: "x", isActive: false },
+    });
+
+    const known = await forgot("prr-known");
+    const deactivated = await forgot("prr-deactivated");
+
+    // An admin has already decided about this account; a row saying "they want
+    // back in" is a question that was answered before it was asked. The reply
+    // is identical to a live account's, so turning somebody off stays
+    // invisible from the login page.
+    expect(deactivated.status).toBe(known.status);
+    expect(deactivated.body).toEqual(known.body);
+
+    expect(await prisma.passwordResetRequest.count()).toBe(1);
   });
 
   it("records nothing when the instance CAN send mail — the mail is the answer then", async () => {

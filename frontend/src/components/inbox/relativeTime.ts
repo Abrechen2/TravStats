@@ -17,6 +17,24 @@ const UNITS: ReadonlyArray<[Intl.RelativeTimeFormatUnit, number]> = [
   ["minute", 60 * 1000],
 ];
 
+/**
+ * The formatter, or an English one.
+ *
+ * `new Intl.RelativeTimeFormat(locale)` THROWS a RangeError on a tag it cannot
+ * parse, and the tag here comes from i18next, which will happily be holding
+ * whatever a URL, a stored setting or a future locale put there. The same
+ * reasoning as the unparseable-timestamp guard below it: the row's point is the
+ * username, and losing the whole inbox block over a language tag would be a
+ * bad trade.
+ */
+function formatterFor(locale: string): Intl.RelativeTimeFormat {
+  try {
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  } catch {
+    return new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  }
+}
+
 export function relativeTimeFromNow(iso: string, locale: string, now: Date = new Date()): string {
   const then = new Date(iso).getTime();
   // An unparseable timestamp is not a reason to break the row it belongs to;
@@ -24,7 +42,7 @@ export function relativeTimeFromNow(iso: string, locale: string, now: Date = new
   if (Number.isNaN(then)) return iso;
 
   const diff = then - now.getTime();
-  const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const format = formatterFor(locale);
 
   for (const [unit, ms] of UNITS) {
     if (Math.abs(diff) >= ms) return format.format(Math.round(diff / ms), unit);

@@ -18,10 +18,16 @@ import { useAuthStore } from "../../../store/authStore";
  *   is indistinguishable from the correct behaviour until the day the guard
  *   moves. The test asserts the CALL was never made, not just that the block
  *   is absent.
- * - **The row must link at the user.** `/admin` without `?user=` opens a table
- *   with no search box; the admin then hunts for the name by eye, which is the
- *   thing the button exists to avoid.
+ * - **The row must navigate AT the user.** `/admin` without `?user=` opens a
+ *   table with no search box; the admin then hunts for the name by eye, which
+ *   is the thing the button exists to avoid.
  */
+
+const navigate = vi.fn();
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return { ...actual, useNavigate: () => navigate };
+});
 
 vi.mock("../../../lib/api/admin", () => ({
   adminApi: {
@@ -50,6 +56,7 @@ const renderSection = (): ReturnType<typeof render> =>
 
 describe("PasswordResetRequestsSection", () => {
   beforeEach(() => {
+    navigate.mockReset();
     vi.mocked(adminApi.getPasswordResetRequests).mockReset();
     vi.mocked(adminApi.markPasswordResetRequestHandled).mockReset();
     vi.mocked(adminApi.getPasswordResetRequests).mockResolvedValue({
@@ -89,12 +96,18 @@ describe("PasswordResetRequestsSection", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("links into user management AT that user", async () => {
+  it("navigates into user management AT that user, from ONE control", async () => {
     signIn(true);
     renderSection();
 
-    const link = await screen.findByRole("link");
-    expect(link).toHaveAttribute("href", "/admin?tab=general&section=users&user=user-7");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "dataQuality:passwordResets.openUser" })
+    );
+
+    expect(navigate).toHaveBeenCalledWith("/admin?tab=general&section=users&user=user-7");
+    // An anchor may not contain interactive content: a <Button> inside a <Link>
+    // is two controls where the user sees one.
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("drops the row once it is marked handled", async () => {
@@ -108,7 +121,11 @@ describe("PasswordResetRequestsSection", () => {
     await waitFor(() =>
       expect(adminApi.markPasswordResetRequestHandled).toHaveBeenCalledWith("req-1")
     );
-    await waitFor(() => expect(screen.queryByRole("link")).toBeNull());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "dataQuality:passwordResets.openUser" })
+      ).toBeNull()
+    );
   });
 
   it("stays away when the list cannot be read, rather than shouting at the user", async () => {

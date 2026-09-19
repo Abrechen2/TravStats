@@ -94,6 +94,13 @@ router.post(
       // thrown at it. The existing `passwordResetLimiter` still guards the
       // door; no new one is needed, because no new door was opened.
       //
+      // The upsert runs only for a real account, so the handler does measurably
+      // more work for a name that exists — measured and accepted, 2026-09-19.
+      // It is no worse than the SMTP path above, which does an UPDATE and an
+      // SMTP send on the same condition, and `passwordResetLimiter` bounds how
+      // often the difference can be sampled. Closing it would mean a decoy
+      // write, which is a worse thing to have in the tree than a millisecond.
+      //
       // The shared demo account is deliberately NOT excluded here. What the
       // SMTP branch refuses it is a reset LINK sent to a stale address; an
       // administrator reading a row and deciding for themselves is not that.

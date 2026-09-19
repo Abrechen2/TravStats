@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi, type PasswordResetRequest } from "../../lib/api/admin";
@@ -38,6 +38,7 @@ import { relativeTimeFromNow } from "./relativeTime";
 export default function PasswordResetRequestsSection(): JSX.Element | null {
   const { t, i18n } = useTranslation(["dataQuality", "common"]);
   const isAdmin = useAuthStore((state) => state.user?.isAdmin ?? false);
+  const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
 
   const [requests, setRequests] = useState<PasswordResetRequest[]>([]);
@@ -117,12 +118,21 @@ export default function PasswordResetRequestsSection(): JSX.Element | null {
               })}
             </span>
             <span className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
-              {/* The admin page reads `?user=` and scrolls that row into view —
+              {/* A button that navigates, NOT a <Button> wrapped in a <Link>:
+                  an anchor may not contain interactive content, and that
+                  nesting gives a screen reader two controls where the user
+                  sees one. The design system has no link-shaped button, and
+                  inventing one here would be styling a primitive in a page.
+
+                  The admin page reads `?user=` and scrolls that row into view —
                   see UserManagement. `?tab=` must name the tab the section
                   lives in, or the deep link lands nowhere. */}
-              <Link to={`/admin?tab=general&section=users&user=${request.userId}`}>
-                <Button variant="secondary">{t("dataQuality:passwordResets.openUser")}</Button>
-              </Link>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/admin?tab=general&section=users&user=${request.userId}`)}
+              >
+                {t("dataQuality:passwordResets.openUser")}
+              </Button>
               <Button
                 variant="secondary"
                 disabled={busyIds.has(request.id)}
