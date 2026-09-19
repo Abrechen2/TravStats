@@ -13,6 +13,10 @@ import type { ApiErrorCode } from "./errorHandler";
  *   Cookie auth   → "user:<userId>"   — per-user bucket, prevents IP-
  *                                      hopping bypass for the same
  *                                      authenticated user
+ *   Shared demo   → "demo-ip:<ip>"   — the one account every visitor of a
+ *                                      public instance is logged in as, so
+ *                                      its bucket is per address, not per
+ *                                      account (see the branch below)
  *   Anonymous     → "ip:<ip>"         — fallback for unauthenticated
  *                                      endpoints (auth, password reset)
  *
@@ -54,8 +58,22 @@ export function skipGlobalRateLimit(ip: string | undefined): boolean {
 }
 
 const userOrIpKey = (req: Request): string => {
-  const r = req as { userId?: string; apiToken?: { id: string } };
+  const r = req as { userId?: string; apiToken?: { id: string }; isSharedDemo?: boolean };
   if (r.apiToken) return `pat:${r.apiToken.id}`;
+  // The shared demo account is not A user, it is EVERY visitor of a public
+  // instance at once — its password is printed on the login page. Keyed by
+  // user id, all of them drew on one bucket: measured on the public beta on
+  // 2026-09-19, where an auditor's FIRST parse request answered 429, spent by
+  // other visitors' calls, and `statsLimiter` behaved the same. That is not
+  // rate limiting, it is a denial of service any visitor can hand the next.
+  //
+  // So the demo falls back to the address, which is the closest thing to "one
+  // visitor" that exists for an account with no single owner. The masking goes
+  // through `ipKeyGenerator` for the same reason the anonymous key does — and
+  // it must stay visible in this function's TEXT, because express-rate-limit 8
+  // reads the source of the key generator at build time and complains
+  // (ERR_ERL_KEY_GEN_IPV6) about a `req.ip` it cannot see masked.
+  if (r.isSharedDemo) return `demo-ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
   if (r.userId) return `user:${r.userId}`;
   return `ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
 };

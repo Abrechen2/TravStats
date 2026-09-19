@@ -94,6 +94,33 @@ export const flightResponse = registry.register(
       arrTimezone: z.string().nullable().describe("IANA zone of the arrival airport."),
       depCountry: z.string().nullable().describe("ISO country of the departure airport."),
       arrCountry: z.string().nullable().describe("ISO country of the arrival airport."),
+
+      // The one key the routes send that this schema did not publish: 95 of
+      // the 96 keys of a listed flight were described, `trip` was not (beta
+      // API audit of 2026-09-19, unlisted finding 1). `GET /flights` and
+      // `GET /flights/{id}` both `include` it so a list can draw the trip's
+      // name and colour without a second request, and a generated client saw
+      // `unknown` where a typed object was on the wire.
+      //
+      // `select`ed, not the whole row: three fields is what the route asks
+      // for, so three fields is what is promised. Nullable because a flight
+      // need not belong to a trip, and optional because the WRITE paths
+      // (`POST`, `PUT`, `PATCH`) answer with the bare updated row and carry no
+      // `trip` key at all — a required field here would describe a response
+      // that does not exist.
+      trip: z
+        .object({
+          id: z.string().uuid(),
+          name: z.string(),
+          color: z.string().describe('Hex colour the trip is drawn in, e.g. "#818cf8".'),
+        })
+        .nullable()
+        .optional()
+        .describe(
+          "The trip this flight belongs to, as the read routes include it. Null when " +
+            "the flight is unassigned; absent on the write routes, which return the " +
+            "bare row."
+        ),
       durationMinutes: z
         .number()
         .int()

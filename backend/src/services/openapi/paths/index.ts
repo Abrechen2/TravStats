@@ -22,6 +22,7 @@ import "./airports";
 import "./stats";
 import "./statsPage";
 import "./parsing";
+import "./training";
 import "./tokens";
 import "./diagnostics";
 import "./cruises";
