@@ -235,7 +235,8 @@
   "filters": {
     "more": "Filters",
     "reset": "Reset filters",
-    "matching": "{{count}} match",
+    "matching_one": "1 matches",
+    "matching_other": "{{count}} match",
     "noMatch": "Nothing matches your filters",
     "filtered": "filtered"
   },
