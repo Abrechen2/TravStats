@@ -207,6 +207,17 @@
     "matchedExisting": "Already exists — matched to “{{name}}”",
     "addError": "Could not create chain"
   },
+  "stay": {
+    "confirmDelete": {
+      "title": "Delete stay?",
+      "body": "The stay {{period}} ({{nights}}) will be permanently deleted. The lodging and any linked trip remain.",
+      "bodyUnknownLength": "The stay {{period}} will be permanently deleted. The lodging and any linked trip remain.",
+      "receiptNote": "The receipt filed with it is deleted too."
+    },
+    "deleted": "Stay deleted",
+    "refreshFailed": "Stay deleted — the figures could not be refreshed.",
+    "deleteError": "Stay could not be deleted"
+  },
   "stayEditor": {
     "addStay": "Add stay",
     "createTitle": "New stay",
@@ -269,6 +280,10 @@
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "matchedAs": "Matched to:",
+    "matchedStayAt": "Existing stay:",
+    "openMatchedStay": "Open the existing stay in a new tab",
+    "createAnyway": "Create anyway",
+    "createAnywayHint": "Creates a second stay for the same booking. The duplicate check keeps pointing at the existing one; the booking reference then appears on both.",
     "rejectMatch": "Not the same hotel — create new",
     "fields": {
       "name": "Name",
@@ -293,7 +308,6 @@
       "ratingOverall": "Overall rating",
       "bookingReference": "Booking reference",
       "notes": "Notes",
-      "hints": "Hints",
       "action": "Action"
     },
     "actions": {

@@ -207,6 +207,17 @@
     "matchedExisting": "Bereits vorhanden — „{{name}}“ zugeordnet",
     "addError": "Kette konnte nicht angelegt werden"
   },
+  "stay": {
+    "confirmDelete": {
+      "title": "Aufenthalt löschen?",
+      "body": "Der Aufenthalt {{period}} ({{nights}}) wird dauerhaft gelöscht. Die Unterkunft und eine verknüpfte Reise bleiben erhalten.",
+      "bodyUnknownLength": "Der Aufenthalt {{period}} wird dauerhaft gelöscht. Die Unterkunft und eine verknüpfte Reise bleiben erhalten.",
+      "receiptNote": "Der hinterlegte Beleg wird mit gelöscht."
+    },
+    "deleted": "Aufenthalt gelöscht",
+    "refreshFailed": "Aufenthalt gelöscht — die Kennzahlen konnten nicht aktualisiert werden.",
+    "deleteError": "Aufenthalt konnte nicht gelöscht werden"
+  },
   "stayEditor": {
     "addStay": "Aufenthalt hinzufügen",
     "createTitle": "Neuer Aufenthalt",
@@ -269,6 +280,10 @@
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "matchedAs": "Zugeordnet zu:",
+    "matchedStayAt": "Vorhandener Aufenthalt:",
+    "openMatchedStay": "Vorhandenen Aufenthalt in einem neuen Tab öffnen",
+    "createAnyway": "Trotzdem anlegen",
+    "createAnywayHint": "Legt einen zweiten Aufenthalt für dieselbe Buchung an. Die Dublettenprüfung zeigt weiterhin auf den vorhandenen; die Buchungsnummer steht danach auf beiden.",
     "rejectMatch": "Nicht dasselbe Hotel — neu anlegen",
     "fields": {
       "name": "Name",
@@ -293,7 +308,6 @@
       "ratingOverall": "Bewertung Gesamt",
       "bookingReference": "Buchungsnummer",
       "notes": "Notizen",
-      "hints": "Hinweise",
       "action": "Aktion"
     },
     "actions": {

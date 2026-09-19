@@ -584,6 +584,47 @@ describe("LodgingImportPreviewModal — rejecting a guessed match", () => {
     expect(committed[0].lodging?.name).toBe("Synthetic Other Building");
   });
 
+  /**
+   * Rejecting the guess must take the DESCRIBED stay with it.
+   *
+   * `matchedStay` is what keeps the hint line open (`hasHints`) and what names
+   * a stay inside the matched house. Leaving it behind on a row that no longer
+   * claims that house would point the reader at a stay in a building they just
+   * said this is not. Unreachable through today's classifier — a heuristic
+   * lodging match never carries a stay match — which is exactly why it is
+   * pinned rather than left to the next rule that changes.
+   */
+  it("clears the described stay along with the rest of the match", () => {
+    const withStay: LodgingImportPreviewRow[] = [
+      {
+        ...guessed[0],
+        matchedStayId: "stay-9",
+        matchedStay: {
+          checkIn: "2026-05-01",
+          checkOut: "2026-05-03",
+          datePrecision: "DAY",
+          nights: 2,
+          href: "/lodging/annex-one-id",
+        },
+      },
+    ];
+    render(
+      <LodgingImportPreviewModal
+        rows={withStay}
+        summary={guessedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("lodging-import-matched-stay-4")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("lodging-import-reject-match-4"));
+
+    expect(screen.queryByTestId("lodging-import-matched-stay-4")).toBeNull();
+    // And with nothing left to say, the hint line itself is gone.
+    expect(screen.queryByTestId("lodging-import-create-anyway-4")).toBeNull();
+  });
+
   it("offers no rejection for a PROVEN match", () => {
     render(
       <LodgingImportPreviewModal
@@ -663,6 +704,134 @@ describe("LodgingImportPreviewModal — a price needs a currency", () => {
     );
     expect(screen.getByTestId("lodging-import-currency-7")).toHaveValue("CHF");
     expect(screen.getByTestId("lodging-import-commit")).toBeEnabled();
+  });
+});
+
+/**
+ * The row whose stay is already on file (owner, 2026-09-19, prod 2.6.2).
+ *
+ * Three things were wrong at once and they compounded: the hint said only
+ * "vorhanden" and never which stay; the action <select> sat in the narrowest
+ * column and clipped its OWN value to "Übersp…", so the row read as nothing to
+ * decide; and creating anyway was in the list nobody could see. The hints are a
+ * full-width line under the entry now, the stay is named and linked, and
+ * "Trotzdem anlegen" is a control of its own.
+ */
+describe("LodgingImportPreviewModal — a stay already on file", () => {
+  const matchedRow: LodgingImportPreviewRow = {
+    sourceRowIndex: 0,
+    lodging: { name: "Hotel Sonne", city: "Meran" },
+    stay: { checkIn: "2026-09-20", checkOut: "2026-09-21", externalRef: "booking:1" },
+    flags: [],
+    dedupeHint: "stay_exact_ref",
+    matchedLodgingId: "lodging-1",
+    matchedLodgingName: "Hotel Sonne",
+    matchedStayId: "stay-1",
+    matchedStay: {
+      checkIn: "2026-09-20",
+      checkOut: "2026-09-21",
+      datePrecision: "DAY",
+      nights: 1,
+      href: "/lodging/lodging-1",
+    },
+    action: "skip",
+  };
+
+  const renderRow = (
+    row: LodgingImportPreviewRow = matchedRow,
+    onCommit = vi.fn()
+  ): ReturnType<typeof vi.fn> => {
+    render(
+      <LodgingImportPreviewModal
+        rows={[row]}
+        summary={{ newRows: 0, alreadyPresent: 1, needsInput: 0 }}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+    return onCommit;
+  };
+
+  it("names the dates of the stay that is already there, and links to it", () => {
+    renderRow();
+
+    const hint = screen.getByTestId("lodging-import-matched-stay-0");
+    // Dates through the shared formatter (the suite pins DD.MM.YYYY in
+    // src/__tests__/setup.ts), so the hint reads the same as a stay card.
+    expect(hint).toHaveTextContent("20.09.2026");
+    expect(hint).toHaveTextContent("21.09.2026");
+
+    const link = screen.getByRole("link", { name: /20\.09\.2026/ });
+    // A stay has no page of its own: the link goes to the house that holds it.
+    expect(link).toHaveAttribute("href", "/lodging/lodging-1");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("says nothing about a stay where there is none", () => {
+    renderRow({ ...matchedRow, matchedStayId: null, matchedStay: null, action: "create" });
+
+    expect(screen.queryByTestId("lodging-import-matched-stay-0")).not.toBeInTheDocument();
+  });
+
+  it("puts the hints on a full-width line of their own, not in the action column", () => {
+    renderRow();
+
+    const hintCell = screen.getByTestId("lodging-import-matched-stay-0").closest("td");
+    expect(hintCell).toHaveAttribute("colspan", "7");
+    // And the action control is in the OTHER row — the one with the fields.
+    const actionCell = screen.getByTestId("lodging-import-action-0").closest("td");
+    expect(actionCell).not.toBe(hintCell);
+    expect(actionCell?.closest("tr")).not.toBe(hintCell?.closest("tr"));
+  });
+
+  it("shows the current choice in full and offers Anlegen without opening anything", () => {
+    renderRow();
+
+    const select = screen.getByTestId("lodging-import-action-0");
+    expect(select).toHaveValue("skip");
+    // The value is not truncated away: the control carries a width that fits
+    // the longest option in either locale.
+    expect(select.className).toMatch(/min-w-/);
+    // …and the alternative is named on screen, not hidden in the list.
+    expect(screen.getByTestId("lodging-import-create-anyway-0")).toHaveTextContent(
+      "lodging:import.createAnyway"
+    );
+  });
+
+  it("sends action create AND the stay it duplicates when the user creates anyway", async () => {
+    const onCommit = renderRow();
+
+    fireEvent.click(screen.getByTestId("lodging-import-create-anyway-0"));
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+
+    await waitFor(() => expect(onCommit).toHaveBeenCalled());
+    const payload = onCommit.mock.calls[0][0];
+    expect(payload[0].action).toBe("create");
+    // The server needs the id: the incoming reference belongs to that stay and
+    // cannot be held twice, and without it the create was a silent skip.
+    expect(payload[0].matchedStayId).toBe("stay-1");
+  });
+
+  it("stops offering it once the row is already set to create", () => {
+    renderRow();
+
+    fireEvent.click(screen.getByTestId("lodging-import-create-anyway-0"));
+    expect(screen.getByTestId("lodging-import-action-0")).toHaveValue("create");
+    expect(screen.queryByTestId("lodging-import-create-anyway-0")).not.toBeInTheDocument();
+  });
+
+  // jsdom has no layout: it cannot measure an overflow, and this file must not
+  // pretend otherwise. What it CAN check is the structure that makes the
+  // overflow impossible — the hints on their own full-width row, and a width
+  // on the select. The narrow-viewport look itself belongs in a browser.
+  it("keeps the header and the field row to the same number of columns", () => {
+    renderRow();
+
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(7);
+    const fieldRow = screen.getByTestId("lodging-import-action-0").closest("tr");
+    expect(fieldRow?.querySelectorAll("td")).toHaveLength(7);
   });
 });
 

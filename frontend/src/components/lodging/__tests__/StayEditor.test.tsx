@@ -754,6 +754,44 @@ describe("StayEditor", () => {
     expect(payload.membershipOptOut).toBe(true);
     expect(payload.membershipId).toBeNull();
   });
+
+  /**
+   * The editor is the second way out of a stay that should not exist.
+   *
+   * It asks nothing and deletes nothing itself: the caller owns the
+   * confirmation and the request, so there is ONE deletion path with two
+   * entry points (this footer and the stay card). Offering the button where
+   * nothing has been created yet would be a button for nothing, which is why
+   * it is the caller that decides by passing the handler at all.
+   */
+  it("offers the footer delete for a stay that exists, and only asks the caller", async () => {
+    const onRequestDelete = vi.fn();
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={baseStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        onRequestDelete={onRequestDelete}
+      />
+    );
+
+    const button = screen.getByTestId("stay-editor-delete");
+    expect(button).toHaveTextContent("common:buttons.delete");
+
+    await userEvent.click(button);
+    expect(onRequestDelete).toHaveBeenCalledTimes(1);
+    // Nothing is written from here — not even the stay being edited.
+    expect(updateStay).not.toHaveBeenCalled();
+  });
+
+  it("offers no footer delete while a stay is being created", () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(screen.getByTestId("stay-editor-save")).toBeInTheDocument();
+    expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+  });
 });
 
 /**

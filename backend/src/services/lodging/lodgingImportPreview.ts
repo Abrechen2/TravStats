@@ -2,11 +2,13 @@ import { namesCouldBeOneHouse } from "./nameSimilarity";
 import { prisma } from "../../db";
 import { findNearbyLodgings } from "./proximityMatch";
 import logger from "../../utils/logger";
+import { resolveStayTiming } from "../../shared/lodgingTiming";
 import type {
   LodgingDedupeHint,
   LodgingImportAction,
   LodgingImportCandidate,
   LodgingImportFlag,
+  LodgingImportMatchedStay,
   LodgingImportPreviewRow,
   LodgingImportSummary,
   LodgingStayChange,
@@ -52,16 +54,20 @@ interface ExistingLodging {
   lon: number | null;
 }
 
-interface ExistingStay {
-  id: string;
-  lodgingId: string;
+/**
+ * The stored fields `stayChanges` compares against — "would this re-import
+ * change anything?" (forgejo#122). A booking mail that restates the same
+ * values is a re-upload and stays a silent skip; one that restates different
+ * ones is the mail saying the booking moved.
+ *
+ * Its own type because the commit path reads exactly these columns and no
+ * others: adding a field to `ExistingStay` below must not force a second
+ * caller to select data it has no use for.
+ */
+export interface ComparableStay {
   externalRef: string | null;
   /** Nullable since 2.7 — an undated stay is still a stay a re-import could duplicate. */
   checkIn: Date | null;
-  // The rest are read ONLY to answer "would this re-import change anything?"
-  // (forgejo#122). A booking mail that restates the same values is a
-  // re-upload and stays a silent skip; one that restates different ones is
-  // the mail saying the booking moved.
   checkOut: Date | null;
   roomCategory: string | null;
   board: string | null;
@@ -70,6 +76,16 @@ interface ExistingStay {
   pricePerNight: number | null;
   currency: string;
   bookingReference: string | null;
+}
+
+interface ExistingStay extends ComparableStay {
+  id: string;
+  lodgingId: string;
+  // Read for the preview HINT, not for the comparison above: the two are what
+  // `formatStayPeriod` needs to write a matched stay's period without
+  // inventing a range the record does not have.
+  datePrecision: string;
+  nights: number | null;
 }
 
 function dayKey(date: Date): string {
@@ -82,6 +98,7 @@ interface RowVerdict {
   matchedLodgingId: string | null;
   matchedLodgingName: string | null;
   matchedStayId: string | null;
+  matchedStay: LodgingImportMatchedStay | null;
   action: LodgingImportAction;
   /** Non-empty only when the action is `update` — see `stayChanges`. */
   changes: LodgingStayChange[];
@@ -98,6 +115,8 @@ interface Indexes {
   chainNames: Set<string>;
   staysByExternalRef: Map<string, ExistingStay>;
   staysByLodging: Map<string, ExistingStay[]>;
+  /** By id, so a verdict can describe the stay it matched instead of only naming its id. */
+  staysById: Map<string, ExistingStay>;
 }
 
 /**
@@ -118,7 +137,7 @@ interface Indexes {
  */
 export function stayChanges(
   incoming: StayCandidateFields,
-  stored: ExistingStay
+  stored: ComparableStay
 ): LodgingStayChange[] {
   const changes: LodgingStayChange[] = [];
   const day = (d: Date | null): string | null => (d ? dayKey(d) : null);
@@ -168,6 +187,33 @@ export function stayChanges(
   }
   text("bookingReference", incoming.bookingReference, stored.bookingReference);
   return changes;
+}
+
+/**
+ * How a matched stay is described to the reader.
+ *
+ * The dates go out as ISO days with their precision, never pre-formatted: the
+ * user's date format and language live on the client, and `formatStayPeriod`
+ * there is the one place that decides how a stay's period is written. `nights`
+ * abstains (null) where the record cannot say — `resolveStayTiming` keeps that
+ * apart from a genuine 0 (a same-day stay), and a "0 Nächte" in a hint the
+ * user is asked to judge would be a measurement nobody took.
+ *
+ * `href` is the LODGING's page. A stay has no page of its own; the same
+ * contract `stayEvidenceEntry` states, for the same reason.
+ */
+function describeStay(stay: ExistingStay): LodgingImportMatchedStay {
+  const timing = resolveStayTiming(stay);
+  return {
+    checkIn: stay.checkIn ? dayKey(stay.checkIn) : null,
+    checkOut: stay.checkOut ? dayKey(stay.checkOut) : null,
+    // The RESOLVED precision, not the raw column: a row whose dates were
+    // cleared without its precision being updated still says "DAY", and the
+    // wire must not carry a claim the dates contradict.
+    datePrecision: timing.precision,
+    nights: timing.nightsKnown ? timing.nights : null,
+    href: `/lodging/${stay.lodgingId}`,
+  };
 }
 
 /**
@@ -361,12 +407,17 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     ? (idx.allLodgings.find((l) => l.id === matchedLodgingId)?.name ?? null)
     : null;
 
+  // The stay the match points at, described rather than merely identified —
+  // the hint could otherwise only say "vorhanden", never which one.
+  const matchedStay = matchedStayId ? (idx.staysById.get(matchedStayId) ?? null) : null;
+
   return {
     flags,
     dedupeHint,
     matchedLodgingId,
     matchedLodgingName,
     matchedStayId,
+    matchedStay: matchedStay ? describeStay(matchedStay) : null,
     action,
     changes,
   };
@@ -398,6 +449,8 @@ export async function buildLodgingPreviewRows(
         externalRef: true,
         checkIn: true,
         checkOut: true,
+        datePrecision: true,
+        nights: true,
         roomCategory: true,
         board: true,
         guests: true,
@@ -423,9 +476,11 @@ export async function buildLodgingPreviewRows(
 
   const staysByExternalRef = new Map<string, ExistingStay>();
   const staysByLodging = new Map<string, ExistingStay[]>();
+  const staysById = new Map<string, ExistingStay>();
   for (const s of stays) {
     if (s.externalRef) staysByExternalRef.set(s.externalRef, s);
     staysByLodging.set(s.lodgingId, [...(staysByLodging.get(s.lodgingId) ?? []), s]);
+    staysById.set(s.id, s);
   }
 
   // Lodgings THIS payload will create — a stays-only row may legitimately point
@@ -444,6 +499,7 @@ export async function buildLodgingPreviewRows(
     chainNames: new Set(chains.map((c) => c.name.trim().toLowerCase())),
     staysByExternalRef,
     staysByLodging,
+    staysById,
   };
 
   const rows: LodgingImportPreviewRow[] = candidates.map((candidate) => ({

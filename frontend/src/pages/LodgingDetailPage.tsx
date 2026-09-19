@@ -16,10 +16,11 @@ import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
-import { deleteLodging, getLodging, listMemberships } from "../lib/api/lodging";
+import { deleteLodging, deleteStay, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
 import { countedStays, countUnconvertedStays } from "../lib/lodgingFormat";
+import { formatStayPeriod, hasUnknownLength, stayNights } from "../lib/lodgingDateDisplay";
 import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import {
   averageRatingsByCategory,
@@ -37,6 +38,10 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 
+/** What a figure reads as when it cannot be stated. The same dash the spend
+ *  card already prints for an unconvertible total. */
+const UNKNOWN_FIGURE = "—";
+
 export default function LodgingDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -52,7 +57,7 @@ export default function LodgingDetailPage(): JSX.Element {
   const fromChain =
     (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
-  const { t } = useTranslation(["lodging", "common"]);
+  const { t, i18n } = useTranslation(["lodging", "common"]);
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
   // `totalSpendBase` is computed by the backend in the user's actual base
@@ -73,6 +78,23 @@ export default function LodgingDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
   const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
+  // The stay whose deletion has been ASKED about but not yet answered — null
+  // while no question is open. Holding the stay itself (not just its id) is
+  // what lets the confirmation name the dates it is about.
+  const [confirmingStayDelete, setConfirmingStayDelete] = useState<LodgingStay | null>(null);
+  const [deletingStay, setDeletingStay] = useState<boolean>(false);
+  /**
+   * The header figures no longer describe the list below them.
+   *
+   * Set when a stay was deleted but the reload that recomputes the aggregates
+   * failed: the row is gone locally while `stayCount`, `nights`,
+   * `overallRating` and `totalSpendBase` still count it. A wrong number
+   * presented as data is worse than no number, so the strip shows "—" until
+   * the next successful load clears this. The flag lives here rather than in
+   * the four fields because the wire type cannot hold "unknown" — they are
+   * plain numbers shared with the list and the stats cells.
+   */
+  const [aggregatesStale, setAggregatesStale] = useState<boolean>(false);
   // Name lookup for the stay cards' trip pill — a stay only stores `tripId`,
   // never the display name, so this page resolves it once against the
   // user's full trip list (small, already-fetched-elsewhere; no per-stay
@@ -93,7 +115,10 @@ export default function LodgingDetailPage(): JSX.Element {
       setFailure(null);
       try {
         const data = await getLodging(id);
-        if (!cancelled) setLodging(data);
+        if (!cancelled) {
+          setLodging(data);
+          setAggregatesStale(false);
+        }
       } catch (err: unknown) {
         logger.error("LodgingDetailPage: failed to load lodging", err);
         if (!cancelled) setFailure(classifyLoadFailure(err));
@@ -152,6 +177,75 @@ export default function LodgingDetailPage(): JSX.Element {
     }
   };
 
+  /**
+   * ONE deletion path for a stay, reached from a stay card and from the
+   * editor's footer. The confirmation in front of it is the only thing between
+   * the reader and a stay that is gone, so the request lives here and nowhere
+   * else — two call sites would be two places to forget the reload.
+   */
+  const handleStayDelete = async (): Promise<void> => {
+    const stay = confirmingStayDelete;
+    if (stay === null || !lodging) return;
+    setDeletingStay(true);
+    try {
+      await deleteStay(lodging.id, stay.id);
+    } catch (err: unknown) {
+      logger.error("LodgingDetailPage: stay delete failed", err);
+      addToast("error", t("lodging:stay.deleteError"));
+      setDeletingStay(false);
+      setConfirmingStayDelete(null);
+      return;
+    }
+    setDeletingStay(false);
+    setConfirmingStayDelete(null);
+    // The editor closes too: it is showing a stay that no longer exists, and
+    // saving from there would answer 404.
+    setEditingStay(null);
+    addToast("success", t("lodging:stay.deleted"));
+    // The same reload a stay SAVE does — the aggregates (nights, stayCount,
+    // overallRating, totalSpendBase) are only ever attached server-side on a
+    // lodging fetch, so the header would otherwise keep counting the deleted
+    // stay.
+    try {
+      setLodging(await getLodging(lodging.id));
+      setAggregatesStale(false);
+    } catch (err: unknown) {
+      logger.error("LodgingDetailPage: reload after stay delete failed", err);
+      // The stay IS deleted; dropping it locally is closer to the truth than
+      // leaving a row the server no longer has. The aggregates cannot be
+      // mended the same way — they are computed server-side over the whole
+      // house — so they are WITHHELD rather than left counting a stay that
+      // is not in the list any more.
+      setLodging((prev) =>
+        prev === null ? prev : { ...prev, stays: prev.stays.filter((s) => s.id !== stay.id) }
+      );
+      setAggregatesStale(true);
+      addToast("error", t("lodging:stay.refreshFailed"));
+    }
+  };
+
+  /**
+   * What the confirmation says about one stay: the period as the rest of the
+   * app writes it, the nights in the same plural-aware wording the card uses,
+   * and — only when there is one — that the receipt goes too.
+   *
+   * The period comes from `formatStayPeriod` rather than two raw dates: a
+   * month-precision or undated stay has no "from – to" to print, and inventing
+   * one is exactly what that helper exists to prevent.
+   */
+  const stayDeleteMessage = (stay: LodgingStay): string => {
+    const period = formatStayPeriod(stay, i18n.language, t).label;
+    const body = hasUnknownLength(stay)
+      ? t("lodging:stay.confirmDelete.bodyUnknownLength", { period })
+      : t("lodging:stay.confirmDelete.body", {
+          period,
+          nights: t("lodging:field.nightsCount", { count: stayNights(stay) }),
+        });
+    return stay.receiptUrl === null
+      ? body
+      : `${body}\n${t("lodging:stay.confirmDelete.receiptNote")}`;
+  };
+
   if (loading) {
     return (
       <AppShell width="list">
@@ -200,8 +294,14 @@ export default function LodgingDetailPage(): JSX.Element {
   const unconvertedCount = countUnconvertedStays(counted);
   // Every priced stay unconverted means the base-currency sum is empty, not
   // zero: "0 €" beside a stay that cost 780 $ is the B12 defect again.
+  // `aggregatesStale` withholds all four server-side figures at once: the
+  // spend sum, its per-night derivation and the rating average are exactly as
+  // stale as the counts, and showing three while hiding one would be the same
+  // lie in a quieter voice.
   const baseKnown =
-    priced && unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
+    !aggregatesStale &&
+    priced &&
+    unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
@@ -215,9 +315,17 @@ export default function LodgingDetailPage(): JSX.Element {
     ),
   ].filter(Boolean);
   const kpis: DetailKpi[] = [
-    { key: "stays", value: lodging.stayCount, label: t("lodging:detail.stays") },
-    { key: "nights", value: lodging.nights, label: t("lodging:detail.nights") },
-    ...(lodging.overallRating !== null
+    {
+      key: "stays",
+      value: aggregatesStale ? UNKNOWN_FIGURE : lodging.stayCount,
+      label: t("lodging:detail.stays"),
+    },
+    {
+      key: "nights",
+      value: aggregatesStale ? UNKNOWN_FIGURE : lodging.nights,
+      label: t("lodging:detail.nights"),
+    },
+    ...(!aggregatesStale && lodging.overallRating !== null
       ? [
           {
             key: "rating",
@@ -338,6 +446,7 @@ export default function LodgingDetailPage(): JSX.Element {
                       key={stay.id}
                       stay={stay}
                       onEdit={setEditingStay}
+                      onDelete={setConfirmingStayDelete}
                       tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
                       membershipName={membershipName}
                       membershipSource={resolvedMembership.source}
@@ -461,6 +570,10 @@ export default function LodgingDetailPage(): JSX.Element {
           lodgingChainId={lodging.chainId}
           lodgingCountryCode={lodging.isoCountryCode}
           stay={editingStay === "new" ? null : editingStay}
+          // Only for a stay that exists — a create form has nothing to delete.
+          onRequestDelete={
+            editingStay === "new" ? undefined : () => setConfirmingStayDelete(editingStay)
+          }
           onClose={() => setEditingStay(null)}
           onSaved={async (savedStay) => {
             setEditingStay(null);
@@ -506,6 +619,20 @@ export default function LodgingDetailPage(): JSX.Element {
           lodging.name,
           lodging.stayCount
         )}
+        confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
+
+      {/* The same dialog for the stay — rendered after the editor so that, at
+          equal z-index, the later portal is the one on top. Both entry points
+          lead here, so there is exactly one place a stay can be deleted from. */}
+      <ConfirmModal
+        isOpen={confirmingStayDelete !== null}
+        onClose={() => setConfirmingStayDelete(null)}
+        onConfirm={() => void handleStayDelete()}
+        isLoading={deletingStay}
+        title={t("lodging:stay.confirmDelete.title")}
+        message={confirmingStayDelete === null ? "" : stayDeleteMessage(confirmingStayDelete)}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />

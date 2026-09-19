@@ -11,6 +11,7 @@
 // with neither `lodging` nor `lodgingName` — the frontend only mirrors the
 // resulting shape, it does not re-validate it.
 
+import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 import type { BoardType, LodgingCurrency, LodgingType } from "./lodging";
 
 export type LodgingImportSource = "csv" | "email" | "pdf";
@@ -111,6 +112,25 @@ export interface LodgingStayChange {
   to: string | number | null;
 }
 
+/**
+ * The stored stay a row was matched against — the dates, not just the id, so
+ * the hint can name WHICH stay is already there (owner, 2026-09-19).
+ *
+ * `datePrecision` travels with the dates because they are written through
+ * `formatStayPeriod`, which must not print a range for a stay recorded as
+ * "July 2011". It is the RESOLVED precision — the server normalises a stored
+ * value the dates contradict — so it is one of the four real ones, never an
+ * arbitrary string. `nights` is null where the record cannot say. `href` is
+ * the LODGING's page: a stay has no page of its own.
+ */
+export interface LodgingImportMatchedStay {
+  checkIn: string | null;
+  checkOut: string | null;
+  datePrecision: LodgingDatePrecision;
+  nights: number | null;
+  href: string;
+}
+
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
@@ -118,6 +138,8 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   /** The stored name behind `matchedLodgingId` — what a guessed match is judged against. */
   matchedLodgingName: string | null;
   matchedStayId: string | null;
+  /** The stay behind `matchedStayId`. Absent on a backend older than 2.7. */
+  matchedStay?: LodgingImportMatchedStay | null;
   action: LodgingImportAction;
   /** Non-empty only on `action: "update"` — what a changed booking would move.
    *  Absent on a backend older than 2.7 (forgejo#122). */
