@@ -145,6 +145,8 @@ export interface FlightDistinctSkeleton {
   id: string;
   date: FlightDate;
   credits: string[];
+  /** Display names for credits that are KEYS rather than words — see the contract. */
+  creditLabels?: Record<string, string>;
 }
 
 /**
@@ -166,6 +168,7 @@ export async function hydrateFlightDistinctEntries(
     subtitle: null,
     date: row.date,
     credits: row.credits,
+    ...(row.creditLabels === undefined ? {} : { creditLabels: row.creditLabels }),
   }));
   const paged = sliceEntries(sortEntries(skeletons), page);
   const detailById = await hydrateFlightPage(userId, paged);
@@ -182,7 +185,13 @@ export async function hydrateFlightDistinctEntries(
       },
       1
     );
-    return { ...hydrated, date: skeleton.date, contribution: undefined, credits: skeleton.credits };
+    return {
+      ...hydrated,
+      date: skeleton.date,
+      contribution: undefined,
+      credits: skeleton.credits,
+      ...(skeleton.creditLabels === undefined ? {} : { creditLabels: skeleton.creditLabels }),
+    };
   });
 
   const allCredits = new Set(matched.flatMap((m) => m.credits));

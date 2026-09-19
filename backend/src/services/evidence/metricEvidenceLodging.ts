@@ -374,7 +374,15 @@ export async function resolveLodgingsUniqueCount(
     .filter(
       (house) => classifyLodging(house.record, statesByLodgingId.get(house.id) ?? []) === "visited"
     )
-    .map((house) => houseEntryOf(house, stays, { credits: [house.id] }));
+    // The credit is the house's own id — two hotels of the same name are two
+    // lodgings — and the id is a UUID, so the name travels beside it. The
+    // panel read "belegt: ea41c04e-…" until 2026-09-19.
+    .map((house) =>
+      houseEntryOf(house, stays, {
+        credits: [house.id],
+        creditLabels: { [house.id]: house.name },
+      })
+    );
   return domainDistinctEvidence({
     key,
     unit: "lodgings",
@@ -467,7 +475,7 @@ export async function resolveLodgingContinentsCount(
 function houseEntryOf(
   house: LodgingHouseRow,
   stays: StayView[],
-  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits">>
+  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels">>
 ): EvidenceEntry {
   let newest: Date | null = null;
   for (const stay of stays) {

@@ -53,6 +53,8 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   let hamburgId: number;
   let osloId: number;
   let kielId: number;
+  let shipAId: number;
+  let shipBId: number;
 
   const UNLOCODES = ["DEHAM-EVID", "NOOSL-EVID", "DEKEL-EVID"];
 
@@ -63,6 +65,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
       domain: string;
       href: string | null;
       credits?: string[];
+      creditLabels?: Record<string, string>;
       contribution?: number;
       subtitle?: { key: string; values?: Record<string, string | number> } | null;
     }>;
@@ -165,6 +168,9 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
         data: { name: "Nordlicht", imo: "IMO-EVID-2", cruiseLine: "TUI", isUserAdded: true },
       }),
     ]);
+
+    shipAId = shipA.id;
+    shipBId = shipB.id;
 
     const first = await prisma.cruise.create({
       data: {
@@ -305,6 +311,48 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     expect(res.measure.value).toBe(2);
     expect(res.entries.every((e) => (e.credits ?? []).length === 1)).toBe(true);
     assertDistinctInvariant(res);
+  });
+
+  /**
+   * A port and a ship credit is a CATALOGUE ID, which is what makes two
+   * cruises calling at Hamburg count it once — and an id is not a word. The
+   * panel printed "belegt: 12" until 2026-09-19, so each row carries the name
+   * its own credits resolve to.
+   */
+  it("port and ship credits carry the catalogue NAME beside the id", () => {
+    const ports = answer("cruisePortsUniqueCount");
+    const first = ports.entries.find((e) => e.id === cruise2024)!;
+    expect(first.creditLabels![String(hamburgId)]).toBe("Hamburg");
+    expect(first.creditLabels![String(osloId)]).toBe("Oslo");
+    const second = ports.entries.find((e) => e.id === cruise2025)!;
+    expect(second.creditLabels![String(kielId)]).toBe("Kiel");
+    // Every credited key has a label; none of them reaches a reader bare.
+    for (const entry of ports.entries) {
+      for (const credit of entry.credits ?? []) {
+        expect([credit, entry.creditLabels?.[credit]]).not.toEqual([credit, undefined]);
+      }
+    }
+
+    const ships = answer("cruiseShipsUniqueCount");
+    expect(ships.entries.find((e) => e.id === cruise2024)!.creditLabels).toEqual({
+      [String(shipAId)]: "Mein Schiff",
+    });
+    expect(ships.entries.find((e) => e.id === cruise2025)!.creditLabels).toEqual({
+      [String(shipBId)]: "Nordlicht",
+    });
+  });
+
+  /**
+   * The other half of the rule: a credit that IS a word gets no label, and the
+   * frontend then renders the key. A lookup table for "AIDA" or "DE" would be
+   * a second opinion about what they are called.
+   */
+  it("a line and a country credit carry no label — they are already words", () => {
+    for (const key of ["cruiseLinesUniqueCount", "cruiseCountriesCount"] as const) {
+      for (const entry of answer(key).entries) {
+        expect([key, entry.creditLabels]).toEqual([key, undefined]);
+      }
+    }
   });
 
   it("cruiseLinesUniqueCount: AIDA and TUI — Costa never sailed", () => {

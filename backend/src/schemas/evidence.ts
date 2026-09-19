@@ -119,6 +119,12 @@ export const evidenceEntrySchema = z.object({
   contribution: z.number().optional(),
   /** `distinct` only: the units this row witnesses ("DE", "MUC", "2026-04-02"). */
   credits: z.array(z.string()).optional(),
+  /**
+   * `distinct` only: a display name per credit key. Partial on purpose — a
+   * key with no entry renders as itself, which is what an IATA code or an
+   * ISO country already is. See `shared/evidence.ts` for the defect.
+   */
+  creditLabels: z.record(z.string(), z.string()).optional(),
 });
 
 export const evidenceResponseSchema = z.object({

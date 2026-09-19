@@ -55,7 +55,7 @@ async function loadScoped(
 /** The panel's row for one cruise, with whatever this measure credits it. */
 function entryOf(
   row: CruiseStatsRow,
-  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">>
+  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">>
 ): EvidenceEntry {
   return cruiseEvidenceEntry(
     { id: row.id, label: row.label, startDate: row.startDate },
@@ -77,7 +77,15 @@ async function cruiseSum(
   return domainSumEvidence({ key, unit, scope, page, entries, value: read(total) });
 }
 
-/** A `distinct` measure that reads one credited SET off the per-cruise stats. */
+/**
+ * A `distinct` measure that reads one credited SET off the per-cruise stats.
+ *
+ * `labels` is for the measures whose credits are catalogue IDS rather than
+ * words — ports. A line's credit IS its name and needs none. The two optional
+ * arguments travel in a bag rather than as a positional pair, because a
+ * caller needing only the second would otherwise have to pass `undefined` for
+ * the first.
+ */
 async function cruiseDistinct(
   userId: string,
   scope: EvidenceScope,
@@ -85,18 +93,49 @@ async function cruiseDistinct(
   key: string,
   unit: string,
   read: (stats: CruiseStats) => string[],
-  value?: (stats: CruiseStats) => number
+  extras: {
+    value?: (stats: CruiseStats) => number;
+    labels?: (row: CruiseStatsRow) => Record<string, string>;
+  } = {}
 ): Promise<EvidenceResponse> {
   const { rows, total, own } = await loadScoped(userId, scope, key);
-  const entries = rows.map((row) => entryOf(row, { credits: read(own.get(row.id)!) }));
+  const entries = rows.map((row) =>
+    entryOf(row, {
+      credits: read(own.get(row.id)!),
+      ...(extras.labels ? { creditLabels: extras.labels(row) } : {}),
+    })
+  );
   return domainDistinctEvidence({
     key,
     unit,
     scope,
     page,
     entries,
-    value: value ? value(total) : undefined,
+    value: extras.value ? extras.value(total) : undefined,
   });
+}
+
+/**
+ * Every catalogue port this cruise row can name, keyed by id — the label map
+ * for `cruisePortsUniqueCount`.
+ *
+ * Read off the ROW's own ports rather than re-walking the effective sequence
+ * (departure → stops → arrival) that `calculateCruiseStats` owns: an extra
+ * entry here is invisible, because the panel only looks up keys that are in
+ * `credits`, while a second copy of that sequence rule would be a second
+ * opinion about which ports a cruise called at.
+ */
+function portLabelsOf(row: CruiseStatsRow): Record<string, string> {
+  const ports = [
+    ...row.input.stops.map((stop) => stop.port),
+    row.input.departurePort,
+    row.input.arrivalPort,
+  ];
+  const labels: Record<string, string> = {};
+  for (const port of ports) {
+    if (port) labels[String(port.id)] = port.name;
+  }
+  return labels;
 }
 
 /** One row each — `cruisesCount` is `cruises.length` and nothing else. */
@@ -162,8 +201,14 @@ export function resolveCruisePortsUniqueCount(
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  return cruiseDistinct(userId, scope, page, "cruisePortsUniqueCount", "ports", (s) =>
-    [...s.ports].map(String)
+  return cruiseDistinct(
+    userId,
+    scope,
+    page,
+    "cruisePortsUniqueCount",
+    "ports",
+    (s) => [...s.ports].map(String),
+    { labels: portLabelsOf }
   );
 }
 
@@ -182,7 +227,16 @@ export async function resolveCruiseShipsUniqueCount(
   const key = "cruiseShipsUniqueCount";
   const { rows, total } = await loadScoped(userId, scope, key);
   const entries = rows.map((row) =>
-    entryOf(row, { credits: row.input.shipId === null ? [] : [String(row.input.shipId)] })
+    entryOf(row, {
+      credits: row.input.shipId === null ? [] : [String(row.input.shipId)],
+      // The credit is the catalogue id, so the ship's catalogue name travels
+      // with it. `shipNameOverride` is deliberately NOT used: it names the
+      // ship on ONE booking, and this key is shared across every cruise that
+      // sailed her.
+      ...(row.input.shipId !== null && row.shipName !== null
+        ? { creditLabels: { [String(row.input.shipId)]: row.shipName } }
+        : {}),
+    })
   );
   return domainDistinctEvidence({
     key,
@@ -226,7 +280,7 @@ export function resolveCruiseCountriesCount(
     "cruiseCountriesCount",
     "countries",
     (s) => [...normalizeCountrySet(s.countries)],
-    (s) => normalizeCountrySet(s.countries).size
+    { value: (s) => normalizeCountrySet(s.countries).size }
   );
 }
 

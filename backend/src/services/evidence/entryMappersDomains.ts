@@ -42,7 +42,7 @@ export interface CruiseEvidenceRow {
  */
 export function cruiseEvidenceEntry(
   row: CruiseEvidenceRow,
-  fields: Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
 ): EvidenceEntry {
   return {
     domain: "cruise",
@@ -53,6 +53,7 @@ export function cruiseEvidenceEntry(
     date: dayPrecisionDate(row.startDate),
     ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
     ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
   };
 }
 
@@ -73,7 +74,7 @@ export interface StayEvidenceRow {
  */
 export function stayEvidenceEntry(
   row: StayEvidenceRow,
-  fields: Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
 ): EvidenceEntry {
   return {
     domain: "lodging",
@@ -84,6 +85,7 @@ export function stayEvidenceEntry(
     date: dayPrecisionDate(row.checkIn),
     ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
     ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
   };
 }
 
@@ -95,7 +97,7 @@ export interface TripEvidenceRow {
 
 export function tripEvidenceEntry(
   row: TripEvidenceRow,
-  fields: Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
 ): EvidenceEntry {
   return {
     domain: "trip",
@@ -106,6 +108,7 @@ export function tripEvidenceEntry(
     date: dayPrecisionDate(row.startDate),
     ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
     ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
   };
 }
 
@@ -124,7 +127,7 @@ export interface PlaceEvidenceRow {
  */
 export function placeEvidenceEntry(
   row: PlaceEvidenceRow,
-  fields: Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
 ): EvidenceEntry {
   return {
     domain: "place",
@@ -135,6 +138,7 @@ export function placeEvidenceEntry(
     date: dayPrecisionDate(row.visitedAt),
     ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
     ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
   };
 }
 

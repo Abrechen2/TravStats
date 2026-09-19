@@ -103,6 +103,20 @@ export interface EvidenceEntry {
   contribution?: number;
   /** `distinct` only: the units this row witnesses ("DE", "MUC", "2026-04-02"). */
   credits?: string[];
+  /**
+   * `distinct` only: a DISPLAY name per credit key, where the key is not one
+   * itself. A credit is an identity key for the union and stays one — that is
+   * what makes two rows witnessing the same unit count once — so an
+   * entity-keyed measure credits a UUID, and the panel printed
+   * "belegt: 0d02459d-4677-…" for every place and every lodging
+   * (browser pass, 2026-09-19).
+   *
+   * A key with NO entry here renders as itself, which is right and is why
+   * this is not `Record<string, string>` filled everywhere: "MUC", "DE" and
+   * "Europe" ARE the reader's words, and inventing a lookup for them would
+   * be a second place to be wrong about what an airport is called.
+   */
+  creditLabels?: Record<string, string>;
 }
 
 export interface EvidenceResponse {

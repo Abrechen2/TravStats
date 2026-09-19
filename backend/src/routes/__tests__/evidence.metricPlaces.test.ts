@@ -51,6 +51,7 @@ describe("GET /api/v1/evidence/metric/... — the places tab", () => {
       domain: string;
       href: string | null;
       credits?: string[];
+      creditLabels?: Record<string, string>;
       contribution?: number;
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
@@ -197,6 +198,35 @@ describe("GET /api/v1/evidence/metric/... — the places tab", () => {
     expect(res.entries.every((e) => e.domain === "place")).toBe(true);
     expect(res.entries.find((e) => e.id === fushimiId)!.href).toBe(`/places/${fushimiId}`);
     assertDistinctInvariant(res);
+  });
+
+  /**
+   * A place credit is the place's UUID — two places both called "Hafen" are
+   * two — so the row carries the name to print. The panel read
+   * "belegt: 34481a44-…" until 2026-09-19.
+   */
+  it("placesVisitedCount: each credited id carries the place NAME", () => {
+    const res = answer("placesVisitedCount");
+    expect(res.entries.find((e) => e.id === fushimiId)!.creditLabels).toEqual({
+      [fushimiId]: "Fushimi Inari",
+    });
+    expect(res.entries.find((e) => e.id === ponteId)!.creditLabels).toEqual({
+      [ponteId]: "Ponte Vecchio",
+    });
+    for (const e of res.entries) {
+      for (const credit of e.credits ?? []) {
+        expect([credit, e.creditLabels?.[credit]]).not.toEqual([credit, undefined]);
+      }
+    }
+  });
+
+  /** ISO codes and city names are words already — no label, and none wanted. */
+  it("country and city credits carry no label", () => {
+    for (const key of ["placeCountriesCount", "placeCitiesCount"] as const) {
+      for (const e of answer(key).entries) {
+        expect([key, e.creditLabels]).toEqual([key, undefined]);
+      }
+    }
   });
 
   /**

@@ -53,6 +53,7 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
       domain: string;
       href: string | null;
       credits?: string[];
+      creditLabels?: Record<string, string>;
       contribution?: number;
       subtitle?: { key: string; values?: Record<string, string | number> } | null;
     }>;
@@ -394,6 +395,33 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
     expect(res.entries.filter((e) => e.id === rheinblickId)).toHaveLength(1);
     expect(entry("lodgingsUniqueCount", rheinblickId).href).toBe(`/lodging/${rheinblickId}`);
     assertDistinctInvariant(res);
+  });
+
+  /**
+   * The credit is the house's UUID — two hotels of one name are two lodgings
+   * — and a UUID is not a word. The panel read "belegt: ea41c04e-…" until
+   * 2026-09-19, so every credited id carries its house name.
+   */
+  it("lodgingsUniqueCount: each credited id carries the house NAME", () => {
+    const res = answer("lodgingsUniqueCount");
+    expect(entry("lodgingsUniqueCount", rheinblickId).creditLabels).toEqual({
+      [rheinblickId]: "Hotel Rheinblick",
+    });
+    expect(entry("lodgingsUniqueCount", huetteId).creditLabels).toEqual({
+      [huetteId]: "Berghütte",
+    });
+    for (const e of res.entries) {
+      for (const credit of e.credits ?? []) {
+        expect([credit, e.creditLabels?.[credit]]).not.toEqual([credit, undefined]);
+      }
+    }
+  });
+
+  /** A country key is readable as it stands; labelling it would be a second opinion. */
+  it("lodgingCountriesCount credits carry no label", () => {
+    for (const e of answer("lodgingCountriesCount").entries) {
+      expect(e.creditLabels).toBeUndefined();
+    }
   });
 
   /**

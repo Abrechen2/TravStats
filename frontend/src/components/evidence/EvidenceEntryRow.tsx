@@ -43,9 +43,17 @@ export default function EvidenceEntryRow({
     aggregation === "sum" && entry.contribution !== undefined
       ? t("evidence:entry.contribution", { value: roundForDisplay(entry.contribution) })
       : null;
+  // A credit is an IDENTITY key — that is what makes two rows witnessing the
+  // same unit count once — and for an entity-keyed measure it is a UUID. What
+  // the reader needs is its name, so the row prints `creditLabels[key]` where
+  // the backend supplied one and the key itself where it did not: "MUC", "DE"
+  // and "Europe" are already words, and a lookup for them would be a second
+  // opinion about what an airport is called.
   const creditsText =
     aggregation === "distinct" && entry.credits
-      ? t("evidence:entry.credits", { list: entry.credits.join(", ") })
+      ? t("evidence:entry.credits", {
+          list: entry.credits.map((key) => entry.creditLabels?.[key] ?? key).join(", "),
+        })
       : null;
 
   const body = (

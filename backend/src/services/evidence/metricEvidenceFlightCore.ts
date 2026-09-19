@@ -295,12 +295,33 @@ export async function resolveDistanceKmTotal(
  */
 function flightAirlineGroupKeys(
   rows: FlightAirlineRow[]
-): Array<{ id: string; departureTime: Date | null; groupKey: string | null }> {
-  return rows.map((r) => ({
-    id: r.id,
-    departureTime: r.departureTime,
-    groupKey: airlineGroupKey(r, airlineResolvers),
-  }));
+): Array<{ id: string; departureTime: Date | null; groupKey: string | null; airline: string }> {
+  return rows.map((r) => {
+    const groupKey = airlineGroupKey(r, airlineResolvers);
+    return {
+      id: r.id,
+      departureTime: r.departureTime,
+      groupKey,
+      airline: airlineDisplayName(groupKey, r.airline),
+    };
+  });
+}
+
+/**
+ * What to PRINT for a group key. The key is deliberately machine-shaped — it
+ * carries the `iata:` / `name:` prefix that decides how two rows were matched
+ * — and the panel used to print it raw, so a row read "belegt: iata:LH"
+ * (browser pass, 2026-09-19). The catalogue name where there is one, the bare
+ * code where the catalogue does not know the carrier, and the row's own
+ * spelling for a `name:`-keyed group, which is lower-cased in the key itself.
+ */
+function airlineDisplayName(groupKey: string | null, stored: string | null): string {
+  if (!groupKey) return "";
+  if (groupKey.startsWith("iata:")) {
+    const iata = groupKey.slice("iata:".length);
+    return airlineResolvers.nameForIata(iata) ?? iata;
+  }
+  return stored?.trim() || groupKey.slice("name:".length);
 }
 
 export async function resolveAirlineCount(
@@ -315,6 +336,7 @@ export async function resolveAirlineCount(
     id: row.id,
     date: flightDateOf(row.departureTime),
     credits: row.groupKey ? [row.groupKey] : [],
+    ...(row.groupKey ? { creditLabels: { [row.groupKey]: row.airline } } : {}),
   }));
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
     userId,

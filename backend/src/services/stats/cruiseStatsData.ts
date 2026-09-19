@@ -22,6 +22,13 @@ export interface CruiseStatsRow {
   id: string;
   /** Route name, ship name, line — whatever the row can offer. Never translated. */
   label: string;
+  /**
+   * The CATALOGUE ship's name, or null where the booking names no catalogue
+   * ship. Distinct from `label`, which falls back through the route name and
+   * the per-booking override: evidence keyed by `shipId` needs the name that
+   * belongs to that id, not the one this booking happened to display.
+   */
+  shipName: string | null;
   startDate: Date | null;
   /** The names on the booking; `deriveCruiseStats` folds these into its tally. */
   companions: string[];
@@ -91,6 +98,7 @@ export async function loadCruiseStatsData(
   const rows: CruiseStatsRow[] = cruises.map((c) => ({
     id: c.id,
     label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? "—",
+    shipName: c.ship?.name ?? null,
     startDate: c.startDate,
     companions: c.companions,
     price: c.price,

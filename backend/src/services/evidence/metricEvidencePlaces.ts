@@ -100,7 +100,7 @@ async function loadScoped(
  */
 function placeEntry(
   place: PlaceRow,
-  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits">>
+  fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels">>
 ): EvidenceEntry {
   let newest: Date | null = null;
   for (const visit of place.visits) {
@@ -114,7 +114,14 @@ function placeEntry(
   );
 }
 
-/** Places that count as visited. Three visits to one McDonald's are ONE place. */
+/**
+ * Places that count as visited. Three visits to one McDonald's are ONE place.
+ *
+ * The credit is the place's OWN id, because that is what makes the union
+ * count places rather than names — two places both called "Hafen" are two.
+ * The id is a UUID, so the row also carries the name to print: the panel read
+ * "belegt: 34481a44-b245-…" on the demo account until 2026-09-19.
+ */
 export async function resolvePlacesVisitedCount(
   userId: string,
   scope: EvidenceScope,
@@ -122,7 +129,9 @@ export async function resolvePlacesVisitedCount(
 ): Promise<EvidenceResponse> {
   const key = "placesVisitedCount";
   const { visited } = await loadScoped(userId, scope, key);
-  const entries = visited.map((place) => placeEntry(place, { credits: [place.id] }));
+  const entries = visited.map((place) =>
+    placeEntry(place, { credits: [place.id], creditLabels: { [place.id]: place.name } })
+  );
   return domainDistinctEvidence({ key, unit: "places", scope, page, entries });
 }
 

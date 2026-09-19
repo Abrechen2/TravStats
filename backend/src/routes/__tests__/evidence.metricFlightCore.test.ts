@@ -203,6 +203,45 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
     assertDistinctInvariant(res.body);
   });
 
+  /**
+   * `airlineGroupKey` is machine-shaped on purpose — the `iata:` / `name:`
+   * prefix records HOW two rows were matched — and the panel printed it raw,
+   * so a row read "belegt: iata:LH" (browser pass, 2026-09-19).
+   *
+   * The assertion is that no label is the key, rather than that it is
+   * "Lufthansa": the catalogue name depends on `seed-test-catalogues.ts`
+   * having run, and a test that would go red on an unseeded database measures
+   * the fixture rather than the resolver. The bare code is the fallback and is
+   * already correct copy.
+   */
+  it("airlineCount: a credit carries the carrier's name, never the `iata:` group key", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/airlineCount")
+      .set("Cookie", userACookie);
+    expect(res.status).toBe(200);
+    const entries = res.body.entries as Array<{
+      credits?: string[];
+      creditLabels?: Record<string, string>;
+    }>;
+    const credited = entries.filter((e) => (e.credits ?? []).length > 0);
+    expect(credited.length).toBeGreaterThan(0);
+    for (const e of credited) {
+      for (const credit of e.credits!) {
+        const label = e.creditLabels?.[credit];
+        expect([credit, label]).not.toEqual([credit, undefined]);
+        expect([credit, label]).not.toEqual([credit, credit]);
+        expect([credit, label!.startsWith("iata:") || label!.startsWith("name:")]).toEqual([
+          credit,
+          false,
+        ]);
+      }
+    }
+    // The flight with no airline identity credits nothing, so it labels nothing.
+    expect(
+      entries.filter((e) => (e.credits ?? []).length === 0).every((e) => !e.creditLabels)
+    ).toBe(true);
+  });
+
   it("flightsWithoutAirlineCount: counts exactly the flight with no airline identity at all", async () => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/flightsWithoutAirlineCount")

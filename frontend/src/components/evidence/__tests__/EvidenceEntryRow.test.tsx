@@ -91,6 +91,41 @@ describe("EvidenceEntryRow", () => {
     expect(screen.queryByText(/entry.contribution/)).not.toBeInTheDocument();
   });
 
+  /**
+   * `placesVisitedCount` and `lodgingsUniqueCount` key their union by the
+   * entity's id, which is a UUID — so the panel printed
+   * "belegt: 0d02459d-4677-…" on the demo account (browser pass, 2026-09-19).
+   * The key stays the identity; the LABEL is what reaches the reader.
+   */
+  it("a UUID-keyed credit renders its NAME, and the UUID never reaches the screen", () => {
+    renderRow(
+      baseEntry({
+        contribution: undefined,
+        credits: ["0d02459d-4677-4e0e-9f8e-4d2f0b0a7c11"],
+        creditLabels: { "0d02459d-4677-4e0e-9f8e-4d2f0b0a7c11": "Elbphilharmonie" },
+      }),
+      "distinct"
+    );
+    expect(
+      screen.getByText('evidence:entry.credits({"list":"Elbphilharmonie"})')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0d02459d/)).not.toBeInTheDocument();
+  });
+
+  it("a credit with no label renders as itself — 'MUC' and 'DE' are already words", () => {
+    renderRow(
+      baseEntry({
+        contribution: undefined,
+        credits: ["DE", "lodging-7"],
+        creditLabels: { "lodging-7": "Hotel Sport" },
+      }),
+      "distinct"
+    );
+    expect(
+      screen.getByText('evidence:entry.credits({"list":"DE, Hotel Sport"})')
+    ).toBeInTheDocument();
+  });
+
   it("an undated entry says so rather than looking like a missing date", () => {
     renderRow(baseEntry({ date: null }));
     expect(screen.getByText("evidence:entry.undated")).toBeInTheDocument();
