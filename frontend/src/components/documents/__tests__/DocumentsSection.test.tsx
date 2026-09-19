@@ -1,0 +1,179 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+
+import type { TravelDocument } from "../../../lib/api/documents";
+
+/**
+ * The surface the 2.7.0 what's-new promised and the web did not have.
+ *
+ * Every case mocks `lib/api/documents` — the module the component really
+ * imports — because the test setup fails a request that escapes a mock
+ * (forgejo#110), and a section that fetches on mount would otherwise assert
+ * against the empty list a failed request leaves behind.
+ */
+const documentsApiMock = vi.hoisted(() => ({
+  listForEntry: vi.fn(),
+  limits: vi.fn(),
+  upload: vi.fn(),
+  remove: vi.fn(),
+}));
+const isDemoMock = vi.hoisted(() => ({ current: false }));
+
+vi.mock("../../../lib/api/documents", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/api/documents")>(
+    "../../../lib/api/documents"
+  );
+  return {
+    ...actual,
+    documentsApi: documentsApiMock,
+  };
+});
+vi.mock("../../../hooks/useIsDemoAccount", () => ({
+  useIsDemoAccount: () => isDemoMock.current,
+}));
+
+import DocumentsSection from "../DocumentsSection";
+
+const LIMITS = {
+  image: 10 * 1024 * 1024,
+  pdf: 10 * 1024 * 1024,
+  eml: 2 * 1024 * 1024,
+  emailText: 2 * 1024 * 1024,
+  pkpass: 5 * 1024 * 1024,
+};
+
+function makeDocument(over: Partial<TravelDocument> = {}): TravelDocument {
+  return {
+    id: "d1",
+    format: "pdf",
+    kind: "boardingPass",
+    mimetype: "application/pdf",
+    sizeBytes: 25_000,
+    sha256: "abc",
+    originalName: "LH2462.pdf",
+    displayName: "LH2462.pdf",
+    issuedOn: "2026-09-18",
+    source: "upload",
+    parsedDomain: null,
+    entry: { type: "flight", id: "f1" },
+    createdAt: "2026-09-18T10:00:00.000Z",
+    linkedAt: "2026-09-18T10:00:00.000Z",
+    url: "/api/v1/documents/d1/file",
+    ...over,
+  };
+}
+
+const FLIGHT = { type: "flight", id: "f1" } as const;
+
+describe("DocumentsSection", () => {
+  beforeEach(() => {
+    isDemoMock.current = false;
+    documentsApiMock.listForEntry.mockReset().mockResolvedValue([]);
+    documentsApiMock.limits.mockReset().mockResolvedValue(LIMITS);
+    documentsApiMock.upload.mockReset().mockResolvedValue(makeDocument());
+    documentsApiMock.remove.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("lists the entry's documents with name, size and date", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    const link = await screen.findByRole("link", { name: "documents:openLabel" });
+    expect(link).toHaveAttribute("href", "/api/v1/documents/d1/file");
+    expect(screen.getByText(/24\.4 KB/)).toBeInTheDocument();
+    expect(screen.getByText(/documents:kind\.boardingPass/)).toBeInTheDocument();
+    expect(documentsApiMock.listForEntry).toHaveBeenCalledWith({ type: "flight", id: "f1" });
+  });
+
+  it("says there are none yet, rather than drawing an empty list", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    expect(await screen.findByText("documents:empty")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("shows the size limits the server reports", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    expect(await screen.findByText("documents:limitHint")).toBeInTheDocument();
+  });
+
+  it("uploads the picked file for THIS entry and re-reads the list", async () => {
+    render(<DocumentsSection entry={{ type: "lodgingStay", id: "s1" }} />);
+    await screen.findByText("documents:empty");
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument({ displayName: "bill.pdf" })]);
+
+    const file = new File(["x"], "bill.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(documentsApiMock.upload).toHaveBeenCalledWith({
+        entry: { type: "lodgingStay", id: "s1" },
+        file,
+      })
+    );
+    // The list is re-read rather than appended to: a repeat of the same bytes
+    // answers with the document already on file.
+    await waitFor(() => expect(documentsApiMock.listForEntry).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
+  });
+
+  it("refuses a file larger than its format's limit without spending the upload", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    await screen.findByText("documents:limitHint");
+
+    const huge = new File(["x"], "scan.eml", { type: "message/rfc822" });
+    Object.defineProperty(huge, "size", { value: 3 * 1024 * 1024 });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [huge] } });
+
+    expect(await screen.findByText("documents:tooLarge")).toBeInTheDocument();
+    expect(documentsApiMock.upload).not.toHaveBeenCalled();
+  });
+
+  it("asks before it deletes, and only then calls the API", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    expect(await screen.findByText("documents:deleteMessage")).toBeInTheDocument();
+    expect(documentsApiMock.remove).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await waitFor(() => expect(documentsApiMock.remove).toHaveBeenCalledWith("d1"));
+    await waitFor(() => expect(screen.queryByText("LH2462.pdf")).toBeNull());
+  });
+
+  it("explains the shared demo instead of offering an upload that always fails", async () => {
+    isDemoMock.current = true;
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.queryByTestId("documents-file-input")).toBeNull();
+    // Nor a remove button: the same guard refuses the delete.
+    expect(screen.queryByRole("button", { name: "documents:removeLabel" })).toBeNull();
+    // And it does not ask for limits it may never use.
+    expect(documentsApiMock.limits).not.toHaveBeenCalled();
+  });
+
+  it("turns a 403 DEMO_ACCOUNT_FORBIDDEN into the sentence, never the code", async () => {
+    documentsApiMock.upload.mockRejectedValue({
+      response: { status: 403, data: { error: "DEMO_ACCOUNT_FORBIDDEN" } },
+    });
+    render(<DocumentsSection entry={FLIGHT} />);
+    await screen.findByText("documents:empty");
+
+    const file = new File(["x"], "bill.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+
+    expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.queryByText(/DEMO_ACCOUNT_FORBIDDEN/)).toBeNull();
+    expect(screen.queryByText("documents:uploadFailed")).toBeNull();
+  });
+
+  it("says the list could not be loaded instead of claiming there is nothing", async () => {
+    documentsApiMock.listForEntry.mockRejectedValue(new Error("offline"));
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    expect(await screen.findByText("documents:loadFailed")).toBeInTheDocument();
+    expect(screen.queryByText("documents:empty")).toBeNull();
+  });
+});
