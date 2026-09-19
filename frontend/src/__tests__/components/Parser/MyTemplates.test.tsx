@@ -64,7 +64,7 @@ describe("MyTemplates", () => {
       heldOut: null,
       heldOutReason: "noSecondSample",
       canActivate: true,
-      previewOf: "2026-03-28T12:00:00Z",
+      patternsHash: "abc123",
     });
   });
 

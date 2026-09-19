@@ -131,7 +131,9 @@
     "domainOverridden": "Recognised as {{domain}} — you changed it.",
     "labelSelect": "Field for the marked text",
     "markedFields": "Marked fields",
-    "markedNothing": "Nothing marked yet."
+    "markedNothing": "Nothing marked yet.",
+    "derivedBanner": "Template derived. Check it under “My Templates” with the preview before activating it.",
+    "dismiss": "Dismiss"
   },
   "derivation": {
     "cannot": {

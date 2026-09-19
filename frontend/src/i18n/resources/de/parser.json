@@ -131,7 +131,9 @@
     "domainOverridden": "Erkannt war {{domain}} — du hast das geändert.",
     "labelSelect": "Feld für die markierte Stelle",
     "markedFields": "Markierte Felder",
-    "markedNothing": "Noch nichts markiert."
+    "markedNothing": "Noch nichts markiert.",
+    "derivedBanner": "Template abgeleitet. Prüfe es unter „Meine Templates“ mit der Vorschau, bevor du es aktivierst.",
+    "dismiss": "Ausblenden"
   },
   "derivation": {
     "cannot": {

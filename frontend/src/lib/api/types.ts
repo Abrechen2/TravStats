@@ -234,7 +234,8 @@ export interface TemplatePreviewResult {
   heldOut: TemplatePreviewSide | null;
   heldOutReason: "noSecondSample" | null;
   canActivate: boolean;
-  previewOf: string;
+  /** Fingerprint of the rules this proof is about — re-deriving voids it. */
+  patternsHash: string;
 }
 
 // ==================== Pending Updates Interfaces ====================

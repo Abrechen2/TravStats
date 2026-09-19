@@ -88,7 +88,7 @@ describe("the workshop's template list", () => {
       },
       heldOutReason: null,
       canActivate: true,
-      previewOf: "2026-09-19T10:00:00.000Z",
+      patternsHash: "abc123",
     });
 
     render(<MyTemplates />);
@@ -113,7 +113,7 @@ describe("the workshop's template list", () => {
       heldOut: null,
       heldOutReason: "noSecondSample",
       canActivate: false,
-      previewOf: "2026-09-19T10:00:00.000Z",
+      patternsHash: "abc123",
     });
 
     render(<MyTemplates />);

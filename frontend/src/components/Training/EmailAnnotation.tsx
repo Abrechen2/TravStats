@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { trainingApi } from "../../lib/api";
-import TemplateReviewCard from "./TemplateReviewCard";
 import { logger } from "../../lib/logger";
 import {
   Flight,
@@ -11,6 +10,7 @@ import {
 } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
+import type { TemplateDerivation } from "../../lib/api/types";
 import AnnotationLabelSelect from "./AnnotationLabelSelect";
 import FlightGroundTruth from "./FlightGroundTruth";
 import type { WorkshopDomain } from "../../shared/annotationLabels";
@@ -23,7 +23,12 @@ interface EmailAnnotationProps {
    * sample was before forgejo#124 phase 6.
    */
   domain?: WorkshopDomain;
-  onComplete: () => void;
+  /**
+   * Called with what the workshop made of the annotation — a template, or a
+   * reason there is none. The CALLER renders it: this component is unmounted
+   * by the same handler, so anything it showed would never be painted.
+   */
+  onComplete: (derivation?: TemplateDerivation) => void;
   onCancel?: () => void;
 }
 
@@ -57,15 +62,6 @@ export default function EmailAnnotation({
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [derivedTemplateId, setDerivedTemplateId] = useState<string | null>(null);
-  /**
-   * Why no template came out of the annotation, when none did.
-   *
-   * Shown instead of a silent nothing: cruise and place have no reader that
-   * could run one, and a lodging mail can be marked too thinly to build one
-   * from (forgejo#124 phase 6). The annotation itself is still saved.
-   */
-  const [derivationNote, setDerivationNote] = useState<string | null>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const labelSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -352,17 +348,13 @@ export default function EmailAnnotation({
         domain
       );
 
-      if (response.templateId) {
-        setDerivedTemplateId(response.templateId);
-      }
-      const derivation = response.derivation;
-      setDerivationNote(
-        derivation && derivation.status === "abstained"
-          ? `parser:derivation.cannot.${derivation.reason}`
-          : null
-      );
-
-      onComplete();
+      // The outcome travels UP, and is not rendered here: `onComplete` takes
+      // this view off the screen in the same batch, so a banner owned by this
+      // component is mounted and unmounted without ever being painted. That
+      // was measured on the abstention note — the user landed on "My
+      // templates" with no template and no reason, which is the silent
+      // nothing the workshop's abstention exists to end.
+      onComplete(response.derivation);
     } catch (error) {
       logger.error("Failed to save annotation:", error);
       alert(t("training:errors.saveFailed"));
@@ -477,9 +469,14 @@ export default function EmailAnnotation({
                   </option>
                 ))}
               </select>
+              {/* One colour for one action: the identical button inside
+                  `FlightGroundTruth` resolves through the token layer, and two
+                  shades of "add a flight" on one screen is a bug you only see
+                  in a browser. */}
               <button
                 onClick={handleAddFlight}
-                className="px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                className="px-3 py-2 text-sm font-medium"
+                style={{ color: "var(--ts-accent)" }}
               >
                 + Flug hinzufügen
               </button>
@@ -656,19 +653,6 @@ export default function EmailAnnotation({
             {saving ? t("training:annotation.saving") : t("training:annotation.saveOnly")}
           </button>
         </div>
-
-        {derivedTemplateId && (
-          <TemplateReviewCard
-            templateId={derivedTemplateId}
-            onDismiss={() => setDerivedTemplateId(null)}
-          />
-        )}
-
-        {derivationNote && (
-          <p className="text-sm" style={{ color: "var(--warning)" }}>
-            {t(derivationNote)}
-          </p>
-        )}
       </div>
     </div>
   );

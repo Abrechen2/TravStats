@@ -11,6 +11,7 @@ import TemplateStatusView from "../components/TemplateStatusView";
 import MyTemplates from "../components/Parser/MyTemplates";
 import DomainPicker from "../components/Parser/DomainPicker";
 import type { WorkshopDomain } from "../shared/annotationLabels";
+import type { TemplateDerivation } from "../lib/api/types";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { Icon } from "../components/ui/Icon";
@@ -48,8 +49,20 @@ export default function ParserPage(): JSX.Element {
     }
   };
 
-  const handleAnnotationComplete = (): void => {
+  /**
+   * What the workshop made of the annotation, kept HERE.
+   *
+   * The annotation view is unmounted by the same handler that receives this,
+   * so a banner it owned would be mounted and dropped in one batch — measured
+   * on the abstention note, which the user never saw: they landed on "My
+   * templates" with no template and no reason, the silent nothing the
+   * abstention exists to end (forgejo#124 phase 6).
+   */
+  const [derivation, setDerivation] = useState<TemplateDerivation | null>(null);
+
+  const handleAnnotationComplete = (outcome?: TemplateDerivation): void => {
     setUploadedFile(null);
+    setDerivation(outcome ?? null);
     setActiveTab("my-templates");
   };
 
@@ -95,6 +108,35 @@ export default function ParserPage(): JSX.Element {
             );
           })}
         </div>
+
+        {/* What the workshop made of the last annotation. It outlives the
+            annotation view on purpose — see `derivation` above. */}
+        {derivation && derivation.status !== "failed" && (
+          <div
+            role="status"
+            className="mb-6 p-4 flex items-start justify-between gap-4"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+              color: derivation.status === "derived" ? "var(--ts-text)" : "var(--warning)",
+            }}
+          >
+            <p className="text-sm">
+              {derivation.status === "derived"
+                ? t("parser:workshop.derivedBanner")
+                : t(`parser:derivation.cannot.${derivation.reason}`)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setDerivation(null)}
+              className="text-sm shrink-0"
+              style={{ color: "var(--ts-muted)" }}
+            >
+              {t("parser:workshop.dismiss")}
+            </button>
+          </div>
+        )}
 
         {/* Tab: Annotieren */}
         {activeTab === "annotate" && (
