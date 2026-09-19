@@ -320,12 +320,19 @@ else
 
     set -e  # Re-enable exit on error
 
-    # Pre-migration backup hook (major-version bumps only).
+    # Pre-migration backup hook (ANY version change, #246).
     # Compares /app/data/backups/last-version with the version we're about
-    # to start. On a major bump (e.g. 1.x -> 2.x) snapshots the DB to
+    # to start. On a change it snapshots the DB to
     # /app/data/backups/pre-vX-upgrade-<ts>.sql before any migration runs.
-    # Soft-fails: if the backup itself errors, the script logs and exits 0
-    # so the migration is never blocked. The migration remains the bottleneck.
+    #
+    # A NON-ZERO EXIT STOPS THE BOOT. It used to print a warning and fall
+    # through to `prisma migrate deploy`, which is the one thing this hook
+    # exists to prevent: the 2026-09-19 integrity audit reproduced a
+    # "Failed to start pg_dump" and watched the migration run anyway, against
+    # a database with no snapshot from before it. Refusing is recoverable —
+    # the data is untouched and the previous image still works. The script
+    # decides, and exits 0 by itself when SKIP_PRE_MIGRATION_BACKUP=true, so
+    # the exit code is the whole contract. Do not add `|| true` here.
     PRE_MIGRATION_BACKUP_SCRIPT="/app/backend/dist/scripts/preMigrationBackup.js"
     if [ -f "$PRE_MIGRATION_BACKUP_SCRIPT" ]; then
         echo "[entrypoint] Checking upgrade-backup trigger..."
@@ -334,7 +341,9 @@ else
         PRE_MIGRATION_BACKUP_EXIT=$?
         set -e
         if [ $PRE_MIGRATION_BACKUP_EXIT -ne 0 ]; then
-            echo "[entrypoint] ⚠️  Pre-migration backup hook exited with $PRE_MIGRATION_BACKUP_EXIT — continuing"
+            echo "[entrypoint] ❌ Pre-migration backup hook exited with $PRE_MIGRATION_BACKUP_EXIT — refusing to migrate"
+            echo "[entrypoint] No migration has run. Start the previous image again, or set SKIP_PRE_MIGRATION_BACKUP=true to upgrade without a backup."
+            exit $PRE_MIGRATION_BACKUP_EXIT
         fi
     else
         echo "[entrypoint] ⚠️  $PRE_MIGRATION_BACKUP_SCRIPT not found — skipping upgrade-backup check"
