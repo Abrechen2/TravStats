@@ -25,6 +25,7 @@ const TAG = `i2scope-${Date.now()}`;
 let otherId = "";
 let demoId = "";
 let demoPreexisted = false;
+let seededOwnDemoContent = false;
 let otherBefore: Record<string, number> = {};
 let userAddedAirportId = 0;
 let userAddedChainId = 0;
@@ -134,21 +135,33 @@ beforeAll(async () => {
   const existingDemo = await prisma.user.findUnique({ where: { username: DEMO_USERNAME } });
   demoPreexisted = existingDemo !== null;
   if (existingDemo) {
-    // Used as found: no credential of an account this suite did not create is
-    // ever written. Its rows are about to be deleted, but that is what
-    // `ensureUser()` does on every boot and what the account is for.
+    // Used as found, and NOTHING is written into it — not a credential, and
+    // not a row.
+    //
+    // Seeding content here was a real race, measured in 1 of 4 full-gate runs
+    // on 2026-09-19: `seedDemoAccount.isDemo.test.ts` deletes and recreates
+    // the `demo` row by id in its `beforeEach`, so a row this suite had
+    // inserted under the old id was cascaded away mid-insert. The symptom was
+    // `places_user_id_fkey` violations here and a failing `afterAll` delete —
+    // neither of which says anything about the code under test.
+    //
+    // The single `demo` username is shared by three suites and cannot be
+    // parameterised (`ensureUser()` reads it from a constant), so the only
+    // safe rule is: a suite writes rows only into an account it created
+    // itself. On this branch the wipe is therefore observed against whatever
+    // the account already holds, which is enough — what the reset must not
+    // touch is the second user, and that is asserted in full either way.
     demoId = existingDemo.id;
   } else {
-    // A genuine demo account — the flag is what the seeder goes by since the
-    // 2026-09-19 fix.
+    // Ours, so it can be filled: a genuine demo account with content to
+    // remove. The flag is what the seeder goes by since the 2026-09-19 fix.
     const created = await prisma.user.create({
       data: { username: DEMO_USERNAME, passwordHash: "seeded-demo-hash", isDemo: true },
     });
     demoId = created.id;
+    await seedContentFor(demoId, `${TAG}-demo`);
+    seededOwnDemoContent = true;
   }
-  // Seeded either way, so the wipe below has something to remove whichever
-  // branch ran — the suite must not need a particular starting database.
-  await seedContentFor(demoId, `${TAG}-demo`);
 });
 
 afterAll(async () => {
@@ -163,16 +176,29 @@ afterAll(async () => {
 
 describe("the demo reset (ensureUser -> wipeDemoUser)", () => {
   it("empties the account it picked", async () => {
-    // At LEAST the rows this suite seeded — a database that already had a demo
-    // account carries its own on top, and the assertion must hold either way.
+    // At least the rows this suite seeded, when it seeded any. On a database
+    // that already had a demo account this suite adds nothing to it (see
+    // `beforeAll`), so the floor is whatever that account happens to hold —
+    // possibly zero, which still lets the assertion that matters run: after
+    // the reset, every count is zero.
     const before = await countsFor(demoId);
-    expect(before.flights).toBeGreaterThanOrEqual(1);
-    expect(before.documents).toBeGreaterThanOrEqual(2);
+    const floor = seededOwnDemoContent ? 1 : 0;
+    expect(before.flights).toBeGreaterThanOrEqual(floor);
+    expect(before.documents).toBeGreaterThanOrEqual(floor * 2);
 
+    // Read back rather than compared to the id captured in `beforeAll`: the
+    // same neighbouring suite may have deleted and recreated the row under a
+    // new id in between, and a mismatch there would be that suite's timing,
+    // not this one's subject. What must hold is that the seeder picks the
+    // account CURRENTLY called `demo` and empties it.
     const returned = await ensureUser();
-    expect(returned).toBe(demoId);
+    const demoNow = await prisma.user.findUniqueOrThrow({
+      where: { username: DEMO_USERNAME },
+      select: { id: true },
+    });
+    expect(returned).toBe(demoNow.id);
 
-    const after = await countsFor(demoId);
+    const after = await countsFor(returned);
     expect(after).toEqual({
       flights: 0,
       lodgings: 0,
