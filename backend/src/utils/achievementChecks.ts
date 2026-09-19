@@ -139,7 +139,7 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
-    case "all_seasons":
+    case "all_seasons": // KEEP — retired, read by achievementChecks.retiredAllSeasons.test.ts
       progress = checkAllSeasons(flights);
       isUnlocked = progress >= achievement.requirement;
       break;

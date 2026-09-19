@@ -56,6 +56,29 @@ Cause: JWT cookie expired but the user is still in `auth-storage` localStorage.
 Fix: `localStorage.removeItem('auth-storage')` in the browser console, then log in again.
 Permanent fix: `authStore.ts` — `onRehydrateStorage` must not remove the event listener (already fixed in 0.9.1+).
 
+### Container refuses to start after an update
+
+Look for a `[pre-migration-backup] FATAL` block in the logs. The automatic
+pre-upgrade snapshot could not be written, so the boot stopped BEFORE
+`prisma migrate deploy`. Nothing has been migrated — the database is untouched
+and the previous image still runs against it, which is what makes this
+recoverable.
+
+```bash
+docker logs TravStats 2>&1 | grep -A 6 "pre-migration-backup"
+
+# pg_dump must be at least the server's MAJOR version — the most common cause
+docker exec TravStats pg_dump --version
+docker exec travstats-db psql -U flights -d flights -c "SELECT version()"
+
+# Space under the data volume
+docker exec TravStats df -h /app/data
+```
+
+Fix the cause and start again. To upgrade WITHOUT a snapshot — having taken
+one by hand — set `SKIP_PRE_MIGRATION_BACKUP=true` (only the literal `true`),
+boot once, then unset it.
+
 ## 3. Rollback
 
 ```bash

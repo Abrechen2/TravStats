@@ -98,6 +98,38 @@ export const documentDtoSchema = z.object({
   url: z.string(),
 });
 
+/**
+ * An unfiled document, as `GET /documents/unfiled` lists it. The extra field is
+ * the whole point of the endpoint: a document with no entry is deleted after
+ * UNLINKED_TTL_DAYS, and until 2026-09-19 nothing told anybody that.
+ */
+export const unfiledDocumentDtoSchema = documentDtoSchema.extend({
+  deletesAt: z
+    .string()
+    .nullable()
+    .describe(
+      "ISO instant at which the sweep will remove this document, measured from when it " +
+        "became unfiled. Null only for a row that carries no such stamp, which the sweep " +
+        "also leaves alone."
+    ),
+});
+
+/**
+ * The unfiled list AND the number of days it is about, in one answer.
+ *
+ * The copy on screen names that number ("otherwise they are deleted 30 days
+ * after…"), and a number written into a locale file is a number that goes on
+ * saying 30 after someone changes `UNLINKED_TTL_DAYS`. There is one source of
+ * truth for it, and this is how it reaches the browser.
+ */
+export const unfiledDocumentsResponseSchema = z.object({
+  ttlDays: z
+    .number()
+    .int()
+    .describe("Days an unfiled document is kept after it became unfiled (UNLINKED_TTL_DAYS)"),
+  documents: z.array(unfiledDocumentDtoSchema),
+});
+
 export const documentLimitsSchema = z.object(
   Object.fromEntries(DOCUMENT_FORMATS.map((f) => [f, z.number().int()])) as Record<
     (typeof DOCUMENT_FORMATS)[number],

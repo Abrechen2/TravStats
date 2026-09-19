@@ -552,7 +552,7 @@ model UserAchievement {
   /// Read by the statistics ETag (forgejo#50).
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
   achievementId String    @map("achievement_id")
-  /// When the badge was EARNED, and null while it is not held.
+  /// When the badge was EARNED. Null until it is, and never null again.
   ///
   /// It used to be `DateTime @default(now())`, so every row carried a date —
   /// including the progress-tracking rows the engine creates the moment a
@@ -563,9 +563,17 @@ model UserAchievement {
   /// `progress >= requirement`), but the column asserted something false and an
   /// audit of the table believed it.
   ///
-  /// Nullable and WITHOUT a default is what makes revocation durable too: a
-  /// badge that falls below its requirement has its date cleared, so "revoked"
-  /// is a state the row can express instead of only a log line.
+  /// Nullable and WITHOUT a default is what lets an un-earned row say so: with
+  /// the default in place a progress-tracking `create` would stamp a date
+  /// nobody asked for and the lie would re-appear on every new row.
+  ///
+  /// Since 2026-09-19 this column is also what MAKES a badge held. It was
+  /// cleared when a measure fell back below its requirement; the integrity
+  /// audit of that day booted the prod mirror and watched AWAY_SHARE_25 —
+  /// earned 2026-09-03 — lose its date because the away-share denominator grows
+  /// with every day of the year. Held-ness is now `progress >= requirement OR
+  /// unlockedAt IS NOT NULL` (`utils/achievementHeld.ts`), and nothing clears
+  /// the column.
   unlockedAt    DateTime? @map("unlocked_at")
   progress      Int       @default(0) // current progress towards achievement
 
@@ -2714,6 +2722,17 @@ model Document {
   createdAt DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
   linkedAt  DateTime? @map("linked_at")
+  /// Since WHEN this document has belonged to nothing — the clock the sweep
+  /// runs on, and the one `deletesAt` is measured from. Null exactly when the
+  /// document IS filed.
+  ///
+  /// The sweep used to count from `createdAt`, which is the age of the FILE and
+  /// not the age of the problem. Unfiling a document uploaded two months ago
+  /// therefore put it past the TTL the moment it was unfiled, and the next
+  /// hourly pass deleted it — while the inbox, reading the same `createdAt`,
+  /// had just promised a date in the past. Whatever the TTL is, the user is
+  /// owed it from the moment the document became unfiled.
+  unlinkedAt DateTime? @map("unlinked_at")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight      Flight?      @relation(fields: [flightId], references: [id], onDelete: Cascade)
@@ -2729,5 +2748,7 @@ model Document {
   @@index([tripId])
   @@index([placeVisitId])
   @@index([userId, linkedAt])
+  /// The sweep asks exactly this: unfiled rows past their stamp.
+  @@index([unlinkedAt])
   @@map("documents")
 }

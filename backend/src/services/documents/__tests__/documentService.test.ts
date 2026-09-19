@@ -188,9 +188,17 @@ describe("documentService", () => {
       entry: { type: "flight", id: flightId },
     });
     const old = new Date(Date.now() - (UNLINKED_TTL_DAYS + 1) * 24 * 60 * 60 * 1000);
+    // `unlinkedAt` as well as `createdAt`: the sweep counts from when a
+    // document became UNFILED, not from when its bytes arrived. Ageing only
+    // `createdAt` no longer expires anything, which is the point of the change
+    // — see `unfiledDeletesAt`.
     await prisma.document.updateMany({
       where: { id: { in: [stale.document.id, filed.document.id] } },
       data: { createdAt: old },
+    });
+    await prisma.document.update({
+      where: { id: stale.document.id },
+      data: { unlinkedAt: old },
     });
     const orphanName = `orphan-${PREFIX}.pdf`;
     fs.writeFileSync(documentPath(orphanName), "%PDF orphan");

@@ -13,11 +13,18 @@ import {
   documentDtoSchema,
   documentLimitsSchema,
   documentUploadFieldsObject,
+  unfiledDocumentDtoSchema,
+  unfiledDocumentsResponseSchema,
   updateDocumentSchema,
 } from "../../../schemas/document";
 import { ENTRY_TYPES, type EntryType } from "../../documents/documentFormats";
 
 const documentDto = registry.register("Document", documentDtoSchema.openapi("Document"));
+registry.register("UnfiledDocument", unfiledDocumentDtoSchema.openapi("UnfiledDocument"));
+const unfiledDocuments = registry.register(
+  "UnfiledDocuments",
+  unfiledDocumentsResponseSchema.openapi("UnfiledDocuments")
+);
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 const json = <T extends z.ZodTypeAny>(schema: T) => ({ "application/json": { schema } });
 
@@ -39,6 +46,26 @@ registry.registerPath({
     "which is how a client knows to hide the feature.",
   tags,
   responses: { 200: { description: "Limits", content: json(envelope(documentLimitsSchema)) } },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/unfiled",
+  summary: "Your uploads that are filed with nothing yet",
+  description:
+    "Ordered by when each became unfiled, newest first, bounded. Each carries `deletesAt`: an " +
+    "unfiled document is removed — row and file — thirty days after it BECAME unfiled, not " +
+    "after it was uploaded, so unfiling an old document gives it the full thirty days. The " +
+    "endpoint exists so that deletion is announced before it happens; the inbox's review tab " +
+    "lists these. `ttlDays` is that thirty, sent rather than assumed, because the sentence on " +
+    "screen names it.",
+  tags,
+  responses: {
+    200: {
+      description: "Unfiled documents, newest first, with the TTL they are subject to",
+      content: json(envelope(unfiledDocuments)),
+    },
+  },
 });
 
 registry.registerPath({
@@ -137,7 +164,8 @@ registry.registerPath({
   path: "/documents/{id}",
   summary: "Say what a document is, when it was issued, or file it",
   description:
-    "`entry: null` takes it off its entry — it then expires after seven days unless filed again. " +
+    "`entry: null` takes it off its entry — it then expires after thirty days unless filed " +
+    "again, and appears under `GET /documents/unfiled` with the exact date. " +
     "Moving a filed document to another entry is refused (409): unfile it first.",
   tags,
   request: { params: idParams, body: { content: json(updateDocumentSchema) } },

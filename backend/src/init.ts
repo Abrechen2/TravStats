@@ -14,7 +14,12 @@ import * as path from "path";
 import * as fs from "fs";
 import logger from "./utils/logger";
 import { initializeEncryptionKey } from "./utils/encryptionKey";
-import { maybeRunPreMigrationBackup, writeLastDeployedVersion } from "./utils/upgradeBackup";
+import {
+  maybeRunPreMigrationBackup,
+  preMigrationOutcome,
+  skipPreMigrationBackupRequested,
+  writeLastDeployedVersion,
+} from "./utils/upgradeBackup";
 
 const prisma = createPrismaClient();
 
@@ -138,14 +143,33 @@ async function init() {
     // the wrong conclusion about when a snapshot is taken.
     console.log("2️⃣.6 Checking upgrade-backup trigger...");
     const upgradeCtx = await maybeRunPreMigrationBackup();
-    if (upgradeCtx.shouldBackup) {
-      if (upgradeCtx.backupCreated) {
-        console.log(`   ✅ Pre-upgrade backup created: ${upgradeCtx.backupCreated}\n`);
-      } else {
-        console.log("   ⚠️  Major-version bump detected but backup failed; check warnings above\n");
-      }
-    } else {
-      console.log("   ✅ No major-version bump; skipping upgrade backup\n");
+    const upgradeOutcome = preMigrationOutcome({
+      shouldBackup: upgradeCtx.shouldBackup,
+      backupCreated: upgradeCtx.backupCreated,
+      backupError: upgradeCtx.backupError,
+      versionSkew: upgradeCtx.versionSkew,
+      skipRequested: skipPreMigrationBackupRequested(),
+    });
+    if (upgradeCtx.backupCreated) {
+      console.log(`   ✅ Pre-upgrade backup created: ${upgradeCtx.backupCreated}\n`);
+    } else if (!upgradeCtx.shouldBackup) {
+      console.log("   ✅ No version change; skipping upgrade backup\n");
+    }
+    for (const line of upgradeOutcome.lines) {
+      if (upgradeOutcome.fatal) console.error(`   ${line}`);
+      else console.log(`   ${line}`);
+    }
+    // Same contract as the container entrypoint: a version change whose backup
+    // failed does not go on to migrate. The two boot paths must agree, or the
+    // guarantee depends on which one you happened to start.
+    if (upgradeOutcome.fatal) {
+      logger.error({
+        operation: "init_pre_migration_backup_fatal",
+        message: "Pre-migration backup failed on a version change; refusing to migrate",
+        previousVersion: upgradeCtx.previousVersion,
+        currentVersion: upgradeCtx.currentVersion,
+      });
+      process.exit(1);
     }
 
     // Step 3: Run migrations

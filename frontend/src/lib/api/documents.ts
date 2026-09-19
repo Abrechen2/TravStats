@@ -58,6 +58,34 @@ export interface TravelDocument {
   url: string;
 }
 
+/**
+ * An unfiled document, as `GET /documents/unfiled` lists it.
+ *
+ * `deletesAt` is the date the server's hourly sweep will remove it, row and
+ * bytes, counted from when it BECAME unfiled rather than from its upload. It
+ * is the reason the endpoint exists: the sweep used to be silent, so an upload
+ * that was never filed vanished after a week without anyone being told
+ * (2026-09-19 integrity audit, finding 4).
+ *
+ * Null when the server cannot date the row — which the sweep also abstains on,
+ * so the screen and the deletion agree. Nothing produces such a row today.
+ */
+export interface UnfiledDocument extends TravelDocument {
+  deletesAt: string | null;
+}
+
+/**
+ * The list plus the number of days it is about.
+ *
+ * `ttlDays` is sent rather than written into the locale files: the sentence on
+ * screen names the number, and a "30" typed into two JSON files is a 30 that
+ * goes on being shown after `UNLINKED_TTL_DAYS` changes.
+ */
+export interface UnfiledDocuments {
+  ttlDays: number;
+  documents: UnfiledDocument[];
+}
+
 /** Bytes, per format. */
 export type DocumentLimits = Record<DocumentFormat, number>;
 
@@ -125,6 +153,12 @@ let limitsRequest: Promise<DocumentLimits> | null = null;
 export const documentsApi = {
   listForEntry: async (entry: DocumentEntryRef): Promise<TravelDocument[]> => {
     const { data } = await api.get<Envelope<TravelDocument[]>>(documentListPath(entry));
+    return data.data;
+  },
+
+  /** The caller's own unfiled uploads, newest first, with the TTL they face. */
+  listUnfiled: async (): Promise<UnfiledDocuments> => {
+    const { data } = await api.get<Envelope<UnfiledDocuments>>("/documents/unfiled");
     return data.data;
   },
 

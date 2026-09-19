@@ -6,14 +6,20 @@
  * upgrade-backup hook only runs in `npm run dev`.
  *
  * Exit codes:
- *   0 — backup ran successfully OR was skipped (not a version change)
- *   0 — backup attempted but failed (soft fail, see upgradeBackup.ts)
- *   1 — internal error before the backup attempt could complete
+ *   0 — backup ran successfully, or was not needed (no version change)
+ *   0 — backup failed but SKIP_PRE_MIGRATION_BACKUP=true was set
+ *   1 — backup failed on a version change, or an internal error
  *
- * Always exits 0 for the soft-fail case so the entrypoint can still
- * proceed to migrate. The migration remains the bottleneck.
+ * A non-zero exit MUST stop the boot: the entrypoint runs `prisma migrate
+ * deploy` immediately after this, and the whole point of the hook is that the
+ * snapshot exists before it does. It exited 0 on failure until 2026-09-19 —
+ * see `preMigrationOutcome` in utils/upgradeBackup.ts for what that cost.
  */
-import { maybeRunPreMigrationBackup } from "../utils/upgradeBackup";
+import {
+  maybeRunPreMigrationBackup,
+  preMigrationOutcome,
+  skipPreMigrationBackupRequested,
+} from "../utils/upgradeBackup";
 
 async function main(): Promise<void> {
   const ctx = await maybeRunPreMigrationBackup();
@@ -37,11 +43,20 @@ async function main(): Promise<void> {
     console.log(`[pre-migration-backup] Same version (${ctx.currentVersion}) — no backup needed`);
   }
 
-  if (ctx.backupCreated) {
-    console.log(`[pre-migration-backup] Backup written: ${ctx.backupCreated}`);
-  } else if (ctx.shouldBackup) {
-    console.log("[pre-migration-backup] WARNING: version changed but backup failed — continuing");
+  const outcome = preMigrationOutcome({
+    shouldBackup: ctx.shouldBackup,
+    backupCreated: ctx.backupCreated,
+    backupError: ctx.backupError,
+    versionSkew: ctx.versionSkew,
+    skipRequested: skipPreMigrationBackupRequested(),
+  });
+
+  for (const line of outcome.lines) {
+    if (outcome.fatal) console.error(line);
+    else console.log(line);
   }
+
+  if (outcome.fatal) process.exit(1);
 }
 
 main().catch((error) => {

@@ -90,8 +90,65 @@ const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
  */
 export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
 
-/** Unfiled uploads older than this are removed by the sweep. */
-export const UNLINKED_TTL_DAYS = 7;
+/**
+ * Unfiled uploads older than this are removed by the sweep.
+ *
+ * It was 7, and nothing anywhere said so — not a locale string, not a screen.
+ * A boarding pass uploaded from the Companion and never filed simply stopped
+ * existing, row and bytes, a week later (2026-09-19 integrity audit, finding
+ * 4). Thirty days is the owner's number, and the deletion is now announced:
+ * `GET /documents/unfiled` carries `deletesAt`, and the inbox's review tab
+ * lists every unfiled document with the date it goes.
+ *
+ * Change this and the date on screen follows, because both read
+ * `unfiledDeletesAt`.
+ */
+export const UNLINKED_TTL_DAYS = 30;
+
+/**
+ * When an unfiled document will be swept, or null when it is not unfiled — or
+ * is unfiled without a stamp, which no write path produces and the migration
+ * backfilled away.
+ *
+ * Measured from `unlinkedAt`, NOT `createdAt`. `createdAt` is the age of the
+ * FILE; the TTL is about the age of the PROBLEM. Unfiling a document uploaded
+ * two months ago put it past a `createdAt` TTL the instant it was unfiled, so
+ * the next hourly pass deleted it — while the inbox, reading the same column,
+ * had just shown a deletion date in the past.
+ *
+ * Null rather than a guess, so this and `sweepDocuments` abstain on the same
+ * rows: a document nobody can date is a document nobody deletes.
+ */
+export function unfiledDeletesAt(document: Pick<Document, "unlinkedAt">): Date | null {
+  if (!document.unlinkedAt) return null;
+  return new Date(document.unlinkedAt.getTime() + UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * How many unfiled documents one request may list. A bound, not a page: the
+ * block this feeds is a warning, and a user with more than fifty unfiled
+ * uploads has a filing problem the list cannot solve by being longer.
+ */
+export const UNFILED_LIST_LIMIT = 50;
+
+/**
+ * A user's own unfiled documents, newest first, each with the date it will be
+ * removed. The counterpart of the sweep: nothing may be deleted here that the
+ * user was not first shown.
+ */
+export async function listUnfiledDocuments(
+  userId: string,
+  limit: number = UNFILED_LIST_LIMIT
+): Promise<Document[]> {
+  return prisma.document.findMany({
+    where: { userId, ...NO_OWNER },
+    // By when it became unfiled, not when it was uploaded: that is the order of
+    // the deadline the list is about. `id` breaks the tie, because `unlinkedAt`
+    // is neither unique nor — on rows the migration backfilled — distinct.
+    orderBy: [{ unlinkedAt: "desc" }, { id: "desc" }],
+    take: limit,
+  });
+}
 
 const NO_OWNER: Prisma.DocumentWhereInput = {
   flightId: null,
@@ -112,6 +169,7 @@ interface OwnerColumns {
   tripId: string | null;
   placeVisitId: string | null;
   linkedAt: Date | null;
+  unlinkedAt: Date | null;
 }
 
 function ownerData(entry: EntryRef | null): OwnerColumns {
@@ -122,6 +180,10 @@ function ownerData(entry: EntryRef | null): OwnerColumns {
     tripId: entry?.type === "trip" ? entry.id : null,
     placeVisitId: entry?.type === "placeVisit" ? entry.id : null,
     linkedAt: entry ? new Date() : null,
+    // The other half of the same fact, and written here for the same reason
+    // `linkedAt` is: this is the ONE place the owner columns are decided, so
+    // create, link, unlink and update cannot disagree about it.
+    unlinkedAt: entry ? null : new Date(),
   };
 }
 
@@ -465,7 +527,10 @@ export async function sweepDocuments(
 ): Promise<SweepResult> {
   const cutoff = new Date(now.getTime() - UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
   const expired = await prisma.document.findMany({
-    where: { ...NO_OWNER, createdAt: { lt: cutoff } },
+    // `unlinkedAt`, not `createdAt` — see `unfiledDeletesAt`. A null never
+    // matches `lt`, which is the safe direction: a row nobody can date is a
+    // row nobody deletes, and it is the same abstention the inbox makes.
+    where: { ...NO_OWNER, unlinkedAt: { lt: cutoff } },
     select: { id: true, storedName: true },
   });
   if (expired.length > 0) {
@@ -518,6 +583,16 @@ export interface DocumentDto {
   createdAt: string;
   linkedAt: string | null;
   url: string;
+}
+
+/** `toDocumentDto` plus the date the sweep will take it. */
+export function toUnfiledDocumentDto(
+  document: Document
+): DocumentDto & { deletesAt: string | null } {
+  return {
+    ...toDocumentDto(document),
+    deletesAt: unfiledDeletesAt(document)?.toISOString() ?? null,
+  };
 }
 
 export function toDocumentDto(document: Document): DocumentDto {

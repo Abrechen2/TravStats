@@ -20,6 +20,14 @@ describe("backfillCompanions", () => {
   });
 
   afterAll(async () => {
+    // Belt and braces for the injected-failure case below: its `finally` drops
+    // this constraint, but a `finally` only runs if the block was entered. A
+    // constraint left behind refuses every INSERT into flight_companions for
+    // the rest of the run, and the failures would land in whichever suite came
+    // next — a long way from the file that caused them.
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE flight_companions DROP CONSTRAINT IF EXISTS tmp_refuse_inserts"
+    );
     await prisma.flightCompanion.deleteMany();
     await prisma.tripCompanion.deleteMany();
     await prisma.cruiseCompanion.deleteMany();
@@ -183,5 +191,51 @@ describe("backfillCompanions", () => {
       orderBy: { position: "asc" },
     });
     expect(repaired.map((l) => l.companion.displayName)).toEqual(["Anna", "Ben"]);
+  });
+
+  // The re-link is a deleteMany followed by a createMany. It used to run as
+  // two separate statements, so a createMany that failed left the record with
+  // NO companions at all — the old links had already gone (2026-09-19
+  // integrity audit, finding 5). The next boot repairs it, which is why nobody
+  // had seen it; "self-healing on the next boot" is not "never wrong in
+  // between", and the in-between is when someone opens the page.
+  //
+  // The failure is injected at the database, not around the client: a CHECK
+  // added NOT VALID leaves the rows that are already there alone and refuses
+  // every INSERT from that moment. That exercises the real transaction —
+  // stubbing the client would only prove the stub was reached.
+  it("leaves the old links in place when the new ones cannot be written", async () => {
+    const flight = await legacyFlight(["Anna", "Jonas"]);
+    await backfillCompanions();
+
+    const namesOf = async (): Promise<string[]> => {
+      const rows = await prisma.flightCompanion.findMany({
+        where: { flightId: flight.id },
+        include: { companion: true },
+        orderBy: { position: "asc" },
+      });
+      return rows.map((l) => l.companion.displayName);
+    };
+    expect(await namesOf()).toEqual(["Anna", "Jonas"]);
+
+    // Move the legacy array on, so the next pass wants to re-link this record.
+    await prisma.flight.update({
+      where: { id: flight.id },
+      data: { companions: { set: ["Anna", "Jonas", "Mia"] } },
+    });
+
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE flight_companions ADD CONSTRAINT tmp_refuse_inserts CHECK (position < 0) NOT VALID"
+    );
+    try {
+      await expect(backfillCompanions()).rejects.toThrow();
+    } finally {
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE flight_companions DROP CONSTRAINT IF EXISTS tmp_refuse_inserts"
+      );
+    }
+
+    // Without the transaction this is [] — the delete committed on its own.
+    expect(await namesOf()).toEqual(["Anna", "Jonas"]);
   });
 });

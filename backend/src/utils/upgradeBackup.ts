@@ -3,6 +3,7 @@ import * as path from "path";
 import { createPrismaClient } from "../prismaClient";
 import logger from "./logger";
 import { createDatabaseDump } from "../services/backup/backupDatabase";
+import { detectPgDumpSkew } from "./pgDumpSkew";
 
 const VERSION_FILE = path.join(__dirname, "..", "..", "VERSION");
 const BACKUP_PATH = process.env.BACKUP_PATH || "/app/data/backups";
@@ -15,8 +16,107 @@ export interface UpgradeBackupContext {
   shouldBackup: boolean;
   firstUpgradeFromPreMarker: boolean;
   backupCreated: string | null;
+  /** The reason the backup did not happen, when one was wanted. Null when the
+   *  backup succeeded or was never attempted. */
+  backupError: string | null;
+  /** A pg_dump/server version skew found BEFORE the attempt, as a sentence.
+   *  Null when the versions agree or either could not be read. */
+  versionSkew: string | null;
   /** Why the decision went the way it did, in words the console can print. */
   reason: string;
+}
+
+/** The env var an operator sets to boot anyway when the backup cannot be taken. */
+export const SKIP_PRE_MIGRATION_BACKUP_ENV = "SKIP_PRE_MIGRATION_BACKUP";
+
+/** What the caller should do once the backup attempt is over. */
+export interface PreMigrationOutcome {
+  /** True when the boot must stop before `prisma migrate deploy` runs. */
+  fatal: boolean;
+  /** Console lines, in order. Multi-line on purpose: this is read once, in a
+   *  container log, by someone deciding whether to roll back. */
+  lines: string[];
+}
+
+/**
+ * Whether a failed pre-migration backup stops the boot.
+ *
+ * It used not to. The script logged `WARNING … continuing` and exited 0, and
+ * the entrypoint printed its own "continuing" on top of that, so
+ * `prisma migrate deploy` ran against an unbacked database. The 2026-09-19
+ * integrity audit reproduced it with `Failed to start pg_dump`: the net came
+ * off with one WARN line, and the schema change went ahead. The image does
+ * ship pg_dump, but nothing checks client/server skew, a renamed container or
+ * a full disk — all of which fail here and none of which anyone would see.
+ *
+ * So: a version change is the one moment a snapshot is worth a refusal, and a
+ * refusal is recoverable while a half-migrated database is not.
+ * `SKIP_PRE_MIGRATION_BACKUP=true` is the deliberate way past it, and it is
+ * named in the message itself rather than in a wiki page nobody has open at
+ * that moment. No version change, or a backup that worked, behaves exactly as
+ * before.
+ *
+ * Pure, so the rule can be tested without a database, a version file or a
+ * pg_dump binary.
+ */
+export function preMigrationOutcome(input: {
+  shouldBackup: boolean;
+  backupCreated: string | null;
+  backupError: string | null;
+  skipRequested: boolean;
+  /** From `detectPgDumpSkew`, measured before the attempt. Optional so a
+   *  caller that cannot probe simply says nothing about it. */
+  versionSkew?: string | null;
+}): PreMigrationOutcome {
+  const { shouldBackup, backupCreated, backupError, skipRequested } = input;
+  const versionSkew = input.versionSkew ?? null;
+
+  if (!shouldBackup || backupError === null) {
+    return {
+      fatal: false,
+      lines: backupCreated ? [`[pre-migration-backup] Backup written: ${backupCreated}`] : [],
+    };
+  }
+
+  // Named on its own line when it is known, because "Failed to start pg_dump"
+  // and "your pg_dump is older than your server" have completely different
+  // fixes and the first cannot be told from the second.
+  const skewLine = versionSkew ? [`[pre-migration-backup] Likely cause: ${versionSkew}`] : [];
+
+  if (skipRequested) {
+    return {
+      fatal: false,
+      lines: [
+        "[pre-migration-backup] WARNING: the pre-migration backup failed and " +
+          `${SKIP_PRE_MIGRATION_BACKUP_ENV} is set — booting anyway.`,
+        `[pre-migration-backup] Cause: ${backupError}`,
+        ...skewLine,
+        "[pre-migration-backup] Migrations are about to run against a database " +
+          "with no snapshot from before them.",
+      ],
+    };
+  }
+
+  return {
+    fatal: true,
+    lines: [
+      "[pre-migration-backup] FATAL: this is a version change and the " +
+        "pre-migration backup could NOT be created.",
+      `[pre-migration-backup] Cause: ${backupError}`,
+      ...skewLine,
+      "[pre-migration-backup] Migrations have NOT been run. Your database is " +
+        "untouched and the previous image still works.",
+      "[pre-migration-backup] Fix the cause (usually: pg_dump missing or older " +
+        "than the server's major version, the database container renamed, or " +
+        "no free space under the backups directory), then start again.",
+      `[pre-migration-backup] To upgrade WITHOUT a backup, set ${SKIP_PRE_MIGRATION_BACKUP_ENV}=true.`,
+    ],
+  };
+}
+
+/** True when the operator has asked to boot even without a usable backup. */
+export function skipPreMigrationBackupRequested(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env[SKIP_PRE_MIGRATION_BACKUP_ENV] === "true";
 }
 
 /**
@@ -84,10 +184,12 @@ export function writeLastDeployedVersion(version: string): void {
  * running install. See `shouldBackupBeforeMigrating` for the exact rule —
  * it is ANY version change, not only a major one (#246).
  *
- * Failure modes are deliberately soft: if the backup fails (Docker
- * socket unavailable, pg_dump missing, no disk space) we log a clear
- * warning and continue. Refusing to migrate on backup failure would
- * paint users into a corner; the migration itself stays the bottleneck.
+ * A failure is NOT soft any more. It used to be — "log a clear warning and
+ * continue", on the reasoning that refusing to migrate would paint users into
+ * a corner. It is the other way round: a refusal leaves the database untouched
+ * and the previous image working, while a migration run without a snapshot can
+ * leave nothing to go back to. `preMigrationOutcome` decides, and
+ * `SKIP_PRE_MIGRATION_BACKUP=true` is the way past it.
  */
 /**
  * Detects whether the database has any prior `_prisma_migrations` rows.
@@ -185,6 +287,8 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     shouldBackup,
     firstUpgradeFromPreMarker,
     backupCreated: null,
+    backupError: null,
+    versionSkew: null,
     reason: decision.reason,
   };
 
@@ -208,6 +312,18 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     firstUpgradeFromPreMarker,
   });
 
+  // BEFORE the attempt, so the failure message can name the reason rather than
+  // only the symptom. It never throws and abstains when either version cannot
+  // be read — see `pgDumpSkew.ts`.
+  ctx.versionSkew = await detectPgDumpSkew();
+  if (ctx.versionSkew) {
+    logger.warn({
+      operation: "upgrade_backup_pg_version_skew",
+      message: "pg_dump and the server disagree on major version",
+      detail: ctx.versionSkew,
+    });
+  }
+
   fs.mkdirSync(BACKUP_PATH, { recursive: true });
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
@@ -224,16 +340,15 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
       outputPath,
     });
   } catch (error) {
-    logger.warn({
+    ctx.backupError = error instanceof Error ? error.message : "Unknown error";
+    logger.error({
       operation: "upgrade_backup_error",
       message:
-        "Pre-migration backup failed; continuing with migration anyway. " +
-        "The user may have an unrecoverable state if migrations break.",
+        "Pre-migration backup failed on a version change. The caller decides " +
+        "whether to boot — see preMigrationOutcome.",
       previousVersion,
       currentVersion,
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
+      error: { message: ctx.backupError },
     });
   }
 

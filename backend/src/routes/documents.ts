@@ -15,7 +15,10 @@ import {
   deleteDocument,
   getOwnDocument,
   listDocumentsForEntry,
+  listUnfiledDocuments,
+  UNLINKED_TTL_DAYS,
   toDocumentDto,
+  toUnfiledDocumentDto,
   updateDocument,
   type EntryType,
 } from "../services/documents/documentService";
@@ -87,6 +90,37 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
 router.get("/documents/limits", authenticate, (_req: AuthRequest, res: Response) => {
   res.json({ success: true, data: DOCUMENT_SIZE_LIMITS });
 });
+
+/**
+ * The caller's own unfiled documents, newest first, each carrying the date the
+ * hourly sweep will remove it.
+ *
+ * ABOVE `/documents/:id`, because `unfiled` would otherwise be parsed as an id
+ * and refused as a malformed uuid.
+ *
+ * It exists because the sweep was silent: an upload that was never filed was
+ * deleted, row and bytes, after seven days, and no screen and no locale string
+ * mentioned it (2026-09-19 integrity audit, finding 4). The TTL is 30 days now,
+ * and this is what the inbox reads to say so before the day arrives.
+ */
+router.get(
+  "/documents/unfiled",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const documents = await listUnfiledDocuments(req.userId!);
+      // `ttlDays` rides along because the sentence on screen names it. A number
+      // typed into a locale file would go on saying 30 after someone changed
+      // the constant, in both languages, silently.
+      res.json({
+        success: true,
+        data: { ttlDays: UNLINKED_TTL_DAYS, documents: documents.map(toUnfiledDocumentDto) },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post(
   "/documents",

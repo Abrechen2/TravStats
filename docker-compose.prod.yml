@@ -119,6 +119,15 @@ services:
       # Docker container name of the Postgres service — used by the backup
       # scheduler to shell into the DB container for pg_dump.
       DOCKER_DB_CONTAINER: ${DOCKER_DB_CONTAINER:-travstats-db}
+
+      # Starting a new version snapshots the database BEFORE any migration
+      # runs, and REFUSES TO START if it cannot. Nothing is migrated in that
+      # case, so the previous image still works — which is the point.
+      # The usual cause is a pg_dump older than the server: pg_dump cannot dump
+      # a server newer than its own MAJOR version (newer client is fine).
+      # Set this to the literal "true" to upgrade with no snapshot; take your
+      # own backup first and unset it again afterwards. See README → Upgrades.
+      # SKIP_PRE_MIGRATION_BACKUP: "true"
       DOCKER: "true"
     volumes:
       - travstats-app-data:/app/data

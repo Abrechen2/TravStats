@@ -80,6 +80,25 @@ persisted inside the `/mnt/user/appdata/travstats/secrets/` subdirectory
 of the main data volume — one mount, no separate secrets share to worry
 about.
 
+## Upgrading
+
+Pulling a newer TravStats image takes a database snapshot into
+`/mnt/user/appdata/travstats/backups/` before any migration runs, and
+**refuses to start if it cannot take one**. Nothing is migrated in that case:
+the old image still works against the database.
+
+On Unraid the cause is almost always the split setup this page describes —
+TravStats and PostGIS are two separate containers, so their versions move
+independently. `pg_dump` cannot dump a server NEWER than itself, so updating
+the PostGIS container to a new major while TravStats still ships the older
+client stops the upgrade. Update TravStats first, or pin PostGIS.
+
+The log names both versions. To upgrade without a snapshot, add
+`SKIP_PRE_MIGRATION_BACKUP` = `true` to the TravStats container's variables
+(**Edit** → **Add another Path, Port, Variable…** → *Variable*), start it,
+then remove the variable again. Only the literal `true` counts. Take your own
+backup from **Admin → Settings → Backups** first.
+
 ## Template maintenance (for the maintainer)
 
 The canonical template URLs — the ones the CA feed reads — are:
