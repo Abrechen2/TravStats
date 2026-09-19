@@ -5,8 +5,6 @@ import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
 import { Icon, type IconName } from "../ui/Icon";
-import Pill from "../ui/Pill";
-import { token } from "../ui/tokens";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
 
@@ -170,7 +168,6 @@ export function DomainTabStrip({
                 )}
               </span>
             )}
-            {tab === "tour" && <Pill color={token("accent")}>Beta</Pill>}
           </button>
         );
       })}

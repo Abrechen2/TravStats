@@ -197,6 +197,21 @@ describe("DomainTabStrip", () => {
       expect(tour).toBeTruthy();
       expect(tour.getAttribute("data-disabled")).toBe("false");
     });
+
+    /**
+     * The tab kept a hard-coded "Beta" pill after the gate was removed
+     * (auditor 3, 2026-09-19). `config/betaFeatures.ts` holds one key,
+     * `devicePairing`, and the 2.7.0 announcement tells readers tours have
+     * shipped -- so the badge was contradicting both the registry and the
+     * release notes. A badge that no registry entry backs is a badge nothing
+     * can ever take away.
+     */
+    it("draws no Beta badge on the Touren tab — tours are released", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      expect(screen.getByRole("tab", { name: /tours/i }).textContent).not.toMatch(/beta/i);
+      expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+    });
   });
 });
 
