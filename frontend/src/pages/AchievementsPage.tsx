@@ -9,6 +9,7 @@ import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import AchievementCard, { TIER_COLOR } from "../components/achievements/AchievementCard";
 import AchievementDetailModal from "../components/achievements/AchievementDetailModal";
 import AchievementLeaderboard from "../components/achievements/AchievementLeaderboard";
+import EvidencePanel from "../components/evidence/EvidencePanel";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { useLocale } from "../hooks/useLocale";
@@ -366,6 +367,10 @@ export default function AchievementsPage(): JSX.Element {
         </div>
       )}
       <AchievementDetailModal achievement={selected} onClose={() => setSelected(null)} />
+      {/* The dialog's evidence trigger only writes `?evidence=`; without the
+          panel mounted here the click would change the URL and show nothing.
+          `AdvancedStatsPage` is the only other page that mounts it. */}
+      <EvidencePanel />
     </AppShell>
   );
 }
