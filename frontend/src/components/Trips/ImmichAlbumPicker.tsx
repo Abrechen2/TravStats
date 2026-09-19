@@ -2,16 +2,8 @@ import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
+import { formatBytes } from "../../lib/fileSize";
 import type { ImmichAlbumSummary, ImmichMode } from "../../types/immich";
-
-const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
-
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), UNITS.length - 1);
-  const value = bytes / 1024 ** exponent;
-  return exponent === 0 ? `${value} B` : `${value.toFixed(1)} ${UNITS[exponent]}`;
-}
 
 // Folds a string for search matching: trims, lower-cases, and strips
 // diacritics so a plain-ASCII query (e.g. "munchen") finds "München" — the
