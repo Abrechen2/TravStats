@@ -69,9 +69,12 @@ export function isPricedStay(stay: LodgingStayFx): stay is LodgingStayFx & { tot
  * exactly such stays, and there the snapshot is the stale reading — the price
  * is not.
  *
- * A missing `currency` reads as EUR, matching the schema default on the
- * column and every other reader of it (`spendByCurrency`, the evidence
- * subtitle). Reading the raw column instead would let one stay be labelled
+ * A missing `currency` reads as EUR. `LodgingStay.currency` is NOT NULL in
+ * the database with a default of EUR, so on the backend that branch is
+ * defensive and unreachable; it earns its place because the frontend's own
+ * stay type declares the field nullable, and because every other reader here
+ * (`spendByCurrency`, the evidence subtitle) already spells the same
+ * fallback. Reading the raw column instead would let one stay be labelled
  * EUR by the per-currency breakdown and excluded for not being EUR by this.
  */
 export function lodgingBaseAmount(stay: LodgingStayFx, baseCurrency: string): number | null {

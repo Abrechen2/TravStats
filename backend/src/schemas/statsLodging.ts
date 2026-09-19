@@ -261,10 +261,13 @@ export const lodgingStatsResponseSchema = z
       }),
       spendBaseTotal: z.number().openapi({
         description:
-          "Sum of totalPriceBase, but ONLY for stays whose fxBaseCurrency matches the " +
-          "CURRENT base currency. A stay snapshotted before the user switched keeps its " +
-          "OLD currency forever — the snapshot is never recalculated — so adding it " +
-          "under the new label would be a wrong number, not a rounding.",
+          "Spend in the account's CURRENT base currency. A stay reaches it either by " +
+          "being priced in it — then its own price counts, no FX snapshot needed, which " +
+          "is what keeps every stay entered before those columns existed in the sum — or " +
+          "by a snapshot TAKEN in it. A snapshot in a base currency the account has " +
+          "since left is not one: it is never recalculated, so adding it under the new " +
+          "label would be a wrong number, not a rounding, and it is reported by " +
+          "spendBaseByCurrency instead. One rule, in backend/src/shared/lodgingSpendBase.ts.",
       }),
       spendByCurrency: z.record(z.string(), z.number()).openapi({
         description: "Original amounts grouped by their original currency — NOT a conversion.",
@@ -274,12 +277,20 @@ export const lodgingStatsResponseSchema = z
         .int()
         .openapi({
           description:
-            "Stays whose price no provider could convert, and which are therefore absent " +
-            "from spendBaseTotal. A stay converted under an OLDER base currency is not " +
-            "counted here: it has a rate and is reported by spendBaseByCurrency, and " +
+            "Stays whose price reached no base-currency sum at all, and which are " +
+            "therefore absent from spendBaseTotal: a price in a FOREIGN currency that " +
+            "nothing converted. A stay priced in the base currency is never counted " +
+            "here — it needs no rate. Neither is one converted under an OLDER base " +
+            "currency: it has a rate and is reported by spendBaseByCurrency, and " +
             "counting it twice would put one stay behind two different hints.",
         }),
-      spendBaseByCurrency: z.record(z.string(), z.number()),
+      spendBaseByCurrency: z.record(z.string(), z.number()).openapi({
+        description:
+          "Every converted amount under the currency it is an amount IN — the full " +
+          "picture behind spendBaseTotal's single current-base slice. Amounts reaching " +
+          "the CURRENT base currency sit under its key; anything carrying only a " +
+          "snapshot from an older base currency keeps that older key.",
+      }),
       awardNights: z.number().int(),
       nightsByType: z.record(z.string(), z.number().int()).openapi({
         description:

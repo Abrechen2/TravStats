@@ -114,6 +114,27 @@ describe("lodging price statistics", () => {
     expect(p.unpricedStays).toBe(0);
   });
 
+  /**
+   * The snapshot branch, measured HERE. Every other included stay in this file
+   * is priced in euros and so reaches the total by its own price — which would
+   * leave the whole of `lodgingBaseAmount`'s second half unexercised by the
+   * suite that owns the per-night figure.
+   */
+  it("prices a foreign stay from its snapshot, not from its own amount", () => {
+    const p = price([
+      stay({
+        currency: "USD",
+        totalPrice: 260,
+        totalPriceBase: 240,
+        fxBaseCurrency: "EUR",
+      }),
+    ]);
+    // 240 EUR over two nights — never 130, which is what the dollars would give.
+    expect(p.avgPricePerNight).toBe(120);
+    expect(p.pricedStays).toBe(1);
+    expect(p.unpricedStays).toBe(0);
+  });
+
   it("leaves out a FOREIGN stay that carries no snapshot", () => {
     const p = price([
       stay({ currency: "EUR", totalPrice: 200, totalPriceBase: null, fxBaseCurrency: null }),

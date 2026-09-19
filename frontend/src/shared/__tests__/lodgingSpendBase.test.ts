@@ -1,10 +1,13 @@
 /**
  * The truth table for `lodgingBaseAmount` / `isUnconvertedSpend`.
  *
- * The backend has the byte-identical suite beside its own copy of the module;
- * nothing checks that the two agree, which is the convention for a mirrored
- * rule here, not a guard. Both sides assert the same rows so that a change
- * made on one and forgotten on the other fails somewhere.
+ * The backend carries the same suite beside its own copy of the module. The
+ * two differ in exactly one line — this side's test runner is imported, the
+ * other's is global — and assert the same rows otherwise, so a change made on
+ * one side and forgotten on the other fails somewhere. Nothing CHECKS that
+ * they agree; that is the convention for a mirrored rule here, not a guard,
+ * and calling the files identical when they are not is how such a convention
+ * quietly stops being true.
  */
 import { describe, expect, it } from "vitest";
 import { isUnconvertedSpend, lodgingBaseAmount, type LodgingStayFx } from "../lodgingSpendBase";
