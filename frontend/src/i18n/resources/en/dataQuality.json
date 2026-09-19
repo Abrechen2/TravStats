@@ -24,6 +24,64 @@
         "description": "None of your records currently has two pieces of information that disagree."
       }
     },
+    "photoJourneys": {
+      "title": "Photo journeys",
+      "description": "Bursts of photographs that no recorded travel explains. Suggestions — only your answer turns one into an entry.",
+      "scan": "Search photos",
+      "scanning": "Searching …",
+      "thumbAlt": "Preview {{position}} of this burst of photographs",
+      "kind": {
+        "place": "Visited a place?",
+        "trip": "A trip?",
+        "stay": "Nights away?"
+      },
+      "facts": {
+        "photos": "{{photos}} photos",
+        "located": "{{located}} with a position",
+        "nights": "{{nights}} nights",
+        "airport": "nearest own airport: {{iata}}"
+      },
+      "creates": {
+        "trip": "Accepting creates a trip covering these dates.",
+        "placeVisit": "Accepting records a visit to this place on the first day.",
+        "stayAnswerOnly": "Accepting only marks the question answered. A stay needs a lodging this finding does not name — you create that yourself.",
+        "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created."
+      },
+      "actions": {
+        "accept": "Accept",
+        "dismiss": "Dismiss"
+      },
+      "empty": {
+        "title": "No suggestions",
+        "description": "Your photographs currently say nothing your logbook does not already record.",
+        "noImmich": {
+          "title": "No photo library connected",
+          "description": "Photo journeys read your own Immich library — the images never leave your machines.",
+          "banner": "Connect Immich and the search can run.",
+          "link": "Go to Settings → External services"
+        }
+      },
+      "messages": {
+        "scanned": "Searched: {{created}} new suggestions, {{updated}} updated.",
+        "noImmich": "No photo library is connected — nothing was searched.",
+        "accepted": {
+          "trip": "Trip created.",
+          "placeVisit": "Visit recorded at the place.",
+          "none": "Marked as answered. Nothing was created."
+        },
+        "dismissed": "Dismissed. This burst will not be suggested again."
+      },
+      "errors": {
+        "loadFailed": "The photo suggestions could not be loaded.",
+        "scanFailed": "The photo search could not be started.",
+        "acceptFailed": "The suggestion could not be accepted.",
+        "acceptLinkFailed": {
+          "trip": "The trip was created, but the suggestion could not be marked as accepted — trying again only links it.",
+          "placeVisit": "The visit was recorded, but the suggestion could not be marked as accepted — trying again only links it."
+        },
+        "dismissFailed": "The suggestion could not be dismissed."
+      }
+    },
     "messages": {
       "resolved": "Thanks — we will look at this record again on the next run.",
       "dismissed": "Understood. This question will not be asked again.",

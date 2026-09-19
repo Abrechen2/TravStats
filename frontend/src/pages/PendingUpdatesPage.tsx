@@ -1,13 +1,16 @@
 /**
  * Posteingang — the one place the user answers questions about their data.
  *
- * Two sections, two backends, on purpose (design §3.5, owner 2026-09-02):
+ * Three sections, three backends, on purpose (design §3.5, owner 2026-09-02):
  *
  * - **Zu prüfen** — `DataQualityFlag` rows: a record whose own two sources
  *   disagree, raised as a QUESTION. Nothing has been changed and nothing is
  *   marked correct.
  * - **Flug-Updates** — `PendingFlightUpdate` rows: a provider's proposed field
  *   values for one flight, with a diff and an apply/reject decision.
+ * - **Foto-Reisen** — `PhotoJourney` rows: a burst of photographs nothing
+ *   recorded explains. The third tab, and the only one that can be absent
+ *   (forgejo#94, point 1); it lives in `components/inbox/`.
  *
  * `PendingFlightUpdate` carries a required `flightId`, `apiSource` and
  * `expiresAt` — it is flight-shaped by construction, and 858 lines of service
@@ -33,6 +36,8 @@ import { logger } from "../lib/logger";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
+import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
+import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 
@@ -83,6 +88,14 @@ interface PendingUpdate {
   };
 }
 
+/**
+ * Three tabs since forgejo#94: the third is the photo scan's findings, and it
+ * is the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
+ * naming it while it is hidden falls back to `review` rather than opening a tab
+ * that is not in the list.
+ */
+type InboxTab = "review" | "updates" | "photos";
+
 interface Statistics {
   totalUpdates: number;
   appliedUpdates: number;
@@ -107,9 +120,18 @@ export default function PendingUpdatesPage(): JSX.Element {
   const [selectedUpdate, setSelectedUpdate] = useState<string | null>(null);
   // Which half is open lives in the URL, so a link can land on the updates.
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") === "updates" ? "updates" : "review";
+  const photoJourneysVisible = usePhotoJourneysVisible();
+  const requestedTab = searchParams.get("tab");
+  const tab: InboxTab =
+    requestedTab === "updates"
+      ? "updates"
+      : requestedTab === "photos" && photoJourneysVisible
+        ? "photos"
+        : "review";
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
+  const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
+  const reportJourneys = useCallback((n: number) => setPendingJourneys(n), []);
 
   useEffect(() => {
     loadUpdates();
@@ -199,13 +221,25 @@ export default function PendingUpdatesPage(): JSX.Element {
 
   const pendingCount = updates.filter((u) => u.status === "pending").length;
 
-  const tabs: { key: "review" | "updates"; label: string; count: number | null }[] = [
+  const tabs: { key: InboxTab; label: string; count: number | null }[] = [
     { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
     {
       key: "updates",
       label: t("dataQuality:inbox.flightUpdates.title"),
       count: statusFilter === "pending" ? pendingCount : null,
     },
+    // Counted the same way as the two above: the tab reports what it loaded,
+    // and `null` until it has, so the label never claims a zero it has not
+    // measured.
+    ...(photoJourneysVisible
+      ? [
+          {
+            key: "photos" as const,
+            label: t("dataQuality:inbox.photoJourneys.title"),
+            count: pendingJourneys,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -232,7 +266,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 role="tab"
                 aria-selected={active}
                 onClick={() =>
-                  setSearchParams(item.key === "updates" ? { tab: "updates" } : {}, {
+                  setSearchParams(item.key === "review" ? {} : { tab: item.key }, {
                     replace: true,
                   })
                 }
@@ -394,6 +428,18 @@ export default function PendingUpdatesPage(): JSX.Element {
             </div>
           )}
         </div>
+
+        {/* Mounted like the review section above, and for the same reason: the
+            tab label's count comes from the tab's own load, so it would stay
+            blank until somebody opened it. Last in the DOM because it is last
+            in the strip. `active` is what keeps the rest of the tab's fetching
+            — the Immich connection status — off an inbox visit that never opens
+            it; the list is the price of the count and runs either way. */}
+        {photoJourneysVisible && (
+          <div hidden={tab !== "photos"}>
+            <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
+          </div>
+        )}
 
         {/* Statistics Impact Preview Modal */}
         {selectedUpdate && (

@@ -104,6 +104,31 @@ describe("the shared demo account resolves no integration", () => {
     await expect(getDawarichConnection()).resolves.toMatchObject({ source: "env" });
   });
 
+  /**
+   * Measured for forgejo#94 point 1, before deciding whether the scan needed a
+   * demo guard of its own: it does not. `scanPhotoJourneys` resolves the
+   * connection as its FIRST statement and returns `no-immich` on null, so for
+   * the shared demo the scan reaches no library, asks Nominatim nothing and
+   * writes no row — one indexed user lookup and a 200. A second guard would
+   * only be a second place to forget.
+   *
+   * The web reads the same answer through `hasAccess` on `/settings/immich`
+   * (`getImmichConnection(userId) !== null`), which is why the inbox shows the
+   * demo "no library connected" instead of a button that can only answer this.
+   */
+  it("answers the photo-journey scan with scanned:false and writes nothing", async () => {
+    const res = await request(app)
+      .post("/api/v1/photo-journeys/scan")
+      .set("Cookie", demoCookie)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      data: { scanned: false, reason: "immich-not-configured" },
+    });
+    await expect(prisma.photoJourney.count({ where: { userId: demoId } })).resolves.toBe(0);
+  });
+
   it("answers the album picker with the normal notConfigured body, not a new error", async () => {
     const res = await request(app)
       .get(`/api/v1/trips/${demoTripId}/immich/albums`)
