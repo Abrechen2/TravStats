@@ -210,7 +210,9 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
 
     const isValid = await comparePassword(password, user?.passwordHash ?? DUMMY_BCRYPT_HASH);
     if (!user || !isValid) {
-      throw new AppError("Invalid credentials", 401);
+      // The code, not the prose, is what the login form reads — it has to say
+      // this in the reader's language (forgejo#88 finding 3).
+      throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
     }
 
     // A deactivated account is refused HERE, before any cookie is written —
@@ -220,7 +222,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
     // handed to a disabled account, and the answer says why on the first
     // request rather than on the next one.
     if (!user.isActive) {
-      throw new AppError("This account has been deactivated", 403);
+      throw new AppError("This account has been deactivated", 403, "ACCOUNT_DEACTIVATED");
     }
 
     // Two-factor: the password was right, so the session is withheld until the

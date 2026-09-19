@@ -75,6 +75,7 @@
     "loading": "Lädt"
   },
   "help": {
+    "title": "Hilfe",
     "clickForMore": "Klick für mehr Infos"
   },
   "theme": {
@@ -200,6 +201,10 @@
     "title": "Seite nicht gefunden",
     "message": "Diese Seite existiert nicht oder wurde verschoben.",
     "back": "Zum Dashboard"
+  },
+  "adminOnly": {
+    "title": "Nur für Administratoren",
+    "body": "Dieser Bereich ist der Administration dieser Instanz vorbehalten. Dein Konto hat dafür keine Rechte — wende dich an die Administration, wenn du sie brauchst."
   },
   "currencySelect": {
     "label": "Währung",

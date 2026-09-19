@@ -70,11 +70,28 @@ describe("DomainRouteGuard", () => {
     expect(screen.getByTestId("detail")).toBeTruthy();
   });
 
-  it("still redirects when the domain is genuinely off", () => {
+  /**
+   * forgejo#88 finding 6. This case used to assert a redirect to the dashboard,
+   * which is what the audit ran into: a bookmarked `/cruises` answered by
+   * silently landing somewhere else, so there was no way to tell a wrong
+   * address from a switched-off area. Refusing is still required — a guard that
+   * never says no is not a guard — but it says so now.
+   */
+  it("explains the disabled domain instead of bouncing to the dashboard", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], enabledDomainsLoaded: true });
 
     renderAt("/cruises/abc");
-    expect(screen.getByTestId("dashboard")).toBeTruthy();
+
+    // The page itself is still withheld, and the reader is still here.
+    expect(screen.queryByTestId("detail")).toBeNull();
+    expect(screen.queryByTestId("dashboard")).toBeNull();
+    // Named cause, and the one way to change it.
+    expect(screen.getByText("dashboard:tabDisabled.title")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "dashboard:tabDisabled.goToSettings" })
+    ).toHaveAttribute("href", "/settings#modules");
+    // The chrome is drawn, so the reader is not stranded on a bare card.
+    expect(screen.getByTestId("nav")).toBeTruthy();
   });
 });
 

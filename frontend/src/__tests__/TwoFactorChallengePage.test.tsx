@@ -108,4 +108,68 @@ describe("TwoFactorChallengePage", () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(setAuth).not.toHaveBeenCalled();
   });
+
+  it("still says the code was wrong for a 401, whatever the server's prose", async () => {
+    verifyTwoFactor.mockRejectedValue({
+      response: { status: 401, data: { error: "That code is not right" } },
+    });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("auth:twoFactor.codeLabel"), {
+      target: { value: "000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "auth:twoFactor.submit" }));
+
+    await waitFor(() => expect(screen.getByText("auth:twoFactor.rejected")).toBeInTheDocument());
+    expect(screen.queryByText(/that code is not right/i)).toBeNull();
+  });
+
+  /**
+   * forgejo#88 finding 4, second surface.
+   *
+   * `authLimiter` sits on `/auth/2fa/verify` in the SAME address-keyed bucket as
+   * `/auth/login`, so ten mistyped codes — or a household sharing one address —
+   * answer 429. The page threw the response away for a fixed "Code abgelehnt",
+   * which blames a code that may well have been correct, at the one moment the
+   * reader is already unsure whether their authenticator is in sync.
+   */
+  it("names the rate limit, with the wait, rather than blaming the code", async () => {
+    verifyTwoFactor.mockRejectedValue({
+      response: {
+        status: 429,
+        data: {
+          error: "Too many authentication attempts, please try again later",
+          code: "RATE_LIMITED",
+          retryAfterSeconds: 600,
+        },
+      },
+    });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("auth:twoFactor.codeLabel"), {
+      target: { value: "000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "auth:twoFactor.submit" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("auth:login.errors.rateLimitedMinutes")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("auth:twoFactor.rejected")).toBeNull();
+    expect(screen.queryByText(/too many authentication attempts/i)).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("says the database is down when it is, instead of blaming the code", async () => {
+    verifyTwoFactor.mockRejectedValue({
+      response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+    });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("auth:twoFactor.codeLabel"), {
+      target: { value: "000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "auth:twoFactor.submit" }));
+
+    await waitFor(() => expect(screen.getByText("auth:login.dbUnavailable")).toBeInTheDocument());
+  });
 });

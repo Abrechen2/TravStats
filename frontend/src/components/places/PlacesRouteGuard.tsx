@@ -1,8 +1,8 @@
 import type { JSX, ReactNode } from "react";
-import { Navigate } from "react-router-dom";
 import { usePlacesAccess } from "../../hooks/usePlacesVisible";
 import { useTranslation } from "../../hooks/useTranslation";
 import NavigationBar from "../NavigationBar";
+import { DomainDisabledNotice } from "../Dashboard/tabs/DomainDisabledNotice";
 
 /**
  * Route guard for the Places pages.
@@ -32,7 +32,17 @@ export function PlacesRouteGuard({ children }: { children: ReactNode }): JSX.Ele
     );
   }
 
-  if (access === "denied") return <Navigate to="/" replace />;
+  // "Denied" means the POI domain is switched off — the only condition left in
+  // `usePlacesAccess`. It is explained rather than redirected away from, for
+  // the reason in `DomainRouteGuard` (forgejo#88 finding 6).
+  if (access === "denied") {
+    return (
+      <>
+        <NavigationBar />
+        <DomainDisabledNotice domain="poi" />
+      </>
+    );
+  }
 
   return <>{children}</>;
 }

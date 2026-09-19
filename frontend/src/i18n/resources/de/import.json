@@ -9,7 +9,8 @@
     "regexWarning": {
       "title": "Kein LLM-Parser verfügbar",
       "body": "Es ist kein LLM (Ollama, OpenAI, Claude) konfiguriert. Der Regex-Fallback erkennt nur die häufigsten Buchungsformate; manuelle Korrekturen sind häufiger nötig."
-    }
+    },
+    "pasteFirst": "Füge zuerst den Text der E-Mail ein."
   },
   "pdf": {
     "dropZone": "PDF hier ablegen oder klicken",

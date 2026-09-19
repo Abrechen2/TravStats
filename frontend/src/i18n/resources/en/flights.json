@@ -163,7 +163,8 @@
       "mergedToast": "Existing flight enriched with {{count}} fields",
       "mergedNoChange": "No empty fields to fill"
     },
-    "alreadyImported": "This flight had already been read in — nothing was created twice."
+    "alreadyImported": "This flight had already been read in — nothing was created twice.",
+    "flightNumberRequired": "Enter a flight number first, for example LH400."
   },
   "list": {
     "title": "Flights",

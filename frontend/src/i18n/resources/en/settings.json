@@ -821,5 +821,8 @@
     "display": "Appearance",
     "data": "Data",
     "services": "Services"
+  },
+  "deepLink": {
+    "adminOnlySection": "The section named in the address is reserved for whoever administers this instance, so it is not shown to you. The rest of the settings on this page are yours."
   }
 }

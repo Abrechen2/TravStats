@@ -821,5 +821,8 @@
     "display": "Darstellung",
     "data": "Daten",
     "services": "Dienste"
+  },
+  "deepLink": {
+    "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
   }
 }

@@ -16,6 +16,15 @@ interface UserMenuProps {
   isAdmin?: boolean;
 }
 
+/**
+ * The handbook. First entry after the personal ones, and deliberately NOT in
+ * the support group below: donating, starring and Discord are ways to help the
+ * project, while this is the project helping the reader — and a beginner
+ * looking for help reads "Spenden · Stern · Discord" as none of the above
+ * (forgejo#88 finding 12). One link, to the docs that already exist.
+ */
+const DOCS_URL = "https://travstats.de/docs/";
+
 /** Where support goes. The same three the old header's Support chip held. */
 const SUPPORT_LINKS = [
   {
@@ -134,6 +143,18 @@ export default function UserMenu({
               {t("dashboard:admin")}
             </Link>
           )}
+          <a
+            role="menuitem"
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
+            style={{ color: "var(--ts-text)" }}
+          >
+            <Icon name="book-open" size={16} />
+            {t("common:help.title")}
+          </a>
           {onReportBug && (
             <button
               type="button"

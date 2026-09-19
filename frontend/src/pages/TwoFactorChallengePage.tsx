@@ -5,6 +5,7 @@ import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
 
 /**
  * Second step of a login. The challenge itself is an HttpOnly cookie set by
@@ -12,6 +13,21 @@ import { LogoLockup } from "../components/Brand/Logo";
  * is harmless, and it cannot be reached usefully without having just entered a
  * correct password.
  */
+
+/**
+ * Everything the server refuses here reads "that code is not right" — every
+ * 401 from `/auth/2fa/verify` is a wrong code, an expired challenge or an
+ * account without 2FA, and the reader's next move is the same in all three.
+ *
+ * `authLimiter` is on that route too, sharing one address-keyed bucket with
+ * the password form, so ten mistyped codes answer 429. The page used to print
+ * "Code abgelehnt" for that as well, which blames a code that may have been
+ * correct — exactly the failure forgejo#88 finding 4 named at the password
+ * field, one screen further on. No `deactivated` or `malformed` key: this
+ * screen cannot tell those apart, and guessing is what the copy object exists
+ * to prevent.
+ */
+const TWO_FACTOR_COPY: LoginFailureCopy = { refused: "twoFactor.rejected" };
 export default function TwoFactorChallengePage(): JSX.Element {
   const { t } = useTranslation(["auth"]);
   const navigate = useNavigate();
@@ -38,8 +54,13 @@ export default function TwoFactorChallengePage(): JSX.Element {
       }
       setAuth(result.user);
       navigate("/");
-    } catch {
-      setError(t("auth:twoFactor.rejected"));
+    } catch (err: unknown) {
+      const failure = loginFailure(err, TWO_FACTOR_COPY);
+      setError(
+        failure.retryAfterMinutes !== undefined
+          ? t(`auth:${failure.key}`, { count: failure.retryAfterMinutes })
+          : t(`auth:${failure.key}`)
+      );
     } finally {
       setLoading(false);
     }

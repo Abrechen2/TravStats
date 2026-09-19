@@ -21,6 +21,7 @@ import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { useAuthStore } from "../../store/authStore";
 import {
   apiTokensApi,
   type ApiToken,
@@ -30,11 +31,25 @@ import {
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
 
+/**
+ * Scopes a token may be minted with, in widening order.
+ *
+ * `admin` is offered to an ADMIN only (forgejo#88 finding 10). The backend was
+ * always right — `requireAdmin` refuses the request whatever the token says,
+ * because the OWNING USER is not an admin (`middleware/auth.ts`) — so the
+ * option was not a hole. It was worse in a quieter way: the UI offered "Admin —
+ * voller Zugriff" to an account for which it can never do anything, so a
+ * reader minted one, watched every admin call fail, and had no way to learn
+ * whether the token, the scope or the endpoint was at fault.
+ */
 const SCOPES: ApiTokenScope[] = ["read", "write", "admin"];
+const NON_ADMIN_SCOPES: ApiTokenScope[] = SCOPES.filter((scope) => scope !== "admin");
 
 export default function ApiTokensSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const isDemo = useIsDemoAccount();
+  const isAdmin = useAuthStore((state) => state.user?.isAdmin === true);
+  const scopes = isAdmin ? SCOPES : NON_ADMIN_SCOPES;
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -195,7 +210,7 @@ export default function ApiTokensSection(): JSX.Element {
             <Segmented
               label={t("settings:apiTokens.scope")}
               value={newScope}
-              options={SCOPES.map((scope) => ({
+              options={scopes.map((scope) => ({
                 value: scope,
                 label: t(`settings:apiTokens.scopesShort.${scope}`),
                 name: t(`settings:apiTokens.scopes.${scope}`),

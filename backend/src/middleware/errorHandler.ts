@@ -9,6 +9,23 @@ export interface ApiError extends Error {
   statusCode?: number;
 }
 
+/**
+ * Every machine-readable cause an `/api` error body may carry in `code`.
+ *
+ * A closed union rather than `string`, so a typo at a throw site is a `tsc`
+ * failure instead of a client branch that silently never matches — which is the
+ * exact failure mode the codes were introduced to END. The frontend's
+ * `lib/loginFailure.ts` compares against these spellings; nothing checks the
+ * two lists against each other across the wire, so the compiler holding this
+ * side is the half that can be held.
+ *
+ * Add a member here before using it, and keep it SCREAMING_SNAKE. Not in this
+ * union: `DEMO_ACCOUNT_FORBIDDEN`, which by an older convention travels in the
+ * `error` field rather than in `code`.
+ */
+export type ApiErrorCode =
+  "INVALID_CREDENTIALS" | "ACCOUNT_DEACTIVATED" | "RATE_LIMITED" | "DB_UNAVAILABLE" | "DUPLICATE";
+
 interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -158,7 +175,7 @@ export const errorHandler = async (
   ) {
     return res.status(503).json({
       error: "Datenbankverbindung fehlgeschlagen. Bitte versuche es später erneut.",
-      code: "DB_UNAVAILABLE",
+      code: "DB_UNAVAILABLE" satisfies ApiErrorCode,
     });
   }
 
@@ -168,7 +185,7 @@ export const errorHandler = async (
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
     return res.status(409).json({
       error: "Ein Eintrag mit diesem Wert existiert bereits.",
-      code: "DUPLICATE",
+      code: "DUPLICATE" satisfies ApiErrorCode,
     });
   }
 
@@ -179,16 +196,38 @@ export const errorHandler = async (
 
   res.status(statusCode).json({
     error: message,
+    // A machine-readable cause, present only where the thrower named one.
+    // `message` is English prose written for a log; a client that shows it to
+    // a reader is showing them the wrong language (forgejo#88 finding 3 — the
+    // login form printed "Invalid credentials" into a German page). The code
+    // is what a client is meant to branch on.
+    ...(isAppError(err) && err.code ? { code: err.code } : {}),
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
 
+function isAppError(err: unknown): err is AppError {
+  return err instanceof AppError;
+}
+
 export class AppError extends Error {
   statusCode: number;
 
-  constructor(message: string, statusCode: number = 500) {
+  /**
+   * Stable, machine-readable cause — see `ApiErrorCode`.
+   *
+   * Optional, and deliberately so: adding one to every throw site at once
+   * would be a rename of the whole error surface. A route that has a client
+   * needing to tell its failures apart names a code; the rest keep the prose
+   * they already had. Typed as the closed union, so a misspelt member fails
+   * `tsc` rather than shipping a branch no client can ever match.
+   */
+  code?: ApiErrorCode;
+
+  constructor(message: string, statusCode: number = 500, code?: ApiErrorCode) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
     this.name = "AppError";
   }
 }

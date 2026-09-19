@@ -145,4 +145,55 @@ describe("LoginPage — passkey sign-in", () => {
     await waitFor(() => expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument());
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  /**
+   * forgejo#88 finding 4, second surface.
+   *
+   * `authLimiter` sits on `/auth/passkeys/login/options` and `/login/verify`,
+   * in the SAME address-keyed bucket as `/auth/login` — so a password manager
+   * retrying an assertion, or a shared address behind a reverse proxy, trips
+   * the ceiling here just as readily. The branch threw the response away for a
+   * fixed "Passkey-Anmeldung fehlgeschlagen", which sends the reader hunting a
+   * broken credential instead of waiting a minute.
+   */
+  it("names the rate limit rather than blaming the passkey", async () => {
+    passkeyApi.availability.mockResolvedValue({ available: true, reason: null });
+    passkeyApi.loginOptions.mockRejectedValue({
+      response: {
+        status: 429,
+        data: {
+          error: "Too many authentication attempts, please try again later",
+          code: "RATE_LIMITED",
+          retryAfterSeconds: 300,
+        },
+      },
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "login.passkeySubmit" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("login.errors.rateLimitedMinutes")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("login.passkeyFailed")).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("still blames nothing but the passkey for a 403, which is two things at once", async () => {
+    // `/login/verify` answers 403 both for a deactivated account and for "set a
+    // new password first". The screen cannot tell them apart, so it must NOT
+    // claim the account is switched off — hence no `deactivated` key in its copy.
+    passkeyApi.availability.mockResolvedValue({ available: true, reason: null });
+    passkeyApi.loginOptions.mockResolvedValue({ challenge: "c" });
+    startAuthentication.mockResolvedValue({ id: "cred" });
+    passkeyApi.loginVerify.mockRejectedValue({
+      response: { status: 403, data: { error: "Account is deactivated" } },
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "login.passkeySubmit" }));
+
+    await waitFor(() => expect(screen.getByText("login.passkeyFailed")).toBeInTheDocument());
+    expect(screen.queryByText("login.errors.accountDeactivated")).toBeNull();
+  });
 });

@@ -12,7 +12,6 @@
     "components/Dashboard/DashboardEmptyState.tsx",
     "components/Dashboard/DashboardLayout.tsx",
     "components/Dashboard/tabs/CruisesTab.tsx",
-    "components/Dashboard/tabs/DomainDisabledNotice.tsx",
     "components/Dashboard/tabs/FlightsTab.tsx",
     "components/Dashboard/tabs/LodgingTab.tsx",
     "components/Dashboard/tabs/lodging/LodgingStatStrip.tsx",

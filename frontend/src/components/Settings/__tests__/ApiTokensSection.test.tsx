@@ -8,6 +8,14 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import ApiTokensSection from "../ApiTokensSection";
+import { useAuthStore } from "../../../store/authStore";
+
+/** The signed-in account the section reads its rights from. */
+const signIn = (isAdmin: boolean): void => {
+  useAuthStore.setState({
+    user: { id: "u1", username: isAdmin ? "root" : "demo", isAdmin },
+  } as Parameters<typeof useAuthStore.setState>[0]);
+};
 
 const TOKEN = {
   id: "t1",
@@ -23,6 +31,7 @@ describe("ApiTokensSection", () => {
   beforeEach(() => {
     Object.values(api).forEach((fn) => fn.mockReset());
     api.list.mockResolvedValue([TOKEN]);
+    signIn(true);
   });
 
   it("lists each token as a row with its scope and a revoke action", async () => {
@@ -53,5 +62,40 @@ describe("ApiTokensSection", () => {
     );
     await waitFor(() => expect(screen.queryByLabelText("settings:apiTokens.newLabel")).toBeNull());
     expect(await screen.findByText("tsk_secret")).toBeInTheDocument();
+  });
+
+  /**
+   * forgejo#88 finding 10.
+   *
+   * The dialog offered "Admin — voller Zugriff" to every account. The backend
+   * was never fooled: `requireAdmin` refuses the request whatever the token
+   * says, because the OWNING USER is not an admin. So this was not a hole — it
+   * was worse in a quieter way. A reader minted an admin token, watched every
+   * admin call answer 403, and had nothing telling them whether the token, the
+   * scope or the endpoint was at fault.
+   */
+  it("offers no admin scope to an account that could never use one", async () => {
+    signIn(false);
+    render(<ApiTokensSection />);
+    await screen.findByText("Home Assistant");
+    fireEvent.click(screen.getByRole("button", { name: "settings:apiTokens.create" }));
+
+    expect(
+      screen.getByRole("radio", { name: "settings:apiTokens.scopes.read" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "settings:apiTokens.scopes.write" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "settings:apiTokens.scopes.admin" })).toBeNull();
+  });
+
+  it("still offers it to an admin, who can", async () => {
+    render(<ApiTokensSection />);
+    await screen.findByText("Home Assistant");
+    fireEvent.click(screen.getByRole("button", { name: "settings:apiTokens.create" }));
+
+    expect(
+      screen.getByRole("radio", { name: "settings:apiTokens.scopes.admin" })
+    ).toBeInTheDocument();
   });
 });
