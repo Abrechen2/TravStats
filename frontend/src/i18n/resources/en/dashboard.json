@@ -193,7 +193,8 @@
       "lodging": "Lodging",
       "poi": "Places",
       "tour": "Tours"
-    }
+    },
+    "disabledHint": "Area disabled — Settings → Areas"
   },
   "addPicker": {
     "button": "Add",

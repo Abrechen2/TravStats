@@ -193,7 +193,8 @@
       "lodging": "Unterkünfte",
       "poi": "Orte",
       "tour": "Touren"
-    }
+    },
+    "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
   "addPicker": {
     "button": "Hinzufügen",

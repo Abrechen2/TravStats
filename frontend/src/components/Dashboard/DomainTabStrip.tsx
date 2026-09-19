@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
@@ -7,7 +8,7 @@ import { Icon, type IconName } from "../ui/Icon";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { DASHBOARD_TABS } from "../../types/dashboard";
-import { isValidDomain, type DomainKey } from "../../shared/domains";
+import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
 
 interface DomainTabStripProps {
   active: DashboardTab;
@@ -59,6 +60,7 @@ export function DomainTabStrip({
   nowMs = Date.now(),
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
+  const navigate = useNavigate();
 
   // The instance beta flag ALONE, deliberately not the enabled state. This
   // strip already receives `enabled` as a prop, and its contract is that a
@@ -118,6 +120,14 @@ export function DomainTabStrip({
         const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
         const label = t(`dashboard:tabStrip.tabs.${tab}`);
         const icon = TAB_ICON[tab];
+        // A dimmed tab used to be a dead end: `onSelect` navigated to
+        // /dashboard/<domain>, and `useDashboardRoute` bounced straight back
+        // to /dashboard, so the pointer cursor promised an action that never
+        // happened and nothing said why (beta audit 2026-09-19, forgejo#88
+        // P5). The click now goes to the domain's OWN route, where
+        // `DomainRouteGuard` draws `DomainDisabledNotice` with the link that
+        // switches the area back on — and the hint says so before the click.
+        const disabledHint = isDisabled ? t("dashboard:tabStrip.disabledHint") : undefined;
 
         return (
           <button
@@ -126,7 +136,11 @@ export function DomainTabStrip({
             aria-selected={isActive}
             aria-disabled={isDisabled}
             data-disabled={isDisabled ? "true" : "false"}
-            onClick={() => onSelect(tab)}
+            title={disabledHint}
+            aria-label={disabledHint === undefined ? undefined : `${label} — ${disabledHint}`}
+            onClick={() =>
+              isDisabled && domain !== null ? navigate(DOMAINS[domain].routePrefix) : onSelect(tab)
+            }
             className="flex shrink-0 items-center"
             style={{
               gap: 8,
