@@ -1,6 +1,6 @@
 import fsp from "fs/promises";
 
-import type { Document, Prisma } from "@prisma/client";
+import type { Document, Prisma } from "../../prisma";
 import type { Response } from "express";
 
 import { prisma } from "../../db";

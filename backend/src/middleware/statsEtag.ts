@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import type { NextFunction, Response } from "express";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 
 import { prisma } from "../db";
 import logger from "../utils/logger";

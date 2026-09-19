@@ -8,7 +8,7 @@
 //   2. Every achievement `code` across all seed parts MUST be unique — a
 //      duplicate collides on `achievement.code`'s unique constraint during
 //      seeding.
-import type { Achievement } from "@prisma/client";
+import type { Achievement } from "../../prisma";
 import { checkAchievement } from "../achievementChecks";
 import { calculateUserStats, type UserStats } from "../achievementStats";
 import { achievements } from "../../data/achievements";

@@ -10,8 +10,9 @@
  * stats consumption.
  */
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
+import type { DbTransaction } from "../../db";
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { buildLegRouteOverrideMap, portLegRouteKey } from "../../shared/cruise/legRouteKey";
 import { computeLegDistance } from "./index";
@@ -23,7 +24,7 @@ export const ORCHESTRATOR_VERSION = "1.0.0";
 
 export async function recomputeLegsForCruise(
   cruiseId: string,
-  tx?: Prisma.TransactionClient
+  tx?: DbTransaction
 ): Promise<number> {
   const client = tx ?? prisma;
 

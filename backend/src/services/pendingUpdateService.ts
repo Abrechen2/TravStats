@@ -5,7 +5,7 @@
  * Also calculates statistics impact of updates.
  */
 
-import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "@prisma/client";
+import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getCachedAirports } from "./airportCache";

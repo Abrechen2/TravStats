@@ -25,7 +25,7 @@
  */
 
 import { prisma } from "../../db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { completeAddressFromCoordinates } from "../geo/nominatim";
 import { collectBackfillCandidates } from "../geo/backfillScan";

@@ -13,7 +13,7 @@
  * `pendingUpdateService` re-exports all three, so no caller changed.
  */
 
-import { Flight, PrismaClient } from "@prisma/client";
+import { Flight, PrismaClient } from "../../prisma";
 
 import { prisma } from "../../db";
 import { flightDurationOf } from "../../shared/flightDuration";

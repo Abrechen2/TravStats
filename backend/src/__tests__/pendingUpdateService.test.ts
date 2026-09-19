@@ -8,7 +8,7 @@ import {
   calculateStatisticsImpact,
   cleanupExpiredUpdates,
 } from "../services/pendingUpdateService";
-import { Flight } from "@prisma/client";
+import { Flight } from "../prisma";
 
 describe("Pending Update Service", () => {
   let userId: string;

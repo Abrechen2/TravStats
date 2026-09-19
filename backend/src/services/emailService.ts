@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
-import type { SmtpConfig } from "@prisma/client";
+import type { SmtpConfig } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { SMTP_CONFIG_ID } from "../routes/admin/smtp";

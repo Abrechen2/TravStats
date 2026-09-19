@@ -1,6 +1,6 @@
 import { classifyVisit } from "../../shared/placeCounting";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import {

@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { ensureUser, ensureUserSettings } from "../seedDemoAccount";
 import { appVersion } from "../utils/version";
 

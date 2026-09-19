@@ -9,11 +9,11 @@
  * Skips silently otherwise so the entrypoint can call it on every boot.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../prismaClient";
 import { seedAirportsFromCSV } from "../seedAirportsFromCSV";
 import logger from "../utils/logger";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main(): Promise<void> {
   await prisma.$connect();

@@ -1,5 +1,5 @@
 import { find as findTimezone } from "geo-tz";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getCachedAirport, invalidateAirportCache, compareAirportAuthority } from "./airportCache";

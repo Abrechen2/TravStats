@@ -1,7 +1,7 @@
 /**
  * Schema-drift regression check.
  *
- * Runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code`,
+ * Runs `prisma migrate diff --from-migrations --to-schema --exit-code`,
  * replaying the migration folder into a scratch shadow database. If the live DB state (after `prisma
  * migrate deploy`) and `schema.prisma` disagree, exits with code 2 — the
  * same convention used by `--exit-code`.
@@ -49,7 +49,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/prismaClient";
 
 const SCHEMA_PATH = resolve(__dirname, "..", "prisma", "schema.prisma");
 const MIGRATIONS_PATH = join(__dirname, "..", "prisma", "migrations");
@@ -74,7 +74,7 @@ const DERIVED_SHADOW_NAME = "travstats_drift_shadow";
  * sets it owns that database.
  */
 async function ensureDerivedShadowDatabase(databaseUrl: string): Promise<void> {
-  const client = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+  const client = createPrismaClient({ url: databaseUrl });
   try {
     const rows = await client.$queryRaw<Array<{ one: number }>>`
       SELECT 1 AS one FROM pg_database WHERE datname = ${DERIVED_SHADOW_NAME}`;
@@ -119,16 +119,18 @@ async function main(): Promise<void> {
     `${databaseUrl.replace(/\/[^/?]+(\?|$)/, "/")}${DERIVED_SHADOW_NAME}`;
   if (!process.env.SHADOW_DATABASE_URL) await ensureDerivedShadowDatabase(databaseUrl);
 
+  // Prisma 7 renamed `--to-schema-datamodel` to `--to-schema` and removed
+  // `--shadow-database-url` outright: the shadow database is now read from
+  // `prisma.config.ts`, which takes it from SHADOW_DATABASE_URL. Hence the
+  // variable in the child environment below rather than a flag here.
   const args = [
     "prisma",
     "migrate",
     "diff",
     "--from-migrations",
     MIGRATIONS_PATH,
-    "--to-schema-datamodel",
+    "--to-schema",
     SCHEMA_PATH,
-    "--shadow-database-url",
-    shadowUrl,
     "--exit-code",
   ];
 
@@ -136,7 +138,7 @@ async function main(): Promise<void> {
   const result = spawnSync("npx", args, {
     stdio: "inherit",
     shell: process.platform === "win32",
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: { ...process.env, DATABASE_URL: databaseUrl, SHADOW_DATABASE_URL: shadowUrl },
   });
 
   if (result.error) {

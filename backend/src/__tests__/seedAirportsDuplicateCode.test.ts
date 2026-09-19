@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 
 import { isDuplicateCodeError } from "../seedAirportsFromCSV";
 

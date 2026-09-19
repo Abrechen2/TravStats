@@ -5,7 +5,7 @@
 // case silently falls through to `default` and the badge can never fire), and
 // every code across ALL seed parts must stay unique.
 
-import type { Achievement } from "@prisma/client";
+import type { Achievement } from "../../prisma";
 import { checkAchievement } from "../achievementChecks";
 import { calculateUserStats, type FlightData, type UserStats } from "../achievementStats";
 import { calculateCruiseStats, type CruiseData, type CruisePortData } from "../cruiseStats";

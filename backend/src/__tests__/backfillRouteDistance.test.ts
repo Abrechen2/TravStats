@@ -5,7 +5,7 @@
  * cover (a) idempotency, (b) NULL-coord skip, (c) Haversine sanity, and
  * (d) dry-run mode.
  */
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../prisma";
 import { prisma } from "../db";
 // `../scripts/`, not `../../scripts/`: c1df7528 moved the script into `src/`
 // so it compiles into the image, and this import kept pointing at the old

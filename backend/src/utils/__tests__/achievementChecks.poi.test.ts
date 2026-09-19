@@ -11,7 +11,7 @@
 // report SEPARATE progress — a single shared maximum would make every wonders
 // badge show the same number, which is exactly what the per-list map exists to
 // prevent.
-import type { Achievement } from "@prisma/client";
+import type { Achievement } from "../../prisma";
 import { checkAchievement } from "../achievementChecks";
 import { calculateUserStats, type UserStats } from "../achievementStats";
 import { seedsPartG } from "../../data/achievementSeeds/partG";

@@ -23,7 +23,7 @@
  * a thousand pairs of dates and nothing else.
  */
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";

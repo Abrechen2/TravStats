@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 import type { CountryTier } from "../../shared/countryEvidence";
 

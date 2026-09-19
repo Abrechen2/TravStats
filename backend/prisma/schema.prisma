@@ -1,12 +1,26 @@
 // This is your Prisma schema file
 
+// Prisma 7 replaced `prisma-client-js` with `prisma-client`: no more magic
+// generation into node_modules, and `output` is required. The client is now
+// plain TypeScript that `tsc` compiles alongside the rest of `src`, which is
+// why it lives under `src/` — the compiled copy lands in `dist/generated/prisma`
+// and the production image needs no `prisma generate` at all.
+//
+// `moduleFormat = "cjs"` is not a preference: this backend compiles to
+// CommonJS (tsconfig `"module": "commonjs"`), and an ESM client would throw
+// `ReferenceError: exports is not defined` the moment `dist/index.js` loaded it.
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
+// Prisma 7 deprecated `url` / `directUrl` / `shadowDatabaseUrl` in the schema:
+// the connection string belongs to `prisma.config.ts` for the CLI and to the
+// driver adapter in `src/db.ts` for the runtime. Leaving a stale copy here
+// would be a second source of truth that nothing reads.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import logger from "../utils/logger";
 import { isDebugEnabled } from "../services/loggingConfig";
 

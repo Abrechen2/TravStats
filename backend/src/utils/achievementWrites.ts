@@ -16,7 +16,7 @@
 // exactly one.
 
 import { prisma } from "../db";
-import type { Achievement, UserAchievement } from "@prisma/client";
+import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
 import type { FlightData, UserStats } from "./achievementStats";

@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "./prismaClient";
 import { hashPassword } from "./utils/password";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const airports = [
   { icao: "EDDF", iata: "FRA", name: "Frankfurt Airport", lat: 50.0379, lon: 8.5622 },

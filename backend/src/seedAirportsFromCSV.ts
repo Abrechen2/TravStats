@@ -1,11 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "./prismaClient";
 import logger from "./utils/logger";
 import fs from "fs";
 import path from "path";
 import { parse } from "csv-parse/sync";
 import https from "https";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 import { admitsAirport } from "./shared/antarcticAirfields";
 import { normalizeAirportName } from "./shared/airportName";

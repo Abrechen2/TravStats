@@ -1,5 +1,5 @@
 import { prisma } from "../../../db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../../prisma";
 import type { TemplateDomain, TemplateFingerprint, TemplatePatterns } from "./types";
 import logger from "../../../utils/logger";
 import { WORKSHOP_DOMAIN_SPECS, isWorkshopDomain } from "../../../shared/annotationLabels";

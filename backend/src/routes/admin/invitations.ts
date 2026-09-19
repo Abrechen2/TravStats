@@ -1,8 +1,8 @@
 import { Router, Response, NextFunction } from "express";
 import crypto from "crypto";
-import { Prisma } from "@prisma/client";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
+import type { DbTransaction } from "../../db";
 import {
   createLinkInvitationSchema,
   createEmailInvitationSchema,
@@ -14,7 +14,7 @@ import { AppError } from "../../middleware/errorHandler";
 
 const router = Router();
 
-async function ensureUserLimitNotReached(tx: Prisma.TransactionClient): Promise<void> {
+async function ensureUserLimitNotReached(tx: DbTransaction): Promise<void> {
   const { maxUsers } = await getInstanceSettings();
   const userCount = await tx.user.count();
   const activeInviteCount = await tx.invitation.count({

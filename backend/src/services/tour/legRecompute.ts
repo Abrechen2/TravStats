@@ -1,4 +1,5 @@
-import { Prisma } from "@prisma/client";
+import type { DbTransaction } from "../../db";
+import { Prisma } from "../../prisma";
 
 import { AppError } from "../../middleware/errorHandler";
 import { planLegs } from "../../shared/tour/legPlan";
@@ -14,7 +15,7 @@ type PrismaLike = { $transaction: <T>(fn: (tx: Tx) => Promise<T>) => Promise<T> 
  * router is the wrong home for logic two routers depend on.
  */
 
-export type Tx = Prisma.TransactionClient;
+export type Tx = DbTransaction;
 
 export interface StopCoords {
   id: string;

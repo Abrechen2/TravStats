@@ -1,6 +1,6 @@
 import http from "http";
 import https from "https";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getAdminParserSettings } from "./parserSettings";

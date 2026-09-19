@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { createPrismaClient } from "./prismaClient";
+const prisma = createPrismaClient();
 
 // Extensive list of major airports worldwide
 const airports = [

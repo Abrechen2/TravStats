@@ -9,13 +9,13 @@
  * endpoint could be written and save nothing — the second count moves and this
  * fails.
  *
- * The spy is a `prisma.$use` middleware rather than a `jest.spyOn` on
- * `prisma.flight.findMany`, so it also sees the queries the services beneath
- * the handlers perform.
+ * The spy is `observeQueries` — the seam that replaced Prisma's removed
+ * `$use` middleware — rather than a `jest.spyOn` on `prisma.flight.findMany`,
+ * so it also sees the queries the services beneath the handlers perform.
  */
 import request from "supertest";
 import app from "../../index";
-import { prisma } from "../../db";
+import { observeQueries, prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { STATS_PAGE_SECTIONS } from "../../schemas/statsPage";
@@ -40,9 +40,8 @@ interface FlightQuery {
 const observed: FlightQuery[] = [];
 let recording = false;
 
-prisma.$use(async (params, next) => {
-  if (recording && params.model === "Flight") observed.push({ action: params.action });
-  return next(params);
+observeQueries(({ model, operation }) => {
+  if (recording && model === "Flight") observed.push({ action: operation });
 });
 
 /** Run `fn` with the spy on and return every `Flight` query it caused. */

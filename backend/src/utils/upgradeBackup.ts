@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../prismaClient";
 import logger from "./logger";
 import { createDatabaseDump } from "../services/backup/backupDatabase";
 
@@ -99,7 +99,7 @@ export function writeLastDeployedVersion(version: string): void {
  * Returns false if the table or DB doesn't exist (truly fresh install).
  */
 async function hasExistingMigrations(): Promise<boolean> {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
       `SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations"`

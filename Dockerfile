@@ -66,6 +66,7 @@ WORKDIR /app/backend
 
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
+COPY backend/prisma.config.ts ./
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -109,6 +110,10 @@ RUN apt-get update && \
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
+# Prisma 7 dropped `--schema` and `--url` and stopped reading `.env`: the CLI
+# takes the schema path and the datasource URL from this file, so `prisma
+# migrate deploy` in the entrypoint has no datasource without it.
+COPY backend/prisma.config.ts ./
 # Dependencies come from the prod-deps stage above rather than a second
 # `npm ci` here, so this image never needs a compiler. Same base image, so the
 # bcrypt binary in there matches this runtime's libc.
@@ -163,7 +168,11 @@ COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
 # compiled with the app, and runs as
 # `node /app/backend/dist/scripts/<name>.js` (see package.json backfill:*).
 COPY backend/scripts ./scripts
-RUN npx prisma generate
+# No `prisma generate` here any more. Prisma 7's `prisma-client` generator
+# emits plain TypeScript, which the backend-builder stage compiled into
+# dist/generated/prisma along with everything else — the client ships as build
+# output. Generating again would write an unused copy under a src/ tree this
+# image does not have.
 
 # Write VERSION file for runtime version reporting.
 # Uses the build-arg (1.0.0, 1.0.0-rc.6, …) so RC / prerelease images

@@ -6,7 +6,7 @@
  * This script is idempotent - safe to run multiple times
  */
 
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "./prismaClient";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
 import { execSync } from "child_process";
@@ -16,7 +16,7 @@ import logger from "./utils/logger";
 import { initializeEncryptionKey } from "./utils/encryptionKey";
 import { maybeRunPreMigrationBackup, writeLastDeployedVersion } from "./utils/upgradeBackup";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function init() {
   console.log("🚀 Initializing TravStats...\n");

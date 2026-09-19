@@ -1,4 +1,4 @@
-import type { Flight, Prisma } from "@prisma/client";
+import type { Flight, Prisma } from "../prisma";
 import { fromZonedTime } from "date-fns-tz";
 
 import type { CreateFlightInput } from "../schemas/flight";

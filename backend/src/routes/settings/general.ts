@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { AuthRequest } from "../../middleware/auth";
 import { isSharedDemoUser } from "../../middleware/demoGuard";
 import { prisma } from "../../db";

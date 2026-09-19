@@ -34,7 +34,8 @@
  *   --batch-size   Rows per UPDATE batch. Default: 500.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../src/prisma";
+import { createPrismaClient } from "../src/prismaClient";
 import { calculateCo2Kg, toSeatClass } from "../src/services/co2Calculator";
 
 interface BackfillArgs {
@@ -122,7 +123,7 @@ async function backfillCo2(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const start = Date.now();
     const result = await backfillCo2(prisma, args);

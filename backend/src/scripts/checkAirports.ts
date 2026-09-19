@@ -4,9 +4,8 @@
  * Outputs the count to stdout, exits with code 0 if airports exist, 1 if empty
  */
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { createPrismaClient } from "../prismaClient";
+const prisma = createPrismaClient();
 
 async function checkAirports() {
   try {

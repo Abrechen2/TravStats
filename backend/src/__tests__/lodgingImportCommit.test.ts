@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
 import {

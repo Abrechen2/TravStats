@@ -40,7 +40,8 @@
  *                  Postgres has tight statement-timeout settings.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../prisma";
+import { createPrismaClient } from "../prismaClient";
 import { haversineKm } from "../services/co2Calculator";
 
 interface BackfillArgs {
@@ -117,7 +118,7 @@ async function backfillRouteDistance(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const start = Date.now();
     const result = await backfillRouteDistance(prisma, args);

@@ -6,7 +6,7 @@
  * branch is defensive only — the schema makes dep/arr coords non-null, so
  * it can't be seeded here; it's covered by the co2Calculator unit tests.
  */
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../prisma";
 import { prisma } from "../db";
 import { backfillCo2 } from "../../scripts/backfillCo2";
 

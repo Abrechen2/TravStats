@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Router, Response, NextFunction } from "express";
-import type { ParserTemplate } from "@prisma/client";
+import type { ParserTemplate } from "../prisma";
 import { z } from "zod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";

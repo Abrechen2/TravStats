@@ -1,4 +1,4 @@
-import type { DataQualityFlag, Prisma } from "@prisma/client";
+import type { DataQualityFlag, Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import logger from "../../utils/logger";

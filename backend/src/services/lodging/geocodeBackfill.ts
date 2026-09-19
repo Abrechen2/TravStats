@@ -1,7 +1,7 @@
 import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";

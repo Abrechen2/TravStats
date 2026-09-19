@@ -54,6 +54,16 @@ export default [
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "**/*.test.ts", "**/*.d.ts", "src/__mocks__/**"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "**/*.test.ts",
+      "**/*.d.ts",
+      "src/__mocks__/**",
+      // The Prisma 7 client is generated TypeScript, not code we write. It is
+      // also gitignored, so linting it would make `npm run lint` depend on
+      // whether `prisma generate` has been run yet.
+      "src/generated/**",
+    ],
   },
 ];

@@ -302,7 +302,20 @@ enforced, and merely practised** below.
   `httpLogger`, `parserLogger`).
 - **Prisma JSON fields** — cast via
   `as unknown as Prisma.InputJsonValue`, never directly from
-  `Record<string, unknown>`.
+  `Record<string, unknown>`. Since Prisma 7 `Prisma` and `PrismaClient` are
+  imported from the project re-export `backend/src/prisma.ts`, never from
+  `@prisma/client`: that package's types still say
+  `export * from ".prisma/client/default"`, a path the `prisma-client`
+  generator never writes, so importing from it yields nothing and every
+  `Prisma.*` type quietly becomes an error. The JSON null sentinel is
+  `typeof Prisma.JsonNull` — `Prisma.NullTypes` is a value in 7, not a
+  namespace of types. The client itself is generated TypeScript under
+  `backend/src/generated/prisma` (gitignored; `postinstall` and the Docker
+  build both run `prisma generate`), and a client is only ever constructed
+  through `createPrismaClient()` in `backend/src/prismaClient.ts`, because the
+  Rust-free client needs an explicit `@prisma/adapter-pg` driver adapter.
+  Client middleware is gone: `db.ts` logs through a `$extends` extension, and
+  a test that needs to watch queries uses `observeQueries()` from `db.ts`.
 - **deck.gl + MapLibre** — use the `MapboxOverlay` + `useControl`
   pattern (NOT the `<DeckGL>` React component — causes a WebGL
   conflict with MapLibre 5.x).

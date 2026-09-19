@@ -36,6 +36,10 @@ module.exports = {
   collectCoverageFrom: [
     "src/**/*.ts",
     "!src/**/*.d.ts",
+    // Prisma 7 emits its client as TypeScript under src/. It is generated, it
+    // is gitignored, and 73 files of it in the denominator would move the
+    // coverage ratchet by a number that means nothing about this project.
+    "!src/generated/**",
     "!src/**/*.test.ts",
     "!src/**/*.spec.ts",
     "!src/__tests__/**",

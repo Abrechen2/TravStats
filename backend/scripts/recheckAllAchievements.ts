@@ -19,10 +19,11 @@
  *   docker exec -it TravStats node dist/scripts/recheckAllAchievements.js
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../src/prisma";
+import { createPrismaClient } from "../src/prismaClient";
 import { checkAndUpdateAchievements } from "../src/utils/achievements";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main(): Promise<void> {
   const users = await prisma.user.findMany({

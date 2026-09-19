@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import type { FlightQueryInput } from "../../schemas/flight";
 
 /**
