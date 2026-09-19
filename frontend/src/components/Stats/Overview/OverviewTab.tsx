@@ -65,21 +65,27 @@ export default function OverviewTab({
   // chip switched off hides a series, it does not take a year off the page.
   const years = useMemo(() => collectYears(stats, visible), [stats, visible]);
 
-  // A year that is still running is set against the SAME span of the compare
-  // year, not against twelve months of it — see `comparisonWindow`. The window
-  // is resolved once here and handed to both sides of the comparison and to
-  // every label that names it, so the number and the words can never describe
-  // different spans.
-  const comparison = selectedYear === null ? null : comparisonWindow(selectedYear);
+  // A year that is still running is set against the SAME span of the other
+  // year, not against twelve months of it — see `comparisonWindow`. It takes
+  // BOTH years, because the period bar lets the compare year be the later one.
+  const activeCompareYear = compareEnabled ? compareYear : null;
+  const comparison =
+    selectedYear === null ? null : comparisonWindow(selectedYear, activeCompareYear);
   const comparisonKind: ComparisonKind = comparison?.kind ?? "fullYear";
-  const agg = aggregate(stats, visible, selectedYear, comparison);
+
+  // Two aggregates for the same year, and the difference is the point. The
+  // HEADLINE describes the whole selected year — cutting it would make the
+  // tile say "2025: 10 experiences" for a year that had 30, and would put the
+  // big number at odds with the evidence panel behind it, which answers for
+  // the whole year. The DELTA pair is windowed on both sides, because that is
+  // the only comparison worth publishing.
+  const agg = aggregate(stats, visible, selectedYear, null);
   // The evidence scope names the population the KPI numbers describe, which
   // is what the fold READ — not the chip state (see `foldedDomains`).
   const folded = useMemo(() => foldedDomains(stats, visible), [stats, visible]);
-  const prevAgg =
-    compareEnabled && selectedYear !== null && compareYear !== null
-      ? aggregate(stats, visible, compareYear, comparison)
-      : null;
+  const comparing = compareEnabled && selectedYear !== null && compareYear !== null;
+  const currentAgg = comparing ? aggregate(stats, visible, selectedYear, comparison) : null;
+  const prevAgg = comparing ? aggregate(stats, visible, compareYear, comparison) : null;
   const heatmapYear = selectedYear ?? years[years.length - 1] ?? new Date().getFullYear();
 
   if (loading) {
@@ -100,6 +106,7 @@ export default function OverviewTab({
           />
           <CrossDomainKpis
             agg={agg}
+            currentAgg={currentAgg}
             prevAgg={prevAgg}
             selectedYear={selectedYear}
             compareYear={compareYear}

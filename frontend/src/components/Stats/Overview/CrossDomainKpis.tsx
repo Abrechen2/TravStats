@@ -13,7 +13,15 @@ import EvidenceTrigger from "../EvidenceTrigger";
 import { delta } from "./aggregate";
 
 interface Props {
+  /** The whole selected year — what the big number on each tile says. */
   agg: YearScopedAgg;
+  /**
+   * The same year narrowed to the comparison window, and its counterpart. They
+   * are a PAIR and the deltas come from them alone: under a same-period window
+   * `currentAgg` is smaller than `agg`, and mixing the two would subtract eight
+   * months from twelve, which is the defect this window removes.
+   */
+  currentAgg: YearScopedAgg | null;
   prevAgg: YearScopedAgg | null;
   selectedYear: number | null;
   compareYear: number | null;
@@ -39,6 +47,7 @@ const EVIDENCE_DOMAIN_OF: Record<DomainKey, EvidenceDomain> = {
 
 export default function CrossDomainKpis({
   agg,
+  currentAgg,
   prevAgg,
   selectedYear,
   compareYear,
@@ -50,7 +59,9 @@ export default function CrossDomainKpis({
   const { t, i18n } = useTranslation(["stats", "common"]);
   // The reader's language decides the thousands separator (#319).
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
-  const showDelta = compareEnabled && prevAgg !== null && selectedYear !== null;
+  const showDelta =
+    compareEnabled && currentAgg !== null && prevAgg !== null && selectedYear !== null;
+  const partialYear = comparisonKind === "samePeriod";
 
   const breakdown = (Object.entries(agg.perDomainEvents) as Array<[DomainKey, number]>)
     .filter(([, n]) => n > 0)
@@ -58,13 +69,15 @@ export default function CrossDomainKpis({
     .join(" · ");
 
   // The population these three numbers were measured over: the period the bar
-  // is showing AND the chips that are on. It is deliberately NOT narrowed when
-  // the delta is a same-period one: the panel explains the current year's whole
-  // population, which is what the tile's own figure counts. The delta is a
-  // separate, labelled comparison beside it — narrowing the scope to match the
-  // delta would make the panel answer a question the big number never asked. These are the only measures in the
+  // is showing AND the chips that are on. These are the only measures in the
   // registry whose scope carries `domains`, which is why the tile has to send
   // it — an all-time, all-domain default would answer a different question.
+  //
+  // It is deliberately NOT narrowed when the delta is a same-period one. The
+  // panel explains the whole selected year, which is exactly what the big
+  // number counts (`agg`, not `currentAgg`); the delta is a separate, labelled
+  // comparison beside it. Narrowing the scope to match the delta would make
+  // the panel answer a question the big number never asked.
   const scope: EvidenceScopeParams = {
     period: selectedYear === null ? "allTime" : "year",
     ...(selectedYear === null ? {} : { year: selectedYear }),
@@ -83,7 +96,10 @@ export default function CrossDomainKpis({
       label: t("stats:overviewKpis.experiences"),
       value: agg.totalEvents,
       hint: breakdown || t("stats:overviewKpis.noEnabledDomains"),
-      delta: showDelta && prevAgg ? delta(agg.totalEvents, prevAgg.totalEvents) : null,
+      delta:
+        showDelta && currentAgg && prevAgg
+          ? delta(currentAgg.totalEvents, prevAgg.totalEvents)
+          : null,
       evidenceKey: "crossDomainEventCount",
     },
     {
@@ -93,9 +109,12 @@ export default function CrossDomainKpis({
       // index is keyed by YEAR and three of the four domains get it from the
       // server, so it cannot be cut at today; the only delta available here is
       // eight months against twelve, which is the comparison this window
-      // exists to stop publishing. A value that cannot be derived is absent.
+      // exists to stop publishing. A value that cannot be derived is absent —
+      // and the tile SAYS it is absent, because a badge that vanishes without
+      // a word reads as a badge that was forgotten.
+      hint: showDelta && partialYear ? t("stats:overviewKpis.countriesNoComparison") : undefined,
       delta:
-        showDelta && prevAgg && comparisonKind === "fullYear"
+        showDelta && currentAgg && prevAgg && !partialYear
           ? delta(agg.countriesCount, prevAgg.countriesCount)
           : null,
       evidenceKey: "crossDomainCountryCount",
@@ -104,7 +123,10 @@ export default function CrossDomainKpis({
       label: t("stats:overviewKpis.activeDays"),
       value: agg.activeDays,
       hint: t("stats:overviewKpis.activeDaysHint"),
-      delta: showDelta && prevAgg ? delta(agg.activeDays, prevAgg.activeDays) : null,
+      delta:
+        showDelta && currentAgg && prevAgg
+          ? delta(currentAgg.activeDays, prevAgg.activeDays)
+          : null,
       evidenceKey: "crossDomainActiveDayCount",
     },
     {

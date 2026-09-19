@@ -13,9 +13,14 @@
  * 1 January to today, versus 1 January to the same day there. A year that is
  * OVER keeps the full-year comparison it always had.
  *
- * The cut is "is this year still running", NOT "is this the year on the system
- * clock": a reader looking at 2024 in 2026 gets a full-year comparison,
- * because 2024 is over and nothing about it is still accruing.
+ * The cut is "is EITHER year still running", NOT "is this the year on the
+ * system clock": a reader looking at 2024 in 2026 gets a full-year comparison,
+ * because both years are over and nothing about either is still accruing.
+ *
+ * Both years, because the period bar lets the compare year be the LATER one.
+ * Picking 2025 and comparing against 2026 drew "ggü. 2026" over a full year
+ * set against eight months — the same defect with the sides swapped, which a
+ * rule that only looked at the selected year could not see.
  *
  * `today` is a parameter, never `Date.now()` read inside, so a test can pin
  * September. Everything here works in LOCAL calendar parts, because the day
@@ -31,24 +36,42 @@ export interface ComparisonWindow {
   kind: ComparisonKind;
   /** Inclusive last day the selected year may count. */
   currentEnd: Date;
-  /** The same window one year earlier — what the default compare year uses. */
+  /** Inclusive last day the compare year may count. */
   previousEnd: Date;
+  /**
+   * The year that is not over — the reason this is a same-period window, and
+   * the year a caveat label has to name. `null` for a full-year window.
+   */
+  runningYear: number | null;
 }
 
 /**
- * The window for a selected year, as of `today`.
+ * The window for a pair of years, as of `today`.
  *
- * `previousEnd` answers the default comparison (`selectedYear - 1`). The
- * compare year is the reader's pick and survives a revisit (#188), so it is
- * not always the year before — `windowEndInYear` is what a caller with an
- * arbitrary compare year asks.
+ * `compareYear` is passed explicitly — including as `null` when no comparison
+ * is on — rather than assumed to be `selectedYear - 1`: the reader picks it
+ * and it survives a revisit (#188), so it can be any year, including a later
+ * one. `null` falls back to the year before, which is what the shape's
+ * `previousEnd` has always described.
+ *
+ * Both ends are cut to the SAME month and day, which is the earlier of the two
+ * ends by construction: a year that is over ends on 31 December, a year that
+ * is running ends today, and today is earlier than any 31 December that has
+ * not happened yet.
  */
-export function comparisonWindow(selectedYear: number, today: Date = new Date()): ComparisonWindow {
-  if (selectedYear < today.getFullYear()) {
+export function comparisonWindow(
+  selectedYear: number,
+  compareYear: number | null,
+  today: Date = new Date()
+): ComparisonWindow {
+  const otherYear = compareYear ?? selectedYear - 1;
+  const latestYear = Math.max(selectedYear, otherYear);
+  if (latestYear < today.getFullYear()) {
     return {
       kind: "fullYear",
       currentEnd: lastDayOfYear(selectedYear),
-      previousEnd: lastDayOfYear(selectedYear - 1),
+      previousEnd: lastDayOfYear(otherYear),
+      runningYear: null,
     };
   }
   const month = today.getMonth();
@@ -56,7 +79,8 @@ export function comparisonWindow(selectedYear: number, today: Date = new Date())
   return {
     kind: "samePeriod",
     currentEnd: sameDayIn(selectedYear, month, day),
-    previousEnd: sameDayIn(selectedYear - 1, month, day),
+    previousEnd: sameDayIn(otherYear, month, day),
+    runningYear: latestYear,
   };
 }
 

@@ -16,7 +16,8 @@
     "activeDays": "Aktive Reisetage",
     "activeDaysHint": "Tage mit mind. einer Aktivität",
     "achievements": "Erfolge",
-    "achievementsHint": "{{points}} Punkte"
+    "achievementsHint": "{{points}} Punkte",
+    "countriesNoComparison": "Länder: kein Vergleich für den laufenden Zeitraum"
   },
   "overviewToggle": {
     "noData": "keine Daten"

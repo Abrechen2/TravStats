@@ -24,10 +24,10 @@ interface Props {
   compareYear: number | null;
   compareEnabled: boolean;
   /**
-   * The comparison window from the tab. This card's count and the KPI strip's
-   * are the same events read two ways; if only one of them were cut, the card
-   * would contradict the strip above it for every reader whose year is still
-   * running.
+   * The comparison window from the tab. This card's delta and the KPI strip's
+   * are the same events read two ways; if only one of them were windowed, the
+   * card would contradict the strip above it for every reader whose year is
+   * still running.
    */
   comparison: ComparisonWindow | null;
 }
@@ -94,12 +94,17 @@ export default function DomainSummaryCard({
     );
   }
 
-  const yearScopedCount =
-    selectedYear !== null ? eventsInWindow(stats, selectedYear, comparison) : null;
-  const compareCount =
-    compareEnabled && compareYear !== null ? eventsInWindow(stats, compareYear, comparison) : null;
+  // The COUNT on the card names the whole selected year, uncut: "2025 · 4 of
+  // 12" has to describe 2025. Only the DELTA is windowed, and on both sides —
+  // the same split the KPI strip makes above it.
+  const yearScopedCount = selectedYear !== null ? (stats.yearlyEvents[selectedYear] ?? 0) : null;
   const cardDelta =
-    yearScopedCount !== null && compareCount !== null ? delta(yearScopedCount, compareCount) : null;
+    compareEnabled && selectedYear !== null && compareYear !== null
+      ? delta(
+          eventsInWindow(stats, selectedYear, comparison),
+          eventsInWindow(stats, compareYear, comparison)
+        )
+      : null;
 
   // Under a year heading, only that year's figures (CT106 audit B03). The
   // lifetime KPIs used to stand here whatever year was chosen. A year without
@@ -144,7 +149,11 @@ export default function DomainSummaryCard({
                 : t("stats:overviewCard.lifetimeCount", { count: stats.totalEvents })}
             </div>
             {cardDelta && (
-              <DeltaBadge d={cardDelta} compareYear={compareYear} kind={comparison?.kind} />
+              <DeltaBadge
+                d={cardDelta}
+                compareYear={compareYear}
+                kind={comparison?.kind ?? "fullYear"}
+              />
             )}
           </div>
         </div>

@@ -65,6 +65,7 @@ async function keysOpenedBy(section: JSX.Element): Promise<string[]> {
 const lifetime = (
   <CrossDomainKpis
     agg={agg}
+    currentAgg={null}
     prevAgg={null}
     selectedYear={null}
     compareYear={null}
@@ -98,6 +99,7 @@ describe("the cross-domain KPI tiles open the measures they render", () => {
       <MemoryRouter>
         <CrossDomainKpis
           agg={agg}
+          currentAgg={null}
           prevAgg={null}
           selectedYear={2024}
           compareYear={null}

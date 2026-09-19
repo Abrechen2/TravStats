@@ -12,15 +12,15 @@ interface Props {
    * travel with it: a same-period delta under "ggü. 2025" would be a second,
    * quieter lie than the unequal comparison it replaced — the reader would
    * take it for the whole year and it is eight months.
+   *
+   * Required, with no default: "full year" is the unsafe direction, so a
+   * caller that forgot to think about it must not silently get the label that
+   * claims more than the number.
    */
-  kind?: ComparisonKind;
+  kind: ComparisonKind;
 }
 
-export default function DeltaBadge({
-  d,
-  compareYear,
-  kind = "fullYear",
-}: Props): JSX.Element | null {
+export default function DeltaBadge({ d, compareYear, kind }: Props): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
   if (!d || compareYear === null) return null;
   const arrow = d.sign === "up" ? "↑" : d.sign === "down" ? "↓" : "→";

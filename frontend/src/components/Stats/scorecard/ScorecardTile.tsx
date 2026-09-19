@@ -13,6 +13,13 @@ export interface ScorecardTileVM {
   points: number[];
   current: number;
   previous: number;
+  /**
+   * Set when the two numbers do NOT cover the same span, and says so. The pill
+   * is otherwise bare — an arrow and a percentage with nothing naming what it
+   * was measured against — which is exactly how "-78 %" came to read as a
+   * collapse in travel when it was four months that had not happened yet.
+   */
+  compareLabel?: string;
   /** Present when this tile's number is a served evidence measure — every scorecard tile currently is (Task 9). */
   evidence?: { kind: EvidenceKind; key: string; scope: EvidenceScopeParams };
 }
@@ -27,6 +34,7 @@ export default function ScorecardTile({
   points,
   current,
   previous,
+  compareLabel,
   evidence,
 }: ScorecardTileVM): JSX.Element {
   const className = "rounded-lg border p-5 shadow-md flex flex-col gap-2";
@@ -37,7 +45,7 @@ export default function ScorecardTile({
         <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
           {label}
         </span>
-        <TrendDelta current={current} previous={previous} />
+        <TrendDelta current={current} previous={previous} compareLabel={compareLabel} />
       </div>
       <span className="text-4xl font-bold tabular-nums" style={{ color: "var(--accent)" }}>
         {value}

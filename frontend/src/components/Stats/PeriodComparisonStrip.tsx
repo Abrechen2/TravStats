@@ -40,7 +40,9 @@ interface Props {
 export default function PeriodComparisonStrip({ year, compareYear, rows }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const grouped = new Intl.NumberFormat(i18n.language.startsWith("de") ? "de-DE" : "en-GB");
-  const partialYear = comparisonWindow(year).kind === "samePeriod";
+  // Both years, because the compare year can be the LATER one: 2025 against
+  // 2026 is a full year set against eight months, sides swapped.
+  const running = comparisonWindow(year, compareYear).runningYear;
   return (
     <section aria-label={t("stats:yearFilter.scopeLabel", { year })}>
       <div
@@ -54,14 +56,14 @@ export default function PeriodComparisonStrip({ year, compareYear, rows }: Props
           {t("stats:yearFilter.scopeLabel", { year })}
         </span>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t(partialYear ? "stats:yearFilter.vsFullYear" : "stats:yearFilter.vs", {
+          {t(running !== null ? "stats:yearFilter.vsFullYear" : "stats:yearFilter.vs", {
             year: compareYear,
           })}
         </span>
       </div>
-      {partialYear && (
+      {running !== null && (
         <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
-          {t("stats:yearFilter.partialYearNote", { year })}
+          {t("stats:yearFilter.partialYearNote", { year: running })}
         </p>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

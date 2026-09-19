@@ -49,10 +49,10 @@ export default function FlightYearSummaryCards({
   // day-keyed adapters. It asks the same rule whether the year is over and
   // labels the comparison for what it is — a part year against a whole one —
   // rather than printing a bare "vs 2025" over it.
-  const vsKey =
-    selectedYear !== null && comparisonWindow(selectedYear).kind === "samePeriod"
-      ? "stats:yearFilter.vsFullYear"
-      : "stats:yearFilter.vs";
+  // Both years, because the compare year can be the later, still-running one.
+  const runningYear =
+    selectedYear === null ? null : comparisonWindow(selectedYear, compareYear).runningYear;
+  const vsKey = runningYear !== null ? "stats:yearFilter.vsFullYear" : "stats:yearFilter.vs";
 
   return (
     <>
@@ -82,9 +82,9 @@ export default function FlightYearSummaryCards({
               </span>
             )}
           </div>
-          {compareSummary !== null && vsKey === "stats:yearFilter.vsFullYear" && (
+          {compareSummary !== null && runningYear !== null && (
             <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
-              {t("stats:yearFilter.partialYearNote", { year: selectedYear })}
+              {t("stats:yearFilter.partialYearNote", { year: runningYear })}
             </p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

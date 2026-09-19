@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { comparisonWindow } from "../../../lib/stats/comparisonWindow";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { formatDistance, formatHours } from "../../../lib/units";
 import type { TimeseriesResponse } from "../../../lib/api/types";
@@ -66,6 +67,30 @@ export default function FlightScorecardBlock({
   const cur = timeseries?.current ?? { count: 0, distanceKm: 0, durationMin: 0 };
   const prev = timeseries?.previous ?? { count: 0, distanceKm: 0, durationMin: 0 };
   const scope = scorecardScope(rangeWindow, selectedYear);
+
+  // The "Jahr" range sets this year against the WHOLE previous calendar year
+  // (`resolveWindow` in the backend's `utils/stats/timeseries.ts`), so in
+  // September the pill reads "-78 %" for eight months against twelve. The
+  // rolling range does not have the problem: its two windows are the same
+  // length by construction, and "all" has no previous window at all.
+  //
+  // The figures come from the server and this component cannot narrow them —
+  // a true same-period comparison needs the timeseries endpoint to accept an
+  // END DATE, not just a window kind. Until it does, the pill says what it is
+  // comparing instead of presenting it as like-for-like.
+  // `null` for every range but "year" — the same fallback `scorecardScope`
+  // makes, because the tile shows a year even when the page's picker is on
+  // "all years".
+  const scorecardYear =
+    rangeWindow === "year" ? (selectedYear ?? new Date().getUTCFullYear()) : null;
+  // `null` as the compare year: this range always sets a year against the one
+  // before it, whatever the page's compare picker says.
+  const runningYear =
+    scorecardYear === null ? null : comparisonWindow(scorecardYear, null).runningYear;
+  const compareLabel =
+    scorecardYear === null || runningYear === null
+      ? undefined
+      : t("stats:yearFilter.vsFullYear", { year: scorecardYear - 1 });
   const tiles: ScorecardTileVM[] = [
     {
       key: "flights",
@@ -75,6 +100,7 @@ export default function FlightScorecardBlock({
       points: counts,
       current: cur.count,
       previous: prev.count,
+      compareLabel,
       evidence: { kind: "metric", key: "scorecardFlightCount", scope },
     },
     {
@@ -85,6 +111,7 @@ export default function FlightScorecardBlock({
       points: distances,
       current: cur.distanceKm,
       previous: prev.distanceKm,
+      compareLabel,
       evidence: { kind: "metric", key: "scorecardDistanceKm", scope },
     },
     {
@@ -95,6 +122,7 @@ export default function FlightScorecardBlock({
       points: durations,
       current: cur.durationMin,
       previous: prev.durationMin,
+      compareLabel,
       evidence: { kind: "metric", key: "scorecardFlightTimeMinutes", scope },
     },
   ];
@@ -102,6 +130,11 @@ export default function FlightScorecardBlock({
     <>
       <TimeRangeControl value={rangeWindow} onChange={onRangeChange} />
       <KpiScorecard tiles={tiles} />
+      {runningYear !== null && (
+        <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+          {t("stats:yearFilter.partialYearNote", { year: runningYear })}
+        </p>
+      )}
       <CanonicalTimeSeries
         series={timeseries?.series ?? []}
         title={t("stats:canonicalChart.flightsTitle")}
