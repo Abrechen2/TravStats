@@ -73,7 +73,45 @@ export interface InstanceSettingsPatch {
  */
 export type ParserOrder = "template_first" | "llm_first";
 
+/**
+ * One password-reset request waiting for an administrator (forgejo#88, point 2).
+ * Only reachable with an admin session — see `routes/admin/passwordResetRequests.ts`.
+ */
+export interface PasswordResetRequest {
+  id: string;
+  userId: string;
+  username: string;
+  /** ISO 8601. */
+  requestedAt: string;
+}
+
 export const adminApi = {
+  /**
+   * The open password-reset requests.
+   *
+   * Every caller must be prepared for a 403: the inbox is a normal user's page
+   * too, and only the admin half of it may ask for this list.
+   */
+  getPasswordResetRequests: async (): Promise<{
+    requests: PasswordResetRequest[];
+    count: number;
+  }> => {
+    const { data } = await api.get<{ requests: PasswordResetRequest[]; count: number }>(
+      "/admin/password-reset-requests"
+    );
+    return data;
+  },
+
+  /** "I have dealt with this" — stamps the request, it leaves the list. */
+  markPasswordResetRequestHandled: async (
+    id: string
+  ): Promise<{ id: string; handledAt: string }> => {
+    const { data } = await api.post<{ id: string; handledAt: string }>(
+      `/admin/password-reset-requests/${id}/handled`
+    );
+    return data;
+  },
+
   getSystemInfo: async (): Promise<{
     instanceName: string;
     userCount: number;

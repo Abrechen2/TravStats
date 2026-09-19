@@ -37,6 +37,7 @@ import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
+import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
@@ -292,6 +293,11 @@ export default function PendingUpdatesPage(): JSX.Element {
             while a flight update expires on its own. The section stays mounted
             so its open count keeps the tab label current. */}
         <div hidden={tab !== "review"}>
+          {/* Admin-only, and gone entirely when there is nothing to show —
+              see the component. It sits ABOVE the user's own questions
+              because somebody is locked out of the instance while it is
+              there, which outranks a disagreement between two dates. */}
+          <PasswordResetRequestsSection />
           <DataQualityFlagsSection onOpenCount={reportOpen} />
         </div>
 

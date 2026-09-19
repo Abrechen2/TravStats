@@ -148,5 +148,14 @@
       "stored": "Stored country",
       "fromCoordinates": "Country at the coordinates"
     }
+  },
+  "passwordResets": {
+    "title": "Password reset requested",
+    "description": "This instance cannot send e-mails, so anyone who forgot their password ends up here instead of in a mailbox.",
+    "row": "Password reset requested: {{username}}, {{when}}",
+    "openUser": "Open user",
+    "markHandled": "Done",
+    "handled": "Request marked as handled.",
+    "handleFailed": "The request could not be marked as handled."
   }
 }

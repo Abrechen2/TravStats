@@ -92,7 +92,42 @@ model User {
 
   documents Document[]
 
+  passwordResetRequest PasswordResetRequest?
+
   @@map("users")
+}
+
+/// "I forgot my password, and this instance cannot send me a mail."
+///
+/// An instance without SMTP used to answer that request with a sentence and
+/// nothing else: the dialog told the user to contact an administrator, and no
+/// administrator ever learned that anyone had asked (forgejo#88, point 2). The
+/// row below is the message. It is written by the unauthenticated
+/// `POST /auth/forgot-password` and read only by admins, in the inbox.
+///
+/// **One row per user, by the unique key.** That is what keeps an
+/// unauthenticated write bounded: the route can be called a thousand times and
+/// the table still cannot grow past the user table, because a repeat is an
+/// UPDATE of `requestedAt`, not a second row. A name that matches no account
+/// writes nothing at all — so the table also never learns a username that does
+/// not exist, and the route keeps answering the same neutral 200 either way.
+///
+/// `handledAt` is the admin's "done". A later request re-opens the same row
+/// (`handledAt` back to null) rather than inserting beside it — asking twice is
+/// still one open question.
+model PasswordResetRequest {
+  id String @id @default(uuid())
+
+  /// Unique: see above. The dedupe is the storage guarantee, not a convention.
+  userId      String    @unique @map("user_id")
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  handledAt   DateTime? @map("handled_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The inbox asks one question: which requests are still open.
+  @@index([handledAt])
+  @@map("password_reset_requests")
 }
 
 /// Personal Access Tokens for programmatic API access.
